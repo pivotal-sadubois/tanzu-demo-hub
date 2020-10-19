@@ -203,6 +203,9 @@ sshEnvironment
 
   # --- CHECK CLOUD AND JUMP SERVER ---
   checkCloudAccess
+  configureJumpHost
+
+exit
   createENVfile $DEPLOY_PCF_DEPLOYMENT /tmp/deployPCFenv_${TDH_DEPLOYMENT_ENV_NAME}.${AWS_HOSTED_DNS_DOMAIN}
 
   $SCP_COMMAND /tmp/deployPCFenv_${PCF_DEPLOYMENT_ENV_NAME}.${AWS_HOSTED_DNS_DOMAIN} \
@@ -213,13 +216,12 @@ sshEnvironment
 
   lines=100
   while [ 1 ]; do
-    $SSH_COMMAND -n "tail -n $lines -f /tmp/pcfconfig.log --pid \$(cat /tmp/pcfconfig.pid)"
-    $($SSH_COMMAND -n "ls /proc/\$(cat /tmp/pcfconfig.pid) > /dev/null 2>&1")
+    $SSH_COMMAND -n "tail -n $lines -f /tmp/tanzu-demo-hub.log --pid \$(cat /tmp/tanzu-demo-hub.pid)"
+    $($SSH_COMMAND -n "ls /proc/\$(cat /tmp/tanzu-demo-hub.pid) > /dev/null 2>&1")
     if [ $? -ne 0 ]; then break; fi
     lines=0
   done
 
-  configureJumpHost
 
 echo "$SSH_COMMAND"
 

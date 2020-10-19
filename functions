@@ -52,10 +52,6 @@ sshEnvironment() {
   JUMP_HOST="jump-${PCF_DEPLOYMENT_ENV_NAME}.${AWS_HOSTED_DNS_DOMAIN}"
 
   if [ "${TDH_DEPLOYMENT_CLOUD}" == "Azure" ]; then
-    SSH_HOST=$(aws ec2 --region=eu-central-1 describe-instances \
-                     --filters Name=tag:sigs.k8s.io/cluster-api-provider-aws/role,Values="bastion" | \
-             jq -r '.Reservations[].Instances[].PublicDnsName')
-
     SSH_USER=ubuntu
     SSH_HOME=/home/ubuntu
     #SSH_HOST=$pip
@@ -68,14 +64,17 @@ sshEnvironment() {
   fi
 
   if [ "${TDH_DEPLOYMENT_CLOUD}" == "AWS" ]; then
+    SSH_HOST=$(aws ec2 --region=eu-central-1 describe-instances \
+                     --filters Name=tag:sigs.k8s.io/cluster-api-provider-aws/role,Values="bastion" | \
+             jq -r '.Reservations[].Instances[].PublicDnsName')
+
     SSH_USER=ubuntu
     SSH_HOME=/home/ubuntu
-    SSH_HOST=$JUMP_HOST
     SSH_OPTIONS="-o StrictHostKeyChecking=no -o RequestTTY=yes -o ServerAliveInterval=30"
     SSH_DISPLAY="-o StrictHostKeyChecking=no"
     SCP_OPTIONS="-o StrictHostKeyChecking=no"
-    SSH_COMMAND="ssh -q $SSH_OPTIONS -i ~/.ssh/${JUMP_HOST}.pem ${SSH_USER}@${SSH_HOST}"
-    SCP_COMMAND="scp -r $SCP_OPTIONS -i ~/.ssh/${JUMP_HOST}.pem"
+    SSH_COMMAND="ssh -q $SSH_OPTIONS -i $AWS_SSH_KEY_FILE ${SSH_USER}@${SSH_HOST}"
+    SCP_COMMAND="scp -r $SCP_OPTIONS -i $AWS_SSH_KEY_FILE"
     SSH_DISPLAY="ssh -i ~/.ssh/${JUMP_HOST}.pem ${SSH_USER}@${SSH_HOST}"
   fi
 
@@ -616,11 +615,34 @@ createENVfile() {
 }
 
 configureJumpHost() {
+echo hallo
   GITTDH="https://github.com/pivotal-sadubois/tanzu-demo-hub.git"
   TDHHOME="${SSH_HOME}/tanzu-demo-hub"
 
   messagePrint " - Verify SSH Access" "success"
   messagePrint " - Update GIT repo"   "$GITTDH"
+  $SSH_COMMAND -n "[ ! -d /home/ubuntu/tanzu-demo-hub ] && git clone $GITTDH > /dev/null 2>&1"
+  $SSH_COMMAND -n "[ -d /home/ubuntu/tanzu-demo-hub ] && cd $TDHHOME; git pull > /dev/null 2>&1"
+
+echo "JUMP_HOST:$JUMP_HOST"
+  # --- HOSTNAME ---
+#  if [ "${TDH_DEPLOYMENT_CLOUD}" == "Azure" -o "${TDH_DEPLOYMENT_CLOUD}" == "AWS" ]; then
+#    $SSH_COMMAND -n "sudo hostname $JUMP_HOST > /dev/null 2>&1"
+#  fi
+
+  # --- TEST FOR RUNNING REMOTE SCRIPT ---
+  stt=$($SSH_COMMAND -n "[ -f /tmp/tanzu-demo-hub.pid ] && pgrep -F /tmp/tanzu-demo-hub.pid")
+  stt=$($SSH_COMMAND -n "[ -f /jump_software_installed ] && echo true")
+  if [ "${stt}" == "" ]; then
+    messagePrint " - Install CLI Utilities"   "aws,az,gcp,bosh,pivnet,cf,om,jq"
+    $SSH_COMMAND -n "[ -d $SSH_HOME/tanzu-demo-hub ] && chmod a+x ${TDHHOME}/scripts/InstallUtilities.sh && \
+        sudo ${TDHHOME}/scripts/InstallUtilities.sh $PCF_PIVNET_TOKEN > /dev/null 2>&1"
+
+    # --- COPY THE AWS DIRECTORY ---
+    $SCP_COMMAND -r ~/.aws ${SSH_USER}@${SSH_HOST}:$SSH_HOME > /dev/null 2>&1
+  fi
+
+
 }
 
 
