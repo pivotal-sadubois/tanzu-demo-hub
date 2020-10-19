@@ -1,0 +1,626 @@
+#!/bin/bash
+# ############################################################################################
+# File: ........: functions
+# Language .....: bash
+# Author .......: Sacha Dubois, VMware
+# Description ..: Tanzu Demo Hub - Cluster Installation
+# ############################################################################################
+
+tmcCheckLogin() {
+  tmc cluster list >/dev/null 2>&1
+
+  if [ $? -ne 0 ]; then 
+    echo "ERROR: Currently not logged in in TMC, please login: tmc login"
+    exit 1
+  fi
+}
+
+messageTitle() {
+  _msg="$*"
+  _dat=$(date "+%Y%m%d-%H:%M:%S")
+
+  if [ "${PCF_DEPLOYMENT_DEBUG}" == "true" -o "${DEBUG}" == "1" ]; then
+    echo "[${_dat}] ${_msg}"
+  else
+    echo "${_msg}"
+  fi
+}
+
+messagePrint() {
+  _msg="$1"
+  _stt="$2"
+  _cnt=$(echo "${_msg}" | wc -c | sed 's/ //g')
+  _dat=$(date "+%Y%m%d-%H:%M:%S")
+
+  _str=""
+  while [ $_cnt -lt 58 ]; do
+    _str="${_str}."
+    let _cnt=_cnt+1
+  done
+
+  # --- INIZIALIZE VALUES IF EMPTY --- ---
+  [ "$DEBUG" == "" ] && DEBUG=0
+
+  if [ "${PCF_DEPLOYMENT_DEBUG}" == "true" -o "${DEBUG}" == "1" ]; then
+    echo "[${_dat}] ${_msg} ${_str}: ${_stt}"
+  else
+    echo "${_msg} ${_str}: ${_stt}"
+  fi
+}
+
+sshEnvironment() {
+  JUMP_HOST="jump-${PCF_DEPLOYMENT_ENV_NAME}.${AWS_HOSTED_DNS_DOMAIN}"
+
+  if [ "${TDH_DEPLOYMENT_CLOUD}" == "Azure" ]; then
+    SSH_HOST=$(aws ec2 --region=eu-central-1 describe-instances \
+                     --filters Name=tag:sigs.k8s.io/cluster-api-provider-aws/role,Values="bastion" | \
+             jq -r '.Reservations[].Instances[].PublicDnsName')
+
+    SSH_USER=ubuntu
+    SSH_HOME=/home/ubuntu
+    #SSH_HOST=$pip
+    SSH_OPTIONS="-o StrictHostKeyChecking=no -o RequestTTY=yes -o ServerAliveInterval=240 -o ClientAliveInterval=240"
+    SSH_OPTIONS="-o StrictHostKeyChecking=no"
+    SCP_OPTIONS="-o StrictHostKeyChecking=no"
+    SSH_COMMAND="ssh -q $SSH_OPTIONS -i ${AWS_SSH_KEY_FILE} ${SSH_USER}@${SSH_HOST}"
+    SCP_COMMAND="scp -r $SCP_OPTIONS"
+    SSH_DISPLAY="ssh ${SSH_USER}@${SSH_HOST}"
+  fi
+
+  if [ "${TDH_DEPLOYMENT_CLOUD}" == "AWS" ]; then
+    SSH_USER=ubuntu
+    SSH_HOME=/home/ubuntu
+    SSH_HOST=$JUMP_HOST
+    SSH_OPTIONS="-o StrictHostKeyChecking=no -o RequestTTY=yes -o ServerAliveInterval=30"
+    SSH_DISPLAY="-o StrictHostKeyChecking=no"
+    SCP_OPTIONS="-o StrictHostKeyChecking=no"
+    SSH_COMMAND="ssh -q $SSH_OPTIONS -i ~/.ssh/${JUMP_HOST}.pem ${SSH_USER}@${SSH_HOST}"
+    SCP_COMMAND="scp -r $SCP_OPTIONS -i ~/.ssh/${JUMP_HOST}.pem"
+    SSH_DISPLAY="ssh -i ~/.ssh/${JUMP_HOST}.pem ${SSH_USER}@${SSH_HOST}"
+  fi
+
+  if [ "${TDH_DEPLOYMENT_CLOUD}" == "GCP" ]; then
+    INSTANCE_NAME="$(echo $JUMP_HOST | awk -F'.' '{ print $1 }')"
+    #ZONE=$(gcloud compute zones list | grep " $GCP_REGION " | head -1 | awk '{ print $1 }')
+    ZONE=$(gcloud compute instances list --filter="name=( '$INSTANCE_NAME')" | egrep "^$INSTANCE_NAME" | awk '{ print $2 }')
+
+    prj=$(gcloud projects list | sed '1d' | awk '{ print $1 }')
+    prj=${GCP_PROJECT}
+
+    SSH_USER=$(whoami)
+    SSH_HOME=/home/$(whoami)
+    SSH_HOST="${INSTANCE_NAME}.${ZONE}.${prj}"
+    SSH_OPTIONS="-o StrictHostKeyChecking=no -o RequestTTY=yes -o ServerAliveInterval=30"
+    SCP_OPTIONS="-o StrictHostKeyChecking=no"
+    SSH_COMMAND="ssh -q $SSH_OPTIONS ${SSH_USER}@${SSH_HOST}"
+    SCP_COMMAND="scp -r $SCP_OPTIONS"
+    SSH_DISPLAY="ssh ${SSH_USER}@${SSH_HOST}"
+  fi
+}
+
+checkCloudCLI() {
+  if [ "${TDH_DEPLOYMENT_CLOUD}" == "GCP" ]; then
+    # --- CHECK FOR AWS CLI ---
+    GCLOUD=$(which gcloud)
+    if [ "${GCLOUD}" != "" ]; then
+      $GCLOUD --version >/dev/null 2>&1; ret=$?
+      if [ ${ret} -eq 0 ]; then
+        GCLOUD_VERSION=$($GCLOUD --version 2>/dev/null | grep "Google Cloud SDK" | awk '{ print $NF}')
+        GCP_CLI_ENABLED=1
+        messagePrint "checking for gcloud CLI utility" "installed - ${GCLOUD_VERSION}"
+      else
+        echo ""
+        echo "ERROR: The gcloud utility does not seam to be correct"
+        echo "       please install gcloud from https://cloud.google.com/sdk/install"; exit 1
+      fi
+    else
+      messagePrint "checking for gcloud CLI utility" "not installed"
+      echo ""
+      echo "ERROR: gcloud utility is not installed. please install terraform from"
+      echo "       https://cloud.google.com/sdk/install"; exit 1
+    fi
+
+    # --- CHECK FOR AWS CLI ---
+    AWSCLI=$(which aws)
+    if [ "${AWSCLI}" != "" ]; then
+      $AWSCLI --version >/dev/null 2>&1; ret=$?
+      if [ ${ret} -eq 0 ]; then
+        AWS_VERSION=$($AWSCLI --version 2>/dev/null | awk -F'/' '{ print $2 }' | awk '{ print $1}')
+        AWS_CLI_ENABLED=1
+        messagePrint "checking for AWS CLI utility (needed for AWS Route53)" "installed - ${AWS_VERSION}"
+      else
+        echo ""
+        echo "ERROR: the AWS cli utility does not seam to be correct, please reinstall it from:"
+        echo "       https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-install.html"; exit 1
+      fi
+    else
+      messagePrint "checking for AWS CLI utility" "not installed"
+      echo "ERROR: the AWS cli utility is not installed, please install it from:"
+      echo "       https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-install.html"; exit 1
+    fi
+  fi
+
+  if [ "${TDH_DEPLOYMENT_CLOUD}" == "AWS" ]; then
+    # --- CHECK FOR AWS CLI ---
+    AWSCLI=$(which aws)
+    if [ "${AWSCLI}" != "" ]; then
+      $AWSCLI --version >/dev/null 2>&1; ret=$?
+      if [ ${ret} -eq 0 ]; then
+        AWS_VERSION=$($AWSCLI --version 2>/dev/null | awk -F'/' '{ print $2 }' | awk '{ print $1}')
+        AWS_CLI_ENABLED=1
+        messagePrint "checking for AWS CLI utility" "installed - ${AWS_VERSION}"
+      else
+        echo ""
+        echo "ERROR: the AWS cli utility does not seam to be correct, please reinstall it from:"
+        echo "       https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-install.html"; exit 1
+      fi
+    else
+      messagePrint "checking for AWS CLI utility" "not installed"
+      echo "ERROR: the AWS cli utility is not installed, please install it from:"
+      echo "       https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-install.html"; exit 1
+    fi
+  fi
+
+  if [ "${TDH_DEPLOYMENT_CLOUD}" == "Azure" ]; then
+    # --- CHECK FOR AWS CLI ---
+    AZCLI=$(which az)
+    if [ "${AZCLI}" != "" ]; then
+      $AZCLI -v >/dev/null 2>&1; ret=$?
+      if [ ${ret} -eq 0 ]; then
+        AZ_VERSION=$($AZCLI -v 2>/dev/null | egrep "^azure-cli" | awk '{ print $2 }'); ret=$?
+        AZURE_CLI_ENABLED=1
+        messagePrint "checking for Azure CLI utility (az)" "installed - ${AZ_VERSION}"
+      else
+        echo ""
+        echo "ERROR: the $cloud CLI $(which az) does not seam to be correct"
+        echo "       please install it from https://docs.microsoft.com/en-us/cli/azure/install-azure-cli?view=azure-cli-latest"; exit 1
+      fi
+    else
+      messagePrint "checking for $cloud CLI utility" "no installed"
+    fi
+    # --- CHECK FOR AWS CLI ---
+    AWSCLI=$(which aws)
+    if [ "${AWSCLI}" != "" ]; then
+      $AWSCLI --version >/dev/null 2>&1; ret=$?
+      if [ ${ret} -eq 0 ]; then
+        AWS_VERSION=$($AWSCLI --version 2>/dev/null | awk -F'/' '{ print $2 }' | awk '{ print $1}')
+        AWS_CLI_ENABLED=1
+        messagePrint "checking for AWS CLI utility (needed for AWS Route53)" "installed - ${AWS_VERSION}"
+      else
+        echo ""
+        echo "ERROR: the AWS cli utility does not seam to be correct, please reinstall it from:"
+        echo "       https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-install.html"; exit 1
+      fi
+    else
+      messagePrint "checking for AWS CLI utility" "not installed"
+      echo "ERROR: the AWS cli utility is not installed, please install it from:"
+      echo "       https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-install.html"; exit 1
+    fi
+  fi
+}
+
+checkCloudAccess() {
+  missing_variables=0
+
+  if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "GCP" ]; then
+    #if [ "${GCP_SERVICE_ACCOUNT}" == "" -o "${GCP_REGION}" == "" -o "${GCP_PROJECT}" == "" ]; then
+    if [ "${GCP_REGION}" == "" -o "${GCP_PROJECT}" == "" ]; then
+      missing_variables=1
+      echo ""
+      echo "  4MISSING ENVIRONMENT-VARIABES    DESCRIPTION        "
+      echo "  --------------------------------------------------------------------------------------------------------------"
+
+      #if [ "${GCP_SERVICE_ACCOUNT}" == "" ]; then
+      #  echo "  GCP_SERVICE_ACCOUNT           (required) GCP Service Account"
+      #fi
+
+      if [ "${GCP_PROJECT}" == "" ]; then
+        echo "  GCP_PROJECT                   (required) GCP Project"
+        echo "                                  => gcloud projects list | sed '1d' | awk '{ print \$1 }'"
+      fi
+
+      if [ "${GCP_REGION}" == "" ]; then
+        echo "  GCP_REGION                    (required) Choose the GCP Region where your installation should run"
+        echo "                                  => gcloud compute zones list | sed '1d' | awk '{ print $2 }' | sort -u"
+        echo "                                     europe-west1, us-east1, europe-west4  etc."
+      fi
+    else
+      echo "GCP Access Credentials"
+      #messagePrint " - GCP Service Account"          "$GCP_SERVICE_ACCOUNT"
+      messagePrint " - GCP Project"                  "$GCP_PROJECT"
+      messagePrint " - GCP Region"                   "$GCP_REGION"
+    fi
+
+#    if [ "$PCF_TILE_PKS_DEPLOY" == "true" ]; then
+#        verifyCertificate GCP PKS "$GCP_PKS_TLS_CERTIFICATE" "$GCP_PKS_TLS_FULLCHAIN" \
+#                                  "$GCP_PKS_TLS_PRIVATE_KEY" "$GCP_PKS_TLS_ROOT_CA"
+#    fi
+#
+#    if [ "$PCF_TILE_PAS_DEPLOY" == "true" ]; then
+#        verifyCertificate GCP PAS "$GCP_PAS_TLS_CERTIFICATE" "$GCP_PKS_TLS_FULLCHAIN" \
+#                                  "$GCP_PAS_TLS_PRIVATE_KEY" "$GCP_PAS_TLS_ROOT_CA"
+#    fi
+  fi
+
+  if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "AWS" ]; then
+    if [ "${AWS_ACCESS_KEY}" == "" -o "${AWS_SECRET_KEY}" == "" -o \
+         "${AWS_REGION}" == "" ]; then
+
+      missing_variables=1
+      echo ""
+      echo "  5MISSING ENVIRONMENT-VARIABES    DESCRIPTION        "
+      echo "  --------------------------------------------------------------------------------------------------------------"
+
+      if [ "${AWS_ACCESS_KEY}" == "" ]; then
+        echo "  AWS_ACCESS_KEY                  (required) AWS Acess Key"
+      fi
+
+      if [ "${AWS_SECRET_KEY}" == "" ]; then
+        echo "  AWS_SECRET_KEY                  (required) AWS Secret Key"
+      fi
+
+      if [ "${AWS_REGION}" == "" ]; then
+        echo "  AWS_REGION                    (required) Choose the AWS Region where your installation should run"
+        echo "                                  => aws ec2 --region=eu-west-3 describe-regions --output text | awk '{ print $NF }'"
+        echo "                                     eu-north-1, eu-west-3, eu-central-1 etc."
+      fi
+    else
+      messageTitle "Azure Access Credentials"
+      messagePrint " - AWS AccwssKey"                "$AWS_ACCESS_KEY"
+      messagePrint " - AWS SecretKey"                "$AWS_SECRET_KEY"
+      messagePrint " - AWS Region"                   "$AWS_REGION"
+    fi
+
+#    if [ "$PCF_TILE_PKS_DEPLOY" == "true" ]; then
+#        verifyCertificate AWS PKS "$AWS_PKS_TLS_CERTIFICATE" "$AWS_PKS_TLS_FULLCHAIN" \
+#                                  "$AWS_PKS_TLS_PRIVATE_KEY" "$AWS_PKS_TLS_ROOT_CA"
+#    fi
+#
+#    if [ "$PCF_TILE_PAS_DEPLOY" == "true" ]; then
+#        verifyCertificate AWS PAS "$AWS_PAS_TLS_CERTIFICATE" "$AWS_PAS_TLS_FULLCHAIN" \
+#                                  "$AWS_PAS_TLS_PRIVATE_KEY" "$AWS_PAS_TLS_ROOT_CA"
+#    fi
+  fi
+
+  if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "Azure" ]; then
+    if [ "${AZURE_SUBSCRIPTION_ID}" == "" -o "${AZURE_TENANT_ID}" == "" -o \
+         "${AZURE_CLIENT_ID}" == "" -o "${AZURE_CLIENT_SECRET}" == "" -o "${AZURE_REGION}" == "" ]; then
+
+      missing_variables=1
+      echo ""
+      echo "  1MISSING ENVIRONMENT-VARIABES    DESCRIPTION        "
+      echo "  --------------------------------------------------------------------------------------------------------------"
+
+      if [ "${AZURE_SUBSCRIPTION_ID}" == "" ]; then
+        echo "  AZURE_SUBSCRIPTION_ID           (required) has the format <xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx>"
+      fi
+
+      if [ "${AZURE_TENANT_ID}" == "" ]; then
+        echo "  AZURE_TENANT_ID                 (required) has the format <xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx>"
+      fi
+
+      if [ "${AZURE_CLIENT_ID}" == "" ]; then
+        echo "  AZURE_CLIENT_ID                 (required) has the format <xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx>"
+      fi
+
+      if [ "${AZURE_CLIENT_SECRET}" == "" ]; then
+        echo "  AZURE_CLIENT_SECRET             (required) has the format <xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx>"
+      fi
+
+      if [ "${AZURE_REGION}" == "" ]; then
+        echo "  AZURE_REGION                    (required) Choose the Azure Region where your installation should run"
+        echo "                                  => az account list-locations -o table | awk '{ print $NF }'"
+        echo "                                     westeurope, northeurope, switzerlandnorth etc."
+      fi
+    else
+      messageTitle "Azure Access Credentials"
+      messagePrint " - Azure SubscriptionId"         "$AZURE_SUBSCRIPTION_ID"
+      messagePrint " - Azure TennantId"              "$AZURE_TENANT_ID"
+      messagePrint " - Azure ClientId"               "$AZURE_CLIENT_ID"
+      messagePrint " - Azure Client Secret"          "$AZURE_CLIENT_SECRET"
+      messagePrint " - Azure Region"                 "$AZURE_REGION"
+    fi
+
+#    if [ "$PCF_TILE_PKS_DEPLOY" == "true" ]; then
+#        verifyCertificate AZURE PKS "$AZURE_PKS_TLS_CERTIFICATE" "$AZURE_PKS_TLS_FULLCHAIN" \
+#                                    "$AZURE_PKS_TLS_PRIVATE_KEY" "$AZURE_PKS_TLS_ROOT_CA"
+#    fi
+#
+#    if [ "$PCF_TILE_PAS_DEPLOY" == "true" ]; then
+#        verifyCertificate AZURE PAS "$AZURE_PAS_TLS_CERTIFICATE" "$AZURE_PKS_TLS_FULLCHAIN" \
+#                                    "$AZURE_PAS_TLS_PRIVATE_KEY" "$AZURE_PAS_TLS_ROOT_CA"
+#    fi
+  fi
+
+  if [ "${PCF_PIVNET_TOKEN}" == "" -o "${AWS_ACCESS_KEY}" == "" -o \
+       "${AWS_SECRET_KEY}" == "" -o "${AWS_HOSTED_DNS_DOMAIN}" == "" ]; then
+
+    missing_variables=1
+    echo ""
+    echo "  2MISSING ENVIRONMENT-VARIABES    DESCRIPTION        "
+    echo "  --------------------------------------------------------------------------------------------------------------"
+
+    if [ "${PCF_PIVNET_TOKEN}" == "" ]; then
+      echo "  PCF_PIVNET_TOKEN                (required) PIVNET Access Token to download software. Get a UAA API TOKEN from"
+      echo "                                  => https://network.pivotal.io/users/dashboard/edit-profile"
+    fi
+
+    if [ "${AWS_ACCESS_KEY}" == "" ]; then
+      echo "  AWS_ACCESS_KEY                  (required) A DNS Domain managed by AWS Route 53 ie. yourdomain.com with a"
+      echo "                                  valid DNS Zone. => https://console.aws.amazon.com/route53"
+    fi
+
+    if [ "${AWS_SECRET_KEY}" == "" ]; then
+      echo "  AWS_SECRET_KEY                  (required) A DNS Domain managed by AWS Route 53 ie. yourdomain.com with a"
+      echo "                                  valid DNS Zone. => https://console.aws.amazon.com/route53"
+    fi
+
+    if [ "${AWS_HOSTED_DNS_DOMAIN}" == "" ]; then
+      echo "  AWS_HOSTED_DNS_DOMAIN           (required) A DNS Domain managed by AWS Route 53 ie. yourdomain.com with a"
+      echo "                                  valid DNS Zone. => https://console.aws.amazon.com/route53"
+    fi
+
+    #if [ "${AWS_HOSTED_ZONE_ID}" == "" ]; then
+    #  echo "  AWS_HOSTED_ZONE_ID              (required) An AWS Route 53 Token is required to add/update DNS records"
+    #  echo "                                  => https://console.aws.amazon.com/route53 -> hosted Zones -> Zone ID"
+    #fi
+  else
+    messageTitle "Supporting services access (Pivotal Network, AWS Route53)"
+    messagePrint " - Pivotal Network Token"           "$PCF_PIVNET_TOKEN"
+    messagePrint " - AWS Route53 Hosted DNS Domain"   "$AWS_HOSTED_DNS_DOMAIN"
+
+    # --- VERIFY PIVNET ACCESS ---
+    pivnetAPI $PCF_PIVNET_TOKEN
+    if [ $? -ne 0 ]; then
+      write_line
+      echo "ERROR: Pivnet Token: $PCF_PIVNET_TOKEN does not seam to be valit. Please greate a new one by"
+      echo "       login to http://network.pivotal.io => Your login Name => Edit Profile => UAA API TOKEN"
+      exit 1
+    fi
+
+    # --- CHECK IF AWS CLI IS CONFIGURED ---
+    if [ ! -d ~/.aws -o -d ~/.aws/credentials ]; then
+      echo "ERROR: AWS CLI is not configured yet, please run aws configure"
+      echo "       => aws configure"
+      exit 1
+    fi
+
+    export AWS_HOSTED_ZONE_ID=$(aws route53 list-hosted-zones --query "HostedZones[?starts_with(to_string(Name), '${AWS_HOSTED_DNS_DOMAIN}.')]" | \
+                        jq -r '.[].Id' | awk -F '/' '{ print $NF }')
+    if [ $? -ne 0 -o "${AWS_HOSTED_ZONE_ID}" == "" ]; then
+      echo "ERROR: failed to get domain information for ($AWS_HOSTED_DNS_DOMAIN)"
+      echo "       => aws route53 list-hosted-zones --query \"HostedZones[?starts_with(to_string(Name), '${AWS_HOSTED_DNS_DOMAIN}.')]\""
+      exit 1
+    else
+      messagePrint " - AWS Route53 ZoneID"              "$AWS_HOSTED_ZONE_ID"
+    fi
+
+#XXXXXX
+    #pivnetAPI $PCF_PIVNET_TOKEN GET products/pivotal-container-service/releases/112041/eula_acceptance
+    #pivnetAPI $PCF_PIVNET_TOKEN GET products/pivotal-container-service/releases
+    #pivnetAPI $PCF_PIVNET_TOKEN GET products/elastic-runtime/releases 2>/dev/null | jq -r '.releases[] | select(.version | scan("^2.6.6$")).id'
+
+    #pivnetAPI $PCF_PIVNET_TOKEN GET products/elastic-runtime/releases 2>/dev/null | \
+    #    jq -r '.releases[] | select(.version | scan("^2.6.6$")).id'
+    #pivnetAPI $PCF_PIVNET_TOKEN GET products/elastic-runtime/releases/467360 | jq
+
+    pslug="pivotal-container-service"; pver="1.5"
+    pslug="elastic-runtime"; pver="2.6.6"
+    pslug="elastic-runtime"; pver="467928"
+  fi
+
+  if [ ${missing_variables} -eq 1 ]; then
+    echo "  --------------------------------------------------------------------------------------------------------------"
+    echo "  IMPORTANT: Please set the missing environment variables either in your shell or in the pcfconfig"
+    echo "             configuration file ~/.pcfconfig and set all variables with the 'export' notation"
+    echo "             ie. => export AZURE_PKS_TLS_CERTIFICATE=/home/demouser/certs/cert.pem"
+    echo "  --------------------------------------------------------------------------------------------------------------"
+    exit 1
+  fi
+}
+
+pivnetAPI() {
+  REFRESH_TOKEN="$1"
+  token=$(curl -X POST https://network.pivotal.io/api/v2/authentication/access_tokens \
+               -d "{\"refresh_token\":\"$REFRESH_TOKEN\"}" 2>/dev/null | jq -r '.access_token')
+  if [ "${token}" == "" -o "${token}" == "null" ]; then return 1; fi
+
+  # --- LOGIN INTO PIVNET ---
+  curl -X GET https://network.pivotal.io/api/v2/authentication -H "Authorization: Bearer $token"
+
+  # --- PIVNET ACCESS TEST ---
+  if [ "${2}" == "" ]; then
+    return 0
+  fi
+
+  curl -H "Authorization: Bearer $token" -X $2 https://network.pivotal.io/api/v2/$3
+
+  return 0
+}
+
+write_line() {
+  messageTitle "----------------------------------------------------------------------------------------------------------------"
+}
+
+createENVfile() {
+  dep="$1"
+  envFile="$2"
+
+  rm -f $env
+  . ${TANZU_DEMO_HUB}/deployments/$dep
+
+  cat ${TANZU_DEMO_HUB}/deployments/$dep | sed -e '/^$/d' -e '/^#/d' -e 's/#.*$//g' > $envFile
+
+  echo "PCF_DEPLOYMENT_DEBUG=$PCF_DEPLOYMENT_DEBUG"                              >> $envFile
+  echo "AWS_HOSTED_ZONE_ID=$AWS_HOSTED_ZONE_ID"                                  >> $envFile
+  echo "AWS_HOSTED_DNS_DOMAIN=$AWS_HOSTED_DNS_DOMAIN"                            >> $envFile
+  echo "PCF_PIVNET_TOKEN=$PCF_PIVNET_TOKEN"                                      >> $envFile
+
+  echo "PCF_TILE_PKS_ADMIN_USER=$PCF_TILE_PKS_ADMIN_USER"                        >> $envFile
+  echo "PCF_TILE_PKS_ADMIN_PASS=$PCF_TILE_PKS_ADMIN_PASS"                        >> $envFile
+  echo "PCF_TILE_PKS_ADMIN_EMAIL=$PCF_TILE_PKS_ADMIN_EMAIL"                      >> $envFile
+  echo "PCF_TILE_PAS_ADMIN_USER=$PCF_TILE_PAS_ADMIN_USER"                        >> $envFile
+  echo "PCF_TILE_PAS_ADMIN_PASS=$PCF_TILE_PAS_ADMIN_PASS"                        >> $envFile
+  echo "PCF_TILE_PAS_ADMIN_EMAIL=$PCF_TILE_PAS_ADMIN_EMAIL"                      >> $envFile
+
+  if [ "${TDH_DEPLOYMENT_CLOUD}" == "GCP" ]; then
+    #echo "GCP_SERVICE_ACCOUNT=/tmp/$(basename $GCP_SERVICE_ACCOUNT)"             >> $envFile
+    echo "GCP_REGION=\"$GCP_REGION\""                                            >> $envFile
+    echo "GCP_PROJECT=\"$GCP_PROJECT\""                                          >> $envFile
+
+    echo "PCF_TERRAFORMS_TEMPLATE_BUNDLE=\"$PCF_TERRAFORMS_TEMPLATE_BUNDLE\""    >> $envFile
+    echo "PCF_TERRAFORMS_TEMPLATE_NAME=\"$PCF_TERRAFORMS_TEMPLATE_NAME\""        >> $envFile
+    echo "PCF_TERRAFORMS_TEMPLATE_VERSION=\"$PCF_TERRAFORMS_TEMPLATE_VERSION\""  >> $envFile
+
+    if [ "${PCF_TILE_PKS_DEPLOY}" == "true" ]; then
+      if [ "${GCP_PKS_TLS_CERTIFICATE}" != "" -a "${GCP_PKS_TLS_FULLCHAIN}" != "" -a \
+           "${GCP_PKS_TLS_PRIVATE_KEY}" != "" ]; then
+
+        echo "TLS_CERTIFICATE=\"$GCP_PKS_TLS_CERTIFICATE\""              >> $envFile
+        echo "TLS_FULLCHAIN=\"$GCP_PKS_TLS_FULLCHAIN\""                  >> $envFile
+        echo "TLS_PRIVATE_KEY=\"$GCP_PKS_TLS_PRIVATE_KEY\""              >> $envFile
+      fi
+    fi
+
+    if [ "${PCF_TILE_PAS_DEPLOY}" == "true" ]; then
+      if [ "${GCP_PAS_TLS_CERTIFICATE}" != "" -a "${GCP_PAS_TLS_FULLCHAIN}" != "" -a \
+           "${GCP_PAS_TLS_PRIVATE_KEY}" != "" ]; then
+
+        echo "TLS_CERTIFICATE=\"$GCP_PAS_TLS_CERTIFICATE\""              >> $envFile
+        echo "TLS_FULLCHAIN=\"$GCP_PAS_TLS_FULLCHAIN\""                  >> $envFile
+        echo "TLS_PRIVATE_KEY=\"$GCP_PAS_TLS_PRIVATE_KEY\""              >> $envFile
+      fi
+    fi
+
+    if [ "${PCF_TILE_HARBOR_DEPLOY}" == "true" ]; then
+      echo "PCF_TILE_HARBOR_ADMIN_PASS=\"$PCF_TILE_HARBOR_ADMIN_PASS\"" >> $envFile
+    fi
+    if [ "${PCF_TILE_PBS_DEPLOY}" == "true" ]; then
+      echo "PCF_TILE_PBS_DEPLOY=\"$PCF_TILE_PBS_DEPLOY\""               >> $envFile
+      echo "PCF_TILE_PBS_NAME=\"$PCF_TILE_PBS_NAME\""                   >> $envFile
+      echo "PCF_TILE_PBS_SLUG=\"$PCF_TILE_PBS_SLUG\""                   >> $envFile
+      echo "PCF_TILE_PBS_VERSION=\"$PCF_TILE_PBS_VERSION\""             >> $envFile
+      echo "PCF_TILE_PBS_ADMIN_USER=\"$PCF_TILE_PBS_ADMIN_USER\""       >> $envFile
+      echo "PCF_TILE_PBS_ADMIN_PASS=\"$PCF_TILE_PBS_ADMIN_PASS\""       >> $envFile
+      echo "PCF_TILE_PBS_ADMIN_EMAIL=\"$PCF_TILE_PBS_ADMIN_EMAIL\""     >> $envFile
+      echo "PCF_TILE_PBS_DOCKER_REPO=\"$PCF_TILE_PBS_DOCKER_REPO\""     >> $envFile
+      echo "PCF_TILE_PBS_DOCKER_USER=\"$PCF_TILE_PBS_DOCKER_USER\""     >> $envFile
+      echo "PCF_TILE_PBS_DOCKER_PASS=\"$PCF_TILE_PBS_DOCKER_PASS\""     >> $envFile
+      echo "PCF_TILE_PBS_GITHUB_REPO=\"$PCF_TILE_PBS_GITHUB_REPO\""     >> $envFile
+      echo "PCF_TILE_PBS_GITHUB_USER=\"$PCF_TILE_PBS_GITHUB_USER\""     >> $envFile
+      echo "PCF_TILE_PBS_GITHUB_PASS=\"$PCF_TILE_PBS_GITHUB_PASS\""     >> $envFile
+    fi
+  fi
+
+  if [ "${TDH_DEPLOYMENT_CLOUD}" == "AWS" ]; then
+    echo "AWS_ACCESS_KEY=\"$AWS_ACCESS_KEY\""                                    >> $envFile
+    echo "AWS_SECRET_KEY=\"$AWS_SECRET_KEY\""                                    >> $envFile
+    echo "AWS_REGION=\"$AWS_REGION\""                                            >> $envFile
+
+    echo "PCF_TERRAFORMS_TEMPLATE_BUNDLE=\"$PCF_TERRAFORMS_TEMPLATE_BUNDLE\""    >> $envFile
+    echo "PCF_TERRAFORMS_TEMPLATE_NAME=\"$PCF_TERRAFORMS_TEMPLATE_NAME\""        >> $envFile
+    echo "PCF_TERRAFORMS_TEMPLATE_VERSION=\"$PCF_TERRAFORMS_TEMPLATE_VERSION\""  >> $envFile
+
+    if [ "${PCF_TILE_PKS_DEPLOY}" == "true" ]; then
+      if [ "${AWS_PKS_TLS_CERTIFICATE}" != "" -a "${AWS_PKS_TLS_FULLCHAIN}" != "" -a \
+           "${AWS_PKS_TLS_PRIVATE_KEY}" != "" ]; then
+
+        echo "TLS_CERTIFICATE=\"$AWS_PKS_TLS_CERTIFICATE\""              >> $envFile
+        echo "TLS_FULLCHAIN=\"$AWS_PKS_TLS_FULLCHAIN\""                  >> $envFile
+        echo "TLS_PRIVATE_KEY=\"$AWS_PKS_TLS_PRIVATE_KEY\""              >> $envFile
+      fi
+    fi
+
+    if [ "${PCF_TILE_PAS_DEPLOY}" == "true" ]; then
+      if [ "${AWS_PAS_TLS_CERTIFICATE}" != "" -a "${AWS_PAS_TLS_FULLCHAIN}" -o \
+           "${AWS_PAS_TLS_PRIVATE_KEY}" != "" ]; then
+
+        echo "TLS_CERTIFICATE=\"$AWS_PAS_TLS_CERTIFICATE\""              >> $envFile
+        echo "TLS_FULLCHAIN=\"$AWS_PAS_TLS_FULLCHAIN\""                  >> $envFile
+        echo "TLS_PRIVATE_KEY=\"$AWS_PAS_TLS_PRIVATE_KEY\""              >> $envFile
+      fi
+    fi
+
+    if [ "${PCF_TILE_HARBOR_DEPLOY}" == "true" ]; then
+      echo "PCF_TILE_HARBOR_ADMIN_PASS=\"$PCF_TILE_HARBOR_ADMIN_PASS\"" >> $envFile
+    fi
+
+    if [ "${PCF_TILE_PBS_DEPLOY}" == "true" ]; then
+      echo "PCF_TILE_PBS_DEPLOY=\"$PCF_TILE_PBS_DEPLOY\""               >> $envFile
+      echo "PCF_TILE_PBS_NAME=\"$PCF_TILE_PBS_NAME\""                   >> $envFile
+      echo "PCF_TILE_PBS_SLUG=\"$PCF_TILE_PBS_SLUG\""                   >> $envFile
+      echo "PCF_TILE_PBS_VERSION=\"$PCF_TILE_PBS_VERSION\""             >> $envFile
+      echo "PCF_TILE_PBS_ADMIN_USER=\"$PCF_TILE_PBS_ADMIN_USER\""       >> $envFile
+      echo "PCF_TILE_PBS_ADMIN_PASS=\"$PCF_TILE_PBS_ADMIN_PASS\""       >> $envFile
+      echo "PCF_TILE_PBS_ADMIN_EMAIL=\"$PCF_TILE_PBS_ADMIN_EMAIL\""     >> $envFile
+      echo "PCF_TILE_PBS_DOCKER_REPO=\"$PCF_TILE_PBS_DOCKER_REPO\""     >> $envFile
+      echo "PCF_TILE_PBS_DOCKER_USER=\"$PCF_TILE_PBS_DOCKER_USER\""     >> $envFile
+      echo "PCF_TILE_PBS_DOCKER_PASS=\"$PCF_TILE_PBS_DOCKER_PASS\""     >> $envFile
+      echo "PCF_TILE_PBS_GITHUB_REPO=\"$PCF_TILE_PBS_GITHUB_REPO\""     >> $envFile
+      echo "PCF_TILE_PBS_GITHUB_USER=\"$PCF_TILE_PBS_GITHUB_USER\""     >> $envFile
+      echo "PCF_TILE_PBS_GITHUB_PASS=\"$PCF_TILE_PBS_GITHUB_PASS\""     >> $envFile
+    fi
+  fi
+
+  if [ "${TDH_DEPLOYMENT_CLOUD}" == "Azure" ]; then
+    echo "AZURE_SUBSCRIPTION_ID=\"$AZURE_SUBSCRIPTION_ID\""                      >> $envFile
+    echo "AZURE_TENANT_ID=\"$AZURE_TENANT_ID\""                                  >> $envFile
+    echo "AZURE_CLIENT_ID=\"$AZURE_CLIENT_ID\""                                  >> $envFile
+    echo "AZURE_CLIENT_SECRET=\"$AZURE_CLIENT_SECRET\""                          >> $envFile
+    echo "AZURE_REGION=\"$AZURE_REGION\""                                        >> $envFile
+
+    echo "PCF_TERRAFORMS_TEMPLATE_BUNDLE=\"$PCF_TERRAFORMS_TEMPLATE_BUNDLE\""    >> $envFile
+    echo "PCF_TERRAFORMS_TEMPLATE_NAME=\"$PCF_TERRAFORMS_TEMPLATE_NAME\""        >> $envFile
+    echo "PCF_TERRAFORMS_TEMPLATE_VERSION=\"$PCF_TERRAFORMS_TEMPLATE_VERSION\""  >> $envFile
+
+    if [ "${PCF_TILE_PKS_DEPLOY}" == "true" ]; then
+      if [ "${AZURE_PKS_TLS_CERTIFICATE}" != "" -a "${AZURE_PKS_TLS_FULLCHAIN}" -o \
+           "${AZURE_PKS_TLS_PRIVATE_KEY}" != "" ]; then
+
+        echo "TLS_CERTIFICATE=\"$AZURE_PKS_TLS_CERTIFICATE\""           >> $envFile
+        echo "TLS_FULLCHAIN=\"$AZURE_PKS_TLS_FULLCHAIN\""               >> $envFile
+        echo "TLS_PRIVATE_KEY=\"$AZURE_PKS_TLS_PRIVATE_KEY\""           >> $envFile
+      fi
+    fi
+
+    if [ "${PCF_TILE_PAS_DEPLOY}" == "true" ]; then
+      if [ "${AZURE_PAS_TLS_CERTIFICATE}" != "" -a "${AZURE_PAS_TLS_FULLCHAIN}" -o \
+           "${AZURE_PAS_TLS_PRIVATE_KEY}" != "" ]; then
+
+        echo "TLS_CERTIFICATE=\"$AZURE_PAS_TLS_CERTIFICATE\""           >> $envFile
+        echo "TLS_FULLCHAIN=\"$AZURE_PAS_TLS_FULLCHAIN\""               >> $envFile
+        echo "TLS_PRIVATE_KEY=\"$AZURE_PAS_TLS_PRIVATE_KEY\""           >> $envFile
+      fi
+    fi
+
+    if [ "${PCF_TILE_HARBOR_DEPLOY}" == "true" ]; then
+      echo "PCF_TILE_HARBOR_ADMIN_PASS=\"$PCF_TILE_HARBOR_ADMIN_PASS\"" >> $envFile
+    fi
+
+    if [ "${PCF_TILE_PBS_DEPLOY}" == "true" ]; then
+      echo "PCF_TILE_PBS_DEPLOY=\"$PCF_TILE_PBS_DEPLOY\""               >> $envFile
+      echo "PCF_TILE_PBS_NAME=\"$PCF_TILE_PBS_NAME\""                   >> $envFile
+      echo "PCF_TILE_PBS_SLUG=\"$PCF_TILE_PBS_SLUG\""                   >> $envFile
+      echo "PCF_TILE_PBS_VERSION=\"$PCF_TILE_PBS_VERSION\""             >> $envFile
+      echo "PCF_TILE_PBS_ADMIN_USER=\"$PCF_TILE_PBS_ADMIN_USER\""       >> $envFile
+      echo "PCF_TILE_PBS_ADMIN_PASS=\"$PCF_TILE_PBS_ADMIN_PASS\""       >> $envFile
+      echo "PCF_TILE_PBS_ADMIN_EMAIL=\"$PCF_TILE_PBS_ADMIN_EMAIL\""     >> $envFile
+      echo "PCF_TILE_PBS_DOCKER_REPO=\"$PCF_TILE_PBS_DOCKER_REPO\""     >> $envFile
+      echo "PCF_TILE_PBS_DOCKER_USER=\"$PCF_TILE_PBS_DOCKER_USER\""     >> $envFile
+      echo "PCF_TILE_PBS_DOCKER_PASS=\"$PCF_TILE_PBS_DOCKER_PASS\""     >> $envFile
+      echo "PCF_TILE_PBS_GITHUB_REPO=\"$PCF_TILE_PBS_GITHUB_REPO\""     >> $envFile
+      echo "PCF_TILE_PBS_GITHUB_USER=\"$PCF_TILE_PBS_GITHUB_USER\""     >> $envFile
+      echo "PCF_TILE_PBS_GITHUB_PASS=\"$PCF_TILE_PBS_GITHUB_PASS\""     >> $envFile
+    fi
+  fi
+}
+
+configureJumpHost() {
+  GITTDH="https://github.com/pivotal-sadubois/tanzu-demo-hub.git"
+  TDHHOME="${SSH_HOME}/tanzu-demo-hub"
+
+  messagePrint " - Verify SSH Access" "success"
+  messagePrint " - Update GIT repo"   "$GITTDH"
+}
+
+
