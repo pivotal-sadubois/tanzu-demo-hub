@@ -1,10 +1,9 @@
 #!/bin/bash
 #https://docs.python-guide.org/dev/virtualenvs/
 
-export PATH=$PATH:/usr/bin:/usr/sbin:/usr/local/bin
 export PIVNET_TOKEN=$1
 #LOC=$(locale 2>/dev/null | grep LC_CTYPE | sed 's/"//g' | awk -F= '{ print $2 }') 
-#export LC_ALL=en_US.UTF-8
+export LC_ALL=en_US.UTF-8
 #export LC_ALL="$LOC"
 
 [ -d /usr/share/X11/locale/en_US.UTF-8 ] && export LC_ALL=en_US.UTF-8
@@ -32,7 +31,11 @@ if [ ! -x /usr/bin/certbot ]; then
   pip install certbot_dns_route53 
   pip install cryptography --upgrade
   #sudo apt install python3-pip -y
-  #sudo pip3 install certbot-dns-route53
+
+  sudo apt-get install python3-pip -y
+  sudo pip3 install certbot --upgrade
+  sudo pip3 install certbot-dns-route53
+  #pip install --upgrade pip
 fi
 
 if [ ! -x /usr/bin/zipinfo ]; then
