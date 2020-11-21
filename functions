@@ -64,7 +64,7 @@ sshEnvironment() {
   fi
 
   if [ "${TDH_DEPLOYMENT_CLOUD}" == "AWS" ]; then
-    SSH_HOST=$(aws ec2 --region=eu-central-1 describe-instances \
+    SSH_HOST=$(aws ec2 --region=$AWS_REGION describe-instances \
                      --filters Name=tag:sigs.k8s.io/cluster-api-provider-aws/role,Values="bastion" | \
              jq -r '.Reservations[].Instances[].PublicDnsName')
 
@@ -73,9 +73,9 @@ sshEnvironment() {
     SSH_OPTIONS="-o StrictHostKeyChecking=no -o RequestTTY=yes -o ServerAliveInterval=30"
     SSH_DISPLAY="-o StrictHostKeyChecking=no"
     SCP_OPTIONS="-o StrictHostKeyChecking=no"
-    SSH_COMMAND="ssh -q $SSH_OPTIONS -i $AWS_SSH_KEY_FILE ${SSH_USER}@${SSH_HOST}"
-    SCP_COMMAND="scp -r $SCP_OPTIONS -i $AWS_SSH_KEY_FILE"
-    SSH_DISPLAY="ssh -i ~/.ssh/${JUMP_HOST}.pem ${SSH_USER}@${SSH_HOST}"
+    SSH_COMMAND="ssh -q $SSH_OPTIONS -i $SSH_KEY_FILE ${SSH_USER}@${SSH_HOST}"
+    SCP_COMMAND="scp -r $SCP_OPTIONS -i $SSH_KEY_FILE"
+    SSH_DISPLAY="ssh -i $SSH_KEY_FILE ${SSH_USER}@${SSH_HOST}"
   fi
 
   if [ "${TDH_DEPLOYMENT_CLOUD}" == "GCP" ]; then
@@ -95,6 +95,11 @@ sshEnvironment() {
     SCP_COMMAND="scp -r $SCP_OPTIONS"
     SSH_DISPLAY="ssh ${SSH_USER}@${SSH_HOST}"
   fi
+
+  echo "--------------------------------- JUMP SERVER ACCESS ------------------------------------------------------"
+  echo "$SSH_DISPLAY"
+  echo "-----------------------------------------------------------------------------------------------------------"
+
 }
 
 checkCloudCLI() {

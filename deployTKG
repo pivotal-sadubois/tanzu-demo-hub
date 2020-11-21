@@ -7,6 +7,7 @@
 # ############################################################################################
 
 export TANZU_DEMO_HUB=$(cd "$(pwd)/$(dirname $0)"; pwd)
+export TDHPATH=$(cd "$(pwd)/$(dirname $0)"; pwd)
 export TDH_DEPLOYMENT_ENV_NAME="awstkg"
 export TDH_DEPLOYMENT_CLOUD="AWS"
 export DEPLOY_PCF_DEPLOYMENT=aws_tkg_default.cfg
@@ -28,11 +29,40 @@ listTemplates() {
   echo "-----------------------------------------------------------------------------------------------------------"
 }
 
+listDeployments() {
+  printf "%-25s %-5s %-10s %-10s %s\n" "CONFIURATION" "CLOUD" "MGMT-CLUSTER" "MAINTAINER" "DESCRIPTION"
+  echo "-----------------------------------------------------------------------------------------------------------"
+
+  for deployment in $(ls -1 ${TDHPATH}/deployments/*.cfg); do
+    PCF_TILE_PKS_VERSION=""
+    PCF_TILE_PAS_VERSION=""
+
+    . $deployment
+
+    dep=$(basename $deployment)
+
+    if [ "$PCF_TILE_PKS_VERSION" != "" ]; then
+      TILE="PKS $PCF_TILE_PKS_VERSION"
+    else
+      TILE="PAS $PCF_TILE_PAS_VERSION"
+    fi
+
+    printf "%-25s %-5s %-12s %-10s %s\n" $dep $TDH_DEPLOYMENT_CLOUD $TDH_MANAGEMENT_CLUSTER \
+           $TDH_DEPLOYMENT_MAINTAINER "$TDH_DEPLOYMENT_DESCRIPTION"
+  done
+
+  echo "-----------------------------------------------------------------------------------------------------------"
+}
+
 createCluster() {
+  SSH_KEY_NAME=vmware-cloud-tmc
+  SSH_KEY_FILE=~/.tanzu-demo-hub/KeyPair-${SSH_KEY_NAME}-${AWS_REGION}.pem
+
   #tmc cluster create -c sadubois-aws -g sadubois --name sadubois-demo -r eu-central-1 -s vmware-cloud-tmc 
   #tmc cluster create -t aws-ha -c my-credential -s my-ssh-key" #template
 
-  stt=$(tmc cluster list --group $TMC_CLUSTER_GROUP --name $TMC_CLUSTER_NAME --output json | \
+  #stt=$(tmc cluster list --group $TMC_CLUSTER_GROUP --name $TMC_CLUSTER_NAME --output json | \
+  stt=$(tmc cluster list --name $TMC_CLUSTER_NAME --output json | \
         jq -r '.clusters[].status.status.state.state')
   if [ "${stt}" == "DELETING" ]; then 
     echo "ERROR: Cluster $TMC_CLUSTER_NAME is currently beeing deleted, please wait and try again later"
@@ -45,18 +75,20 @@ createCluster() {
   messagePrint " - Cluster Group"            "$TMC_CLUSTER_GROUP"
   messagePrint " - Cluster Template"         "$DEPLOY_TKG_TEMPLATE"
   messagePrint " - AWS Credentials"          "$TMC_ACCOUNT_NAME_AWS"
-  messagePrint " - AWS SSH Key"              "$AWS_SSH_KEY_NAME"
-  messagePrint " - AWS SSH Key File"         "$AWS_SSH_KEY_FILE"
   messagePrint " - AWS Region"               "$AWS_REGION"
 
   if [ "${stt}" == "" ]; then 
+    echo "-----------------------------------------------------------------------------------------------------------"
     tmc cluster create -c $TMC_ACCOUNT_NAME_AWS -g $TMC_CLUSTER_GROUP --name $TMC_CLUSTER_NAME \
-        -s $AWS_SSH_KEY_NAME -t $DEPLOY_TKG_TEMPLATE -r $AWS_REGION
+        -s $SSH_KEY_NAME --management-cluster-name $TDH_MANAGEMENT_CLUSTER -r $AWS_REGION \
+        --provisioner-name $TMC_ACCOUNT_NAME_AWS
+    echo "-----------------------------------------------------------------------------------------------------------"
   fi
 
   while [ 1 ]; do
-    stt=$(tmc cluster list --group $TMC_CLUSTER_GROUP --name $TMC_CLUSTER_NAME --output json | \
-         jq -r '.clusters[].status.status.state.state')
+    #stt=$(tmc cluster list --group $TMC_CLUSTER_GROUP --name $TMC_CLUSTER_NAME --output json | \
+    stt=$(tmc cluster list --name $TMC_CLUSTER_NAME --output json | \
+         jq -r '.clusters[].status.phase')
     if [ "${stt}" != "CREATING" ]; then break; fi
  
     sleep 60
@@ -125,23 +157,37 @@ while [ "$1" != "" ]; do
 done
 
 if [ "${DEPLOY_TKG_TEMPLATE}" == "" ]; then
-  listTemplates
+  #listTemplates
+  listDeployments
   usage; exit 0
 fi
 
+# --- VERIFY DEPLOYMENT ---
+if [ ! -f ${TDHPATH}/deployments/${DEPLOY_TKG_TEMPLATE} ]; then
+  echo "ERROR: Deployment file $pcf_deployment can not be found in ${TDHPATH}/deployments"
+  exit 1
+fi
 
-if [ 1 -eq 1 ]; then 
+
+cnt=$(egrep -c "^TDH_DEPLOYMENT_CLOUD=" ${TDHPATH}/deployments/$DEPLOY_TKG_TEMPLATE)
+if [ $cnt -eq 0 ]; then
+  echo "ERROR: ${TDHPATH}/deployments/$DEPLOY_TKG_TEMPLATE is not a correct TANZU-DEMO-HUB deployment configuration file"
+  exit 1
+else
   missing_variables=0
+  .  ${TDHPATH}/deployments/${DEPLOY_TKG_TEMPLATE}
 
   # --- CHECK ENVIRONMENT VARIABLES ---
-  if [ -f ~/.tanzu-demo-hub ]; then
-    . ~/.tanzu-demo-hub
+  if [ -f ~/.tanzu-demo-hub.cfg ]; then
+    . ~/.tanzu-demo-hub.cfg
   fi
 
   # CHECK AWS ACCOUNTS
-  if [ 1 -eq 1 ]; then 
-    if [ "${AWS_ACCESS_KEY}" == "" -o "${AWS_SECRET_KEY}" == "" -o "${AWS_REGION}" == "" -o "${AWS_SSH_KEY_NAME}" == "" ]; then
+  if [ "$TDH_DEPLOYMENT_CLOUD" == "AWS" ]; then 
+    if [ "${AWS_ACCESS_KEY}" == "" -o "${AWS_SECRET_KEY}" == "" -o "${AWS_REGION}" == "" ]; then
       missing_variables=1
+
+
       echo ""
       echo "  MISSING ENVIRONMENT-VARIABES  DESCRIPTION        "
       echo "  --------------------------------------------------------------------------------------------------------------"
@@ -179,27 +225,75 @@ if [ 1 -eq 1 ]; then
   fi
 fi
 
-#"KeyFingerprint": "a8:c4:01:2b:12:7e:0d:8f:56:8c:38:80:cf:8b:6d:53:13:9c:28:cd",
-#aws ec2 --region=eu-central-1 create-key-pair --dry-run --key-name sacha
-#/tmp/key.pem
+checkKeyPairs() {
+  SSH_KEY_NAME=vmware-cloud-tmc
+  SSH_KEY_FILE=~/.tanzu-demo-hub/KeyPair-${SSH_KEY_NAME}-${AWS_REGION}.pem
 
-# --- VERIFY KEY-PAIR ---
-key=$(aws ec2 --region=$AWS_REGION describe-key-pairs | jq -r --arg key "$AWS_SSH_KEY_NAME" '.KeyPairs[] | select(.KeyName == $key).KeyFingerprint')
-if [ -f "${AWS_SSH_KEY_FILE}" ]; then
-  kfp=$(openssl pkcs8 -in $AWS_SSH_KEY_FILE -inform PEM -outform DER -topk8 -nocrypt | openssl sha1 -c)
+  #"KeyFingerprint": "a8:c4:01:2b:12:7e:0d:8f:56:8c:38:80:cf:8b:6d:53:13:9c:28:cd",
+  #aws ec2 --region=eu-central-1 create-key-pair --dry-run --key-name sacha
+  #/tmp/key.pem
 
-  if [ "${key}" != "${kfp}" ]; then
-    echo "ERROR: Fingerprint of AWS SSH Key-pair ($AWS_SSH_KEY_NAME) and the local PEM file: "
-    echo "       $AWS_SSH_KEY_FILE are not the same"
-    exit
+  if [ ! -d ~/.tanzu-demo-hub ] ; then mkdir ~/.tanzu-demo-hub; fi
+
+  # --- VERIFY KEY-PAIR ---
+  key=$(aws ec2 --region=$AWS_REGION describe-key-pairs | \
+        jq -r --arg key "$SSH_KEY_NAME" '.KeyPairs[] | select(.KeyName == $key).KeyFingerprint')
+
+  # --- CREATE ONE IF IT DOES NOT EXIST ---
+  if [ "${key}" == "" ]; then 
+    aws ec2 --region=$AWS_REGION create-key-pair --key-name vmware-cloud-tmc | \
+       jq -r '.KeyMaterial' > $SSH_KEY_FILE
+    chmod 600 $SSH_KEY_FILE
   fi
-fi
 
-#listClusters
+  if [ -f "${SSH_KEY_FILE}" ]; then
+    kfp=$(openssl pkcs8 -in $SSH_KEY_FILE -inform PEM -outform DER -topk8 -nocrypt | openssl sha1 -c)
+  
+    if [ "${key}" != "${kfp}" ]; then
+      echo "ERROR: Fingerprint of AWS SSH Key-pair ($SSH_KEY_NAME) and the local PEM file: "
+      echo "       $SSH_KEY_FILE are not the same"
+      exit
+    fi
+  fi
+}
 
+configureJumpHost() {
+  messagePrint "Configure Jump Server" "$SSH_HOST"
+
+  # --- WAIT UNTIL SSH DEAMON IS READY NO JUMPHOST ----
+  ret=1
+  while [ $ret -ne 0 ]; do
+    $SSH_COMMAND -n id > /dev/null 2>&1; ret=$?
+    [ $ret -ne 0 ] && sleep 10
+  done
+
+  GITREPO="https://github.com/pivotal-sadubois/tanzu-demo-hub.git"
+  TDHHOME="${SSH_HOME}/tanzu-demo-hub"
+
+  messagePrint " - Verify SSH Access" "success"
+  messagePrint " - Update GIT repo"   "$GITREPO"
+
+  $SSH_COMMAND -n "[ ! -d /home/ubuntu/tanzu-demo-hub ] && git clone $GITREPO > /dev/null 2>&1"
+  $SSH_COMMAND -n "[ -d /home/ubuntu/tanzu-demo-hub ] && cd $PCFHOME; git pull > /dev/null 2>&1"
+
+  # --- HOSTNAME ---
+  if [ "${PCF_DEPLOYMENT_CLOUD}" == "Azure" -o "${PCF_DEPLOYMENT_CLOUD}" == "AWS" ]; then
+    $SSH_COMMAND -n "sudo hostname $JUMP_HOST > /dev/null 2>&1"
+  fi
+
+}
+
+# --- VERYFY ACCESS TO CLOUD ---
 checkCloudCLI
+checkCloudAccess
+checkKeyPairs
+
+# --- CREATE TKG CLUSTER AND JUMP SERVER
 createCluster
 sshEnvironment
+configureJumpHost
+
+exit
 
   # --- CHECK CLOUD AND JUMP SERVER ---
   checkCloudAccess
