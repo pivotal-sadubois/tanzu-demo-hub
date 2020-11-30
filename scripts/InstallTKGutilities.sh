@@ -20,6 +20,7 @@ sudo apt-get remove docker docker-engine docker.io containerd runc -y > /dev/nul
 sudo apt install docker.io -y > /dev/null 2>&1
 sudo systemctl start docker > /dev/null 2>&1
 sudo systemctl enable docker > /dev/null 2>&1
+sudo chmod a+rw /var/run/docker.sock
 
 sudo chmod a+rw  /var/run/docker.sock
 docker run hello-world
