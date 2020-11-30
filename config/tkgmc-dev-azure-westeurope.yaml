@@ -1,0 +1,56 @@
+cert-manager-timeout: 30m0s
+overridesFolder: /Users/sdubois/.tkg/overrides
+NODE_STARTUP_TIMEOUT: 20m
+BASTION_HOST_ENABLED: "true"
+providers:
+  - name: cluster-api
+    url: /Users/sdubois/.tkg/providers/cluster-api/v0.3.10/core-components.yaml
+    type: CoreProvider
+  - name: aws
+    url: /Users/sdubois/.tkg/providers/infrastructure-aws/v0.5.5/infrastructure-components.yaml
+    type: InfrastructureProvider
+  - name: vsphere
+    url: /Users/sdubois/.tkg/providers/infrastructure-vsphere/v0.7.1/infrastructure-components.yaml
+    type: InfrastructureProvider
+  - name: azure
+    url: /Users/sdubois/.tkg/providers/infrastructure-azure/v0.4.8/infrastructure-components.yaml
+    type: InfrastructureProvider
+  - name: tkg-service-vsphere
+    url: /Users/sdubois/.tkg/providers/infrastructure-tkg-service-vsphere/v1.0.0/unused.yaml
+    type: InfrastructureProvider
+  - name: kubeadm
+    url: /Users/sdubois/.tkg/providers/bootstrap-kubeadm/v0.3.10/bootstrap-components.yaml
+    type: BootstrapProvider
+  - name: kubeadm
+    url: /Users/sdubois/.tkg/providers/control-plane-kubeadm/v0.3.10/control-plane-components.yaml
+    type: ControlPlaneProvider
+  - name: docker
+    url: /Users/sdubois/.tkg/providers/infrastructure-docker/v0.3.10/infrastructure-components.yaml
+    type: InfrastructureProvider
+images:
+    all:
+        repository: registry.tkg.vmware.run/cluster-api
+    cert-manager:
+        repository: registry.tkg.vmware.run/cert-manager
+        tag: v0.16.1_vmware.1
+release:
+    version: v1.2.0
+AZURE_CLIENT_ID: <encoded:ZGI5ZjlkNmMtNjU1OC00Y2Y2LWJjMzUtZDU2MDJmZDA5NmM3>
+AZURE_SSH_PUBLIC_KEY_B64: c3NoLXJzYSBBQUFBQjNOemFDMXljMkVBQUFBREFRQUJBQUFDQVFETVQyL2hXMXdtS2REeG5TU2dqblNKZW92eXFPL2lhR2F6bDBkVmJlUENPVkNsZmVqeUxBWXVsVXg1WnRmcmxnTmlyMXJpK1JGdmpRZVNGWC9aK2VRbUNzSGZQeEdjcy9ZelRBb2NWd2ZPaWN2VDNZb3gyYzIwV0RWQzR6cFJhZzRrcFRFNjlCUFJGOVkwM2YvMHNyU3BueWIrNi94YjhxQ29DV2tyaDhjc2p6VU5LV2pqd1FPSzJrWVF0NWRBNWVhTlNrbUllL2s0RGcvMDcyUkU3S21HeVc1NGFMVGVyRVJ2M2I1S3ZlWklXQ0ZTaGtiUmNVd21OenlSWmhjQU5MMGx5dTdIb3puc2VmOGYrKzI1UTJYa2F4T2VoMFlLVGUyM1VsRm1JRXJLWTVEcVJ4RXJ3MjBMOGxLYXNhL1RqSlFWcWxXU1NiQmRmaXd4dDVLV0FkMTFHaDAxN2F0WEd6Q3ZNbHVweitJdUVqRk0rdHFPREw3TWdidzdLZTlDU2VaRWRCZ1pGVDRET3J0cHR0TzZyNjk4VUNUZkdRdmN4ZU54cWw1MVI3RWlUVU9ZdVI1TjZvYTY4dFJEejRRTGtXaU9ISXVscEFhTlpNNi9lTG5jbHgvSzlqM1ovM0h0SUpLTDg0Z0lhc0lWS1NmL2xjR1ZjWmFTckJKY2ROaDlxQkZOZlo0MmNtQnJ3SUFLbysrSFBqWXhTdGdpYThaL1l4ZEtMaDIvK2xRdzR0a29CVFB1eVQ0dGVuMWUra2UrKzZzcWFwU3p6TndDUU9na0ZvcWZYbmVIUXliSVQ3RnFaOTVVKzN1UHdCSHprR0lwSXg3Z2g4RFc1TnhNZ2dyRml0VGNkUktmaGVjay9TeCt3RjhqaU1XTUczM1ZSN2NXZlVzVVJmSW1kSGVUQlE9PSBzZHVib2lzQHNkdWJvaXMtYTAxLnZtd2FyZS5jb20=
+AZURE_CONTROL_PLANE_MACHINE_TYPE: Standard_D2s_v3
+MACHINE_HEALTH_CHECK_ENABLED: "true"
+CLUSTER_CIDR: 100.96.0.0/11
+AZURE_LOCATION: westeurope
+AZURE_SUBSCRIPTION_ID: 1fc6fab2-068c-4d73-953d-d9c3f4a21f17
+AZURE_TENANT_ID: 29248f74-371f-4db2-9a50-c62a6877a0c1
+AZURE_CLIENT_SECRET: <encoded:flFfc2drNGFjX19HbXo1Z244bGN0TjZ1X04wTl8uVVAyZQ==>
+AZURE_NODE_MACHINE_TYPE: Standard_D2s_v3
+SERVICE_CIDR: 100.64.0.0/13
+tkg:
+    regions:
+      - name: sadubois-azure-tkg-mc
+        context: sadubois-azure-tkg-mc-admin@sadubois-azure-tkg-mc
+        file: /Users/sdubois/.kube-tkg/config
+        status: Success
+        isCurrentContext: false
+    current-region-context: ""
