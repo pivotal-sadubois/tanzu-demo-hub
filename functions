@@ -629,13 +629,23 @@ createENVfile() {
 }
 
 configureJumpHost() {
+  messagePrint "Configure Jump Server" "$SSH_HOST"
+
+  # --- WAIT UNTIL SSH DEAMON IS READY NO JUMPHOST ----
+  ret=1
+  while [ $ret -ne 0 ]; do
+    $SSH_COMMAND -n id > /dev/null 2>&1; ret=$?
+    [ $ret -ne 0 ] && sleep 10
+  done
+
   GITTDH="https://github.com/pivotal-sadubois/tanzu-demo-hub.git"
   TDHHOME="${SSH_HOME}/tanzu-demo-hub"
 
   messagePrint " - Verify SSH Access" "success"
   messagePrint " - Update GIT repo"   "$GITTDH"
+
   $SSH_COMMAND -n "[ ! -d /home/ubuntu/tanzu-demo-hub ] && git clone $GITTDH > /dev/null 2>&1"
-  $SSH_COMMAND -n "[ -d /home/ubuntu/tanzu-demo-hub ] && cd $TDHHOME; git pull > /dev/null 2>&1"
+  $SSH_COMMAND -n "[ -d /home/ubuntu/tanzu-demo-hub ] && cd $SSH_HOME/tanzu-demo-hub; git pull > /dev/null 2>&1"
 
   # --- HOSTNAME ---
 #  if [ "${TDH_DEPLOYMENT_CLOUD}" == "Azure" -o "${TDH_DEPLOYMENT_CLOUD}" == "AWS" ]; then
@@ -654,19 +664,19 @@ configureJumpHost() {
     $SCP_COMMAND -r ~/.aws ${SSH_USER}@${SSH_HOST}:$SSH_HOME > /dev/null 2>&1
   fi
 
-  # --- INSTALL TKG UTILITES ---
-  stt=$($SSH_COMMAND -n "[ -f /tkg_software_installed ] && echo true")
-echo gaga
-echo "stt:$stt"
+  # --- COPY SOFTWARE ---
+  stt=$($SSH_COMMAND -n "[ -d /home/ubuntu/tanzu-demo-hub/software ] && echo true")
   if [ "${stt}" == "" ]; then
     # --- COPY THE AWS DIRECTORY ---
-echo "$SCP_COMMAND -r ${TDHPATH}/software ${SSH_USER}@${SSH_HOST}:${SSH_HOME}/tanzu-demo-hub/"
     $SCP_COMMAND -r ${TDHPATH}/software ${SSH_USER}@${SSH_HOST}:${SSH_HOME}/tanzu-demo-hub/ > /dev/null 2>&1
+  fi
 
+  # --- INSTALL TKG UTILITES ---
+  stt=$($SSH_COMMAND -n "[ -f /tkg_software_installed ] && echo true")
+  if [ "${stt}" == "" ]; then
     messagePrint " - Install TKG Utilities"   "tkg, ytt, kapp, kbld, kubectl, kind"
-#    $SSH_COMMAND -n "[ -d $SSH_HOME/tanzu-demo-hub ] && chmod a+x ${TDHHOME}/scripts/InstallTKGutilities.sh && \
-#        sudo ${TDHHOME}/scripts/InstallTKGutilities.sh $PCF_PIVNET_TOKEN > /dev/null 2>&1"
-
+    $SSH_COMMAND -n "[ -d $SSH_HOME/tanzu-demo-hub ] && chmod a+x ${TDHHOME}/scripts/InstallTKGutilities.sh && \
+        sudo ${TDHHOME}/scripts/InstallTKGutilities.sh \"$SSH_HOME/tanzu-demo-hub\" > /dev/null 2>&1"
   fi
 
 }
