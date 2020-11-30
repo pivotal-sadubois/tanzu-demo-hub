@@ -6,6 +6,33 @@
 # Description ..: Tanzu Demo Hub - Cluster Installation
 # ############################################################################################
 
+waitCmd() {
+  read
+}
+
+prtHead() {
+  if [ "${tocindex}" == "" ]; then tocindex=1; else let tocindex=tocindex+1; fi
+  printf "%2d.) %s\n" $tocindex "$1"
+}
+
+prtText() {
+  if [ "${tocindex}" == "" ]; then tocindex=1; else let tocindex=tocindex+1; fi
+  printf "%2s   %s\n" "" "$1"
+}
+
+execCmd() {
+  bold=$(tput bold)
+  normal=$(tput sgr0)
+
+  echo -e "     => ${bold}$1${normal}\c"; read x
+  echo "     -----------------------------------------------------------------------------------------------------------"
+  eval "$1" 2>&1 | sed -e '/^$/d' -e 's/^/     /g'
+  #$1 | sed -e '/^$/d' -e 's/^/     /g'
+  echo "     -----------------------------------------------------------------------------------------------------------"
+  echo ""
+  if [ $? -ne 0 ]; then exit 1; fi
+}
+
 tmcCheckLogin() {
   tmc cluster list >/dev/null 2>&1
 
@@ -49,18 +76,26 @@ messagePrint() {
 }
 
 sshEnvironment() {
-  JUMP_HOST="jump-${PCF_DEPLOYMENT_ENV_NAME}.${AWS_HOSTED_DNS_DOMAIN}"
+  JUMP_HOST="jump-${TDH_TKGMC_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}"
 
-  if [ "${TDH_DEPLOYMENT_CLOUD}" == "Azure" ]; then
+  if [ "${TDH_DEPLOYMENT_CLOUD}" == "Azure" -o "${TDH_TKGMC_INFRASTRUCTURE}" ]; then
+    pip=""
+    while [ "$pip" == "" -o "$pip" == "null" ]; do
+      pip=$(az network public-ip list -g Admin --query "[?contains(name, 'AdminPublicIP_$TDH_TKGMC_ENVNAME')]" | \
+            jq -r '.[].ipAddress')
+      sleep 10
+    done
+
     SSH_USER=ubuntu
     SSH_HOME=/home/ubuntu
-    #SSH_HOST=$pip
+    SSH_PRIVATE_KEY=~/.tanzu-demo-hub/KeyPair-Azure.pem
+    SSH_HOST=$pip
     SSH_OPTIONS="-o StrictHostKeyChecking=no -o RequestTTY=yes -o ServerAliveInterval=240 -o ClientAliveInterval=240"
     SSH_OPTIONS="-o StrictHostKeyChecking=no"
     SCP_OPTIONS="-o StrictHostKeyChecking=no"
-    SSH_COMMAND="ssh -q $SSH_OPTIONS -i ${AWS_SSH_KEY_FILE} ${SSH_USER}@${SSH_HOST}"
-    SCP_COMMAND="scp -r $SCP_OPTIONS"
-    SSH_DISPLAY="ssh ${SSH_USER}@${SSH_HOST}"
+    SSH_COMMAND="ssh -q $SSH_OPTIONS -i ${SSH_PRIVATE_KEY} ${SSH_USER}@${SSH_HOST}"
+    SCP_COMMAND="scp -i ${SSH_PRIVATE_KEY} -r $SCP_OPTIONS"
+    SSH_DISPLAY="ssh $SSH_OPTIONS -i ${SSH_PRIVATE_KEY} ${SSH_USER}@${SSH_HOST}"
   fi
 
   if [ "${TDH_DEPLOYMENT_CLOUD}" == "AWS" ]; then
@@ -99,7 +134,6 @@ sshEnvironment() {
   echo "--------------------------------- JUMP SERVER ACCESS ------------------------------------------------------"
   echo "$SSH_DISPLAY"
   echo "-----------------------------------------------------------------------------------------------------------"
-
 }
 
 checkCloudCLI() {
@@ -234,16 +268,6 @@ checkCloudAccess() {
       messagePrint " - GCP Project"                  "$GCP_PROJECT"
       messagePrint " - GCP Region"                   "$GCP_REGION"
     fi
-
-#    if [ "$PCF_TILE_PKS_DEPLOY" == "true" ]; then
-#        verifyCertificate GCP PKS "$GCP_PKS_TLS_CERTIFICATE" "$GCP_PKS_TLS_FULLCHAIN" \
-#                                  "$GCP_PKS_TLS_PRIVATE_KEY" "$GCP_PKS_TLS_ROOT_CA"
-#    fi
-#
-#    if [ "$PCF_TILE_PAS_DEPLOY" == "true" ]; then
-#        verifyCertificate GCP PAS "$GCP_PAS_TLS_CERTIFICATE" "$GCP_PKS_TLS_FULLCHAIN" \
-#                                  "$GCP_PAS_TLS_PRIVATE_KEY" "$GCP_PAS_TLS_ROOT_CA"
-#    fi
   fi
 
   if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "AWS" ]; then
@@ -270,20 +294,10 @@ checkCloudAccess() {
       fi
     else
       messageTitle "Azure Access Credentials"
-      messagePrint " - AWS AccwssKey"                "$AWS_ACCESS_KEY"
-      messagePrint " - AWS SecretKey"                "$AWS_SECRET_KEY"
+      messagePrint " - AWS AccwssKey"                $(maskPassword "$AWS_ACCESS_KEY")
+      messagePrint " - AWS SecretKey"                $(maskPassword "$AWS_SECRET_KEY")
       messagePrint " - AWS Region"                   "$AWS_REGION"
     fi
-
-#    if [ "$PCF_TILE_PKS_DEPLOY" == "true" ]; then
-#        verifyCertificate AWS PKS "$AWS_PKS_TLS_CERTIFICATE" "$AWS_PKS_TLS_FULLCHAIN" \
-#                                  "$AWS_PKS_TLS_PRIVATE_KEY" "$AWS_PKS_TLS_ROOT_CA"
-#    fi
-#
-#    if [ "$PCF_TILE_PAS_DEPLOY" == "true" ]; then
-#        verifyCertificate AWS PAS "$AWS_PAS_TLS_CERTIFICATE" "$AWS_PAS_TLS_FULLCHAIN" \
-#                                  "$AWS_PAS_TLS_PRIVATE_KEY" "$AWS_PAS_TLS_ROOT_CA"
-#    fi
   fi
 
   if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "Azure" ]; then
@@ -305,10 +319,12 @@ checkCloudAccess() {
 
       if [ "${AZURE_CLIENT_ID}" == "" ]; then
         echo "  AZURE_CLIENT_ID                 (required) has the format <xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx>"
+        echo "                                  => az ad sp create-for-rbac --name \"TanzuDemoHub\" ## appId"
       fi
 
       if [ "${AZURE_CLIENT_SECRET}" == "" ]; then
         echo "  AZURE_CLIENT_SECRET             (required) has the format <xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx>"
+        echo "                                  => az ad sp create-for-rbac --name \"TanzuDemoHub\" ## password"
       fi
 
       if [ "${AZURE_REGION}" == "" ]; then
@@ -318,27 +334,28 @@ checkCloudAccess() {
       fi
     else
       messageTitle "Azure Access Credentials"
-      messagePrint " - Azure SubscriptionId"         "$AZURE_SUBSCRIPTION_ID"
-      messagePrint " - Azure TennantId"              "$AZURE_TENANT_ID"
-      messagePrint " - Azure ClientId"               "$AZURE_CLIENT_ID"
-      messagePrint " - Azure Client Secret"          "$AZURE_CLIENT_SECRET"
+      messagePrint " - Azure SubscriptionId"         $(maskPassword "$AZURE_SUBSCRIPTION_ID")
+      messagePrint " - Azure TennantId"              $(maskPassword "$AZURE_TENANT_ID")
+      messagePrint " - Azure ClientId"               $(maskPassword "$AZURE_CLIENT_ID")
+      messagePrint " - Azure Client Secret"          $(maskPassword "$AZURE_CLIENT_SECRET")
       messagePrint " - Azure Region"                 "$AZURE_REGION"
     fi
-
-#    if [ "$PCF_TILE_PKS_DEPLOY" == "true" ]; then
-#        verifyCertificate AZURE PKS "$AZURE_PKS_TLS_CERTIFICATE" "$AZURE_PKS_TLS_FULLCHAIN" \
-#                                    "$AZURE_PKS_TLS_PRIVATE_KEY" "$AZURE_PKS_TLS_ROOT_CA"
-#    fi
-#
-#    if [ "$PCF_TILE_PAS_DEPLOY" == "true" ]; then
-#        verifyCertificate AZURE PAS "$AZURE_PAS_TLS_CERTIFICATE" "$AZURE_PKS_TLS_FULLCHAIN" \
-#                                    "$AZURE_PAS_TLS_PRIVATE_KEY" "$AZURE_PAS_TLS_ROOT_CA"
-#    fi
   fi
 
-  if [ "${PCF_PIVNET_TOKEN}" == "" -o "${AWS_ACCESS_KEY}" == "" -o \
-       "${AWS_SECRET_KEY}" == "" -o "${AWS_HOSTED_DNS_DOMAIN}" == "" ]; then
+  if [ ${missing_variables} -eq 1 ]; then
+    echo "  --------------------------------------------------------------------------------------------------------------"
+    echo "  IMPORTANT: Please set the missing environment variables either in your shell or in the pcfconfig"
+    echo "             configuration file ~/.pcfconfig and set all variables with the 'export' notation"
+    echo "             ie. => export AZURE_PKS_TLS_CERTIFICATE=/home/demouser/certs/cert.pem"
+    echo "  --------------------------------------------------------------------------------------------------------------"
+    exit 1
+  fi
+}
 
+checkTDHAccess() {
+  missing_variables=0
+
+  if [ "${PCF_PIVNET_TOKEN}" == "" -o "${AWS_HOSTED_DNS_DOMAIN}" == "" ]; then
     missing_variables=1
     echo ""
     echo "  2MISSING ENVIRONMENT-VARIABES    DESCRIPTION        "
@@ -399,15 +416,6 @@ checkCloudAccess() {
       messagePrint " - AWS Route53 ZoneID"              "$AWS_HOSTED_ZONE_ID"
     fi
 
-#XXXXXX
-    #pivnetAPI $PCF_PIVNET_TOKEN GET products/pivotal-container-service/releases/112041/eula_acceptance
-    #pivnetAPI $PCF_PIVNET_TOKEN GET products/pivotal-container-service/releases
-    #pivnetAPI $PCF_PIVNET_TOKEN GET products/elastic-runtime/releases 2>/dev/null | jq -r '.releases[] | select(.version | scan("^2.6.6$")).id'
-
-    #pivnetAPI $PCF_PIVNET_TOKEN GET products/elastic-runtime/releases 2>/dev/null | \
-    #    jq -r '.releases[] | select(.version | scan("^2.6.6$")).id'
-    #pivnetAPI $PCF_PIVNET_TOKEN GET products/elastic-runtime/releases/467360 | jq
-
     pslug="pivotal-container-service"; pver="1.5"
     pslug="elastic-runtime"; pver="2.6.6"
     pslug="elastic-runtime"; pver="467928"
@@ -421,7 +429,8 @@ checkCloudAccess() {
     echo "  --------------------------------------------------------------------------------------------------------------"
     exit 1
   fi
-}
+
+} 
 
 pivnetAPI() {
   REFRESH_TOKEN="$1"
@@ -620,7 +629,6 @@ createENVfile() {
 }
 
 configureJumpHost() {
-echo hallo
   GITTDH="https://github.com/pivotal-sadubois/tanzu-demo-hub.git"
   TDHHOME="${SSH_HOME}/tanzu-demo-hub"
 
@@ -629,7 +637,6 @@ echo hallo
   $SSH_COMMAND -n "[ ! -d /home/ubuntu/tanzu-demo-hub ] && git clone $GITTDH > /dev/null 2>&1"
   $SSH_COMMAND -n "[ -d /home/ubuntu/tanzu-demo-hub ] && cd $TDHHOME; git pull > /dev/null 2>&1"
 
-echo "JUMP_HOST:$JUMP_HOST"
   # --- HOSTNAME ---
 #  if [ "${TDH_DEPLOYMENT_CLOUD}" == "Azure" -o "${TDH_DEPLOYMENT_CLOUD}" == "AWS" ]; then
 #    $SSH_COMMAND -n "sudo hostname $JUMP_HOST > /dev/null 2>&1"
@@ -647,7 +654,199 @@ echo "JUMP_HOST:$JUMP_HOST"
     $SCP_COMMAND -r ~/.aws ${SSH_USER}@${SSH_HOST}:$SSH_HOME > /dev/null 2>&1
   fi
 
+  # --- INSTALL TKG UTILITES ---
+  stt=$($SSH_COMMAND -n "[ -f /tkg_software_installed ] && echo true")
+echo gaga
+echo "stt:$stt"
+  if [ "${stt}" == "" ]; then
+    # --- COPY THE AWS DIRECTORY ---
+echo "$SCP_COMMAND -r ${TDHPATH}/software ${SSH_USER}@${SSH_HOST}:${SSH_HOME}/tanzu-demo-hub/"
+    $SCP_COMMAND -r ${TDHPATH}/software ${SSH_USER}@${SSH_HOST}:${SSH_HOME}/tanzu-demo-hub/ > /dev/null 2>&1
+
+    messagePrint " - Install TKG Utilities"   "tkg, ytt, kapp, kbld, kubectl, kind"
+#    $SSH_COMMAND -n "[ -d $SSH_HOME/tanzu-demo-hub ] && chmod a+x ${TDHHOME}/scripts/InstallTKGutilities.sh && \
+#        sudo ${TDHHOME}/scripts/InstallTKGutilities.sh $PCF_PIVNET_TOKEN > /dev/null 2>&1"
+
+  fi
 
 }
 
+route53createHostedZone() {
+  zone=$1
+
+  ZONE_ID=$(aws route53 list-hosted-zones-by-name --dns-name ${zone} | jq -r ".HostedZones[] | select(.Name | \
+            scan(\"^$zone.\")).Id")
+  if [ "${ZONE_ID}" != "" ]; then
+    route53deleteHostedZone $ZONE_ID
+  fi
+
+  aws route53 create-hosted-zone --name $zone --caller-reference "$(date)" \
+       --hosted-zone-config Comment="Managed by pcfconfig" > /dev/null 2>&1
+  if [ $? -ne 0 ]; then
+      echo "ERROR: failed to create AWS Route53 zone $ZONE_ID"
+      echo "       => aws route53 create-hosted-zone --name $zone --caller-reference \"$(date)\" \\"
+      echo "          --hosted-zone-config Comment=\"command-line version\""
+      exit 1
+  fi
+
+  ZONE_ID=$(aws route53 list-hosted-zones-by-name --dns-name ${zone} | jq -r ".HostedZones[] | select(.Name | \
+            scan(\"^$zone.\")).Id")
+  NAME_SERVERS=$(aws route53 get-hosted-zone --id $ZONE_ID | jq -r '.DelegationSet.NameServers[]')
+
+  # --- CREATE ZONE ---
+  route53setNSrecord $zone "$AWS_HOSTED_DNS_DOMAIN" "$NAME_SERVERS"
+}
+
+route53setNSrecord () {
+  hnm=$1; dom=$2; dns="$3"
+
+  ZONE_ID=$(aws route53 list-hosted-zones-by-name --dns-name ${dom} | jq -r ".HostedZones[] | select(.Name | \
+            scan(\"^$dom.\")).Id")
+  ZONE_ID_STR=$(echo "${ZONE_ID}" | awk -F'/' '{ print $NF }')
+  if [ "${ZONE_ID}" == "" ]; then
+    echo "ERROR: ZoneID for domain $dom can not be optained, please veriofy manually"
+    echo "       aws route53 list-hosted-zones-by-name --dns-name ${dom}"
+    exit 1
+  fi
+
+  DNS1=$(echo $dns | awk '{ print $1 }')
+  DNS2=$(echo $dns | awk '{ print $2 }')
+  DNS3=$(echo $dns | awk '{ print $3 }')
+  DNS4=$(echo $dns | awk '{ print $4 }')
+
+  TMPROUTE53=/tmp/$$_tmp_route53.json
+  echo "{"                                                   >  $TMPROUTE53
+  echo "  \"Comment\": \"CREATE/DELETE/UPSERT a record \","  >> $TMPROUTE53
+  echo "  \"Changes\": [{"                                   >> $TMPROUTE53
+  echo "  \"Action\": \"UPSERT\","                           >> $TMPROUTE53
+  echo "  \"ResourceRecordSet\": {"                          >> $TMPROUTE53
+  echo "    \"Name\": \"${hnm}\","                           >> $TMPROUTE53
+  echo "    \"Type\": \"NS\","                               >> $TMPROUTE53
+  echo "    \"TTL\": 300,"                                   >> $TMPROUTE53
+  echo "    \"ResourceRecords\": [ "                         >> $TMPROUTE53
+  echo "      { \"Value\": \"${DNS1}\" },"                   >> $TMPROUTE53
+  echo "      { \"Value\": \"${DNS2}\" },"                   >> $TMPROUTE53
+  echo "      { \"Value\": \"${DNS3}\" },"                   >> $TMPROUTE53
+  echo "      { \"Value\": \"${DNS4}\" }"                    >> $TMPROUTE53
+  echo "    ]"                                               >> $TMPROUTE53
+  echo "}}]"                                                 >> $TMPROUTE53
+  echo "}"                                                   >> $TMPROUTE53
+
+  aws route53 change-resource-record-sets --hosted-zone-id $ZONE_ID \
+      --change-batch file://${TMPROUTE53} > /dev/null 2>&1
+  if [ $? -ne 0 ]; then
+    echo "ERROR: failed to set DNS for $hnm"
+    echo "       => aws route53 change-resource-record-sets --hosted-zone-id \"${ZONE_ID}\" \\"
+    echo "              --change-batch file://${TMPROUTE53}"
+    cat /tmp/$$_zone_record
+    exit 1
+  fi
+}
+
+route53deleteHostedZone() {
+  ZONE_ID=$1
+  aws route53 list-resource-record-sets --hosted-zone-id $ZONE_ID | jq -c '.ResourceRecordSets[]' | \
+  while read -r resourcerecordset; do
+    read -r name type <<<$(echo $(jq -r '.Name,.Type' <<<"$resourcerecordset"))
+
+     if [ $type != "NS" -a $type != "SOA" ]; then
+        aws route53 change-resource-record-sets \
+          --hosted-zone-id $ZONE_ID \
+          --change-batch '{"Changes":[{"Action":"DELETE","ResourceRecordSet":
+          '"$resourcerecordset"'
+        }]}' \
+        --output text --query 'ChangeInfo.Id' >/dev/null 2>&1
+     fi
+  done
+
+  aws route53 delete-hosted-zone --id $ZONE_ID >/dev/null 2>&1
+  if [ $? -ne 0 ]; then
+    echo "ERROR: failed to delete AWS Route53 zone $ZONE_ID"
+    echo "       => aws route53 delete-hosted-zone --id $ZONE_ID"
+    #exit 1
+  fi
+}
+
+checkKeyPairs() {
+  SSH_KEY_NAME=vmware-cloud-tmc
+  SSH_KEY_FILE=~/.tanzu-demo-hub/KeyPair-${SSH_KEY_NAME}-${AWS_REGION}.pem
+
+  #"KeyFingerprint": "a8:c4:01:2b:12:7e:0d:8f:56:8c:38:80:cf:8b:6d:53:13:9c:28:cd",
+  #aws ec2 --region=eu-central-1 create-key-pair --dry-run --key-name sacha
+  #/tmp/key.pem
+
+  if [ ! -d ~/.tanzu-demo-hub ] ; then mkdir ~/.tanzu-demo-hub; fi
+
+  # --- VERIFY KEY-PAIR ---
+  key=$(aws ec2 --region=$AWS_REGION describe-key-pairs | \
+        jq -r --arg key "$SSH_KEY_NAME" '.KeyPairs[] | select(.KeyName == $key).KeyFingerprint')
+
+  # --- CREATE ONE IF IT DOES NOT EXIST ---
+  if [ "${key}" == "" ]; then
+    aws ec2 --region=$AWS_REGION create-key-pair --key-name vmware-cloud-tmc | \
+       jq -r '.KeyMaterial' > $SSH_KEY_FILE
+    chmod 600 $SSH_KEY_FILE
+  fi
+
+  if [ -f "${SSH_KEY_FILE}" ]; then
+    kfp=$(openssl pkcs8 -in $SSH_KEY_FILE -inform PEM -outform DER -topk8 -nocrypt | openssl sha1 -c)
+
+    if [ "${key}" != "${kfp}" ]; then
+      echo "ERROR: Fingerprint of AWS SSH Key-pair ($SSH_KEY_NAME) and the local PEM file: "
+      echo "       $SSH_KEY_FILE are not the same"
+      exit
+    fi
+  fi
+}
+
+maskPassword() {
+  echo "$1" | sed 's/[^-]/X/g'
+}
+
+route53getIPaddress() {
+  env=$1
+  dom=$2
+  hst="jump-${env}.${dom}."
+  ZONE_ID=$(aws route53 list-hosted-zones-by-name --dns-name ${dom} | jq -r ".HostedZones[] | select(.Name | \
+            scan(\"^$dom.\")).Id")
+  ZONE_ID_STR=$(echo "${ZONE_ID}" | awk -F'/' '{ print $NF }')
+
+  aws route53 list-resource-record-sets --hosted-zone-id $ZONE_ID_STR --query "ResourceRecordSets[?Name == '${hst}']" | \
+  jq -r '.[].ResourceRecords[].Value'
+}
+
+#route53setDNSrecord "$pip" "$JUMP_HOST" "$AWS_HOSTED_DNS_DOMAIN"
+route53setDNSrecord() {
+  ipa=$1; hnm=$2; dom=$3
+
+  ZONE_ID=$(aws route53 list-hosted-zones-by-name --dns-name ${dom} | jq -r '.HostedZones[0].Id')
+  ZONE_ID_STR=$(echo "${ZONE_ID}" | awk -F'/' '{ print $NF }')
+  if [ "${ZONE_ID}" == "" ]; then
+    echo "ERROR: ZoneID for domain $dom can not be optained, please veriofy manually"
+    echo "       aws route53 list-hosted-zones-by-name --dns-name ${dom}"
+    exit 1
+  fi
+
+cat << EOF | sed -e "s/FQHN/$hnm/g" -e "s/IPADDR/$ipa/g" > /tmp/$$_zone_record
+{
+            "Comment": "CREATE/DELETE/UPSERT a record ",
+            "Changes": [{
+            "Action": "UPSERT",
+                        "ResourceRecordSet": {
+                                    "Name": "FQHN",
+                                    "Type": "A",
+                                    "TTL": 300,
+                                 "ResourceRecords": [{ "Value": "IPADDR"}]
+}}]
+}
+EOF
+
+   aws route53 change-resource-record-sets --hosted-zone-id "${ZONE_ID}" --change-batch file:///tmp/$$_zone_record > /dev/null 2>&1
+   if [ $? -ne 0 ]; then
+     echo "ERROR: failed to set DNS for $hnm"
+     echo "       => aws route53 change-resource-record-sets --hosted-zone-id "${ZONE_ID}" --change-batch file:///tmp/$$_zone_record"
+     cat /tmp/$$_zone_record
+     exit 1
+   fi
+}
 
