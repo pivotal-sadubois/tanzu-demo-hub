@@ -865,8 +865,6 @@ createCluster() {
   messagePrint " - Cluster Name"             "$TDH_TKGMC_NAME"
   messagePrint " - Configuration File"       "${TDHPATH}/config/${TDH_TKGMC_CONFIG}"
 
-  InstallTKGmc.sh
-
   stt=$(tkg get mc --name $TDH_TKGMC_NAME -o json | jq -r '.[].status')
   if [ "${stt}" != "Success" ]; then
     echo "----------------------------------------------------------------------------------------------------------------"
