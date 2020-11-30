@@ -24,5 +24,10 @@ else
   . ${TDHPATH}/deployments/${DEPLOY_TKG_TEMPLATE}
 fi
 
+# --- CHECK ENVIRONMENT VARIABLES ---
+if [ -f ~/.tanzu-demo-hub.cfg ]; then
+  . ~/.tanzu-demo-hub.cfg
+fi
+
 createCluster 
 
