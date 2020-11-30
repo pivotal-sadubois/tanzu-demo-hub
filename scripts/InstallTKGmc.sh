@@ -11,6 +11,7 @@ export TDHPATH=$(cd "$(pwd)/$(dirname $0)/.."; pwd)
 export DEPLOY_TKG_TEMPLATE=$1
 
 echo "DEPLOY_TKG_TEMPLATE:$DEPLOY_TKG_TEMPLATE"
+echo "TANZU_DEMO_HUB:$TANZU_DEMO_HUB"
 echo "TDHPATH:$TDHPATH"
 
 . $TANZU_DEMO_HUB/functions
