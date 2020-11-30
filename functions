@@ -662,7 +662,15 @@ configureJumpHost() {
 
     # --- COPY THE AWS DIRECTORY ---
     $SCP_COMMAND -r ~/.aws ${SSH_USER}@${SSH_HOST}:$SSH_HOME > /dev/null 2>&1
+    $SCP_COMMAND -r ~/.azure ${SSH_USER}@${SSH_HOST}:$SSH_HOME > /dev/null 2>&1
+    $SCP_COMMAND -r ~/.tanzu-demo-hub ${SSH_USER}@${SSH_HOST}:$SSH_HOME > /dev/null 2>&1
+    $SCP_COMMAND -r ~/.tanzu-demo-hub.cfg ${SSH_USER}@${SSH_HOST}:$SSH_HOME > /dev/null 2>&1
   fi
+
+echo "xxxxxxxxx"
+    $SCP_COMMAND -r ~/.azure ${SSH_USER}@${SSH_HOST}:$SSH_HOME > /dev/null 2>&1
+    $SCP_COMMAND -r ~/.tanzu-demo-hub ${SSH_USER}@${SSH_HOST}:$SSH_HOME > /dev/null 2>&1
+    $SCP_COMMAND -r ~/.tanzu-demo-hub.cfg ${SSH_USER}@${SSH_HOST}:$SSH_HOME > /dev/null 2>&1
 
   # --- COPY SOFTWARE ---
   stt=$($SSH_COMMAND -n "[ -d /home/ubuntu/tanzu-demo-hub/software ] && echo true")
