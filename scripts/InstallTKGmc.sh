@@ -22,6 +22,9 @@ if [ ! -f ${TDHPATH}/deployments/${DEPLOY_TKG_TEMPLATE} ]; then
   exit 1
 else
   . ${TDHPATH}/deployments/${DEPLOY_TKG_TEMPLATE}
+
+echo "222 TDH_TKGMC_CONFIG:$TDH_TKGMC_CONFIG"
+echo ". ${TDHPATH}/deployments/${DEPLOY_TKG_TEMPLATE}"
 fi
 
 # --- CHECK ENVIRONMENT VARIABLES ---
