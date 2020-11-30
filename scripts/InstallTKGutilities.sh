@@ -16,10 +16,10 @@ mv tkg/ytt-linux-amd64-v0.30.0+vmware.1   /usr/local/bin/ytt    && chmod +x /usr
 mkdir $TDHPATH/extensions && cd $TDHPATH/extensions
 tar xfz $TDHPATH/software/tkg-extensions-manifests-v1.2.0-vmware.1.tar-2.gz
 
-sudo apt-get remove docker docker-engine docker.io containerd runc -y
-sudo apt install docker.io -y
-sudo systemctl start docker
-sudo systemctl enable docker
+sudo apt-get remove docker docker-engine docker.io containerd runc -y > /dev/null 2>&1
+sudo apt install docker.io -y > /dev/null 2>&1
+sudo systemctl start docker > /dev/null 2>&1
+sudo systemctl enable docker > /dev/null 2>&1
 
 sudo chmod a+rw  /var/run/docker.sock
 docker run hello-world
