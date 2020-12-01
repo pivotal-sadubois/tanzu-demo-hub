@@ -47,10 +47,5 @@ AZURE_CLIENT_SECRET: <encoded:flFfc2drNGFjX19HbXo1Z244bGN0TjZ1X04wTl8uVVAyZQ==>
 AZURE_NODE_MACHINE_TYPE: Standard_D2s_v3
 SERVICE_CIDR: 100.64.0.0/13
 tkg:
-    regions:
-      - name: sadubois-azure-tkg-mc
-        context: sadubois-azure-tkg-mc-admin@sadubois-azure-tkg-mc
-        file: /Users/sdubois/.kube-tkg/config
-        status: Success
-        isCurrentContext: false
+    regions: ""
     current-region-context: ""
