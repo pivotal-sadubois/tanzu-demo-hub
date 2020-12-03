@@ -144,9 +144,9 @@ else
   kubectl config use-context $con > /dev/null 2>&1
 fi
 
-echo "-----------------------------------------------------------------------------------------------------------"
-tkg get clusters
-echo "-----------------------------------------------------------------------------------------------------------"
+#echo "-----------------------------------------------------------------------------------------------------------"
+#tkg get clusters
+#echo "-----------------------------------------------------------------------------------------------------------"
 
 if [ "${TDH_TKGWC_INGRESS_CONTOUR}" == "true" ]; then 
 
@@ -156,16 +156,16 @@ if [ "${TDH_TKGWC_INGRESS_CONTOUR}" == "true" ]; then
     # --- INSTALL TMC EXTENSION MANAGER ---
     kubectl apply -f tmc-extension-manager.yaml >/dev/null 2>&1
     if [ $? -ne 0 ]; then 
-      messageText "Install Ingress Contour" "failed"
+      messagePrint "Install Ingress Contour" "failed"
       echo "ERROR: Installation of TMC Extension manager failed"
       echo "       => cd $TDHPATH/extensions/$TDH_TKGWC_EXTENSIONS"
       echo "       => kubectl apply -f tmc-extension-manager.yaml"
       exit
     else
-      messageText "Install Ingress Contour" "completed"
+      messagePrint "Install Ingress Contour" "completed"
     fi
   else
-    messageText "Verify Ingress Contour"  "installed/running"
+    messagePrint "Verify Ingress Contour"  "installed/running"
   fi
 
 #  kubectl get ns -o json | jq -r '.items[].metadata | select(.name == "tkg-system").uid'
