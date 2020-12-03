@@ -44,7 +44,7 @@ listDeployments() {
   printf "%-31s %-5s %-15s %-22s %-5s %s\n" "DEPLOYMENTS" "CLOUD" "REGION" "MGMT-CLUSTER" "PLAN" "status"
   echo "-----------------------------------------------------------------------------------------------------------"
 
-  for deployment in $(ls -1 ${TDHPATH}/deployments/tkgmc*.cfg); do
+  for deployment in $(ls -1 ${TDHPATH}/deployments/tkg-*.cfg); do
     . $deployment
 
     dep=$(basename $deployment)
