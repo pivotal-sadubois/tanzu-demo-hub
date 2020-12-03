@@ -137,6 +137,10 @@ fi
 
 # --- VERIFY TKG WORKLOAD CLUSTER ---
 stt=$(tkg get cluster -o json | jq -r '.[] | select(.name == "$TDH_TKGWC_NAME").status') 
+echo "STT:$stt"
+echo "TDH_TKGWC_NAME:$TDH_TKGWC_NAME"
+tkg get cluster -o json
+exit
 if [ "${stt}" == "" ]; then 
   messageTitle "Creating TKG Cluster"
   messagePrint " - Cluster Name"             "$TDH_TKGWC_NAME"
