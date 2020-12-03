@@ -148,17 +148,19 @@ else
   kubectl config use-context $con
 fi
 
+echo "-----------------------------------------------------------------------------------------------------------"
+tkg get clusters
+echo "-----------------------------------------------------------------------------------------------------------"
 
 if [ "${TDH_TKGWC_INGRESS_CONTOUR}" == "true" ]; then 
   if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "Azure" ]; then 
     
 
-
-
-
 echo "TDH_TKGMC_INFRASTRUCTURE:$TDH_TKGMC_INFRASTRUCTURE"
+echo "TDH_TKGWC_EXTENSIONS:$TDH_TKGWC_EXTENSIONS"
 echo gaga
 
+  fi
 fi
 
 exit
