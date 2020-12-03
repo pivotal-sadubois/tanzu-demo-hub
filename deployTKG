@@ -135,11 +135,22 @@ if [ "${isc}" != "true" ]; then
   tkg set mc -c "$con" $TDH_TKGMC_NAME > /dev/null 2>&1
 fi
 
+# --- VERIFY TKG WORKLOAD CLUSTER ---
+stt=$(tkg get cluster -o json | jq -r '.[] | select(.name == "$TDH_TKGWC_NAME").status') 
+if [ "${stt}" == "" ]; then 
+  messageTitle "Creating TKG Cluster"
+  messagePrint " - Cluster Name"             "$TDH_TKGWC_NAME"
+  tkg create cluster $TDH_TKGWC_NAME $TDH_OPTIONS
+else
+  messageTitle "Verify TKG Cluster"
+  messagePrint " - Cluster Name"             "$TDH_TKGWC_NAME"
+fi
+
+
 exit
 
 
 echo "tkg create cluster $TDH_TKGWC_NAME $TDH_OPTIONS"
-#tkg create cluster $TDH_TKGWC_NAME $TDH_OPTIONS
 
 exit
 
