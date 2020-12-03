@@ -136,7 +136,7 @@ if [ "${isc}" != "true" ]; then
 fi
 
 # --- VERIFY TKG WORKLOAD CLUSTER ---
-stt=$(tkg get cluster -o json | jq -r '.[] | select(.name == "$TDH_TKGWC_NAME").status') 
+stt=$(tkg get cluster -o json | jq -r --arg $TDH_TKGWC_NAME '.[] | select(.name == $key).status') 
 echo "STT:$stt"
 echo "TDH_TKGWC_NAME:$TDH_TKGWC_NAME"
 tkg get cluster -o json
