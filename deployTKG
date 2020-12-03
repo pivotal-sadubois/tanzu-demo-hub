@@ -1,10 +1,14 @@
 #!/bin/bash
 # ############################################################################################
-# File: ........: deployTKGwc
+# File: ........: deployTKG
 # Language .....: bash
 # Author .......: Sacha Dubois, VMware
 # Description ..: Tanzu Demo Hub - Deploy TKG Workload Cluster
 # ############################################################################################
+
+if [ ! -f /tkg_software_installed ]; then 
+  echo "ERROR: $0 Needs to run on a TKG Jump Host"; exit 
+fi
 
 export TANZU_DEMO_HUB=$(cd "$(pwd)/$(dirname $0)"; pwd)
 export TDHPATH=$(cd "$(pwd)/$(dirname $0)"; pwd)
