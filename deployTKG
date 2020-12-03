@@ -137,17 +137,17 @@ fi
 
 # --- VERIFY TKG WORKLOAD CLUSTER ---
 stt=$(tkg get cluster -o json | jq -r --arg key $TDH_TKGWC_NAME '.[] | select(.name == $key).status')
-echo "STT:$stt"
-echo "TDH_TKGWC_NAME:$TDH_TKGWC_NAME"
-tkg get cluster -o json
-exit
 if [ "${stt}" == "" ]; then 
-  messageTitle "Creating TKG Cluster"
-  messagePrint " - Cluster Name"             "$TDH_TKGWC_NAME"
+  messageTitle "Creating TKG Cluster ($TDH_TKGWC_NAME)"
+  messagePrint " - Install Ingress Contour"  "$TDH_TKGWC_INGRESS_CONTOUR" 
+  messagePrint " - Install Ingress NGINX"    "$TDH_TKGWC_INGRESS_NGINX" 
+
+  [ "$TDH_TKGWC_INGRESS_CONTOUR" == "true" ] &&   
   tkg create cluster $TDH_TKGWC_NAME $TDH_OPTIONS
 else
-  messageTitle "Verify TKG Cluster"
-  messagePrint " - Cluster Name"             "$TDH_TKGWC_NAME"
+  messageTitle "Verify TKG Cluster ($TDH_TKGWC_NAME)"
+  messagePrint " - Install Ingress Contour"  "$TDH_TKGWC_INGRESS_CONTOUR" 
+  messagePrint " - Install Ingress NGINX"    "$TDH_TKGWC_INGRESS_NGINX" 
 fi
 
 
