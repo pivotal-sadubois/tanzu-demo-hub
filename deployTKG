@@ -149,23 +149,23 @@ fi
 #echo "-----------------------------------------------------------------------------------------------------------"
 
 if [ "${TDH_TKGWC_INGRESS_CONTOUR}" == "true" ]; then 
-
+  messageTitle "Install Ingress Contour" 
   stt=$(kubectl get ns -o json | jq -r '.items[] | select(.metadata.name == "vmware-system-tmc").status.phase')
   if [ "${stt}" == "" ]; then
     cd extensions/$TDH_TKGWC_EXTENSIONS/extensions
     # --- INSTALL TMC EXTENSION MANAGER ---
     kubectl apply -f tmc-extension-manager.yaml >/dev/null 2>&1
     if [ $? -ne 0 ]; then 
-      messagePrint "Install Ingress Contour" "failed"
+      messagePrint "- Install Extension Manager" "failed"
       echo "ERROR: Installation of TMC Extension manager failed"
       echo "       => cd $TDHPATH/extensions/$TDH_TKGWC_EXTENSIONS"
       echo "       => kubectl apply -f tmc-extension-manager.yaml"
       exit
     else
-      messagePrint "Install Ingress Contour" "completed"
+      messagePrint "- Install TMC Extension Manager" "completed"
     fi
   else
-    messagePrint "Verify Ingress Contour"  "installed/running"
+    messagePrint "- Verify TMC Extension Manager"  "installed/running"
   fi
 
 #  kubectl get ns -o json | jq -r '.items[].metadata | select(.name == "tkg-system").uid'
