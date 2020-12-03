@@ -139,14 +139,23 @@ if [ "${stt}" == "" ]; then
 
   [ "$TDH_TKGWC_INGRESS_CONTOUR" == "true" ] &&   
   tkg create cluster $TDH_TKGWC_NAME $TDH_OPTIONS
+  tkg get credentials $TDH_TKGWC_NAME
+  kubectl config use-context $con
 else
   messageTitle "Verify TKG Cluster ($TDH_TKGWC_NAME)"
   messagePrint " - Install Ingress Contour"  "$TDH_TKGWC_INGRESS_CONTOUR" 
   messagePrint " - Install Ingress NGINX"    "$TDH_TKGWC_INGRESS_NGINX" 
+  kubectl config use-context $con
 fi
 
 
 if [ "${TDH_TKGWC_INGRESS_CONTOUR}" == "true" ]; then 
+  if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "Azure" ]; then 
+    
+
+
+
+
 echo "TDH_TKGMC_INFRASTRUCTURE:$TDH_TKGMC_INFRASTRUCTURE"
 echo gaga
 
