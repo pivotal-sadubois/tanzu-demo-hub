@@ -51,7 +51,7 @@ listDeployments() {
     sdp="undeployed"
     smc="inactive"
 
-    stt=$(tkg get mc $TDH_TKGMC_NAME -o json --config ${TDHPATH}/config/$TDH_TKGMC_CONFIG | jq -r '.[].status')
+    stt=$(tkg get mc -q $TDH_TKGMC_NAME -o json --config ${TDHPATH}/config/$TDH_TKGMC_CONFIG | jq -r '.[].status')
     if [ "${stt}" != "" ]; then 
       if [ "${stt}" == "Success" ]; then smc="deployed/active"; else smc="deployed/$stt"; fi
     else
