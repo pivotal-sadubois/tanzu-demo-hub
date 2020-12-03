@@ -87,7 +87,6 @@ if [ "${TKG_DEPLOYMENT}" == "" -o "${TKG_WC_CLUSTER}" == "" -o "${TDH_TKGWC_NAME
   usage; exit 0
 fi
 
-echo gaga3
 # --- VERIFY DEPLOYMENT ---
 if [ ! -f ${TDHPATH}/deployments/${TKG_DEPLOYMENT} ]; then
   echo "ERROR: Deployment file $TKG_DEPLOYMENT can not be found in ${TDHPATH}/deployments"
@@ -95,7 +94,6 @@ if [ ! -f ${TDHPATH}/deployments/${TKG_DEPLOYMENT} ]; then
 else
   . ${TDHPATH}/deployments/${TKG_DEPLOYMENT}
 fi
-echo gaga4
 
 # --- VERIFY DEPLOYMENT ---
 echo "${TDHPATH}/deployments/${TKG_WC_CLUSTER}"
@@ -119,9 +117,6 @@ if [ "${TDH_TKGWC_PLAN}" != "" ]; then TDH_OPTIONS="$TDH_OPTIONS --plan=$TDH_TKG
 if [ "${TDH_TKGWC_KUBERNETES}" != "" ]; then TDH_OPTIONS="$TDH_OPTIONS --kubernetes-version=$TDH_TKGWC_KUBERNETES"; fi
 if [ "${TDH_TKGWC_CONTROPLANE}" != "" ]; then TDH_OPTIONS="$TDH_OPTIONS --controlplane-machine-count=$TDH_TKGWC_CONTROPLANE"; fi
 if [ "${TDH_TKGWC_WORKERNODES}" != "" ]; then TDH_OPTIONS="$TDH_OPTIONS --worker-machine-count=$TDH_TKGWC_WORKERNODES"; fi
-
-echo "TDH_TKGWC_NAME:$TDH_TKGWC_NAME"
-echo "TDH_TKGMC_NAME:$TDH_TKGMC_NAME"
 
 # --- VERIFY TKG MANAGEMENT CLUSTER ---
 stt=$(tkg get mc --name $TDH_TKGMC_NAME -o json | jq -r '.[].status')
@@ -150,6 +145,12 @@ else
   messagePrint " - Install Ingress NGINX"    "$TDH_TKGWC_INGRESS_NGINX" 
 fi
 
+
+if [ "${TDH_TKGWC_INGRESS_CONTOUR}" == "true" ]; then 
+echo "TDH_TKGMC_INFRASTRUCTURE:$TDH_TKGMC_INFRASTRUCTURE"
+echo gaga
+
+fi
 
 exit
 
