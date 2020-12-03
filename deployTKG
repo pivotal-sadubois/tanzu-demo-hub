@@ -151,7 +151,7 @@ echo "--------------------------------------------------------------------------
 if [ "${TDH_TKGWC_INGRESS_CONTOUR}" == "true" ]; then 
   messagePrint " - Install Ingress Contour"  "$TDH_TKGWC_INGRESS_CONTOUR" 
 
-  cd extensions/$TDH_TKGWC_EXTENSIONS
+  cd extensions/$TDH_TKGWC_EXTENSIONS/extensions
   # --- INSTALL TMC EXTENSION MANAGER ---
   kubectl apply -f tmc-extension-manager.yaml >/dev/null 2>&1
   if [ $? -ne 0 ]; then 
