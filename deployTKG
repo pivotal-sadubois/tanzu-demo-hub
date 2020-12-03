@@ -134,12 +134,12 @@ fi
 stt=$(tkg get cluster -o json | jq -r --arg key $TDH_TKGWC_NAME '.[] | select(.name == $key).status')
 if [ "${stt}" == "" ]; then 
   messageTitle "Creating TKG Cluster ($TDH_TKGWC_NAME)"
-
-  [ "$TDH_TKGWC_INGRESS_CONTOUR" == "true" ] &&   
+  echo "-----------------------------------------------------------------------------------------------------------"
   tkg create cluster $TDH_TKGWC_NAME $TDH_OPTIONS
   tkg get credentials $TDH_TKGWC_NAME
   messagePrint "- Kubernetes Context:" "$TDH_TKGWC_NAME-admin@$TDH_TKGWC_NAME"
   kubectl config use-context $TDH_TKGWC_NAME-admin@$TDH_TKGWC_NAME > /dev/null 2>&1
+  echo "-----------------------------------------------------------------------------------------------------------"
 else
   messageTitle "Verify TKG Cluster ($TDH_TKGWC_NAME)"
   messagePrint "- Kubernetes Context:" "$TDH_TKGWC_NAME-admin@$TDH_TKGWC_NAME"
@@ -173,13 +173,13 @@ if [ "${TDH_TKGWC_INGRESS_CONTOUR}" == "true" ]; then
 
   # -- INSTALL KAPP CONTROLLER ---
   #kubectl config use-context $con > /dev/null 2>&1
-  kubectl apply -f kapp-controller.yaml
+  kubectl apply -f kapp-controller.yaml > /dev/null 2>&1
 
   # -- INSTALL CERT MANAGER ---
   stt=$(kubectl get ns -o json | jq -r '.items[] | select(.metadata.name == "cert-manager").status.phase')
   if [ "${stt}" == "" ]; then
     cd ${TDHPATH}/extensions/$TDH_TKGWC_EXTENSIONS/extensions
-    kubectl apply -f ../cert-manager/
+    kubectl apply -f ../cert-manager/ > /dev/null 2>&1
     if [ $? -ne 0 ]; then
       messagePrint "- Install Cert Manager" "failed"
       echo "ERROR: Installation of TMC Extension manager failed"
@@ -195,7 +195,7 @@ if [ "${TDH_TKGWC_INGRESS_CONTOUR}" == "true" ]; then
   stt=$(kubectl get ns -o json | jq -r '.items[] | select(.metadata.name == "tanzu-system-ingress").status.phase')
   if [ "${stt}" == "" ]; then
     cd ${TDHPATH}/extensions/$TDH_TKGWC_EXTENSIONS/extensions
-    kubectl apply -f ingress/contour/namespace-role.yaml
+    kubectl apply -f ingress/contour/namespace-role.yaml > /dev/null 2>&1
     if [ $? -ne 0 ]; then
       messagePrint "- Install Contour Ingress" "failed"
       echo "ERROR: Installation of Contour Ingress failed"
@@ -207,39 +207,35 @@ if [ "${TDH_TKGWC_INGRESS_CONTOUR}" == "true" ]; then
     fi
   fi
 
-
-  #Kapp controller
-#  kubectl get ns -o json | jq -r '.items[].metadata | select(.name == "tkg-system").uid'
-
-#NAME                STATUS   AGE
-#default             Active   5h20m
-#kube-node-lease     Active   5h20m
-#kube-public         Active   5h20m
-#kube-system         Active   5h20m
-#tkg-system-public   Active   5h19m
-#vmware-system-tmc   Active   18m
-
-#capi-kubeadm-bootstrap-system
-#capi-kubeadm-control-plane-system
-#capi-system
-#capi-webhook-system
-#capz-system
-#cert-manager
-#default
-#kube-node-lease
-#kube-public
-#kube-system
-#tkg-system
-#tkg-system-public
-#tkg-system-telemetry
-
+  while [ $(kubectl get pods -A | sed 1d | grep -v Running | wc -l) -ne 0 ]; do
+    sleep 10
+  done
 
   if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "Azure" ]; then 
-    
+    cd ${TDHPATH}/extensions/$TDH_TKGWC_EXTENSIONS/extensions
+    cp ingress/contour/azure/contour-data-values.yaml.example ingress/contour/azure/contour-data-values.yaml
+    echo "envoy:"                         >> ingress/contour/azure/contour-data-values.yaml
+    echo "  service:"                     >> ingress/contour/azure/contour-data-values.yaml
+    echo "    type: LoadBalancer"         >> ingress/contour/azure/contour-data-values.yaml
+  fi
+
+  stt=$(kubectl get secret contour-data-values -n tanzu-system-ingress -o json | jq -r '.metadata.name') 
+  if [ "${stt}" == "" ]; then
+    cd ${TDHPATH}/extensions/$TDH_TKGWC_EXTENSIONS/extensions
+    kubectl create secret generic contour-data-values --from-file=values.yaml=ingress/contour/azure/contour-data-values.yaml \
+            -n tanzu-system-ingress > /dev/null 2>&1
+  fi
+
+  cnt=$(kubectl get extension contour -n tanzu-system-ingress | egrep -c "^contour" )
+  if [ $cnt -eq 0 ]; then
+    kubectl apply -f ingress/contour/contour-extension.yaml > /dev/null 2>&1
+  fi
+
+  kubectl get app contour -n tanzu-system-ingress
 
 echo "TDH_TKGMC_INFRASTRUCTURE:$TDH_TKGMC_INFRASTRUCTURE"
 echo "TDH_TKGWC_EXTENSIONS:$TDH_TKGWC_EXTENSIONS"
-echo gaga
+exit
 
   fi
 fi
