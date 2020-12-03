@@ -134,18 +134,14 @@ fi
 stt=$(tkg get cluster -o json | jq -r --arg key $TDH_TKGWC_NAME '.[] | select(.name == $key).status')
 if [ "${stt}" == "" ]; then 
   messageTitle "Creating TKG Cluster ($TDH_TKGWC_NAME)"
-  messagePrint " - Install Ingress Contour"  "$TDH_TKGWC_INGRESS_CONTOUR" 
-  messagePrint " - Install Ingress NGINX"    "$TDH_TKGWC_INGRESS_NGINX" 
 
   [ "$TDH_TKGWC_INGRESS_CONTOUR" == "true" ] &&   
   tkg create cluster $TDH_TKGWC_NAME $TDH_OPTIONS
   tkg get credentials $TDH_TKGWC_NAME
-  kubectl config use-context $con
+  kubectl config use-context $con > /dev/null 2>&1
 else
   messageTitle "Verify TKG Cluster ($TDH_TKGWC_NAME)"
-  messagePrint " - Install Ingress Contour"  "$TDH_TKGWC_INGRESS_CONTOUR" 
-  messagePrint " - Install Ingress NGINX"    "$TDH_TKGWC_INGRESS_NGINX" 
-  kubectl config use-context $con
+  kubectl config use-context $con > /dev/null 2>&1
 fi
 
 echo "-----------------------------------------------------------------------------------------------------------"
@@ -153,6 +149,36 @@ tkg get clusters
 echo "-----------------------------------------------------------------------------------------------------------"
 
 if [ "${TDH_TKGWC_INGRESS_CONTOUR}" == "true" ]; then 
+  messagePrint " - Install Ingress Contour"  "$TDH_TKGWC_INGRESS_CONTOUR" 
+
+  cd extensions/$TDH_TKGWC_EXTENSIONS
+  # --- INSTALL TMC EXTENSION MANAGER ---
+  kubectl apply -f tmc-extension-manager.yaml >/dev/null 2>&1
+  if [ $? -ne 0 ]; then 
+    echo "ERROR: Installation of TMC Extension manager failed"
+    echo "       => cd $TDHPATH/extensions/$TDH_TKGWC_EXTENSIONS"
+    echo "       => kubectl apply -f tmc-extension-manager.yaml"
+    exit
+  fi
+  
+#  kubectl get ns -o json | jq -r '.items[].metadata | select(.name == "tkg-system").uid'
+
+#capi-kubeadm-bootstrap-system
+#capi-kubeadm-control-plane-system
+#capi-system
+#capi-webhook-system
+#capz-system
+#cert-manager
+#default
+#kube-node-lease
+#kube-public
+#kube-system
+#tkg-system
+#tkg-system-public
+#tkg-system-telemetry
+
+
+
   if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "Azure" ]; then 
     
 
@@ -165,6 +191,7 @@ fi
 
 exit
 
+  messagePrint " - Install Ingress NGINX"    "$TDH_TKGWC_INGRESS_NGINX" 
 
 echo "tkg create cluster $TDH_TKGWC_NAME $TDH_OPTIONS"
 
