@@ -140,12 +140,12 @@ if [ "${stt}" == "" ]; then
   tkg get credentials $TDH_TKGWC_NAME
   messagePrint "- Kubernetes Context:" "$TDH_TKGWC_NAME-admin@$TDH_TKGWC_NAME"
   #kubectl config use-context $con > /dev/null 2>&1
-  kubectl config use-context $TDH_TKGWC_NAME-admin@$TDH_TKGWC_NAME
+  kubectl config use-context $TDH_TKGWC_NAME-admin@$TDH_TKGWC_NAME > /dev/null 2>&1
 else
   messageTitle "Verify TKG Cluster ($TDH_TKGWC_NAME)"
   messagePrint "- Kubernetes Context:" "$TDH_TKGWC_NAME-admin@$TDH_TKGWC_NAME"
   #kubectl config use-context $con > /dev/null 2>&1
-  kubectl config use-context $TDH_TKGWC_NAME-admin@$TDH_TKGWC_NAME
+  kubectl config use-context $TDH_TKGWC_NAME-admin@$TDH_TKGWC_NAME > /dev/null 2>&1
 fi
 
 #echo "-----------------------------------------------------------------------------------------------------------"
@@ -188,23 +188,6 @@ if [ "${TDH_TKGWC_INGRESS_CONTOUR}" == "true" ]; then
 #tkg-system
 #tkg-system-public
 #tkg-system-telemetry
-
-capi-kubeadm-bootstrap-system       Active   8h
-capi-kubeadm-control-plane-system   Active   8h
-capi-system                         Active   8h
-capi-webhook-system                 Active   8h
-capz-system                         Active   8h
-cert-manager                        Active   8h
-default                             Active   8h
-kube-node-lease                     Active   8h
-kube-public                         Active   8h
-kube-system                         Active   8h
-tkg-system                          Active   8h
-tkg-system-public                   Active   8h
-tkg-system-telemetry                Active   8h
-vmware-system-tmc                   Active   16m
-
-
 
 
   if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "Azure" ]; then 
