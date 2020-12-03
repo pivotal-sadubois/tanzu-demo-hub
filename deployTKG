@@ -139,7 +139,6 @@ if [ "${stt}" == "" ]; then
   tkg create cluster $TDH_TKGWC_NAME $TDH_OPTIONS
   tkg get credentials $TDH_TKGWC_NAME
   messagePrint "- Kubernetes Context:" "$TDH_TKGWC_NAME-admin@$TDH_TKGWC_NAME"
-  #kubectl config use-context $con > /dev/null 2>&1
   kubectl config use-context $TDH_TKGWC_NAME-admin@$TDH_TKGWC_NAME > /dev/null 2>&1
 else
   messageTitle "Verify TKG Cluster ($TDH_TKGWC_NAME)"
@@ -156,7 +155,7 @@ if [ "${TDH_TKGWC_INGRESS_CONTOUR}" == "true" ]; then
   messageTitle "Install Ingress Contour" 
   stt=$(kubectl get ns -o json | jq -r '.items[] | select(.metadata.name == "vmware-system-tmc").status.phase')
   if [ "${stt}" == "" ]; then
-    cd extensions/$TDH_TKGWC_EXTENSIONS/extensions
+    cd ${TDHPATH}/extensions/$TDH_TKGWC_EXTENSIONS/extensions
     # --- INSTALL TMC EXTENSION MANAGER ---
     kubectl apply -f tmc-extension-manager.yaml >/dev/null 2>&1
     if [ $? -ne 0 ]; then 
@@ -172,8 +171,35 @@ if [ "${TDH_TKGWC_INGRESS_CONTOUR}" == "true" ]; then
     messagePrint "- Verify TMC Extension Manager"  "installed/running"
   fi
 
+  # -- Install Kapp controller ---
+  #kubectl config use-context $con > /dev/null 2>&1
+  kubectl apply -f kapp-controller.yaml
+
+  stt=$(kubectl get ns -o json | jq -r '.items[] | select(.metadata.name == "cert-manager").status.phase')
+  if [ "${stt}" == "" ]; then
+    cd ${TDHPATH}/extensions/$TDH_TKGWC_EXTENSIONS/extensions
+    kubectl apply -f ../cert-manager/
+    if [ $? -ne 0 ]; then
+      messagePrint "- Install Cert Manager" "failed"
+      echo "ERROR: Installation of TMC Extension manager failed"
+      echo "       => cd $TDHPATH/extensions/$TDH_TKGWC_EXTENSIONS"
+      echo "       => kubectl apply -f ../cert-manager/"
+      exit
+    else
+      messagePrint "- Install Cert Manager" "completed"
+    fi
+  fi
+
   #Kapp controller
 #  kubectl get ns -o json | jq -r '.items[].metadata | select(.name == "tkg-system").uid'
+
+#NAME                STATUS   AGE
+#default             Active   5h20m
+#kube-node-lease     Active   5h20m
+#kube-public         Active   5h20m
+#kube-system         Active   5h20m
+#tkg-system-public   Active   5h19m
+#vmware-system-tmc   Active   18m
 
 #capi-kubeadm-bootstrap-system
 #capi-kubeadm-control-plane-system
