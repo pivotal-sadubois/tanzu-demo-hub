@@ -138,10 +138,14 @@ if [ "${stt}" == "" ]; then
   [ "$TDH_TKGWC_INGRESS_CONTOUR" == "true" ] &&   
   tkg create cluster $TDH_TKGWC_NAME $TDH_OPTIONS
   tkg get credentials $TDH_TKGWC_NAME
-  kubectl config use-context $con > /dev/null 2>&1
+  messagePrint "- Kubernetes Context:" "$TDH_TKGWC_NAME-admin@$TDH_TKGWC_NAME"
+  #kubectl config use-context $con > /dev/null 2>&1
+  kubectl config use-context $TDH_TKGWC_NAME-admin@$TDH_TKGWC_NAME
 else
   messageTitle "Verify TKG Cluster ($TDH_TKGWC_NAME)"
-  kubectl config use-context $con > /dev/null 2>&1
+  messagePrint "- Kubernetes Context:" "$TDH_TKGWC_NAME-admin@$TDH_TKGWC_NAME"
+  #kubectl config use-context $con > /dev/null 2>&1
+  kubectl config use-context $TDH_TKGWC_NAME-admin@$TDH_TKGWC_NAME
 fi
 
 #echo "-----------------------------------------------------------------------------------------------------------"
@@ -168,6 +172,7 @@ if [ "${TDH_TKGWC_INGRESS_CONTOUR}" == "true" ]; then
     messagePrint "- Verify TMC Extension Manager"  "installed/running"
   fi
 
+  #Kapp controller
 #  kubectl get ns -o json | jq -r '.items[].metadata | select(.name == "tkg-system").uid'
 
 #capi-kubeadm-bootstrap-system
@@ -183,6 +188,22 @@ if [ "${TDH_TKGWC_INGRESS_CONTOUR}" == "true" ]; then
 #tkg-system
 #tkg-system-public
 #tkg-system-telemetry
+
+capi-kubeadm-bootstrap-system       Active   8h
+capi-kubeadm-control-plane-system   Active   8h
+capi-system                         Active   8h
+capi-webhook-system                 Active   8h
+capz-system                         Active   8h
+cert-manager                        Active   8h
+default                             Active   8h
+kube-node-lease                     Active   8h
+kube-public                         Active   8h
+kube-system                         Active   8h
+tkg-system                          Active   8h
+tkg-system-public                   Active   8h
+tkg-system-telemetry                Active   8h
+vmware-system-tmc                   Active   16m
+
 
 
 
