@@ -171,10 +171,11 @@ if [ "${TDH_TKGWC_INGRESS_CONTOUR}" == "true" ]; then
     messagePrint "- Verify TMC Extension Manager"  "installed/running"
   fi
 
-  # -- Install Kapp controller ---
+  # -- INSTALL KAPP CONTROLLER ---
   #kubectl config use-context $con > /dev/null 2>&1
   kubectl apply -f kapp-controller.yaml
 
+  # -- INSTALL CERT MANAGER ---
   stt=$(kubectl get ns -o json | jq -r '.items[] | select(.metadata.name == "cert-manager").status.phase')
   if [ "${stt}" == "" ]; then
     cd ${TDHPATH}/extensions/$TDH_TKGWC_EXTENSIONS/extensions
@@ -189,6 +190,23 @@ if [ "${TDH_TKGWC_INGRESS_CONTOUR}" == "true" ]; then
       messagePrint "- Install Cert Manager" "completed"
     fi
   fi
+
+  # -- INSTALL CONTOUR INGRESS CONTROLLER ---
+  stt=$(kubectl get ns -o json | jq -r '.items[] | select(.metadata.name == "tanzu-system-ingress").status.phase')
+  if [ "${stt}" == "" ]; then
+    cd ${TDHPATH}/extensions/$TDH_TKGWC_EXTENSIONS/extensions
+    kubectl apply -f ingress/contour/namespace-role.yaml
+    if [ $? -ne 0 ]; then
+      messagePrint "- Install Contour Ingress" "failed"
+      echo "ERROR: Installation of Contour Ingress failed"
+      echo "       => cd $TDHPATH/extensions/$TDH_TKGWC_EXTENSIONS"
+      echo "       => kubectl apply -f ingress/contour/namespace-role.yaml"
+      exit
+    else
+      messagePrint "- Install Contour Ingress" "completed"
+    fi
+  fi
+
 
   #Kapp controller
 #  kubectl get ns -o json | jq -r '.items[].metadata | select(.name == "tkg-system").uid'
