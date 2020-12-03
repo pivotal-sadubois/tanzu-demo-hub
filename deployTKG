@@ -70,6 +70,7 @@ echo "Tanzu Demo Hub - Deploy TKG Workload Cluster"
 echo "by Sacha Dubois, VMware Inc,"
 echo "-----------------------------------------------------------------------------------------------------------"
 
+echo gaga1
 while [ "$1" != "" ]; do
   case $1 in
     -d)  TKG_DEPLOYMENT=$2;;
@@ -79,6 +80,7 @@ while [ "$1" != "" ]; do
   shift
 done
 
+echo gaga2
 if [ "${TKG_DEPLOYMENT}" == "" -o "${TKG_WC_CLUSTER}" == "" -o "${TDH_TKGWC_NAME}" == "" ]; then
   if [ "${TKG_DEPLOYMENT}" == "" ]; then 
     listDeployments
@@ -90,6 +92,7 @@ if [ "${TKG_DEPLOYMENT}" == "" -o "${TKG_WC_CLUSTER}" == "" -o "${TDH_TKGWC_NAME
   usage; exit 0
 fi
 
+echo gaga3
 # --- VERIFY DEPLOYMENT ---
 if [ ! -f ${TDHPATH}/deployments/${TKG_DEPLOYMENT} ]; then
   echo "ERROR: Deployment file $TKG_DEPLOYMENT can not be found in ${TDHPATH}/deployments"
@@ -97,6 +100,7 @@ if [ ! -f ${TDHPATH}/deployments/${TKG_DEPLOYMENT} ]; then
 else
   . ${TDHPATH}/deployments/${TKG_DEPLOYMENT}
 fi
+echo gaga4
 
 # --- VERIFY DEPLOYMENT ---
 echo "${TDHPATH}/deployments/${TKG_WC_CLUSTER}"
