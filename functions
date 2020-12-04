@@ -880,12 +880,84 @@ createCluster() {
 }
 
 setTKGclusterDNS() {
-  TDH_TKGWC_NAME="$1"
+  TKG_CLUSTER="$1"
+  DNS_PREFIX="$TDH_TKGMC_ENVNAME"
 
 echo "TDH_TKGWC_NAME:$TDH_TKGWC_NAME"
 echo "TDH_TKGMC_ENVNAME:$TDH_TKGMC_ENVNAME"
 echo "AWS_HOSTED_DNS_DOMAIN:$AWS_HOSTED_DNS_DOMAIN"
 echo "TDH_TKGMC_INFRASTRUCTURE:$TDH_TKGMC_INFRASTRUCTURE"
+
+  if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "AWS" ]; then
+    AWS_ID=$(echo $DNSLB | awk -F '-' '{ print $1 }')
+    AWS_LB="k8s-master-$TKG_CLUSTER"
+    AWS_SG=$(aws elb --region $AWS_REGION describe-load-balancers --load-balancer-names $AWS_ID | \
+             jq -r '.LoadBalancerDescriptions[].SecurityGroups[]')
+    AWS_VP=$(aws elb --region $AWS_REGION describe-load-balancers --load-balancer-names $AWS_ID | \
+             jq -r '.LoadBalancerDescriptions[].VPCId')
+  
+    cnt=$(echo "${AWS_SG}" | egrep -c "$AWS_SG_NEW")
+    if [ $cnt -eq 0 ]; then
+      a=1
+    fi
+  fi
+  
+  if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "GCP" ]; then
+    DNS_NAME="*.apps-${TKG_CLUSTER}"
+    messageTitle "Create DNS Entry for *.apps-${TKG_CLUSTER}.${DNS_PREFIX}.${DNS_SUFFIX}"
+  
+    cnt=$(gcloud dns record-sets list -z ${DNS_PREFIX}-zone --name "${DNS_NAME}.${DNS_PREFIX}.${DNS_SUFFIX}." \
+            --type=A 2> /dev/null | grep -v "^NAME" | wc -l | sed 's/ //g')
+    if [ ${cnt} -eq 0 ]; then
+      messagePrint " - Creating DNS Entry in (${DNS_PREFIX}-zone)" "${DNS_NAME}"
+      gcloud dns record-sets transaction abort -z ${DNS_PREFIX}-zone > /dev/null 2>&1
+      gcloud dns record-sets transaction start -z ${DNS_PREFIX}-zone > /dev/null 2>&1
+      gcloud dns record-sets transaction add "$DNSLB" --name "${DNS_NAME}.${DNS_PREFIX}.${DNS_SUFFIX}." \
+         --type A -z ${DNS_PREFIX}-zone --ttl=300 > /dev/null 2>&1
+      gcloud dns record-sets transaction execute -z ${DNS_PREFIX}-zone > /dev/null 2>&1; ret=$?
+      if [ ${ret} -ne 0 ]; then
+        echo "ERROR: Creating DNS record-sets for zone (${DNS_PREFIX}-zone)"
+        echo "       => gcloud dns record-sets transaction execute -z ${DNS_PREFIX}-zone"
+        exit 1
+      fi
+    fi
+  fi
+  
+  if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "Azure" ]; then
+    DNS_NAME="*.apps-${TKG_CLUSTER}"
+    echo "Create DNS Entry for *.apps.${TKG_CLUSTER}.${DNS_PREFIX}.${DNS_SUFFIX}:"
+echo "DNS_NAME:$DNS_NAME"
+  
+echo "az network dns record-set a show -g $DNS_PREFIX -z ${DNS_PREFIX}.${DNS_SUFFIX} -n $DNS_NAME"
+    az network dns record-set a show -g $DNS_PREFIX -z ${DNS_PREFIX}.${DNS_SUFFIX} -n $DNS_NAME > /dev/null 2>&1
+    if [ $? -eq 0 ]; then
+     ipa=$(az network dns record-set a show -g $DNS_PREFIX -z ${DNS_PREFIX}.${DNS_SUFFIX} -n $DNS_NAME | \
+         jq -r '.arecords[].ipv4Address')
+echo "IPA:$ipa"
+      az network dns record-set a remove-record -g $DNS_PREFIX -z ${DNS_PREFIX}.${DNS_SUFFIX} \
+         -n $DNS_NAME -a $ipa > /dev/null 2>&1
+      if [ $? -ne 0 ]; then
+        debugInfos $(($BITMASK_JMP+$BITMASK_OPS+$BITMASK_PXS+$BITMASK_K8S))
+  
+        echo "ERROR: failed to delete DNS record-set for $DNS_NAME"
+        echo "       => az network dns record-set a remove-record -g $DNS_PREFIX \\"
+        echo "          -n $DNS_NAME -a $ipa"
+        exit 1
+      fi
+    fi
+
+    az network dns record-set a add-record -g $DNS_PREFIX -z "${DNS_PREFIX}.${DNS_SUFFIX}" \
+        -n "$DNS_NAME" --ipv4-address $DNSLB > /dev/null 2>&1
+    if [ $? -ne 0 ]; then
+      debugInfos $(($BITMASK_JMP+$BITMASK_OPS+$BITMASK_PXS+$BITMASK_K8S))
+  
+      echo "ERROR: failed to create DNS record-set for $DNS_NAME"
+      echo "       => az network dns record-set a add-record -g $DNS_PREFIX \\"
+      echo "          -z ${DNS_PREFIX}.${DNS_SUFFIX} -n $DNS_NAME --ipv4-address $DNSLB"
+      exit 1
+    fi
+  fi
+
 
 }
 
