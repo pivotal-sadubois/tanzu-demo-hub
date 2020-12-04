@@ -150,7 +150,7 @@ fi
 echo "${TDHPATH}/config/${TDH_TKGWC_NAME}.cfg"
 echo "TDH_TKGWC_NAME=$TDH_TKGWC_NAME"                        >  ${TDHPATH}/config/${TDH_TKGWC_NAME}.cfg
 echo "K8S_CONTEXT=$TDH_TKGWC_NAME-admin@$TDH_TKGWC_NAME"     >> ${TDHPATH}/config/${TDH_TKGWC_NAME}.cfg
-echo "TKG_DEPLOYMENT=$TTKG_DEPLOYMENT"                       >> ${TDHPATH}/config/${TDH_TKGWC_NAME}.cfg
+echo "TKG_DEPLOYMENT=$TKG_DEPLOYMENT"                        >> ${TDHPATH}/config/${TDH_TKGWC_NAME}.cfg
 echo "TDH_TKGMC_CONFIG=$TDH_TKGMC_CONFIG"                    >> ${TDHPATH}/config/${TDH_TKGWC_NAME}.cfg
 
 exit
