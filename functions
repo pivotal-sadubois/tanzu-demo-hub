@@ -955,8 +955,6 @@ setTKGclusterDNS() {
         echo "}}]"                                                 >> $TMPROUTE53
         echo "}"                                                   >> $TMPROUTE53
 
-cat $TMPROUTE53
-exit
         aws route53 change-resource-record-sets --hosted-zone-id $ZONE_ID \
             --change-batch file://${TMPROUTE53} > /dev/null 2>&1
         if [ $? -ne 0 ]; then
@@ -967,6 +965,7 @@ exit
           exit 1
         fi
 
+cp $TMPROUTE53 /tmp/zone
         rm -f $TMPROUTE53
       fi
 
