@@ -154,8 +154,6 @@ echo "TKG_DEPLOYMENT=$TKG_DEPLOYMENT"                        >> ${TDHPATH}/confi
 echo "TDH_TKGMC_CONFIG=$TDH_TKGMC_CONFIG"                    >> ${TDHPATH}/config/${TDH_TKGWC_NAME}.cfg
 echo "TKG_WC_CLUSTER=$TKG_WC_CLUSTER"                        >> ${TDHPATH}/config/${TDH_TKGWC_NAME}.cfg
 
-exit
-
 if [ "${TDH_TKGWC_INGRESS_CONTOUR}" == "true" ]; then 
   messageTitle "Install Ingress Contour" 
   stt=$(kubectl get ns -o json | jq -r '.items[] | select(.metadata.name == "vmware-system-tmc").status.phase')
