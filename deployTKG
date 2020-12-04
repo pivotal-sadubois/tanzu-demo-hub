@@ -244,6 +244,7 @@ if [ "${TDH_TKGWC_INGRESS_CONTOUR}" == "true" ]; then
 
   # --- SET CLUSTER DNS ---
   ipa=$(kubectl get svc envoy -n tanzu-system-ingress -o json | jq -r '.status.loadBalancer.ingress[].ip')
+echo "IP:$ip"
   if [ "{$ipa}" != "" ]; then 
     setTKGclusterDNS "$TDH_TKGWC_NAME" "${ip}"
   else
