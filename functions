@@ -905,7 +905,7 @@ echo "TDH_TKGMC_INFRASTRUCTURE:$TDH_TKGMC_INFRASTRUCTURE"
   
   if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "GCP" ]; then
     DNS_NAME="*.apps-${TKG_CLUSTER}"
-    messageTitle "Create DNS Entry for *.apps-${TKG_CLUSTER}.${DNS_PREFIX}.${DNS_SUFFIX}"
+    messagePrint "- Create DNS Entry for *.apps-${TKG_CLUSTER}.${DNS_PREFIX}.${DNS_SUFFIX}"
   
     cnt=$(gcloud dns record-sets list -z ${DNS_PREFIX}-zone --name "${DNS_NAME}.${DNS_PREFIX}.${DNS_SUFFIX}." \
             --type=A 2> /dev/null | grep -v "^NAME" | wc -l | sed 's/ //g')
@@ -926,7 +926,7 @@ echo "TDH_TKGMC_INFRASTRUCTURE:$TDH_TKGMC_INFRASTRUCTURE"
   
   if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "Azure" ]; then
     DNS_NAME="*.apps-${TKG_CLUSTER}"
-    echo "Create DNS Entry for *.apps.${TKG_CLUSTER}.${DNS_PREFIX}.${DNS_SUFFIX}:"
+    messagePrint "- Create DNS Entry for *.apps-${TKG_CLUSTER}.${DNS_PREFIX}.${DNS_SUFFIX}"
 echo "DNS_NAME:$DNS_NAME"
   
 echo "az network dns record-set a show -g $DNS_PREFIX -z ${DNS_PREFIX}.${DNS_SUFFIX} -n $DNS_NAME"
