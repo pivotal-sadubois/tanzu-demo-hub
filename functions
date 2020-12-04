@@ -947,7 +947,7 @@ setTKGclusterDNS() {
         echo "  \"ResourceRecordSet\": {"                          >> $TMPROUTE53
         echo "    \"Name\": \"${ZONE}\","                          >> $TMPROUTE53
         echo "    \"Type\": \"A\","                                >> $TMPROUTE53
-        echo "    \"ResourceRecords": [{ \"Value\": \"10.0.10.10\"}]"  >> $TMPROUTE53
+        echo "    \"ResourceRecords\": [{ \"Value\": \"10.0.10.10\"}]"  >> $TMPROUTE53
 
 #        echo "    \"AliasTarget\": {"                              >> $TMPROUTE53
 #        echo "      \"HostedZoneId\": \"Z104527015YJE4FAPIH6I\","        >> $TMPROUTE53
