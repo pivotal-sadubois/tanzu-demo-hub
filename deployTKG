@@ -243,10 +243,10 @@ if [ "${TDH_TKGWC_INGRESS_CONTOUR}" == "true" ]; then
   fi
 
   # --- SET CLUSTER DNS ---
-  setTKGclusterDNS $TDH_TKGWC_NAME
+  #setTKGclusterDNS $TDH_TKGWC_NAME
 
 fi
 
 exit
 
-  messagePrint " - Install Ingress NGINX"    "$TDH_TKGWC_INGRESS_NGINX" 
+  #messagePrint " - Install Ingress NGINX"    "$TDH_TKGWC_INGRESS_NGINX" 
