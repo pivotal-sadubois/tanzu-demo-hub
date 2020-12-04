@@ -233,7 +233,7 @@ if [ "${TDH_TKGWC_INGRESS_CONTOUR}" == "true" ]; then
       stt=$(kubectl get app contour -n tanzu-system-ingress -o json | jq -r '.status.friendlyDescription')
     done
 
-    if [ "${stt} == "Reconcile succeeded" ]; then
+    if [ "${stt}" == "Reconcile succeeded" ]; then
       messagePrint "- Install Contour Ingress" "completed"
     else
       kubectl get app contour -n tanzu-system-ingress
