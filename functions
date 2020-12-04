@@ -879,3 +879,25 @@ createCluster() {
   fi
 }
 
+setTKGclusterDNS() {
+  TDH_TKGWC_NAME="$1"
+
+echo "TDH_TKGMC_ENVNAME:$TDH_TKGMC_ENVNAME"
+echo "AWS_HOSTED_DNS_DOMAIN:$AWS_HOSTED_DNS_DOMAIN"
+echo "PCF_DEPLOYMENT_CLOUD:$PCF_DEPLOYMENT_CLOUD"
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+

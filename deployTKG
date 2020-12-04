@@ -202,64 +202,51 @@ if [ "${TDH_TKGWC_INGRESS_CONTOUR}" == "true" ]; then
       echo "       => cd $TDHPATH/extensions/$TDH_TKGWC_EXTENSIONS"
       echo "       => kubectl apply -f ingress/contour/namespace-role.yaml"
       exit
-    else
+    fi
+
+    while [ $(kubectl get pods -A | sed 1d | grep -v Running | wc -l) -ne 0 ]; do
+      sleep 10
+    done
+
+    if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "Azure" ]; then 
+      cd ${TDHPATH}/extensions/$TDH_TKGWC_EXTENSIONS/extensions
+      cp ingress/contour/azure/contour-data-values.yaml.example ingress/contour/azure/contour-data-values.yaml
+      echo ""                               >> ingress/contour/azure/contour-data-values.yaml
+      echo "  service:"                     >> ingress/contour/azure/contour-data-values.yaml
+      echo "    type: LoadBalancer"         >> ingress/contour/azure/contour-data-values.yaml
+    fi
+
+    stt=$(kubectl get secret contour-data-values -n tanzu-system-ingress -o json 2>/dev/null | jq -r '.metadata.name') 
+    if [ "${stt}" == "" ]; then
+      cd ${TDHPATH}/extensions/$TDH_TKGWC_EXTENSIONS/extensions
+      kubectl create secret generic contour-data-values --from-file=values.yaml=ingress/contour/azure/contour-data-values.yaml \
+              -n tanzu-system-ingress > /dev/null 2>&1
+    fi
+
+    cnt=$(kubectl get extension contour -n tanzu-system-ingress 2>/dev/null | egrep -c "^contour" )
+    if [ $cnt -eq 0 ]; then
+      kubectl apply -f ingress/contour/contour-extension.yaml > /dev/null 2>&1
+    fi
+
+    stt=$(kubectl get app contour -n tanzu-system-ingress -o json | jq -r '.status.friendlyDescription')
+    while [ "${stt} == "Reconciling" ]; do
+      stt=$(kubectl get app contour -n tanzu-system-ingress -o json | jq -r '.status.friendlyDescription')
+    done
+
+    if [ "${stt} == "Reconcile succeeded" ]; then
       messagePrint "- Install Contour Ingress" "completed"
+    else
+      kubectl get app contour -n tanzu-system-ingress
+      kubectl get app contour -n tanzu-system-ingress -o yaml
+      messagePrint "- Install Contour Ingress" "failed"
     fi
   fi
 
-  while [ $(kubectl get pods -A | sed 1d | grep -v Running | wc -l) -ne 0 ]; do
-    sleep 10
-  done
+  # --- SET CLUSTER DNS ---
+  setTKGclusterDNS $TDH_TKGWC_NAME
 
-echo gaga1
-  if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "Azure" ]; then 
-    cd ${TDHPATH}/extensions/$TDH_TKGWC_EXTENSIONS/extensions
-    cp ingress/contour/azure/contour-data-values.yaml.example ingress/contour/azure/contour-data-values.yaml
-    echo ""                               >> ingress/contour/azure/contour-data-values.yaml
-    echo "  service:"                     >> ingress/contour/azure/contour-data-values.yaml
-    echo "    type: LoadBalancer"         >> ingress/contour/azure/contour-data-values.yaml
-  fi
-
-  stt=$(kubectl get secret contour-data-values -n tanzu-system-ingress -o json 2>/dev/null | jq -r '.metadata.name') 
-  if [ "${stt}" == "" ]; then
-    cd ${TDHPATH}/extensions/$TDH_TKGWC_EXTENSIONS/extensions
-    kubectl create secret generic contour-data-values --from-file=values.yaml=ingress/contour/azure/contour-data-values.yaml \
-            -n tanzu-system-ingress > /dev/null 2>&1
-  fi
-
-  cnt=$(kubectl get extension contour -n tanzu-system-ingress 2>/dev/null | egrep -c "^contour" )
-  if [ $cnt -eq 0 ]; then
-    kubectl apply -f ingress/contour/contour-extension.yaml > /dev/null 2>&1
-  fi
-
-  kubectl get app contour -n tanzu-system-ingress
-
-echo "TDH_TKGMC_INFRASTRUCTURE:$TDH_TKGMC_INFRASTRUCTURE"
-echo "TDH_TKGWC_EXTENSIONS:$TDH_TKGWC_EXTENSIONS"
-exit
-
-  fi
 fi
 
 exit
 
   messagePrint " - Install Ingress NGINX"    "$TDH_TKGWC_INGRESS_NGINX" 
-
-echo "tkg create cluster $TDH_TKGWC_NAME $TDH_OPTIONS"
-
-exit
-
-export AZURE_SUBSCRIPTION_ID="1fc6fab2-068c-4d73-953d-d9c3f4a21f17"
-export AZURE_TENANT_ID="29248f74-371f-4db2-9a50-c62a6877a0c1"
-export AZURE_CLIENT_ID="3487faeb-52ab-44a1-9aac-210c4d2ea65e"
-export AZURE_CLIENT_ID="db9f9d6c-6558-4cf6-bc35-d5602fd096c7"
-export AZURE_CLIENT_SECRET="~Q_sgk4ac__Gmz5gn8lctN6u_N0N_.UP2e"
-#export AZURE_CLIENT_SECRET="pivotal"
-export AZURE_REGION="westeurope"
-export AZURE_LOCATION="westeurope"
-export TKG_CONFIG=/Users/sdubois/workspace/tanzu-demo-hub/config/tkgmc-azure-westeurope.yaml
-export TKG_CONFIG=/Users/sdubois/workspace/tanzu-demo-hub/config/tkgmc-dev-azure-westeurope.yaml
-
-tkg config cluster tkgwc01 --plan=dev
-tkg create cluster tkgwc01 --plan=dev
-
