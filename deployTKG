@@ -152,12 +152,9 @@ echo "TDH_TKGWC_NAME=$TDH_TKGWC_NAME"                        >  ${TDHPATH}/confi
 echo "K8S_CONTEXT=$TDH_TKGWC_NAME-admin@$TDH_TKGWC_NAME"     >> ${TDHPATH}/config/${TDH_TKGWC_NAME}.cfg
 echo "TKG_DEPLOYMENT=$TKG_DEPLOYMENT"                        >> ${TDHPATH}/config/${TDH_TKGWC_NAME}.cfg
 echo "TDH_TKGMC_CONFIG=$TDH_TKGMC_CONFIG"                    >> ${TDHPATH}/config/${TDH_TKGWC_NAME}.cfg
+echo "TKG_WC_CLUSTER=$TKG_WC_CLUSTER"                        >> ${TDHPATH}/config/${TDH_TKGWC_NAME}.cfg
 
 exit
-
-#echo "-----------------------------------------------------------------------------------------------------------"
-#tkg get clusters
-#echo "-----------------------------------------------------------------------------------------------------------"
 
 if [ "${TDH_TKGWC_INGRESS_CONTOUR}" == "true" ]; then 
   messageTitle "Install Ingress Contour" 
