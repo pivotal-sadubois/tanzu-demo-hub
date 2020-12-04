@@ -243,7 +243,14 @@ if [ "${TDH_TKGWC_INGRESS_CONTOUR}" == "true" ]; then
   fi
 
   # --- SET CLUSTER DNS ---
-  setTKGclusterDNS $TDH_TKGWC_NAME
+  ipa=$(kubectl get svc envoy -n tanzu-system-ingress -o json | jq -r '.status.loadBalancer.ingress[].ip')
+  if [ "{$ipa}" != "" ]; then 
+    setTKGclusterDNS "$TDH_TKGWC_NAME" "${ip}"
+  else
+    echo "ERROR: Unable to get LoadBalancer IP-Adress of the Ingress"
+    echo "       => kubectl get svc envoy -n tanzu-system-ingress"
+    exit 1
+  fi
 
 fi
 
