@@ -942,7 +942,7 @@ setTKGclusterDNS() {
       echo "      \"Name\": \"${ZONE}\","                                 >> $TMPROUTE53
       echo "      \"Type\": \"A\","                                       >> $TMPROUTE53
       echo "      \"TTL\": 300,"                                          >> $TMPROUTE53
-      echo "      \"ResourceRecords\": [{ \"Value\": \"TKG_IPADRESS\"}]"  >> $TMPROUTE53
+      echo "      \"ResourceRecords\": [{ \"Value\": \"$TKG_IPADRESS\"}]" >> $TMPROUTE53
       echo "    }"                                                        >> $TMPROUTE53
       echo "  }]"                                                         >> $TMPROUTE53
       echo "}"                                                            >> $TMPROUTE53
