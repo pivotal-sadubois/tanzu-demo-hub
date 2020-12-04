@@ -229,7 +229,7 @@ if [ "${TDH_TKGWC_INGRESS_CONTOUR}" == "true" ]; then
     fi
 
     stt=$(kubectl get app contour -n tanzu-system-ingress -o json | jq -r '.status.friendlyDescription')
-    while [ "${stt} == "Reconciling" ]; do
+    while [ "${stt}" == "Reconciling" ]; do
       stt=$(kubectl get app contour -n tanzu-system-ingress -o json | jq -r '.status.friendlyDescription')
     done
 
