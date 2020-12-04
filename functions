@@ -948,8 +948,8 @@ setTKGclusterDNS() {
         echo "    \"Name\": \"${ZONE}\","                          >> $TMPROUTE53
         echo "    \"Type\": \"A\","                                >> $TMPROUTE53
         echo "    \"AliasTarget\": {"                              >> $TMPROUTE53
-        echo "      \"HostedZoneId\": \"${DNSLB_ZONEID}\","        >> $TMPROUTE53
-        echo "      \"DNSName\": \"dualstack.${DNSLB}.\","         >> $TMPROUTE53
+        echo "      \"HostedZoneId\": \"${Z104527015YJE4FAPIH6I}\","        >> $TMPROUTE53
+        echo "      \"DNSName\": \"20.73.113.95\","         >> $TMPROUTE53
         echo "      \"EvaluateTargetHealth\": true"                >> $TMPROUTE53
         echo "    }"                                               >> $TMPROUTE53
         echo "}}]"                                                 >> $TMPROUTE53
