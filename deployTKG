@@ -147,6 +147,14 @@ else
   kubectl config use-context $TDH_TKGWC_NAME-admin@$TDH_TKGWC_NAME > /dev/null 2>&1
 fi
 
+echo "${TDHPATH}/config/${TDH_TKGWC_NAME}.cfg"
+echo "TDH_TKGWC_NAME=$TDH_TKGWC_NAME"                        >  ${TDHPATH}/config/${TDH_TKGWC_NAME}.cfg
+echo "K8S_CONTEXT==$TDH_TKGWC_NAME-admin@$TDH_TKGWC_NAME"    >> ${TDHPATH}/config/${TDH_TKGWC_NAME}.cfg
+echo "TDH_TKGMC_INFRASTRUCTURE=$TDH_TKGMC_INFRASTRUCTURE"    >> ${TDHPATH}/config/${TDH_TKGWC_NAME}.cfg
+echo "TDH_TKGMC_CONFIG=$TDH_TKGMC_CONFIG"                    >> ${TDHPATH}/config/${TDH_TKGWC_NAME}.cfg
+
+exit
+
 #echo "-----------------------------------------------------------------------------------------------------------"
 #tkg get clusters
 #echo "-----------------------------------------------------------------------------------------------------------"

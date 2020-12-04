@@ -959,44 +959,6 @@ setTKGclusterDNS() {
 
       rm -f $TMPROUTE53
     fi
-
-
-echo "ZONE_ID_STR:$ZONE_ID_STR"
-echo "DNSLB:$DNSLB"
-echo "DNSLB_ZONEID:$DNSLB_ZONEID"
-echo "ZONE_ID:$ZONE_ID"
-echo "ALIAS:$ALIAS"
-
-exit
-  
-echo "az network dns record-set a show -g $DNS_PREFIX -z ${DNS_PREFIX}.${DNS_SUFFIX} -n $DNS_NAME"
-    az network dns record-set a show -g $DNS_PREFIX -z ${DNS_PREFIX}.${DNS_SUFFIX} -n $DNS_NAME > /dev/null 2>&1
-    if [ $? -eq 0 ]; then
-     ipa=$(az network dns record-set a show -g $DNS_PREFIX -z ${DNS_PREFIX}.${DNS_SUFFIX} -n $DNS_NAME | \
-         jq -r '.arecords[].ipv4Address')
-echo "IPA:$ipa"
-      az network dns record-set a remove-record -g $DNS_PREFIX -z ${DNS_PREFIX}.${DNS_SUFFIX} \
-         -n $DNS_NAME -a $ipa > /dev/null 2>&1
-      if [ $? -ne 0 ]; then
-        debugInfos $(($BITMASK_JMP+$BITMASK_OPS+$BITMASK_PXS+$BITMASK_K8S))
-  
-        echo "ERROR: failed to delete DNS record-set for $DNS_NAME"
-        echo "       => az network dns record-set a remove-record -g $DNS_PREFIX \\"
-        echo "          -n $DNS_NAME -a $ipa"
-        exit 1
-      fi
-    fi
-
-    az network dns record-set a add-record -g $DNS_PREFIX -z "${DNS_PREFIX}.${DNS_SUFFIX}" \
-        -n "$DNS_NAME" --ipv4-address $DNSLB > /dev/null 2>&1
-    if [ $? -ne 0 ]; then
-      debugInfos $(($BITMASK_JMP+$BITMASK_OPS+$BITMASK_PXS+$BITMASK_K8S))
-  
-      echo "ERROR: failed to create DNS record-set for $DNS_NAME"
-      echo "       => az network dns record-set a add-record -g $DNS_PREFIX \\"
-      echo "          -z ${DNS_PREFIX}.${DNS_SUFFIX} -n $DNS_NAME --ipv4-address $DNSLB"
-      exit 1
-    fi
   fi
 
   if [ "${AWS_HOSTED_ZONE_ID}" != "" -a "${TDH_TKGMC_INFRASTRUCTURE}" == "AWS" ]; then
