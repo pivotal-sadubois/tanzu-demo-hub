@@ -247,6 +247,7 @@ if [ "${TDH_TKGWC_INGRESS_CONTOUR}" == "true" ]; then
     fi
   fi
 
+echo gaga1
   # --- SET CLUSTER DNS ---
   ipa=$(kubectl get svc envoy -n tanzu-system-ingress -o json | jq -r '.status.loadBalancer.ingress[].ip')
   if [ "${ipa}" != "" ]; then 
@@ -256,6 +257,7 @@ if [ "${TDH_TKGWC_INGRESS_CONTOUR}" == "true" ]; then
     echo "       => kubectl get svc envoy -n tanzu-system-ingress"
     exit 1
   fi
+echo gaga2
 
 fi
 
