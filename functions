@@ -885,12 +885,6 @@ setTKGclusterDNS() {
   DNS_PREFIX="$TDH_TKGMC_ENVNAME"
   DNS_SUFFIX="$AWS_HOSTED_DNS_DOMAIN"
 
-echo "TKG_IPADRESS:$TKG_IPADRESS"
-echo "TDH_TKGWC_NAME:$TDH_TKGWC_NAME"
-echo "TDH_TKGMC_ENVNAME:$TDH_TKGMC_ENVNAME"
-echo "AWS_HOSTED_DNS_DOMAIN:$AWS_HOSTED_DNS_DOMAIN"
-echo "TDH_TKGMC_INFRASTRUCTURE:$TDH_TKGMC_INFRASTRUCTURE"
-
   if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "AWS" ]; then
     AWS_ID=$(echo $DNSLB | awk -F '-' '{ print $1 }')
     AWS_LB="k8s-master-$TKG_CLUSTER"
@@ -928,9 +922,26 @@ echo "TDH_TKGMC_INFRASTRUCTURE:$TDH_TKGMC_INFRASTRUCTURE"
   
   if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "Azure" ]; then
     DNS_NAME="*.apps-${TKG_CLUSTER}"
+    messagePrint "- LoadBalancer PublicIP:" "$TKG_IPADRESS"
     messagePrint "- Create DNS Entry for:" "*.apps-${TKG_CLUSTER}.${DNS_PREFIX}.${DNS_SUFFIX}"
 
+    ZONE_ID_STR=$(echo "${ZONE_ID}" | awk -F'/' '{ print $NF }')
+    DNSLB=$(aws elb --region $AWS_REGION describe-load-balancers --load-balancer-names "$AWS_ID" | \
+        jq -r '.LoadBalancerDescriptions[0].DNSName')
+    DNSLB_ZONEID=$(aws elb --region $AWS_REGION describe-load-balancers --load-balancer-names "$AWS_ID" | \
+        jq -r '.LoadBalancerDescriptions[0].CanonicalHostedZoneNameID')
+    ZONE_ID=$(aws route53 list-hosted-zones-by-name --dns-name ${DNS_PREFIX}.${DNS_SUFFIX} | jq -r '.HostedZones[0].Id')
 
+    ALIAS=$(aws route53 list-resource-record-sets --hosted-zone-id $ZONE_ID \
+            --query "ResourceRecordSets[?contains(Name, 'apps-${cluster}.${DNS_PREFIX}.${DNS_SUFFIX}')].AliasTarget.DNSName" | \
+            jq -r '.[]' | sed -e 's/dualstack\.//g' -e 's/\.$//g' )
+
+
+echo "ZONE_ID_STR:$ZONE_ID_STR"
+echo "DNSLB:$DNSLB"
+echo "DNSLB_ZONEID:$DNSLB_ZONEID"
+echo "ZONE_ID:$ZONE_ID"
+echo "ALIAS:$ALIAS"
 
 exit
   
