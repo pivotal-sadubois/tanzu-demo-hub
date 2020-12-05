@@ -21,7 +21,7 @@ sudo apt-get remove docker docker-engine docker.io containerd runc -y > /dev/nul
 sudo apt install docker.io -y > /dev/null 2>&1
 sudo systemctl start docker > /dev/null 2>&1
 sudo systemctl enable docker > /dev/null 2>&1
-sudo usermod -aG docker ${USER}
+sudo usermod -aG docker ubuntu
 
 touch  /tkg_software_installed
 
