@@ -237,14 +237,17 @@ echo gaga2
     stt=$(kubectl get app contour -n tanzu-system-ingress -o json | jq -r '.status.friendlyDescription')
     while [ "${stt}" == "Reconciling" ]; do
       stt=$(kubectl get app contour -n tanzu-system-ingress -o json | jq -r '.status.friendlyDescription')
+      sleep 10
+echo "stt:$stt"
     done
+echo "stt:$stt"
 
 echo gaga3
     if [ "${stt}" == "Reconcile succeeded" ]; then
       messagePrint "- Install Contour Ingress" "completed"
     else
       kubectl get app contour -n tanzu-system-ingress
-      kubectl get app contour -n tanzu-system-ingress -o yaml
+      #kubectl get app contour -n tanzu-system-ingress -o yaml
       messagePrint "- Install Contour Ingress" "failed"; exit
     fi
 echo gaga4
