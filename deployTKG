@@ -241,11 +241,10 @@ if [ "${TDH_TKGWC_INGRESS_CONTOUR}" == "true" ]; then
     else
       kubectl get app contour -n tanzu-system-ingress
       kubectl get app contour -n tanzu-system-ingress -o yaml
-      messagePrint "- Install Contour Ingress" "failed"
+      messagePrint "- Install Contour Ingress" "failed"; exit
     fi
   fi
 
-echo gaga1
   # --- SET CLUSTER DNS ---
   ipa=$(kubectl get svc envoy -n tanzu-system-ingress -o json | jq -r '.status.loadBalancer.ingress[].ip')
   if [ "${ipa}" != "" ]; then 
@@ -255,7 +254,6 @@ echo gaga1
     echo "       => kubectl get svc envoy -n tanzu-system-ingress"
     exit 1
   fi
-echo gaga2
 
 fi
 
