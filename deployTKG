@@ -261,7 +261,10 @@ if [ "${TDH_TKGWC_INGRESS_CONTOUR}" == "true" ]; then
     echo "       => kubectl get svc envoy -n tanzu-system-ingress"
     exit 1
   fi
+fi
 
+if [ "${TDH_TKGWC_INGRESS_NGINX}" == "true" ]; then 
+  messageTitle "Install Ingress NGINX" 
 fi
 
 exit

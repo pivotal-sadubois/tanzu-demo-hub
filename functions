@@ -935,7 +935,7 @@ setTKGclusterDNS() {
     ZONE_ID_STR=$(echo "${ZONE_ID}" | awk -F'/' '{ print $NF }')
 
     if [ "${ZONE_ID}" != "" ]; then
-      echo "Create DNS Entry for *.apps-${cluster}.${DNS_PREFIX}.${DNS_SUFFIX}:"
+      echo "Create DNS Entry for *.apps-${TKG_CLUSTER}.${DNS_PREFIX}.${DNS_SUFFIX}:"
       ZONE="*.${TKG_CLUSTER}.${DNS_PREFIX}.${DNS_SUFFIX}"
       ZONE="*.apps-${TKG_CLUSTER}.${DNS_PREFIX}.${DNS_SUFFIX}"
 
