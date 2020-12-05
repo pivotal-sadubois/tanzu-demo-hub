@@ -26,3 +26,5 @@ sudo usermod -aG docker ${USER}
 docker run hello-world
 
 touch  /tkg_software_installed
+
+sudo reboot
