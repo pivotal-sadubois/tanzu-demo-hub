@@ -233,14 +233,18 @@ echo gaga1
       sleep 10
     fi
 
-echo gaga2
-    stt=$(kubectl get app contour -n tanzu-system-ingress -o json | jq -r '.status.friendlyDescription')
-    while [ "${stt}" == "Reconciling" ]; do
+    i=0
+    while [ $i -lt 3 ]; do
       stt=$(kubectl get app contour -n tanzu-system-ingress -o json | jq -r '.status.friendlyDescription')
-      sleep 10
-echo "stt:$stt"
+      while [ "${stt}" == "Reconciling" ]; do
+        stt=$(kubectl get app contour -n tanzu-system-ingress -o json | jq -r '.status.friendlyDescription')
+        sleep 10
+  echo "=> LOOP: $i stt:$stt"
+      done
+  echo "=> LOOP: $i stt:$stt"
+      sleep 30
+      let i=i+1
     done
-echo "stt:$stt"
 
 echo gaga3
     if [ "${stt}" == "Reconcile succeeded" ]; then
