@@ -23,8 +23,6 @@ sudo systemctl start docker > /dev/null 2>&1
 sudo systemctl enable docker > /dev/null 2>&1
 sudo usermod -aG docker ${USER}
 
-docker run hello-world
-
 touch  /tkg_software_installed
 
 sudo reboot
