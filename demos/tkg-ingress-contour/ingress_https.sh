@@ -40,7 +40,7 @@ if [ -f ~/.tanzu-demo-hub.cfg ]; then
   . ~/.tanzu-demo-hub.cfg
 fi
 
-TDH_TKGWC_NAME=tanzu-demo-hub
+TDH_TKGWC_NAME=tdh-1
 if [ -f $TDHPATH/config/${TDH_TKGWC_NAME}.cfg ]; then
   . $TDHPATH/config/${TDH_TKGWC_NAME}.cfg
 else
