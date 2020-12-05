@@ -147,7 +147,6 @@ else
   kubectl config use-context $TDH_TKGWC_NAME-admin@$TDH_TKGWC_NAME > /dev/null 2>&1
 fi
 
-echo "${TDHPATH}/config/${TDH_TKGWC_NAME}.cfg"
 echo "TDH_TKGWC_NAME=$TDH_TKGWC_NAME"                        >  ${TDHPATH}/config/${TDH_TKGWC_NAME}.cfg
 echo "K8S_CONTEXT=$TDH_TKGWC_NAME-admin@$TDH_TKGWC_NAME"     >> ${TDHPATH}/config/${TDH_TKGWC_NAME}.cfg
 echo "TKG_DEPLOYMENT=$TKG_DEPLOYMENT"                        >> ${TDHPATH}/config/${TDH_TKGWC_NAME}.cfg
