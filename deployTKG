@@ -226,16 +226,20 @@ if [ "${TDH_TKGWC_INGRESS_CONTOUR}" == "true" ]; then
               -n tanzu-system-ingress > /dev/null 2>&1
     fi
 
+echo gaga1
     cnt=$(kubectl get extension contour -n tanzu-system-ingress 2>/dev/null | egrep -c "^contour" )
     if [ $cnt -eq 0 ]; then
       kubectl apply -f ingress/contour/contour-extension.yaml > /dev/null 2>&1
+      sleep 10
     fi
 
+echo gaga2
     stt=$(kubectl get app contour -n tanzu-system-ingress -o json | jq -r '.status.friendlyDescription')
     while [ "${stt}" == "Reconciling" ]; do
       stt=$(kubectl get app contour -n tanzu-system-ingress -o json | jq -r '.status.friendlyDescription')
     done
 
+echo gaga3
     if [ "${stt}" == "Reconcile succeeded" ]; then
       messagePrint "- Install Contour Ingress" "completed"
     else
@@ -243,6 +247,7 @@ if [ "${TDH_TKGWC_INGRESS_CONTOUR}" == "true" ]; then
       kubectl get app contour -n tanzu-system-ingress -o yaml
       messagePrint "- Install Contour Ingress" "failed"; exit
     fi
+echo gaga4
   fi
 
   # --- SET CLUSTER DNS ---
