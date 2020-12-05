@@ -264,12 +264,12 @@ configureLetsEnscript() {
     route53createHostedZone $domain
 
     echo "-------------------------------------- GENERATE LET'S-ENCRYPT CERTIFICATES -------------------------------------"
-    typ=$(echo $domain | egrep -c "azpks|awspks|gcppks")
+    typ=$(echo $domain | egrep -c "aztkg|awstkg|gcptkg")
     if [ $typ -ne 0 ]; then
       messageTitle "Generate Certificate for PKS Domains ($domain)"
-      #$SSH_COMMAND -n "echo \"/usr/bin/certbot certonly --dns-route53 -d '*.$domain' -d '*.api.$domain' -d '*.apps-cl1.$domain'\""
-      $SSH_COMMAND -n "sudo /usr/local/bin/certbot certonly --dns-route53 -d '*.$domain' -d '*.api.$domain' -d 'api.pks.$domain' -d '*.apps-cl1.$domain' \
-                   -d '*.apps-cl2.$domain' -d '*.apps-cl3.$domain' -m sadubois@pivotal.io --agree-tos -n --expand"
+      #$SSH_COMMAND -n "echo \"/usr/bin/certbot certonly --dns-route53 -d '*.$domain' -d '*.api.$domain' -d '*.contour-tdh.$domain'\" -d '*.nginx-tdh.$domain'\""
+      $SSH_COMMAND -n "sudo /usr/local/bin/certbot certonly --dns-route53 -d '*.$domain' -d '*.apps-tdh-1.$domain' -d '*.nginx-tdh-1.$domain' \
+                -d '*.nginx-tdh-1.$domain' -d '*.apps-tdh-2.$domain' -d '*.apps-tdh3.$domain' -m sadubois@pivotal.io --agree-tos -n --expand"
       if [ $? -ne 0 ]; then
         echo "ERROR: failed to generate certificate. There are probably to many cert requests happends and a limit reached"
         echo "       Try it again after some hours or search *.$domain in https://crt.sh/"
@@ -516,9 +516,9 @@ echo "    => tkg create cluster tkg01 --plan=dev --kubernetes-version=v1.18.8  #
 echo "    => tkg create cluster tkg01 --plan=prod --worker-machine-count 3 --controlplane-machine-count 3"
 echo ""
 echo "-----------------------------------------------------------------------------------------------------------"
-echo "./deployTKG -d $DEPLOY_TKG_TEMPLATE -c tkg-tanzu-demo-hub.cfg -n tanzu-demo-hub"
-echo \"$SSH_COMMAND -n "cd tanzu-demo-hub && ./deployTKG -d $DEPLOY_TKG_TEMPLATE -c tkg-tanzu-demo-hub.cfg -n tanzu-demo-hub\""
-$SSH_COMMAND -n "cd tanzu-demo-hub && ./deployTKG -d $DEPLOY_TKG_TEMPLATE -c tkg-tanzu-demo-hub.cfg -n tanzu-demo-hub"
+echo "./deployTKG -d $DEPLOY_TKG_TEMPLATE -c tkg-tanzu-demo-hub.cfg -n tdh-tdh-1"
+echo \"$SSH_COMMAND -n "cd tanzu-demo-hub && ./deployTKG -d $DEPLOY_TKG_TEMPLATE -c tkg-tanzu-demo-hub.cfg -n tdh-1\""
+#$SSH_COMMAND -n "cd tanzu-demo-hub && ./deployTKG -d $DEPLOY_TKG_TEMPLATE -c tkg-tanzu-demo-hub.cfg -n tdh-1"
 
 exit
 

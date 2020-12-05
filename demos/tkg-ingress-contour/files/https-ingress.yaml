@@ -2,23 +2,23 @@ apiVersion: extensions/v1beta1
 kind: Ingress
 metadata:
   name: https-ingress
-  namespace: test-ingress
+  namespace: NAMESPACE
   labels:
-    app: hello
+    app: echoserver
 spec:
   tls:
   - secretName: https-secret
     hosts:
-      - foo.bar.com
+      - echoserver.DNS_DOMAIN
   rules:
-  - host: foo.bar.com
+  - host: echoserver.DNS_DOMAIN
     http:
       paths:
       - path: /foo
         backend:
-          serviceName: s1
-          servicePort: 80
+          serviceName: echoserver-1
+          servicePort: 8080
       - path: /bar
         backend:
-          serviceName: s2
-          servicePort: 80
+          serviceName: echoserver-2
+          servicePort: 8080

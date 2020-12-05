@@ -30,8 +30,8 @@ echo '                      | | |   \ |_| | | |_| |  __/ | | | | | (_) |        
 echo '                      |_| |_|\_\____| |____/ \___|_| |_| |_|\___/                     '
 echo '                                                                                      '
 echo '          ----------------------------------------------------------------------------'
-echo '                      Contour Ingress Example with Domain based Routing               '
-echo '                                  by Sacha Dubois, VMware Inc                         '
+echo '              Contour Ingress Example with Domain and Context based Routing           '
+echo '                               by Sacha Dubois, VMware Inc                            '
 echo '          ----------------------------------------------------------------------------'
 echo '                                                                                      '
 

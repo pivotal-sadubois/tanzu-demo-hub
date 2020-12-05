@@ -30,8 +30,8 @@ echo '                      | | |   \ |_| | | |_| |  __/ | | | | | (_) |        
 echo '                      |_| |_|\_\____| |____/ \___|_| |_| |_|\___/                     '
 echo '                                                                                      '
 echo '          ----------------------------------------------------------------------------'
-echo '                      Contour Ingress Example with Domain based Routing               '
-echo '                                  by Sacha Dubois, VMware Inc                         '
+echo '              Contour Ingress Example with Domain and Context based Routing           '
+echo '                               by Sacha Dubois, VMware Inc                            '
 echo '          ----------------------------------------------------------------------------'
 echo '                                                                                      '
 
@@ -75,10 +75,37 @@ else
   echo "ERROR: can not find ${TDHPATH}/deployments/$TKG_DEPLOYMENT"; exit
 fi
 
+if [ -d ../../certificates/$dom  ]; then
+  TLS_CERTIFICATE=../../certificates/fullchain.pem
+  TLS_PRIVATE_KEY=../../certificates/privkey.pem
+fi
+
+# --- CHECK IF CERTIFICATE HAS BEEN DEFINED ---
+if [ "${TLS_CERTIFICATE}" == "" -o "${TLS_PRIVATE_KEY}" == "" ]; then
+  echo ""
+  echo "ERROR: Certificate and Private-Key has not been specified. Please set"
+  echo "       the following environment variables:"
+  echo "       => export TLS_CERTIFICATE=<cert.pem>"
+  echo "       => export TLS_PRIVATE_KEY=<private_key.pem>"
+  echo ""
+  exit 1
+else
+  verifyTLScertificate $TLS_CERTIFICATE $TLS_PRIVATE_KEY
+fi
+
+# --- CONVERT CERTS TO BASE64 ---
+cert=$(base64 --wrap=10000 $TLS_CERTIFICATE)
+pkey=$(base64 --wrap=10000 $TLS_PRIVATE_KEY)
+
+# --- GENERATE INGRES FILES ---
+cat files/https-secret.yaml | sed -e "s/NAMESPACE/$NAMESPACE/g" > /tmp/https-secret.yaml
+echo "  tls.crt: \"$cert\"" >> /tmp/https-secret.yaml
+echo "  tls.key: \"$pkey\"" >> /tmp/https-secret.yaml
+
 TKG_EXTENSIONS=${TDHPATH}/extensions/tkg-extensions-v1.2.0+vmware.1
 
 # --- PREPARATION ---
-cat files/http-ingress.yaml | sed -e "s/DNS_DOMAIN/$DOMAIN/g" -e "s/NAMESPACE/$NAMESPACE/g" > /tmp/http-ingress.yaml
+cat files/https-ingress.yaml | sed -e "s/DNS_DOMAIN/$DOMAIN/g" -e "s/NAMESPACE/$NAMESPACE/g" > /tmp/https-ingress.yaml
 
 prtHead "Create seperate namespace to host the Ingress Cheese Demo"
 execCmd "kubectl create namespace $NAMESPACE"
@@ -93,18 +120,22 @@ execCmd "kubectl expose deployment echoserver-1 --port=8080 -n $NAMESPACE"
 execCmd "kubectl expose deployment echoserver-2 --port=8080 -n $NAMESPACE"
 execCmd "kubectl get svc,pods -n $NAMESPACE"
 
+prtHead "Create a secret with the certificates of domain $DOMAIN"
+execCmd "cat /tmp/https-secret.yaml"
+execCmd "kubectl create -f /tmp/https-secret.yaml -n $NAMESPACE"
+
 prtHead "Create the ingress route with context based routing"
-execCmd "cat /tmp/http-ingress.yaml"
-execCmd "kubectl create -f /tmp/http-ingress.yaml"
+execCmd "cat /tmp/https-ingress.yaml"
+execCmd "kubectl create -f /tmp/https-ingress.yaml -n $NAMESPACE"
 execCmd "kubectl get ingress,svc,pods -n $NAMESPACE"
 
 prtHead "Open WebBrowser and verify the deployment"
 echo "     # --- Context Based Routing"
-echo "     => curl http://echoserver.${DOMAIN}/foo"
-echo "     => curl http://echoserver.${DOMAIN}/bar"
+echo "     => curl https://echoserver.${DOMAIN}/foo"
+echo "     => curl https://echoserver.${DOMAIN}/bar"
 echo "     # --- Domain Based Routing"
-echo "     => curl http://echoserver1.$DOMAIN"
-echo "     => curl http://echoserver2.$DOMAIN"
+echo "     => curl https://echoserver1.$DOMAIN"
+echo "     => curl https://echoserver2.$DOMAIN"
 echo ""
 
 exit
