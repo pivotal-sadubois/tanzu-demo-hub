@@ -11,6 +11,7 @@ if [ ! -f /tkg_software_installed ]; then
   echo "ERROR: $0 Needs to run on a TKG Jump Host"; exit
 fi
 
+export TDH_TKGWC_NAME=tdh-1
 export NAMESPACE="tkg-ingress-nginx"
 export TANZU_DEMO_HUB=$(cd "$(pwd)/$(dirname $0)/../../"; pwd)
 export TDHPATH=$(cd "$(pwd)/$(dirname $0)/../../"; pwd)
@@ -42,7 +43,6 @@ if [ -f ~/.tanzu-demo-hub.cfg ]; then
   . ~/.tanzu-demo-hub.cfg
 fi
 
-TDH_TKGWC_NAME=tanzu-demo-hub
 if [ -f $TDHPATH/config/${TDH_TKGWC_NAME}.cfg ]; then
   . $TDHPATH/config/${TDH_TKGWC_NAME}.cfg
 else
