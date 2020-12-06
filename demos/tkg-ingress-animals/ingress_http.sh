@@ -85,9 +85,6 @@ cat files/template_http_ingress.yaml | sed "s/DNS_DOMAIN/$DOMAIN/g" > /tmp/http-
 prtHead "Create seperate namespace to host the Ingress Demo"
 execCmd "kubectl create namespace $NAMESPACE" 
 
-prtHead "Create seperate namespace to host the Ingress Demo"
-execCmd "kubectl create namespace $NAMESPACE" 
-
 prtHead "Create deployment for the ingress tesing app"
 execCmd "kubectl create deployment bear --image=supergiantkir/animals:bear --port=80 -n $NAMESPACE"
 execCmd "kubectl create deployment hare --image=supergiantkir/animals:hare --port=80 -n $NAMESPACE"
