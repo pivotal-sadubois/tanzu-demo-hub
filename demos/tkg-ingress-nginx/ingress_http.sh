@@ -12,7 +12,7 @@ if [ ! -f /tkg_software_installed ]; then
 fi
 
 export TDH_TKGWC_NAME=tdh-1
-export NAMESPACE="tkg-ingress-nginx"
+export NAMESPACE="nginx-ingress-demo"
 export TANZU_DEMO_HUB=$(cd "$(pwd)/$(dirname $0)/../../"; pwd)
 export TDHPATH=$(cd "$(pwd)/$(dirname $0)/../../"; pwd)
 export TDHDEMO=${TDHPATH}/demos/$NAMESPACE
@@ -79,6 +79,12 @@ fi
 # --- GENERATE INGRES FILES --
 cat files/template_http_ingress.yaml | sed "s/DNS_DOMAIN/$DOMAIN/g" > /tmp/http-ingress.yaml
 
+#LOGS
+#kubectl logs service/stable-nginx-ingress-controller -n nginx-ingress
+
+prtHead "Create seperate namespace to host the Ingress Demo"
+execCmd "kubectl create namespace $NAMESPACE" 
+
 prtHead "Create seperate namespace to host the Ingress Demo"
 execCmd "kubectl create namespace $NAMESPACE" 
 
@@ -107,4 +113,18 @@ echo "     => curl http://echoserver1.$DOMAIN"
 echo "     => curl http://echoserver2.$DOMAIN"
 echo ""
 
+prtHead "Create the ingress route with context based routing"
+
+
+
+
+
+
+
 exit 0
+
+
+
+
+
+

@@ -11,7 +11,7 @@ if [ ! -f /tkg_software_installed ]; then
 fi
 
 export TDH_TKGWC_NAME=tdh-1
-export NAMESPACE="tkg-ingress-nginx"
+export NAMESPACE="nginx-ingress-demo"
 export TANZU_DEMO_HUB=$(cd "$(pwd)/$(dirname $0)/../../"; pwd)
 export TDHPATH=$(cd "$(pwd)/$(dirname $0)/../../"; pwd)
 export TDHDEMO=${TDHPATH}/demos/$NAMESPACE

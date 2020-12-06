@@ -11,9 +11,10 @@ if [ ! -f /tkg_software_installed ]; then
   echo "ERROR: $0 Needs to run on a TKG Jump Host"; exit
 fi
 
+export NAMESPACE="contour-ingress-demo"
 export TANZU_DEMO_HUB=$(cd "$(pwd)/$(dirname $0)/../../"; pwd)
 export TDHPATH=$(cd "$(pwd)/$(dirname $0)/../../"; pwd)
-export TDHDEMO=${TDHPATH}/demos/tkg-ingress-contour
+export TDHDEMO=${TDHPATH}/demos/$NAMESPACE
 
 if [ -f $TANZU_DEMO_HUB/functions ]; then
   . $TANZU_DEMO_HUB/functions
@@ -60,7 +61,6 @@ if [ "${stt}" != "running" ]; then
   echo "       => tkg get cluster $TDH_TKGWC_NAME --config=$TDHPATH/config/$TDH_TKGMC_CONFIG"; exit
 fi
 
-NAMESPACE="contour-ingress-demo"
 kubectl get namespace $NAMESPACE > /dev/null 2>&1
 if [ $? -eq 0 ]; then
   echo "ERROR: Namespace '$NAMESPACE' already exist"
