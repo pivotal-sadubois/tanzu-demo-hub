@@ -254,7 +254,7 @@ if [ "${TDH_TKGWC_INGRESS_CONTOUR}" == "true" ]; then
   # --- SET CLUSTER DNS ---
   ipa=$(kubectl get svc envoy -n tanzu-system-ingress -o json | jq -r '.status.loadBalancer.ingress[].ip')
   if [ "${ipa}" != "" ]; then 
-    setTKGclusterDNS "$TDH_TKGWC_NAME" "${ipa}"
+    setTKGclusterDNS "$TDH_TKGWC_NAME" "${ipa}" "apps"
   else
     echo "ERROR: Unable to get LoadBalancer IP-Adress of the Ingress"
     echo "       => kubectl get svc envoy -n tanzu-system-ingress"
@@ -263,7 +263,54 @@ if [ "${TDH_TKGWC_INGRESS_CONTOUR}" == "true" ]; then
 fi
 
 if [ "${TDH_TKGWC_INGRESS_NGINX}" == "true" ]; then 
+  #https://docs.bitnami.com/kubernetes/get-started-tkg/
   messageTitle "Install Ingress NGINX" 
+  messagePrint "- Confogure Helm Repo" "https://charts.helm.sh/stable"
+  helm repo add stable https://charts.helm.sh/stable > /dev/null 2>&1
+
+  messagePrint "- Configure Bitnami Helm Repo" "https://charts.helm.sh/stable"
+  helm repo add bitnami https://charts.bitnami.com/bitnami
+  helm repo update > /dev/null 2>&1
+
+  messagePrint "- Create ServiceAccount for tiller" "demos/k8s-helm/rbac-config.yaml "
+  kubectl apply -f demos/k8s-helm/rbac-config.yaml > /dev/null 2>&1
+  if [ $? -ne 0 ]; then 
+    echo "ERROR: Failed to create tiller service aacount"
+    echo "       => kubectl apply -f demos/k8s-helm/rbac-config.yaml"
+  fi
+
+#  helm init --service-account tiller > /dev/null 2>&1
+#  if [ $? -ne 0 ]; then 
+#    echo "ERROR: Failed to initialize tiller"
+#    echo "       => helm init --service-account tiller > /dev/null 2>&1"
+#  fi
+
+  messagePrint "- Install Ingress Controller" "bitnami/nginx-ingress-controller"
+
+
+  kubectl get namespace nginx-ingress > /dev/null 2>&1
+  if [ $? -ne 0 ]; then kubectl create namespace nginx-ingress > /dev/null 2>&1; fi
+
+  #helm install stable bitnami/nginx-ingress-controller -n nginx-ingress --set rbac.create=true
+  helm install stable bitnami/nginx-ingress-controller -n nginx-ingress > /dev/null 2>&1
+  if [ $? -ne 0 ]; then
+    echo "ERROR: Failed to install bitnami/nginx-ingress-controller"
+    echo "       => helm install stable bitnami/nginx-ingress-controller"
+  fi
+
+  # --- SET CLUSTER DNS ---
+  ipa=$(kubectl get svc stable-nginx-ingress-controller -n nginx-ingress -o json | jq -r '.status.loadBalancer.ingress[].ip')
+  if [ "${ipa}" != "" ]; then
+    setTKGclusterDNS "$TDH_TKGWC_NAME" "${ipa}" "nginx"
+  else
+    echo "ERROR: Unable to get LoadBalancer IP-Adress of the Ingress"
+    echo "       => kubectl get svc envoy -n tanzu-system-ingress"
+    exit 1
+  fi
+
+  #helm search repo bitnami
+  #helm search repo standard
+  #bitnami/nginx-ingress-controller 
 fi
 
 exit

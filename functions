@@ -888,6 +888,7 @@ createCluster() {
 setTKGclusterDNS() {
   TKG_CLUSTER="$1"
   TKG_IPADRESS="$2"
+  TKG_INGRESS="$3"
   DNS_PREFIX="$TDH_TKGMC_ENVNAME"
   DNS_SUFFIX="$AWS_HOSTED_DNS_DOMAIN"
 
@@ -906,8 +907,8 @@ setTKGclusterDNS() {
   fi
   
   if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "GCP" ]; then
-    DNS_NAME="*.apps-${TKG_CLUSTER}"
-    messagePrint "- Create DNS Entry for:" "*.apps-${TKG_CLUSTER}.${DNS_PREFIX}.${DNS_SUFFIX}"
+    DNS_NAME="*.${TKG_INGRESS}-${TKG_CLUSTER}"
+    messagePrint "- Create DNS Entry for:" "*.${TKG_INGRESS}-${TKG_CLUSTER}.${DNS_PREFIX}.${DNS_SUFFIX}"
   
     cnt=$(gcloud dns record-sets list -z ${DNS_PREFIX}-zone --name "${DNS_NAME}.${DNS_PREFIX}.${DNS_SUFFIX}." \
             --type=A 2> /dev/null | grep -v "^NAME" | wc -l | sed 's/ //g')
@@ -927,16 +928,16 @@ setTKGclusterDNS() {
   fi
   
   if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "Azure" ]; then
-    DNS_NAME="*.apps-${TKG_CLUSTER}"
+    DNS_NAME="*.${TKG_INGRESS}-${TKG_CLUSTER}"
     messagePrint "- LoadBalancer PublicIP:" "$TKG_IPADRESS"
-    messagePrint "- Create DNS Entry for:" "*.apps-${TKG_CLUSTER}.${DNS_PREFIX}.${DNS_SUFFIX}"
+    messagePrint "- Create DNS Entry for:" "*.${TKG_INGRESS}-${TKG_CLUSTER}.${DNS_PREFIX}.${DNS_SUFFIX}"
 
     ZONE_ID=$(aws route53 list-hosted-zones-by-name --dns-name ${DNS_PREFIX}.${DNS_SUFFIX} | jq -r '.HostedZones[0].Id')
     ZONE_ID_STR=$(echo "${ZONE_ID}" | awk -F'/' '{ print $NF }')
 
     if [ "${ZONE_ID}" != "" ]; then
       ZONE="*.${TKG_CLUSTER}.${DNS_PREFIX}.${DNS_SUFFIX}"
-      ZONE="*.apps-${TKG_CLUSTER}.${DNS_PREFIX}.${DNS_SUFFIX}"
+      ZONE="*.${TKG_INGRESS}-${TKG_CLUSTER}.${DNS_PREFIX}.${DNS_SUFFIX}"
 
       TMPROUTE53=/tmp/$$_tmp_route53.json
       echo "{"                                                            >  $TMPROUTE53
@@ -975,14 +976,14 @@ setTKGclusterDNS() {
     ZONE_ID=$(aws route53 list-hosted-zones-by-name --dns-name ${DNS_PREFIX}.${DNS_SUFFIX} | jq -r '.HostedZones[0].Id')
   
     ALIAS=$(aws route53 list-resource-record-sets --hosted-zone-id $ZONE_ID \
-            --query "ResourceRecordSets[?contains(Name, 'apps-${TKG_CLUSTER}.${DNS_PREFIX}.${DNS_SUFFIX}')].AliasTarget.DNSName" | \
+            --query "ResourceRecordSets[?contains(Name, '${TKG_INGRESS}-${TKG_CLUSTER}.${DNS_PREFIX}.${DNS_SUFFIX}')].AliasTarget.DNSName" | \
             jq -r '.[]' | sed -e 's/dualstack\.//g' -e 's/\.$//g' )
   
     if [ "${ALIAS}" != "$DNSLB" ]; then
       if [ "${ZONE_ID}" != "" ]; then
-        echo "Create DNS Entry for *.apps-${TKG_CLUSTER}.${DNS_PREFIX}.${DNS_SUFFIX}:"
+        echo "Create DNS Entry for *.${TKG_INGRESS}-${TKG_CLUSTER}.${DNS_PREFIX}.${DNS_SUFFIX}:"
         ZONE="*.${TKG_CLUSTER}.${DNS_PREFIX}.${DNS_SUFFIX}"
-        ZONE="*.apps-${TKG_CLUSTER}.${DNS_PREFIX}.${DNS_SUFFIX}"
+        ZONE="*.${TKG_INGRESS}-${TKG_CLUSTER}.${DNS_PREFIX}.${DNS_SUFFIX}"
   
         TMPROUTE53=/tmp/$$_tmp_route53.json
         echo "{"                                                   >  $TMPROUTE53
