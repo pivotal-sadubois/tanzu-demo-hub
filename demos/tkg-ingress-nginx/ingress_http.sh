@@ -98,6 +98,10 @@ execCmd "kubectl expose deployment echoserver-1 --port=8080 -n $NAMESPACE"
 execCmd "kubectl expose deployment echoserver-2 --port=8080 -n $NAMESPACE"
 execCmd "kubectl get svc,pods -n $NAMESPACE"
 
+prtHead "Show the NGNIX Ingress Controller Setup"
+kubectl get nsns
+kubectl get svc -n nginx-ingress
+
 prtHead "Create the ingress route with context based routing"
 execCmd "cat /tmp/http-ingress.yaml"
 execCmd "kubectl create -f /tmp/http-ingress.yaml -n $NAMESPACE"

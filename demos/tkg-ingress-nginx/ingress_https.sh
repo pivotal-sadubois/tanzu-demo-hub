@@ -122,6 +122,10 @@ prtHead "Create a secret with the certificates of domain $DOMAIN"
 execCmd "cat /tmp/https-secret.yaml"
 execCmd "kubectl create -f /tmp/https-secret.yaml -n $NAMESPACE"
 
+prtHead "Show the NGNIX Ingress Controller Setup"
+kubectl get nsns
+kubectl get svc -n nginx-ingress
+
 prtHead "Create the ingress route with context based routing"
 execCmd "cat /tmp/https-ingress.yaml"
 execCmd "kubectl create -f /tmp/https-ingress.yaml -n $NAMESPACE"
