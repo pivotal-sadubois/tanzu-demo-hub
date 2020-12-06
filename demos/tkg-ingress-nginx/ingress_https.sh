@@ -1,54 +1,84 @@
 # ============================================================================================
-# File: ........: deploy_demo_tls.sh
+# File: ........: ingress_https.sh
 # Language .....: bash
-# Author .......: Sacha Dubois, Pivotal
+# Author .......: Sacha Dubois, VMware
 # --------------------------------------------------------------------------------------------
 # Description ..: Monitoring with Grafana and Prometheus Demo
 # ============================================================================================
 
-BASENAME=$(basename $0)
-DIRNAME=$(dirname $0)
-
-if [ -f ${DIRNAME}/../../functions ]; then
-  . ${DIRNAME}/../../functions
-else
-  echo "ERROR: can ont find ${DIRNAME}/../../functions"; exit 1
+f [ ! -f /tkg_software_installed ]; then
+  echo "ERROR: $0 Needs to run on a TKG Jump Host"; exit
 fi
 
-# Created by /usr/local/bin/figlet
+export TDH_TKGWC_NAME=tdh-1
+export NAMESPACE="tkg-ingress-nginx"
+export TANZU_DEMO_HUB=$(cd "$(pwd)/$(dirname $0)/../../"; pwd)
+export TDHPATH=$(cd "$(pwd)/$(dirname $0)/../../"; pwd)
+export TDHDEMO=${TDHPATH}/demos/$NAMESPACE
+
+if [ -f $TANZU_DEMO_HUB/functions ]; then
+  . $TANZU_DEMO_HUB/functions
+else
+  echo "ERROR: can ont find ${TANZU_DEMO_HUB}/functions"; exit 1
+fi
+
+ Created by /usr/local/bin/figlet
 clear
-echo '                                                                                      '
-echo '              ___                                   ____ _                            '
-echo '             |_ _|_ __   __ _ _ __ ___  ___ ___    / ___| |__   ___  ___  ___  ___    '
-echo '              | ||  _ \ / _  |  __/ _ \/ __/ __|  | |   |  _ \ / _ \/ _ \/ __|/ _ \   '
-echo '              | || | | | (_| | | |  __/\__ \__ \  | |___| | | |  __/  __/\__ \  __/   '
-echo '             |___|_| |_|\__, |_|  \___||___/___/   \____|_| |_|\___|\___||___/\___|   '
-echo '                        |___/                                                         '
-echo '                                   ____                                               '
-echo '                                  |  _ \  ___ _ __ ___   ___                          '
-echo '                                  | | | |/ _ \  _   _ \ / _ \                         '
-echo '                                  | |_| |  __/ | | | | | (_) |                        '
-echo '                                  |____/ \___|_| |_| |_|\___/                         '
+echo '                  _____ _  ______   ___                                               '
+echo '                 |_   _| |/ / ___| |_ _|_ __   __ _ _ __ ___  ___ ___                 '
+echo '                   | | |   / |  _   | ||  _ \ / _  |  __/ _ \/ __/ __|                '
+echo '                   | | |   \ |_| |  | || | | | (_| | | |  __/\__ \__ \                '
+echo '                   |_| |_|\_\____| |___|_| |_|\__  |_|  \___||___/___/                '
+echo '                                              |___/                                   '
 echo '                                                                                      '
 echo '          ----------------------------------------------------------------------------'
-echo '                   Demonstration for Ingress Routing based on two different URL       '
-echo '                                    by Sacha Dubois, Pivotal Inc                      '
+echo '              NGINX Ingress Example with Domain and Context based Routing             '
+echo '                               by Sacha Dubois, VMware Inc                            '
 echo '          ----------------------------------------------------------------------------'
 echo '                                                                                      '
 
-showK8sEnvironment
+# --- CHECK ENVIRONMENT VARIABLES ---
+if [ -f ~/.tanzu-demo-hub.cfg ]; then
+  . ~/.tanzu-demo-hub.cfg
+fi
 
-# --- LOAD CLOUD ENVIRONMENT ---
-dom=$(pks cluster cl1 | grep "Kubernetes Master Host" | awk '{ print $NF }' | sed 's/cl1\.//g')
+if [ -f $TDHPATH/config/${TDH_TKGWC_NAME}.cfg ]; then
+  . $TDHPATH/config/${TDH_TKGWC_NAME}.cfg
+else
+  echo "ERROR: $TDHPATH/config/${TDH_TKGWC_NAME}.cfg not found"; exit
+fi
+
+K8S_CONTEXT_CURRENT=$(kubectl config current-context)
+if [ "${K8S_CONTEXT_CURRENT}" != "${K8S_CONTEXT}" ]; then
+  kubectl config use-context $K8S_CONTEXT
+fi
+
+# --- CHECK CLUSTER ---
+stt=$(tkg get cluster $TDH_TKGWC_NAME --config=$TDHPATH/config/$TDH_TKGMC_CONFIG -o json | jq -r '.[].status')
+if [ "${stt}" != "running" ]; then
+  echo "ERROR: tkg cluster is not in 'running' status"
+  echo "       => tkg get cluster $TDH_TKGWC_NAME --config=$TDHPATH/config/$TDH_TKGMC_CONFIG"; exit
+fi
+
+kubectl get namespace $NAMESPACE > /dev/null 2>&1
+if [ $? -eq 0 ]; then
+  echo "ERROR: Namespace '$NAMESPACE' already exist"
+  echo "       => kubectl delete namespace $NAMESPACE"
+  exit 1
+fi
+
+if [ -f ${TDHPATH}/deployments/$TKG_DEPLOYMENT ]; then
+  . ${TDHPATH}/deployments/$TKG_DEPLOYMENT
+
+  DOMAIN="nginx-${TDH_TKGWC_NAME}.${TDH_TKGMC_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}"
+else
+  echo "ERROR: can not find ${TDHPATH}/deployments/$TKG_DEPLOYMENT"; exit
+fi
 
 if [ -d ../../certificates/$dom -a "$dom" != "" ]; then 
   TLS_CERTIFICATE=../../certificates/$dom/fullchain.pem 
   TLS_PRIVATE_KEY=../../certificates/$dom/privkey.pem 
 fi
-
-#pks get-credentials cl1 > /dev/null 2>&1
-#uid=$(kubectl config view -o jsonpath="{.contexts[?(@.name == \"cl1\")].context.user}")
-#tok=$(kubectl describe secret $(kubectl get secret | grep $uid | awk '{print $1}') | grep "token:" | awk '{ print $2 }')
 
 # --- CHECK IF CERTIFICATE HAS BEEN DEFINED ---
 if [ "${TLS_CERTIFICATE}" == "" -o "${TLS_PRIVATE_KEY}" == "" ]; then 
@@ -63,23 +93,16 @@ else
   verifyTLScertificate $TLS_CERTIFICATE $TLS_PRIVATE_KEY
 fi
 
-kubectl get namespace cheese > /dev/null 2>&1
-if [ $? -eq 0 ]; then
-  echo "ERROR: Namespace 'cheese' already exist"
-  echo "       => kubectl delete namespace cheese"
-  exit 1
-fi
-
 # --- CONVERT CERTS TO BASE64 ---
-cert=$(base64 $TLS_CERTIFICATE) 
-pkey=$(base64 $TLS_PRIVATE_KEY) 
+cert=$(base64 --wrap=10000 $TLS_CERTIFICATE) 
+pkey=$(base64 --wrap=10000 $TLS_PRIVATE_KEY) 
 
 # --- GENERATE INGRES FILES ---
-cat ${DIRNAME}/template_cheese-ingress_tls.yml | sed -e "s/DOMAIN/$PKS_APPATH/g" > /tmp/cheese-ingress_tls.yml
-echo " tls.crt: \"$cert\"" >> /tmp/cheese-ingress_tls.yml
-echo " tls.key: \"$pkey\"" >> /tmp/cheese-ingress_tls.yml
+cat ${DIRNAME}/template_ingress_tls.yaml | sed -e "s/DOMAIN/$PKS_APPATH/g" > /tmp/https-ingress.yaml
+echo " tls.crt: \"$cert\"" >> /tmp/https-ingress.yaml
+echo " tls.key: \"$pkey\"" >> /tmp/https-ingress.yaml
 
-prtHead "Create seperate namespace to host the Ingress Cheese Demo"
+prtHead "Create seperate namespace to host the Ingress Demo"
 execCmd "kubectl create namespace cheese"
 
 prtHead "Create the deployment for stilton-cheese"

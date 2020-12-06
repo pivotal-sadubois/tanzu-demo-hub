@@ -77,7 +77,7 @@ else
 fi
 
 # --- GENERATE INGRES FILES --
-cat files/temp/late_cheese-ingress.yml | sed "s/DOMAIN/$DOMAIN/g" > /tmp/http-ingress.yaml
+cat files/template_ingress.yml | sed "s/DOMAIN/$DOMAIN/g" > /tmp/http-ingress.yaml
 
 prtHead "Create seperate namespace to host the Ingress Demo"
 execCmd "kubectl create namespace $NAMESPACE" 
