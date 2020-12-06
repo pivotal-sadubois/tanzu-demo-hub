@@ -98,9 +98,57 @@ cert=$(base64 --wrap=10000 $TLS_CERTIFICATE)
 pkey=$(base64 --wrap=10000 $TLS_PRIVATE_KEY) 
 
 # --- GENERATE INGRES FILES ---
-cat ${DIRNAME}/template_https_ingress.yaml | sed -e "s/DOMAIN/$PKS_APPATH/g" > /tmp/https-ingress.yaml
-echo " tls.crt: \"$cert\"" >> /tmp/https-ingress.yaml
-echo " tls.key: \"$pkey\"" >> /tmp/https-ingress.yaml
+cat files/https-secret.yaml | sed -e "s/NAMESPACE/$NAMESPACE/g" > /tmp/https-secret.yaml
+echo "  tls.crt: \"$cert\"" >> /tmp/https-secret.yaml
+echo "  tls.key: \"$pkey\"" >> /tmp/https-secret.yaml
+
+# --- PREPARATION ---
+cat files/https-ingress.yaml | sed -e "s/DNS_DOMAIN/$DOMAIN/g" -e "s/NAMESPACE/$NAMESPACE/g" > /tmp/https-ingress.yaml
+
+prtHead "Create seperate namespace to host the Ingress Demo"
+execCmd "kubectl create namespace $NAMESPACE"
+
+prtHead "Create deployment for the ingress tesing app"
+execCmd "kubectl create deployment echoserver-1 --image=datamanos/echoserver --port=8080 -n $NAMESPACE"
+execCmd "kubectl create deployment echoserver-2 --image=datamanos/echoserver --port=8080 -n $NAMESPACE"
+execCmd "kubectl get pods -n $NAMESPACE"
+
+prtHead "Create two service (echoserver-1 and echoserver-2) for the ingress tesing app"
+execCmd "kubectl expose deployment echoserver-1 --port=8080 -n $NAMESPACE"
+execCmd "kubectl expose deployment echoserver-2 --port=8080 -n $NAMESPACE"
+execCmd "kubectl get svc,pods -n $NAMESPACE"
+
+prtHead "Create a secret with the certificates of domain $DOMAIN"
+execCmd "cat /tmp/https-secret.yaml"
+execCmd "kubectl create -f /tmp/https-secret.yaml -n $NAMESPACE"
+
+prtHead "Create the ingress route with context based routing"
+execCmd "cat /tmp/https-ingress.yaml"
+execCmd "kubectl create -f /tmp/https-ingress.yaml -n $NAMESPACE"
+execCmd "kubectl get ingress,svc,pods -n $NAMESPACE"
+
+prtHead "Open WebBrowser and verify the deployment"
+echo "     # --- Context Based Routing"
+echo "     => curl https://echoserver.${DOMAIN}/foo"
+echo "     => curl https://echoserver.${DOMAIN}/bar"
+echo ""
+echo "     # --- Domain Based Routing"
+echo "     => curl https://echoserver1.$DOMAIN"
+echo "     => curl https://echoserver2.$DOMAIN"
+echo ""
+
+
+
+exit
+
+
+
+
+
+
+
+
+
 
 prtHead "Create seperate namespace to host the Ingress Demo"
 execCmd "kubectl create namespace cheese"
