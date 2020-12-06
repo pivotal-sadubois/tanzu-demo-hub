@@ -98,7 +98,7 @@ cert=$(base64 --wrap=10000 $TLS_CERTIFICATE)
 pkey=$(base64 --wrap=10000 $TLS_PRIVATE_KEY) 
 
 # --- GENERATE INGRES FILES ---
-cat ${DIRNAME}/template_ingress_tls.yaml | sed -e "s/DOMAIN/$PKS_APPATH/g" > /tmp/https-ingress.yaml
+cat ${DIRNAME}/template_https_ingress.yaml | sed -e "s/DOMAIN/$PKS_APPATH/g" > /tmp/https-ingress.yaml
 echo " tls.crt: \"$cert\"" >> /tmp/https-ingress.yaml
 echo " tls.key: \"$pkey\"" >> /tmp/https-ingress.yaml
 
