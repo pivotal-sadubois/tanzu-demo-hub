@@ -271,7 +271,7 @@ if [ "${TDH_TKGWC_INGRESS_NGINX}" == "true" ]; then
   helm repo add stable https://charts.helm.sh/stable > /dev/null 2>&1
 
   messagePrint "- Configure Bitnami Helm Repo" "https://charts.bitnami.com/bitnami"
-  helm repo add bitnami https://charts.bitnami.com/bitnami
+  helm repo add bitnami https://charts.bitnami.com/bitnami > /dev/null 2>&1
   helm repo update > /dev/null 2>&1
 
   messagePrint "- Create ServiceAccount for tiller" "demos/k8s-helm/rbac-config.yaml "
