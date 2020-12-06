@@ -330,19 +330,8 @@ echo gaga3
   # https://docs.vmware.com/en/VMware-Tanzu-Kubernetes-Grid/1.2/vmware-tanzu-kubernetes-grid-12/GUID-extensions-harbor-registry.html"
   messageTitle "Install Harbor Registry"
   messagePrint "- Confogure Helm Repo" "https://charts.helm.sh/stable"
-  cd ${TDHPATH}/extensions/$TDH_TKGWC_EXTENSIONS/extensions
 
-  messagePrint "- Create a namespace for the Harbor service" "registry/harbor/namespace-role.yaml"
-  kubectl apply -f registry/harbor/namespace-role.yaml > /dev/null 2>&1
-  if [ $? -ne 0 ]; then
-    echo "ERROR: Failed to create namespace for the Harbor service"
-    echo "       => kubectl apply -f registry/harbor/namespace-role.yaml"
-  fi
-
-echo xxxx1
-pwd
-  if [ -d ../../../certificates ]; then
-echo xxxx2
+  if [ -d certificates ]; then
     TLS_CERTIFICATE=certificates/fullchain.pem
     TLS_PRIVATE_KEY=certificates/privkey.pem
   fi
@@ -363,6 +352,15 @@ echo xxxx2
   # --- CONVERT CERTS TO BASE64 ---
   cert=$(base64 --wrap=10000 $TLS_CERTIFICATE)
   pkey=$(base64 --wrap=10000 $TLS_PRIVATE_KEY)
+
+  cd ${TDHPATH}/extensions/$TDH_TKGWC_EXTENSIONS/extensions
+
+  messagePrint "- Create a namespace for the Harbor service" "registry/harbor/namespace-role.yaml"
+  kubectl apply -f registry/harbor/namespace-role.yaml > /dev/null 2>&1
+  if [ $? -ne 0 ]; then
+    echo "ERROR: Failed to create namespace for the Harbor service"
+    echo "       => kubectl apply -f registry/harbor/namespace-role.yaml"
+  fi
 
   sudo snap install yq > /dev/null 2>&1
   cp registry/harbor/harbor-data-values.yaml.example registry/harbor/harbor-data-values.yaml
