@@ -1,0 +1,36 @@
+---
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: http-ingress
+  annotations:
+    kubernetes.io/ingress.class: nginx
+spec:
+  rules:
+  # --- CONTEXT BASED ROUTING ---
+  - host: animals.DNS_DOMAIN
+    http:
+      paths:
+      - path: /bear
+        backend:
+          serviceName: bear
+          servicePort: 80
+      - path: /hare
+        backend:
+          serviceName: hare
+          servicePort: 80
+
+  # --- DOMAIN BASED ROUTING ---
+  - host: bear.DNS_DOMAIN
+    http:
+      paths: 
+      - backend:
+          serviceName: bear
+          servicePort: 80
+  - host: hare.DNS_DOMAIN
+    http:
+      paths: 
+      - backend:
+          serviceName: hare
+          servicePort: 80
+
