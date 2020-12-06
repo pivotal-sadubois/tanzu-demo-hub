@@ -103,7 +103,7 @@ echo "  tls.crt: \"$cert\"" >> /tmp/https-secret.yaml
 echo "  tls.key: \"$pkey\"" >> /tmp/https-secret.yaml
 
 # --- PREPARATION ---
-cat files/https-ingress.yaml | sed -e "s/DNS_DOMAIN/$DOMAIN/g" -e "s/NAMESPACE/$NAMESPACE/g" > /tmp/https-ingress.yaml
+cat files/template_https-ingress.yaml | sed -e "s/DNS_DOMAIN/$DOMAIN/g" -e "s/NAMESPACE/$NAMESPACE/g" > /tmp/https-ingress.yaml
 
 prtHead "Create seperate namespace to host the Ingress Demo"
 execCmd "kubectl create namespace $NAMESPACE"
