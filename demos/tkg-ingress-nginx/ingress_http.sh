@@ -4,14 +4,14 @@
 # Language .....: bash
 # Author .......: Sacha Dubois, VMware
 # --------------------------------------------------------------------------------------------
-# Description ..: Deploy the TKG Management Cluster on Azure
+# Description ..: Demonstration for Ingress Routing based on two different URL
 # ============================================================================================
 
 if [ ! -f /tkg_software_installed ]; then
   echo "ERROR: $0 Needs to run on a TKG Jump Host"; exit
 fi
 
-export NAMESPACE="contour-ingress-demo"
+export NAMESPACE="tkg-ingress-nginx"
 export TANZU_DEMO_HUB=$(cd "$(pwd)/$(dirname $0)/../../"; pwd)
 export TDHPATH=$(cd "$(pwd)/$(dirname $0)/../../"; pwd)
 export TDHDEMO=${TDHPATH}/demos/$NAMESPACE
@@ -32,7 +32,7 @@ echo '                   |_| |_|\_\____| |___|_| |_|\__  |_|  \___||___/___/    
 echo '                                              |___/                                   '
 echo '                                                                                      '
 echo '          ----------------------------------------------------------------------------'
-echo '              Contour Ingress Example with Domain and Context based Routing           '
+echo '              NGINX Ingress Example with Domain and Context based Routing             '
 echo '                               by Sacha Dubois, VMware Inc                            '
 echo '          ----------------------------------------------------------------------------'
 echo '                                                                                      '
@@ -50,7 +50,7 @@ else
 fi
 
 K8S_CONTEXT_CURRENT=$(kubectl config current-context)
-if [ "${K8S_CONTEXT_CURRENT}" != "${K8S_CONTEXT}" ]; then 
+if [ "${K8S_CONTEXT_CURRENT}" != "${K8S_CONTEXT}" ]; then
   kubectl config use-context $K8S_CONTEXT
 fi
 
@@ -71,18 +71,16 @@ fi
 if [ -f ${TDHPATH}/deployments/$TKG_DEPLOYMENT ]; then
   . ${TDHPATH}/deployments/$TKG_DEPLOYMENT
 
-  DOMAIN="apps-${TDH_TKGWC_NAME}.${TDH_TKGMC_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}"
+  DOMAIN="nginx-${TDH_TKGWC_NAME}.${TDH_TKGMC_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}"
 else
   echo "ERROR: can not find ${TDHPATH}/deployments/$TKG_DEPLOYMENT"; exit
 fi
 
-TKG_EXTENSIONS=${TDHPATH}/extensions/tkg-extensions-v1.2.0+vmware.1
-
-# --- PREPARATION ---
-cat files/http-ingress.yaml | sed -e "s/DNS_DOMAIN/$DOMAIN/g" -e "s/NAMESPACE/$NAMESPACE/g" > /tmp/http-ingress.yaml
+# --- GENERATE INGRES FILES --
+cat files/temp/late_cheese-ingress.yml | sed "s/DOMAIN/$DOMAIN/g" > /tmp/http-ingress.yaml
 
 prtHead "Create seperate namespace to host the Ingress Demo"
-execCmd "kubectl create namespace $NAMESPACE"
+execCmd "kubectl create namespace $NAMESPACE" 
 
 prtHead "Create deployment for the ingress tesing app"
 execCmd "kubectl create deployment echoserver-1 --image=datamanos/echoserver --port=8080 -n $NAMESPACE"
@@ -110,28 +108,24 @@ echo ""
 
 exit
 
-#nginxdemos/hello
-#TDH_TKGWC_NAME=tanzu-demo-hub
-#K8S_CONTEXT=tanzu-demo-hub-admin@tanzu-demo-hub
-#TKG_DEPLOYMENT=tkgmc-dev-azure-westeurope.cfg
-#TDH_TKGMC_CONFIG=tkgmc-dev-azure-westeurope.yaml
-#TKG_WC_CLUSTER=tkg-tanzu-demo-hub.cfg
+prtHead " 7.) Verify services of cheddar-cheese and stilton-cheese"
+execCmd "kubectl get svc -n cheese"
 
-  841  docker run -p 8888:80 shomika17/animals
-  842  docker run -p 8887:80 shomika17/animals:latest
-  843  docker run shomika17/animals:latest
-  844  docker run -p 8887:80 bersling/animals
-  845  docker run -p 8887:80 kritouf/animals
-  846  docker run -p 8887:80 testingmky9394/docker-whale
-  847  docker run -p 8887:80 amithrr/fortuneteller
-  848  docker run -p 8887:80 paulbouwer/hello-kubernetes:1.8
-  849  docker run -p 8887:8080 paulbouwer/hello-kubernetes:1.8
-  863  docker run -p 8888:8080 gcr.io/google-samples/hello-app:1.0
+prtHead " 8.) Describe services cheddar-cheese and stilton-cheese"
+execCmd "kubectl describe svc cheddar-cheese -n cheese"
+execCmd "kubectl describe svc stilton-cheese -n cheese"
 
-export TDH_DEPLOYMENT_ENV_NAME="Azure"
-export TKG_CONFIG=/Users/sdubois/workspace/tanzu-demo-hub/config/tkgmc-azure-westeurope.yaml
+prtHead " 9.) Review ingress configuration file (/tmp/cheese-ingress.yml)"
+execCmd "more /tmp/cheese-ingress.yml"
 
+prtHead "10.) Create ingress routing cheddar-cheese and stilton-cheese service"
+execCmd "kubectl create -f /tmp/cheese-ingress.yml -n cheese"
+execCmd "kubectl get ingress -n cheese"
+execCmd "kubectl describe ingress -n cheese"
 
+prtHead "10.) Open WebBrowser and verify the deployment"
+prtText "     => http://cheddar-cheese.apps-cl1.$dom"
+prtText "     => http://stilton-cheese.apps-cl1.$dom"
+prtText ""
 
-
-
+exit 0
