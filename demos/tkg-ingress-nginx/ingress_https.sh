@@ -6,7 +6,7 @@
 # Description ..: Monitoring with Grafana and Prometheus Demo
 # ============================================================================================
 
-f [ ! -f /tkg_software_installed ]; then
+if [ ! -f /tkg_software_installed ]; then
   echo "ERROR: $0 Needs to run on a TKG Jump Host"; exit
 fi
 
