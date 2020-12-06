@@ -1,9 +1,10 @@
+#!/bin/bash
 # ============================================================================================
-# File: ........: ingress_https.sh
+# File: ........: ingress_http.sh
 # Language .....: bash
 # Author .......: Sacha Dubois, VMware
 # --------------------------------------------------------------------------------------------
-# Description ..: Monitoring with Grafana and Prometheus Demo
+# Description ..: Demonstration for Ingress Routing based on two different URL
 # ============================================================================================
 
 if [ ! -f /tkg_software_installed ]; then
@@ -22,7 +23,7 @@ else
   echo "ERROR: can ont find ${TANZU_DEMO_HUB}/functions"; exit 1
 fi
 
- Created by /usr/local/bin/figlet
+# Created by /usr/local/bin/figlet
 clear
 echo '                  _____ _  ______   ___                                               '
 echo '                 |_   _| |/ / ___| |_ _|_ __   __ _ _ __ ___  ___ ___                 '
@@ -75,38 +76,44 @@ else
   echo "ERROR: can not find ${TDHPATH}/deployments/$TKG_DEPLOYMENT"; exit
 fi
 
-if [ -d ../../certificates ]; then 
-  TLS_CERTIFICATE=../../certificates/$dom/fullchain.pem 
-  TLS_PRIVATE_KEY=../../certificates/$dom/privkey.pem 
-fi
+# --- GENERATE INGRES FILES --
+cat files/template_http_ingress.yaml | sed "s/DNS_DOMAIN/$DOMAIN/g" > /tmp/http-ingress.yaml
 
-# --- CHECK IF CERTIFICATE HAS BEEN DEFINED ---
-if [ "${TLS_CERTIFICATE}" == "" -o "${TLS_PRIVATE_KEY}" == "" ]; then 
-  echo ""
-  echo "ERROR: Certificate and Private-Key has not been specified. Please set"
-  echo "       the following environment variables:"
-  echo "       => export TLS_CERTIFICATE=<cert.pem>"
-  echo "       => export TLS_PRIVATE_KEY=<private_key.pem>"
-  echo ""
-  exit 1 
-else
-  verifyTLScertificate $TLS_CERTIFICATE $TLS_PRIVATE_KEY
-fi
+#LOGS
+#kubectl logs service/stable-nginx-ingress-controller -n nginx-ingress
 
-# --- CONVERT CERTS TO BASE64 ---
-cert=$(base64 --wrap=10000 $TLS_CERTIFICATE) 
-pkey=$(base64 --wrap=10000 $TLS_PRIVATE_KEY) 
+exit
+kind: Ingress
+metadata:
+  name: http-ingress
+  annotations:
+    kubernetes.io/ingress.class: nginx
 
-# --- GENERATE INGRES FILES ---
-cat files/https-secret.yaml | sed -e "s/NAMESPACE/$NAMESPACE/g" > /tmp/https-secret.yaml
-echo "  tls.crt: \"$cert\"" >> /tmp/https-secret.yaml
-echo "  tls.key: \"$pkey\"" >> /tmp/https-secret.yaml
+-----------------------------------------------------------------------------------------------------------
+Hostname: echoserver-2-6bf6d4f799-4sm46
+Request Information:
+        real path=/bar   <- **** CONTEXT WITHOUT PATH REWRITE
+        request_uri=http://echoserver.nginx-tdh-1.aztkg.pcfsdu.com:8080/bar <- **** CONTEXT WITHOUT PATH REWRITE
 
-# --- PREPARATION ---
-cat files/https-ingress.yaml | sed -e "s/DNS_DOMAIN/$DOMAIN/g" -e "s/NAMESPACE/$NAMESPACE/g" > /tmp/https-ingress.yaml
+kind: Ingress
+metadata:
+  name: http-ingress
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    nginx.ingress.kubernetes.io/rewrite-target: /
+
+-----------------------------------------------------------------------------------------------------------
+Hostname: echoserver-2-6bf6d4f799-4sm46
+Request Information:
+        real path=/      <- **** CONTEXT WITH PATH REWRITE
+        request_uri=http://echoserver.nginx-tdh-1.aztkg.pcfsdu.com:8080/ <- **** CONTEXT WITHOUT PATH REWRITE
+
 
 prtHead "Create seperate namespace to host the Ingress Demo"
-execCmd "kubectl create namespace $NAMESPACE"
+execCmd "kubectl create namespace $NAMESPACE" 
+
+prtHead "Create seperate namespace to host the Ingress Demo"
+execCmd "kubectl create namespace $NAMESPACE" 
 
 prtHead "Create deployment for the ingress tesing app"
 execCmd "kubectl create deployment echoserver-1 --image=datamanos/echoserver --port=8080 -n $NAMESPACE"
@@ -118,23 +125,33 @@ execCmd "kubectl expose deployment echoserver-1 --port=8080 -n $NAMESPACE"
 execCmd "kubectl expose deployment echoserver-2 --port=8080 -n $NAMESPACE"
 execCmd "kubectl get svc,pods -n $NAMESPACE"
 
-prtHead "Create a secret with the certificates of domain $DOMAIN"
-execCmd "cat /tmp/https-secret.yaml"
-execCmd "kubectl create -f /tmp/https-secret.yaml -n $NAMESPACE"
-
 prtHead "Create the ingress route with context based routing"
-execCmd "cat /tmp/https-ingress.yaml"
-execCmd "kubectl create -f /tmp/https-ingress.yaml -n $NAMESPACE"
+execCmd "cat /tmp/http-ingress.yaml"
+execCmd "kubectl create -f /tmp/http-ingress.yaml -n $NAMESPACE"
 execCmd "kubectl get ingress,svc,pods -n $NAMESPACE"
 
 prtHead "Open WebBrowser and verify the deployment"
 echo "     # --- Context Based Routing"
-echo "     => curl https://echoserver.${DOMAIN}/foo"
-echo "     => curl https://echoserver.${DOMAIN}/bar"
+echo "     => curl http://echoserver.${DOMAIN}/foo"
+echo "     => curl http://echoserver.${DOMAIN}/bar"
 echo ""
 echo "     # --- Domain Based Routing"
-echo "     => curl https://echoserver1.$DOMAIN"
-echo "     => curl https://echoserver2.$DOMAIN"
+echo "     => curl http://echoserver1.$DOMAIN"
+echo "     => curl http://echoserver2.$DOMAIN"
 echo ""
 
+prtHead "Create the ingress route with context based routing"
+
+
+
+
+
+
+
 exit 0
+
+
+
+
+
+

@@ -23,11 +23,12 @@ fi
 
 # Created by /usr/local/bin/figlet
 clear
-echo '                     _____ _  ______   ____                                           '
-echo '                    |_   _| |/ / ___| |  _ \  ___ _ __ ___   ___                      '
-echo '                      | | |   / |  _  | | | |/ _ \  _   _ \ / _ \                     '
-echo '                      | | |   \ |_| | | |_| |  __/ | | | | | (_) |                    '
-echo '                      |_| |_|\_\____| |____/ \___|_| |_| |_|\___/                     '
+echo '                  _____ _  ______   ___                                               '
+echo '                 |_   _| |/ / ___| |_ _|_ __   __ _ _ __ ___  ___ ___                 '
+echo '                   | | |   / |  _   | ||  _ \ / _  |  __/ _ \/ __/ __|                '
+echo '                   | | |   \ |_| |  | || | | | (_| | | |  __/\__ \__ \                '
+echo '                   |_| |_|\_\____| |___|_| |_|\__  |_|  \___||___/___/                '
+echo '                                              |___/                                   '
 echo '                                                                                      '
 echo '          ----------------------------------------------------------------------------'
 echo '              Contour Ingress Example with Domain and Context based Routing           '
@@ -75,7 +76,7 @@ else
   echo "ERROR: can not find ${TDHPATH}/deployments/$TKG_DEPLOYMENT"; exit
 fi
 
-if [ -d ../../certificates/$dom  ]; then
+if [ -d ../../certificates ]; then
   TLS_CERTIFICATE=../../certificates/fullchain.pem
   TLS_PRIVATE_KEY=../../certificates/privkey.pem
 fi
@@ -107,7 +108,7 @@ TKG_EXTENSIONS=${TDHPATH}/extensions/tkg-extensions-v1.2.0+vmware.1
 # --- PREPARATION ---
 cat files/https-ingress.yaml | sed -e "s/DNS_DOMAIN/$DOMAIN/g" -e "s/NAMESPACE/$NAMESPACE/g" > /tmp/https-ingress.yaml
 
-prtHead "Create seperate namespace to host the Ingress Cheese Demo"
+prtHead "Create seperate namespace to host the Ingress Demo"
 execCmd "kubectl create namespace $NAMESPACE"
 
 prtHead "Create deployment for the ingress tesing app"
@@ -133,6 +134,7 @@ prtHead "Open WebBrowser and verify the deployment"
 echo "     # --- Context Based Routing"
 echo "     => curl https://echoserver.${DOMAIN}/foo"
 echo "     => curl https://echoserver.${DOMAIN}/bar"
+echo ""
 echo "     # --- Domain Based Routing"
 echo "     => curl https://echoserver1.$DOMAIN"
 echo "     => curl https://echoserver2.$DOMAIN"
