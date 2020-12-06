@@ -76,8 +76,8 @@ else
 fi
 
 if [ -d ../../certificates ]; then 
-  TLS_CERTIFICATE=../../certificates/$dom/fullchain.pem 
-  TLS_PRIVATE_KEY=../../certificates/$dom/privkey.pem 
+  TLS_CERTIFICATE=../../certificates/fullchain.pem 
+  TLS_PRIVATE_KEY=../../certificates/privkey.pem 
 fi
 
 # --- CHECK IF CERTIFICATE HAS BEEN DEFINED ---
