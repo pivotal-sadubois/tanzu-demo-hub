@@ -94,38 +94,17 @@ execCmd "kubectl get svc,pods -n $NAMESPACE"
 
 prtHead "Create the ingress route with context based routing"
 execCmd "cat /tmp/http-ingress.yaml"
-execCmd "kubectl create -f /tmp/http-ingress.yaml"
+execCmd "kubectl create -f /tmp/http-ingress.yaml -n $NAMESPACE"
 execCmd "kubectl get ingress,svc,pods -n $NAMESPACE"
 
 prtHead "Open WebBrowser and verify the deployment"
 echo "     # --- Context Based Routing"
 echo "     => curl http://echoserver.${DOMAIN}/foo"
 echo "     => curl http://echoserver.${DOMAIN}/bar"
+echo ""
 echo "     # --- Domain Based Routing"
 echo "     => curl http://echoserver1.$DOMAIN"
 echo "     => curl http://echoserver2.$DOMAIN"
 echo ""
-
-exit
-
-prtHead " 7.) Verify services of cheddar-cheese and stilton-cheese"
-execCmd "kubectl get svc -n cheese"
-
-prtHead " 8.) Describe services cheddar-cheese and stilton-cheese"
-execCmd "kubectl describe svc cheddar-cheese -n cheese"
-execCmd "kubectl describe svc stilton-cheese -n cheese"
-
-prtHead " 9.) Review ingress configuration file (/tmp/cheese-ingress.yml)"
-execCmd "more /tmp/cheese-ingress.yml"
-
-prtHead "10.) Create ingress routing cheddar-cheese and stilton-cheese service"
-execCmd "kubectl create -f /tmp/cheese-ingress.yml -n cheese"
-execCmd "kubectl get ingress -n cheese"
-execCmd "kubectl describe ingress -n cheese"
-
-prtHead "10.) Open WebBrowser and verify the deployment"
-prtText "     => http://cheddar-cheese.apps-cl1.$dom"
-prtText "     => http://stilton-cheese.apps-cl1.$dom"
-prtText ""
 
 exit 0
