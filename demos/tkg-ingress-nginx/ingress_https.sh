@@ -76,9 +76,11 @@ else
 fi
 
 if [ -d ../../certificates ]; then 
+echo jjjjj
   TLS_CERTIFICATE=../../certificates/fullchain.pem 
   TLS_PRIVATE_KEY=../../certificates/privkey.pem 
 fi
+echo "gaga TLS_PRIVATE_KEY:$TLS_PRIVATE_KEY"
 
 # --- CHECK IF CERTIFICATE HAS BEEN DEFINED ---
 if [ "${TLS_CERTIFICATE}" == "" -o "${TLS_PRIVATE_KEY}" == "" ]; then 
