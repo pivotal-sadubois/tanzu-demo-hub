@@ -1031,7 +1031,7 @@ verifyTLScertificate() {
     exit 1
   fi
 
-  if [ "${TLS_ROOT_CA}" == "" ]; then
+  if [ ! -f certificates/ca.pem ]; then
     # --- TRY TO FIND THE ROOT_CA ---
     if [ "${ROOT_CA_NAME}" == "DST Root CA X3" ]; then
       ROOT_CA_URL="https://letsencrypt.org/certs/trustid-x3-root.pem.txt"
