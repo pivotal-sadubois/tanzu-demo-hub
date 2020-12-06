@@ -334,6 +334,7 @@ echo gaga3
   if [ -d certificates ]; then
     TLS_CERTIFICATE=certificates/fullchain.pem
     TLS_PRIVATE_KEY=certificates/privkey.pem
+    TLS_ROOT_CA=certificates/ca.pem
   fi
 
   # --- CHECK IF CERTIFICATE HAS BEEN DEFINED ---
@@ -356,6 +357,7 @@ exit
   # --- CONVERT CERTS TO BASE64 ---
   cert=$(base64 --wrap=10000 $TLS_CERTIFICATE)
   pkey=$(base64 --wrap=10000 $TLS_PRIVATE_KEY)
+  cart=$(base64 --wrap=10000 $TLS_ROOT_CA)
 
   cd ${TDHPATH}/extensions/$TDH_TKGWC_EXTENSIONS/extensions
 
@@ -378,6 +380,7 @@ exit
   messagePrint "- Add Cerfificate and PrivateKey for domain" "$DNS_HARBOR"
   sed -i "s/  tls.crt:/  tls.crt: $cert/g" registry/harbor/harbor-data-values.yaml
   sed -i "s/  tls.key:/  tls.key: $pkey/g" registry/harbor/harbor-data-values.yaml
+  sed -i "s/  ca.crt:/  ca.crt: $cart/g" registry/harbor/harbor-data-values.yaml
 
   messagePrint "- Create secrets for the Harbor config" "registry/harbor/harbor-data-values.yaml"
   kubectl create secret generic harbor-data-values --from-file=values.yaml=registry/harbor/harbor-data-values.yaml \
