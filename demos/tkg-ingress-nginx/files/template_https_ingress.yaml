@@ -1,0 +1,33 @@
+---
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+ annotations:
+   kubernetes.io/ingress.class: nginx
+ name: cheese-ingress
+spec:
+ rules:
+ - host: cheddar-cheese.DOMAIN
+   http:
+     paths:
+     - backend:
+         serviceName: cheddar-cheese
+         servicePort: 80
+ - host: stilton-cheese.DOMAIN
+   http:
+     paths:
+     - backend:
+         serviceName: stilton-cheese
+         servicePort: 80
+ tls:
+ - hosts:
+   - cheddar-cheese.DOMAIN
+   - stilton-cheese.DOMAIN
+   secretName: cheese-ingress-certs
+---
+kind: Secret
+metadata:
+ name: cheese-ingress-certs
+type: Opaque
+apiVersion: v1
+data:
