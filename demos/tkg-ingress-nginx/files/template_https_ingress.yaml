@@ -14,17 +14,15 @@ spec:
       - echoserver2.DNS_DOMAIN
   rules:
   # --- CONTEXT BASED ROUTING ---
-  - host: echoserver1.DNS_DOMAIN
+  - host: echoserver.DNS_DOMAIN
     http:
       paths:
-      - backend:
+      - path: /foo
+        backend:
           serviceName: echoserver-1
           servicePort: 8080
-
-  - host: echoserver2.DNS_DOMAIN
-    http:
-      paths:
-      - backend:
+      - path: /bar
+        backend:
           serviceName: echoserver-2
           servicePort: 8080
 
