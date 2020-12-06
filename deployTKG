@@ -339,7 +339,7 @@ echo gaga3
     echo "       => kubectl apply -f registry/harbor/namespace-role.yaml"
   fi
 
-  if [ -d ../../certificates ]; then
+  if [ -d certificates ]; then
     TLS_CERTIFICATE=certificates/fullchain.pem
     TLS_PRIVATE_KEY=certificates/privkey.pem
   fi
