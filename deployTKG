@@ -324,6 +324,7 @@ fi
 #  if [ "${stt}" == "" ]; then
 #    cd ${TDHPATH}/extensions/$TDH_TKGWC_EXTENSIONS/extensions
 
+echo "TDH_TKGWC_INGRESS_HARBOR:$TDH_TKGWC_INGRESS_HARBOR"
 if [ "${TDH_TKGWC_INGRESS_HARBOR}" == "true" ]; then
 echo gaga3
   # https://docs.vmware.com/en/VMware-Tanzu-Kubernetes-Grid/1.2/vmware-tanzu-kubernetes-grid-12/GUID-extensions-harbor-registry.html"
