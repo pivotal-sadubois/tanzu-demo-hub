@@ -1034,12 +1034,19 @@ verifyTLScertificate() {
 
 verifyCertificate () {
   CLOUD="$1"
-  MODE="$2"
-  TLS_CERTIFICATE="$3"
-  TLS_FULLCHAIN="$4"
-  TLS_PRIVATE_KEY="$5"
-  TLS_CHAIN="$6"
-  TLS_ROOT_CA="$7"
+  TLS_CERTIFICATE="$2"
+  TLS_FULLCHAIN="$3"
+  TLS_PRIVATE_KEY="$4"
+  TLS_CHAIN="$5"
+  TLS_ROOT_CA="$6"
+
+
+echo "CLOUD:$CLOUD"
+echo "CLOUD:$CLOUD"
+echo "CLOUD:$CLOUD"
+echo "CLOUD:$CLOUD"
+
+exit
 
   if [ "${TLS_CERTIFICATE}" == "" -o "${TLS_PRIVATE_KEY}" == "" -o \
        "${TLS_FULLCHAIN}" == "" ]; then
