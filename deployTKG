@@ -126,7 +126,9 @@ if [ "${stt}" != "Success" ]; then
   echo "ERROR: $0 TKG Management Cluster deployment was not Successfil"; exit 1
 fi
 
+echo gaga1
 verifyCertificate "$TDH_TKGMC_ENVNAME" "$AWS_HOSTED_DNS_DOMAIN"
+echo gaga2
 
 exit
 
