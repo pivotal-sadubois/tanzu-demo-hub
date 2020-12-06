@@ -9,17 +9,17 @@ spec:
   tls:
   - secretName: https-secret
     hosts:
-      - echoserver.DOMAIN
-      - echoserver1.DOMAIN
-      - echoserver2.DOMAIN
+      - echoserver.DNS_DOMAIN
+      - echoserver1.DNS_DOMAIN
+      - echoserver2.DNS_DOMAIN
   rules:
-  - host: echoserver.DOMAIN
+  - host: echoserver1.DNS_DOMAIN
     http:
       paths:
       - backend:
           serviceName: echoserver-1
           servicePort: 8080
-  - host: stilton-cheese.DOMAIN
+  - host: echoserver2.DNS_DOMAIN
     http:
       paths:
       - backend:
