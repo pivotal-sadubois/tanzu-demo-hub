@@ -135,8 +135,6 @@ stt=$(tkg get cluster -o json | jq -r --arg key $TDH_TKGWC_NAME '.[] | select(.n
 if [ "${stt}" == "" ]; then 
   messageTitle "Creating TKG Cluster ($TDH_TKGWC_NAME)"
   echo "-----------------------------------------------------------------------------------------------------------"
-echo "tkg create cluster $TDH_TKGWC_NAME $TDH_OPTIONS"
-exit
   tkg create cluster $TDH_TKGWC_NAME $TDH_OPTIONS
   tkg get credentials $TDH_TKGWC_NAME
   messagePrint "- Kubernetes Context:" "$TDH_TKGWC_NAME-admin@$TDH_TKGWC_NAME"
