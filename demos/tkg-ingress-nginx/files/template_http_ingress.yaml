@@ -21,15 +21,15 @@ spec:
           servicePort: 8080
 
   # --- DOMAIN BASED ROUTING ---
-  - host: echoserver1.DOMAIN
+  - host: echoserver1.DNS_DOMAIN
     http:
-      paths: /
+      paths: 
       - backend:
           serviceName: echoserver-1
           servicePort: 8080
-  - host: echoserver2.DOMAIN
+  - host: echoserver2.DNS_DOMAIN
     http:
-      paths: /
+      paths: 
       - backend:
           serviceName: echoserver-2
           servicePort: 8080
