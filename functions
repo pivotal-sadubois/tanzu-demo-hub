@@ -1030,6 +1030,27 @@ verifyTLScertificate() {
     echo "       => openssl rsa -in $TLS_PRIVATE_KEY -noout -modulus"
     exit 1
   fi
+
+  if [ "${TLS_ROOT_CA}" == "" ]; then
+    # --- TRY TO FIND THE ROOT_CA ---
+    if [ "${ROOT_CA_NAME}" == "DST Root CA X3" ]; then
+      ROOT_CA_URL="https://letsencrypt.org/certs/trustid-x3-root.pem.txt"
+      curl --output /tmp/trustid-x3-root.pem $ROOT_CA_URL > /dev/null 2>&1
+      TLS_ROOT_CA=/tmp/trustid-x3-root.pem
+      #eval export ${CLOUD}_${MODE}_TLS_ROOT_CA=/tmp/trustid-x3-root.pem
+    fi
+
+    # --- GENERATE CA.PEM WITH ROOT_CA AND FULLCHAIN ---
+    cat $TLS_ROOT_CA $TLS_CERTIFICATE > certificates/ca.pem
+
+    if [ "${TLS_ROOT_CA}" == "" ]; then
+      echo "ERROR: ROOT_CA for $ROOT_CA_NAME could not be found, please download the file manually"
+      echo "       and set the variable in the ~/.pcfconfig"
+      echo "       => export ${CLOUD}_${MODE}_TLS_ROOT_CA=<ca.crt>"
+      exit 1
+    fi
+  fi
+
 }
 
 verifyCertificate () {

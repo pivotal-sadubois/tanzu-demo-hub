@@ -355,6 +355,10 @@ echo gaga3
     verifyTLScertificate $TLS_CERTIFICATE $TLS_PRIVATE_KEY
   fi
 
+
+echo oooooooooooooo
+exit
+
   # --- CONVERT CERTS TO BASE64 ---
   cert=$(base64 --wrap=10000 $TLS_CERTIFICATE)
   pkey=$(base64 --wrap=10000 $TLS_PRIVATE_KEY)
