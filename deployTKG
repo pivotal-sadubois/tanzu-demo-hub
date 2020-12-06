@@ -135,6 +135,8 @@ stt=$(tkg get cluster -o json | jq -r --arg key $TDH_TKGWC_NAME '.[] | select(.n
 if [ "${stt}" == "" ]; then 
   messageTitle "Creating TKG Cluster ($TDH_TKGWC_NAME)"
   echo "-----------------------------------------------------------------------------------------------------------"
+echo "tkg create cluster $TDH_TKGWC_NAME $TDH_OPTIONS"
+exit
   tkg create cluster $TDH_TKGWC_NAME $TDH_OPTIONS
   tkg get credentials $TDH_TKGWC_NAME
   messagePrint "- Kubernetes Context:" "$TDH_TKGWC_NAME-admin@$TDH_TKGWC_NAME"
@@ -393,7 +395,7 @@ echo gaga3
 
   cnt=$(kubectl get extension harbor -n tanzu-system-registry 2>/dev/null | egrep -c "^harbor")
   if [ $cnt -eq 0 ]; then
-    kubectl apply -f ingress/contour/contour-extension.yaml > /dev/null 2>&1
+    kubectl apply -f ingress/contour/harbor-extension.yaml > /dev/null 2>&1
     sleep 10
   fi
 
