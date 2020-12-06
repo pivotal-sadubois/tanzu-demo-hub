@@ -259,7 +259,7 @@ configureLetsEnscript() {
     CERTS_GENERATE_NEW=true
   fi
 
-  if [ "${CERTS_GENERATE_NEW}" == "true1" ]; then
+  if [ "${CERTS_GENERATE_NEW}" == "true" ]; then
     messageTitle "Generate Certificates for domain ($domain)"
     route53createHostedZone $domain
 
@@ -269,7 +269,7 @@ configureLetsEnscript() {
       messageTitle "Generate Certificate for PKS Domains ($domain)"
       #$SSH_COMMAND -n "echo \"/usr/bin/certbot certonly --dns-route53 -d '*.$domain' -d '*.api.$domain' -d '*.contour-tdh.$domain'\" -d '*.nginx-tdh.$domain'\""
       $SSH_COMMAND -n "sudo /usr/local/bin/certbot certonly --dns-route53 -d '*.$domain' -d '*.apps-tdh-1.$domain' -d '*.nginx-tdh-1.$domain' \
-                -d '*.nginx-tdh-1.$domain' -d '*.apps-tdh-2.$domain' -d '*.apps-tdh3.$domain' -m sadubois@pivotal.io --agree-tos -n --expand"
+                -d '*.nginx-tdh-1.$domain' -d '*.apps-tdh-2.$domain' -d '*.apps-tdh-3.$domain' -m sadubois@pivotal.io --agree-tos -n --expand"
       if [ $? -ne 0 ]; then
         echo "ERROR: failed to generate certificate. There are probably to many cert requests happends and a limit reached"
         echo "       Try it again after some hours or search *.$domain in https://crt.sh/"
@@ -293,6 +293,7 @@ configureLetsEnscript() {
     $SSH_COMMAND -n "[ -d /etc/letsencrypt/live ] && sudo chmod -R a+r /etc/letsencrypt/live /etc/letsencrypt/archive"
     $SSH_COMMAND -n "[ -d /etc/letsencrypt/live ] && sudo chmod 777 /etc/letsencrypt/live /etc/letsencrypt/live/$domain"
     $SSH_COMMAND -n "[ -d /etc/letsencrypt/archive ] && sudo chmod 777 /etc/letsencrypt/archive /etc/letsencrypt/archive/$domain"
+    $SSH_COMMAND -n "[ ! -d $SSH_HOME/tanzu-demo-hub/certificates/$domain ] && mkdir -p $SSH_HOME/tanzu-demo-hub/certificates"
     $SSH_COMMAND -n "[ -d /etc/letsencrypt/live/$domain ] && cp /etc/letsencrypt/live/$domain/* ~/tanzu-demo-hub/certificates"
 
     messageTitle " Copy new certificates from jump to local ./certificates/$domain"
@@ -304,7 +305,6 @@ configureLetsEnscript() {
 
     echo "----------------------------------------------------------------------------------------------------------------"
   fi
-
 }
 
 createCluster_old() {
@@ -495,6 +495,16 @@ sshEnvironment
 configureJumpHost
 configureLetsEnscript
 
+echo "AZURE_PKS_TLS_CERTIFICATE:$AZURE_PKS_TLS_CERTIFICATE"
+echo "AZURE_PAS_TLS_CERTIFICATE:$AZURE_PAS_TLS_CERTIFICATE"
+exit
+verifyCertificate
+#        verifyCertificate AZURE PKS "$AZURE_PKS_TLS_CERTIFICATE" "$AZURE_PKS_TLS_FULLCHAIN" \
+#                                    "$AZURE_PKS_TLS_PRIVATE_KEY" "$AZURE_PKS_TLS_ROOT_CA"
+
+exit
+
+
 # --- CREATE MANAGEMENT CLUSTER ---
 $SSH_COMMAND -n "[ -f $SSH_HOME/tanzu-demo-hub/scripts/InstallTKGmc.sh ] && tanzu-demo-hub/scripts/InstallTKGmc.sh $DEPLOY_TKG_TEMPLATE"
 echo "-----------------------------------------------------------------------------------------------------------"
@@ -516,9 +526,10 @@ echo "    => tkg create cluster tkg01 --plan=dev --kubernetes-version=v1.18.8  #
 echo "    => tkg create cluster tkg01 --plan=prod --worker-machine-count 3 --controlplane-machine-count 3"
 echo ""
 echo "-----------------------------------------------------------------------------------------------------------"
-echo "./deployTKG -d $DEPLOY_TKG_TEMPLATE -c tkg-tanzu-demo-hub.cfg -n tdh-tdh-1"
+messageTitle "Creating Worload Cluster (tdh-1)"
+echo "./deployTKG -d $DEPLOY_TKG_TEMPLATE -c tkg-tanzu-demo-hub.cfg -n tdh-1"
 echo \"$SSH_COMMAND -n "cd tanzu-demo-hub && ./deployTKG -d $DEPLOY_TKG_TEMPLATE -c tkg-tanzu-demo-hub.cfg -n tdh-1\""
-#$SSH_COMMAND -n "cd tanzu-demo-hub && ./deployTKG -d $DEPLOY_TKG_TEMPLATE -c tkg-tanzu-demo-hub.cfg -n tdh-1"
+$SSH_COMMAND -n "cd tanzu-demo-hub && ./deployTKG -d $DEPLOY_TKG_TEMPLATE -c tkg-tanzu-demo-hub.cfg -n tdh-1"
 
 exit
 

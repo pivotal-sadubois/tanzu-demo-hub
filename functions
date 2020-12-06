@@ -1032,5 +1032,189 @@ verifyTLScertificate() {
   fi
 }
 
+verifyCertificate () {
+  CLOUD="$1"
+  MODE="$2"
+  TLS_CERTIFICATE="$3"
+  TLS_FULLCHAIN="$4"
+  TLS_PRIVATE_KEY="$5"
+  TLS_CHAIN="$6"
+  TLS_ROOT_CA="$7"
 
+  if [ "${TLS_CERTIFICATE}" == "" -o "${TLS_PRIVATE_KEY}" == "" -o \
+       "${TLS_FULLCHAIN}" == "" ]; then
+
+    echo ""
+    echo "  3MISSING ENVIRONMENT-VARIABES    DESCRIPTION        "
+    echo "  --------------------------------------------------------------------------------------------------------------"
+    echo "  To allow TLS encrypted httpd traffic a Certificate and key needs to be created for your DNS Domain. Free"
+    echo "  certificates can be optained through https://letsencrypt.org."
+    echo ""
+
+    if [ "${TLS_CERTIFICATE}" == "" ]; then
+      echo "  ${CLOUD}_${MODE}_TLS_CERTIFICATE       (optional)  TLS Certificate (type PEM Certificate)"
+    fi
+
+    if [ "${TLS_FULLCHAIN}" == "" ]; then
+      echo "  ${CLOUD}_${MODE}_TLS_FULLCHAIN         (optional)  TLS Fullchain (type PEM Certificate)"
+    fi
+
+    if [ "${TLS_PRIVATE_KEY}" == "" ]; then
+      echo "  ${CLOUD}_${MODE}_TLS_PRIVATE_KEY       (optional)  TLS Private Key"
+    fi
+
+    if [ "${ROOT_CA}" == "" ]; then
+      echo "  ${CLOUD}_${MODE}_TLS_ROOT_CA           (automatic) TLS Root CA"
+    fi
+
+    dom="$PCF_DEPLOYMENT_ENV_NAME.$AWS_HOSTED_DNS_DOMAIN"
+    echo "                                  "
+    echo "                                  $PCF_DEPLOYMENT_ENV_NAME.$AWS_HOSTED_DNS_DOMAIN"
+    echo "                                    |      |_________ represented by the PCF_ENVIRONMENT_NAME variable"
+    echo "                                    |________________ represented by the AWS_HOSTED_DNS_DOMAIN variable"
+    echo ""
+    echo "                                  The certificate Should include the following domains:"
+    echo "                                  - PKS Services (API, OpsMan, Harbor) .: *.${dom}"
+    echo "                                  - PKS Cluster and Applications .......: *.apps.cl1.${dom}"
+    echo "                                                                          *.apps.cl2.${dom}"
+    echo "                                                                          *.apps.cl3.${dom}"
+    echo ""
+  else
+    messageTitle "TLS Encryption for domain (${PCF_DEPLOYMENT_ENV_NAME}.${AWS_HOSTED_DNS_DOMAIN})"
+
+    for n in $TLS_CERTIFICATE $TLS_FULLCHAIN; do
+      cnt=$(grep -c "BEGIN CERTIFICATE" $n)
+      if [ $cnt -eq 0 ]; then
+        echo "ERROR: The file ($n) is not in (Base64) format"
+        echo "       It should begin with '-----BEGIN CERTIFICATE-----' and end with '-----END CERTIFICATE-----'"
+        exit 1
+      fi
+    done
+
+    for n in $TLS_PRIVATE_KEY; do
+      cnt=$(egrep -c "BEGIN RSA PRIVATE|BEGIN PRIVATE" $n)
+      if [ $cnt -eq 0 ]; then
+        echo "ERROR: The file ($n) is not (private-key Base64) format"
+        echo "       It should begin with '-----BEGIN RSA PRIVATE' and end with '-----END RSA PRIVATE'"
+        exit 1
+      fi
+    done
+
+    # --- VERIFY THE CERTIFICATE ---
+    cnm="${PCF_DEPLOYMENT_ENV_NAME}.${AWS_HOSTED_DNS_DOMAIN}"
+    cnt=$(openssl crl2pkcs7 -nocrl -certfile $TLS_FULLCHAIN | openssl pkcs7 -print_certs | egrep "^subject|^issuer" | \
+          sed -e 's/CN = /CN=/g' -e 's/^subject=.*CN=//g' -e 's/^issuer=.*CN=//g' | egrep -c "^\*.${cnm}")
+    if [ $cnt -eq 0 ]; then
+      echo "ERROR: The file ($(basename $TLS_FULLCHAIN)) does not contain the CN=*.${cnm}"
+      exit 1
+    fi
+
+    ISSUER="*.${cnm}"; item_found=1
+    while [ ${item_found} -eq 1 ]; do
+      item_found=0
+      for item in $(openssl crl2pkcs7 -nocrl -certfile $TLS_FULLCHAIN | openssl pkcs7 -print_certs | \
+                    egrep "^subject|^issuer" | sed -e 's/CN = /CN=/g' -e 's/^subject=.*CN=//g' \
+                    -e 's/^issuer=.*CN=//g' -e 's/ /~1~/g' | paste -d ':' - -); do
+
+        sub=$(echo "${item}" | awk -F: '{ print $1 }')
+        iss=$(echo "${item}" | awk -F: '{ print $2 }')
+
+        if [ "${sub}" == "${ISSUER}" ]; then ISSUER="${iss}"; SUBJECT="${sub}"; item_found=1; fi
+      done
+    done
+
+    ROOT_CA=$ISSUER
+    ROOT_CA_NAME=$(echo $ISSUER | sed 's/~1~/ /g')
+
+    if [ "${TLS_ROOT_CA}" == "" ]; then
+      # --- TRY TO FIND THE ROOT_CA ---
+      if [ "${ROOT_CA_NAME}" == "DST Root CA X3" ]; then
+        ROOT_CA_URL="https://letsencrypt.org/certs/trustid-x3-root.pem.txt"
+        curl --output /tmp/trustid-x3-root.pem $ROOT_CA_URL > /dev/null 2>&1
+        TLS_ROOT_CA=/tmp/trustid-x3-root.pem
+        eval export ${CLOUD}_${MODE}_TLS_ROOT_CA=/tmp/trustid-x3-root.pem
+      fi
+
+      # --- GENERATE CA.PEM WITH ROOT_CA AND FULLCHAIN ---
+      cat $TLS_ROOT_CA $TLS_FULLCHAIN > $HOME/pcfconfig/certificates/ca.pem
+
+      if [ "${TLS_ROOT_CA}" == "" ]; then
+        echo "ERROR: ROOT_CA for $ROOT_CA_NAME could not be found, please download the file manually"
+        echo "       and set the variable in the ~/.pcfconfig"
+        echo "       => export ${CLOUD}_${MODE}_TLS_ROOT_CA=<ca.crt>"
+        exit 1
+      fi
+    fi
+
+    # --- VERIFY TO ROOT_CA ---
+    for n in $TLS_ROOT_CA; do
+      if [ ! -f $n ]; then
+        echo "ERROR: the file $n does not exist"; exit 1
+      fi
+
+      cnt=$(grep -c "BEGIN CERTIFICATE" $n)
+      if [ $cnt -eq 0 ]; then
+        echo "ERROR: The file ($(basename $n)) is not in (Base64) format"
+        echo "       It should begin with '-----BEGIN CERTIFICATE-----' and end with '-----END CERTIFICATE-----'"
+        exit 1
+      fi
+    done
+
+    # --- VERIFY THE CERTIFICATE ISSUER AND SUBJECT ---
+    tmp=$(openssl crl2pkcs7 -nocrl -certfile $TLS_ROOT_CA | openssl pkcs7 -print_certs | \
+          egrep "^subject|^issuer" | sed -e 's/CN = /CN=/g' -e 's/^subject=.*CN=//g' -e 's/^issuer=.*CN=//g' -e 's/ /~1~/g' | \
+          paste -d ':' - -)
+    sub=$(echo "${tmp}" | awk -F: '{ print $1 }' | sed 's/~1~/ /g')
+    iss=$(echo "${tmp}" | awk -F: '{ print $2 }' | sed 's/~1~/ /g')
+    if [ "${iss}" != "${sub}" ]; then
+      echo "ERROR: $TLS_ROOT_CA is not a Root CA. Issuer and Subject should be the same"
+      echo "       => File: $TLS_ROOT_CA Issuer=$sub / Subject=$iss"
+      exit 1
+    fi
+
+    if [ "${iss}" != "${ROOT_CA_NAME}" ]; then
+      echo "ERROR: $TLS_ROOT_CA is not Signed by $ROOT_CA_NAME."
+      echo "       => File: $TLS_ROOT_CA Subject=$iss"
+      exit 1
+    fi
+
+    # --- VERIFY CERTITICATE AND FULLCHAAIN SIGNED BY ROOT_CA ---
+    cat $TLS_ROOT_CA $TLS_FULLCHAIN > /tmp/ca.crt
+    openssl verify -CAfile /tmp/ca.crt $TLS_CERTIFICATE > /dev/null 2>&1
+    if [ $? -ne 0 ]; then
+      echo "ERROR: Certificate ($TLS_CERTIFICATE) was not signed by the Roor CA ($ROOT_CA_NAME)"
+      exit 1
+    fi
+
+    openssl verify -CAfile /tmp/ca.crt $TLS_FULLCHAIN > /dev/null 2>&1
+    if [ $? -ne 0 ]; then
+      echo "ERROR: Certificate ($TLS_FULLCHAIN) was not signed by the Roor CA ($ROOT_CA_NAME)"
+      exit 1
+    fi
+
+   # --- VERIFY IF PRIVATE KEY MATCH THE CERTIFICATE ---
+    pk=$(openssl rsa  -noout -modulus -in $TLS_PRIVATE_KEY | openssl md5)
+    cr=$(openssl x509 -noout -modulus -in $TLS_CERTIFICATE | openssl md5)
+    fc=$(openssl x509 -noout -modulus -in $TLS_FULLCHAIN | openssl md5)
+
+    if [ "${pk}" != "${cr}" ]; then
+      echo "ERROR: Cert ($(basename $TLS_CERTIFICATE)) does not match the private key ($(basename $TLS_PRIVATE_KEY))"
+      echo "       => openssl rsa -noout -modulus -in $TLS_PRIVATE_KEY | openssl md5"
+      echo "       => openssl x509 -noout -modulus -in $TLS_CERTIFICATE | openssl md5"
+      exit 1
+    fi
+
+    if [ "${pk}" != "${fc}" ]; then
+      echo "ERROR: Cert ($(basename $TLS_FULLCHAIN)) does not match the private key ($(basename $TLS_PRIVATE_KEY))"
+      echo "       => openssl rsa -noout -modulus -in $TLS_PRIVATE_KEY | openssl md5"
+      echo "       => openssl x509 -noout -modulus -in $TLS_FULLCHAIN | openssl md5"
+      exit 1
+    fi
+
+    messagePrint " - TLS Certificate"                  "$TLS_CERTIFICATE"
+    messagePrint " - TLS fullchain"                    "$TLS_FULLCHAIN"
+    messagePrint " - TLS Private Key"                  "$TLS_PRIVATE_KEY"
+    messagePrint " - TLS Root CA ($ROOT_CA_NAME)"      "$TLS_ROOT_CA"
+  fi
+}
 
