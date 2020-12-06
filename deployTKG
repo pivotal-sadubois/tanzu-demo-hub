@@ -341,7 +341,7 @@ echo gaga3
 
 echo xxxx1
 pwd
-  if [ -d certificates ]; then
+  if [ -d ../../../certificates ]; then
 echo xxxx2
     TLS_CERTIFICATE=certificates/fullchain.pem
     TLS_PRIVATE_KEY=certificates/privkey.pem
