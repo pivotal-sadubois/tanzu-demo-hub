@@ -264,6 +264,9 @@ if [ "${TDH_TKGWC_INGRESS_CONTOUR}" == "true" ]; then
   fi
 fi
 
+echo "XXXXXXXXXXXXXXXXXXXX"
+exit
+
 if [ "${TDH_TKGWC_INGRESS_NGINX}" == "true" ]; then 
   #https://docs.bitnami.com/kubernetes/get-started-tkg/
   messageTitle "Install Ingress NGINX" 
