@@ -472,6 +472,14 @@ echo ooooooo
     #route53setDNSrecord "$pip" "JUMP_HOST" "$AWS_HOSTED_DNS_DOMAIN"
   fi
 
+    messagePrint "- LoadBalancer PublicIP:" "$pip"
+    messagePrint "- Create DNS Entry for:" "harbor.${TDH_TKGMC_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}"
+    messagePrint "- Create DNS Entry for:" "notary.harbor.${TDH_TKGMC_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}"
+echo "TDH_TKGMC_ENVNAME:$TDH_TKGMC_ENVNAME"
+echo "AWS_HOSTED_DNS_DOMAIN:$AWS_HOSTED_DNS_DOMAIN"
+
+exit
+
     pip=$(kubectl get svc envoy -n tanzu-system-ingress -o jsonpath='{.status.loadBalancer.ingress[0]}' | jq -r '.ip')
 echo "PIP:$pip"
 #setTKGclusterDNS "$TDH_TKGWC_NAME" "${ipa}" "apps"
