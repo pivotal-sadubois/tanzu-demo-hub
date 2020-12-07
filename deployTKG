@@ -418,7 +418,7 @@ if [ "${TDH_TKGWC_INGRESS_HARBOR}" == "true" ]; then
 
   cnt=$(tkg get cluster --include-management-cluster -o json | jq -r --arg key "$TDH_TKGWC_NAME" '.[] | select(.name == $key).roles[]' | \
             egrep -c "tanzu-services") 
-  if [ $cnt -eq 0 |; then 
+  if [ $cnt -eq 0 ]; then 
     messagePrint "- Set a cluster-role label on $TDH_TKGWC_NAME cluster" "Role: tanzu-services"
     kubectl label cluster.cluster.x-k8s.io/$TDH_TKGWC_NAME cluster-role.tkg.tanzu.vmware.com/tanzu-services="" --overwrite=true
   else
