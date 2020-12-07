@@ -315,6 +315,10 @@ echo "STT:$stt"
     fi
   fi
 
+echo gugus61 && helm list
+helm install stable bitnami/nginx-ingress-controller -n nginx-ingress
+exit
+
 echo gaga1
   # --- SET CLUSTER DNS ---
   ipa=$(kubectl get svc stable-nginx-ingress-controller -n nginx-ingress -o json 2>/dev/null | jq -r '.status.loadBalancer.ingress[].ip' 2>/dev/null)
