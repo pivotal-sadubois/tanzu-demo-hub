@@ -379,8 +379,6 @@ if [ "${TDH_TKGWC_INGRESS_HARBOR}" == "true" ]; then
   messagePrint "- Set Admin Password" "XXXXXXXXX"
   sed -i "s/^harborAdminPassword: .*$/harborAdminPassword: harbor/g" registry/harbor/harbor-data-values.yaml
   messagePrint "- Add Cerfificate and PrivateKey for domain" "$DNS_HARBOR"
-pwd
-echo ooooooo
   sed -i "s/  tls.crt:/  tls.crt: $cert/g" registry/harbor/harbor-data-values.yaml
   sed -i "s/  tls.key:/  tls.key: $pkey/g" registry/harbor/harbor-data-values.yaml
   sed -i "s/  ca.crt:/  ca.crt: $cart/g" registry/harbor/harbor-data-values.yaml
@@ -477,7 +475,7 @@ echo ooooooo
     messagePrint "- Create DNS Entry for:" "harbor.${TDH_TKGMC_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}"
     messagePrint "- Create DNS Entry for:" "notary.harbor.${TDH_TKGMC_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}"
     setDNSrecord "$pip" "${TDH_TKGMC_ENVNAME}" "${AWS_HOSTED_DNS_DOMAIN}" "harbor"
-#    setDNSrecord "$pip" "${TDH_TKGMC_ENVNAME}" "${AWS_HOSTED_DNS_DOMAIN}" "notary.harbor"
+    setDNSrecord "$pip" "${TDH_TKGMC_ENVNAME}" "${AWS_HOSTED_DNS_DOMAIN}" "notary.harbor"
 
 
 exit
