@@ -362,9 +362,10 @@ if [ "${TDH_TKGWC_INGRESS_HARBOR}" == "true" ]; then
     echo "       => kubectl apply -f registry/harbor/namespace-role.yaml"
   fi
 
+  messagePrint "- Create Harbor service configuration" "registry/harbor/harbor-data-values.yaml"
   sudo snap install yq > /dev/null 2>&1
   cp registry/harbor/harbor-data-values.yaml.example registry/harbor/harbor-data-values.yaml
-  bash registry/harbor/generate-passwords.sh registry/harbor/harbor-data-values.yaml
+  bash registry/harbor/generate-passwords.sh registry/harbor/harbor-data-values.yaml > /dev/null 2>&1
 
   DNS_HARBOR="harbor.${TDH_TKGMC_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}"
   messagePrint "- Configure Harber Name" "$DNS_HARBOR"
@@ -376,13 +377,16 @@ if [ "${TDH_TKGWC_INGRESS_HARBOR}" == "true" ]; then
   sed -i "s/  tls.key:/  tls.key: $pkey/g" registry/harbor/harbor-data-values.yaml
   sed -i "s/  ca.crt:/  ca.crt: $cart/g" registry/harbor/harbor-data-values.yaml
 
-  messagePrint "- Create secrets for the Harbor config" "registry/harbor/harbor-data-values.yaml"
-  kubectl create secret generic harbor-data-values --from-file=values.yaml=registry/harbor/harbor-data-values.yaml \
-       -n tanzu-system-registry  > /dev/null 2>&1
-  if [ $? -ne 0 ]; then
-    echo "ERROR: Failed to create secret for the Harbor service"
-    echo "       => kubectl create secret generic harbor-data-values --from-file=values.yaml=registry/harbor/harbor-data-values.yaml \
-       -n tanzu-system-registry"
+  cnt=$(kubectl get secrets harbor-data-values -n tanzu-system-registry | grep -c "harbor-data-values")
+  if [ $cnt -eq 0 ]; then
+    messagePrint "- Create secrets for the Harbor config" "registry/harbor/harbor-data-values.yaml"
+    kubectl create secret generic harbor-data-values --from-file=values.yaml=registry/harbor/harbor-data-values.yaml \
+         -n tanzu-system-registry  > /dev/null 2>&1
+    if [ $? -ne 0 ]; then
+      echo "ERROR: Failed to create secret for the Harbor service"
+      echo "       => kubectl create secret generic harbor-data-values --from-file=values.yaml=registry/harbor/harbor-data-values.yaml \
+         -n tanzu-system-registry"
+    fi
   fi
 
   messagePrint "- Deploy the Harbor service" "registry/harbor/harbor-extension.yaml"
@@ -409,6 +413,22 @@ if [ "${TDH_TKGWC_INGRESS_HARBOR}" == "true" ]; then
     let i=i+1
   done
 
+  kubectl -n tanzu-system-registry get secret harbor-tls -o=jsonpath="{.data.ca\.crt}" | base64 -d > /tmp/hatbor-tls.pem
+  kubectl config use-context tkg-mc-azure-dev-admin@tkg-mc-azure-dev
+
+  cnt=$(tkg get cluster --include-management-cluster -o json | jq -r --arg key "$TDH_TKGWC_NAME" '.[] | select(.name == $key).roles[]' | \
+            egrep -c "tanzu-services") 
+  if [ $cnt -eq 0 |; then 
+    messagePrint "- Set a cluster-role label on $TDH_TKGWC_NAME cluster" "Role: tanzu-services"
+    kubectl label cluster.cluster.x-k8s.io/$TDH_TKGWC_NAME cluster-role.tkg.tanzu.vmware.com/tanzu-services="" --overwrite=true
+  else
+    messagePrint "- Verify cluster-role label on $TDH_TKGWC_NAME cluster" "Role: tanzu-services on"
+  fi
+
+  echo "-----------------------------------------------------------------------------------------------------------"
+  tkg get cluster --include-management-cluster 
+  echo "-----------------------------------------------------------------------------------------------------------"
+
   if [ "${stt}" == "Reconcile succeeded" ]; then
     messagePrint "- Install Harbor Registry" "completed"
   else
@@ -416,7 +436,15 @@ if [ "${TDH_TKGWC_INGRESS_HARBOR}" == "true" ]; then
     messagePrint "- Install Harbor Registry" "failed"; exit
   fi
 
-  kubectl -n tanzu-system-registry get secret harbor-tls -o=jsonpath="{.data.ca\.crt}" | base64 -d > /tmp/hatbor-tls.pem
+echo gaga1
+  messagePrint "- Install the Tanzu Kubernetes Grid Connectivity API on the Management Cluster" ""
+  if [ ! -d extensions/manifests ]; then 
+echo gaga2
+    (cd extensions; tar xvf ../software/$TKG_CONNECTIVITY)
+  fi
+echo gaga3
+echo "TKG_CONNECTIVITY:$TKG_CONNECTIVITY"
+
 
 echo "CON:$con"
 
