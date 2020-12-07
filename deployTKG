@@ -476,8 +476,8 @@ echo ooooooo
     messagePrint "- LoadBalancer PublicIP:" "$pip"
     messagePrint "- Create DNS Entry for:" "harbor.${TDH_TKGMC_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}"
     messagePrint "- Create DNS Entry for:" "notary.harbor.${TDH_TKGMC_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}"
-    setDNSrecord "$pip" "${TDH_TKGMC_ENVNAMEa" "${AWS_HOSTED_DNS_DOMAIN}" "harbor"
-#    setDNSrecord "$pip" "${TDH_TKGMC_ENVNAMEa" "${AWS_HOSTED_DNS_DOMAIN}" "notary.harbor"
+    setDNSrecord "$pip" "${TDH_TKGMC_ENVNAME}" "${AWS_HOSTED_DNS_DOMAIN}" "harbor"
+#    setDNSrecord "$pip" "${TDH_TKGMC_ENVNAME}" "${AWS_HOSTED_DNS_DOMAIN}" "notary.harbor"
 
 
 exit

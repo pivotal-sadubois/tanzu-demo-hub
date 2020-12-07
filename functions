@@ -1253,41 +1253,36 @@ setDNSrecord() {
   DNS_SUFFIX="$3"
   HOSTNAME="$4"
   
+  ZONE_ID=$(aws route53 list-hosted-zones-by-name --dns-name ${DNS_PREFIX}.${DNS_SUFFIX} | jq -r '.HostedZones[0].Id')
+  ZONE_ID_STR=$(echo "${ZONE_ID}" | awk -F'/' '{ print $NF }')
 
-    DNS_NAME="*.${TKG_INGRESS}-${TKG_CLUSTER}"
-    messagePrint "- LoadBalancer PublicIP:" "$TKG_IPADRESS"
-    messagePrint "- Create DNS Entry for:" "*.${TKG_INGRESS}-${TKG_CLUSTER}.${DNS_PREFIX}.${DNS_SUFFIX}"
+  if [ "${ZONE_ID}" != "" ]; then
+    ZONE="${HOSTNAME}.${DNS_PREFIX}.${DNS_SUFFIX}"
 
-    ZONE_ID=$(aws route53 list-hosted-zones-by-name --dns-name ${DNS_PREFIX}.${DNS_SUFFIX} | jq -r '.HostedZones[0].Id')
-    ZONE_ID_STR=$(echo "${ZONE_ID}" | awk -F'/' '{ print $NF }')
+    TMPROUTE53=/tmp/$$_tmp_route53.json
+    echo "{"                                                            >  $TMPROUTE53
+    echo "  \"Comment\": \"CREATE/DELETE/UPSERT a record \","           >> $TMPROUTE53
+    echo "  \"Changes\": [{"                                            >> $TMPROUTE53
+    echo "    \"Action\": \"UPSERT\","                                  >> $TMPROUTE53
+    echo "    \"ResourceRecordSet\": {"                                 >> $TMPROUTE53
+    echo "      \"Name\": \"${ZONE}\","                                 >> $TMPROUTE53
+    echo "      \"Type\": \"A\","                                       >> $TMPROUTE53
+    echo "      \"TTL\": 300,"                                          >> $TMPROUTE53
+    echo "      \"ResourceRecords\": [{ \"Value\": \"$TKG_IPADRESS\"}]" >> $TMPROUTE53
+    echo "    }"                                                        >> $TMPROUTE53
+    echo "  }]"                                                         >> $TMPROUTE53
+    echo "}"                                                            >> $TMPROUTE53
 
-    if [ "${ZONE_ID}" != "" ]; then
-      ZONE="${HOSTNAME}.${DNS_PREFIX}.${DNS_SUFFIX}"
-
-      TMPROUTE53=/tmp/$$_tmp_route53.json
-      echo "{"                                                            >  $TMPROUTE53
-      echo "  \"Comment\": \"CREATE/DELETE/UPSERT a record \","           >> $TMPROUTE53
-      echo "  \"Changes\": [{"                                            >> $TMPROUTE53
-      echo "    \"Action\": \"UPSERT\","                                  >> $TMPROUTE53
-      echo "    \"ResourceRecordSet\": {"                                 >> $TMPROUTE53
-      echo "      \"Name\": \"${ZONE}\","                                 >> $TMPROUTE53
-      echo "      \"Type\": \"A\","                                       >> $TMPROUTE53
-      echo "      \"TTL\": 300,"                                          >> $TMPROUTE53
-      echo "      \"ResourceRecords\": [{ \"Value\": \"$TKG_IPADRESS\"}]" >> $TMPROUTE53
-      echo "    }"                                                        >> $TMPROUTE53
-      echo "  }]"                                                         >> $TMPROUTE53
-      echo "}"                                                            >> $TMPROUTE53
-
-      aws route53 change-resource-record-sets --hosted-zone-id $ZONE_ID \
-          --change-batch file://${TMPROUTE53} > /dev/null 2>&1
-      if [ $? -ne 0 ]; then
-        echo "ERROR: failed to set DNS for $hnm"
-        echo "       => aws route53 change-resource-record-sets --hosted-zone-id \"${ZONE_ID}\" \\"
-        echo "              --change-batch file://${TMPROUTE53}"
-        cat $TMPROUTE53
-        exit 1
-      fi
-
-      rm -f $TMPROUTE53
+    aws route53 change-resource-record-sets --hosted-zone-id $ZONE_ID \
+        --change-batch file://${TMPROUTE53} > /dev/null 2>&1
+    if [ $? -ne 0 ]; then
+      echo "ERROR: failed to set DNS for $hnm"
+      echo "       => aws route53 change-resource-record-sets --hosted-zone-id \"${ZONE_ID}\" \\"
+      echo "              --change-batch file://${TMPROUTE53}"
+      cat $TMPROUTE53
+      exit 1
     fi
+
+    rm -f $TMPROUTE53
+  fi
 }
