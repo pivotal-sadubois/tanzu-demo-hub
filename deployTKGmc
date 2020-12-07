@@ -495,20 +495,14 @@ sshEnvironment
 configureJumpHost
 configureLetsEnscript
 
-echo "AZURE_PKS_TLS_CERTIFICATE:$AZURE_PKS_TLS_CERTIFICATE"
-echo "AZURE_PAS_TLS_CERTIFICATE:$AZURE_PAS_TLS_CERTIFICATE"
-exit
-verifyCertificate
-#        verifyCertificate AZURE PKS "$AZURE_PKS_TLS_CERTIFICATE" "$AZURE_PKS_TLS_FULLCHAIN" \
-#                                    "$AZURE_PKS_TLS_PRIVATE_KEY" "$AZURE_PKS_TLS_ROOT_CA"
-
-exit
-
+messageTitle "Creating Worload Cluster (tdh-1)"
+echo "./deployTKG -d $DEPLOY_TKG_TEMPLATE -c tkg-tanzu-demo-hub.cfg -n tdh-1"
+echo \"$SSH_COMMAND -n "cd tanzu-demo-hub && ./deployTKG -d $DEPLOY_TKG_TEMPLATE -c tkg-tanzu-demo-hub.cfg -n tdh-1\""
+$SSH_COMMAND -n "cd tanzu-demo-hub && ./deployTKG -d $DEPLOY_TKG_TEMPLATE -c tkg-tanzu-demo-hub.cfg -n tdh-1"
 
 # --- CREATE MANAGEMENT CLUSTER ---
 $SSH_COMMAND -n "[ -f $SSH_HOME/tanzu-demo-hub/scripts/InstallTKGmc.sh ] && tanzu-demo-hub/scripts/InstallTKGmc.sh $DEPLOY_TKG_TEMPLATE"
 echo "-----------------------------------------------------------------------------------------------------------"
-#$SSH_COMMAND -n "tkg get mc --config /home/ubuntu/tanzu-demo-hub/config/tkgmc-dev-azure-westeurope.yaml"
 $SSH_COMMAND -n "tkg get mc --config $SSH_HOME/tanzu-demo-hub/config/$TDH_TKGMC_CONFIG"
 echo "-----------------------------------------------------------------------------------------------------------"
 echo "1.) Login to Jump Server: $JUMP_HOST"
@@ -526,10 +520,6 @@ echo "    => tkg create cluster tkg01 --plan=dev --kubernetes-version=v1.18.8  #
 echo "    => tkg create cluster tkg01 --plan=prod --worker-machine-count 3 --controlplane-machine-count 3"
 echo ""
 echo "-----------------------------------------------------------------------------------------------------------"
-messageTitle "Creating Worload Cluster (tdh-1)"
-echo "./deployTKG -d $DEPLOY_TKG_TEMPLATE -c tkg-tanzu-demo-hub.cfg -n tdh-1"
-echo \"$SSH_COMMAND -n "cd tanzu-demo-hub && ./deployTKG -d $DEPLOY_TKG_TEMPLATE -c tkg-tanzu-demo-hub.cfg -n tdh-1\""
-$SSH_COMMAND -n "cd tanzu-demo-hub && ./deployTKG -d $DEPLOY_TKG_TEMPLATE -c tkg-tanzu-demo-hub.cfg -n tdh-1"
 
 exit
 
