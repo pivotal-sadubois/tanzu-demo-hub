@@ -292,6 +292,7 @@ if [ "${TDH_TKGWC_INGRESS_NGINX}" == "true" ]; then
   if [ $? -ne 0 ]; then kubectl create namespace nginx-ingress > /dev/null 2>&1; fi
 
   stt=$(helm list -o json | jq -r --arg key "nginx-ingress-controller" '.[] | select(.chart | contains($key)).status')
+echo "STT:$stt"
   if [ "$stt" != "deployed" ]; then 
     helm install stable bitnami/nginx-ingress-controller -n nginx-ingress > /dev/null 2>&1
     if [ $? -ne 0 ]; then
