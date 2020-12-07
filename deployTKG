@@ -291,11 +291,13 @@ if [ "${TDH_TKGWC_INGRESS_NGINX}" == "true" ]; then
   kubectl get namespace nginx-ingress > /dev/null 2>&1
   if [ $? -ne 0 ]; then kubectl create namespace nginx-ingress > /dev/null 2>&1; fi
 
-  #helm install stable bitnami/nginx-ingress-controller -n nginx-ingress --set rbac.create=true
-  helm install stable bitnami/nginx-ingress-controller -n nginx-ingress > /dev/null 2>&1
-  if [ $? -ne 0 ]; then
-    echo "ERROR: Failed to install bitnami/nginx-ingress-controller"
-    echo "       => helm install stable bitnami/nginx-ingress-controller"
+  stt=$(helm list -o json | jq -r --arg key "nginx-ingress-controller" '.[] | select(.chart | contains($key)).status')
+  if [ "$stt" != "deployed" ]; then 
+    helm install stable bitnami/nginx-ingress-controller -n nginx-ingress > /dev/null 2>&1
+    if [ $? -ne 0 ]; then
+      echo "ERROR: Failed to install bitnami/nginx-ingress-controller"
+      echo "       => helm install stable bitnami/nginx-ingress-controller"
+    fi
   fi
 
 echo gaga1
@@ -436,11 +438,15 @@ if [ "${TDH_TKGWC_INGRESS_HARBOR}" == "true" ]; then
     messagePrint "- Install Harbor Registry" "failed"; exit
   fi
 
+  cd ${TDHPATH}
+
 echo gaga1
   messagePrint "- Install the Tanzu Kubernetes Grid Connectivity API on the Management Cluster" ""
   if [ ! -d extensions/manifests ]; then 
+pwd
 echo gaga2
     (cd extensions; tar xvf ../software/$TKG_CONNECTIVITY)
+pwd
   fi
 echo gaga3
 echo "TKG_CONNECTIVITY:$TKG_CONNECTIVITY"
@@ -448,7 +454,6 @@ echo "TKG_CONNECTIVITY:$TKG_CONNECTIVITY"
 
 echo "CON:$con"
 
-  cd ${TDHPATH}
 fi
 
 exit
