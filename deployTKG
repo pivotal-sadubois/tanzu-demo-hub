@@ -153,6 +153,7 @@ echo "TKG_DEPLOYMENT=$TKG_DEPLOYMENT"                        >> ${TDHPATH}/confi
 echo "TDH_TKGMC_CONFIG=$TDH_TKGMC_CONFIG"                    >> ${TDHPATH}/config/${TDH_TKGWC_NAME}.cfg
 echo "TKG_WC_CLUSTER=$TKG_WC_CLUSTER"                        >> ${TDHPATH}/config/${TDH_TKGWC_NAME}.cfg
 
+echo gugus100 && helm list
 if [ "${TDH_TKGWC_INGRESS_CONTOUR}" == "true" ]; then 
   messageTitle "Install Ingress Contour" 
   stt=$(kubectl get ns -o json | jq -r '.items[] | select(.metadata.name == "vmware-system-tmc").status.phase')
@@ -192,6 +193,7 @@ if [ "${TDH_TKGWC_INGRESS_CONTOUR}" == "true" ]; then
       messagePrint "- Install Cert Manager" "completed"
     fi
   fi
+echo gugus101 && helm list
 
   # -- INSTALL CONTOUR INGRESS CONTROLLER ---
   stt=$(kubectl get ns -o json | jq -r '.items[] | select(.metadata.name == "tanzu-system-ingress").status.phase')
@@ -217,6 +219,7 @@ if [ "${TDH_TKGWC_INGRESS_CONTOUR}" == "true" ]; then
       echo "  service:"                     >> ingress/contour/azure/contour-data-values.yaml
       echo "    type: LoadBalancer"         >> ingress/contour/azure/contour-data-values.yaml
     fi
+echo gugus103 && helm list
 
     stt=$(kubectl get secret contour-data-values -n tanzu-system-ingress -o json 2>/dev/null | jq -r '.metadata.name') 
     if [ "${stt}" == "" ]; then
@@ -249,6 +252,7 @@ if [ "${TDH_TKGWC_INGRESS_CONTOUR}" == "true" ]; then
       #kubectl get app contour -n tanzu-system-ingress -o yaml
       messagePrint "- Install Contour Ingress" "failed"; exit
     fi
+echo gugus104 && helm list
 
     cd ${TDHPATH}
   fi
@@ -262,6 +266,7 @@ if [ "${TDH_TKGWC_INGRESS_CONTOUR}" == "true" ]; then
     echo "       => kubectl get svc envoy -n tanzu-system-ingress"
     exit 1
   fi
+echo gugus105 && helm list
 fi
 
 if [ "${TDH_TKGWC_INGRESS_NGINX}" == "true" ]; then 
