@@ -324,9 +324,7 @@ fi
 #  if [ "${stt}" == "" ]; then
 #    cd ${TDHPATH}/extensions/$TDH_TKGWC_EXTENSIONS/extensions
 
-echo "TDH_TKGWC_INGRESS_HARBOR:$TDH_TKGWC_INGRESS_HARBOR"
 if [ "${TDH_TKGWC_INGRESS_HARBOR}" == "true" ]; then
-echo gaga3
   # https://docs.vmware.com/en/VMware-Tanzu-Kubernetes-Grid/1.2/vmware-tanzu-kubernetes-grid-12/GUID-extensions-harbor-registry.html"
   messageTitle "Install Harbor Registry"
   messagePrint "- Confogure Helm Repo" "https://charts.helm.sh/stable"
@@ -417,6 +415,10 @@ echo gaga3
     kubectl get app harbor -n tanzu-system-registry
     messagePrint "- Install Harbor Registry" "failed"; exit
   fi
+
+  kubectl -n tanzu-system-registry get secret harbor-tls -o=jsonpath="{.data.ca\.crt}" | base64 -d > /tmp/hatbor-tls.pem
+
+echo "CON:$con"
 
   cd ${TDHPATH}
 fi
