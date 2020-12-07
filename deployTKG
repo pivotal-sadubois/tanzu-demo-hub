@@ -153,6 +153,7 @@ echo "TKG_DEPLOYMENT=$TKG_DEPLOYMENT"                        >> ${TDHPATH}/confi
 echo "TDH_TKGMC_CONFIG=$TDH_TKGMC_CONFIG"                    >> ${TDHPATH}/config/${TDH_TKGWC_NAME}.cfg
 echo "TKG_WC_CLUSTER=$TKG_WC_CLUSTER"                        >> ${TDHPATH}/config/${TDH_TKGWC_NAME}.cfg
 
+kubectl config current-context
 echo gugus100 && helm list
 if [ "${TDH_TKGWC_INGRESS_CONTOUR}" == "true" ]; then 
   messageTitle "Install Ingress Contour" 
@@ -271,6 +272,7 @@ fi
 
 if [ "${TDH_TKGWC_INGRESS_NGINX}" == "true" ]; then 
 echo gugus1 && helm list
+kubectl config current-context
   #https://docs.bitnami.com/kubernetes/get-started-tkg/
   messageTitle "Install Ingress NGINX" 
   messagePrint "- Confogure Helm Repo" "https://charts.helm.sh/stable"
@@ -301,6 +303,7 @@ echo gugus5 && helm list
   kubectl get namespace nginx-ingress > /dev/null 2>&1
   if [ $? -ne 0 ]; then kubectl create namespace nginx-ingress > /dev/null 2>&1; fi
 echo gugus6 && helm list
+kubectl config current-context
 
   stt=$(helm list -o json | jq -r --arg key "nginx-ingress-controller" '.[] | select(.chart | contains($key)).status')
 echo "STT:$stt"
@@ -435,6 +438,8 @@ echo xxxxr && helm list
   done
 
 echo xxxx8 && helm list
+echo gugus100 && helm list
+kubectl config current-context
   kubectl -n tanzu-system-registry get secret harbor-tls -o=jsonpath="{.data.ca\.crt}" | base64 -d > /tmp/hatbor-tls.pem
   kubectl config use-context tkg-mc-azure-dev-admin@tkg-mc-azure-dev
 
@@ -461,6 +466,7 @@ echo xxxx10 && helm list
   fi
 echo xxxx11 && helm list
 
+  kubectl config use-context $TDH_TKGWC_NAME-admin@$TDH_TKGWC_NAME > /dev/null 2>&1
   cd ${TDHPATH}
 
 echo gaga1
