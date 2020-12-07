@@ -303,7 +303,7 @@ if [ "${TDH_TKGWC_INGRESS_NGINX}" == "true" ]; then
 
   stt=$(helm list -n nginx-ingress -o json | jq -r --arg key "nginx-ingress-controller" '.[] | select(.chart | contains($key)).status')
   if [ "$stt" != "deployed" ]; then 
-    helm install nginx-ingress bitnami/nginx-ingress-controller -n nginx-ingress > /dev/null 2>&1
+    helm install bitnami bitnami/nginx-ingress-controller -n nginx-ingress > /dev/null 2>&1
     if [ $? -ne 0 ]; then
       echo "ERROR: Failed to install bitnami/nginx-ingress-controller"
       echo "       => helm install stable bitnami/nginx-ingress-controller"
@@ -311,10 +311,10 @@ if [ "${TDH_TKGWC_INGRESS_NGINX}" == "true" ]; then
   fi
 
   # --- SET CLUSTER DNS ---
-  ipa=$(kubectl get svc stable-nginx-ingress-controller -n nginx-ingress -o json 2>/dev/null | jq -r '.status.loadBalancer.ingress[].ip' 2>/dev/null)
+  ipa=$(kubectl get svc bitnami-nginx-ingress-controller -n nginx-ingress -o json 2>/dev/null | jq -r '.status.loadBalancer.ingress[].ip' 2>/dev/null)
   while [ "${ipa}" == "" ]; do
     sleep 10
-    ipa=$(kubectl get svc stable-nginx-ingress-controller -n nginx-ingress -o json 2>/dev/null | jq -r '.status.loadBalancer.ingress[].ip' 2>/dev/null)
+    ipa=$(kubectl get svc bitnami-nginx-ingress-controller -n nginx-ingress -o json 2>/dev/null | jq -r '.status.loadBalancer.ingress[].ip' 2>/dev/null)
   done
 
   if [ "${ipa}" != "" ]; then
