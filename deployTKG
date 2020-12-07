@@ -328,6 +328,7 @@ fi
 #    cd ${TDHPATH}/extensions/$TDH_TKGWC_EXTENSIONS/extensions
 
 if [ "${TDH_TKGWC_INGRESS_HARBOR}" == "true" ]; then
+echo xxxx1 && helm list
   # https://docs.vmware.com/en/VMware-Tanzu-Kubernetes-Grid/1.2/vmware-tanzu-kubernetes-grid-12/GUID-extensions-harbor-registry.html"
   messageTitle "Install Harbor Registry"
   messagePrint "- Confogure Helm Repo" "https://charts.helm.sh/stable"
@@ -358,6 +359,7 @@ if [ "${TDH_TKGWC_INGRESS_HARBOR}" == "true" ]; then
 
   cd ${TDHPATH}/extensions/$TDH_TKGWC_EXTENSIONS/extensions
 
+echo xxxx2 && helm list
   messagePrint "- Create a namespace for the Harbor service" "registry/harbor/namespace-role.yaml"
   kubectl apply -f registry/harbor/namespace-role.yaml > /dev/null 2>&1
   if [ $? -ne 0 ]; then
@@ -370,6 +372,7 @@ if [ "${TDH_TKGWC_INGRESS_HARBOR}" == "true" ]; then
   cp registry/harbor/harbor-data-values.yaml.example registry/harbor/harbor-data-values.yaml
   bash registry/harbor/generate-passwords.sh registry/harbor/harbor-data-values.yaml > /dev/null 2>&1
 
+echo xxxx3 && helm list
   DNS_HARBOR="harbor.${TDH_TKGMC_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}"
   messagePrint "- Configure Harber Name" "$DNS_HARBOR"
   sed -i "s/hostname: core.harbor.domain/hostname: $DNS_HARBOR/g" registry/harbor/harbor-data-values.yaml
@@ -380,6 +383,7 @@ if [ "${TDH_TKGWC_INGRESS_HARBOR}" == "true" ]; then
   sed -i "s/  tls.key:/  tls.key: $pkey/g" registry/harbor/harbor-data-values.yaml
   sed -i "s/  ca.crt:/  ca.crt: $cart/g" registry/harbor/harbor-data-values.yaml
 
+echo xxxx4 && helm list
   cnt=$(kubectl get secrets harbor-data-values -n tanzu-system-registry | grep -c "harbor-data-values")
   if [ $cnt -eq 0 ]; then
     messagePrint "- Create secrets for the Harbor config" "registry/harbor/harbor-data-values.yaml"
@@ -391,6 +395,7 @@ if [ "${TDH_TKGWC_INGRESS_HARBOR}" == "true" ]; then
          -n tanzu-system-registry"
     fi
   fi
+echo xxxx5 && helm list
 
   messagePrint "- Deploy the Harbor service" "registry/harbor/harbor-extension.yaml"
   kubectl apply -f registry/harbor/harbor-extension.yaml > /dev/null 2>&1
@@ -399,12 +404,14 @@ if [ "${TDH_TKGWC_INGRESS_HARBOR}" == "true" ]; then
     echo "       => kubectl apply -f registry/harbor/harbor-extension.yaml"
   fi
 
+echo xxxx6 && helm list
   cnt=$(kubectl get extension harbor -n tanzu-system-registry 2>/dev/null | egrep -c "^harbor")
   if [ $cnt -eq 0 ]; then
     kubectl apply -f ingress/contour/harbor-extension.yaml > /dev/null 2>&1
     sleep 10
   fi
 
+echo xxxxr && helm list
   i=0
   while [ $i -lt 3 ]; do
     stt=$(kubectl get app harbor -n tanzu-system-registry -o json | jq -r '.status.friendlyDescription')
@@ -416,9 +423,11 @@ if [ "${TDH_TKGWC_INGRESS_HARBOR}" == "true" ]; then
     let i=i+1
   done
 
+echo xxxx8 && helm list
   kubectl -n tanzu-system-registry get secret harbor-tls -o=jsonpath="{.data.ca\.crt}" | base64 -d > /tmp/hatbor-tls.pem
   kubectl config use-context tkg-mc-azure-dev-admin@tkg-mc-azure-dev
 
+echo xxxx9 && helm list
   cnt=$(tkg get cluster --include-management-cluster -o json | jq -r --arg key "$TDH_TKGWC_NAME" '.[] | select(.name == $key).roles[]' | \
             egrep -c "tanzu-services") 
   if [ $cnt -eq 0 ]; then 
@@ -427,6 +436,7 @@ if [ "${TDH_TKGWC_INGRESS_HARBOR}" == "true" ]; then
   else
     messagePrint "- Verify cluster-role label on $TDH_TKGWC_NAME cluster" "Role: tanzu-services on"
   fi
+echo xxxx10 && helm list
 
   echo "-----------------------------------------------------------------------------------------------------------"
   tkg get cluster --include-management-cluster 
@@ -438,6 +448,7 @@ if [ "${TDH_TKGWC_INGRESS_HARBOR}" == "true" ]; then
     kubectl get app harbor -n tanzu-system-registry
     messagePrint "- Install Harbor Registry" "failed"; exit
   fi
+echo xxxx11 && helm list
 
   cd ${TDHPATH}
 
