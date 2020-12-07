@@ -379,6 +379,8 @@ if [ "${TDH_TKGWC_INGRESS_HARBOR}" == "true" ]; then
   messagePrint "- Set Admin Password" "XXXXXXXXX"
   sed -i "s/^harborAdminPassword: .*$/harborAdminPassword: harbor/g" registry/harbor/harbor-data-values.yaml
   messagePrint "- Add Cerfificate and PrivateKey for domain" "$DNS_HARBOR"
+pwd
+echo ooooooo
   sed -i "s/  tls.crt:/  tls.crt: $cert/g" registry/harbor/harbor-data-values.yaml
   sed -i "s/  tls.key:/  tls.key: $pkey/g" registry/harbor/harbor-data-values.yaml
   sed -i "s/  ca.crt:/  ca.crt: $cart/g" registry/harbor/harbor-data-values.yaml
@@ -445,17 +447,34 @@ if [ "${TDH_TKGWC_INGRESS_HARBOR}" == "true" ]; then
   kubectl config use-context $TDH_TKGWC_NAME-admin@$TDH_TKGWC_NAME > /dev/null 2>&1
   cd ${TDHPATH}
 
-echo gaga1
   messagePrint "- Install the Tanzu Kubernetes Grid Connectivity API on the Management Cluster" ""
-  if [ ! -d extensions/manifests ]; then 
-pwd
-echo gaga2
-    (cd extensions; tar xvf ../software/$TKG_CONNECTIVITY)
-pwd
-  fi
-echo gaga3
-echo "TKG_CONNECTIVITY:$TKG_CONNECTIVITY"
+  stt=$(kubectl get ns -o json | jq -r '.items[] | select(.metadata.name == "tanzu-system-connectivity").status.phase')
+  if [ ! -d extensions/manifests -a "${stt}" != "Active" ]; then 
+    cd extensions 
+    tar xvf ../software/$TKG_CONNECTIVITY
+    ca_cert=$(cat /tmp/hatbor-tls.pem) 
+    sed -i "s/  enabled:.*$/  enabled: \"true\"/g" manifests/tanzu-registry/values.yaml
+    sed -i "s/  dnsOverride:.*$/  dnsOverride: \"false\"/g" manifests/tanzu-registry/values.yaml
+    sed -i "s/  fqdn:.*$/  fqdn: \"$DNS_HARBOR\"/g" manifests/tanzu-registry/values.yaml
+    sed -i "s/  vip:.*$/  vip: \"1.2.3.4\"/g" manifests/tanzu-registry/values.yaml
+    sed -i "s/  bootstrapProxy:.*$/  bootstrapProxy: \"true\"/g" manifests/tanzu-registry/values.yaml
+    sed -i "s/  rootCA:.*$/  rootCA: \"$ca_cert\"/g" manifests/tanzu-registry/values.yaml
 
+    kubectl config use-context $con > /dev/null 2>&1
+    ytt --ignore-unknown-comments -f manifests/tanzu-registry | kubectl apply -f -  > /dev/null 2>&1
+    ytt -f manifests/tkg-connectivity-operator | kubectl apply -f - > /dev/null 2>&1
+
+    kubectl config use-context $TDH_TKGWC_NAME-admin@$TDH_TKGWC_NAME > /dev/null 2>&1
+    kubectl -n tanzu-system-registry annotate httpproxy harbor-httpproxy connectivity.tanzu.vmware.com/vip=1.2.3.4 > /dev/null 2>&1
+    kubectl -n tanzu-system-registry label httpproxy harbor-httpproxy connectivity.tanzu.vmware.com/export= > /dev/null 2>&1
+
+    pip=$(kubectl get svc envoy -n tanzu-system-ingress -o jsonpath='{.status.loadBalancer.ingress[0]}' | jq -r '.ip')
+    #route53setDNSrecord "$pip" "JUMP_HOST" "$AWS_HOSTED_DNS_DOMAIN"
+  fi
+
+    pip=$(kubectl get svc envoy -n tanzu-system-ingress -o jsonpath='{.status.loadBalancer.ingress[0]}' | jq -r '.ip')
+echo "PIP:$pip"
+#setTKGclusterDNS "$TDH_TKGWC_NAME" "${ipa}" "apps"
 
 echo "CON:$con"
 
