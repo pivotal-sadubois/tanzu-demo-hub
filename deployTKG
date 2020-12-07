@@ -265,18 +265,27 @@ if [ "${TDH_TKGWC_INGRESS_CONTOUR}" == "true" ]; then
 fi
 
   messageTitle "Install and configure Helm Charts"
-  messagePrint "- Confogure Helm Repo" "https://charts.helm.sh/stable"
-  helm repo add stable https://charts.helm.sh/stable > /dev/null 2>&1
-  messagePrint "- Configure Bitnami Helm Repo" "https://charts.bitnami.com/bitnami"
-  helm repo add bitnami https://charts.bitnami.com/bitnami > /dev/null 2>&1
-  helm repo update > /dev/null 2>&1
-
-  messagePrint "- Create ServiceAccount for tiller" "demos/k8s-helm/rbac-config.yaml "
-  kubectl apply -f demos/k8s-helm/rbac-config.yaml > /dev/null 2>&1
-  if [ $? -ne 0 ]; then 
-    echo "ERROR: Failed to create tiller service aacount"
-    echo "       => kubectl apply -f demos/k8s-helm/rbac-config.yaml"
+  cnt=$(helm repo list -o json | jq -r --arg key "stable" '.[] | select(.name == $key).url')
+  if [ "${cnt}" != "" ]; then 
+    messagePrint "- Confogure Helm Repo" "https://charts.helm.sh/stable"
+    helm repo add stable https://charts.helm.sh/stable > /dev/null 2>&1
+    helm repo update > /dev/null 2>&1
   fi
+
+  cnt=$(helm repo list -o json | jq -r --arg key "bitnami" '.[] | select(.name == $key).url')
+  if [ "${cnt}" != "" ]; then 
+    messagePrint "- Configure Bitnami Helm Repo" "https://charts.bitnami.com/bitnami"
+    helm repo add bitnami https://charts.bitnami.com/bitnami > /dev/null 2>&1
+    helm repo update > /dev/null 2>&1
+  fi
+
+  ### => NEEDED BY HELM-2
+#  messagePrint "- Create ServiceAccount for tiller" "demos/k8s-helm/rbac-config.yaml "
+#  kubectl apply -f demos/k8s-helm/rbac-config.yaml > /dev/null 2>&1
+#  if [ $? -ne 0 ]; then 
+#    echo "ERROR: Failed to create tiller service aacount"
+#    echo "       => kubectl apply -f demos/k8s-helm/rbac-config.yaml"
+#  fi
 
 #  helm init --service-account tiller > /dev/null 2>&1
 #  if [ $? -ne 0 ]; then 
@@ -284,14 +293,9 @@ fi
 #    echo "       => helm init --service-account tiller > /dev/null 2>&1"
 #  fi
 
-
-echo "XXXXXXXXXXXXXXXXXXXX"
-exit
-
 if [ "${TDH_TKGWC_INGRESS_NGINX}" == "true" ]; then 
   #https://docs.bitnami.com/kubernetes/get-started-tkg/
   messageTitle "Install Ingress NGINX" 
-
 
   messagePrint "- Install Ingress Controller" "bitnami/nginx-ingress-controller"
   kubectl get namespace nginx-ingress > /dev/null 2>&1
@@ -320,10 +324,6 @@ if [ "${TDH_TKGWC_INGRESS_NGINX}" == "true" ]; then
     echo "       => kubectl get svc envoy -n tanzu-system-ingress"
     exit 1
   fi
-
-  #helm search repo bitnami
-  #helm search repo standard
-  #bitnami/nginx-ingress-controller 
 fi
 
 #  stt=$(kubectl get ns -o json | jq -r '.items[] | select(.metadata.name == "cert-manager").status.phase')
