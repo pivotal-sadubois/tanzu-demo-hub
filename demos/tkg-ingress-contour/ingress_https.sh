@@ -90,8 +90,8 @@ if [ "${TLS_CERTIFICATE}" == "" -o "${TLS_PRIVATE_KEY}" == "" ]; then
   echo "       => export TLS_PRIVATE_KEY=<private_key.pem>"
   echo ""
   exit 1
-else
-  verifyTLScertificate $TLS_CERTIFICATE $TLS_PRIVATE_KEY
+#else
+#  verifyTLScertificate $TLS_CERTIFICATE $TLS_PRIVATE_KEY
 fi
 
 # --- CONVERT CERTS TO BASE64 ---
