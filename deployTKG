@@ -267,15 +267,15 @@ if [ "${TDH_TKGWC_INGRESS_CONTOUR}" == "true" ]; then
 fi
 
   messageTitle "Install and configure Helm Charts"
-  cnt=$(helm repo list -o json | jq -r --arg key "stable" '.[] | select(.name == $key).url')
-  if [ "${cnt}" != "" ]; then 
+  cnt=$(helm repo list -o json 2>/dev/null | jq -r --arg key "stable" '.[] | select(.name == $key).url')
+  if [ "${cnt}" == "" ]; then 
     messagePrint "- Confogure Helm Repo" "https://charts.helm.sh/stable"
     helm repo add stable https://charts.helm.sh/stable > /dev/null 2>&1
     helm repo update > /dev/null 2>&1
   fi
 
-  cnt=$(helm repo list -o json | jq -r --arg key "bitnami" '.[] | select(.name == $key).url')
-  if [ "${cnt}" != "" ]; then 
+  cnt=$(helm repo list -o json 2>/dev/null | jq -r --arg key "bitnami" '.[] | select(.name == $key).url')
+  if [ "${cnt}" == "" ]; then 
     messagePrint "- Configure Bitnami Helm Repo" "https://charts.bitnami.com/bitnami"
     helm repo add bitnami https://charts.bitnami.com/bitnami > /dev/null 2>&1
     helm repo update > /dev/null 2>&1
