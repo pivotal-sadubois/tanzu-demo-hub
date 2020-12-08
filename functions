@@ -1022,6 +1022,9 @@ verifyTLScertificate() {
   TLS_CERTIFICATE=$1
   TLS_PRIVATE_KEY=$2
 
+echo "TDHPATH$TDHPATH"
+sleep 1000
+
   dif=$((openssl x509 -in $TLS_CERTIFICATE -noout -modulus; openssl rsa -in $TLS_PRIVATE_KEY -noout -modulus) | \
       uniq -c | awk '{ print $1 }')
   if [ "$dif" == "" ]; then dif=0; fi
