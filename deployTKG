@@ -122,6 +122,8 @@ if [ "${TDH_TKGWC_WORKERNODES}" != "" ]; then TDH_OPTIONS="$TDH_OPTIONS --worker
 stt=$(tkg get mc --name $TDH_TKGMC_NAME -o json | jq -r '.[].status')
 con=$(tkg get mc --name $TDH_TKGMC_NAME -o json | jq -r '.[].context')
 isc=$(tkg get mc --name $TDH_TKGMC_NAME -o json | jq -r '.[].true')
+echo gaga
+tkg get mc
 echo "STT:$stt"
 echo "TKG_CONFIG:$TKG_CONFIG"
 if [ "${stt}" != "Success" ]; then 
@@ -385,7 +387,7 @@ if [ "${TDH_TKGWC_INGRESS_HARBOR}" == "true" ]; then
   sed -i "s/  tls.key:/  tls.key: $pkey/g" registry/harbor/harbor-data-values.yaml
   sed -i "s/  ca.crt:/  ca.crt: $cart/g" registry/harbor/harbor-data-values.yaml
 
-  cnt=$(kubectl get secrets harbor-data-values -n tanzu-system-registry | grep -c "harbor-data-values")
+  cnt=$(kubectl get secrets harbor-data-values -n tanzu-system-registry 2>/dev/null | grep -c "harbor-data-values")
   if [ $cnt -eq 0 ]; then
     messagePrint "- Create secrets for the Harbor config" "registry/harbor/harbor-data-values.yaml"
     kubectl create secret generic harbor-data-values --from-file=values.yaml=registry/harbor/harbor-data-values.yaml \
