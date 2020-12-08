@@ -1266,7 +1266,7 @@ setDNSrecord() {
     echo "    \"Action\": \"UPSERT\","                                  >> $TMPROUTE53
     echo "    \"ResourceRecordSet\": {"                                 >> $TMPROUTE53
     echo "      \"Name\": \"${ZONE}\","                                 >> $TMPROUTE53
-    echo "      \"Type\": \"A\","                                       >> $TMPROUTE53
+    echo "      \"Type\": \"CNAME\","                                       >> $TMPROUTE53
     echo "      \"TTL\": 300,"                                          >> $TMPROUTE53
     echo "      \"ResourceRecords\": [{ \"Value\": \"$TKG_IPADRESS\"}]" >> $TMPROUTE53
     echo "    }"                                                        >> $TMPROUTE53
