@@ -1022,9 +1022,6 @@ verifyTLScertificate() {
   TLS_CERTIFICATE=$1
   TLS_PRIVATE_KEY=$2
 
-echo "TDHPATH$TDHPATH"
-sleep 1000
-
   dif=$((openssl x509 -in $TLS_CERTIFICATE -noout -modulus; openssl rsa -in $TLS_PRIVATE_KEY -noout -modulus) | \
       uniq -c | awk '{ print $1 }')
   if [ "$dif" == "" ]; then dif=0; fi
@@ -1035,7 +1032,7 @@ sleep 1000
     exit 1
   fi
 
-  if [ ! -f certificates/ca.pem ]; then
+  if [ ! -f ${TDHPATH}/certificates/ca.pem ]; then
     # --- TRY TO FIND THE ROOT_CA ---
     if [ "${ROOT_CA_NAME}" == "DST Root CA X3" ]; then
       ROOT_CA_URL="https://letsencrypt.org/certs/trustid-x3-root.pem.txt"
@@ -1045,7 +1042,7 @@ sleep 1000
     fi
 
     # --- GENERATE CA.PEM WITH ROOT_CA AND FULLCHAIN ---
-    cat $TLS_ROOT_CA $TLS_CERTIFICATE > certificates/ca.pem
+    cat $TLS_ROOT_CA $TLS_CERTIFICATE > ${TDHPATH}/certificates/ca.pem
 
     if [ "${TLS_ROOT_CA}" == "" ]; then
       echo "ERROR: ROOT_CA for $ROOT_CA_NAME could not be found, please download the file manually"
