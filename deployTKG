@@ -122,6 +122,8 @@ if [ "${TDH_TKGWC_WORKERNODES}" != "" ]; then TDH_OPTIONS="$TDH_OPTIONS --worker
 stt=$(tkg get mc --name $TDH_TKGMC_NAME -o json | jq -r '.[].status')
 con=$(tkg get mc --name $TDH_TKGMC_NAME -o json | jq -r '.[].context')
 isc=$(tkg get mc --name $TDH_TKGMC_NAME -o json | jq -r '.[].true')
+echo "STT:$stt"
+echo "TKG_CONFIG:$TKG_CONFIG"
 if [ "${stt}" != "Success" ]; then 
   echo "ERROR: $0 TKG Management Cluster deployment was not Successfil"; exit 1
 fi
