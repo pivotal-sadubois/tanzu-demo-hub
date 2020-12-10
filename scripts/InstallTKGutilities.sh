@@ -4,7 +4,7 @@ TDHPATH=$1; cd /tmp
 
 # INSTALL TKG UTILITY
 tar xfz $TDHPATH/software/tkg-linux-amd64-v1.2.0-vmware.1.tar.gz
-mv /usr/local/bin; chmod +x /usr/local/bin/tkg
+#mv /usr/local/bin; chmod +x /usr/local/bin/tkg
 
 mv tkg/imgpkg-linux-amd64-v0.2.0+vmware.1 /usr/local/bin/imgpkg && chmod +x /usr/local/bin/imgpkg
 mv tkg/kapp-linux-amd64-v0.33.0+vmware.1  /usr/local/bin/kapp   && chmod +x /usr/local/bin/kapp
