@@ -346,7 +346,7 @@ checkCloudAccess() {
   if [ ${missing_variables} -eq 1 ]; then
     echo "  --------------------------------------------------------------------------------------------------------------"
     echo "  IMPORTANT: Please set the missing environment variables either in your shell or in the pcfconfig"
-    echo "             configuration file ~/.pcfconfig and set all variables with the 'export' notation"
+    echo "             configuration file ~/.tanzu-demo-hub.cfg and set all variables with the 'export' notation"
     echo "             ie. => export AZURE_PKS_TLS_CERTIFICATE=/home/demouser/certs/cert.pem"
     echo "  --------------------------------------------------------------------------------------------------------------"
     exit 1
