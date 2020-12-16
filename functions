@@ -873,15 +873,16 @@ EOF
 createCluster() {
   messageTitle "Creating TKG Managment Cluster"
   messagePrint " - Cluster Name"             "$TDH_TKGMC_NAME"
-  messagePrint " - Configuration File"       "${TDHPATH}/config/${TDH_TKGMC_CONFIG}"
+  #messagePrint " - Configuration File"       "${TDHPATH}/config/${TDH_TKGMC_CONFIG}"
+  messagePrint " - Configuration File"       "${SSH_HOME}/${TDH_TKGMC_CONFIG}"
 
   stt=$(tkg get mc --name $TDH_TKGMC_NAME -o json | jq -r '.[].status')
   if [ "${stt}" != "Success" ]; then
     echo "----------------------------------------------------------------------------------------------------------------"
     echo "tkg init -q -i azure -p dev --ceip-participation true --cni antrea -v 0 \\"
-    echo "         --name $TDH_TKGMC_NAME --config ${TDHPATH}/config/${TDH_TKGMC_CONFIG}"
+    echo "         --name $TDH_TKGMC_NAME --config ${SSH_HOME}/${TDH_TKGMC_CONFIG}"
     echo "----------------------------------------------------------------------------------------------------------------"
-    time tkg init -i azure -p dev --ceip-participation true --cni antrea -v 0 --name $TDH_TKGMC_NAME --config ${TDHPATH}/config/${TDH_TKGMC_CONFIG}
+    time tkg init -i azure -p dev --ceip-participation true --cni antrea -v 0 --name $TDH_TKGMC_NAME --config ${SSH_HOME}/${TDH_TKGMC_CONFIG}
     echo "----------------------------------------------------------------------------------------------------------------"
   fi
 }
