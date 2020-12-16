@@ -182,7 +182,7 @@ checkKeyPairs() {
       rm -f ~/.tanzu-demo-hub/KeyPair-Azure.pem ~/.tanzu-demo-hub/KeyPair-Azure.pub
       ssh-keygen -t rsa -b 4096 -f ~/.tanzu-demo-hub/KeyPair-Azure -P "" > /dev/null 2>&1
       mv ~/.tanzu-demo-hub/KeyPair-Azure ~/.tanzu-demo-hub/KeyPair-Azure.pem
-    else
+#    else
       # COMPATE KEYS
       #LOCALSSH=$(cat ~/.tanzu-demo-hub/KeyPair-Azure.pub | base64 | tr -d ‘\r\n’)
       #CONFIGSSH=$(egrep "^AZURE_SSH_PUBLIC_KEY_B64:" ${TDHPATH}/config/${TDH_TKGMC_CONFIG} | awk '{ print $2 }')
