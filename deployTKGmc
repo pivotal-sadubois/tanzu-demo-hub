@@ -478,13 +478,6 @@ createJumpHost
 sshEnvironment
 configureJumpHost
 configureLetsEnscript
-createCluster
-exit
-
-messageTitle "Creating Worload Cluster (tdh-1)"
-echo "./deployTKG -d $DEPLOY_TKG_TEMPLATE -c tkg-tanzu-demo-hub.cfg -n tdh-1"
-echo "$SSH_COMMAND -n \"cd tanzu-demo-hub && ./deployTKG -d $DEPLOY_TKG_TEMPLATE -c tkg-tanzu-demo-hub.cfg -n tdh-1\""
-$SSH_COMMAND -n "cd tanzu-demo-hub && ./deployTKG -d $DEPLOY_TKG_TEMPLATE -c tkg-tanzu-demo-hub.cfg -n tdh-1"
 
 # --- CREATE MANAGEMENT CLUSTER ---
 $SSH_COMMAND -n "[ -f $SSH_HOME/tanzu-demo-hub/scripts/InstallTKGmc.sh ] && tanzu-demo-hub/scripts/InstallTKGmc.sh $DEPLOY_TKG_TEMPLATE"
@@ -506,6 +499,13 @@ echo "    => tkg create cluster tkg01 --plan=dev --kubernetes-version=v1.18.8  #
 echo "    => tkg create cluster tkg01 --plan=prod --worker-machine-count 3 --controlplane-machine-count 3"
 echo ""
 echo "-----------------------------------------------------------------------------------------------------------"
+
+exit
+messageTitle "Creating Worload Cluster (tdh-1)"
+echo "./deployTKG -d $DEPLOY_TKG_TEMPLATE -c tkg-tanzu-demo-hub.cfg -n tdh-1"
+echo "$SSH_COMMAND -n \"cd tanzu-demo-hub && ./deployTKG -d $DEPLOY_TKG_TEMPLATE -c tkg-tanzu-demo-hub.cfg -n tdh-1\""
+$SSH_COMMAND -n "cd tanzu-demo-hub && ./deployTKG -d $DEPLOY_TKG_TEMPLATE -c tkg-tanzu-demo-hub.cfg -n tdh-1"
+
 
 exit
 
