@@ -184,8 +184,8 @@ checkKeyPairs() {
       mv ~/.tanzu-demo-hub/KeyPair-Azure ~/.tanzu-demo-hub/KeyPair-Azure.pem
     else
       # COMPATE KEYS
-      LOCALSSH=$(cat ~/.tanzu-demo-hub/KeyPair-Azure.pub | base64 | tr -d ‘\r\n’)
-      CONFIGSSH=$(egrep "^AZURE_SSH_PUBLIC_KEY_B64:" ${TDHPATH}/config/${TDH_TKGMC_CONFIG} | awk '{ print $2 }')
+      #LOCALSSH=$(cat ~/.tanzu-demo-hub/KeyPair-Azure.pub | base64 | tr -d ‘\r\n’)
+      #CONFIGSSH=$(egrep "^AZURE_SSH_PUBLIC_KEY_B64:" ${TDHPATH}/config/${TDH_TKGMC_CONFIG} | awk '{ print $2 }')
 
       #if [ "${LOCALSSH} != ${CONFIGSSH}" ]; then
       #  gsed -i "s/^\(AZURE_SSH_PUBLIC_KEY_B64:\) .*$/\1 $LOCALSSH/g" ${TDHPATH}/config/${TDH_TKGMC_CONFIG}
@@ -485,11 +485,16 @@ createJumpHost() {
 }
 
 # --- VERYFY ACCESS TO CLOUD ---
+echo gaga1
 checkCloudCLI
+echo gaga2
 checkCloudAccess
+echo gaga3
 checkKeyPairs
+echo gaga4
 
 # --- CREATE TKG CLUSTER AND JUMP SERVER
+exit
 createJumpHost
 sshEnvironment
 configureJumpHost

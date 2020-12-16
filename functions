@@ -787,19 +787,24 @@ route53deleteHostedZone() {
   fi
 }
 
-checkKeyPairs() {
+checkKeyPairs_old() {
+echo hallo1
   SSH_KEY_NAME=vmware-cloud-tmc
   SSH_KEY_FILE=~/.tanzu-demo-hub/KeyPair-${SSH_KEY_NAME}-${AWS_REGION}.pem
 
+echo hallo2
   #"KeyFingerprint": "a8:c4:01:2b:12:7e:0d:8f:56:8c:38:80:cf:8b:6d:53:13:9c:28:cd",
   #aws ec2 --region=eu-central-1 create-key-pair --dry-run --key-name sacha
   #/tmp/key.pem
+echo hallo3
 
   if [ ! -d ~/.tanzu-demo-hub ] ; then mkdir ~/.tanzu-demo-hub; fi
+echo hallo4
 
   # --- VERIFY KEY-PAIR ---
   key=$(aws ec2 --region=$AWS_REGION describe-key-pairs | \
         jq -r --arg key "$SSH_KEY_NAME" '.KeyPairs[] | select(.KeyName == $key).KeyFingerprint')
+echo hallo5
 
   # --- CREATE ONE IF IT DOES NOT EXIST ---
   if [ "${key}" == "" ]; then
@@ -807,6 +812,7 @@ checkKeyPairs() {
        jq -r '.KeyMaterial' > $SSH_KEY_FILE
     chmod 600 $SSH_KEY_FILE
   fi
+echo hallo6
 
   if [ -f "${SSH_KEY_FILE}" ]; then
     kfp=$(openssl pkcs8 -in $SSH_KEY_FILE -inform PEM -outform DER -topk8 -nocrypt | openssl sha1 -c)
@@ -817,6 +823,7 @@ checkKeyPairs() {
       exit
     fi
   fi
+echo hallo7
 }
 
 maskPassword() {
