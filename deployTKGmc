@@ -478,6 +478,8 @@ createJumpHost
 sshEnvironment
 configureJumpHost
 configureLetsEnscript
+createCluster
+exit
 
 messageTitle "Creating Worload Cluster (tdh-1)"
 echo "./deployTKG -d $DEPLOY_TKG_TEMPLATE -c tkg-tanzu-demo-hub.cfg -n tdh-1"
