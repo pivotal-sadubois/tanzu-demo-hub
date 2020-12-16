@@ -173,7 +173,7 @@ if [ -f ~/.tanzu-demo-hub.cfg ]; then
 fi
 
 export TDH_DEPLOYMENT_ENV_NAME=$TDH_TKGMC_INFRASTRUCTURE
-export TKG_CONFIG=${TDHPATH}/config/$TDH_TKGMC_CONFIG
+export TKG_CONFIG=~/.tanzu-demo-hub/$TDH_TKGMC_CONFIG
 
 checkKeyPairs() {
   if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "Azure" ]; then
@@ -303,22 +303,6 @@ configureLetsEnscript() {
       sleep 10
     done
 
-    echo "----------------------------------------------------------------------------------------------------------------"
-  fi
-}
-
-createCluster_old() {
-  messageTitle "Creating TKG Managment Cluster"
-  messagePrint " - Cluster Name"             "$TDH_TKGMC_NAME"
-  messagePrint " - Configuration File"       "${TDHPATH}/config/${TDH_TKGMC_CONFIG}"
-
-  stt=$(tkg get mc --name $TDH_TKGMC_NAME -o json | jq -r '.[].status')
-  if [ "${stt}" != "Success" ]; then
-    echo "----------------------------------------------------------------------------------------------------------------"
-    echo "tkg init -i azure -p dev --ceip-participation true --cni antrea -v 0 \\"
-    echo "         --name $TDH_TKGMC_NAME --config ${TDHPATH}/config/${TDH_TKGMC_CONFIG}"
-    echo "----------------------------------------------------------------------------------------------------------------"
-    time tkg init -i azure -p dev --ceip-participation true --cni antrea -v 0 --name $TDH_TKGMC_NAME --config ${TDHPATH}/config/${TDH_TKGMC_CONFIG}
     echo "----------------------------------------------------------------------------------------------------------------"
   fi
 }
@@ -485,16 +469,11 @@ createJumpHost() {
 }
 
 # --- VERYFY ACCESS TO CLOUD ---
-echo gaga1
 checkCloudCLI
-echo gaga2
 checkCloudAccess
-echo gaga3
 checkKeyPairs
-echo gaga4
 
 # --- CREATE TKG CLUSTER AND JUMP SERVER
-exit
 createJumpHost
 sshEnvironment
 configureJumpHost
@@ -508,19 +487,19 @@ $SSH_COMMAND -n "cd tanzu-demo-hub && ./deployTKG -d $DEPLOY_TKG_TEMPLATE -c tkg
 # --- CREATE MANAGEMENT CLUSTER ---
 $SSH_COMMAND -n "[ -f $SSH_HOME/tanzu-demo-hub/scripts/InstallTKGmc.sh ] && tanzu-demo-hub/scripts/InstallTKGmc.sh $DEPLOY_TKG_TEMPLATE"
 echo "-----------------------------------------------------------------------------------------------------------"
-$SSH_COMMAND -n "tkg get mc --config $SSH_HOME/tanzu-demo-hub/config/$TDH_TKGMC_CONFIG"
+$SSH_COMMAND -n "tkg get mc --config ${SSH_HOME}/.tanzu-demo-hub/$TDH_TKGMC_CONFIG"
 echo "-----------------------------------------------------------------------------------------------------------"
 echo "1.) Login to Jump Server: $JUMP_HOST"
 echo "    => $SSH_COMMAND"
 echo "2.) Check Management Cluster Status"
-echo "    => export TKG_CONFIG=${SSH_HOME}/tanzu-demo-hub/config/$TDH_TKGMC_CONFIG"
+echo "    => export TKG_CONFIG=${SSH_HOME}/.tanzu-demo-hub/$TDH_TKGMC_CONFIG"
 echo "    => tkg set mc $TDH_TKGMC_NAME                # Set active mc cluster"
 echo "    => tkg get mc"
 printf "    => %-50s %s\n" "kubectl config set-context $TDH_TKGMC_NAME" "# Set k8s Context to mc Cluster"
 printf "    => %-50s %s\n" "kubectl get nodes" "# Set k8s Context to the TKG Management Cluster"
 printf "    => %-50s %s\n" "kubectl get namespaces" "# Set k8s Namespaces of the TKG Management Cluster"
 echo "3.) Ceeate TKG Workload Cluster"
-echo "    => export TKG_CONFIG=${SSH_HOME}/tanzu-demo-hub/config/$TDH_TKGMC_CONFIG"
+echo "    => export TKG_CONFIG=${SSH_HOME}/.tanzu-demo-hub/$TDH_TKGMC_CONFIG"
 echo "    => tkg create cluster tkg01 --plan=dev --kubernetes-version=v1.18.8  # available 1.19.1 1.18.8 1.17.11"
 echo "    => tkg create cluster tkg01 --plan=prod --worker-machine-count 3 --controlplane-machine-count 3"
 echo ""
