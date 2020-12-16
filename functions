@@ -882,6 +882,7 @@ createCluster() {
   messagePrint " - Cluster Name"             "$TDH_TKGMC_NAME"
   #messagePrint " - Configuration File"       "${TDHPATH}/config/${TDH_TKGMC_CONFIG}"
   messagePrint " - Configuration File"       "~/.tanzu-demo-hub/${TDH_TKGMC_CONFIG}"
+echo "AZURE_SSH_PUBLIC_KEY_B64:$AZURE_SSH_PUBLIC_KEY_B64"
 
   stt=$(tkg get mc --name $TDH_TKGMC_NAME -o json | jq -r '.[].status')
   if [ "${stt}" != "Success" ]; then
