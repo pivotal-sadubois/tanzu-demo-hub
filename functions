@@ -878,27 +878,27 @@ EOF
 }
 
 createCluster() {
-  TKG_CNOFIG=${HOME}/.tanzu-demo-hub/${TDH_TKGMC_CONFIG}
+  TKG_CONFIG=${HOME}/.tanzu-demo-hub/${TDH_TKGMC_CONFIG}
 
   messageTitle "Creating TKG Managment Cluster"0
   messagePrint " - Cluster Name"             "$TDH_TKGMC_NAME"
-  messagePrint " - Configuration File"       "$TKG_CNOFIG"
+  messagePrint " - Configuration File"       "$TKG_CONFIG"
 
   [ -f ${TDHPATH}/.tkg/config ] && rm -f ${TDHPATH}/.tkg/config
   tkg get mc > /dev/null 2>&1
-  cp ${TDHPATH}/.tkg/config $TKG_CNOFIG
+  cp ${TDHPATH}/.tkg/config $TKG_CONFIG
 
   AZURE_SSH_PUBLIC_KEY_B64=$(cat ~/.tanzu-demo-hub/KeyPair-Azure.pub | base64 -w 10000 | tr -d ‘\r\n’)
 
-  echo "AZURE_SSH_PUBLIC_KEY_B64: $AZURE_SSH_PUBLIC_KEY_B64"          >> $TKG_CNOFIG
-  echo "ZURE_NODE_MACHINE_TYPE: Standard_D2s_v3"                      >> $TKG_CNOFIG
-  echo "AZURE_TENANT_ID: $AZURE_TENANT_ID"                            >> $TKG_CNOFIG
-  echo "AZURE_CLIENT_ID: $AZURE_CLIENT_ID"                            >> $TKG_CNOFIG
-  echo "AZURE_CLIENT_SECRET: $AZURE_CLIENT_SECRET"                    >> $TKG_CNOFIG
-  echo "AZURE_CONTROL_PLANE_MACHINE_TYPE: Standard_D2s_v3"            >> $TKG_CNOFIG
-  echo "SERVICE_CIDR: 100.64.0.0/13"                                  >> $TKG_CNOFIG
-  echo "AZURE_LOCATION: $AZURE_LOCATION"                              >> $TKG_CNOFIG
-  echo "AZURE_SUBSCRIPTION_ID: $AZURE_SUBSCRIPTION_ID"                >> $TKG_CNOFIG
+  echo "AZURE_SSH_PUBLIC_KEY_B64: $AZURE_SSH_PUBLIC_KEY_B64"          >> $TKG_CONFIG
+  echo "ZURE_NODE_MACHINE_TYPE: Standard_D2s_v3"                      >> $TKG_CONFIG
+  echo "AZURE_TENANT_ID: $AZURE_TENANT_ID"                            >> $TKG_CONFIG
+  echo "AZURE_CLIENT_ID: $AZURE_CLIENT_ID"                            >> $TKG_CONFIG
+  echo "AZURE_CLIENT_SECRET: $AZURE_CLIENT_SECRET"                    >> $TKG_CONFIG
+  echo "AZURE_CONTROL_PLANE_MACHINE_TYPE: Standard_D2s_v3"            >> $TKG_CONFIG
+  echo "SERVICE_CIDR: 100.64.0.0/13"                                  >> $TKG_CONFIG
+  echo "AZURE_LOCATION: $AZURE_LOCATION"                              >> $TKG_CONFIG
+  echo "AZURE_SUBSCRIPTION_ID: $AZURE_SUBSCRIPTION_ID"                >> $TKG_CONFIG
 
 
 
