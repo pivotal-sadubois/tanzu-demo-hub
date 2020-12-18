@@ -886,7 +886,10 @@ createCluster() {
 
   [ -f ${HOME}/.tkg/config.yaml ] && rm -f ${HOME}/.tkg/config.yaml
   tkg get mc > /dev/null 2>&1
+  tkg get mc 
+ls -la ${HOME}/.tkg/config.yaml
   cp ${HOME}/.tkg/config.yaml $TKG_CONFIG
+exit
 
   AZURE_SSH_PUBLIC_KEY_B64=$(cat ~/.tanzu-demo-hub/KeyPair-Azure.pub | base64 -w 10000 | tr -d ‘\r\n’)
 
