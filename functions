@@ -884,10 +884,9 @@ createCluster() {
   messagePrint " - Cluster Name"             "$TDH_TKGMC_NAME"
   messagePrint " - Configuration File"       "$TKG_CNOFIG"
 
-  if [ -f ${TDHPATH}/.tkg/config ]; then
-    rm -f ${TDHPATH}/.tkg/config
-    tkg get mc > /dev/null 2>&1
-  fi
+  [ -f ${TDHPATH}/.tkg/config ] && rm -f ${TDHPATH}/.tkg/config
+  tkg get mc > /dev/null 2>&1
+  cp ${TDHPATH}/.tkg/config $TKG_CNOFIG
 
   AZURE_SSH_PUBLIC_KEY_B64=$(cat ~/.tanzu-demo-hub/KeyPair-Azure.pub | base64 -w 10000 | tr -d ‘\r\n’)
 
