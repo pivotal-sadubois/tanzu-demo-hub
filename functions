@@ -878,20 +878,31 @@ EOF
 }
 
 createCluster() {
+  TKG_CNOFIG=${HOME}/.tanzu-demo-hub/${TDH_TKGMC_CONFIG}
+
   messageTitle "Creating TKG Managment Cluster"
   messagePrint " - Cluster Name"             "$TDH_TKGMC_NAME"
-  messagePrint " - Configuration File"       "${TDHPATH}/config/${TDH_TKGMC_CONFIG}"
-  messagePrint " - Configuration File"       "~/.tanzu-demo-hub/${TDH_TKGMC_CONFIG}"
+  messagePrint " - Configuration File"       "$TKG_CNOFIG"
 
-echo "TDHPATH:$TDHPATH"
+  if [ -f ${TDHPATH}/.tkg/config ]; then
+    rm -f ${TDHPATH}/.tkg/config
+    tkg get mc > /dev/null 2>&1
+  fi
 
-  [ -f ${TDHPATH}/.tkg/config ] && rm -f ${TDHPATH}/.tkg/config
-  AZURE_SSH_PUBLIC_KEY_B64=$(cat ~/.tanzu-demo-hub/KeyPair-Azure.pub | base64 | tr -d ‘\r\n’)
-echo "AZURE_SSH_PUBLIC_KEY_B64:$AZURE_SSH_PUBLIC_KEY_B64"
+  AZURE_SSH_PUBLIC_KEY_B64=$(cat ~/.tanzu-demo-hub/KeyPair-Azure.pub | base64 -b 10000 | tr -d ‘\r\n’)
 
-exit
+  echo "AZURE_SSH_PUBLIC_KEY_B64: $AZURE_SSH_PUBLIC_KEY_B64"          >> $TKG_CNOFIG
+  echo "ZURE_NODE_MACHINE_TYPE: Standard_D2s_v3"                      >> $TKG_CNOFIG
+  echo "AZURE_TENANT_ID: $AZURE_TENANT_ID"                            >> $TKG_CNOFIG
+  echo "AZURE_CLIENT_ID: $AZURE_CLIENT_ID"                            >> $TKG_CNOFIG
+  echo "AZURE_CLIENT_SECRET: $AZURE_CLIENT_SECRET"                    >> $TKG_CNOFIG
+  echo "AZURE_CONTROL_PLANE_MACHINE_TYPE: Standard_D2s_v3"            >> $TKG_CNOFIG
+  echo "SERVICE_CIDR: 100.64.0.0/13"                                  >> $TKG_CNOFIG
+  echo "AZURE_LOCATION: $AZURE_LOCATION"                              >> $TKG_CNOFIG
+  echo "AZURE_SUBSCRIPTION_ID: $AZURE_SUBSCRIPTION_ID"                >> $TKG_CNOFIG
 
-  tkg get mc > /dev/null 2>&1
+
+
 
   stt=$(tkg get mc --name $TDH_TKGMC_NAME -o json | jq -r '.[].status')
   if [ "${stt}" != "Success" ]; then
@@ -899,9 +910,11 @@ exit
     echo "tkg init -q -i azure -p dev --ceip-participation true --cni antrea -v 0 \\"
     echo "         --name $TDH_TKGMC_NAME --config ~/.tanzu-demo-hub/${TDH_TKGMC_CONFIG}"
     echo "----------------------------------------------------------------------------------------------------------------"
+exit
     time tkg init -i azure -p dev --ceip-participation true --cni antrea -v 0 --name $TDH_TKGMC_NAME --config ~/.tanzu-demo-hub/${TDH_TKGMC_CONFIG}
     echo "----------------------------------------------------------------------------------------------------------------"
   fi
+exit
 }
 
 setTKGclusterDNS() {
