@@ -889,7 +889,7 @@ createCluster() {
     tkg get mc > /dev/null 2>&1
   fi
 
-  AZURE_SSH_PUBLIC_KEY_B64=$(cat ~/.tanzu-demo-hub/KeyPair-Azure.pub | base64 -w=1000 | tr -d ‘\r\n’)
+  AZURE_SSH_PUBLIC_KEY_B64=$(cat ~/.tanzu-demo-hub/KeyPair-Azure.pub | base64 -w 1000 | tr -d ‘\r\n’)
 
   echo "AZURE_SSH_PUBLIC_KEY_B64: $AZURE_SSH_PUBLIC_KEY_B64"          >> $TKG_CNOFIG
   echo "ZURE_NODE_MACHINE_TYPE: Standard_D2s_v3"                      >> $TKG_CNOFIG
