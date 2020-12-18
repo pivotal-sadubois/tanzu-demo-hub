@@ -303,7 +303,7 @@ checkCloudAccess() {
 
   if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "Azure" ]; then
     if [ "${AZURE_SUBSCRIPTION_ID}" == "" -o "${AZURE_TENANT_ID}" == "" -o \
-         "${AZURE_CLIENT_ID}" == "" -o "${AZURE_CLIENT_SECRET}" == "" -o "${AZURE_REGION}" == "" ]; then
+         "${AZURE_CLIENT_ID}" == "" -o "${AZURE_CLIENT_SECRET}" == "" -o "${AZURE_LOCATION}" == "" ]; then
 
       missing_variables=1
       echo ""
@@ -328,8 +328,8 @@ checkCloudAccess() {
         echo "                                  => az ad sp create-for-rbac --name \"TanzuDemoHub\" ## password"
       fi
 
-      if [ "${AZURE_REGION}" == "" ]; then
-        echo "  AZURE_REGION                    (required) Choose the Azure Region where your installation should run"
+      if [ "${AZURE_LOCATION}" == "" ]; then
+        echo "  AZURE_LOCATION                    (required) Choose the Azure Region where your installation should run"
         echo "                                  => az account list-locations -o table | awk '{ print $NF }'"
         echo "                                     westeurope, northeurope, switzerlandnorth etc."
       fi
@@ -339,7 +339,7 @@ checkCloudAccess() {
       messagePrint " - Azure TennantId"              $(maskPassword "$AZURE_TENANT_ID")
       messagePrint " - Azure ClientId"               $(maskPassword "$AZURE_CLIENT_ID")
       messagePrint " - Azure Client Secret"          $(maskPassword "$AZURE_CLIENT_SECRET")
-      messagePrint " - Azure Region"                 "$AZURE_REGION"
+      messagePrint " - Azure Region"                 "$AZURE_LOCATION"
     fi
   fi
 
@@ -581,7 +581,7 @@ createENVfile() {
     echo "AZURE_TENANT_ID=\"$AZURE_TENANT_ID\""                                  >> $envFile
     echo "AZURE_CLIENT_ID=\"$AZURE_CLIENT_ID\""                                  >> $envFile
     echo "AZURE_CLIENT_SECRET=\"$AZURE_CLIENT_SECRET\""                          >> $envFile
-    echo "AZURE_REGION=\"$AZURE_REGION\""                                        >> $envFile
+    echo "AZURE_LOCATION=\"$AZURE_LOCATION\""                                    >> $envFile
 
     echo "PCF_TERRAFORMS_TEMPLATE_BUNDLE=\"$PCF_TERRAFORMS_TEMPLATE_BUNDLE\""    >> $envFile
     echo "PCF_TERRAFORMS_TEMPLATE_NAME=\"$PCF_TERRAFORMS_TEMPLATE_NAME\""        >> $envFile
