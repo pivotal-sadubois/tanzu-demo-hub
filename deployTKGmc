@@ -475,6 +475,7 @@ checkKeyPairs
 
 # --- CREATE TKG CLUSTER AND JUMP SERVER
 createJumpHost
+exit
 sshEnvironment
 configureJumpHost
 configureLetsEnscript
