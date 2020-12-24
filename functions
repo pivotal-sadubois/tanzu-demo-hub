@@ -76,9 +76,26 @@ messagePrint() {
 }
 
 sshEnvironment() {
-  JUMP_HOST="jump-${TDH_TKGMC_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}"
+  if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "vSphere" ]; then
+    JUMP_HOST="${TDH_TKGMC_VCENTER_JUMPHOST}"
 
-  if [ "${TDH_DEPLOYMENT_CLOUD}" == "Azure" -o "${TDH_TKGMC_INFRASTRUCTURE}" ]; then
+    SSH_USER=ubuntu
+    SSH_HOME=/home/ubuntu
+    SSH_PRIVATE_KEY=~/.tanzu-demo-hub/KeyPair-Azure.pem
+    SSH_HOST=$JUMP_HOST
+    SSH_OPTIONS="-o StrictHostKeyChecking=no"
+    SSH_OPTIONS="-o StrictHostKeyChecking=no -o RequestTTY=yes -o ServerAliveInterval=240 -o ClientAliveInterval=240"
+    SSH_OPTIONS="-o StrictHostKeyChecking=no -o RequestTTY=yes -o ServerAliveInterval=240"
+    SCP_OPTIONS="-o StrictHostKeyChecking=no"
+    SSH_COMMAND="ssh -q $SSH_OPTIONS -i ${SSH_PRIVATE_KEY} ${SSH_USER}@${SSH_HOST}"
+    SCP_COMMAND="scp -i ${SSH_PRIVATE_KEY} -r $SCP_OPTIONS"
+    SSH_DISPLAY="ssh $SSH_OPTIONS -i ${SSH_PRIVATE_KEY} ${SSH_USER}@${SSH_HOST}"
+
+  fi
+
+  if [ "${TDH_DEPLOYMENT_CLOUD}" == "Azure" -o "${TDH_TKGMC_INFRASTRUCTURE}" == "Azure" ]; then
+    JUMP_HOST="jump-${TDH_TKGMC_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}"
+
     pip=""
     while [ "$pip" == "" -o "$pip" == "null" ]; do
       pip=$(az network public-ip list -g Admin --query "[?contains(name, 'AdminPublicIP_$TDH_TKGMC_ENVNAME')]" | \
@@ -240,6 +257,71 @@ checkCloudCLI() {
 
 checkCloudAccess() {
   missing_variables=0
+
+  if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "vSphere" ]; then
+    if [ "${VSPHERE_ADMIN}" == "" -o "${VSPHERE_PASSWORD}" == "" -o "${VSPHERE_SERVER}" == "" -o \
+         "${VSPHERE_DATACENTER}" == "" -o "${VSPHERE_DATASTORE}" == "" -o "${VSPHERE_CLUSTER}" == "" -o \
+         "${VSPHERE_SSH_PRIVATE_KEY_FILE}" == "" -o "${VSPHERE_SSH_PUBLIC_KEY_FILE}" == "" -o \
+         "${VSPHERE_MANAGEMENT_NETWORK}" == "" -o "${VSPHERE_WAN_NETWORK}" == "" -o "${VSPHERE_CLUSTER}" == "" ]; then
+      missing_variables=1
+      echo ""
+      echo "  4MISSING ENVIRONMENT-VARIABES    DESCRIPTION        "
+      echo "  --------------------------------------------------------------------------------------------------------------"
+
+      if [ "${VSPHERE_SERVER}" == "" ]; then
+        echo "  VSPHERE_SERVER                   (required) vSphere Server Name"
+      fi
+
+      if [ "${VSPHERE_ADMIN}" == "" ]; then
+        echo "  VSPHERE_ADMIN                    (required) vSphere Amdinistrator"
+      fi
+
+      if [ "${VSPHERE_PASSWORD}" == "" ]; then
+        echo "  VSPHERE_PASSWORD                 (required) vSphere Admin Password"
+      fi
+
+      if [ "${VSPHERE_DATACENTER}" == "" ]; then
+        echo "  VSPHERE_DATACENTER               (required) vSphere Datacenter"
+      fi
+
+      if [ "${VSPHERE_DATASTORE}" == "" ]; then
+        echo "  VSPHERE_DATASTORE                (required) vSphere Datastore"
+      fi
+
+      if [ "${VSPHERE_CLUSTER}" == "" ]; then
+        echo "  VSPHERE_CLUSTER                  (required) vSphere Cluster"
+      fi
+
+      if [ "${VSPHERE_MANAGEMENT_NETWORK}" == "" ]; then
+        echo "  VSPHERE_MANAGEMENT_NETWORK       (required) vSphere Management Network"
+      fi
+
+      if [ "${VSPHERE_WAN_NETWORK}" == "" ]; then
+        echo "  VSPHERE_WAN_NETWORK              (required) vSphere WAN Network"
+      fi
+
+      if [ "${VSPHERE_SSH_PRIVATE_KEY_FILE}" == "" ]; then
+        echo "  VSPHERE_SSH_PRIVATE_KEY_FILE     (required) SSH Private Key File"
+      fi
+    
+      if [ "${VSPHERE_SSH_PUBLIC_KEY_FILE}" == "" ]; then
+        echo "  VSPHERE_SSH_PUBLIC_KEY_FILE      (required) SSH Public Key File"
+      fi
+    else
+      echo "vSphere Access Credentials"
+      messagePrint " - vSphere Server Name"                "$VSPHERE_SERVER"
+      messagePrint " - vSphere Admin User"                 "$VSPHERE_ADMIN"
+      messagePrint " - vSphere Admin Password"             $(maskPassword "$VSPHERE_PASSWORD")
+      messagePrint " - vSphere Datacenter"                 "$VSPHERE_DATACENTER"
+      messagePrint " - vSphere Datastore"                  "$VSPHERE_DATASTORE"
+      messagePrint " - vSphere Cluster NAme"               "$VSPHERE_CLUSTER"
+      messagePrint " - vSphere Management Network"         "$VSPHERE_MANAGEMENT_NETWORK"
+      messagePrint " - vSphere WAN Network"                "$VSPHERE_WAN_NETWORK"
+      messagePrint " - SSH Private Key"                    "$VSPHERE_SSH_PRIVATE_KEY_FILE"
+      messagePrint " - SSH Public Key"                     "$VSPHERE_SSH_PUBLIC_KEY_FILE"
+    fi
+
+  fi
 
   if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "GCP" ]; then
     #if [ "${GCP_SERVICE_ACCOUNT}" == "" -o "${GCP_REGION}" == "" -o "${GCP_PROJECT}" == "" ]; then
