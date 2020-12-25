@@ -56,35 +56,6 @@ if [ ! -x /usr/bin/aws ]; then
   #sudo -H pip3 install --upgrade awscli
 fi
 
-if [ ! -x /usr/bin/cf ]; then 
-  echo "- Install CF-CLI"
-  wget -q -O - https://packages.cloudfoundry.org/debian/cli.cloudfoundry.org.key | sudo apt-key add -
-  echo "deb https://packages.cloudfoundry.org/debian stable main" | sudo tee /etc/apt/sources.list.d/cloudfoundry-cli.list
-  apt-get update && apt-get install cf-cli -y > /dev/null 2>&1
-fi
-
-while  [ ! -x /usr/bin/gcloud ]; do 
-  echo "- Install GCP SDK"
-  echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] https://packages.cloud.google.com/apt cloud-sdk main" | \
-  tee -a /etc/apt/sources.list.d/google-cloud-sdk.list > /dev/null
-  apt-get install apt-transport-https ca-certificates -y > /dev/null 2>&1
-  curl https://packages.cloud.google.com/apt/doc/apt-key.gpg 2>/dev/null | \
-  sudo 2>/dev/null apt-key --keyring /usr/share/keyrings/cloud.google.gpg add - 
-  apt-get update && apt-get install google-cloud-sdk -y > /dev/null 2>&1
-done
-
-while  [ ! -x /usr/bin/om ]; do 
-  echo "- Install OM"
-  #sudo wget -q -O - https://raw.githubusercontent.com/starkandwayne/homebrew-cf/master/public.key | sudo apt-key add -
-  #sudo echo "deb http://apt.starkandwayne.com stable main" | sudo  tee /etc/apt/sources.list.d/starkandwayne.list
-  #sudo apt-get update > /dev/null 2>&1
-  #sudo apt-get install om -y  > /dev/null 2>&1
-  wget -q -O - https://raw.githubusercontent.com/starkandwayne/homebrew-cf/master/public.key | apt-key add - 
-  echo "deb http://apt.starkandwayne.com stable main" | tee /etc/apt/sources.list.d/starkandwayne.list > /dev/null
-  apt-get update > /dev/null 2>&1
-  apt-get install om -y  > /dev/null 2>&1
-done
-
 if [ ! -x /usr/bin/kubectl ]; then 
   echo "- Install Kubectl"
   curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add -
