@@ -310,68 +310,79 @@ configureLetsEnscript() {
 createJumpHost() {
   if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "vSphere" ]; then
     JUMP_HOST="${TDH_TKGMC_VCENTER_JUMPHOST}"
+    SSH_USER=ubuntu
+    SSH_OPTIONS="-o StrictHostKeyChecking=no -o RequestTTY=yes -o ServerAliveInterval=240"
+    SSH_PRIVATE_KEY=$VSPHERE_SSH_PRIVATE_KEY_FILE
+    SSH_COMMAND="ssh -q $SSH_OPTIONS -i ${SSH_PRIVATE_KEY} ${SSH_USER}@${JUMP_HOST}"
+    SSH_USER=ubuntu
 
-    # --- PACKER CREATE JUMP TEMPLATE ---
-    messagePrint "Crreate vSphere Jump-Server with (packer)" "$JUMP_HOST"
-    messagePrint " - Using Ubuntu Packer Config" "${TDHPATH}/packer/ubuntu.json"
-    messagePrint " - Generating Packer Config" "/tmp/jump.json"
+    # --- TEST IF JUMP HOST IS ALREADY DEPLOYED
+    $SSH_COMMAND -n "hostname > /dev/null 2>&1"; ret=$?
+    if [ "$ret" != 0 ]; then   
+      # --- PACKER CREATE JUMP TEMPLATE ---
+      messagePrint "Crreate vSphere Jump-Server with (packer)" "$JUMP_HOST"
+      messagePrint " - Using Ubuntu Packer Config" "${TDHPATH}/packer/ubuntu.json"
+      messagePrint " - Generating Packer Config" "/tmp/jump.json"
 
-    cat ${TDHPATH}/packer/jump_variables.json | sed -e "s/XXX_VSPHERE_SERVER_XXX/$VSPHERE_SERVER/g" \
-       -e "s/XXX_VSPHERE_PASSWORD_XXX/$VSPHERE_PASSWORD/g"  -e "s/XXX_VSPHERE_DATACENTER_XXX/$VSPHERE_DATACENTER/g" \
-       -e "s/XXX_VSPHERE_ADMIN_XXX/$VSPHERE_ADMIN/g"  -e "s/XXX_VSPHERE_DATACENTER_XXX/$VSPHERE_DATACENTER/g" \
-       -e "s/XXX_VSPHERE_DATASTORE_XXX/$VSPHERE_DATASTORE/g" -e "s/XXX_VSPHERE_CLUSTER_XXX/$VSPHERE_CLUSTER/g"\
-       -e "s/XXX_VSPHERE_WAN_NETWORK_XXX/$VSPHERE_WAN_NETWORK/g" \
-       -e "s/XXX_VSPHERE_MANAGEMENT_NETWORK_XXX/$VSPHERE_MANAGEMENT_NETWORK/g" > /tmp/jump.json
+      cat ${TDHPATH}/packer/jump_variables.json | sed -e "s/XXX_VSPHERE_SERVER_XXX/$VSPHERE_SERVER/g" \
+         -e "s/XXX_VSPHERE_PASSWORD_XXX/$VSPHERE_PASSWORD/g"  -e "s/XXX_VSPHERE_DATACENTER_XXX/$VSPHERE_DATACENTER/g" \
+         -e "s/XXX_VSPHERE_ADMIN_XXX/$VSPHERE_ADMIN/g"  -e "s/XXX_VSPHERE_DATACENTER_XXX/$VSPHERE_DATACENTER/g" \
+         -e "s/XXX_VSPHERE_DATASTORE_XXX/$VSPHERE_DATASTORE/g" -e "s/XXX_VSPHERE_CLUSTER_XXX/$VSPHERE_CLUSTER/g"\
+         -e "s/XXX_VSPHERE_WAN_NETWORK_XXX/$VSPHERE_WAN_NETWORK/g" \
+         -e "s/XXX_VSPHERE_MANAGEMENT_NETWORK_XXX/$VSPHERE_MANAGEMENT_NETWORK/g" > /tmp/jump.json
 
-    messagePrint " - Generating Preseed Config" "/tmp/preseed.cfg"
-    VSPHERE_SSH_PUBLIC_KEY=$(cat $VSPHERE_SSH_PUBLIC_KEY_FILE)
-    echo "    in-target /bin/sh -c \"echo '$VSPHERE_SSH_PUBLIC_KEY' >> /home/ubuntu/.ssh/authorized_keys\"; " > /tmp/snipset.txt
-    cat ${TDHPATH}/packer/jump_preseed.cfg | sed -e '/XXX_SSHKEY_XXX/r /tmp/snipset.txt' -e '/XXX_SSHKEY_XXX/d' > /tmp/preseed.cfg
+      messagePrint " - Generating Preseed Config" "/tmp/preseed.cfg"
+      VSPHERE_SSH_PUBLIC_KEY=$(cat $VSPHERE_SSH_PUBLIC_KEY_FILE)
+      echo "    in-target /bin/sh -c \"echo '$VSPHERE_SSH_PUBLIC_KEY' >> /home/ubuntu/.ssh/authorized_keys\"; " > /tmp/snipset.txt
+      cat ${TDHPATH}/packer/jump_preseed.cfg | sed -e '/XXX_SSHKEY_XXX/r /tmp/snipset.txt' -e '/XXX_SSHKEY_XXX/d' > /tmp/preseed.cfg
 
-    if [ -x /usr/local/bin/packer ]; then
-      echo "--------------------------------------------------------------------------------------------------------------"
-      echo "=> packer build -var-file=/tmp/jump.json ${TDHPATH}/packer/ubuntu.json"
-      echo "--------------------------------------------------------------------------------------------------------------"
-      packer build -var-file=/tmp/jump.json ${TDHPATH}/packer/ubuntu.json | sed '/^$/d'
-      echo "--------------------------------------------------------------------------------------------------------------"
+      if [ -x /usr/local/bin/packer ]; then
+        echo "--------------------------------------------------------------------------------------------------------------"
+        echo "=> packer build -var-file=/tmp/jump.json ${TDHPATH}/packer/ubuntu.json"
+        echo "--------------------------------------------------------------------------------------------------------------"
+        packer build -var-file=/tmp/jump.json ${TDHPATH}/packer/ubuntu.json | sed '/^$/d'
+        echo "--------------------------------------------------------------------------------------------------------------"
+      else
+        echo "ERROR: HashiCorp Packer has not been installed, download it from https://www.packer.io/downloads" 
+        echo "       and install it in /usr/local/bin/packer"; exit 0
+      fi
+
+      messagePrint "Deploy vSphere Jump-Server with (terraforms)" "$JUMP_HOST"
+      messagePrint " - Creating Variable file" "/tmp/terraform.tfvars"
+      echo "vsphere_user = \"administrator@corelab.com\""          >  /tmp/terraform.tfvars
+      echo "vsphere_password = \"$VSPHERE_PASSWORD\""              >> /tmp/terraform.tfvars
+      echo "vsphere_server = \"$VSPHERE_SERVER\""                  >> /tmp/terraform.tfvars
+      echo "vsphere_datacenter = \"$VSPHERE_DATACENTER\""          >> /tmp/terraform.tfvars
+      echo "vsphere_datastore = \"$VSPHERE_DATASTORE\""            >> /tmp/terraform.tfvars
+      echo "vsphere_compute_cluster = \"$VSPHERE_CLUSTER\""        >> /tmp/terraform.tfvars
+      echo "#vsphere_resource_pool = \"cluster/Resources\""        >> /tmp/terraform.tfvars
+      echo "vsphere_network = \"$VSPHERE_MANAGEMENT_NETWORK\""     >> /tmp/terraform.tfvars
+      echo "vsphere_virtual_machine_template = \"jump_template\""  >> /tmp/terraform.tfvars
+      echo "vsphere_virtual_machine_name = \"jump\""               >> /tmp/terraform.tfvars
+      echo "root_password = \"root\""                              >> /tmp/terraform.tfvars
+
+      if [ -x /usr/local/bin/terraform ]; then
+        echo "--------------------------------------------------------------------------------------------------------------"
+        echo "=> terraform -chdir=${TDHPATH}/terraform init"
+        echo "--------------------------------------------------------------------------------------------------------------"
+        terraform -chdir=${TDHPATH}/terraform init
+  
+        echo "--------------------------------------------------------------------------------------------------------------"
+        echo "=> terraform -chdir=${TDHPATH}/terraform plan -var-file=/tmp/terraform.tfvars -out jump -state=/tmp/terraform.state"
+        echo "--------------------------------------------------------------------------------------------------------------"
+        terraform -chdir=${TDHPATH}/terraform plan -var-file=/tmp/terraform.tfvars -out jump -state=/tmp/terraform.state
+  
+        echo "--------------------------------------------------------------------------------------------------------------"
+        echo "=> terraform -chdir=${TDHPATH}/terraform apply -state=/tmp/terraform.tfstate \"jump\""
+        terraform -chdir=${TDHPATH}/terraform apply -state=/tmp/terraform.tfstate "jump"
+  
+       #terraform -chdir=/Users/sdu/icloud/Development/tanzu-demo-hub/terraform destroy -state=/tmp/terraform.tfstate -var-file=/tmp/terraform.tfvars -auto-approve
+      else
+        echo "ERROR: HashiCorp terraform has not been installed, download it from https://www.terraform.io"
+        echo "       and install it in /usr/local/bin/terraform"; exit 0
+      fi
     else
-      echo "ERROR: HashiCorp Packer has not been installed, download it from https://www.packer.io/downloads" 
-      echo "       and install it in /usr/local/bin/packer"; exit 0
-    fi
-
-    messagePrint "Deploy vSphere Jump-Server with (terraforms)" "$JUMP_HOST"
-    messagePrint " - Creating Variable file" "/tmp/terraform.tfvars"
-    echo "vsphere_user = \"administrator@corelab.com\""          >  /tmp/terraform.tfvars
-    echo "vsphere_password = \"$VSPHERE_PASSWORD\""              >> /tmp/terraform.tfvars
-    echo "vsphere_server = \"$VSPHERE_SERVER\""                  >> /tmp/terraform.tfvars
-    echo "vsphere_datacenter = \"$VSPHERE_DATACENTER\""          >> /tmp/terraform.tfvars
-    echo "vsphere_datastore = \"$VSPHERE_DATASTORE\""            >> /tmp/terraform.tfvars
-    echo "vsphere_compute_cluster = \"$VSPHERE_CLUSTER\""        >> /tmp/terraform.tfvars
-    echo "#vsphere_resource_pool = \"cluster/Resources\""        >> /tmp/terraform.tfvars
-    echo "vsphere_network = \"$VSPHERE_MANAGEMENT_NETWORK\""     >> /tmp/terraform.tfvars
-    echo "vsphere_virtual_machine_template = \"jump_template\""  >> /tmp/terraform.tfvars
-    echo "vsphere_virtual_machine_name = \"jump\""               >> /tmp/terraform.tfvars
-    echo "root_password = \"root\""                              >> /tmp/terraform.tfvars
-
-    if [ -x /usr/local/bin/terraform ]; then
-      echo "--------------------------------------------------------------------------------------------------------------"
-      echo "=> terraform -chdir=${TDHPATH}/terraform init"
-      echo "--------------------------------------------------------------------------------------------------------------"
-      terraform -chdir=${TDHPATH}/terraform init
-
-      echo "--------------------------------------------------------------------------------------------------------------"
-      echo "=> terraform -chdir=${TDHPATH}/terraform plan -var-file=/tmp/terraform.tfvars -out jump -state=/tmp/terraform.state"
-      echo "--------------------------------------------------------------------------------------------------------------"
-      terraform -chdir=${TDHPATH}/terraform plan -var-file=/tmp/terraform.tfvars -out jump -state=/tmp/terraform.state
-
-      echo "--------------------------------------------------------------------------------------------------------------"
-      echo "=> terraform -chdir=${TDHPATH}/terraform apply -state=/tmp/terraform.tfstate \"jump\""
-      terraform -chdir=${TDHPATH}/terraform apply -state=/tmp/terraform.tfstate "jump"
-
-     #terraform -chdir=/Users/sdu/icloud/Development/tanzu-demo-hub/terraform destroy -state=/tmp/terraform.tfstate -var-file=/tmp/terraform.tfvars -auto-approve
-    else
-      echo "ERROR: HashiCorp terraform has not been installed, download it from https://www.terraform.io"
-      echo "       and install it in /usr/local/bin/terraform"; exit 0
+      messagePrint "Verify vSphere Jump-Server" "$JUMP_HOST"
     fi
   fi
 
@@ -544,9 +555,15 @@ checkKeyPairs
 createJumpHost
 sshEnvironment
 configureJumpHost
-exit
+uploadOVAimages
 configureLetsEnscript
 
+# --- UPLOAD OVA IMAGES TO VCENTER ---
+if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "vSphere" ]; then
+  $SSH_COMMAND -n "[ -f $SSH_HOME/tanzu-demo-hub/scripts/uploadOVAimages.sh ] && tanzu-demo-hub/scripts/uploadOVAimages.sh"
+fi
+
+exit
 # --- CREATE MANAGEMENT CLUSTER ---
 $SSH_COMMAND -n "[ -f $SSH_HOME/tanzu-demo-hub/scripts/InstallTKGmc.sh ] && tanzu-demo-hub/scripts/InstallTKGmc.sh $DEPLOY_TKG_TEMPLATE"
 

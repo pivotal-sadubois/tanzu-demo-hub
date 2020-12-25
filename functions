@@ -82,6 +82,7 @@ sshEnvironment() {
     SSH_USER=ubuntu
     SSH_HOME=/home/ubuntu
     SSH_PRIVATE_KEY=~/.tanzu-demo-hub/KeyPair-Azure.pem
+    SSH_PRIVATE_KEY=$VSPHERE_SSH_PRIVATE_KEY_FILE
     SSH_HOST=$JUMP_HOST
     SSH_OPTIONS="-o StrictHostKeyChecking=no"
     SSH_OPTIONS="-o StrictHostKeyChecking=no -o RequestTTY=yes -o ServerAliveInterval=240 -o ClientAliveInterval=240"
@@ -320,6 +321,34 @@ checkCloudAccess() {
       messagePrint " - SSH Private Key"                    "$VSPHERE_SSH_PRIVATE_KEY_FILE"
       messagePrint " - SSH Public Key"                     "$VSPHERE_SSH_PUBLIC_KEY_FILE"
     fi
+
+    # --- VERIFY OVA-IMAGES / OVFTOOL BUNDLE ---
+    found=1; file_list=""
+    for n in $TDH_TKGMC_TKG_IMAGES; do
+      if [ ! -f $n ]; then found=0; file_list="$file_list $n"; fi
+    done
+
+    if [ $found -eq 0 ]; then 
+      txt="ERROR: Missing OVA Images for TKG:"
+      for n in $file_list; do 
+        echo "$txt $n"; txt="                                  "
+      done
+
+      echo "Please download them from the VMware Download page:"
+      echo "=> https://my.vmware.com/group/vmware/downloads/details?downloadGroup=TKG-121&productId=988"
+      exit
+    fi
+
+    if [ ! -f $TDH_TKGMC_OVFTOOL_BUNDLE ]; then 
+      echo "ERROR: Missing OVFTOOL Bundle, please download it from the VMware Download page:"
+      echo "=> https://my.vmware.com/group/vmware/downloads/details?downloadGroup=OVFTOOL441&productId=734"
+    fi
+
+exit
+    
+# ovftool -q --verifyOnly --skipManifestCheck --noDestinationSSLVerify --noSourceSSLVerify --acceptAllEulas --network="Management" --datastore="datastore1" /tmp/photon-3-kube-v1.17.13-vmware.1.ova 'vi://administrator@corelab.com:00Penwin$@vc01.corelab.com/CoreDC/host/demoCluster01'
+#https://my.vmware.com/group/vmware/downloads/details?downloadGroup=TKG-121&productId=988
+#gaga
 
   fi
 
@@ -725,7 +754,6 @@ configureJumpHost() {
   TDHHOME="${SSH_HOME}/tanzu-demo-hub"
 
   messagePrint " - Verify SSH Access" "success"
-  messagePrint " - Update GIT repo"   "$GITTDH"
 
   $SSH_COMMAND -n "[ ! -d /home/ubuntu/tanzu-demo-hub ] && git clone $GITTDH > /dev/null 2>&1"
   $SSH_COMMAND -n "[ -d /home/ubuntu/tanzu-demo-hub ] && cd $SSH_HOME/tanzu-demo-hub; git pull > /dev/null 2>&1"
