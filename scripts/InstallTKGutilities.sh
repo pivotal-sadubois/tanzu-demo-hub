@@ -23,6 +23,21 @@ sudo systemctl start docker > /dev/null 2>&1
 sudo systemctl enable docker > /dev/null 2>&1
 sudo usermod -aG docker ubuntu
 
+# INSTALL KIND
+curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.9.0/kind-linux-amd64 2>/dev/null
+chmod +x ./kind
+mv kind /usr/local/bin
+
+if [ ! -f /usr/bin/ovftool ]; then 
+  if [ -f software/VMware-ovftool-4.4.1-16812187-lin.x86_64.bundle ]; then 
+    echo -e "\n\n\nyes" | sudo nohup software/VMware-ovftool-4.4.1-16812187-lin.x86_64.bundle
+  else
+    echo "ERROR: VMware ovtools not found, please download to tanzu-content-hub/software from: "
+    echo "https://my.vmware.com/group/vmware/downloads/details?downloadGroup=OVFTOOL441&productId=734"
+    exit 1
+  fi
+fi
+
 touch  /tkg_software_installed
 
 sudo reboot
