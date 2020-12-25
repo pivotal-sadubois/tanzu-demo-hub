@@ -36,7 +36,7 @@ done
 #ovftool -q --verifyOnly --skipManifestCheck --noDestinationSSLVerify --noSourceSSLVerify --acceptAllEulas --network="Management" --datastore="datastore1" /tmp/photon-3-kube-v1.17.13-vmware.1.ova 'vi://administrator@corelab.com:00Penwin$@vc01.corelab.com/CoreDC/host/demoCluster01'
 
 OVFTOOL="ovftool -q --verifyOnly --skipManifestCheck --noDestinationSSLVerify --noSourceSSLVerify --acceptAllEulas"
-OVFOPTS="--network="$VSPHERE_MANAGEMENT_NETWORK --datastore="$VSPHERE_DATASTORE"
+OVFOPTS="--network=\"$VSPHERE_MANAGEMENT_NETWORK\" --datastore=\"$VSPHERE_DATASTORE\""
 OVFCONN="vi://${VSPHERE_ADMIN}:${VSPHERE_PASSWORD}@${VSPHERE_SERVER}/${VSPHERE_DATACENTER}/host/${VSPHERE_CLUSTER}"
 
 echo "OVFCONN:$OVFCONN"
