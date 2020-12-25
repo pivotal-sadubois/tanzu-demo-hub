@@ -555,12 +555,11 @@ checkKeyPairs
 createJumpHost
 sshEnvironment
 configureJumpHost
-uploadOVAimages
 configureLetsEnscript
 
 # --- UPLOAD OVA IMAGES TO VCENTER ---
 if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "vSphere" ]; then
-  $SSH_COMMAND -n "[ -f $SSH_HOME/tanzu-demo-hub/scripts/uploadOVAimages.sh ] && tanzu-demo-hub/scripts/uploadOVAimages.sh"
+  $SSH_COMMAND -n "[ -f $SSH_HOME/tanzu-demo-hub/scripts/uploadOVAimages.sh ] && tanzu-demo-hub/scripts/uploadOVAimages.sh $DEPLOY_TKG_TEMPLATE"
 fi
 
 exit

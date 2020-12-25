@@ -28,6 +28,11 @@ fi
 export TDH_DEPLOYMENT_ENV_NAME=$TDH_TKGMC_INFRASTRUCTURE
 export TKG_CONFIG=${TDHPATH}/config/$TDH_TKGMC_CONFIG
 
+messageTitle "Uploading OVS Images to vSphere"
+for n in $TDH_TKGMC_TKG_IMAGES; do
+  messagePrint " - OVA Image: $n"             "completed"
+done
+
 #ovftool -q --verifyOnly --skipManifestCheck --noDestinationSSLVerify --noSourceSSLVerify --acceptAllEulas --network="Management" --datastore="datastore1" /tmp/photon-3-kube-v1.17.13-vmware.1.ova 'vi://administrator@corelab.com:00Penwin$@vc01.corelab.com/CoreDC/host/demoCluster01'
 
 OVFTOOL="ovftool -q --verifyOnly --skipManifestCheck --noDestinationSSLVerify --noSourceSSLVerify --acceptAllEulas"
