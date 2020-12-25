@@ -12,6 +12,7 @@ sudo 2>/dev/null  mkdir -p /usr/local /usr/local/bin
 
 echo "Install Software on Jumphost"
 echo "- Pivnet Token: $PIVNET_TOKEN"
+sudo apt-get install curl -y
 
 # APT-CLEANUP
 #sudo rm -f /etc/apt/sources.list.d/google-cloud-sdk.list
@@ -70,9 +71,9 @@ fi
 
 if [ ! -x /usr/bin/terraform ]; then 
   echo "- Install Terraform"
-  wget -q https://releases.hashicorp.com/terraform/0.11.14/terraform_0.11.14_linux_amd64.zip
-  unzip -q terraform_0.11.14_linux_amd64.zip
-  mv terraform /usr/local/bin/
+  #wget -q https://releases.hashicorp.com/terraform/0.11.14/terraform_0.11.14_linux_amd64.zip
+  #unzip -qn terraform_0.11.14_linux_amd64.zip
+  #mv terraform /usr/local/bin/
   #sudo apt-get install terraform -y
 fi
 
@@ -81,32 +82,17 @@ if [ ! -x /usr/local/bin/pivnet ]; then
   wget -q -O pivnet github.com/pivotal-cf/pivnet-cli/releases/download/v0.0.55/pivnet-linux-amd64-0.0.55 && chmod a+x pivnet && sudo mv pivnet /usr/local/bin
 fi
 
-if [ ! -x /usr/bin/bin/pks ]; then 
-  echo "- Installing PKS Utility from Pivnet"
-  pivnet login --api-token=$PIVNET_TOKEN 2>/dev/null
-  PRODUCT_VERSION=$(pivnet releases -p pivotal-container-service --format json | jq -r '.[].version' | head -1)
-  PRODUCT_ID=`pivnet product-files -p pivotal-container-service -r $PRODUCT_VERSION --format json | jq -r '.[] | select(.aws_object_key | contains("product-files/pivotal-container-service/pks-linux-amd64")).id'`
-  pivnet download-product-files -p pivotal-container-service -r $PRODUCT_VERSION -i $PRODUCT_ID
-  FILE_NAME=$(pivnet product-files -p pivotal-container-service -r $PRODUCT_VERSION --format json | jq -r '.[] | select(.aws_object_key | contains("product-files/pivotal-container-service/pks-linux-amd64")).aws_object_key' | awk -F'/' '{ print $NF }')
-  chmod a+x $FILE_NAME
-  mv $FILE_NAME /usr/local/bin/pks
-fi
-
 if [ ! -x /snap/bin/helm ]; then 
   echo "- Installing Helm Utility"
+  sudo apt install snapd -y  sudo ln -s /snap/bin/helm /usr/bin/helm
+
   sudo snap install helm --classic >/dev/null 2>&1
-  sudo ln -s /snap/bin/helm /usr/bin/helm
+  [ ! -s /usr/bin/helm ] && sudo ln -s /snap/bin/helm /usr/bin/helm
 fi
 
-if [ ! -x /usr/bin/docker ]; then
-  apt-get install docker.io -y  > /dev/null 2>&1
-fi
-
-if [ ! -x /usr/local/bin/uaac ]; then
-  sudo apt-get install ruby -y > /dev/null 2>&1
-  sudo apt-get install ruby-dev -y > /dev/null 2>&1
-  sudo gem install cf-uaac > /dev/null 2>&1
-fi
+#if [ ! -x /usr/bin/docker ]; then
+#  sudo apt-get install docker.io -y  > /dev/null 2>&1
+#fi
 
 touch  /jump_software_installed
 
