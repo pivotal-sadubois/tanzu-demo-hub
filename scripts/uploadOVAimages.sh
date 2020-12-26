@@ -49,10 +49,14 @@ fi
 
 messageTitle "Uploading OVS Images to vSphere"
 for n in $(echo $TDH_TKGMC_TKG_IMAGES | awk -F'/' '{ print $2 }'); do
-  pth=$(echo $n | sed 's/-vmware.1.ova//g') 
+  pth=$(echo $n | sed 's/\.ova//g') 
 echo "N:$n"
+  cnt=$(govc datastore.ls -ds=datastore1 $pth | wc -l | sed 's/  //g') 
+echo $cnt
 
-echo "govc datastore.disk.info ${pth}/${n}.vmdk"
+echo "govc datastore.ls -ds=datastore1 $pth"
+
+exit
   govc datastore.disk.info ${pth}/${n}.vmdk > /dev/null 2>&1; ret=$?
   if [ $ret -ne 0 ]; then
     stt="uploaded"
@@ -66,7 +70,7 @@ done
 
 exit
 
-#ovftool -q --verifyOnly --skipManifestCheck --noDestinationSSLVerify --noSourceSSLVerify --acceptAllEulas --network="Management" --datastore="datastore1" /tmp/photon-3-kube-v1.17.13-vmware.1.ova 'vi://administrator@corelab.com:00Penwin$@vc01.corelab.com/CoreDC/host/demoCluster01'
+#ovftool -q --verifyOnly --skipManifestCheck --noDestinationSSLVerify --noSourceSSLVerify --acceptAllEulas --network="Management" --datastore="datastore1" software/photon-3-kube-v1.17.13-vmware.1.ova 'vi://administrator@corelab.com:00Penwin$@vc01.corelab.com/CoreDC/host/demoCluster01'
 
 OVFTOOL="ovftool -q --verifyOnly --skipManifestCheck --noDestinationSSLVerify --noSourceSSLVerify --acceptAllEulas"
 OVFOPTS="--network=\"$VSPHERE_MANAGEMENT_NETWORK\" --datastore=\"$VSPHERE_DATASTORE\""
