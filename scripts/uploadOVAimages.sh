@@ -54,6 +54,7 @@ echo "--------------------------------------------------------------------------
   cnt=$(govc datastore.ls -ds=$VSPHERE_DATASTORE | grep -c "$pth")
   if [ $cnt -eq 0 ]; then
     stt="uploaded"
+echo "$OVFTOOL $OVFOPTS ${n} $OVFCONN"
     $OVFTOOL $OVFOPTS ${n} $OVFCONN
   else
     stt="already uploaded"
