@@ -49,9 +49,10 @@ fi
 
 messageTitle "Uploading OVS Images to vSphere"
 for n in $(echo $TDH_TKGMC_TKG_IMAGES | awk -F'/' '{ print $2 }'); do
-  pth=$(echo $n | sed 's/\.ova//g') 
+  pth=$(echo $n | sed -e 's/-vmware.1.ova//g' -e 's/+vmware.1.ova//g') 
 echo "N:$n"
-  cnt=$(govc datastore.ls -ds=datastore1 $pth | wc -l | sed 's/  //g') 
+echo "PTH:$pth"
+  cnt=$(govc datastore.ls -ds=$VSPHERE_DATASTORE | grep -c "$pth")
 echo $cnt
 
 echo "govc datastore.ls -ds=datastore1 $pth"
