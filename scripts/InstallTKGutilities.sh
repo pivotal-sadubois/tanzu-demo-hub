@@ -38,6 +38,14 @@ if [ ! -f /usr/bin/ovftool ]; then
   fi
 fi
 
+# INSTALL GOVC
+sudo apt install golang-go -y
+sudo curl -L https://github.com/vmware/govmomi/releases/download/v0.24.0/govc_linux_amd64.gz
+wget https://github.com/vmware/govmomi/releases/download/v0.24.0/govc_linux_amd64.gz 2>/dev/null 1>&2
+gunzip govc_linux_amd64.gz
+sudo mv govc_linux_amd64 /usr/local/bin/govc
+chmod +x /usr/local/bin/govc
+
 touch  /tkg_software_installed
 
 sudo reboot
