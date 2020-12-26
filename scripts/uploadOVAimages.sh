@@ -50,9 +50,6 @@ if [ $ret -ne 0 ]; then
   echo "       => govc vm.info vc01"; exit
 fi
 
-hostname
-exit
-
 messageTitle "Uploading OVS Images to vSphere"
 for n in $TDH_TKGMC_TKG_IMAGES; do
 echo "-----------------------------------------------------------------------------"
@@ -60,7 +57,6 @@ echo "--------------------------------------------------------------------------
   cnt=$(govc datastore.ls -ds=$VSPHERE_DATASTORE | grep -c "$pth")
   if [ $cnt -eq 0 ]; then
     stt="uploaded"
-echo "$OVFTOOL $OVFOPTS tanzu-demo-hub/${n} $OVFCONN"
     $OVFTOOL $OVFOPTS tanzu-demo-hub/${n} $OVFCONN
   else
     stt="already uploaded"
