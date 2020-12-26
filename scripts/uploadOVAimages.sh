@@ -50,6 +50,9 @@ if [ $ret -ne 0 ]; then
   echo "       => govc vm.info vc01"; exit
 fi
 
+hostname
+exit
+
 messageTitle "Uploading OVS Images to vSphere"
 for n in $TDH_TKGMC_TKG_IMAGES; do
 echo "-----------------------------------------------------------------------------"
