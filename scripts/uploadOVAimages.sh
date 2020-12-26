@@ -55,6 +55,7 @@ echo "--------------------------------------------------------------------------
 echo "PTH:$pth N:$n CNT:$cnt"
   if [ $cnt -eq 0 ]; then
     stt="uploaded"
+echo "$OVFTOOL $OVFOPTS software/${n} $OVFCONN"
     $OVFTOOL $OVFOPTS software/${n} $OVFCONN
   else
     stt="already uploaded"
