@@ -48,7 +48,7 @@ if [ $ret -ne 0 ]; then
 fi
 
 messageTitle "Uploading OVS Images to vSphere"
-for n in $TDH_TKGMC_TKG_IMAGES | awk -F'/' { print $2 }'; do
+for n in $(echo $TDH_TKGMC_TKG_IMAGES | awk -F'/' '{ print $2 }'); do
   govc datastore.disk.info ${n}/${n}.vmdk > /dev/null 2>&1; ret=$?
   if [ $ret -ne 0 ]; then
     stt="uploaded"
