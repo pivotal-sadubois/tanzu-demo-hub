@@ -1,6 +1,6 @@
 #!/bin/bash
 # ############################################################################################
-# File: ........: deployTKGmc
+# File: ........: uploadOVAimages.sh
 # Language .....: bash
 # Author .......: Sacha Dubois, VMware
 # Description ..: Tanzu Demo Hub - Deploy TKG Management Cluster
@@ -28,10 +28,39 @@ fi
 export TDH_DEPLOYMENT_ENV_NAME=$TDH_TKGMC_INFRASTRUCTURE
 export TKG_CONFIG=${TDHPATH}/config/$TDH_TKGMC_CONFIG
 
+export GOVC_INSECURE=1
+export GOVC_URL=https://${VSPHERE_SERVER}/sdk
+export GOVC_USERNAME=$VSPHERE_ADMIN
+export GOVC_PASSWORD=$VSPHERE_PASSWORD
+export GOVC_DATASTORE=$VSPHERE_DATASTORE
+export GOVC_NETWORK="$VSPHERE_MANAGEMENT_NETWORK"
+export GOVC_RESOURCE_POOL=/${VSPHERE_DATACENTER}/host/${VSPHERE_CLUSTER}/Resources
+
+OVFTOOL="ovftool -q --skipManifestCheck --noDestinationSSLVerify --noSourceSSLVerify --acceptAllEulas"
+OVFOPTS="--network=\"$VSPHERE_MANAGEMENT_NETWORK\" --datastore=\"$VSPHERE_DATASTORE\""
+OVFCONN="vi://${VSPHERE_ADMIN}:${VSPHERE_PASSWORD}@${VSPHERE_SERVER}/${VSPHERE_DATACENTER}/host/${VSPHERE_CLUSTER}"
+
+# --- TEST GOVC CONNECTION ---
+govc vm.info vc01 > /dev/null 2>&1; ret=$?
+if [ $ret -ne 0 ]; then 
+  echo "ERROR: govc: Connection to vCenter failed:"
+  echo "       => govc vm.info vc01"; exit
+fi
+
 messageTitle "Uploading OVS Images to vSphere"
-for n in $TDH_TKGMC_TKG_IMAGES; do
-  messagePrint " - OVA Image: $n"             "completed"
+for n in $TDH_TKGMC_TKG_IMAGES | awk -F'/' { print $2 }'; do
+  govc datastore.disk.info ${n}/${n}.vmdk > /dev/null 2>&1; ret=$?
+  if [ $ret -ne 0 ]; then
+    stt="uploaded"
+    $OVFTOOL $OVFOPTS software/${n} $OVFCONN
+  else
+    stt="already uploaded"
+  fi
+
+  messagePrint " - OVA Image: $n"             "$stt"
 done
+
+exit
 
 #ovftool -q --verifyOnly --skipManifestCheck --noDestinationSSLVerify --noSourceSSLVerify --acceptAllEulas --network="Management" --datastore="datastore1" /tmp/photon-3-kube-v1.17.13-vmware.1.ova 'vi://administrator@corelab.com:00Penwin$@vc01.corelab.com/CoreDC/host/demoCluster01'
 
