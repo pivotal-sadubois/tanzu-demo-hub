@@ -39,6 +39,9 @@ export GOVC_RESOURCE_POOL=/${VSPHERE_DATACENTER}/host/${VSPHERE_CLUSTER}/Resourc
 OVFTOOL="ovftool -q --skipManifestCheck --noDestinationSSLVerify --noSourceSSLVerify --acceptAllEulas"
 OVFOPTS="--network=\"$VSPHERE_MANAGEMENT_NETWORK\" --datastore=\"$VSPHERE_DATASTORE\""
 OVFCONN="vi://${VSPHERE_ADMIN}:${VSPHERE_PASSWORD}@${VSPHERE_SERVER}/${VSPHERE_DATACENTER}/host/${VSPHERE_CLUSTER}"
+echo "VSPHERE_PASSWORD:$VSPHERE_PASSWORD"
+echo "OVFCONN:$OVFCONN"
+exit
 
 # --- TEST GOVC CONNECTION ---
 govc vm.info vc01 > /dev/null 2>&1; ret=$?
