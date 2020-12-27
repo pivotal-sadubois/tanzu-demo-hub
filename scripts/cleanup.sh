@@ -37,6 +37,7 @@ export GOVC_DATASTORE=$VSPHERE_DATASTORE
 export GOVC_NETWORK="$VSPHERE_MANAGEMENT_NETWORK"
 export GOVC_RESOURCE_POOL=/${VSPHERE_DATACENTER}/host/${VSPHERE_CLUSTER}/Resources
 
+echo xx
 for n in $(govc find -name "photon*"); do
    govc vm.destroy $n
 done
