@@ -36,12 +36,11 @@ export GOVC_DATASTORE=$VSPHERE_DATASTORE
 export GOVC_NETWORK="$VSPHERE_MANAGEMENT_NETWORK"
 export GOVC_RESOURCE_POOL=/${VSPHERE_DATACENTER}/host/${VSPHERE_CLUSTER}/Resources
 
-OVFTOOL="ovftool -q --skipManifestCheck --noDestinationSSLVerify --noSourceSSLVerify --acceptAllEulas"
-OVFOPTS="--network=\"$VSPHERE_MANAGEMENT_NETWORK\" --datastore=\"$VSPHERE_DATASTORE\""
-OVFCONN="'vi://${VSPHERE_ADMIN}:${VSPHERE_PASSWORD}@${VSPHERE_SERVER}/${VSPHERE_DATACENTER}/host/${VSPHERE_CLUSTER}'"
-echo "VSPHERE_PASSWORD:$VSPHERE_PASSWORD"
-echo "OVFCONN:$OVFCONN"
-echo "$OVFTOOL $OVFOPTS ${n} $OVFCONN"
+OVFTOOL="/usr/bin/ovftool --skipManifestCheck --noDestinationSSLVerify --noSourceSSLVerify --acceptAllEulas"
+OVFTOOL="/usr/bin/ovftool -q --overwrite --skipManifestCheck --noDestinationSSLVerify --noSourceSSLVerify --acceptAllEulas"
+OVFTOOL="/usr/bin/ovftool -q --skipManifestCheck --noDestinationSSLVerify --noSourceSSLVerify --acceptAllEulas"
+OVFOPTS="--network=$VSPHERE_MANAGEMENT_NETWORK --datastore=$VSPHERE_DATASTORE"
+OVFCONN="vi://${VSPHERE_ADMIN}@${VSPHERE_SERVER}/${VSPHERE_DATACENTER}/host/${VSPHERE_CLUSTER}"
 
 # --- TEST GOVC CONNECTION ---
 govc vm.info vc01 > /dev/null 2>&1; ret=$?
@@ -52,37 +51,16 @@ fi
 
 messageTitle "Uploading OVS Images to vSphere"
 for n in $TDH_TKGMC_TKG_IMAGES; do
-echo "-----------------------------------------------------------------------------"
-  pth=$(echo $n | awk -F'/' '{ print $2 }' | sed -e 's/-vmware.1.ova//g' -e 's/+vmware.1.ova//g') 
+  pth=$(echo $n | awk -F'/' '{ print $2 }' | sed -e 's/-vmware.1.ova//g' -e 's/+vmware.1.ova//g')
+  nam=$(echo $n | awk -F'/' '{ print $2 }')
   cnt=$(govc datastore.ls -ds=$VSPHERE_DATASTORE | grep -c "$pth")
   if [ $cnt -eq 0 ]; then
     stt="uploaded"
-echo "1 $OVFTOOL $OVFOPTS tanzu-demo-hub/${n} $OVFCONN"
-    nohup $OVFTOOL $OVFOPTS "tanzu-demo-hub/${n}" "$OVFCONN "
+    echo "$VSPHERE_PASSWORD" | $OVFTOOL $OVFOPTS tanzu-demo-hub/${n} $OVFCONN > /dev/null 2>&1
   else
     stt="already uploaded"
   fi
 
   messagePrint " - OVA Image: $n"             "$stt"
 done
-
-exit
-
-#ovftool -q --skipManifestCheck --noDestinationSSLVerify --noSourceSSLVerify --acceptAllEulas --network="Management" --datastore="datastore1" software/photon-3-kube-v1.17.13-vmware.1.ova 'vi://administrator@corelab.com:00Penwin$@vc01.corelab.com/CoreDC/host/demoCluster01'
-
-OVFTOOL="ovftool -q --verifyOnly --skipManifestCheck --noDestinationSSLVerify --noSourceSSLVerify --acceptAllEulas"
-OVFOPTS="--network=\"$VSPHERE_MANAGEMENT_NETWORK\" --datastore=\"$VSPHERE_DATASTORE\""
-OVFCONN="vi://${VSPHERE_ADMIN}:${VSPHERE_PASSWORD}@${VSPHERE_SERVER}/${VSPHERE_DATACENTER}/host/${VSPHERE_CLUSTER}"
-
-echo "OVFCONN:$OVFCONN"
-
-#TDH_TKGMC_TKG_IMAGES
-
-
-
-
-
-
-
-
 
