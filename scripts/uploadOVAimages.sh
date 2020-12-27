@@ -57,6 +57,14 @@ for n in $TDH_TKGMC_TKG_IMAGES; do
   if [ $cnt -eq 0 ]; then
     stt="uploaded"
     echo "$VSPHERE_PASSWORD" | $OVFTOOL $OVFOPTS tanzu-demo-hub/${n} $OVFCONN > /dev/null 2>&1
+    vmn=$(govc find -name "${pth}*")
+    govc object.rename $vmn ${vmn}.orig
+    govc vm.clone -template=true -vm ${vmn}.orig ${pth}
+
+    
+govc find -name "photon*"
+echo "VM:$vmn"
+read x
   else
     stt="already uploaded"
   fi
