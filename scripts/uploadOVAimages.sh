@@ -1,4 +1,4 @@
-#!/bin/bash
+!/bin/bash
 # ############################################################################################
 # File: ........: uploadOVAimages.sh
 # Language .....: bash
@@ -57,12 +57,16 @@ for n in $TDH_TKGMC_TKG_IMAGES; do
   if [ $cnt -eq 0 ]; then
     stt="uploaded"
     echo "$VSPHERE_PASSWORD" | $OVFTOOL $OVFOPTS tanzu-demo-hub/${n} $OVFCONN > /dev/null 2>&1
-    vmn=$(govc find -name "${pth}*")
-echo "govc object.rename $vmn ${vmn}.orig"
-echo "govc vm.clone -template=true -vm ${vmn}.orig ${pth}"
+    src=$(govc find -name "${pth}*")
+    vmn=$(govc find -name "${pth}*" | awk -F'/' '{ print $NF }')
+echo "govc object.rename /CoreDC/vm/${vmn} ${vmn}.orig"
+echo "govc vm.clone -template=true -vm /CoreDC/vm/${vmn}.orig ${vmn}"
+echo "govc vm.destroy /CoreDC/vm/${vmn}.orig"
+echo "govc object.mv /CoreDC/vm/$vmn /CoreDC/vm/Templates"
 exit
-    govc object.rename $vmn ${vmn}.orig
-    govc vm.clone -template=true -vm ${vmn}.orig ${pth}
+    govc object.rename /CoreDC/vm/${vmn} ${vmn}.orig
+    govc vm.clone -template=true -vm /CoreDC/vm/${vmn}.orig ${vmn}
+    govc vm.destroy /CoreDC/vm/${vmn}.orig
 
     
 govc find -name "photon*"
