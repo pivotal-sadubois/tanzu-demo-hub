@@ -59,14 +59,9 @@ for n in $TDH_TKGMC_TKG_IMAGES; do
     echo "$VSPHERE_PASSWORD" | $OVFTOOL $OVFOPTS tanzu-demo-hub/${n} $OVFCONN > /dev/null 2>&1
     src=$(govc find -name "${pth}*")
     vmn=$(govc find -name "${pth}*" | awk -F'/' '{ print $NF }')
-echo "govc object.rename /CoreDC/vm/${vmn} ${vmn}.orig"
-echo "govc vm.clone -template=true -vm /CoreDC/vm/${vmn}.orig ${vmn}"
-echo "govc vm.destroy /CoreDC/vm/${vmn}.orig"
-echo "govc object.mv /CoreDC/vm/$vmn /CoreDC/vm/Templates"
+echo "govc vm.clone -template=true -folder=Templates -vm /CoreDC/vm/${vmn} ${vmn}"
 exit
-    govc object.rename /CoreDC/vm/${vmn} ${vmn}.orig
-    govc vm.clone -template=true -vm /CoreDC/vm/${vmn}.orig ${vmn}
-    govc vm.destroy /CoreDC/vm/${vmn}.orig
+    govc vm.clone -template=true -vm /CoreDC/vm/${vmn} -folder=Templates ${vmn}
 
     
 govc find -name "photon*"
