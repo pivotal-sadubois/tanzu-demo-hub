@@ -58,6 +58,9 @@ for n in $TDH_TKGMC_TKG_IMAGES; do
     stt="uploaded"
     echo "$VSPHERE_PASSWORD" | $OVFTOOL $OVFOPTS tanzu-demo-hub/${n} $OVFCONN > /dev/null 2>&1
     vmn=$(govc find -name "${pth}*")
+echo "govc object.rename $vmn ${vmn}.orig"
+echo "govc vm.clone -template=true -vm ${vmn}.orig ${pth}"
+exit
     govc object.rename $vmn ${vmn}.orig
     govc vm.clone -template=true -vm ${vmn}.orig ${pth}
 
