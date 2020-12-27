@@ -59,15 +59,8 @@ for n in $TDH_TKGMC_TKG_IMAGES; do
     echo "$VSPHERE_PASSWORD" | $OVFTOOL $OVFOPTS tanzu-demo-hub/${n} $OVFCONN > /dev/null 2>&1
     src=$(govc find -name "${pth}*")
     vmn=$(govc find -name "${pth}*" | awk -F'/' '{ print $NF }')
-echo "govc vm.clone -template=true -folder=Templates -vm /CoreDC/vm/${vmn} -force=true ${vmn}"
-echo "govc vm.destroy /CoreDC/vm/${vmn}"
-exit
-    govc vm.clone -template=true -vm /CoreDC/vm/${vmn} -folder=Templates ${vmn}
-
-    
-govc find -name "photon*"
-echo "VM:$vmn"
-read x
+    govc vm.clone -template=true -vm /CoreDC/vm/${vmn} -folder=Templates -force=true ${vmn} > /dev/null 2>&1
+    govc vm.destroy /CoreDC/vm/${vmn}
   else
     stt="already uploaded"
   fi
