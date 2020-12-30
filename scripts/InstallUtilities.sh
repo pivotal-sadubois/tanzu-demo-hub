@@ -59,9 +59,13 @@ fi
 
 if [ ! -x /usr/bin/kubectl ]; then 
   echo "- Install Kubectl"
-  curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add -
-  echo "deb https://apt.kubernetes.io/ kubernetes-xenial main" | sudo tee -a /etc/apt/sources.list.d/kubernetes.list
-  apt-get install kubectl -y --allow-unauthenticated > /dev/null 2>&1
+  curl -LO "https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl" > /dev/null 2>&1
+  chmod +x ./kubectl
+  sudo mv ./kubectl /usr/local/bin/kubectl
+
+  #curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add -
+  #echo "deb https://apt.kubernetes.io/ kubernetes-xenial main" | sudo tee -a /etc/apt/sources.list.d/kubernetes.list
+  #apt-get install kubectl -y --allow-unauthenticated > /dev/null 2>&1
 fi
 
 if [ ! -x /usr/bin/jq ]; then 
