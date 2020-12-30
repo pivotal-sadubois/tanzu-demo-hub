@@ -1031,47 +1031,67 @@ createCluster() {
 
   if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "vSphere" ]; then
     MDOE=vsphere
-    messageTitle "Creating TKG Managment Cluster"
-    messagePrint " - Cluster Name"                "$TDH_TKGMC_NAME"
-    messagePrint " - Configuration File"          "$TKG_TEMPLATE"
-    messagePrint " - Control Plane Machine Type"  "$TDH_TKGMC_CONTROL_PLANE_MACHINE_TYPE"
-    messagePrint " - Worker Node Machine Type"    "$TDH_TKGMC_MACHINE_TYPE"
-    messagePrint " - Cluster CIDR"                "$TDH_TKGMC_CLUSTER_CIDR"
-    messagePrint " - Service CIDR"                "$TDH_TKGMC_SERVICE_CIDR"
-    messagePrint " - Health Check Enabled"        "$TDH_TKGMC_MACHINE_HEALTH_CHECK_ENABLED"
+    MC_CLUSTER_STATUS=1  ### MC-CLUSTER IS ACTIVE
 
-    [ -f ${HOME}/.tkg/config.yaml ] && rm -f ${HOME}/.tkg/config.yaml
-    tkg get mc > /dev/null 2>&1
-    cp ${HOME}/.tkg/config.yaml $TKG_TEMPLATE
+    if [ -f TKG_TEMPLATE ]; zhen 
+      stt=$(tkg get mc --name $TDH_TKGMC_NAME -o json --config $TKG_TEMPLATE | jq -r '.[].status')
+      if [ "${stt}" != "Success" ]; then
+        rm -f $TKG_TEMPLATE
+        MC_CLUSTER_STATUS=0
+      fi
+    else
+      MC_CLUSTER_STATUS=0
+    fi
 
-    AZURE_SSH_PUBLIC_KEY_B64=$(cat ~/.tanzu-demo-hub/KeyPair-Azure.pub | base64 -w 10000)
+    if [ $MC_CLUSTER_STATUS -eq 0 ]; zhen 
+      messageTitle "Creating TKG Managment Cluster"
+      messagePrint " - Cluster Name"                "$TDH_TKGMC_NAME"
+      messagePrint " - Configuration File"          "$TKG_TEMPLATE"
+      messagePrint " - Control Plane Machine Type"  "$TDH_TKGMC_CONTROL_PLANE_MACHINE_TYPE"
+      messagePrint " - Worker Node Machine Type"    "$TDH_TKGMC_MACHINE_TYPE"
+      messagePrint " - Cluster CIDR"                "$TDH_TKGMC_CLUSTER_CIDR"
+      messagePrint " - Service CIDR"                "$TDH_TKGMC_SERVICE_CIDR"
+      messagePrint " - Health Check Enabled"        "$TDH_TKGMC_MACHINE_HEALTH_CHECK_ENABLED"
 
-    echo "VSPHERE_WORKER_MEM_MIB: 2048"                                                 >> $TKG_TEMPLATE
-    echo "_VSPHERE_CONTROL_PLANE_ENDPOINT_IP: 10.1.1.30"                                >> $TKG_TEMPLATE
-    echo "VSPHERE_CONTROL_PLANE_DISK_GIB: 20"                                           >> $TKG_TEMPLATE
-    echo "VSPHERE_PASSWORD: <encoded:$(eval printf \"$VSPHERE_PASSWORD\" | base64)>"    >> $TKG_TEMPLATE
-    echo "VSPHERE_NETWORK: Management"                                                  >> $TKG_TEMPLATE
-    echo "VSPHERE_WORKER_NUM_CPUS: \"2\""                                               >> $TKG_TEMPLATE
-    echo "VSPHERE_USERNAME: $VSPHERE_ADMIN"                                             >> $TKG_TEMPLATE
-    echo "VSPHERE_FOLDER: /CoreDC/vm/Templates"                                         >> $TKG_TEMPLATE
-    echo "SERVICE_CIDR: $TDH_TKGMC_SERVICE_CIDR"                                        >> $TKG_TEMPLATE
-    echo "CLUSTER_CIDR: $TDH_TKGMC_CLUSTER_CIDR"                                        >> $TKG_TEMPLATE
-    echo "VSPHERE_CONTROL_PLANE_NUM_CPUS: \"2\""                                        >> $TKG_TEMPLATE
-    echo "VSPHERE_WORKER_DISK_GIB: \"20\""                                              >> $TKG_TEMPLATE
-    echo "VSPHERE_SSH_AUTHORIZED_KEY: |-"                                               >> $TKG_TEMPLATE
-    cat $VSPHERE_SSH_PUBLIC_KEY_FILE | sed 's/^/    /g'                                 >> $TKG_TEMPLATE
-    echo "VSPHERE_SERVER: $TDH_TKGMC_VCENTER_SERVER"                                    >> $TKG_TEMPLATE
-    echo "VSPHERE_DATASTORE: /$VSPHERE_DATACENTER/datastore/$VSPHERE_DATASTORE"         >> $TKG_TEMPLATE
-    echo "VSPHERE_RESOURCE_POOL: /$VSPHERE_DATACENTER/host/$VSPHERE_CLUSTER/Resources"  >> $TKG_TEMPLATE
-    echo "VSPHERE_CONTROL_PLANE_MEM_MIB: \"2048\""                                      >> $TKG_TEMPLATE
-    echo "MACHINE_HEALTH_CHECK_ENABLED: \"true\""                                       >> $TKG_TEMPLATE
-    echo "VSPHERE_DATACENTER: /$VSPHERE_DATACENTER"                                     >> $TKG_TEMPLATE
+      export GOVC_INSECURE=1
+      export GOVC_URL=https://${VSPHERE_SERVER}/sdk
+      export GOVC_USERNAME=$VSPHERE_ADMIN
+      export GOVC_PASSWORD=$VSPHERE_PASSWORD
+      export GOVC_DATASTORE=$VSPHERE_DATASTORE
+      export GOVC_NETWORK="$VSPHERE_MANAGEMENT_NETWORK"
+      export GOVC_RESOURCE_POOL=/${VSPHERE_DATACENTER}/host/${VSPHERE_CLUSTER}/Resources
 
-echo "tkg get mc --name $TDH_TKGMC_NAME -o json --config $TKG_TEMPLATE"
-    stt=$(tkg get mc --name $TDH_TKGMC_NAME -o json --config $TKG_TEMPLATE | jq -r '.[].status')
-echo "STT:$stt"
+      for n in $(govc find -name "$TDH_TKGMC_NAME*"); do
+        messagePrint " - Cleanup Old Cluster NOdes"  "$n"
+        govc vm.destroy $n
+      done
 exit
-    if [ "${stt}" != "Success" ]; then
+
+      [ -f ${HOME}/.tkg/config.yaml ] && rm -f ${HOME}/.tkg/config.yaml
+      tkg get mc > /dev/null 2>&1
+      cp ${HOME}/.tkg/config.yaml $TKG_TEMPLATE
+
+      echo "VSPHERE_WORKER_MEM_MIB: 2048"                                                 >> $TKG_TEMPLATE
+      echo "_VSPHERE_CONTROL_PLANE_ENDPOINT_IP: 10.1.1.30"                                >> $TKG_TEMPLATE
+      echo "VSPHERE_CONTROL_PLANE_DISK_GIB: 20"                                           >> $TKG_TEMPLATE
+      echo "VSPHERE_PASSWORD: <encoded:$(eval printf \"$VSPHERE_PASSWORD\" | base64)>"    >> $TKG_TEMPLATE
+      echo "VSPHERE_NETWORK: Management"                                                  >> $TKG_TEMPLATE
+      echo "VSPHERE_WORKER_NUM_CPUS: \"2\""                                               >> $TKG_TEMPLATE
+      echo "VSPHERE_USERNAME: $VSPHERE_ADMIN"                                             >> $TKG_TEMPLATE
+      echo "VSPHERE_FOLDER: /CoreDC/vm/Templates"                                         >> $TKG_TEMPLATE
+      echo "SERVICE_CIDR: $TDH_TKGMC_SERVICE_CIDR"                                        >> $TKG_TEMPLATE
+      echo "CLUSTER_CIDR: $TDH_TKGMC_CLUSTER_CIDR"                                        >> $TKG_TEMPLATE
+      echo "VSPHERE_CONTROL_PLANE_NUM_CPUS: \"2\""                                        >> $TKG_TEMPLATE
+      echo "VSPHERE_WORKER_DISK_GIB: \"20\""                                              >> $TKG_TEMPLATE
+      echo "VSPHERE_SSH_AUTHORIZED_KEY: |-"                                               >> $TKG_TEMPLATE
+      cat $VSPHERE_SSH_PUBLIC_KEY_FILE | sed 's/^/    /g'                                 >> $TKG_TEMPLATE
+      echo "VSPHERE_SERVER: $TDH_TKGMC_VCENTER_SERVER"                                    >> $TKG_TEMPLATE
+      echo "VSPHERE_DATASTORE: /$VSPHERE_DATACENTER/datastore/$VSPHERE_DATASTORE"         >> $TKG_TEMPLATE
+      echo "VSPHERE_RESOURCE_POOL: /$VSPHERE_DATACENTER/host/$VSPHERE_CLUSTER/Resources"  >> $TKG_TEMPLATE
+      echo "VSPHERE_CONTROL_PLANE_MEM_MIB: \"2048\""                                      >> $TKG_TEMPLATE
+      echo "MACHINE_HEALTH_CHECK_ENABLED: \"true\""                                       >> $TKG_TEMPLATE
+      echo "VSPHERE_DATACENTER: /$VSPHERE_DATACENTER"                                     >> $TKG_TEMPLATE
+
       echo "----------------------------------------------------------------------------------------------------------------"
       echo "tkg init -q -i $MODE -p dev --vsphere-controlplane-endpoint-ip $VSPHERE_CONTROLPLANE_IP \\"
       echo "         --ceip-participation true --cni $TDH_TKGMC_CNI -v 0 \\"
@@ -1080,6 +1100,15 @@ exit
       time tkg init -i $MODE -p dev --vsphere-controlplane-endpoint-ip $VSPHERE_CONTROLPLANE_IP --ceip-participation true \
            --cni $TDH_TKGMC_CNI -v 0 --name $TDH_TKGMC_NAME --config $TKG_TEMPLATE
       echo "----------------------------------------------------------------------------------------------------------------"
+    else
+      messageTitle "Verify TKG Managment Cluster"
+      messagePrint " - Cluster Name"                "$TDH_TKGMC_NAME"
+      messagePrint " - Configuration File"          "$TKG_TEMPLATE"
+      messagePrint " - Control Plane Machine Type"  "$TDH_TKGMC_CONTROL_PLANE_MACHINE_TYPE"
+      messagePrint " - Worker Node Machine Type"    "$TDH_TKGMC_MACHINE_TYPE"
+      messagePrint " - Cluster CIDR"                "$TDH_TKGMC_CLUSTER_CIDR"
+      messagePrint " - Service CIDR"                "$TDH_TKGMC_SERVICE_CIDR"
+      messagePrint " - Health Check Enabled"        "$TDH_TKGMC_MACHINE_HEALTH_CHECK_ENABLED"
     fi
   fi
 }
