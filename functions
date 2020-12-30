@@ -1030,7 +1030,7 @@ createCluster() {
   fi
 
   if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "vSphere" ]; then
-    MDOE=vsphere
+    MODE=vsphere
     MC_CLUSTER_STATUS=1  ### MC-CLUSTER IS ACTIVE
 
     if [ -f $TKG_TEMPLATE ]; then 
