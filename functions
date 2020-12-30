@@ -1032,7 +1032,7 @@ createCluster() {
     echo "VSPHERE_WORKER_MEM_MIB: 2048"                                                 >> $TKG_TEMPLATE
     echo "_VSPHERE_CONTROL_PLANE_ENDPOINT_IP: 10.1.1.30"                                >> $TKG_TEMPLATE
     echo "VSPHERE_CONTROL_PLANE_DISK_GIB: 20"                                           >> $TKG_TEMPLATE
-    echo "VSPHERE_PASSWORD: $(printf \"$VSPHERE_PASSWORD\" | base64)"                    >> $TKG_TEMPLATE
+    echo "VSPHERE_PASSWORD: <encoded:$(eval printf \"$VSPHERE_PASSWORD\" | base64)>"    >> $TKG_TEMPLATE
     echo "VSPHERE_NETWORK: Management"                                                  >> $TKG_TEMPLATE
     echo "VSPHERE_WORKER_NUM_CPUS: 2"                                                   >> $TKG_TEMPLATE
     echo "VSPHERE_NETWORK: Management"                                                  >> $TKG_TEMPLATE
@@ -1044,12 +1044,12 @@ createCluster() {
     echo "VSPHERE_WORKER_DISK_GIB: 20"                                                  >> $TKG_TEMPLATE
     echo "VSPHERE_SSH_AUTHORIZED_KEY: |-"                                               >> $TKG_TEMPLATE
     cat $VSPHERE_SSH_PUBLIC_KEY_FILE | sed 's/^/    /g'                                 >> $TKG_TEMPLATE
-    echo "VSPHERE_SERVER: $SPHERE_SERVER"                                              >> $TKG_TEMPLATE
+    echo "VSPHERE_SERVER: $TDH_TKGMC_VCENTER_SERVER"                                    >> $TKG_TEMPLATE
     echo "VSPHERE_DATASTORE: /$VSPHERE_DATACENTER/datastore/$VSPHERE_DATASTORE"         >> $TKG_TEMPLATE
     echo "VSPHERE_RESOURCE_POOL: /$VSPHERE_DATACENTER/host/$VSPHERE_CLUSTER/Resources"  >> $TKG_TEMPLATE
     echo "VSPHERE_CONTROL_PLANE_MEM_MIB: 2048"                                          >> $TKG_TEMPLATE
-    echo "VSPHERE_DATACENTER: $VSPHERE_DATACENTER"                                      >> $TKG_TEMPLATE
     echo "MACHINE_HEALTH_CHECK_ENABLED: \"true\""                                       >> $TKG_TEMPLATE
+    echo "VSPHERE_DATACENTER: $VSPHERE_DATACENTER"                                      >> $TKG_TEMPLATE
 
 
 cat $TKG_TEMPLATE
