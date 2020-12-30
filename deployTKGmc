@@ -566,7 +566,6 @@ fi
 # --- CREATE MANAGEMENT CLUSTER ---
 $SSH_COMMAND -n "[ -f $SSH_HOME/tanzu-demo-hub/scripts/InstallTKGmc.sh ] && tanzu-demo-hub/scripts/InstallTKGmc.sh $DEPLOY_TKG_TEMPLATE"
 
-exit
 echo "-----------------------------------------------------------------------------------------------------------"
 $SSH_COMMAND -n "tkg get mc --config ${SSH_HOME}/.tanzu-demo-hub/$TDH_TKGMC_CONFIG"
 echo "-----------------------------------------------------------------------------------------------------------"
