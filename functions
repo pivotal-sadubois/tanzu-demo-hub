@@ -343,13 +343,6 @@ checkCloudAccess() {
       echo "ERROR: Missing OVFTOOL Bundle, please download it from the VMware Download page:"
       echo "=> https://my.vmware.com/group/vmware/downloads/details?downloadGroup=OVFTOOL441&productId=734"
     fi
-
-exit
-    
-# ovftool -q --verifyOnly --skipManifestCheck --noDestinationSSLVerify --noSourceSSLVerify --acceptAllEulas --network="Management" --datastore="datastore1" /tmp/photon-3-kube-v1.17.13-vmware.1.ova 'vi://administrator@corelab.com:00Penwin$@vc01.corelab.com/CoreDC/host/demoCluster01'
-#https://my.vmware.com/group/vmware/downloads/details?downloadGroup=TKG-121&productId=988
-#gaga
-
   fi
 
   if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "GCP" ]; then
@@ -789,8 +782,10 @@ configureJumpHost() {
   stt=$($SSH_COMMAND -n "[ -f /tkg_software_installed ] && echo true")
   if [ "${stt}" == "" ]; then
     messagePrint " - Install TKG Utilities"   "tkg, ytt, kapp, kbld, kubectl, kind"
+    #$SSH_COMMAND -n "[ -d $SSH_HOME/tanzu-demo-hub ] && chmod a+x ${TDHHOME}/scripts/InstallTKGutilities.sh && \
+    #    sudo ${TDHHOME}/scripts/InstallTKGutilities.sh \"$SSH_HOME/tanzu-demo-hub\" > /dev/null 2>&1"
     $SSH_COMMAND -n "[ -d $SSH_HOME/tanzu-demo-hub ] && chmod a+x ${TDHHOME}/scripts/InstallTKGutilities.sh && \
-        sudo ${TDHHOME}/scripts/InstallTKGutilities.sh \"$SSH_HOME/tanzu-demo-hub\" > /dev/null 2>&1"
+        sudo ${TDHHOME}/scripts/InstallTKGutilities.sh \"$SSH_HOME/tanzu-demo-hub\" 
 
     # --- WAIT UNTIL SSH DEAMON IS READY NO JUMPHOST ----
     ret=1
