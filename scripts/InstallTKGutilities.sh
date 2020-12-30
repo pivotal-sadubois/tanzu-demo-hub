@@ -13,7 +13,7 @@ mv tkg/tkg-linux-amd64-v1.2.0+vmware.1    /usr/local/bin/tkg    && chmod +x /usr
 mv tkg/ytt-linux-amd64-v0.30.0+vmware.1   /usr/local/bin/ytt    && chmod +x /usr/local/bin/ytt
 
 # INSTALL TKG EXTENSIONS
-mkdir $TDHPATH/extensions && cd $TDHPATH/extensions
+mkdir -p $TDHPATH/extensions && cd $TDHPATH/extensions
 tar xfz $TDHPATH/software/tkg-extensions-manifests-v1.2.0-vmware.1.tar-2.gz
 sudo chown -R ubuntu:ubuntu $TDHPATH/extensions
 
@@ -28,9 +28,11 @@ curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.9.0/kind-linux-amd64 2>/dev/null
 chmod +x ./kind
 mv kind /usr/local/bin
 
+echo "PWD:$PWD"
+
 if [ ! -f /usr/bin/ovftool ]; then 
-  if [ -f software/VMware-ovftool-4.4.1-16812187-lin.x86_64.bundle ]; then 
-    echo -e "\n\n\nyes" | sudo nohup software/VMware-ovftool-4.4.1-16812187-lin.x86_64.bundle
+  if [ -f $TDHPATH/software/VMware-ovftool-4.4.1-16812187-lin.x86_64.bundle ]; then 
+    echo -e "\n\n\nyes" | sudo nohup $TDHPATH/software/VMware-ovftool-4.4.1-16812187-lin.x86_64.bundle
   else
     echo "ERROR: VMware ovtools not found, please download to tanzu-content-hub/software from: "
     echo "https://my.vmware.com/group/vmware/downloads/details?downloadGroup=OVFTOOL441&productId=734"
