@@ -59,8 +59,6 @@ for n in $TDH_TKGMC_TKG_IMAGES; do
     echo "$VSPHERE_PASSWORD" | $OVFTOOL $OVFOPTS tanzu-demo-hub/${n} $OVFCONN > /dev/null 2>&1
     src=$(govc find -name "${pth}*")
     vmn=$(govc find -name "${pth}*" | awk -F'/' '{ print $NF }')
-echo "N:$n PTH:$pth SEC:$src VMN:$vmn"
-echo "govc vm.clone -template=true -vm /CoreDC/vm/${vmn} -folder=Templates -force=true ${vmn}"
     govc vm.clone -template=true -vm /CoreDC/vm/${vmn} -folder=Templates -force=true ${vmn} > /dev/null 2>&1
     govc vm.destroy /CoreDC/vm/${vmn}
   else
