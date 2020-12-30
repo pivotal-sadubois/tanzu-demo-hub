@@ -1033,7 +1033,7 @@ createCluster() {
     MDOE=vsphere
     MC_CLUSTER_STATUS=1  ### MC-CLUSTER IS ACTIVE
 
-    if [ -f $TKG_TEMPLATE ]; zhen 
+    if [ -f $TKG_TEMPLATE ]; then 
       stt=$(tkg get mc --name $TDH_TKGMC_NAME -o json --config $TKG_TEMPLATE | jq -r '.[].status')
       if [ "${stt}" != "Success" ]; then
         rm -f $TKG_TEMPLATE
