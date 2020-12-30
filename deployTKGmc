@@ -556,7 +556,6 @@ createJumpHost
 sshEnvironment
 configureJumpHost
 
-exit
 configureLetsEnscript
 
 # --- UPLOAD OVA IMAGES TO VCENTER ---
