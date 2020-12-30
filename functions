@@ -1043,7 +1043,7 @@ createCluster() {
       MC_CLUSTER_STATUS=0
     fi
 
-    if [ $MC_CLUSTER_STATUS -eq 0 ]; zhen 
+    if [ $MC_CLUSTER_STATUS -eq 0 ]; then 
       messageTitle "Creating TKG Managment Cluster"
       messagePrint " - Cluster Name"                "$TDH_TKGMC_NAME"
       messagePrint " - Configuration File"          "$TKG_TEMPLATE"
