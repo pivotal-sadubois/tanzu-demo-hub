@@ -263,6 +263,7 @@ checkCloudAccess() {
     if [ "${VSPHERE_ADMIN}" == "" -o "${VSPHERE_PASSWORD}" == "" -o "${VSPHERE_SERVER}" == "" -o \
          "${VSPHERE_DATACENTER}" == "" -o "${VSPHERE_DATASTORE}" == "" -o "${VSPHERE_CLUSTER}" == "" -o \
          "${VSPHERE_SSH_PRIVATE_KEY_FILE}" == "" -o "${VSPHERE_SSH_PUBLIC_KEY_FILE}" == "" -o \
+         "${VSPHERE_CONTROLPLANE_IP}" == "" -o \
          "${VSPHERE_MANAGEMENT_NETWORK}" == "" -o "${VSPHERE_WAN_NETWORK}" == "" -o "${VSPHERE_CLUSTER}" == "" ]; then
       missing_variables=1
       echo ""
@@ -271,6 +272,10 @@ checkCloudAccess() {
 
       if [ "${VSPHERE_SERVER}" == "" ]; then
         echo "  VSPHERE_SERVER                   (required) vSphere Server Name"
+      fi
+
+      if [ "${VSPHERE_CONTROLPLANE_IP}" == "" ]; then
+        echo "  VSPHERE_CONTROLPLANE_IP          (required) TKG Controlplance IP"
       fi
 
       if [ "${VSPHERE_ADMIN}" == "" ]; then
@@ -986,6 +991,7 @@ createCluster() {
   unset TKG_CONFIG
   TKG_TEMPLATE=${HOME}/.tanzu-demo-hub/${TDH_TKGMC_CONFIG}
   if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "Azure" ]; then
+    MDOE=azure
     messageTitle "Creating TKG Managment Cluster"
     messagePrint " - Cluster Name"                "$TDH_TKGMC_NAME"
     messagePrint " - Configuration File"          "$TKG_TEMPLATE"
@@ -1011,9 +1017,20 @@ createCluster() {
     echo "CLUSTER_CIDR: $TDH_TKGMC_CLUSTER_CIDR"                                      >> $TKG_TEMPLATE
     echo "AZURE_LOCATION: $AZURE_LOCATION"                                            >> $TKG_TEMPLATE
     echo "AZURE_SUBSCRIPTION_ID: $AZURE_SUBSCRIPTION_ID"                              >> $TKG_TEMPLATE
+
+    stt=$(tkg get mc --name $TDH_TKGMC_NAME -o json | jq -r '.[].status')
+    if [ "${stt}" != "Success" ]; then
+      echo "----------------------------------------------------------------------------------------------------------------"
+      echo "tkg init -q -i $MPDE -p dev --ceip-participation true --cni $TDH_TKGMC_CNI -v 0 \\"
+      echo "         --name $TDH_TKGMC_NAME --config $TKG_TEMPLATE"
+      echo "----------------------------------------------------------------------------------------------------------------"
+      time tkg init -i $MPDE -p dev --ceip-participation true --cni $TDH_TKGMC_CNI -v 0 --name $TDH_TKGMC_NAME --config $TKG_TEMPLATE
+      echo "----------------------------------------------------------------------------------------------------------------"
+    fi
   fi
 
   if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "vSphere" ]; then
+    MDOE=vsphere
     messageTitle "Creating TKG Managment Cluster"
     messagePrint " - Cluster Name"                "$TDH_TKGMC_NAME"
     messagePrint " - Configuration File"          "$TKG_TEMPLATE"
@@ -1035,7 +1052,6 @@ createCluster() {
     echo "VSPHERE_PASSWORD: <encoded:$(eval printf \"$VSPHERE_PASSWORD\" | base64)>"    >> $TKG_TEMPLATE
     echo "VSPHERE_NETWORK: Management"                                                  >> $TKG_TEMPLATE
     echo "VSPHERE_WORKER_NUM_CPUS: \"2\""                                               >> $TKG_TEMPLATE
-    echo "VSPHERE_NETWORK: Management"                                                  >> $TKG_TEMPLATE
     echo "VSPHERE_USERNAME: $VSPHERE_ADMIN"                                             >> $TKG_TEMPLATE
     echo "VSPHERE_FOLDER: /CoreDC/vm/Templates"                                         >> $TKG_TEMPLATE
     echo "SERVICE_CIDR: $TDH_TKGMC_SERVICE_CIDR"                                        >> $TKG_TEMPLATE
@@ -1050,17 +1066,19 @@ createCluster() {
     echo "VSPHERE_CONTROL_PLANE_MEM_MIB: \"2048\""                                      >> $TKG_TEMPLATE
     echo "MACHINE_HEALTH_CHECK_ENABLED: \"true\""                                       >> $TKG_TEMPLATE
     echo "VSPHERE_DATACENTER: /$VSPHERE_DATACENTER"                                     >> $TKG_TEMPLATE
-  fi
 
-  stt=$(tkg get mc --name $TDH_TKGMC_NAME -o json | jq -r '.[].status')
-  if [ "${stt}" != "Success" ]; then
-    echo "----------------------------------------------------------------------------------------------------------------"
-    echo "tkg init -q -i azure -p dev --ceip-participation true --cni $TDH_TKGMC_CNI -v 0 \\"
-    echo "         --name $TDH_TKGMC_NAME --config $TKG_TEMPLATE"
-    echo "----------------------------------------------------------------------------------------------------------------"
-exit
-    time tkg init -i azure -p dev --ceip-participation true --cni $TDH_TKGMC_CNI -v 0 --name $TDH_TKGMC_NAME --config $TKG_TEMPLATE
-    echo "----------------------------------------------------------------------------------------------------------------"
+    stt=$(tkg get mc --name $TDH_TKGMC_NAME -o json | jq -r '.[].status')
+    if [ "${stt}" != "Success" ]; then
+      echo "----------------------------------------------------------------------------------------------------------------"
+      echo "tkg init -q -i $MPDE -p dev --vsphere-controlplane-endpoint-ip $VSPHERE_CONTROLPLANE_IP \\"
+      echo "         --ceip-participation true --cni $TDH_TKGMC_CNI -v 0 \\"
+      echo "         --name $TDH_TKGMC_NAME --config $TKG_TEMPLATE"
+      echo "----------------------------------------------------------------------------------------------------------------"
+#gaga
+  exit
+      time tkg init -i $MPDE -p dev --ceip-participation true --cni $TDH_TKGMC_CNI -v 0 --name $TDH_TKGMC_NAME --config $TKG_TEMPLATE
+      echo "----------------------------------------------------------------------------------------------------------------"
+    fi
   fi
 exit
 }
