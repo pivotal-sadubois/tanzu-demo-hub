@@ -42,6 +42,9 @@ OVFTOOL="/usr/bin/ovftool -q --skipManifestCheck --noDestinationSSLVerify --noSo
 OVFOPTS="--network=$VSPHERE_MANAGEMENT_NETWORK --datastore=$VSPHERE_DATASTORE"
 OVFCONN="vi://${VSPHERE_ADMIN}@${VSPHERE_SERVER}/${VSPHERE_DATACENTER}/host/${VSPHERE_CLUSTER}"
 
+govc vm.info vc01
+exit
+
 # --- TEST GOVC CONNECTION ---
 govc vm.info vc01 > /dev/null 2>&1; ret=$?
 if [ $ret -ne 0 ]; then 
