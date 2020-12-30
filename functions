@@ -1074,13 +1074,11 @@ createCluster() {
       echo "         --ceip-participation true --cni $TDH_TKGMC_CNI -v 0 \\"
       echo "         --name $TDH_TKGMC_NAME --config $TKG_TEMPLATE"
       echo "----------------------------------------------------------------------------------------------------------------"
-#gaga
-  exit
-      time tkg init -i $MPDE -p dev --ceip-participation true --cni $TDH_TKGMC_CNI -v 0 --name $TDH_TKGMC_NAME --config $TKG_TEMPLATE
+      time tkg init -i $MPDE -p dev --vsphere-controlplane-endpoint-ip $VSPHERE_CONTROLPLANE_IP --ceip-participation true \
+           --cni $TDH_TKGMC_CNI -v 0 --name $TDH_TKGMC_NAME --config $TKG_TEMPLATE
       echo "----------------------------------------------------------------------------------------------------------------"
     fi
   fi
-exit
 }
 
 setTKGclusterDNS() {
