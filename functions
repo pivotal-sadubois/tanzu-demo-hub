@@ -1067,8 +1067,10 @@ createCluster() {
     echo "MACHINE_HEALTH_CHECK_ENABLED: \"true\""                                       >> $TKG_TEMPLATE
     echo "VSPHERE_DATACENTER: /$VSPHERE_DATACENTER"                                     >> $TKG_TEMPLATE
 
+echo "tkg get mc --name $TDH_TKGMC_NAME -o json --config $TKG_TEMPLATE"
     stt=$(tkg get mc --name $TDH_TKGMC_NAME -o json --config $TKG_TEMPLATE | jq -r '.[].status')
 echo "STT:$stt"
+exit
     if [ "${stt}" != "Success" ]; then
       echo "----------------------------------------------------------------------------------------------------------------"
       echo "tkg init -q -i $MODE -p dev --vsphere-controlplane-endpoint-ip $VSPHERE_CONTROLPLANE_IP \\"
