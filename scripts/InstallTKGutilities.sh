@@ -42,11 +42,11 @@ fi
 
 # INSTALL GOVC
 echo gaga1
-sudo apt install golang-go -y
+sudo apt install golang-go -y > /dev/null 2>&1
 echo gaga2
-sudo apt install gccgo-go -y
+sudo apt install gccgo-go -y > /dev/null 2>&1
 echo gaga3
-sudo curl -L https://github.com/vmware/govmomi/releases/download/v0.24.0/govc_linux_amd64.gz
+#curl -L https://github.com/vmware/govmomi/releases/download/v0.24.0/govc_linux_amd64.gz --output govc_linux_amd64.gz > /dev/null 2>&1
 wget https://github.com/vmware/govmomi/releases/download/v0.24.0/govc_linux_amd64.gz 2>/dev/null 1>&2
 gunzip govc_linux_amd64.gz
 sudo mv govc_linux_amd64 /usr/local/bin/govc
