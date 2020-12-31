@@ -1062,8 +1062,13 @@ createCluster() {
       export GOVC_RESOURCE_POOL=/${VSPHERE_DATACENTER}/host/${VSPHERE_CLUSTER}/Resources
 
       for n in $(govc find -name "$TDH_TKGMC_NAME*"); do
-        messagePrint " - Cleanup Old Cluster NOdes"  "$n"
+        messagePrint " - Cleanup local kind Clusters:"  "$n"
         govc vm.destroy $n
+      done
+
+      or n in $(kind get clusters); do
+        messagePrint " - Cleanup Old Cluster NOdes"  "$n"
+        kind delete clusters $n > /dev/null 2>&1
       done
 
       [ -f ${HOME}/.tkg/config.yaml ] && rm -f ${HOME}/.tkg/config.yaml
