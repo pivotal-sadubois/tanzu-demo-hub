@@ -43,10 +43,10 @@ OVFOPTS="--network=$VSPHERE_MANAGEMENT_NETWORK --datastore=$VSPHERE_DATASTORE"
 OVFCONN="vi://${VSPHERE_ADMIN}@${VSPHERE_SERVER}/${VSPHERE_DATACENTER}/host/${VSPHERE_CLUSTER}"
 
 # --- TEST GOVC CONNECTION ---
-govc vm.info vc01 > /dev/null 2>&1; ret=$?
+govc vm.info $(echo $VSPHERE_SERVER | awk -F. '{ print $1 }') > /dev/null 2>&1; ret=$?
 if [ $ret -ne 0 ]; then 
   echo "ERROR: govc: Connection to vCenter failed:"
-  echo "       => govc vm.info vc01"; exit
+  echo "       => govc vm.info $(echo $VSPHERE_SERVER | awk -F. '{ print $1 }')"; exit
 fi
 
 messageTitle "Uploading OVS Images to vSphere"
