@@ -1066,7 +1066,7 @@ createCluster() {
         govc vm.destroy $n
       done
 
-      or n in $(kind get clusters); do
+      for n in $(kind get clusters); do
         messagePrint " - Cleanup Old Cluster NOdes"  "$n"
         kind delete clusters $n > /dev/null 2>&1
       done
