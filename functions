@@ -1061,11 +1061,16 @@ createCluster() {
       export GOVC_NETWORK="$VSPHERE_MANAGEMENT_NETWORK"
       export GOVC_RESOURCE_POOL=/${VSPHERE_DATACENTER}/host/${VSPHERE_CLUSTER}/Resources
 
+echo "TDH_TKGMC_NAME:$TDH_TKGMC_NAME"
       nodes=$(govc find -name "$TDH_TKGMC_NAME*" >/dev/null 2>&1)
       if [ $? != 0 ]; then 
         echo "ERROR: failed to login to vSphere"
         echo "       => govc find -name \"$TDH_TKGMC_NAME*\""; exit
       fi
+
+echo "nodes:$nodes"
+
+exit
 
       for n in $nodes; do
         messagePrint " - Cleanup Old Cluster Nodes"  "$n"
@@ -1084,6 +1089,8 @@ createCluster() {
       [ -f ${HOME}/.tkg/config.yaml ] && rm -f ${HOME}/.tkg/config.yaml
       tkg get mc > /dev/null 2>&1
       cp ${HOME}/.tkg/config.yaml $TKG_TEMPLATE
+
+exit
 
       echo "VSPHERE_WORKER_MEM_MIB: 2048"                                                 >> $TKG_TEMPLATE
       echo "_VSPHERE_CONTROL_PLANE_ENDPOINT_IP: 10.1.1.30"                                >> $TKG_TEMPLATE
