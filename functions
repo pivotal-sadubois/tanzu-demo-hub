@@ -1112,7 +1112,7 @@ createCluster() {
       echo "         --name $TDH_TKGMC_NAME --config $TKG_TEMPLATE"
       echo "----------------------------------------------------------------------------------------------------------------"
       time tkg init -i $MODE -p dev --vsphere-controlplane-endpoint-ip $VSPHERE_CONTROLPLANE_IP --ceip-participation true \
-           --cni $TDH_TKGMC_CNI -v 0 --name $TDH_TKGMC_NAME --config $TKG_TEMPLATE
+           --cni $TDH_TKGMC_CNI -v 6 --name $TDH_TKGMC_NAME --config $TKG_TEMPLATE
       echo "----------------------------------------------------------------------------------------------------------------"
     else
       messageTitle "Verify TKG Managment Cluster"
