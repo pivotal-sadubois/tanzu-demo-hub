@@ -1070,7 +1070,7 @@ createCluster() {
       for n in $nodes; do
         messagePrint " - Cleanup Old Cluster Nodes"  "$n"
         govc vm.destroy $n > /dev/null 2>&1
-        if [ $? != 0 ], then 
+        if [ $? != 0 ]; then 
           echo "ERROR: failed to login to vSphere"
           echo "       => govc vm.destroy $n"; exit 
         fi
