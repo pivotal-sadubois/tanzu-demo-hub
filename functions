@@ -1085,8 +1085,6 @@ createCluster() {
       tkg get mc > /dev/null 2>&1
       cp ${HOME}/.tkg/config.yaml $TKG_TEMPLATE
 
-exit
-
       echo "VSPHERE_WORKER_MEM_MIB: 2048"                                                 >> $TKG_TEMPLATE
       echo "_VSPHERE_CONTROL_PLANE_ENDPOINT_IP: 10.1.1.30"                                >> $TKG_TEMPLATE
       echo "VSPHERE_CONTROL_PLANE_DISK_GIB: 20"                                           >> $TKG_TEMPLATE
