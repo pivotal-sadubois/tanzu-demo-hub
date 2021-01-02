@@ -162,19 +162,14 @@ if [ "${TDH_TKGWC_INGRESS_CONTOUR}" == "true" ]; then
   stt=$(kubectl get ns -o json | jq -r '.items[] | select(.metadata.name == "vmware-system-tmc").status.phase')
   if [ "${stt}" == "" ]; then
     cd ${TDHPATH}/extensions/$TDH_TKGWC_EXTENSIONS/extensions
-echo "KUBECONFIG:$KUBECONFIG"
+echo "${TDHPATH}/extensions/$TDH_TKGWC_EXTENSIONS/extensions"
     # --- INSTALL TMC EXTENSION MANAGER ---
-    kubectl apply -f extensions/tmc-extension-manager.yaml >/dev/null 2>&1; ret=$?
-    kubectl apply -f extensions/tmc-extension-manager.yaml 
-
-pwd
-echo "RET:$ret"
-exit
+    kubectl apply -f tmc-extension-manager.yaml >/dev/null 2>&1; ret=$?
     if [ $ret -ne 0 ]; then 
       messagePrint "- Install Extension Manager" "failed"
       echo "ERROR: Installation of TMC Extension manager failed"
       echo "       => cd $TDHPATH/extensions/$TDH_TKGWC_EXTENSIONS"
-      echo "       => kubectl apply -f extensions/tmc-extension-manager.yaml"
+      echo "       => kubectl apply -f tmc-extension-manager.yaml"
       exit
     else
       messagePrint "- Install TMC Extension Manager" "completed"
@@ -194,7 +189,7 @@ exit
     kubectl apply -f ../cert-manager/ > /dev/null 2>&1
     if [ $? -ne 0 ]; then
       messagePrint "- Install Cert Manager" "failed"
-      echo "ERROR: Installation of TMC Extension manager failed"
+      echo "ERROR: Installation of Cert Manager failed"
       echo "       => cd $TDHPATH/extensions/$TDH_TKGWC_EXTENSIONS"
       echo "       => kubectl apply -f ../cert-manager/"
       exit
