@@ -6,9 +6,9 @@
 # Description ..: Tanzu Demo Hub - Deploy TKG Workload Cluster
 # ############################################################################################
 
-if [ ! -f /tkg_software_installed ]; then 
-  echo "ERROR: $0 Needs to run on a TKG Jump Host"; exit 
-fi
+#if [ ! -f /tkg_software_installed ]; then 
+#  echo "ERROR: $0 Needs to run on a TKG Jump Host"; exit 
+#fi
 
 export TANZU_DEMO_HUB=$(cd "$(pwd)/$(dirname $0)"; pwd)
 export TDHPATH=$(cd "$(pwd)/$(dirname $0)"; pwd)
@@ -72,6 +72,7 @@ while [ "$1" != "" ]; do
     -d)  TKG_DEPLOYMENT=$2;;
     -c)  TKG_WC_CLUSTER=$2;;
     -n)  TDH_TKGWC_NAME=$2;;
+    -ip) TDH_TKGWC_IP=$2;;
   esac
   shift
 done
@@ -117,6 +118,7 @@ if [ "${TDH_TKGWC_PLAN}" != "" ]; then TDH_OPTIONS="$TDH_OPTIONS --plan=$TDH_TKG
 if [ "${TDH_TKGWC_KUBERNETES}" != "" ]; then TDH_OPTIONS="$TDH_OPTIONS --kubernetes-version=$TDH_TKGWC_KUBERNETES"; fi
 if [ "${TDH_TKGWC_CONTROPLANE}" != "" ]; then TDH_OPTIONS="$TDH_OPTIONS --controlplane-machine-count=$TDH_TKGWC_CONTROPLANE"; fi
 if [ "${TDH_TKGWC_WORKERNODES}" != "" ]; then TDH_OPTIONS="$TDH_OPTIONS --worker-machine-count=$TDH_TKGWC_WORKERNODES"; fi
+if [ "${TDH_TKGWC_IP}" != "" ]; then TDH_OPTIONS="$TDH_OPTIONS --vsphere-controlplane-endpoint-ip=$TDH_TKGWC_IP"; fi
 
 # --- VERIFY TKG MANAGEMENT CLUSTER ---
 stt=$(tkg get mc --name $TDH_TKGMC_NAME -o json | jq -r '.[].status')
@@ -139,6 +141,7 @@ stt=$(tkg get cluster -o json | jq -r --arg key $TDH_TKGWC_NAME '.[] | select(.n
 if [ "${stt}" == "" ]; then 
   messageTitle "Creating TKG Cluster ($TDH_TKGWC_NAME)"
   echo "-----------------------------------------------------------------------------------------------------------"
+echo "tkg create cluster $TDH_TKGWC_NAME $TDH_OPTIONS"
   tkg create cluster $TDH_TKGWC_NAME $TDH_OPTIONS
   tkg get credentials $TDH_TKGWC_NAME
   messagePrint "- Kubernetes Context:" "$TDH_TKGWC_NAME-admin@$TDH_TKGWC_NAME"
