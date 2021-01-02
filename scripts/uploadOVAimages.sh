@@ -45,7 +45,7 @@ OVFCONN="vi://${VSPHERE_ADMIN}@${VSPHERE_SERVER}/${VSPHERE_DATACENTER}/host/${VS
 # --- TEST GOVC CONNECTION ---
 govc vm.info $(echo $VSPHERE_SERVER | awk -F. '{ print $1 }') > /dev/null 2>&1; ret=$?
 if [ $ret -ne 0 ]; then 
-  echo "ERROR: govc: Connection to vCenter failed:"
+  echo "1 ERROR: govc: Connection to vCenter failed:"
   echo "       => govc vm.info $(echo $VSPHERE_SERVER | awk -F. '{ print $1 }')"; exit
 fi
 

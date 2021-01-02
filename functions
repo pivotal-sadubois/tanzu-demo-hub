@@ -990,6 +990,7 @@ EOF
 createCluster() {
   unset TKG_CONFIG
   TKG_TEMPLATE=${HOME}/.tanzu-demo-hub/${TDH_TKGMC_CONFIG}
+  TKG_KUBECONFIG=${HOME}/.tanzu-demo-hub/${TDH_TKGMC_NAME}_kubeconfig
   if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "Azure" ]; then
     MDOE=azure
     messageTitle "Creating TKG Managment Cluster"
@@ -1022,9 +1023,9 @@ createCluster() {
     if [ "${stt}" != "Success" ]; then
       echo "----------------------------------------------------------------------------------------------------------------"
       echo "tkg init -q -i $MPDE -p dev --ceip-participation true --cni $TDH_TKGMC_CNI -v 0 \\"
-      echo "         --name $TDH_TKGMC_NAME --config $TKG_TEMPLATE"
+      echo "         --name $TDH_TKGMC_NAME --config $TKG_TEMPLATE --kubeconfig=$TKG_KUBECONFIG"
       echo "----------------------------------------------------------------------------------------------------------------"
-      time tkg init -i $MPDE -p dev --ceip-participation true --cni $TDH_TKGMC_CNI -v 0 --name $TDH_TKGMC_NAME --config $TKG_TEMPLATE
+      time tkg init -i $MPDE -p dev --ceip-participation true --cni $TDH_TKGMC_CNI -v 0 --name $TDH_TKGMC_NAME --config $TKG_TEMPLATE --kubeconfig=$TKG_KUBECONFIG
       echo "----------------------------------------------------------------------------------------------------------------"
     fi
   fi
