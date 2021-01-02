@@ -990,7 +990,7 @@ EOF
 createCluster() {
   unset TKG_CONFIG
   TKG_TEMPLATE=${HOME}/.tanzu-demo-hub/${TDH_TKGMC_CONFIG}
-  TKG_KUBECONFIG=${HOME}/.tanzu-demo-hub/${TDH_TKGMC_NAME}_kubeconfig
+  TKG_KUBECONFIG=${HOME}/.tanzu-demo-hub/${TDH_TKGMC_NAME}.kubeconfig
   if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "Azure" ]; then
     MDOE=azure
     messageTitle "Creating TKG Managment Cluster"
@@ -1107,15 +1107,19 @@ createCluster() {
       echo "MACHINE_HEALTH_CHECK_ENABLED: \"true\""                                       >> $TKG_TEMPLATE
       echo "VSPHERE_DATACENTER: /$VSPHERE_DATACENTER"                                     >> $TKG_TEMPLATE
 
+      [ -f $HOME/.kube/config ] && mv $HOME/.kube/config $HOME/.kube/config.old
+
       echo "----------------------------------------------------------------------------------------------------------------"
       echo "tkg init -q -i $MODE -p dev --vsphere-controlplane-endpoint-ip $VSPHERE_CONTROLPLANE_IP \\"
       echo "         --ceip-participation true --cni $TDH_TKGMC_CNI -v 0 \\"
       echo "         --name $TDH_TKGMC_NAME --config $TKG_TEMPLATE --kubeconfig $TKG_KUBECONFIG"
       echo "----------------------------------------------------------------------------------------------------------------"
-echo "TKG_TEMPLATE:$TKG_TEMPLATE"
       time tkg init -i $MODE -p dev --vsphere-controlplane-endpoint-ip $VSPHERE_CONTROLPLANE_IP --ceip-participation true \
            --cni $TDH_TKGMC_CNI -v 0 --name $TDH_TKGMC_NAME --config $TKG_TEMPLATE --kubeconfig $TKG_KUBECONFIG
       echo "----------------------------------------------------------------------------------------------------------------"
+
+      cp $HOME/.kube/config $HOME/.tanzu-demo-hub/${TDH_TKGMC_NAME}.kubeconfig
+      [ -f $HOME/.kube/config.old ] && mv $HOME/.kube/config.old $HOME/.kube/config
     else
       messageTitle "Verify TKG Managment Cluster"
       messagePrint " - Cluster Name"                "$TDH_TKGMC_NAME"
