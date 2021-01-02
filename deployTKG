@@ -112,7 +112,7 @@ fi
 
 export TDH_OPTIONS=""
 export TDH_DEPLOYMENT_ENV_NAME=$TDH_TKGMC_INFRASTRUCTURE
-export TKG_CONFIG=${TDHPATH}/config/$TDH_TKGMC_CONFIG
+export TKG_CONFIG=${HOME}/.tanzu-demo-hub/$TDH_TKGMC_CONFIG
 
 if [ "${TDH_TKGWC_PLAN}" != "" ]; then TDH_OPTIONS="$TDH_OPTIONS --plan=$TDH_TKGWC_PLAN"; fi
 if [ "${TDH_TKGWC_KUBERNETES}" != "" ]; then TDH_OPTIONS="$TDH_OPTIONS --kubernetes-version=$TDH_TKGWC_KUBERNETES"; fi
@@ -124,10 +124,15 @@ if [ "${TDH_TKGWC_IP}" != "" ]; then TDH_OPTIONS="$TDH_OPTIONS --vsphere-control
 stt=$(tkg get mc --name $TDH_TKGMC_NAME -o json | jq -r '.[].status')
 con=$(tkg get mc --name $TDH_TKGMC_NAME -o json | jq -r '.[].context')
 isc=$(tkg get mc --name $TDH_TKGMC_NAME -o json | jq -r '.[].true')
+
+
+
 echo gaga
 tkg get mc
 echo "STT:$stt"
 echo "TKG_CONFIG:$TKG_CONFIG"
+hostname
+exit
 if [ "${stt}" != "Success" ]; then 
   echo "ERROR: $0 TKG Management Cluster deployment was not Successfil"; exit 1
 fi
