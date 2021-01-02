@@ -113,6 +113,7 @@ fi
 export TDH_OPTIONS=""
 export TDH_DEPLOYMENT_ENV_NAME=$TDH_TKGMC_INFRASTRUCTURE
 export TKG_CONFIG=${HOME}/.tanzu-demo-hub/$TDH_TKGMC_CONFIG
+export KUBECONFIG=${HOME}/.tanzu-demo-hub/$TDH_TKGMC_NAME.kubeconfig
 
 if [ "${TDH_TKGWC_PLAN}" != "" ]; then TDH_OPTIONS="$TDH_OPTIONS --plan=$TDH_TKGWC_PLAN"; fi
 if [ "${TDH_TKGWC_KUBERNETES}" != "" ]; then TDH_OPTIONS="$TDH_OPTIONS --kubernetes-version=$TDH_TKGWC_KUBERNETES"; fi
@@ -161,10 +162,12 @@ if [ "${TDH_TKGWC_INGRESS_CONTOUR}" == "true" ]; then
   stt=$(kubectl get ns -o json | jq -r '.items[] | select(.metadata.name == "vmware-system-tmc").status.phase')
   if [ "${stt}" == "" ]; then
     cd ${TDHPATH}/extensions/$TDH_TKGWC_EXTENSIONS/extensions
+echo "KUBECONFIG:$KUBECONFIG"
     # --- INSTALL TMC EXTENSION MANAGER ---
     kubectl apply -f extensions/tmc-extension-manager.yaml >/dev/null 2>&1; ret=$?
+    kubectl apply -f extensions/tmc-extension-manager.yaml 
 
-ped
+pwd
 echo "RET:$ret"
 exit
     if [ $ret -ne 0 ]; then 
