@@ -168,7 +168,7 @@ if [ "${TDH_TKGWC_INGRESS_CONTOUR}" == "true" ]; then
       messagePrint "- Install Extension Manager" "failed"
       echo "ERROR: Installation of TMC Extension manager failed"
       echo "       => cd $TDHPATH/extensions/$TDH_TKGWC_EXTENSIONS"
-      echo "       => kubectl apply -f tmc-extension-manager.yaml"
+      echo "       => kubectl apply -f extensions/tmc-extension-manager.yaml"
       exit
     else
       messagePrint "- Install TMC Extension Manager" "completed"
