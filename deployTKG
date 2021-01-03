@@ -200,7 +200,9 @@ echo "1 STT:$stt"
     fi
   fi
 
+kubectl config get-contexts
 echo gaga2
+kubectl get ns 
   # -- INSTALL CONTOUR INGRESS CONTROLLER ---
   stt=$(kubectl get ns -o json | jq -r '.items[] | select(.metadata.name == "tanzu-system-ingress").status.phase')
 echo "2 STT:$stt"
