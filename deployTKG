@@ -163,16 +163,16 @@ echo "TDH_TKGMC_CONFIG=$TDH_TKGMC_CONFIG"                    >> ${TDHPATH}/confi
 echo "TKG_WC_CLUSTER=$TKG_WC_CLUSTER"                        >> ${TDHPATH}/config/${TDH_TKGWC_NAME}.cfg
 
 if [ "${TDH_TKGWC_INGRESS_CONTOUR}" == "true" ]; then 
-ech hhhh1
+echo hhhh1
   messageTitle "Install Ingress Contour" 
   stt=$(kubectl get ns -o json | jq -r '.items[] | select(.metadata.name == "vmware-system-tmc").status.phase')
-ech hhhh2
+echo hhhh2
   if [ "${stt}" == "" ]; then
     cd ${TDHPATH}/extensions/$TDH_TKGWC_EXTENSIONS/extensions
-ech hhhh4
+echo hhhh4
     # --- INSTALL TMC EXTENSION MANAGER ---
     kubectl apply -f tmc-extension-manager.yaml >/dev/null 2>&1; ret=$?
-ech hhhh5
+echo hhhh5
     if [ $ret -ne 0 ]; then 
       messagePrint "- Install Extension Manager" "failed"
       echo "ERROR: Installation of TMC Extension manager failed"
