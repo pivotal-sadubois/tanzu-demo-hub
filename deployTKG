@@ -191,9 +191,7 @@ echo hhhh5
   kubectl apply -f kapp-controller.yaml > /dev/null 2>&1
 
   # -- INSTALL CERT MANAGER ---
-echo gaga1
   stt=$(kubectl get ns -o json | jq -r '.items[] | select(.metadata.name == "cert-manager").status.phase')
-echo "1 STT:$stt"
   if [ "${stt}" == "" ]; then
     cd ${TDHPATH}/extensions/$TDH_TKGWC_EXTENSIONS/extensions
     kubectl apply -f ../cert-manager/ > /dev/null 2>&1
@@ -208,12 +206,8 @@ echo "1 STT:$stt"
     fi
   fi
 
-kubectl config get-contexts
-echo gaga2
-kubectl get ns 
   # -- INSTALL CONTOUR INGRESS CONTROLLER ---
   stt=$(kubectl get ns -o json | jq -r '.items[] | select(.metadata.name == "tanzu-system-ingress").status.phase')
-echo "2 STT:$stt"
   if [ "${stt}" == "" ]; then
     cd ${TDHPATH}/extensions/$TDH_TKGWC_EXTENSIONS/extensions
     kubectl apply -f ingress/contour/namespace-role.yaml > /dev/null 2>&1
@@ -228,7 +222,6 @@ echo "2 STT:$stt"
     while [ $(kubectl get pods -A | sed 1d | grep -v Running | wc -l) -ne 0 ]; do
       sleep 10
     done
-echo gaga3
 
     if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "vSphere" ]; then 
       cd ${TDHPATH}/extensions/$TDH_TKGWC_EXTENSIONS/extensions
@@ -261,15 +254,12 @@ echo gaga3
       fi
     fi
 
-echo gaga4
     cnt=$(kubectl get extension contour -n tanzu-system-ingress 2>/dev/null | egrep -c "^contour" )
-echo "3 CNT:$cnt"
     if [ $cnt -eq 0 ]; then
       kubectl apply -f ingress/contour/contour-extension.yaml > /dev/null 2>&1
       sleep 10
     fi
 
-echo gaga5
     i=0
     while [ $i -lt 5 ]; do
       stt=$(kubectl get app contour -n tanzu-system-ingress -o json | jq -r '.status.friendlyDescription')
