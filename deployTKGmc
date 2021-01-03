@@ -574,26 +574,21 @@ if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "vSphere" ]; then
   echo "    => tkg set mc $TDH_TKGMC_NAME                # Set active mc cluster"
   echo "    => tkg get mc"
   printf "    => %-50s %s\n" "kubectl config set-context $TDH_TKGMC_NAME" "# Set k8s Context to mc Cluster"
-  printf "    => %-50s %s\n" "kubectl get nodes" "# Set k8s Context to the TKG Management Cluster"
-  printf "    => %-50s %s\n" "kubectl get namespaces" "# Set k8s Namespaces of the TKG Management Cluster"
+  printf "    => %-50s %s\n" "kubectl get nodes"        "# Set k8s Context to the TKG Management Cluster"
+  printf "    => %-50s %s\n" "kubectl get namespaces"   "# Set k8s Namespaces of the TKG Management Cluster"
   echo "3.) Ceeate TKG Workload Cluster"
   echo "    => export TKG_CONFIG=\${HOME}/.tanzu-demo-hub/$TDH_TKGMC_CONFIG"
+  echo "    => export KUBECONFIG=\${HOME}/.tanzu-demo-hub/${TDH_TKGMC_NAME}.kubeconfig"
   echo "    => tkg create cluster tkg01 --plan=dev --vsphere-controlplane-endpoint-ip 10.1.1.31"
   echo "    => tkg create cluster tkg01 --plan=dev --kubernetes-version=v1.18.8  # available 1.19.1 1.18.8 1.17.11"
   echo "    => tkg create cluster tkg01 --plan=prod --worker-machine-count 3 --controlplane-machine-count 3"
   echo "-----------------------------------------------------------------------------------------------------------"
 
-  # --- COPY TKG CONFIG ---
-  $SCP_COMMAND -q ${HOME}/.tanzu-demo-hub/$TDH_TKGMC_CONFIG $SSH_USER@$SSH_HOST:${SSH_HOME}/.tanzu-demo-hub
-  $SSH_COMMAND -n "mkdir -p ${HOME}/.kube-tkg"
-  $SCP_COMMAND -q ${HOME}/.kube-tkg/config $SSH_USER@$SSH_HOST:${SSH_HOME}/.kube-tkg/config
-  $SSH_COMMAND -n "echo \"y\" | tkg get mc --config \${HOME}/.tanzu-demo-hub/$TDH_TKGMC_CONFIG" > /dev/null 2>&1
+  messageTitle "Creating Workload Cluster (tdh-1)"
+  $SSH_COMMAND -n "cd tanzu-demo-hub && ./deployTKG -d $DEPLOY_TKG_TEMPLATE -c tkg-tanzu-demo-hub.cfg -n tdh-1 -ip 10.1.1.31"
 
-exit
-  messageTitle "Creating Worload Cluster (tdh-1)"
-  echo "./deployTKG -d $DEPLOY_TKG_TEMPLATE -c tkg-tanzu-demo-hub.cfg -n tdh-1"
-  echo "$SSH_COMMAND -n \"cd tanzu-demo-hub && ./deployTKG -d $DEPLOY_TKG_TEMPLATE -c tkg-tanzu-demo-hub.cfg -n tdh-1\""
-  $SSH_COMMAND -n "cd tanzu-demo-hub && ./deployTKG -d $DEPLOY_TKG_TEMPLATE -c tkg-tanzu-demo-hub.cfg -n tdh-1"
+#  messageTitle "Creating Worload Cluster (tdh-1)"
+#  ./deployTKG -d $DEPLOY_TKG_TEMPLATE -c tkg-tanzu-demo-hub.cfg -n tdh-1 -ip 10.1.1.31
 
 exit
   echo "./deployTKG -d $DEPLOY_TKG_TEMPLATE -c tkg-tanzu-demo-hub.cfg -n tdh-1 --vsphere-controlplane-endpoint-ip 10.1.1.31"
@@ -626,7 +621,7 @@ else
   echo "-----------------------------------------------------------------------------------------------------------"
 
   exit
-  messageTitle "Creating Worload Cluster (tdh-1)"
+  messageTitle "Creating Workload Cluster (tdh-1)"
   echo "./deployTKG -d $DEPLOY_TKG_TEMPLATE -c tkg-tanzu-demo-hub.cfg -n tdh-1"
   echo "$SSH_COMMAND -n \"cd tanzu-demo-hub && ./deployTKG -d $DEPLOY_TKG_TEMPLATE -c tkg-tanzu-demo-hub.cfg -n tdh-1\""
   $SSH_COMMAND -n "cd tanzu-demo-hub && ./deployTKG -d $DEPLOY_TKG_TEMPLATE -c tkg-tanzu-demo-hub.cfg -n tdh-1"

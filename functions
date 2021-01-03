@@ -1120,6 +1120,13 @@ createCluster() {
 
       cp $HOME/.kube/config $HOME/.tanzu-demo-hub/${TDH_TKGMC_NAME}.kubeconfig
       [ -f $HOME/.kube/config.old ] && mv $HOME/.kube/config.old $HOME/.kube/config
+
+      # --- COPY TKG CONFIG ---
+      $SCP_COMMAND -q $HOME/.tanzu-demo-hub/${TDH_TKGMC_CONFIG} $SSH_USER@$SSH_HOST:${SSH_HOME}/.tanzu-demo-hub
+      $SCP_COMMAND -q $HOME/.tanzu-demo-hub/${TDH_TKGMC_NAME}.kubeconfig $SSH_USER@$SSH_HOST:${SSH_HOME}/.tanzu-demo-hub
+      $SSH_COMMAND -n "echo \"y\" | tkg get mc --config \${HOME}/.tanzu-demo-hub/$TDH_TKGMC_CONFIG" > /dev/null 2>&1
+      $SSH_COMMAND -n "sed -i 's+file: /Users/sdu/.kube-tkg/config+file: /home/ubuntu/.kube-tkg/config+g' \
+           ~/.tanzu-demo-hub/tkgmc-dev-vsphere-macbook.yaml"
     else
       messageTitle "Verify TKG Managment Cluster"
       messagePrint " - Cluster Name"                "$TDH_TKGMC_NAME"
