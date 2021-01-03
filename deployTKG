@@ -137,12 +137,16 @@ fi
 # --- VERIFY TKG WORKLOAD CLUSTER ---
 stt=$(tkg get cluster -o json | jq -r --arg key $TDH_TKGWC_NAME '.[] | select(.name == $key).status')
 if [ "${stt}" == "" ]; then 
+echo xxxx1
   messageTitle "Creating TKG Cluster ($TDH_TKGWC_NAME)"
   echo "-----------------------------------------------------------------------------------------------------------"
   tkg create cluster $TDH_TKGWC_NAME $TDH_OPTIONS
+echo xxxx2
   tkg get credentials $TDH_TKGWC_NAME
+echo xxxx3
   messagePrint "- Kubernetes Context:" "$TDH_TKGWC_NAME-admin@$TDH_TKGWC_NAME"
   kubectl config use-context $TDH_TKGWC_NAME-admin@$TDH_TKGWC_NAME > /dev/null 2>&1
+echo xxxx4
 
   echo "-----------------------------------------------------------------------------------------------------------"
 else
@@ -283,6 +287,8 @@ echo gaga5
 
     cd ${TDHPATH}
   fi
+
+echo agagagagagaga
 
   # --- SET CLUSTER DNS ---
   ipa=$(kubectl get svc envoy -n tanzu-system-ingress -o json | jq -r '.status.loadBalancer.ingress[].ip')
