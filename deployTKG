@@ -184,6 +184,7 @@ if [ "${TDH_TKGWC_INGRESS_CONTOUR}" == "true" ]; then
 
   # -- INSTALL CERT MANAGER ---
   stt=$(kubectl get ns -o json | jq -r '.items[] | select(.metadata.name == "cert-manager").status.phase')
+echo "STT:$stt"
   if [ "${stt}" == "" ]; then
     cd ${TDHPATH}/extensions/$TDH_TKGWC_EXTENSIONS/extensions
     kubectl apply -f ../cert-manager/ > /dev/null 2>&1
