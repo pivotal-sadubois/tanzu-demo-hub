@@ -251,12 +251,15 @@ echo gaga3
       fi
     fi
 
+echo gaga4
     cnt=$(kubectl get extension contour -n tanzu-system-ingress 2>/dev/null | egrep -c "^contour" )
+echo "3 CNT:$cnt"
     if [ $cnt -eq 0 ]; then
       kubectl apply -f ingress/contour/contour-extension.yaml > /dev/null 2>&1
       sleep 10
     fi
 
+echo gaga5
     i=0
     while [ $i -lt 3 ]; do
       stt=$(kubectl get app contour -n tanzu-system-ingress -o json | jq -r '.status.friendlyDescription')
