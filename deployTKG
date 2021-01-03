@@ -139,13 +139,11 @@ stt=$(tkg get cluster -o json | jq -r --arg key $TDH_TKGWC_NAME '.[] | select(.n
 if [ "${stt}" == "" ]; then 
   messageTitle "Creating TKG Cluster ($TDH_TKGWC_NAME)"
   echo "-----------------------------------------------------------------------------------------------------------"
-echo "gaga0 $(hostname)"; kubectl config get-contexts
   tkg create cluster $TDH_TKGWC_NAME $TDH_OPTIONS
   tkg get credentials $TDH_TKGWC_NAME
   messagePrint "- Kubernetes Context:" "$TDH_TKGWC_NAME-admin@$TDH_TKGWC_NAME"
   kubectl config use-context $TDH_TKGWC_NAME-admin@$TDH_TKGWC_NAME > /dev/null 2>&1
 
-echo gaga1; kubectl config get-contexts
   echo "-----------------------------------------------------------------------------------------------------------"
 else
   messageTitle "Verify TKG Cluster ($TDH_TKGWC_NAME)"
@@ -154,21 +152,17 @@ else
   kubectl config use-context $TDH_TKGWC_NAME-admin@$TDH_TKGWC_NAME > /dev/null 2>&1
 fi
 
-echo gaga2; kubectl config get-contexts
 echo "TDH_TKGWC_NAME=$TDH_TKGWC_NAME"                        >  ${TDHPATH}/config/${TDH_TKGWC_NAME}.cfg
 echo "K8S_CONTEXT=$TDH_TKGWC_NAME-admin@$TDH_TKGWC_NAME"     >> ${TDHPATH}/config/${TDH_TKGWC_NAME}.cfg
 echo "TKG_DEPLOYMENT=$TKG_DEPLOYMENT"                        >> ${TDHPATH}/config/${TDH_TKGWC_NAME}.cfg
 echo "TDH_TKGMC_CONFIG=$TDH_TKGMC_CONFIG"                    >> ${TDHPATH}/config/${TDH_TKGWC_NAME}.cfg
 echo "TKG_WC_CLUSTER=$TKG_WC_CLUSTER"                        >> ${TDHPATH}/config/${TDH_TKGWC_NAME}.cfg
 
-echo gaga3; kubectl config get-contexts
 if [ "${TDH_TKGWC_INGRESS_CONTOUR}" == "true" ]; then 
   messageTitle "Install Ingress Contour" 
   stt=$(kubectl get ns -o json | jq -r '.items[] | select(.metadata.name == "vmware-system-tmc").status.phase')
   if [ "${stt}" == "" ]; then
     cd ${TDHPATH}/extensions/$TDH_TKGWC_EXTENSIONS/extensions
-echo "${TDHPATH}/extensions/$TDH_TKGWC_EXTENSIONS/extensions"
-echo gaga4; kubectl config get-contexts
     # --- INSTALL TMC EXTENSION MANAGER ---
     kubectl apply -f tmc-extension-manager.yaml >/dev/null 2>&1; ret=$?
     if [ $ret -ne 0 ]; then 
