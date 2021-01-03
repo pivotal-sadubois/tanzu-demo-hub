@@ -221,19 +221,35 @@ echo gaga4; kubectl config get-contexts
       sleep 10
     done
 
+    if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "vSphere" ]; then 
+      cd ${TDHPATH}/extensions/$TDH_TKGWC_EXTENSIONS/extensions
+      cp ingress/contour/vsphere/contour-data-values.yaml.example ingress/contour/vsphere/contour-data-values.yaml
+      echo ""                               >> ingress/contour/vsphere/contour-data-values.yaml
+      echo "  service:"                     >> ingress/contour/vsphere/contour-data-values.yaml
+      echo "    type: LoadBalancer"         >> ingress/contour/vsphere/contour-data-values.yaml
+
+
+      stt=$(kubectl get secret contour-data-values -n tanzu-system-ingress -o json 2>/dev/null | jq -r '.metadata.name') 
+      if [ "${stt}" == "" ]; then
+        cd ${TDHPATH}/extensions/$TDH_TKGWC_EXTENSIONS/extensions
+        kubectl create secret generic contour-data-values --from-file=values.yaml=ingress/contour/vsphere/contour-data-values.yaml \
+                -n tanzu-system-ingress > /dev/null 2>&1
+      fi
+    fi
+
     if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "Azure" ]; then 
       cd ${TDHPATH}/extensions/$TDH_TKGWC_EXTENSIONS/extensions
       cp ingress/contour/azure/contour-data-values.yaml.example ingress/contour/azure/contour-data-values.yaml
       echo ""                               >> ingress/contour/azure/contour-data-values.yaml
       echo "  service:"                     >> ingress/contour/azure/contour-data-values.yaml
       echo "    type: LoadBalancer"         >> ingress/contour/azure/contour-data-values.yaml
-    fi
 
-    stt=$(kubectl get secret contour-data-values -n tanzu-system-ingress -o json 2>/dev/null | jq -r '.metadata.name') 
-    if [ "${stt}" == "" ]; then
-      cd ${TDHPATH}/extensions/$TDH_TKGWC_EXTENSIONS/extensions
-      kubectl create secret generic contour-data-values --from-file=values.yaml=ingress/contour/azure/contour-data-values.yaml \
-              -n tanzu-system-ingress > /dev/null 2>&1
+      stt=$(kubectl get secret contour-data-values -n tanzu-system-ingress -o json 2>/dev/null | jq -r '.metadata.name') 
+      if [ "${stt}" == "" ]; then
+        cd ${TDHPATH}/extensions/$TDH_TKGWC_EXTENSIONS/extensions
+        kubectl create secret generic contour-data-values --from-file=values.yaml=ingress/contour/azure/contour-data-values.yaml \
+                -n tanzu-system-ingress > /dev/null 2>&1
+      fi
     fi
 
     cnt=$(kubectl get extension contour -n tanzu-system-ingress 2>/dev/null | egrep -c "^contour" )
