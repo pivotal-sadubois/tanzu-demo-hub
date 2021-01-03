@@ -183,8 +183,9 @@ if [ "${TDH_TKGWC_INGRESS_CONTOUR}" == "true" ]; then
   kubectl apply -f kapp-controller.yaml > /dev/null 2>&1
 
   # -- INSTALL CERT MANAGER ---
+echo gaga1
   stt=$(kubectl get ns -o json | jq -r '.items[] | select(.metadata.name == "cert-manager").status.phase')
-echo "STT:$stt"
+echo "1 STT:$stt"
   if [ "${stt}" == "" ]; then
     cd ${TDHPATH}/extensions/$TDH_TKGWC_EXTENSIONS/extensions
     kubectl apply -f ../cert-manager/ > /dev/null 2>&1
@@ -199,8 +200,10 @@ echo "STT:$stt"
     fi
   fi
 
+echo gaga2
   # -- INSTALL CONTOUR INGRESS CONTROLLER ---
   stt=$(kubectl get ns -o json | jq -r '.items[] | select(.metadata.name == "tanzu-system-ingress").status.phase')
+echo "2 STT:$stt"
   if [ "${stt}" == "" ]; then
     cd ${TDHPATH}/extensions/$TDH_TKGWC_EXTENSIONS/extensions
     kubectl apply -f ingress/contour/namespace-role.yaml > /dev/null 2>&1
@@ -215,6 +218,7 @@ echo "STT:$stt"
     while [ $(kubectl get pods -A | sed 1d | grep -v Running | wc -l) -ne 0 ]; do
       sleep 10
     done
+echo gaga3
 
     if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "vSphere" ]; then 
       cd ${TDHPATH}/extensions/$TDH_TKGWC_EXTENSIONS/extensions
