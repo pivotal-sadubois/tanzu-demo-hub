@@ -271,7 +271,7 @@ echo "3 CNT:$cnt"
 
 echo gaga5
     i=0
-    while [ $i -lt 3 ]; do
+    while [ $i -lt 5 ]; do
       stt=$(kubectl get app contour -n tanzu-system-ingress -o json | jq -r '.status.friendlyDescription')
       while [ "${stt}" == "Reconciling" ]; do
         stt=$(kubectl get app contour -n tanzu-system-ingress -o json | jq -r '.status.friendlyDescription')
@@ -450,7 +450,7 @@ if [ "${TDH_TKGWC_INGRESS_HARBOR}" == "true" ]; then
   fi
 
   i=0
-  while [ $i -lt 3 ]; do
+  while [ $i -lt 5 ]; do
     stt=$(kubectl get app harbor -n tanzu-system-registry -o json | jq -r '.status.friendlyDescription')
     while [ "${stt}" == "Reconciling" ]; do
       stt=$(kubectl get app harbor -n tanzu-system-registry -o json | jq -r '.status.friendlyDescription')
