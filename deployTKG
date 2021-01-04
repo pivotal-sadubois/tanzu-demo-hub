@@ -166,7 +166,6 @@ if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "vSphere" ]; then
     kubectl create ns metallb-system > /dev/null 2>&1
     kubectl create secret generic -n metallb-system memberlist --from-literal=secretkey="$(openssl rand -base64 128)"
 
-    cat > metallb-configmap.yaml << EOF
     echo "apiVersion: v1"                           >  /tmp/metallb-configmap.yaml
     echo "kind: ConfigMap"                          >> /tmp/metallb-configmap.yaml
     echo "metadata:"                                >> /tmp/metallb-configmap.yaml
@@ -547,4 +546,3 @@ fi
 
 exit
 
-  #messagePrint " - Install Ingress NGINX"    "$TDH_TKGWC_INGRESS_NGINX" 
