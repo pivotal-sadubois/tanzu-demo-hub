@@ -446,6 +446,8 @@ echo gaga6
   sed -i "s/  tls.key:/  tls.key: $pkey/g" registry/harbor/harbor-data-values.yaml
   sed -i "s/  ca.crt:/  ca.crt: $cart/g" registry/harbor/harbor-data-values.yaml
 
+  #harbor-ctrl
+
   cnt=$(kubectl get secrets harbor-data-values -n tanzu-system-registry 2>/dev/null | grep -c "harbor-data-values")
   if [ $cnt -eq 0 ]; then
     messagePrint "- Create secrets for the Harbor config" "registry/harbor/harbor-data-values.yaml"
