@@ -1182,7 +1182,9 @@ setTKGclusterDNS() {
     fi
   fi
   
+echo xxxxx1
   if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "Azure" -o "${TDH_TKGMC_INFRASTRUCTURE}" == "vSphere" ]; then
+echo xxxxx2
     DNS_NAME="*.${TKG_INGRESS}-${TKG_CLUSTER}"
     messagePrint "- LoadBalancer PublicIP:" "$TKG_IPADRESS"
     messagePrint "- Create DNS Entry for:" "*.${TKG_INGRESS}-${TKG_CLUSTER}.${DNS_PREFIX}.${DNS_SUFFIX}"
@@ -1190,7 +1192,9 @@ setTKGclusterDNS() {
     ZONE_ID=$(aws route53 list-hosted-zones-by-name --dns-name ${DNS_PREFIX}.${DNS_SUFFIX} | jq -r '.HostedZones[0].Id')
     ZONE_ID_STR=$(echo "${ZONE_ID}" | awk -F'/' '{ print $NF }')
 
+echo "ZONE_ID:$ZONE_ID"
     if [ "${ZONE_ID}" != "" ]; then
+echo xxxxx3
       ZONE="*.${TKG_CLUSTER}.${DNS_PREFIX}.${DNS_SUFFIX}"
       ZONE="*.${TKG_INGRESS}-${TKG_CLUSTER}.${DNS_PREFIX}.${DNS_SUFFIX}"
 
