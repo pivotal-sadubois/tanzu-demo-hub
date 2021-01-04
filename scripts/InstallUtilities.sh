@@ -88,7 +88,7 @@ fi
 
 if [ ! -x /snap/bin/helm ]; then 
   echo "- Installing Helm Utility"
-  sudo apt install snapd -y  sudo ln -s /snap/bin/helm /usr/bin/helm
+  sudo apt install snapd -y  
 
   sudo snap install helm --classic >/dev/null 2>&1
   [ ! -s /usr/bin/helm ] && sudo ln -s /snap/bin/helm /usr/bin/helm
