@@ -1182,7 +1182,7 @@ setTKGclusterDNS() {
     fi
   fi
   
-  if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "Azure" ]; then
+  if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "Azure" -o "${TDH_TKGMC_INFRASTRUCTURE}" == "vSphere" ]; then
     DNS_NAME="*.${TKG_INGRESS}-${TKG_CLUSTER}"
     messagePrint "- LoadBalancer PublicIP:" "$TKG_IPADRESS"
     messagePrint "- Create DNS Entry for:" "*.${TKG_INGRESS}-${TKG_CLUSTER}.${DNS_PREFIX}.${DNS_SUFFIX}"
