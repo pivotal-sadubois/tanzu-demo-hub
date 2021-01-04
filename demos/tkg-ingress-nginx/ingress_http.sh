@@ -55,10 +55,10 @@ if [ "${K8S_CONTEXT_CURRENT}" != "${K8S_CONTEXT}" ]; then
 fi
 
 # --- CHECK CLUSTER ---
-stt=$(tkg get cluster $TDH_TKGWC_NAME --config=$TDHPATH/config/$TDH_TKGMC_CONFIG -o json | jq -r '.[].status')
+stt=$(tkg get cluster $TDH_TKGWC_NAME --config=$HOME/.tanzu-demo-hub/$TDH_TKGMC_CONFIG -o json | jq -r '.[].status')
 if [ "${stt}" != "running" ]; then
   echo "ERROR: tkg cluster is not in 'running' status"
-  echo "       => tkg get cluster $TDH_TKGWC_NAME --config=$TDHPATH/config/$TDH_TKGMC_CONFIG"; exit
+  echo "       => tkg get cluster $TDH_TKGWC_NAME --config=$HOME/.tanzu-demo-hub/$TDH_TKGMC_CONFIG"; exit
 fi
 
 kubectl get namespace $NAMESPACE > /dev/null 2>&1
