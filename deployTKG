@@ -164,20 +164,22 @@ if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "vSphere" ]; then
   stt=$(kubectl get ns -o json | jq -r '.items[] | select(.metadata.name == "metallb-system").status.phase')
   if [ "${stt}" == "" ]; then
     kubectl create ns metallb-system > /dev/null 2>&1
+    kubectl apply -f https://raw.githubusercontent.com/google/metallb/v0.9.2/manifests/metallb.yaml -n metallb-system
+
     kubectl create secret generic -n metallb-system memberlist --from-literal=secretkey="$(openssl rand -base64 128)"
 
-    echo "apiVersion: v1"                           >  /tmp/metallb-configmap.yaml
-    echo "kind: ConfigMap"                          >> /tmp/metallb-configmap.yaml
-    echo "metadata:"                                >> /tmp/metallb-configmap.yaml
-    echo "  namespace: metallb-system"              >> /tmp/metallb-configmap.yaml
-    echo "  name: config"                           >> /tmp/metallb-configmap.yaml
-    echo "data:"                                    >> /tmp/metallb-configmap.yaml
-    echo "  config: |"                              >> /tmp/metallb-configmap.yaml
-    echo "    address-pools:"                       >> /tmp/metallb-configmap.yaml
-    echo "    - name: default"                      >> /tmp/metallb-configmap.yaml
-    echo "      protocol: layer2"                   >> /tmp/metallb-configmap.yaml
-    echo "      addresses:"                         >> /tmp/metallb-configmap.yaml
-    echo "      - 10.1.1.220-10.1.1.250"            >> /tmp/metallb-configmap.yaml
+echo "apiVersion: v1"                               >  /tmp/metallb-configmap.yaml
+echo "kind: ConfigMap"                              >> /tmp/metallb-configmap.yaml
+echo "metadata:"                              >> /tmp/metallb-configmap.yaml
+echo "  namespace: metallb-system"                              >> /tmp/metallb-configmap.yaml
+echo "  name: config"                              >> /tmp/metallb-configmap.yaml
+echo "data:"                              >> /tmp/metallb-configmap.yaml
+echo "  config: |"                              >> /tmp/metallb-configmap.yaml
+echo "    address-pools:"                              >> /tmp/metallb-configmap.yaml
+echo "    - name: default"                              >> /tmp/metallb-configmap.yaml
+echo "      protocol: layer2"                              >> /tmp/metallb-configmap.yaml
+echo "      addresses:"                              >> /tmp/metallb-configmap.yaml
+echo "      - 10.1.1.220-10.1.1.250"                              >> /tmp/metallb-configmap.yaml
 
     kubectl apply -f /tmp/metallb-configmap.yaml > /dev/null 2>&1
     if [ $? -ne 0 ]; then
