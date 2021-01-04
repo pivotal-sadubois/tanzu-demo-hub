@@ -94,6 +94,11 @@ if [ ! -x /snap/bin/helm ]; then
   [ ! -s /usr/bin/helm ] && sudo ln -s /snap/bin/helm /usr/bin/helm
 fi
 
+if [ ! -x /snap/bin/yq ]; then
+  sudo wget https://github.com/mikefarah/yq/releases/download/3.4.1/yq_linux_amd64 -O /usr/bin/yq > /dev/null 2>&1
+  sudo chmod +x /usr/bin/yq
+fi
+
 #if [ ! -x /usr/bin/docker ]; then
 #  sudo apt-get install docker.io -y  > /dev/null 2>&1
 #fi
