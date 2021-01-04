@@ -373,7 +373,6 @@ if [ "${TDH_TKGWC_INGRESS_NGINX}" == "true" ]; then
     ipa=$(kubectl get svc bitnami-nginx-ingress-controller -n nginx-ingress -o json 2>/dev/null | jq -r '.status.loadBalancer.ingress[].ip' 2>/dev/null)
   done
 
-echo "gaga IPA:$ipa"
   if [ "${ipa}" != "" ]; then
     setTKGclusterDNS "$TDH_TKGWC_NAME" "${ipa}" "nginx"
   else
@@ -382,7 +381,6 @@ echo "gaga IPA:$ipa"
     exit 1
   fi
 fi
-exit
 
 #  stt=$(kubectl get ns -o json | jq -r '.items[] | select(.metadata.name == "cert-manager").status.phase')
 #  if [ "${stt}" == "" ]; then
