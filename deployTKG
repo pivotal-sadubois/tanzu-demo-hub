@@ -164,22 +164,21 @@ if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "vSphere" ]; then
   stt=$(kubectl get ns -o json | jq -r '.items[] | select(.metadata.name == "metallb-system").status.phase')
   if [ "${stt}" == "" ]; then
     kubectl create ns metallb-system > /dev/null 2>&1
-    kubectl apply -f https://raw.githubusercontent.com/google/metallb/v0.9.2/manifests/metallb.yaml -n metallb-system
+    kubectl apply -f https://raw.githubusercontent.com/google/metallb/v0.9.2/manifests/metallb.yaml -n metallb-system > /dev/null 2>&1
+    kubectl create secret generic -n metallb-system memberlist --from-literal=secretkey="$(openssl rand -base64 128)" > /dev/null 2>&1
 
-    kubectl create secret generic -n metallb-system memberlist --from-literal=secretkey="$(openssl rand -base64 128)"
-
-echo "apiVersion: v1"                               >  /tmp/metallb-configmap.yaml
-echo "kind: ConfigMap"                              >> /tmp/metallb-configmap.yaml
-echo "metadata:"                              >> /tmp/metallb-configmap.yaml
-echo "  namespace: metallb-system"                              >> /tmp/metallb-configmap.yaml
-echo "  name: config"                              >> /tmp/metallb-configmap.yaml
-echo "data:"                              >> /tmp/metallb-configmap.yaml
-echo "  config: |"                              >> /tmp/metallb-configmap.yaml
-echo "    address-pools:"                              >> /tmp/metallb-configmap.yaml
-echo "    - name: default"                              >> /tmp/metallb-configmap.yaml
-echo "      protocol: layer2"                              >> /tmp/metallb-configmap.yaml
-echo "      addresses:"                              >> /tmp/metallb-configmap.yaml
-echo "      - 10.1.1.220-10.1.1.250"                              >> /tmp/metallb-configmap.yaml
+    echo "apiVersion: v1"                               >  /tmp/metallb-configmap.yaml
+    echo "kind: ConfigMap"                              >> /tmp/metallb-configmap.yaml
+    echo "metadata:"                              >> /tmp/metallb-configmap.yaml
+    echo "  namespace: metallb-system"                              >> /tmp/metallb-configmap.yaml
+    echo "  name: config"                              >> /tmp/metallb-configmap.yaml
+    echo "data:"                              >> /tmp/metallb-configmap.yaml
+    echo "  config: |"                              >> /tmp/metallb-configmap.yaml
+    echo "    address-pools:"                              >> /tmp/metallb-configmap.yaml
+    echo "    - name: default"                              >> /tmp/metallb-configmap.yaml
+    echo "      protocol: layer2"                              >> /tmp/metallb-configmap.yaml
+    echo "      addresses:"                              >> /tmp/metallb-configmap.yaml
+    echo "      - 10.1.1.220-10.1.1.250"                              >> /tmp/metallb-configmap.yaml
 
     kubectl apply -f /tmp/metallb-configmap.yaml > /dev/null 2>&1
     if [ $? -ne 0 ]; then
@@ -310,8 +309,6 @@ if [ "${TDH_TKGWC_INGRESS_CONTOUR}" == "true" ]; then
     cd ${TDHPATH}
   fi
 
-echo agagagagagaga
-
   # --- SET CLUSTER DNS ---
   ipa=$(kubectl get svc envoy -n tanzu-system-ingress -o json | jq -r '.status.loadBalancer.ingress[].ip')
   if [ "${ipa}" != "" ]; then 
@@ -376,6 +373,7 @@ if [ "${TDH_TKGWC_INGRESS_NGINX}" == "true" ]; then
     ipa=$(kubectl get svc bitnami-nginx-ingress-controller -n nginx-ingress -o json 2>/dev/null | jq -r '.status.loadBalancer.ingress[].ip' 2>/dev/null)
   done
 
+echo "gaga IPA:$ipa"
   if [ "${ipa}" != "" ]; then
     setTKGclusterDNS "$TDH_TKGWC_NAME" "${ipa}" "nginx"
   else
@@ -384,22 +382,26 @@ if [ "${TDH_TKGWC_INGRESS_NGINX}" == "true" ]; then
     exit 1
   fi
 fi
+exit
 
 #  stt=$(kubectl get ns -o json | jq -r '.items[] | select(.metadata.name == "cert-manager").status.phase')
 #  if [ "${stt}" == "" ]; then
 #    cd ${TDHPATH}/extensions/$TDH_TKGWC_EXTENSIONS/extensions
 
 if [ "${TDH_TKGWC_INGRESS_HARBOR}" == "true" ]; then
+echo gaga1
   # https://docs.vmware.com/en/VMware-Tanzu-Kubernetes-Grid/1.2/vmware-tanzu-kubernetes-grid-12/GUID-extensions-harbor-registry.html"
   messageTitle "Install Harbor Registry"
   messagePrint "- Confogure Helm Repo" "https://charts.helm.sh/stable"
 
+echo gaga2
   if [ -d certificates ]; then
     TLS_CERTIFICATE=certificates/fullchain.pem
     TLS_PRIVATE_KEY=certificates/privkey.pem
     TLS_ROOT_CA=certificates/ca.pem
   fi
 
+echo gaga3
   # --- CHECK IF CERTIFICATE HAS BEEN DEFINED ---
   if [ "${TLS_CERTIFICATE}" == "" -o "${TLS_PRIVATE_KEY}" == "" ]; then
     echo ""
@@ -412,6 +414,7 @@ if [ "${TDH_TKGWC_INGRESS_HARBOR}" == "true" ]; then
   else
     verifyTLScertificate $TLS_CERTIFICATE $TLS_PRIVATE_KEY
   fi
+echo gaga4
 
   # --- CONVERT CERTS TO BASE64 ---
   cert=$(base64 --wrap=10000 $TLS_CERTIFICATE)
@@ -419,6 +422,8 @@ if [ "${TDH_TKGWC_INGRESS_HARBOR}" == "true" ]; then
   cart=$(base64 --wrap=10000 $TLS_ROOT_CA)
 
   cd ${TDHPATH}/extensions/$TDH_TKGWC_EXTENSIONS/extensions
+echo "${TDHPATH}/extensions/$TDH_TKGWC_EXTENSIONS/extensions"
+echo gaga5
 
   messagePrint "- Create a namespace for the Harbor service" "registry/harbor/namespace-role.yaml"
   kubectl apply -f registry/harbor/namespace-role.yaml > /dev/null 2>&1
@@ -426,6 +431,7 @@ if [ "${TDH_TKGWC_INGRESS_HARBOR}" == "true" ]; then
     echo "ERROR: Failed to create namespace for the Harbor service"
     echo "       => kubectl apply -f registry/harbor/namespace-role.yaml"
   fi
+echo gaga6
 
   messagePrint "- Create Harbor service configuration" "registry/harbor/harbor-data-values.yaml"
   sudo snap install yq > /dev/null 2>&1
@@ -454,6 +460,9 @@ if [ "${TDH_TKGWC_INGRESS_HARBOR}" == "true" ]; then
     fi
   fi
 
+#gaga
+echo gaga10
+pwd
   messagePrint "- Deploy the Harbor service" "registry/harbor/harbor-extension.yaml"
   kubectl apply -f registry/harbor/harbor-extension.yaml > /dev/null 2>&1
   if [ $? -ne 0 ]; then
@@ -461,12 +470,14 @@ if [ "${TDH_TKGWC_INGRESS_HARBOR}" == "true" ]; then
     echo "       => kubectl apply -f registry/harbor/harbor-extension.yaml"
   fi
 
+echo gaga11
   cnt=$(kubectl get extension harbor -n tanzu-system-registry 2>/dev/null | egrep -c "^harbor")
   if [ $cnt -eq 0 ]; then
     kubectl apply -f ingress/contour/harbor-extension.yaml > /dev/null 2>&1
     sleep 10
   fi
 
+echo gaga12
   i=0
   while [ $i -lt 5 ]; do
     stt=$(kubectl get app harbor -n tanzu-system-registry -o json | jq -r '.status.friendlyDescription')
@@ -478,8 +489,10 @@ if [ "${TDH_TKGWC_INGRESS_HARBOR}" == "true" ]; then
     let i=i+1
   done
 
+echo gaga13
   kubectl -n tanzu-system-registry get secret harbor-tls -o=jsonpath="{.data.ca\.crt}" | base64 -d > /tmp/hatbor-tls.pem
   kubectl config use-context tkg-mc-azure-dev-admin@tkg-mc-azure-dev
+echo gaga14
 
   cnt=$(tkg get cluster --include-management-cluster -o json | jq -r --arg key "$TDH_TKGWC_NAME" '.[] | select(.name == $key).roles[]' | \
             egrep -c "tanzu-services") 
