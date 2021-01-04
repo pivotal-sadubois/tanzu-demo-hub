@@ -137,16 +137,12 @@ fi
 # --- VERIFY TKG WORKLOAD CLUSTER ---
 stt=$(tkg get cluster -o json | jq -r --arg key $TDH_TKGWC_NAME '.[] | select(.name == $key).status')
 if [ "${stt}" == "" ]; then 
-echo xxxx1
   messageTitle "Creating TKG Cluster ($TDH_TKGWC_NAME)"
   echo "-----------------------------------------------------------------------------------------------------------"
   tkg create cluster $TDH_TKGWC_NAME $TDH_OPTIONS
-echo xxxx2
   tkg get credentials $TDH_TKGWC_NAME
-echo xxxx3
   messagePrint "- Kubernetes Context:" "$TDH_TKGWC_NAME-admin@$TDH_TKGWC_NAME"
   kubectl config use-context $TDH_TKGWC_NAME-admin@$TDH_TKGWC_NAME > /dev/null 2>&1
-echo xxxx4
 
   echo "-----------------------------------------------------------------------------------------------------------"
 else
@@ -162,17 +158,48 @@ echo "TKG_DEPLOYMENT=$TKG_DEPLOYMENT"                        >> ${TDHPATH}/confi
 echo "TDH_TKGMC_CONFIG=$TDH_TKGMC_CONFIG"                    >> ${TDHPATH}/config/${TDH_TKGWC_NAME}.cfg
 echo "TKG_WC_CLUSTER=$TKG_WC_CLUSTER"                        >> ${TDHPATH}/config/${TDH_TKGWC_NAME}.cfg
 
+if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "vSphere" ]; then 
+  messageTitle "Install Metalib Load Balancer" 
+
+  stt=$(kubectl get ns -o json | jq -r '.items[] | select(.metadata.name == "metallb-system").status.phase')
+  if [ "${stt}" == "" ]; then
+    kubectl create ns metallb-system > /dev/null 2>&1
+    kubectl create secret generic -n metallb-system memberlist --from-literal=secretkey="$(openssl rand -base64 128)"
+
+    cat > metallb-configmap.yaml << EOF
+    echo "apiVersion: v1"                           >  /tmp/metallb-configmap.yaml
+    echo "kind: ConfigMap"                          >> /tmp/metallb-configmap.yaml
+    echo "metadata:"                                >> /tmp/metallb-configmap.yaml
+    echo "  namespace: metallb-system"              >> /tmp/metallb-configmap.yaml
+    echo "  name: config"                           >> /tmp/metallb-configmap.yaml
+    echo "data:"                                    >> /tmp/metallb-configmap.yaml
+    echo "  config: |"                              >> /tmp/metallb-configmap.yaml
+    echo "    address-pools:"                       >> /tmp/metallb-configmap.yaml
+    echo "    - name: default"                      >> /tmp/metallb-configmap.yaml
+    echo "      protocol: layer2"                   >> /tmp/metallb-configmap.yaml
+    echo "      addresses:"                         >> /tmp/metallb-configmap.yaml
+    echo "      - 10.1.1.220-10.1.1.250"            >> /tmp/metallb-configmap.yaml
+
+    kubectl apply -f /tmp/metallb-configmap.yaml > /dev/null 2>&1
+    if [ $? -ne 0 ]; then
+      messagePrint "- Install Metalib Load Balancer" "failed"
+      echo "ERROR: Installation of Cert Manager failed"
+      echo "       => cd $TDHPATH/extensions/$TDH_TKGWC_EXTENSIONS"
+      echo "       => kubectl apply -f ../cert-manager/"
+      exit
+    else
+      messagePrint "- Install Metalib Load Balancer" "completed"
+    fi
+  fi
+fi
+
 if [ "${TDH_TKGWC_INGRESS_CONTOUR}" == "true" ]; then 
-echo hhhh1
   messageTitle "Install Ingress Contour" 
   stt=$(kubectl get ns -o json | jq -r '.items[] | select(.metadata.name == "vmware-system-tmc").status.phase')
-echo hhhh2
   if [ "${stt}" == "" ]; then
     cd ${TDHPATH}/extensions/$TDH_TKGWC_EXTENSIONS/extensions
-echo hhhh4
     # --- INSTALL TMC EXTENSION MANAGER ---
     kubectl apply -f tmc-extension-manager.yaml >/dev/null 2>&1; ret=$?
-echo hhhh5
     if [ $ret -ne 0 ]; then 
       messagePrint "- Install Extension Manager" "failed"
       echo "ERROR: Installation of TMC Extension manager failed"
