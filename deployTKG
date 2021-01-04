@@ -482,7 +482,7 @@ echo gaga12
   while [ $i -lt 5 ]; do
     stt=$(kubectl get app harbor -n tanzu-system-registry -o json | jq -r '.status.friendlyDescription')
     while [ "${stt}" == "Reconciling" ]; do
-      stt=$(kubectl get app harbor -n tanzu-system-registry -o json | jq -r '.status.friendlyDescription')
+      stt=$(kubectl get app harbor -n tanzu-system-registry -o json 2>/dev/null | jq -r '.status.friendlyDescription')
       sleep 10
     done
     sleep 30
@@ -490,8 +490,9 @@ echo gaga12
   done
 
 echo gaga13
+
   kubectl -n tanzu-system-registry get secret harbor-tls -o=jsonpath="{.data.ca\.crt}" | base64 -d > /tmp/hatbor-tls.pem
-  kubectl config use-context tkg-mc-azure-dev-admin@tkg-mc-azure-dev
+  kubectl config use-context $TDH_TKGWC_NAME-admin@$TDH_TKGWC_NAME > /dev/null 2>&1
 echo gaga14
 
   cnt=$(tkg get cluster --include-management-cluster -o json | jq -r --arg key "$TDH_TKGWC_NAME" '.[] | select(.name == $key).roles[]' | \
