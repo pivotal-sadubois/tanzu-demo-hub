@@ -120,26 +120,19 @@ if [ "${TDH_TKGWC_KUBERNETES}" != "" ]; then TDH_OPTIONS="$TDH_OPTIONS --kuberne
 if [ "${TDH_TKGWC_CONTROPLANE}" != "" ]; then TDH_OPTIONS="$TDH_OPTIONS --controlplane-machine-count=$TDH_TKGWC_CONTROPLANE"; fi
 if [ "${TDH_TKGWC_WORKERNODES}" != "" ]; then TDH_OPTIONS="$TDH_OPTIONS --worker-machine-count=$TDH_TKGWC_WORKERNODES"; fi
 if [ "${TDH_TKGWC_IP}" != "" ]; then TDH_OPTIONS="$TDH_OPTIONS --vsphere-controlplane-endpoint-ip=$TDH_TKGWC_IP"; fi
-echo gagagaga2
 
 # --- VERIFY TKG MANAGEMENT CLUSTER ---
 stt=$(tkg get mc --name $TDH_TKGMC_NAME -o json | jq -r '.[].status')
 con=$(tkg get mc --name $TDH_TKGMC_NAME -o json | jq -r '.[].context')
 isc=$(tkg get mc --name $TDH_TKGMC_NAME -o json | jq -r '.[].true')
-echo gagagaga3
 
 if [ "${stt}" != "Success" ]; then 
   echo "ERROR: $0 TKG Management Cluster deployment was not Successfil"; exit 1
 fi
-echo gagagaga4
 
 if [ "${isc}" != "true" ]; then 
   tkg set mc -c "$con" $TDH_TKGMC_NAME > /dev/null 2>&1
 fi
-echo gagagaga5
-echo "KUBECONFIG:$KUBECONFIG"
-echo "TKG_CONFIG:$TKG_CONFIG"
-hostname
 
 # --- VERIFY TKG WORKLOAD CLUSTER ---
 stt=$(tkg get cluster -o json | jq -r --arg key $TDH_TKGWC_NAME '.[] | select(.name == $key).status')
@@ -159,8 +152,6 @@ else
   #kubectl config use-context $con > /dev/null 2>&1
   kubectl config use-context $TDH_TKGWC_NAME-admin@$TDH_TKGWC_NAME > /dev/null 2>&1
 fi
-echo gagagaga6
-exit
 
 echo "TDH_TKGWC_NAME=$TDH_TKGWC_NAME"                        >  ${TDHPATH}/config/${TDH_TKGWC_NAME}.cfg
 echo "K8S_CONTEXT=$TDH_TKGWC_NAME-admin@$TDH_TKGWC_NAME"     >> ${TDHPATH}/config/${TDH_TKGWC_NAME}.cfg
