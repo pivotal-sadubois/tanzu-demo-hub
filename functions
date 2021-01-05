@@ -1032,9 +1032,11 @@ createCluster() {
 
 echo gugus1
   if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "vSphere" ]; then
-echo gugus2
     MODE=vsphere
     MC_CLUSTER_STATUS=1  ### MC-CLUSTER IS ACTIVE
+
+    # --- ADJUST CONFIG FILE ---
+    echo y | tkg get mc > /dev/null 2>&1
 
     if [ -f $TKG_TEMPLATE ]; then 
       stt=$(tkg get mc --name $TDH_TKGMC_NAME -o json --config $TKG_TEMPLATE | jq -r '.[].status')
@@ -1045,10 +1047,6 @@ echo gugus2
     else
       MC_CLUSTER_STATUS=0
     fi
-echo gugus3
-
-echo "MC_CLUSTER_STATUS:$MC_CLUSTER_STATUS"
-tkg get mc --name $TDH_TKGMC_NAME -o json --config $TKG_TEMPLATE | jq -r '.[].status'
 
     if [ $MC_CLUSTER_STATUS -eq 0 ]; then 
       messageTitle "Creating TKG Managment Cluster"
