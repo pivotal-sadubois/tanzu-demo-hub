@@ -1030,7 +1030,9 @@ createCluster() {
     fi
   fi
 
+echo gugus1
   if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "vSphere" ]; then
+echo gugus2
     MODE=vsphere
     MC_CLUSTER_STATUS=1  ### MC-CLUSTER IS ACTIVE
 
@@ -1061,12 +1063,15 @@ createCluster() {
       export GOVC_DATASTORE=$VSPHERE_DATASTORE
       export GOVC_NETWORK="$VSPHERE_MANAGEMENT_NETWORK"
       export GOVC_RESOURCE_POOL=/${VSPHERE_DATACENTER}/host/${VSPHERE_CLUSTER}/Resources
+echo gugus3
 
       nodes=$(govc find -name "$TDH_TKGMC_NAME*")
       if [ $? != 0 ]; then 
         echo "ERROR: failed to login to vSphere"
         echo "       => govc find -name \"$TDH_TKGMC_NAME*\""; exit
       fi
+echo gugus4
+echo "NODES:$nodes"
 
       for n in $nodes; do
         messagePrint " - Cleanup Old Cluster Nodes"  "$n"
