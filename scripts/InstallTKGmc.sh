@@ -1,6 +1,6 @@
 #!/bin/bash
 # ############################################################################################
-# File: ........: deployTKGmc
+# File: ........: InstallTKGmc.sh
 # Language .....: bash
 # Author .......: Sacha Dubois, VMware
 # Description ..: Tanzu Demo Hub - Deploy TKG Management Cluster
@@ -8,6 +8,8 @@
 
 export TANZU_DEMO_HUB=$(cd "$(pwd)/$(dirname $0)/.."; pwd)
 export TDHPATH=$(cd "$(pwd)/$(dirname $0)/.."; pwd)
+echo "TANZU_DEMO_HUB:$TANZU_DEMO_HUB"
+
 export DEPLOY_TKG_TEMPLATE=$1
 
 . $TANZU_DEMO_HUB/functions
