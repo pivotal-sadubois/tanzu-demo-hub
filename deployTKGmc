@@ -585,6 +585,7 @@ if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "vSphere" ]; then
   echo "    => tkg create cluster tkg01 --plan=prod --worker-machine-count 3 --controlplane-machine-count 3"
   echo "-----------------------------------------------------------------------------------------------------------"
 
+exit
   messageTitle "Creating Workload Cluster (tdh-1)"
   $SSH_COMMAND -n "cd tanzu-demo-hub && ./deployTKG -d $DEPLOY_TKG_TEMPLATE -c tkg-tanzu-demo-hub.cfg -n tdh-1 -ip 10.1.1.31"
 
