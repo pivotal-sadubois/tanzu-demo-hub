@@ -28,5 +28,7 @@ fi
 export TDH_DEPLOYMENT_ENV_NAME=$TDH_TKGMC_INFRASTRUCTURE
 export TKG_CONFIG=${TDHPATH}/config/$TDH_TKGMC_CONFIG
 
+sshEnvironment > /dev/null 2>&1
 createCluster 
+
 

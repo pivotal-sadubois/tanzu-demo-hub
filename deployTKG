@@ -110,7 +110,6 @@ if [ -f ~/.tanzu-demo-hub.cfg ]; then
   . ~/.tanzu-demo-hub.cfg
 fi
 
-echo gagagaga1
 export TDH_OPTIONS=""
 export TDH_DEPLOYMENT_ENV_NAME=$TDH_TKGMC_INFRASTRUCTURE
 export TKG_CONFIG=${HOME}/.tanzu-demo-hub/$TDH_TKGMC_CONFIG
