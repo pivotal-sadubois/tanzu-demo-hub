@@ -6,6 +6,7 @@
 # Description ..: Tanzu Demo Hub - Deploy TKG Management Cluster
 # ############################################################################################
 
+echo "XXXXXXXXX:$0"
 export TANZU_DEMO_HUB=$(cd "$(pwd)/$(dirname $0)/.."; pwd)
 export TDHPATH=$(cd "$(pwd)/$(dirname $0)/.."; pwd)
 echo "TANZU_DEMO_HUB:$TANZU_DEMO_HUB"
