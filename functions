@@ -1030,7 +1030,6 @@ createCluster() {
     fi
   fi
 
-echo gugus1
   if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "vSphere" ]; then
     MODE=vsphere
     MC_CLUSTER_STATUS=1  ### MC-CLUSTER IS ACTIVE
@@ -1040,8 +1039,6 @@ echo gugus1
 
     if [ -f $TKG_TEMPLATE ]; then 
       stt=$(tkg get mc --name $TDH_TKGMC_NAME -o json --config $TKG_TEMPLATE | jq -r '.[].status')
-echo "STT:$stt"
-hostname
       if [ "${stt}" != "Success" ]; then
         rm -f $TKG_TEMPLATE
         MC_CLUSTER_STATUS=0
@@ -1049,10 +1046,6 @@ hostname
     else
       MC_CLUSTER_STATUS=0
     fi
-echo "MC_CLUSTER_STATUS:$MC_CLUSTER_STATUS"
-tkg get mc --name $TDH_TKGMC_NAME
-
-exit
 
     if [ $MC_CLUSTER_STATUS -eq 0 ]; then 
       messageTitle "Creating TKG Managment Cluster"
@@ -1071,15 +1064,12 @@ exit
       export GOVC_DATASTORE=$VSPHERE_DATASTORE
       export GOVC_NETWORK="$VSPHERE_MANAGEMENT_NETWORK"
       export GOVC_RESOURCE_POOL=/${VSPHERE_DATACENTER}/host/${VSPHERE_CLUSTER}/Resources
-echo gugus3
 
       nodes=$(govc find -name "$TDH_TKGMC_NAME*")
       if [ $? != 0 ]; then 
         echo "ERROR: failed to login to vSphere"
         echo "       => govc find -name \"$TDH_TKGMC_NAME*\""; exit
       fi
-echo gugus4
-echo "NODES:$nodes"
 
       for n in $nodes; do
         messagePrint " - Cleanup Old Cluster Nodes"  "$n"
@@ -1135,13 +1125,13 @@ echo "NODES:$nodes"
       [ -f $HOME/.kube/config.old ] && mv $HOME/.kube/config.old $HOME/.kube/config
 
       # --- COPY TKG CONFIG ---
-      $SCP_COMMAND -q $HOME/.tanzu-demo-hub/${TDH_TKGMC_CONFIG} $SSH_USER@$SSH_HOST:${SSH_HOME}/.tanzu-demo-hub
-      $SCP_COMMAND -q $HOME/.tanzu-demo-hub/${TDH_TKGMC_NAME}.kubeconfig $SSH_USER@$SSH_HOST:${SSH_HOME}/.tanzu-demo-hub
+      $SCP_COMMAND $HOME/.tanzu-demo-hub/${TDH_TKGMC_CONFIG} $SSH_USER@$SSH_HOST:${SSH_HOME}/.tanzu-demo-hub > /dev/null 2>&1
+      $SCP_COMMAND $HOME/.tanzu-demo-hub/${TDH_TKGMC_NAME}.kubeconfig $SSH_USER@$SSH_HOST:${SSH_HOME}/.tanzu-demo-hub > /dev/null 2>&1
 echo kkkkk1
       $SSH_COMMAND -n "echo \"y\" | tkg get mc --config \${HOME}/.tanzu-demo-hub/$TDH_TKGMC_CONFIG" > /dev/null 2>&1
 echo kkkkk2
-      $SSH_COMMAND -n "sed -i 's+file: /Users/sdu/.kube-tkg/config+file: /home/ubuntu/.kube-tkg/config+g' \
-           ~/.tanzu-demo-hub/tkgmc-dev-vsphere-macbook.yaml"
+      $SSH_COMMAND -n "sed -i 's+file: /Users/sdu/.kube-tkg/config+file: /home/ubuntu/.kube-tkg/config+g' ~/.tanzu-demo-hub/tkgmc-dev-vsphere-macbook.yaml"
+echo kkkkk3
     else
       messageTitle "Verify TKG Managment Cluster"
       messagePrint " - Cluster Name"                "$TDH_TKGMC_NAME"
