@@ -1,0 +1,20 @@
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: http-ingress
+  namespace: NAMESPACE
+  labels:
+    app: hello
+spec:
+  rules:
+  - host: DNS_DOMAIN
+    http:
+      paths:
+      - path: /foo
+        backend:
+          serviceName: echoserver-1
+          servicePort: 8080
+      - path: /bar
+        backend:
+          serviceName: echoserver-2
+          servicePort: 8080

@@ -1,0 +1,25 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: echoserver
+  namespace: contour-ingress-demo
+  labels:
+    app: hello
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: echoserver
+      tier: web
+  template:
+    metadata:
+      labels:
+        app: echoserver
+        tier: web
+    spec:
+      containers:
+      - name: echoserver-app
+        #image: gcr.io/google-samples/hello-app:1.0
+        image: datamanos/echoserver:latest
+        ports:
+        - containerPort: 8080
