@@ -1040,6 +1040,8 @@ echo gugus1
 
     if [ -f $TKG_TEMPLATE ]; then 
       stt=$(tkg get mc --name $TDH_TKGMC_NAME -o json --config $TKG_TEMPLATE | jq -r '.[].status')
+echo "STT:$stt"
+hostname
       if [ "${stt}" != "Success" ]; then
         rm -f $TKG_TEMPLATE
         MC_CLUSTER_STATUS=0
@@ -1047,6 +1049,10 @@ echo gugus1
     else
       MC_CLUSTER_STATUS=0
     fi
+echo "MC_CLUSTER_STATUS:$MC_CLUSTER_STATUS"
+tkg get mc --name $TDH_TKGMC_NAME
+
+exit
 
     if [ $MC_CLUSTER_STATUS -eq 0 ]; then 
       messageTitle "Creating TKG Managment Cluster"
