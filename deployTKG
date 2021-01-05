@@ -138,6 +138,9 @@ if [ "${isc}" != "true" ]; then
   tkg set mc -c "$con" $TDH_TKGMC_NAME > /dev/null 2>&1
 fi
 echo gagagaga5
+echo "KUBECONFIG:$KUBECONFIG"
+echo "TKG_CONFIG:$TKG_CONFIG"
+hostname
 
 # --- VERIFY TKG WORKLOAD CLUSTER ---
 stt=$(tkg get cluster -o json | jq -r --arg key $TDH_TKGWC_NAME '.[] | select(.name == $key).status')
@@ -157,6 +160,8 @@ else
   #kubectl config use-context $con > /dev/null 2>&1
   kubectl config use-context $TDH_TKGWC_NAME-admin@$TDH_TKGWC_NAME > /dev/null 2>&1
 fi
+echo gagagaga6
+exit
 
 echo "TDH_TKGWC_NAME=$TDH_TKGWC_NAME"                        >  ${TDHPATH}/config/${TDH_TKGWC_NAME}.cfg
 echo "K8S_CONTEXT=$TDH_TKGWC_NAME-admin@$TDH_TKGWC_NAME"     >> ${TDHPATH}/config/${TDH_TKGWC_NAME}.cfg
