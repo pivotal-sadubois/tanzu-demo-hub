@@ -388,19 +388,16 @@ fi
 #    cd ${TDHPATH}/extensions/$TDH_TKGWC_EXTENSIONS/extensions
 
 if [ "${TDH_TKGWC_INGRESS_HARBOR}" == "true" ]; then
-echo gaga1
   # https://docs.vmware.com/en/VMware-Tanzu-Kubernetes-Grid/1.2/vmware-tanzu-kubernetes-grid-12/GUID-extensions-harbor-registry.html"
   messageTitle "Install Harbor Registry"
   messagePrint "- Confogure Helm Repo" "https://charts.helm.sh/stable"
 
-echo gaga2
   if [ -d certificates ]; then
     TLS_CERTIFICATE=certificates/fullchain.pem
     TLS_PRIVATE_KEY=certificates/privkey.pem
     TLS_ROOT_CA=certificates/ca.pem
   fi
 
-echo gaga3
   # --- CHECK IF CERTIFICATE HAS BEEN DEFINED ---
   if [ "${TLS_CERTIFICATE}" == "" -o "${TLS_PRIVATE_KEY}" == "" ]; then
     echo ""
@@ -413,7 +410,6 @@ echo gaga3
   else
     verifyTLScertificate $TLS_CERTIFICATE $TLS_PRIVATE_KEY
   fi
-echo gaga4
 
   # --- CONVERT CERTS TO BASE64 ---
   cert=$(base64 --wrap=10000 $TLS_CERTIFICATE)
@@ -421,8 +417,6 @@ echo gaga4
   cart=$(base64 --wrap=10000 $TLS_ROOT_CA)
 
   cd ${TDHPATH}/extensions/$TDH_TKGWC_EXTENSIONS/extensions
-echo "${TDHPATH}/extensions/$TDH_TKGWC_EXTENSIONS/extensions"
-echo gaga5
 
   messagePrint "- Create a namespace for the Harbor service" "registry/harbor/namespace-role.yaml"
   kubectl apply -f registry/harbor/namespace-role.yaml > /dev/null 2>&1
@@ -430,14 +424,13 @@ echo gaga5
     echo "ERROR: Failed to create namespace for the Harbor service"
     echo "       => kubectl apply -f registry/harbor/namespace-role.yaml"
   fi
-echo gaga6
 
   messagePrint "- Create Harbor service configuration" "registry/harbor/harbor-data-values.yaml"
   sudo snap install yq > /dev/null 2>&1
   cp registry/harbor/harbor-data-values.yaml.example registry/harbor/harbor-data-values.yaml
   bash registry/harbor/generate-passwords.sh registry/harbor/harbor-data-values.yaml > /dev/null 2>&1
 
-  DNS_HARBOR="harbor.${TDH_TKGMC_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}"
+  DNS_HARBOR="harbor.apps-${TDH_TKGWC_NAME}.${TDH_TKGMC_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}"
   messagePrint "- Configure Harber Name" "$DNS_HARBOR"
   sed -i "s/hostname: core.harbor.domain/hostname: $DNS_HARBOR/g" registry/harbor/harbor-data-values.yaml
   messagePrint "- Set Admin Password" "XXXXXXXXX"
@@ -447,7 +440,8 @@ echo gaga6
   sed -i "s/  tls.key:/  tls.key: $pkey/g" registry/harbor/harbor-data-values.yaml
   sed -i "s/  ca.crt:/  ca.crt: $cart/g" registry/harbor/harbor-data-values.yaml
 
-  #harbor-ctrl
+  #echo | openssl s_client -showcerts -servername harbor.vstkg.pcfsdu.com -connect harbor.vstkg.pcfsdu.com:8443 2>/dev/null | openssl x509 -inform pem -noout -text
+  #kubectl exec harbor-registry-7d6fcfccb9-phh7f -c registry -n tanzu-system-registry -i -t -- bash -il
 
   cnt=$(kubectl get secrets harbor-data-values -n tanzu-system-registry 2>/dev/null | grep -c "harbor-data-values")
   if [ $cnt -eq 0 ]; then
@@ -461,9 +455,6 @@ echo gaga6
     fi
   fi
 
-#gaga
-echo gaga10
-pwd
   messagePrint "- Deploy the Harbor service" "registry/harbor/harbor-extension.yaml"
   kubectl apply -f registry/harbor/harbor-extension.yaml > /dev/null 2>&1
   if [ $? -ne 0 ]; then
@@ -471,14 +462,12 @@ pwd
     echo "       => kubectl apply -f registry/harbor/harbor-extension.yaml"
   fi
 
-echo gaga11
   cnt=$(kubectl get extension harbor -n tanzu-system-registry 2>/dev/null | egrep -c "^harbor")
   if [ $cnt -eq 0 ]; then
     kubectl apply -f ingress/contour/harbor-extension.yaml > /dev/null 2>&1
     sleep 10
   fi
 
-echo gaga12
   i=0
   while [ $i -lt 5 ]; do
     stt=$(kubectl get app harbor -n tanzu-system-registry -o json | jq -r '.status.friendlyDescription')
@@ -490,11 +479,8 @@ echo gaga12
     let i=i+1
   done
 
-echo gaga13
-
   kubectl -n tanzu-system-registry get secret harbor-tls -o=jsonpath="{.data.ca\.crt}" | base64 -d > /tmp/hatbor-tls.pem
   kubectl config use-context $TDH_TKGWC_NAME-admin@$TDH_TKGWC_NAME > /dev/null 2>&1
-echo gaga14
 
   cnt=$(tkg get cluster --include-management-cluster -o json | jq -r --arg key "$TDH_TKGWC_NAME" '.[] | select(.name == $key).roles[]' | \
             egrep -c "tanzu-services") 
