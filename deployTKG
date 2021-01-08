@@ -456,6 +456,8 @@ if [ "${TDH_TKGWC_INGRESS_HARBOR}" == "true" ]; then
   fi
 
   messagePrint "- Deploy the Harbor service" "registry/harbor/harbor-extension.yaml"
+echo "=> $(pwd)"
+echo "=> kubectl apply -f registry/harbor/harbor-extension.yaml"
   kubectl apply -f registry/harbor/harbor-extension.yaml > /dev/null 2>&1
   if [ $? -ne 0 ]; then
     echo "ERROR: Failed to deploy the Harbor service"
@@ -534,8 +536,8 @@ if [ "${TDH_TKGWC_INGRESS_HARBOR}" == "true" ]; then
     messagePrint "- LoadBalancer PublicIP:" "$pip"
     messagePrint "- Create DNS Entry for:" "harbor.${TDH_TKGMC_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}"
     messagePrint "- Create DNS Entry for:" "notary.harbor.${TDH_TKGMC_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}"
-    setDNSrecord "$pip" "${TDH_TKGMC_ENVNAME}" "${AWS_HOSTED_DNS_DOMAIN}" "harbor"
-    setDNSrecord "$pip" "${TDH_TKGMC_ENVNAME}" "${AWS_HOSTED_DNS_DOMAIN}" "notary.harbor"
+    #setDNSrecord "$pip" "${TDH_TKGMC_ENVNAME}" "${AWS_HOSTED_DNS_DOMAIN}" "harbor"
+    #setDNSrecord "$pip" "${TDH_TKGMC_ENVNAME}" "${AWS_HOSTED_DNS_DOMAIN}" "notary.harbor"
 
 
 exit
