@@ -455,31 +455,34 @@ if [ "${TDH_TKGWC_INGRESS_HARBOR}" == "true" ]; then
     fi
   fi
 
-  messagePrint "- Deploy the Harbor service" "registry/harbor/harbor-extension.yaml"
-echo "=> $(pwd)"
-echo "=> kubectl apply -f registry/harbor/harbor-extension.yaml"
-  kubectl apply -f registry/harbor/harbor-extension.yaml > /dev/null 2>&1
-  if [ $? -ne 0 ]; then
-    echo "ERROR: Failed to deploy the Harbor service"
-    echo "       => kubectl apply -f registry/harbor/harbor-extension.yaml"
-  fi
+  kubectl get app harbor -n tanzu-system-registry 2>/dev/null 2>&1; ret=$?
+  if [ ${ret} -ne 0 ]; then 
+    messagePrint "- Deploy the Harbor service" "registry/harbor/harbor-extension.yaml"
+    kubectl apply -f registry/harbor/harbor-extension.yaml > /dev/null 2>&1
+    if [ $? -ne 0 ]; then
+      echo "ERROR: Failed to deploy the Harbor service"
+      echo "       => kubectl apply -f registry/harbor/harbor-extension.yaml"
+    fi
 
-  cnt=$(kubectl get extension harbor -n tanzu-system-registry 2>/dev/null | egrep -c "^harbor")
-  if [ $cnt -eq 0 ]; then
-    kubectl apply -f ingress/contour/harbor-extension.yaml > /dev/null 2>&1
-    sleep 10
-  fi
-
-  i=0
-  while [ $i -lt 5 ]; do
-    stt=$(kubectl get app harbor -n tanzu-system-registry -o json | jq -r '.status.friendlyDescription')
-    while [ "${stt}" == "Reconciling" ]; do
-      stt=$(kubectl get app harbor -n tanzu-system-registry -o json 2>/dev/null | jq -r '.status.friendlyDescription')
+    cnt=$(kubectl get extension harbor -n tanzu-system-registry 2>/dev/null | egrep -c "^harbor")
+    if [ $cnt -eq 0 ]; then
+      kubectl apply -f ingress/contour/harbor-extension.yaml > /dev/null 2>&1
       sleep 10
+    fi
+
+    i=0
+    while [ $i -lt 5 ]; do
+      stt=$(kubectl get app harbor -n tanzu-system-registry -o json | jq -r '.status.friendlyDescription')
+      while [ "${stt}" == "Reconciling" ]; do
+        stt=$(kubectl get app harbor -n tanzu-system-registry -o json 2>/dev/null | jq -r '.status.friendlyDescription')
+        sleep 10
+      done
+      sleep 30
+      let i=i+1
     done
-    sleep 30
-    let i=i+1
-  done
+  else 
+    messagePrint "- Verify the Harbor service" "registry/harbor/harbor-extension.yaml"
+  fi
 
   echo "-----------------------------------------------------------------------------------------------------------"
   tkg get cluster --include-management-cluster
@@ -513,6 +516,8 @@ echo "=> kubectl apply -f registry/harbor/harbor-extension.yaml"
   messageTitle "Install the Tanzu Kubernetes Grid Connectivity API on the Management Cluster" ""
   messagePrint "- Current Context" "$(kubectl config current-context)"
   stt=$(kubectl get ns -o json | jq -r '.items[] | select(.metadata.name == "tanzu-system-connectivity").status.phase')
+echo "stt:$stt"
+pwd
   if [ ! -d extensions/manifests -a "${stt}" != "Active" ]; then 
 echo gaga1
     cd extensions 
@@ -536,6 +541,7 @@ echo gaga1
     pip=$(kubectl get svc envoy -n tanzu-system-ingress -o jsonpath='{.status.loadBalancer.ingress[0]}' | jq -r '.ip')
     #route53setDNSrecord "$pip" "JUMP_HOST" "$AWS_HOSTED_DNS_DOMAIN"
   fi
+echo gaga10
 #gaga
 
 exit
