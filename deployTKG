@@ -480,19 +480,19 @@ if [ "${TDH_TKGWC_INGRESS_HARBOR}" == "true" ]; then
       sleep 30
       let i=i+1
     done
+
+    if [ "${stt}" == "Reconcile succeeded" ]; then
+      messagePrint "- Install Harbor Registry" "completed"
+    else
+      echo "-----------------------------------------------------------------------------------------------------------"
+      tkg get cluster --include-management-cluster
+      echo "-----------------------------------------------------------------------------------------------------------"
+  
+      kubectl get app harbor -n tanzu-system-registry
+      messagePrint "- Install Harbor Registry" "failed"; exit
+    fi
   else 
     messagePrint "- Verify the Harbor service" "registry/harbor/harbor-extension.yaml"
-  fi
-
-  echo "-----------------------------------------------------------------------------------------------------------"
-  tkg get cluster --include-management-cluster
-  echo "-----------------------------------------------------------------------------------------------------------"
-
-  if [ "${stt}" == "Reconcile succeeded" ]; then
-    messagePrint "- Install Harbor Registry" "completed"
-  else
-    kubectl get app harbor -n tanzu-system-registry
-    messagePrint "- Install Harbor Registry" "failed"; exit
   fi
 
   messageTitle "Define Cluster as a shared service" 
