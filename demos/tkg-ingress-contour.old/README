@@ -1,3 +1,0 @@
-docker run -p 8888:80 supergiantkir/animals:bear
-docker run -p 8888:80 supergiantkir/animals:hare
-

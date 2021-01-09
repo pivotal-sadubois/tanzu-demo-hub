@@ -481,8 +481,22 @@ echo "=> kubectl apply -f registry/harbor/harbor-extension.yaml"
     let i=i+1
   done
 
+  echo "-----------------------------------------------------------------------------------------------------------"
+  tkg get cluster --include-management-cluster
+  echo "-----------------------------------------------------------------------------------------------------------"
+
+  if [ "${stt}" == "Reconcile succeeded" ]; then
+    messagePrint "- Install Harbor Registry" "completed"
+  else
+    kubectl get app harbor -n tanzu-system-registry
+    messagePrint "- Install Harbor Registry" "failed"; exit
+  fi
+
+  messageTitle "Define Cluster as a shared service" 
+  messagePrint "- Current Context" "$(kubectl config current-context)"
   kubectl -n tanzu-system-registry get secret harbor-tls -o=jsonpath="{.data.ca\.crt}" | base64 -d > /tmp/hatbor-tls.pem
-  kubectl config use-context $TDH_TKGWC_NAME-admin@$TDH_TKGWC_NAME > /dev/null 2>&1
+  #kubectl config use-context $TDH_TKGWC_NAME-admin@$TDH_TKGWC_NAME > /dev/null 2>&1
+  kubectl config use-context $con > /dev/null 2>&1
 
   cnt=$(tkg get cluster --include-management-cluster -o json | jq -r --arg key "$TDH_TKGWC_NAME" '.[] | select(.name == $key).roles[]' | \
             egrep -c "tanzu-services") 
@@ -493,23 +507,14 @@ echo "=> kubectl apply -f registry/harbor/harbor-extension.yaml"
     messagePrint "- Verify cluster-role label on $TDH_TKGWC_NAME cluster" "Role: tanzu-services on"
   fi
 
-  echo "-----------------------------------------------------------------------------------------------------------"
-  tkg get cluster --include-management-cluster 
-  echo "-----------------------------------------------------------------------------------------------------------"
-
-  if [ "${stt}" == "Reconcile succeeded" ]; then
-    messagePrint "- Install Harbor Registry" "completed"
-  else
-    kubectl get app harbor -n tanzu-system-registry
-    messagePrint "- Install Harbor Registry" "failed"; exit
-  fi
-
-  kubectl config use-context $TDH_TKGWC_NAME-admin@$TDH_TKGWC_NAME > /dev/null 2>&1
+  #kubectl config use-context $TDH_TKGWC_NAME-admin@$TDH_TKGWC_NAME > /dev/null 2>&1
   cd ${TDHPATH}
 
-  messagePrint "- Install the Tanzu Kubernetes Grid Connectivity API on the Management Cluster" ""
+  messageTitle "Install the Tanzu Kubernetes Grid Connectivity API on the Management Cluster" ""
+  messagePrint "- Current Context" "$(kubectl config current-context)"
   stt=$(kubectl get ns -o json | jq -r '.items[] | select(.metadata.name == "tanzu-system-connectivity").status.phase')
   if [ ! -d extensions/manifests -a "${stt}" != "Active" ]; then 
+echo gaga1
     cd extensions 
     tar xvf ../software/$TKG_CONNECTIVITY
     ca_cert=$(cat /tmp/hatbor-tls.pem) 
@@ -531,7 +536,9 @@ echo "=> kubectl apply -f registry/harbor/harbor-extension.yaml"
     pip=$(kubectl get svc envoy -n tanzu-system-ingress -o jsonpath='{.status.loadBalancer.ingress[0]}' | jq -r '.ip')
     #route53setDNSrecord "$pip" "JUMP_HOST" "$AWS_HOSTED_DNS_DOMAIN"
   fi
+#gaga
 
+exit
     pip=$(kubectl get svc envoy -n tanzu-system-ingress -o jsonpath='{.status.loadBalancer.ingress[0]}' | jq -r '.ip')
     messagePrint "- LoadBalancer PublicIP:" "$pip"
     messagePrint "- Create DNS Entry for:" "harbor.${TDH_TKGMC_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}"
@@ -539,6 +546,13 @@ echo "=> kubectl apply -f registry/harbor/harbor-extension.yaml"
     #setDNSrecord "$pip" "${TDH_TKGMC_ENVNAME}" "${AWS_HOSTED_DNS_DOMAIN}" "harbor"
     #setDNSrecord "$pip" "${TDH_TKGMC_ENVNAME}" "${AWS_HOSTED_DNS_DOMAIN}" "notary.harbor"
 
+echo "äSCP_COMMAND:$äSCP_COMMAND"
+    äSCP_COMMAND ${SSH_USER}@${SSH_HOST}:/home/ubuntu/.tanzu-demo-hub/tkg-mc-vsphere-dev.kubeconfig \
+          ${HOME}/.tanzu-demo-hub/tkg-mc-vsphere-dev.kubeconfig
+
+    #kubectl label cluster.cluster.x-k8s.io/tdh-1 cluster-role.tkg.tanzu.vmware.com/tanzu-services="" --overwrite=true
+
+    #scp -i ~/.tanzu-demo-hub/KKeyPair-vSphere.pub ubuntu@jump.corelab.com:/home/ubuntu/.tanzu-demo-hub/tkg-mc-vsphere-dev.kubeconfig ${HOME}/.tanzu-demo-hub/tkg-mc-vsphere-dev.kubeconfig
 
 exit
 
