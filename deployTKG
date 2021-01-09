@@ -516,9 +516,7 @@ if [ "${TDH_TKGWC_INGRESS_HARBOR}" == "true" ]; then
   messageTitle "Install the Tanzu Kubernetes Grid Connectivity API on the Management Cluster" ""
   messagePrint "- Current Context" "$(kubectl config current-context)"
   stt=$(kubectl get ns -o json | jq -r '.items[] | select(.metadata.name == "tanzu-system-connectivity").status.phase')
-echo "stt:$stt"
-pwd
-  if [ ! -d extensions/manifests -a "${stt}" != "Active" ]; then 
+  if [ -d extensions/manifests -a "${stt}" != "Active" ]; then 
 echo gaga1
     cd extensions 
     tar xvf ../software/$TKG_CONNECTIVITY
