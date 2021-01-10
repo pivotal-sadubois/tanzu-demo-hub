@@ -74,4 +74,4 @@ spec:
             backend:
               serviceName: harbor-notary-server
               servicePort: 4443
-      host: XXX_HARBORFGDM_XXX
+      host: XXX_NOTARYFGDM_XXX
