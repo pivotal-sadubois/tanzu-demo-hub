@@ -495,6 +495,11 @@ if [ "${TDH_TKGWC_INGRESS_HARBOR}" == "true" ]; then
     messagePrint "- Verify the Harbor service" "registry/harbor/harbor-extension.yaml"
   fi
 
+  messagePrint "- Deploy Ingress for Harbor" "/tmp/harbor_ingress.yaml"
+pwd
+
+
+exit
   messageTitle "Define Cluster as a shared service" 
   messagePrint "- Current Context" "$(kubectl config current-context)"
   kubectl -n tanzu-system-registry get secret harbor-tls -o=jsonpath="{.data.ca\.crt}" | base64 -d > /tmp/hatbor-tls.pem
@@ -517,7 +522,6 @@ if [ "${TDH_TKGWC_INGRESS_HARBOR}" == "true" ]; then
   messagePrint "- Current Context" "$(kubectl config current-context)"
   stt=$(kubectl get ns -o json | jq -r '.items[] | select(.metadata.name == "tanzu-system-connectivity").status.phase')
   if [ -d extensions/manifests -a "${stt}" != "Active" ]; then 
-echo gaga1
     cd extensions 
     tar xvf ../software/$TKG_CONNECTIVITY
     ca_cert=$(cat /tmp/hatbor-tls.pem) 
@@ -539,10 +543,16 @@ echo gaga1
     pip=$(kubectl get svc envoy -n tanzu-system-ingress -o jsonpath='{.status.loadBalancer.ingress[0]}' | jq -r '.ip')
     #route53setDNSrecord "$pip" "JUMP_HOST" "$AWS_HOSTED_DNS_DOMAIN"
   fi
+
+
 echo gaga10
 #gaga
 
 exit
+
+    #kubectl apply -f extensions/tkg-extensions-v1.2.0+vmware.1/registry/harbor/harbor.ingress.yaml
+    #curl http://harbor.apps-tdh-1.vstkg.pcfsdu.com/api/v2.0/systeminfo/getcert | base64 --decode | openssl x509 -text -noout
+
     pip=$(kubectl get svc envoy -n tanzu-system-ingress -o jsonpath='{.status.loadBalancer.ingress[0]}' | jq -r '.ip')
     messagePrint "- LoadBalancer PublicIP:" "$pip"
     messagePrint "- Create DNS Entry for:" "harbor.${TDH_TKGMC_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}"
@@ -550,11 +560,10 @@ exit
     #setDNSrecord "$pip" "${TDH_TKGMC_ENVNAME}" "${AWS_HOSTED_DNS_DOMAIN}" "harbor"
     #setDNSrecord "$pip" "${TDH_TKGMC_ENVNAME}" "${AWS_HOSTED_DNS_DOMAIN}" "notary.harbor"
 
-echo "äSCP_COMMAND:$äSCP_COMMAND"
     äSCP_COMMAND ${SSH_USER}@${SSH_HOST}:/home/ubuntu/.tanzu-demo-hub/tkg-mc-vsphere-dev.kubeconfig \
           ${HOME}/.tanzu-demo-hub/tkg-mc-vsphere-dev.kubeconfig
+    tkg get credentials $TDH_TKGWC_NAME > /dev/null 2>&1
 
-    #kubectl label cluster.cluster.x-k8s.io/tdh-1 cluster-role.tkg.tanzu.vmware.com/tanzu-services="" --overwrite=true
 
     #scp -i ~/.tanzu-demo-hub/KKeyPair-vSphere.pub ubuntu@jump.corelab.com:/home/ubuntu/.tanzu-demo-hub/tkg-mc-vsphere-dev.kubeconfig ${HOME}/.tanzu-demo-hub/tkg-mc-vsphere-dev.kubeconfig
 
