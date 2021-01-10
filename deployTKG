@@ -12,6 +12,7 @@
 
 export TANZU_DEMO_HUB=$(cd "$(pwd)/$(dirname $0)"; pwd)
 export TDHPATH=$(cd "$(pwd)/$(dirname $0)"; pwd)
+export DEBUG=1
 
 . $TANZU_DEMO_HUB/functions
 
@@ -431,6 +432,7 @@ if [ "${TDH_TKGWC_INGRESS_HARBOR}" == "true" ]; then
   bash registry/harbor/generate-passwords.sh registry/harbor/harbor-data-values.yaml > /dev/null 2>&1
 
   DNS_HARBOR="harbor.apps-${TDH_TKGWC_NAME}.${TDH_TKGMC_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}"
+  DNS_NOTARY="notary.apps-${TDH_TKGWC_NAME}.${TDH_TKGMC_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}"
   messagePrint "- Configure Harber Name" "$DNS_HARBOR"
   sed -i "s/hostname: core.harbor.domain/hostname: $DNS_HARBOR/g" registry/harbor/harbor-data-values.yaml
   messagePrint "- Set Admin Password" "XXXXXXXXX"
@@ -496,10 +498,18 @@ if [ "${TDH_TKGWC_INGRESS_HARBOR}" == "true" ]; then
   fi
 
   messagePrint "- Deploy Ingress for Harbor" "/tmp/harbor_ingress.yaml"
-pwd
+  sed -e 's/XXX_HARBORFGDM_XXX/$DNS_HARBOR/g' -e 's/XXX_NOTARYFGDM_XXX/$DNS_NOTARY/g' \
+  ${TDHPATH}/files/harbor_ingresa_template.yaml > /tmp/harbor_ingresa.yaml
+  if [ $DEBUG -eq 1 ]; then 
+    echo "-----------------------------------------------------------------------------------------------------------"
+    kubectl apply -f /tmp/harbor_ingresa.yaml 
+    echo "-----------------------------------------------------------------------------------------------------------"
+    kubectl describe ingress harbor-ingress -n tanzu-system-registry
+    echo "-----------------------------------------------------------------------------------------------------------"
+  else
+    kubectl apply -f /tmp/harbor_ingresa.yaml > /dev/null 2>&+
+  fi
 
-
-exit
   messageTitle "Define Cluster as a shared service" 
   messagePrint "- Current Context" "$(kubectl config current-context)"
   kubectl -n tanzu-system-registry get secret harbor-tls -o=jsonpath="{.data.ca\.crt}" | base64 -d > /tmp/hatbor-tls.pem
