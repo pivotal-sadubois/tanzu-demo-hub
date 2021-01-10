@@ -498,7 +498,7 @@ if [ "${TDH_TKGWC_INGRESS_HARBOR}" == "true" ]; then
   fi
 
   messagePrint "- Deploy Ingress for Harbor" "/tmp/harbor_ingress.yaml"
-  sed -e 's/XXX_HARBORFGDM_XXX/$DNS_HARBOR/g' -e 's/XXX_NOTARYFGDM_XXX/$DNS_NOTARY/g' \
+  sed -e "s/XXX_HARBORFGDM_XXX/$DNS_HARBOR/g" -e "s/XXX_NOTARYFGDM_XXX/$DNS_NOTARY/g" \
   ${TDHPATH}/files/harbor_ingresa_template.yaml > /tmp/harbor_ingresa.yaml
   if [ $DEBUG -eq 1 ]; then 
     echo "-----------------------------------------------------------------------------------------------------------"
