@@ -501,15 +501,15 @@ if [ "${TDH_TKGWC_INGRESS_HARBOR}" == "true" ]; then
   messagePrint "- Deploy Ingress for Harbor" "/tmp/harbor_ingress.yaml"
   sed -e "s/XXX_HARBORFGDM_XXX/$DNS_HARBOR/g" -e "s/XXX_NOTARYFGDM_XXX/$DNS_NOTARY/g" \
   ${TDHPATH}/files/harbor_ingresa_template.yaml > /tmp/harbor_ingresa.yaml
-  if [ $DEBUG -eq 1 ]; then 
-    echo "-----------------------------------------------------------------------------------------------------------"
-    kubectl apply -f /tmp/harbor_ingresa.yaml 
-    echo "-----------------------------------------------------------------------------------------------------------"
-    kubectl describe ingress harbor-ingress -n tanzu-system-registry
-    echo "-----------------------------------------------------------------------------------------------------------"
-  else
-    kubectl apply -f /tmp/harbor_ingresa.yaml > /dev/null 2>&+
-  fi
+#  if [ $DEBUG -eq 1 ]; then 
+#    echo "-----------------------------------------------------------------------------------------------------------"
+#    kubectl apply -f /tmp/harbor_ingresa.yaml 
+#    echo "-----------------------------------------------------------------------------------------------------------"
+#    kubectl describe ingress harbor-ingress -n tanzu-system-registry
+#    echo "-----------------------------------------------------------------------------------------------------------"
+#  else
+#    kubectl apply -f /tmp/harbor_ingresa.yaml > /dev/null 2>&+
+#  fi
 
   messageTitle "Define Cluster as a shared service" 
   messagePrint "- Current Context" "$(kubectl config current-context)"
