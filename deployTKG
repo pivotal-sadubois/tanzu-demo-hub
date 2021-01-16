@@ -436,7 +436,8 @@ if [ "${TDH_TKGWC_INGRESS_HARBOR}" == "true" ]; then
   messagePrint "- Configure Harber Name" "$DNS_HARBOR"
   sed -i "s/hostname: core.harbor.domain/hostname: $DNS_HARBOR/g" registry/harbor/harbor-data-values.yaml
   messagePrint "- Set Admin Password" "XXXXXXXXX"
-  sed -i "s/^harborAdminPassword: .*$/harborAdminPassword: harbor/g" registry/harbor/harbor-data-values.yaml
+  sed -i "s/^harborAdminPassword: .*$/harborAdminPassword: 00Penwin/g" registry/harbor/harbor-data-values.yaml
+  sed -i "s/^enableContourHttpProxy: .*$/enableContourHttpProxy: false/g" registry/harbor/harbor-data-values.yaml
   messagePrint "- Add Cerfificate and PrivateKey for domain" "$DNS_HARBOR"
   sed -i "s/  tls.crt:/  tls.crt: $cert/g" registry/harbor/harbor-data-values.yaml
   sed -i "s/  tls.key:/  tls.key: $pkey/g" registry/harbor/harbor-data-values.yaml
