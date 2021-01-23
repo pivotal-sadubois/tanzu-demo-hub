@@ -443,8 +443,8 @@ if [ "${TDH_TKGWC_INGRESS_HARBOR}" == "true" ]; then
   echo "  type: ClusterIP"                                                           >> $HARBOR_VALUES
   echo "  tls:"                                                                      >> $HARBOR_VALUES
   echo "    enabled: true"                                                           >> $HARBOR_VALUES
-  echo "    existingSecret: harbor-tls-staging"                                      >> $HARBOR_VALUES
-  echo "    notaryExistingSecret: notary-tls-staging"                                >> $HARBOR_VALUES
+  echo "    existingSecret: harbor-tls-sacha"                                        >> $HARBOR_VALUES
+  echo "    notaryExistingSecret: notary-tls-sacha"                                  >> $HARBOR_VALUES
   echo ""                                                                            >> $HARBOR_VALUES
   echo "ingress:"                                                                    >> $HARBOR_VALUES
   echo "  enabled: true"                                                             >> $HARBOR_VALUES
@@ -492,7 +492,7 @@ if [ "${TDH_TKGWC_INGRESS_HARBOR}" == "true" ]; then
   fi
 
 echo gaga1
-  kubectl get app harbor -n tanzu-system-registry 2>/dev/null 2>&1; ret=$?
+  kubectl get app harbor -n tanzu-system-registry >/dev/null 2>&1; ret=$?
   if [ ${ret} -ne 0 ]; then 
 echo gaga11
     messagePrint "- Deploy the Harbor service" "registry/harbor/harbor-extension.yaml"
