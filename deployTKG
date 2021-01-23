@@ -491,8 +491,10 @@ if [ "${TDH_TKGWC_INGRESS_HARBOR}" == "true" ]; then
     fi
   fi
 
+echo gaga1
   kubectl get app harbor -n tanzu-system-registry 2>/dev/null 2>&1; ret=$?
   if [ ${ret} -ne 0 ]; then 
+echo gaga11
     messagePrint "- Deploy the Harbor service" "registry/harbor/harbor-extension.yaml"
     kubectl apply -f registry/harbor/harbor-extension.yaml > /dev/null 2>&1
     if [ $? -ne 0 ]; then
