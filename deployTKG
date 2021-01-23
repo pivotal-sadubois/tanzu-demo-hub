@@ -434,12 +434,9 @@ if [ "${TDH_TKGWC_INGRESS_HARBOR}" == "true" ]; then
   HARBOR_VALUES=/tmp/harbor-data-values.yaml
   HARBOR_VALUES=registry/harbor/harbor-data-values.yaml
 
-echo "TLS_CERTIFICATE:$TDHPATH/$TLS_CERTIFICATE"
-echo "TLS_PRIVATE_KEY:$TDHPATH/$TLS_PRIVATE_KEY"
   kubectl -n cattle-system create secret tls harbor-tls-sacha -n tanzu-system-registry \
   --cert=$TDHPATH/$TLS_CERTIFICATE --key=$TDHPATH/$TLS_PRIVATE_KEY
 
-exit
   echo "harborAdminPassword: Password12345"                                          >  $HARBOR_VALUES
   echo ""                                                                            >> $HARBOR_VALUES
   echo "service:"                                                                    >> $HARBOR_VALUES
