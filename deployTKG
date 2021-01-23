@@ -389,7 +389,6 @@ fi
 #    cd ${TDHPATH}/extensions/$TDH_TKGWC_EXTENSIONS/extensions
 
 if [ "${TDH_TKGWC_INGRESS_HARBOR}" == "true" ]; then
-echo gagaga1
   # https://docs.vmware.com/en/VMware-Tanzu-Kubernetes-Grid/1.2/vmware-tanzu-kubernetes-grid-12/GUID-extensions-harbor-registry.html"
   messageTitle "Install Harbor Registry"
   messagePrint "- Confogure Helm Repo" "https://charts.helm.sh/stable"
@@ -435,6 +434,10 @@ echo gagaga1
   HARBOR_VALUES=/tmp/harbor-data-values.yaml
   HARBOR_VALUES=registry/harbor/harbor-data-values.yaml
 
+  kubectl -n cattle-system create secret tls harbor-tls-sacha -n tanzu-system-registry \
+  --cert=$TLS_CERTIFICATE --key=$TLS_PRIVATE_KEY
+
+exit
   echo "harborAdminPassword: Password12345"                                          >  $HARBOR_VALUES
   echo ""                                                                            >> $HARBOR_VALUES
   echo "service:"                                                                    >> $HARBOR_VALUES
@@ -458,7 +461,7 @@ echo gagaga1
   echo ""                                                                            >> $HARBOR_VALUES
   echo "portal:"                                                                     >> $HARBOR_VALUES
   echo "  tls:"                                                                      >> $HARBOR_VALUES
-  echo "    existingSecret: harbor-tls-staging"                                      >> $HARBOR_VALUES
+  echo "    existingSecret: harbor-tls-sacha"                                        >> $HARBOR_VALUES
   
 
 #  cp registry/harbor/harbor-data-values.yaml.example registry/harbor/harbor-data-values.yaml
