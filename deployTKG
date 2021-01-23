@@ -389,6 +389,7 @@ fi
 #    cd ${TDHPATH}/extensions/$TDH_TKGWC_EXTENSIONS/extensions
 
 if [ "${TDH_TKGWC_INGRESS_HARBOR}" == "true" ]; then
+echo gagaga1
   # https://docs.vmware.com/en/VMware-Tanzu-Kubernetes-Grid/1.2/vmware-tanzu-kubernetes-grid-12/GUID-extensions-harbor-registry.html"
   messageTitle "Install Harbor Registry"
   messagePrint "- Confogure Helm Repo" "https://charts.helm.sh/stable"
@@ -428,20 +429,50 @@ if [ "${TDH_TKGWC_INGRESS_HARBOR}" == "true" ]; then
 
   messagePrint "- Create Harbor service configuration" "registry/harbor/harbor-data-values.yaml"
   sudo snap install yq > /dev/null 2>&1
-  cp registry/harbor/harbor-data-values.yaml.example registry/harbor/harbor-data-values.yaml
-  bash registry/harbor/generate-passwords.sh registry/harbor/harbor-data-values.yaml > /dev/null 2>&1
 
   DNS_HARBOR="harbor.apps-${TDH_TKGWC_NAME}.${TDH_TKGMC_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}"
   DNS_NOTARY="notary.apps-${TDH_TKGWC_NAME}.${TDH_TKGMC_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}"
-  messagePrint "- Configure Harber Name" "$DNS_HARBOR"
-  sed -i "s/hostname: core.harbor.domain/hostname: $DNS_HARBOR/g" registry/harbor/harbor-data-values.yaml
-  messagePrint "- Set Admin Password" "XXXXXXXXX"
-  sed -i "s/^harborAdminPassword: .*$/harborAdminPassword: 00Penwin/g" registry/harbor/harbor-data-values.yaml
-  sed -i "s/^enableContourHttpProxy: .*$/enableContourHttpProxy: false/g" registry/harbor/harbor-data-values.yaml
-  messagePrint "- Add Cerfificate and PrivateKey for domain" "$DNS_HARBOR"
-  sed -i "s/  tls.crt:/  tls.crt: $cert/g" registry/harbor/harbor-data-values.yaml
-  sed -i "s/  tls.key:/  tls.key: $pkey/g" registry/harbor/harbor-data-values.yaml
-  sed -i "s/  ca.crt:/  ca.crt: $cart/g" registry/harbor/harbor-data-values.yaml
+  HARBOR_VALUES=/tmp/harbor-data-values.yaml
+  HARBOR_VALUES=registry/harbor/harbor-data-values.yaml
+
+  echo "harborAdminPassword: Password12345"                                          >  $HARBOR_VALUES
+  echo ""                                                                            >> $HARBOR_VALUES
+  echo "service:"                                                                    >> $HARBOR_VALUES
+  echo "  type: ClusterIP"                                                           >> $HARBOR_VALUES
+  echo "  tls:"                                                                      >> $HARBOR_VALUES
+  echo "    enabled: true"                                                           >> $HARBOR_VALUES
+  echo "    existingSecret: harbor-tls-staging"                                      >> $HARBOR_VALUES
+  echo "    notaryExistingSecret: notary-tls-staging"                                >> $HARBOR_VALUES
+  echo ""                                                                            >> $HARBOR_VALUES
+  echo "ingress:"                                                                    >> $HARBOR_VALUES
+  echo "  enabled: true"                                                             >> $HARBOR_VALUES
+  echo "  hosts:"                                                                    >> $HARBOR_VALUES
+  echo "    core: $DNS_HARBOR"                                                       >> $HARBOR_VALUES
+  echo "    notary: $DNS_NOTARY"                                                     >> $HARBOR_VALUES
+  echo "  annotations:"                                                              >> $HARBOR_VALUES
+  echo "    cert-manager.io/cluster-issuer: letsencrypt-staging"                     >> $HARBOR_VALUES
+  echo "    ingress.kubernetes.io/force-ssl-redirect: \"true\""                      >> $HARBOR_VALUES
+  echo "    kubernetes.io/ingress.class: contour"                                    >> $HARBOR_VALUES
+  echo "    kubernetes.io/tls-acme: \"true\""                                        >> $HARBOR_VALUES
+  echo "externalURL: https://$DNS_HARBOR"                                            >> $HARBOR_VALUES
+  echo ""                                                                            >> $HARBOR_VALUES
+  echo "portal:"                                                                     >> $HARBOR_VALUES
+  echo "  tls:"                                                                      >> $HARBOR_VALUES
+  echo "    existingSecret: harbor-tls-staging"                                      >> $HARBOR_VALUES
+  
+
+#  cp registry/harbor/harbor-data-values.yaml.example registry/harbor/harbor-data-values.yaml
+#  bash registry/harbor/generate-passwords.sh registry/harbor/harbor-data-values.yaml > /dev/null 2>&1
+
+#  messagePrint "- Configure Harber Name" "$DNS_HARBOR"
+#  sed -i "s/hostname: core.harbor.domain/hostname: $DNS_HARBOR/g" registry/harbor/harbor-data-values.yaml
+#  messagePrint "- Set Admin Password" "XXXXXXXXX"
+#  sed -i "s/^harborAdminPassword: .*$/harborAdminPassword: 00Penwin/g" registry/harbor/harbor-data-values.yaml
+#  sed -i "s/^enableContourHttpProxy: .*$/enableContourHttpProxy: false/g" registry/harbor/harbor-data-values.yaml
+#  messagePrint "- Add Cerfificate and PrivateKey for domain" "$DNS_HARBOR"
+#  sed -i "s/  tls.crt:/  tls.crt: $cert/g" registry/harbor/harbor-data-values.yaml
+#  sed -i "s/  tls.key:/  tls.key: $pkey/g" registry/harbor/harbor-data-values.yaml
+#  sed -i "s/  ca.crt:/  ca.crt: $cart/g" registry/harbor/harbor-data-values.yaml
 
   #echo | openssl s_client -showcerts -servername harbor.vstkg.pcfsdu.com -connect harbor.vstkg.pcfsdu.com:8443 2>/dev/null | openssl x509 -inform pem -noout -text
   #kubectl exec harbor-registry-7d6fcfccb9-phh7f -c registry -n tanzu-system-registry -i -t -- bash -il
@@ -558,8 +589,6 @@ if [ "${TDH_TKGWC_INGRESS_HARBOR}" == "true" ]; then
 
 echo gaga10
 #gaga
-
-exit
 
     #kubectl apply -f extensions/tkg-extensions-v1.2.0+vmware.1/registry/harbor/harbor.ingress.yaml
     #curl http://harbor.apps-tdh-1.vstkg.pcfsdu.com/api/v2.0/systeminfo/getcert | base64 --decode | openssl x509 -text -noout
