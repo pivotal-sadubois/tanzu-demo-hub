@@ -235,9 +235,11 @@ if [ "${TDH_TKGWC_INGRESS_CONTOUR}" == "true" ]; then
     fi
   fi
 
+echo xxxxxxxx1
   # -- INSTALL CONTOUR INGRESS CONTROLLER ---
   stt=$(kubectl get ns -o json | jq -r '.items[] | select(.metadata.name == "tanzu-system-ingress").status.phase')
   if [ "${stt}" == "" ]; then
+echo xxxxxxxx2
     cd ${TDHPATH}/extensions/$TDH_TKGWC_EXTENSIONS/extensions
     kubectl apply -f ingress/contour/namespace-role.yaml 
     kubectl apply -f ingress/contour/namespace-role.yaml > /dev/null 2>&1
@@ -249,6 +251,7 @@ if [ "${TDH_TKGWC_INGRESS_CONTOUR}" == "true" ]; then
       exit
     fi
 
+echo xxxxxxxx4
     while [ $(kubectl get pods -A | sed 1d | grep -v Running | wc -l) -ne 0 ]; do
       sleep 10
     done
