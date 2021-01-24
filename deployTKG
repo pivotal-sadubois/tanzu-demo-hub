@@ -239,11 +239,12 @@ if [ "${TDH_TKGWC_INGRESS_CONTOUR}" == "true" ]; then
   stt=$(kubectl get ns -o json | jq -r '.items[] | select(.metadata.name == "tanzu-system-ingress").status.phase')
   if [ "${stt}" == "" ]; then
     cd ${TDHPATH}/extensions/$TDH_TKGWC_EXTENSIONS/extensions
+    kubectl apply -f ingress/contour/namespace-role.yaml 
     kubectl apply -f ingress/contour/namespace-role.yaml > /dev/null 2>&1
     if [ $? -ne 0 ]; then
       messagePrint "- Install Contour Ingress" "failed"
       echo "ERROR: Installation of Contour Ingress failed"
-      echo "       => cd $TDHPATH/extensions/$TDH_TKGWC_EXTENSIONS"
+      echo "       => cd $TDHPATH/extensions/$TDH_TKGWC_EXTENSIONS/extensions"
       echo "       => kubectl apply -f ingress/contour/namespace-role.yaml"
       exit
     fi
