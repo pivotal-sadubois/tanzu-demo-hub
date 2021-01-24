@@ -617,14 +617,15 @@ echo gaga10
     #kubectl apply -f extensions/tkg-extensions-v1.2.0+vmware.1/registry/harbor/harbor.ingress.yaml
     #curl http://harbor.apps-tdh-1.vstkg.pcfsdu.com/api/v2.0/systeminfo/getcert | base64 --decode | openssl x509 -text -noout
 
+    kubectl config use-context $TDH_TKGWC_NAME-admin@$TDH_TKGWC_NAME > /dev/null 2>&1
     pip=$(kubectl get svc envoy -n tanzu-system-ingress -o jsonpath='{.status.loadBalancer.ingress[0]}' | jq -r '.ip')
     messagePrint "- LoadBalancer PublicIP:" "$pip"
-    messagePrint "- Create DNS Entry for:" "harbor.${TDH_TKGMC_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}"
-    messagePrint "- Create DNS Entry for:" "notary.harbor.${TDH_TKGMC_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}"
+    messagePrint "- Create DNS Entry for:" "$DNS_HARBOR"
+    messagePrint "- Create DNS Entry for:" "$DNS_NOTARY"
     #setDNSrecord "$pip" "${TDH_TKGMC_ENVNAME}" "${AWS_HOSTED_DNS_DOMAIN}" "harbor"
     #setDNSrecord "$pip" "${TDH_TKGMC_ENVNAME}" "${AWS_HOSTED_DNS_DOMAIN}" "notary.harbor"
 
-    äSCP_COMMAND ${SSH_USER}@${SSH_HOST}:/home/ubuntu/.tanzu-demo-hub/tkg-mc-vsphere-dev.kubeconfig \
+    $SCP_COMMAND ${SSH_USER}@${SSH_HOST}:/home/ubuntu/.tanzu-demo-hub/tkg-mc-vsphere-dev.kubeconfig \
           ${HOME}/.tanzu-demo-hub/tkg-mc-vsphere-dev.kubeconfig
     tkg get credentials $TDH_TKGWC_NAME > /dev/null 2>&1
 
