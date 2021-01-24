@@ -437,6 +437,7 @@ if [ "${TDH_TKGWC_INGRESS_HARBOR}" == "true" ]; then
   kubectl -n cattle-system create secret tls harbor-tls-sacha -n tanzu-system-registry \
   --cert=$TDHPATH/$TLS_CERTIFICATE --key=$TDHPATH/$TLS_PRIVATE_KEY
 
+if [ 1 -eq 2 ]; then 
   echo "harborAdminPassword: Password12345"                                          >  $HARBOR_VALUES
   echo ""                                                                            >> $HARBOR_VALUES
   echo "service:"                                                                    >> $HARBOR_VALUES
@@ -461,8 +462,8 @@ if [ "${TDH_TKGWC_INGRESS_HARBOR}" == "true" ]; then
   echo "portal:"                                                                     >> $HARBOR_VALUES
   echo "  tls:"                                                                      >> $HARBOR_VALUES
   echo "    existingSecret: harbor-tls-sacha"                                        >> $HARBOR_VALUES
-  
-
+else
+echo "OLD STYLE"
 #  cp registry/harbor/harbor-data-values.yaml.example registry/harbor/harbor-data-values.yaml
 #  bash registry/harbor/generate-passwords.sh registry/harbor/harbor-data-values.yaml > /dev/null 2>&1
 
@@ -475,9 +476,12 @@ if [ "${TDH_TKGWC_INGRESS_HARBOR}" == "true" ]; then
 #  sed -i "s/  tls.crt:/  tls.crt: $cert/g" registry/harbor/harbor-data-values.yaml
 #  sed -i "s/  tls.key:/  tls.key: $pkey/g" registry/harbor/harbor-data-values.yaml
 #  sed -i "s/  ca.crt:/  ca.crt: $cart/g" registry/harbor/harbor-data-values.yaml
+fi
 
   #echo | openssl s_client -showcerts -servername harbor.vstkg.pcfsdu.com -connect harbor.vstkg.pcfsdu.com:8443 2>/dev/null | openssl x509 -inform pem -noout -text
   #kubectl exec harbor-registry-7d6fcfccb9-phh7f -c registry -n tanzu-system-registry -i -t -- bash -il
+  #kubectl get secrets harbor-data-values -n tanzu-system-registry -o json | jq -r '.data."values.yaml"' | base64 --decode
+  #kubectl get secrets harbor-tls-sacha -n tanzu-system-registry -o json | jq -r '.data."tls.crt"' | base64 --decode
 
   cnt=$(kubectl get secrets harbor-data-values -n tanzu-system-registry 2>/dev/null | grep -c "harbor-data-values")
   if [ $cnt -eq 0 ]; then
