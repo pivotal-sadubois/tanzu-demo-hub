@@ -255,8 +255,10 @@ echo xxxxxxxx4
     while [ $(kubectl get pods -A | sed 1d | grep -v Running | wc -l) -ne 0 ]; do
       sleep 10
     done
+echo xxxxxxxx5
 
     if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "vSphere" ]; then 
+echo xxxxxxxx51
       cd ${TDHPATH}/extensions/$TDH_TKGWC_EXTENSIONS/extensions
       cp ingress/contour/vsphere/contour-data-values.yaml.example ingress/contour/vsphere/contour-data-values.yaml
       echo ""                               >> ingress/contour/vsphere/contour-data-values.yaml
@@ -270,6 +272,7 @@ echo xxxxxxxx4
         kubectl create secret generic contour-data-values --from-file=values.yaml=ingress/contour/vsphere/contour-data-values.yaml \
                 -n tanzu-system-ingress > /dev/null 2>&1
       fi
+echo xxxxxxxx52
     fi
 
     if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "Azure" ]; then 
@@ -287,11 +290,13 @@ echo xxxxxxxx4
       fi
     fi
 
+echo xxxxxxxx6
     cnt=$(kubectl get extension contour -n tanzu-system-ingress 2>/dev/null | egrep -c "^contour" )
     if [ $cnt -eq 0 ]; then
       kubectl apply -f ingress/contour/contour-extension.yaml > /dev/null 2>&1
       sleep 10
     fi
+echo xxxxxxxx7
 
     i=0
     while [ $i -lt 5 ]; do
@@ -303,6 +308,7 @@ echo xxxxxxxx4
       sleep 30
       let i=i+1
     done
+echo xxxxxxxx8
 
     if [ "${stt}" == "Reconcile succeeded" ]; then
       messagePrint "- Install Contour Ingress" "completed"
