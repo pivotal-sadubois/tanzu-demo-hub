@@ -625,10 +625,12 @@ echo gaga10
     setDNSrecord "$pip" "${TDH_TKGMC_ENVNAME}" "${AWS_HOSTED_DNS_DOMAIN}" "harbor"
     setDNSrecord "$pip" "${TDH_TKGMC_ENVNAME}" "${AWS_HOSTED_DNS_DOMAIN}" "notary.harbor"
 
+echo gugu
 echo "$SCP_COMMAND ${SSH_USER}@${SSH_HOST}:"
     $SCP_COMMAND ${SSH_USER}@${SSH_HOST}:/home/ubuntu/.tanzu-demo-hub/tkg-mc-vsphere-dev.kubeconfig \
           ${HOME}/.tanzu-demo-hub/tkg-mc-vsphere-dev.kubeconfig
     tkg get credentials $TDH_TKGWC_NAME > /dev/null 2>&1
+echo gaga
 
 
     #scp -i ~/.tanzu-demo-hub/KKeyPair-vSphere.pub ubuntu@jump.corelab.com:/home/ubuntu/.tanzu-demo-hub/tkg-mc-vsphere-dev.kubeconfig ${HOME}/.tanzu-demo-hub/tkg-mc-vsphere-dev.kubeconfig
