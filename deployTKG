@@ -437,7 +437,7 @@ if [ "${TDH_TKGWC_INGRESS_HARBOR}" == "true" ]; then
   kubectl -n cattle-system create secret tls harbor-tls-sacha -n tanzu-system-registry \
   --cert=$TDHPATH/$TLS_CERTIFICATE --key=$TDHPATH/$TLS_PRIVATE_KEY
 
-if [ 1 -eq 1 ]; then 
+if [ 1 -eq 2 ]; then 
   echo "harborAdminPassword: Password12345"                                          >  $HARBOR_VALUES
   echo ""                                                                            >> $HARBOR_VALUES
   echo "service:"                                                                    >> $HARBOR_VALUES
