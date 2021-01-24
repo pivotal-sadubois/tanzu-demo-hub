@@ -476,6 +476,12 @@ echo "OLD STYLE"
   sed -i "s/  tls.crt:/  tls.crt: $cert/g" registry/harbor/harbor-data-values.yaml
   sed -i "s/  tls.key:/  tls.key: $pkey/g" registry/harbor/harbor-data-values.yaml
   sed -i "s/  ca.crt:/  ca.crt: $cart/g" registry/harbor/harbor-data-values.yaml
+
+  echo "externalURL: https://$DNS_HARBOR"                                            >> $HARBOR_VALUES
+  echo ""                                                                            >> $HARBOR_VALUES
+  echo "portal:"                                                                     >> $HARBOR_VALUES
+  echo "  tls:"                                                                      >> $HARBOR_VALUES
+  echo "    existingSecret: harbor-tls-sacha"                                        >> $HARBOR_VALUES
 fi
 
   #echo | openssl s_client -showcerts -servername harbor.vstkg.pcfsdu.com -connect harbor.vstkg.pcfsdu.com:8443 2>/dev/null | openssl x509 -inform pem -noout -text
