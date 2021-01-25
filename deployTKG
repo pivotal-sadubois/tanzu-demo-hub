@@ -628,6 +628,7 @@ echo gaga10
     setDNSrecord "$pip" "${TDH_TKGMC_ENVNAME}" "${AWS_HOSTED_DNS_DOMAIN}" "notary.harbor"
 fi
 
+exit
 echo gugu
 hostname
 echo "$SCP_COMMAND ${SSH_USER}@${SSH_HOST}:"
