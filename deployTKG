@@ -626,8 +626,10 @@ echo gaga10
     messagePrint "- Create DNS Entry for:" "$DNS_NOTARY"
     setDNSrecord "$pip" "${TDH_TKGMC_ENVNAME}" "${AWS_HOSTED_DNS_DOMAIN}" "harbor"
     setDNSrecord "$pip" "${TDH_TKGMC_ENVNAME}" "${AWS_HOSTED_DNS_DOMAIN}" "notary.harbor"
+fi
 
 echo gugu
+hostname
 echo "$SCP_COMMAND ${SSH_USER}@${SSH_HOST}:"
     $SCP_COMMAND ${SSH_USER}@${SSH_HOST}:/home/ubuntu/.tanzu-demo-hub/tkg-mc-vsphere-dev.kubeconfig \
           ${HOME}/.tanzu-demo-hub/tkg-mc-vsphere-dev.kubeconfig
@@ -644,7 +646,6 @@ echo "PIP:$pip"
 
 echo "CON:$con"
 
-fi
 
 exit
 
