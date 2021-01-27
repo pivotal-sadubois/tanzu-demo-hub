@@ -442,6 +442,10 @@ if [ "${TDH_TKGWC_INGRESS_HARBOR}" == "true" ]; then
   HARBOR_VALUES=/tmp/harbor-data-values.yaml
 
   kubectl -n $HARBOR_NAMESPACE create secret tls harbor-certs --cert=$TLS_CERTIFICATE  --key=$TLS_CERTIFICATE
+  if [ $? -ne 0 ]; then
+    echo "ERROR: failed to create TLS Secret"
+    echo "       => kubectl -n $HARBOR_NAMESPACE create secret tls harbor-certs --cert=$TLS_CERTIFICATE  --key=$TLS_CERTIFICATE"; exit
+  fi
 
   echo "harborAdminPassword: $HARBOR_PASS"                                           >  $HARBOR_VALUES
   echo ""                                                                            >> $HARBOR_VALUES
@@ -470,11 +474,11 @@ if [ "${TDH_TKGWC_INGRESS_HARBOR}" == "true" ]; then
   if [ $cnt -eq 0 ]; then
     messagePrint "- Create secrets for the Harbor config" "$HARBOR_VALUES"
     kubectl create secret generic harbor-data-values --from-file=values.yaml=$HARBOR_VALUES \
-         -n HARBOR_NAMESPACE  > /dev/null 2>&1
+         -n $HARBOR_NAMESPACE  > /dev/null 2>&1
     if [ $? -ne 0 ]; then
       echo "ERROR: Failed to create secret for the Harbor service"
-      echo "       => kubectl create secret generic harbor-data-values --from-file=values.yaml=$HARBOR_VALUES \
-         -n HARBOR_NAMESPACE"
+      echo "       => kubectl create secret generic harbor-data-values --from-file=values.yaml=$HARBOR_VALUES -n $HARBOR_NAMESPACE"
+      exit
     fi
   fi
 
