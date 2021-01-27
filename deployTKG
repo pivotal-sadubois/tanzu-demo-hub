@@ -423,6 +423,9 @@ if [ "${TDH_TKGWC_INGRESS_HARBOR}" == "true" ]; then
     verifyTLScertificate $TLS_CERTIFICATE $TLS_PRIVATE_KEY
   fi
 
+  kubectl delete ns $HARBOR_NAMESPACE > /dev/null 2>&1
+  kubectl create ns $HARBOR_NAMESPACE > /dev/null 2>&1
+
   messagePrint "- Create a namespace for the Harbor service" "$HARBOR_NAMESPACE"
   kubectl apply -f registry/harbor/namespace-role.yaml > /dev/null 2>&1
   if [ $? -ne 0 ]; then
