@@ -425,12 +425,12 @@ if [ "${TDH_TKGWC_INGRESS_HARBOR}" == "true" ]; then
 
   kubectl create ns $HARBOR_NAMESPACE > /dev/null 2>&1
 
-  cd ${TDHPATH}/extensions/$TDH_TKGWC_EXTENSIONS/extensions
+  EXTENSIONS=${TDHPATH}/extensions/$TDH_TKGWC_EXTENSIONS/extensions
   messagePrint "- Create a namespace for the Harbor service" "$HARBOR_NAMESPACE"
-  kubectl apply -f registry/harbor/namespace-role.yaml > /dev/null 2>&1
+  kubectl apply -f ${EXTENSIONS}/registry/harbor/namespace-role.yaml > /dev/null 2>&1
   if [ $? -ne 0 ]; then
     echo "ERROR: Failed to create namespace for the Harbor service"
-    echo "       => kubectl apply -f registry/harbor/namespace-role.yaml"
+    echo "       => kubectl apply -f ${EXTENSIONS}/registry/harbor/namespace-role.yaml"
     exit
   fi
 
