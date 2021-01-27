@@ -474,6 +474,17 @@ if [ "${TDH_TKGWC_INGRESS_HARBOR}" == "true" ]; then
   echo "  tls:"                                                                      >> $HARBOR_VALUES
   echo "    existingSecret: harbor-certs"                                            >> $HARBOR_VALUES
 
+if [ 1 -eq 1 ]; then 
+  helm install harbor bitnami/harbor -f $HARBOR_VALUES -n $HARBOR_NAMESPACE --version 9.2.2
+
+  # --- TESTING REGISTRY ---
+  docker login $DNS_HARBOR -u admin -p $HARBOR_PASS > /dev/null 2>&1
+  if [ $? -ne 0 ]; then  
+    echo "ERROR: Docker login does not work"
+    echo "       => docker login $DNS_HARBOR -u admin -p $HARBOR_PASS"; exit
+  fi
+
+else
   cnt=$(kubectl get secrets harbor-data-values -n $HARBOR_NAMESPACE 2>/dev/null | grep -c "harbor-data-values")
   if [ $cnt -eq 0 ]; then
     messagePrint "- Create secrets for the Harbor config" "$HARBOR_VALUES"
@@ -504,7 +515,7 @@ if [ "${TDH_TKGWC_INGRESS_HARBOR}" == "true" ]; then
 
     i=0
     while [ $i -lt 5 ]; do
-      stt=$(kubectl get app harbor -n tanzu-system-registry -o json | jq -r '.status.friendlyDescription')
+      stt=$(kubectl get app harbor -n tanzu-system-registry -o json 2>/dev/null | jq -r '.status.friendlyDescription')
       while [ "${stt}" == "Reconciling" ]; do
         stt=$(kubectl get app harbor -n tanzu-system-registry -o json 2>/dev/null | jq -r '.status.friendlyDescription')
         sleep 10
@@ -526,7 +537,7 @@ if [ "${TDH_TKGWC_INGRESS_HARBOR}" == "true" ]; then
   else
     messagePrint "- Verify the Harbor service" "registry/harbor/harbor-extension.yaml"
   fi
-
+fi
 #hhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh
 fi
 
