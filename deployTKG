@@ -441,7 +441,7 @@ if [ "${TDH_TKGWC_INGRESS_HARBOR}" == "true" ]; then
   DNS_NOTARY="notary.apps-${TDH_TKGWC_NAME}.${TDH_TKGMC_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}"
   HARBOR_VALUES=/tmp/harbor-data-values.yaml
 
-  kubectl -n $HARBOR_NAMESPACE create secret tls harbor-certs --cert=$TLS_CERTIFICATE  --key=$TLS_CERTIFICATE
+  kubectl -n $HARBOR_NAMESPACE create secret tls harbor-certs --cert=$TLS_CERTIFICATE  --key=$TLS_PRIVATE_KEY
   if [ $? -ne 0 ]; then
     echo "ERROR: failed to create TLS Secret"
     echo "       => kubectl -n $HARBOR_NAMESPACE create secret tls harbor-certs --cert=$TLS_CERTIFICATE  --key=$TLS_CERTIFICATE"; exit
