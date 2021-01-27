@@ -396,11 +396,128 @@ if [ "${TDH_TKGWC_INGRESS_NGINX}" == "true" ]; then
   fi
 fi
 
-#  stt=$(kubectl get ns -o json | jq -r '.items[] | select(.metadata.name == "cert-manager").status.phase')
-#  if [ "${stt}" == "" ]; then
-#    cd ${TDHPATH}/extensions/$TDH_TKGWC_EXTENSIONS/extensions
-
 if [ "${TDH_TKGWC_INGRESS_HARBOR}" == "true" ]; then
+#hhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh
+  messageTitle "Install Harbor Registry XXXX"
+  messagePrint "- Confogure Helm Repo" "https://charts.helm.sh/stable"
+
+  HARBOR_NAMESPACE=tanzu-system-registry
+  HARBOR_VALUES=/tmp/harbor-data-values.yaml
+
+  if [ -d certificates ]; then
+    TLS_CERTIFICATE=certificates/fullchain.pem
+    TLS_PRIVATE_KEY=certificates/privkey.pem
+    TLS_ROOT_CA=certificates/ca.pem
+  fi
+
+  # --- CHECK IF CERTIFICATE HAS BEEN DEFINED ---
+  if [ "${TLS_CERTIFICATE}" == "" -o "${TLS_PRIVATE_KEY}" == "" ]; then
+    echo ""
+    echo "ERROR: Certificate and Private-Key has not been specified. Please set"
+    echo "       the following environment variables:"
+    echo "       => export TLS_CERTIFICATE=<cert.pem>"
+    echo "       => export TLS_PRIVATE_KEY=<private_key.pem>"
+    echo ""
+    exit 1
+  else
+    verifyTLScertificate $TLS_CERTIFICATE $TLS_PRIVATE_KEY
+  fi
+
+  messagePrint "- Create a namespace for the Harbor service" "$HARBOR_NAMESPACE"
+  kubectl apply -f registry/harbor/namespace-role.yaml > /dev/null 2>&1
+  if [ $? -ne 0 ]; then
+    echo "ERROR: Failed to create namespace for the Harbor service"
+    echo "       => kubectl apply -f registry/harbor/namespace-role.yaml"
+  fi
+
+  messagePrint "- Create Harbor service configuration" ""
+  sudo snap install yq > /dev/null 2>&1
+
+  DNS_HARBOR="harbor.apps-${TDH_TKGWC_NAME}.${TDH_TKGMC_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}"
+  DNS_NOTARY="notary.apps-${TDH_TKGWC_NAME}.${TDH_TKGMC_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}"
+  HARBOR_VALUES=/tmp/harbor-data-values.yaml
+
+  kubectl -n $HARBOR_NAMESPACE create secret tls harbor-certs --cert=$TLS_CERTIFICATE  --key=$TLS_CERTIFICATE
+
+  echo "harborAdminPassword: $HARBOR_PASS"                                           >  $HARBOR_VALUES
+  echo ""                                                                            >> $HARBOR_VALUES
+  echo "service:"                                                                    >> $HARBOR_VALUES
+  echo "  type: LoadBalancer"                                                        >> $HARBOR_VALUES
+  echo "  tls:"                                                                      >> $HARBOR_VALUES
+  echo "    enabled: true"                                                           >> $HARBOR_VALUES
+  echo "    existingSecret: harbor-certs"                                            >> $HARBOR_VALUES
+  echo "    notaryExistingSecret: notary-certs"                                      >> $HARBOR_VALUES
+  echo ""                                                                            >> $HARBOR_VALUES
+  echo "ingress:"                                                                    >> $HARBOR_VALUES
+  echo "  enabled: true"                                                             >> $HARBOR_VALUES
+  echo "  hosts:"                                                                    >> $HARBOR_VALUES
+  echo "    core: $DNS_HARBOR"                                                       >> $HARBOR_VALUES
+  echo "    notary: $DNS_NOTARY"                                                     >> $HARBOR_VALUES
+  echo "  annotations:"                                                              >> $HARBOR_VALUES
+  echo "    ingress.kubernetes.io/force-ssl-redirect: \"true\""                      >> $HARBOR_VALUES
+  echo "    kubernetes.io/ingress.class: contour"                                    >> $HARBOR_VALUES
+  echo "externalURL: https://$DNS_HARBOR"                                            >> $HARBOR_VALUES
+  echo ""                                                                            >> $HARBOR_VALUES
+  echo "portal:"                                                                     >> $HARBOR_VALUES
+  echo "  tls:"                                                                      >> $HARBOR_VALUES
+  echo "    existingSecret: harbor-certs"                                            >> $HARBOR_VALUES
+
+  cnt=$(kubectl get secrets harbor-data-values -n $HARBOR_NAMESPACE 2>/dev/null | grep -c "harbor-data-values")
+  if [ $cnt -eq 0 ]; then
+    messagePrint "- Create secrets for the Harbor config" "$HARBOR_VALUES"
+    kubectl create secret generic harbor-data-values --from-file=values.yaml=$HARBOR_VALUES \
+         -n HARBOR_NAMESPACE  > /dev/null 2>&1
+    if [ $? -ne 0 ]; then
+      echo "ERROR: Failed to create secret for the Harbor service"
+      echo "       => kubectl create secret generic harbor-data-values --from-file=values.yaml=$HARBOR_VALUES \
+         -n HARBOR_NAMESPACE"
+    fi
+  fi
+
+  kubectl get app harbor -n tanzu-system-registry >/dev/null 2>&1; ret=$?
+  if [ ${ret} -ne 0 ]; then
+    messagePrint "- Deploy the Harbor service" "registry/harbor/harbor-extension.yaml"
+    kubectl apply -f registry/harbor/harbor-extension.yaml > /dev/null 2>&1
+    if [ $? -ne 0 ]; then
+      echo "ERROR: Failed to deploy the Harbor service"
+      echo "       => kubectl apply -f registry/harbor/harbor-extension.yaml"
+    fi
+
+    cnt=$(kubectl get extension harbor -n tanzu-system-registry 2>/dev/null | egrep -c "^harbor")
+    if [ $cnt -eq 0 ]; then
+      kubectl apply -f ingress/contour/harbor-extension.yaml > /dev/null 2>&1
+      sleep 10
+    fi
+
+    i=0
+    while [ $i -lt 5 ]; do
+      stt=$(kubectl get app harbor -n tanzu-system-registry -o json | jq -r '.status.friendlyDescription')
+      while [ "${stt}" == "Reconciling" ]; do
+        stt=$(kubectl get app harbor -n tanzu-system-registry -o json 2>/dev/null | jq -r '.status.friendlyDescription')
+        sleep 10
+      done
+      sleep 30
+      let i=i+1
+    done
+
+    if [ "${stt}" == "Reconcile succeeded" ]; then
+      messagePrint "- Install Harbor Registry" "completed"
+    else
+      echo "-----------------------------------------------------------------------------------------------------------"
+      tkg get cluster --include-management-cluster
+      echo "-----------------------------------------------------------------------------------------------------------"
+ 
+      kubectl get app harbor -n tanzu-system-registry
+      messagePrint "- Install Harbor Registry" "failed"; exit
+    fi
+  else
+    messagePrint "- Verify the Harbor service" "registry/harbor/harbor-extension.yaml"
+  fi
+
+#hhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh
+fi
+
+if [ "${TDH_TKGWC_INGRESS_HARBOR}" == "true1" ]; then
   # https://docs.vmware.com/en/VMware-Tanzu-Kubernetes-Grid/1.2/vmware-tanzu-kubernetes-grid-12/GUID-extensions-harbor-registry.html"
   messageTitle "Install Harbor Registry"
   messagePrint "- Confogure Helm Repo" "https://charts.helm.sh/stable"
@@ -513,10 +630,8 @@ fi
     fi
   fi
 
-echo gaga1
   kubectl get app harbor -n tanzu-system-registry >/dev/null 2>&1; ret=$?
   if [ ${ret} -ne 0 ]; then 
-echo gaga11
     messagePrint "- Deploy the Harbor service" "registry/harbor/harbor-extension.yaml"
     kubectl apply -f registry/harbor/harbor-extension.yaml > /dev/null 2>&1
     if [ $? -ne 0 ]; then
