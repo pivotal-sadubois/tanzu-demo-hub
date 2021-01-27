@@ -440,6 +440,7 @@ if [ "${TDH_TKGWC_INGRESS_HARBOR}" == "true" ]; then
   DNS_HARBOR="harbor.apps-${TDH_TKGWC_NAME}.${TDH_TKGMC_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}"
   DNS_NOTARY="notary.apps-${TDH_TKGWC_NAME}.${TDH_TKGMC_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}"
   HARBOR_VALUES=/tmp/harbor-data-values.yaml
+  HARBOR_PASS=Password12345
 
   kubectl -n $HARBOR_NAMESPACE create secret tls harbor-certs --cert=$TLS_CERTIFICATE  --key=$TLS_PRIVATE_KEY
   if [ $? -ne 0 ]; then
@@ -489,6 +490,7 @@ if [ "${TDH_TKGWC_INGRESS_HARBOR}" == "true" ]; then
     if [ $? -ne 0 ]; then
       echo "ERROR: Failed to deploy the Harbor service"
       echo "       => kubectl apply -f registry/harbor/harbor-extension.yaml"
+      exit
     fi
 
     cnt=$(kubectl get extension harbor -n tanzu-system-registry 2>/dev/null | egrep -c "^harbor")
