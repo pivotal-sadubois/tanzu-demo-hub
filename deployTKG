@@ -470,7 +470,7 @@ echo pppp2
 echo pppp3
 if [ 1 -eq 1 ]; then 
   cnt=$(helm ls -n tanzu-system-registry | egrep -c "^harbor")
-  if [ $cnt -ne 0 ]; then
+  if [ $cnt -eq 0 ]; then
     helm install harbor bitnami/harbor -f $HARBOR_VALUES -n $HARBOR_NAMESPACE --version 9.2.2
   fi
 echo pppp4
@@ -539,6 +539,7 @@ else
 fi
 #hhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh
 fi
+echo ppppp10
 
 if [ "${TDH_TKGWC_INGRESS_HARBOR}" == "true1" ]; then
   # https://docs.vmware.com/en/VMware-Tanzu-Kubernetes-Grid/1.2/vmware-tanzu-kubernetes-grid-12/GUID-extensions-harbor-registry.html"
