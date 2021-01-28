@@ -475,7 +475,10 @@ if [ "${TDH_TKGWC_INGRESS_HARBOR}" == "true" ]; then
   echo "    existingSecret: harbor-certs"                                            >> $HARBOR_VALUES
 
 if [ 1 -eq 1 ]; then 
-  helm install harbor bitnami/harbor -f $HARBOR_VALUES -n $HARBOR_NAMESPACE --version 9.2.2
+  cnt=$(helm ls -n tanzu-system-registry | egrep -c "^harbor")
+  if [ $cnt -ne 0 ]; then
+    helm install harbor bitnami/harbor -f $HARBOR_VALUES -n $HARBOR_NAMESPACE --version 9.2.2
+  fi
 
   # --- TESTING REGISTRY ---
   docker login $DNS_HARBOR -u admin -p $HARBOR_PASS > /dev/null 2>&1
