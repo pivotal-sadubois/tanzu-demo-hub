@@ -237,11 +237,9 @@ if [ "${TDH_TKGWC_INGRESS_CONTOUR}" == "true" ]; then
     fi
   fi
 
-echo xxxxxxxx1
   # -- INSTALL CONTOUR INGRESS CONTROLLER ---
   stt=$(kubectl get ns -o json | jq -r '.items[] | select(.metadata.name == "tanzu-system-ingress").status.phase')
   if [ "${stt}" == "" ]; then
-echo xxxxxxxx2
     cd ${TDHPATH}/extensions/$TDH_TKGWC_EXTENSIONS/extensions
     kubectl apply -f ingress/contour/namespace-role.yaml 
     kubectl apply -f ingress/contour/namespace-role.yaml > /dev/null 2>&1
@@ -253,14 +251,11 @@ echo xxxxxxxx2
       exit
     fi
 
-echo xxxxxxxx4
     while [ $(kubectl get pods -A | sed 1d | grep -v Running | wc -l) -ne 0 ]; do
       sleep 10
     done
-echo xxxxxxxx5
 
     if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "vSphere" ]; then 
-echo xxxxxxxx51
       cd ${TDHPATH}/extensions/$TDH_TKGWC_EXTENSIONS/extensions
       cp ingress/contour/vsphere/contour-data-values.yaml.example ingress/contour/vsphere/contour-data-values.yaml
       echo ""                               >> ingress/contour/vsphere/contour-data-values.yaml
@@ -274,7 +269,6 @@ echo xxxxxxxx51
         kubectl create secret generic contour-data-values --from-file=values.yaml=ingress/contour/vsphere/contour-data-values.yaml \
                 -n tanzu-system-ingress > /dev/null 2>&1
       fi
-echo xxxxxxxx52
     fi
 
     if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "Azure" ]; then 
@@ -292,13 +286,11 @@ echo xxxxxxxx52
       fi
     fi
 
-echo xxxxxxxx6
     cnt=$(kubectl get extension contour -n tanzu-system-ingress 2>/dev/null | egrep -c "^contour" )
     if [ $cnt -eq 0 ]; then
       kubectl apply -f ingress/contour/contour-extension.yaml > /dev/null 2>&1
       sleep 10
     fi
-echo xxxxxxxx7
 
     i=0
     while [ $i -lt 5 ]; do
@@ -310,7 +302,6 @@ echo xxxxxxxx7
       sleep 30
       let i=i+1
     done
-echo xxxxxxxx8
 
     if [ "${stt}" == "Reconcile succeeded" ]; then
       messagePrint "- Install Contour Ingress" "completed"
@@ -437,11 +428,13 @@ if [ "${TDH_TKGWC_INGRESS_HARBOR}" == "true" ]; then
   messagePrint "- Create Harbor service configuration" ""
   sudo snap install yq > /dev/null 2>&1
 
+echo pppp1
   DNS_HARBOR="harbor.apps-${TDH_TKGWC_NAME}.${TDH_TKGMC_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}"
   DNS_NOTARY="notary.apps-${TDH_TKGWC_NAME}.${TDH_TKGMC_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}"
   HARBOR_VALUES=/tmp/harbor-data-values.yaml
   HARBOR_PASS=Password12345
 
+echo pppp2
   kubectl -n $HARBOR_NAMESPACE get secret harbor-certs > /dev/null 2>&1
   if [ $? -ne 0 ]; then
     kubectl -n $HARBOR_NAMESPACE create secret tls harbor-certs --cert=$TLS_CERTIFICATE  --key=$TLS_PRIVATE_KEY
@@ -474,11 +467,13 @@ if [ "${TDH_TKGWC_INGRESS_HARBOR}" == "true" ]; then
   echo "  tls:"                                                                      >> $HARBOR_VALUES
   echo "    existingSecret: harbor-certs"                                            >> $HARBOR_VALUES
 
+echo pppp3
 if [ 1 -eq 1 ]; then 
   cnt=$(helm ls -n tanzu-system-registry | egrep -c "^harbor")
   if [ $cnt -ne 0 ]; then
     helm install harbor bitnami/harbor -f $HARBOR_VALUES -n $HARBOR_NAMESPACE --version 9.2.2
   fi
+echo pppp4
 
   # --- TESTING REGISTRY ---
   docker login $DNS_HARBOR -u admin -p $HARBOR_PASS > /dev/null 2>&1
@@ -486,6 +481,7 @@ if [ 1 -eq 1 ]; then
     echo "ERROR: Docker login does not work"
     echo "       => docker login $DNS_HARBOR -u admin -p $HARBOR_PASS"; exit
   fi
+echo pppp5
 
 else
   cnt=$(kubectl get secrets harbor-data-values -n $HARBOR_NAMESPACE 2>/dev/null | grep -c "harbor-data-values")
