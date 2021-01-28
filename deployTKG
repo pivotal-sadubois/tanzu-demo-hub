@@ -773,6 +773,11 @@ echo gaga10
     setDNSrecord "$pip" "${TDH_TKGMC_ENVNAME}" "${AWS_HOSTED_DNS_DOMAIN}" "notary.harbor"
 fi
 
+if [ "${TDH_TKGWC_TBS}" == "true" ]; then
+echo "gaga"
+hostname
+fi
+
 exit
 echo gugu
 hostname
