@@ -781,6 +781,7 @@ if [ "${TDH_TKGWC_TBS}" == "true" ]; then
   TBS_FILE=$(ls -1tr $TDHPATH/software/build-service-*.tar | tail -1)
   [ -d /tmp/build-service ] && rm -rf /tmp/build-service 
   mkdir /tmp/build-service
+echo "tar xf $TBS_FILE -C /tmp/build-service"
   tar xf $TBS_FILE -C /tmp/build-service
 fi
 
