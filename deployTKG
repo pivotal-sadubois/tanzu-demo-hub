@@ -796,7 +796,17 @@ if [ "${TDH_TKGWC_TBS}" == "true" ]; then
       echo "ERROR: Docker login does not work"
       echo "       => docker login $PCF_REGISTRY_NAME -u $PCF_REGISTRA_USER -p $PCF_REGISTRA_PASS"; exit
     fi
+
+    # --- TESTING REGISTRY ---
+    docker login $DNS_HARBOR -u admin -p $HARBOR_PASS > /dev/null 2>&1
+    if [ $? -ne 0 ]; then  
+      echo "ERROR: Docker login does not work"
+      echo "       => docker login $DNS_HARBOR -u admin -p $HARBOR_PASS"; exit
+    fi
   fi
+
+echo "kbld relocate -f /tmp/images.lock --lock-output /tmp/images-relocated.lock --repository $DNS_HARBOR:sadubois"
+  kbld relocate -f /tmp/images.lock --lock-output /tmp/images-relocated.lock --repository $DNS_HARBOR:sadubois
 
 
 
