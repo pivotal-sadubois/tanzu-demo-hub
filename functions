@@ -254,12 +254,6 @@ checkCloudCLI() {
       echo "       https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-install.html"; exit 1
     fi
   fi
-
-  if [ ! -x /usr/local/bin/kp ]; then 
-    echo "ERROR: Please install the kp utility from https://network.pivotal.io/products/build-service"
-    echo "       to /usr/local/bin/kp"
-    exit
-  fi
 }
 
 checkCloudAccess() {
@@ -1138,7 +1132,6 @@ createCluster() {
 
       $SSH_COMMAND -n "[ ! -d \$HOME/.kube-tkg ] && mkdir -p \$HOME/.kube-tkg"
       $SCP_COMMAND $HOME/.kube-tkg/config $SSH_USER@$SSH_HOST:${SSH_HOME}/.kube-tkg/  > /dev/null 2>&1
-      #tkg get credentials tdh-1 > /dev/null 2>&1
     else
       messageTitle "Verify TKG Managment Cluster"
       messagePrint " - Cluster Name"                "$TDH_TKGMC_NAME"
