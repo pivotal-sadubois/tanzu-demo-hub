@@ -778,8 +778,9 @@ if [ "${TDH_TKGWC_TBS}" == "true" ]; then
     sudo chmod 777 /usr/local/bin/kp
   fi
 
-echo "gaga"
-hostname
+  TBS_FILE=$(ls -1tr $TDHPATH/software/build-service-*.tar | tail -1)
+  rm -rf /tmp/build-service
+  tar xf $TBS_FILE -C /tmp/build-service
 fi
 
 exit
