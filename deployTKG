@@ -474,7 +474,8 @@ if [ 1 -eq 1 ]; then
   # --- TESTING REGISTRY ---
   docker login $DNS_HARBOR -u admin -p $HARBOR_PASS > /dev/null 2>&1
   if [ $? -ne 0 ]; then  
-    echo "ERROR: Docker login does not work"
+docker login $DNS_HARBOR -u admin -p $HARBOR_PASS 
+    echo "ERROR: Docker login does not work 3"
     echo "       => docker login $DNS_HARBOR -u admin -p $HARBOR_PASS"; exit
   fi
 
@@ -802,7 +803,7 @@ if [ "${TDH_TKGWC_TBS}" == "true" ]; then
     docker login $DNS_HARBOR -u admin -p $HARBOR_PASS > /dev/null 2>&1
     if [ $? -ne 0 ]; then  
 docker login $DNS_HARBOR -u admin -p $HARBOR_PASS
-      echo "ERROR: Docker login does not work"
+      echo "ERROR: Docker login does not work 1"
       echo "       => docker login $DNS_HARBOR -u admin -p $HARBOR_PASS"; exit
     fi
   fi
@@ -810,7 +811,7 @@ docker login $DNS_HARBOR -u admin -p $HARBOR_PASS
   messagePrint "- Relocate the images" "$PCF_REGISTRY_NAME/library/build-service"
   kbld relocate -f /tmp/images.lock --lock-output /tmp/images-relocated.lock --repository $PCF_REGISTRY_NAME/library/build-service > /dev/null 2>&1
   if [ $? -ne 0 ]; then  
-    echo "ERROR: Docker login does not work"
+    echo "ERROR: Docker login does not work 2"
     echo "       => docker login $DNS_HARBOR -u admin -p $HARBOR_PASS"; exit
   fi
 
