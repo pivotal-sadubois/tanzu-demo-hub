@@ -801,6 +801,7 @@ if [ "${TDH_TKGWC_TBS}" == "true" ]; then
     # --- TESTING REGISTRY ---
     docker login $DNS_HARBOR -u admin -p $HARBOR_PASS > /dev/null 2>&1
     if [ $? -ne 0 ]; then  
+docker login $DNS_HARBOR -u admin -p $HARBOR_PASS
       echo "ERROR: Docker login does not work"
       echo "       => docker login $DNS_HARBOR -u admin -p $HARBOR_PASS"; exit
     fi
