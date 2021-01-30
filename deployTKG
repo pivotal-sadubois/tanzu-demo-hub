@@ -815,8 +815,6 @@ if [ "${TDH_TKGWC_TBS}" == "true" ]; then
     echo "          --repository $DNS_HARBOR/library/build-service"; exit
   fi
 
-exit
-echo gaga1
 echo "ytt -f /tmp/build-service/values.yaml -f /tmp/build-service/manifests/ -v docker_repository="$DNS_HARBOR/library/build-service" -v docker_username="admin" -v docker_password="$HARBOR_PASS" | kbld -f /tmp/images-relocated.lock -f- | kapp deploy -a tanzu-build-service -f- -y"
 
 echo gaga2
