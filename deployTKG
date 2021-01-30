@@ -807,15 +807,16 @@ if [ "${TDH_TKGWC_TBS}" == "true" ]; then
   fi
 
   messagePrint "- Relocate the images" "$PCF_REGISTRY_NAME/library/build-service"
-echo "kbld relocate -f /tmp/images.lock --lock-output /tmp/images-relocated.lock --repository $PCF_REGISTRY_NAME/library/build-service"
-  kbld relocate -f /tmp/images.lock --lock-output /tmp/images-relocated.lock --repository $PCF_REGISTRY_NAME/library/build-service
+  kbld relocate -f /tmp/images.lock --lock-output /tmp/images-relocated.lock --repository $PCF_REGISTRY_NAME/library/build-service > /dev/null 2>&1
   if [ $? -ne 0 ]; then  
     echo "ERROR: Docker login does not work"
     echo "       => docker login $DNS_HARBOR -u admin -p $HARBOR_PASS"; exit
   fi
 
+echo gaga1
 echo "ytt -f /tmp/build-service/values.yaml -f /tmp/build-service/manifests/ -v docker_repository="$PCF_REGISTRY_NAME/library/build-service" -v docker_username="admin" -v docker_password="$HARBOR_PASS" | kbld -f /tmp/images-relocated.lock -f- | kapp deploy -a tanzu-build-service -f- -y"
 
+echo gaga2
   ytt -f /tmp/build-service/values.yaml \
     -f /tmp/build-service/manifests/ \
     -v docker_repository="$PCF_REGISTRY_NAME/library/build-service" \
