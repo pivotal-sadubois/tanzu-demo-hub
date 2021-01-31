@@ -838,9 +838,12 @@ if [ "${TDH_TKGWC_TBS}" == "true" ]; then
   fi
 
   messagePrint "- Import Tanzu Build Service Dependencies" ""
+pwd
   fil=$(ls -1 tanzu-demo-hub/software/tbs/descriptor-* | tail -1)
 echo "kp import -f $fil"
   kp import -f $fil
+
+exit
   if [ $? -ne 0 ]; then
     echo "ERROR: Install dependancies"
    echo "       => kp import -f $fil"; exit
