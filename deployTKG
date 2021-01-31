@@ -469,6 +469,12 @@ if [ 1 -eq 1 ]; then
   cnt=$(helm ls -n tanzu-system-registry | egrep -c "^harbor")
   if [ $cnt -eq 0 ]; then
     helm install harbor bitnami/harbor -f $HARBOR_VALUES -n $HARBOR_NAMESPACE --version 9.2.2
+
+    cnt=1
+    while [ $cnt -eq 0 ]; do
+      cnt=$(kubectl get pods -n tanzu-system-registry | sed 1d | grep -vc Running)
+      sleep 10
+    done
   fi
 
   # --- TESTING REGISTRY ---
