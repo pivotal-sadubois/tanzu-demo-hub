@@ -474,7 +474,6 @@ if [ 1 -eq 1 ]; then
   # --- TESTING REGISTRY ---
   docker login $DNS_HARBOR -u admin -p $HARBOR_PASS > /dev/null 2>&1
   if [ $? -ne 0 ]; then  
-docker login $DNS_HARBOR -u admin -p $HARBOR_PASS 
     echo "ERROR: Docker login does not work 3"
     echo "       => docker login $DNS_HARBOR -u admin -p $HARBOR_PASS"; exit
   fi
@@ -613,6 +612,15 @@ if [ 1 -eq 1 ]; then
   echo "portal:"                                                                     >> $HARBOR_VALUES
   echo "  tls:"                                                                      >> $HARBOR_VALUES
   echo "    existingSecret: harbor-tls-sacha"                                        >> $HARBOR_VALUES
+  echo ""                                                                            >> $HARBOR_VALUES
+  echo "persistence:"                                                                >> $HARBOR_VALUES
+  echo "  enabled: true"                                                             >> $HARBOR_VALUES
+  echo "  resourcePolicy: 'keep'"                                                    >> $HARBOR_VALUES
+  echo "  persistentVolumeClaim:"                                                    >> $HARBOR_VALUES
+  echo "    registry:"                                                               >> $HARBOR_VALUES
+  echo "      accessMode: ReadWriteOnce"                                             >> $HARBOR_VALUES
+  echo "      size: 15Gi"                                                            >> $HARBOR_VALUES
+
 else
 echo "OLD STYLE"
   cp registry/harbor/harbor-data-values.yaml.example registry/harbor/harbor-data-values.yaml
