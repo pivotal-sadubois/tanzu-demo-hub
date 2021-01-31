@@ -815,16 +815,27 @@ if [ "${TDH_TKGWC_TBS}" == "true" ]; then
     echo "          --repository $DNS_HARBOR/library/build-service"; exit
   fi
 
-echo "ytt -f /tmp/build-service/values.yaml -f /tmp/build-service/manifests/ -v docker_repository="$DNS_HARBOR/library/build-service" -v docker_username="admin" -v docker_password="$HARBOR_PASS" | kbld -f /tmp/images-relocated.lock -f- | kapp deploy -a tanzu-build-service -f- -y"
-
-echo gaga2
-  ytt -f /tmp/build-service/values.yaml \
-    -f /tmp/build-service/manifests/ \
-    -v docker_repository="$DNS_HARBOR/library/build-service" \
-    -v docker_username="admin" \
-    -v docker_password="$HARBOR_PASS" \
-    | kbld -f /tmp/images-relocated.lock -f- \
-    | kapp deploy -a tanzu-build-service -f- -y
+  cnt=$(kubectl get namespace kpack build-service 2>/dev/null | egrep -c "kpack|build-service")
+  if [ $cnt -ne 2 ]; then 
+    messagePrint "- Install Build Service" ""
+    ytt -f /tmp/build-service/values.yaml \
+        -f /tmp/build-service/manifests/ \
+        -v docker_repository="$DNS_HARBOR/library/build-service" \
+        -v docker_username="admin" \
+        -v docker_password="$HARBOR_PASS" \
+        | kbld -f /tmp/images-relocated.lock -f- \
+        | kapp deploy -a tanzu-build-service -f- -y > /dev/null 2>&1
+    if [ $? -ne 0 ]; then
+      echo "ERROR: Installing Build Service"
+      echo "       => ytt -f /tmp/build-service/values.yaml \\"
+      echo "          -f /tmp/build-service/manifests/ \\"
+      echo "          -v docker_repository=\"$DNS_HARBOR/library/build-service\" \\"
+      echo "          -v docker_username=\"admin\" \\"
+      echo "          -v docker_password=\"$HARBOR_PASS\" \\"
+      echo "          | kbld -f /tmp/images-relocated.lock -f- \\"
+      echo "          | kapp deploy -a tanzu-build-service -f- -y"
+    fi
+  fi
 
 
 fi
