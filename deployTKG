@@ -838,7 +838,7 @@ if [ "${TDH_TKGWC_TBS}" == "true" ]; then
     messagePrint "- Install Build Service" ""
     echo "-----------------------------------------------------------------------------------------------------------"
     ret=1; cnt=0
-    while [ $ret -ne 0 -a $cnt -lt 5 ]; dp
+    while [ $ret -ne 0 -a $cnt -lt 5 ]; do
       ytt -f /tmp/build-service/values.yaml \
           -f /tmp/build-service/manifests/ \
           -v docker_repository="$DNS_HARBOR/library/build-service" \
