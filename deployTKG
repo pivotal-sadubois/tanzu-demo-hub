@@ -478,10 +478,11 @@ if [ "${TDH_TKGWC_INGRESS_HARBOR}" == "true" ]; then
 if [ 1 -eq 1 ]; then 
   cnt=$(helm ls -n tanzu-system-registry | egrep -c "^harbor")
   if [ $cnt -eq 0 ]; then
-    helm install harbor bitnami/harbor -f $HARBOR_VALUES -n $HARBOR_NAMESPACE --version 9.2.2
+    helm install harbor bitnami/harbor -f $HARBOR_VALUES -n $HARBOR_NAMESPACE --version 9.2.2 > /dev/null 2>&1
 
     cnt=1
-    while [ $cnt -eq 0 ]; do
+    while [ $cnt -ne 0 ]; do
+      echo "  wait for containers to become ready ...."
       cnt=$(kubectl get pods -n tanzu-system-registry | sed 1d | grep -vc Running)
       sleep 10
     done
