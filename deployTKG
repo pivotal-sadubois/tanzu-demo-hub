@@ -464,6 +464,16 @@ if [ "${TDH_TKGWC_INGRESS_HARBOR}" == "true" ]; then
   echo "portal:"                                                                     >> $HARBOR_VALUES
   echo "  tls:"                                                                      >> $HARBOR_VALUES
   echo "    existingSecret: harbor-certs"                                            >> $HARBOR_VALUES
+  echo ""                                                                            >> $HARBOR_VALUES
+  echo "persistence:"                                                                >> $HARBOR_VALUES
+  echo "  enabled: true"                                                             >> $HARBOR_VALUES
+  echo "  resourcePolicy: 'keep'"                                                    >> $HARBOR_VALUES
+  echo "  persistentVolumeClaim:"                                                    >> $HARBOR_VALUES
+  echo "    registry:"                                                               >> $HARBOR_VALUES
+  echo "      accessMode: ReadWriteOnce"                                             >> $HARBOR_VALUES
+  echo "      size: 15Gi"                                                            >> $HARBOR_VALUES
+
+#gaga
 
 if [ 1 -eq 1 ]; then 
   cnt=$(helm ls -n tanzu-system-registry | egrep -c "^harbor")
@@ -619,13 +629,6 @@ if [ 1 -eq 1 ]; then
   echo "  tls:"                                                                      >> $HARBOR_VALUES
   echo "    existingSecret: harbor-tls-sacha"                                        >> $HARBOR_VALUES
   echo ""                                                                            >> $HARBOR_VALUES
-  echo "persistence:"                                                                >> $HARBOR_VALUES
-  echo "  enabled: true"                                                             >> $HARBOR_VALUES
-  echo "  resourcePolicy: 'keep'"                                                    >> $HARBOR_VALUES
-  echo "  persistentVolumeClaim:"                                                    >> $HARBOR_VALUES
-  echo "    registry:"                                                               >> $HARBOR_VALUES
-  echo "      accessMode: ReadWriteOnce"                                             >> $HARBOR_VALUES
-  echo "      size: 15Gi"                                                            >> $HARBOR_VALUES
 
 else
 echo "OLD STYLE"
