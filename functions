@@ -1554,25 +1554,33 @@ setDNSrecord() {
 }
 
 listDeployments() {
-  printf "%-30s %-8s %-15s %-20s %-5s %s\n" "DEPLOYMENT" "CLOUD" "REGION" "MGMT-CLUSTER" "PLAN" "CONFIGURATION"
+  printf "%-32s %-8s  %-15s %-20s %-5s %s\n" "DEPLOYMENT" "PLATFORM" "PROFILE" "MGMT-CLUSTER" "PLAN" "CONFIGURATION"
   echo "----------------------------------------------------------------------------------------------------------------"
-
-  for deployment in $(ls -1 ${TDHPATH}/deployments/tkgmc*.cfg); do
-    PCF_TILE_PKS_VERSION=""
-    PCF_TILE_PAS_VERSION=""
-
-    . $deployment
+  for deployment in $(ls -1 ${TDHPATH}/deployments/minikube*.cfg) ; do
+    mcr=$(egrep "^TDH_MINIKUBE_PROFILE=" $deployment | awk -F= '{ print $NF }') 
 
     dep=$(basename $deployment)
 
-    if [ "$PCF_TILE_PKS_VERSION" != "" ]; then
-      TILE="PKS $PCF_TILE_PKS_VERSION"
-    else
-      TILE="PAS $PCF_TILE_PAS_VERSION"
-    fi
+    printf "%-32s %-8s  %-15s %-20s %-5s %s\n" $dep minikube $mcr "n/a" "n/a" \
+           "$TDH_TKGMC_CONFIG"
+  done
 
-    printf "%-30s %-8s %-15s %-20s %-5s %s\n" $dep $TDH_TKGMC_INFRASTRUCTURE $TDH_TKGMC_REGION $TDH_TKGMC_NAME \
-           $TDH_TKGMC_PLAN "$TDH_TKGMC_CONFIG"
+  echo 
+  printf "%-32s %-8s  %-15s %-20s %-5s %s\n" "DEPLOYMENT" "CLOUD" "REGION" "MGMT-CLUSTER" "PLAN" "CONFIGURATION"
+  echo "----------------------------------------------------------------------------------------------------------------"
+  for deployment in $(ls -1 ${TDHPATH}/deployments/tkgmc*.cfg) ; do
+
+    mci=$(egrep "^TDH_TKGMC_INFRASTRUCTURE=" $deployment | awk -F= '{ print $NF }') 
+    reg=$(egrep "^TDH_TKGMC_REGION=" $deployment | awk -F= '{ print $NF }') 
+    mcn=$(egrep "^TDH_TKGMC_NAME=" $deployment | awk -F= '{ print $NF }') 
+    mcp=$(egrep "^TDH_TKGMC_PLAN=" $deployment | awk -F= '{ print $NF }') 
+    mcc=$(egrep "^TDH_TKGMC_CONFIG=" $deployment | awk -F= '{ print $NF }') 
+
+    dep=$(basename $deployment)
+
+    printf "%-32s %-8s  %-15s %-20s %-5s %s\n" $dep $mci $reg $mcn \
+           $mcp "$mcc"
+
   done
 
   echo "----------------------------------------------------------------------------------------------------------------"
@@ -1626,7 +1634,7 @@ VerifyDemoEnvironment() {
     listDeployments
     echo ""
     echo "ERROR: environment variable TKG_DEPLOYMENT not set. Pleae choose one from the list"
-    echo "       => export TKG_DEPLOYMENT=<DEPLOYMENT>"
+    echo "       => export TKG_DEPLOYMENT=<DEPLOYMENT>"; exit
   fi
 
   if [ "${TKG_CONFIG}" == "" ]; then
