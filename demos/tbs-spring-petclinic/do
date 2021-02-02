@@ -1,0 +1,7 @@
+#!/bin/bash
+
+source ~/.tanzu-demo-hub.cfg
+
+echo "GIT_HUB_USER:$GIT_HUB_USER"
+
+git clone https://github.com/$GIT_HUB_USER/spring-petclinic.git
