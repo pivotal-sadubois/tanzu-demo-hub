@@ -254,6 +254,12 @@ checkCloudCLI() {
       echo "       https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-install.html"; exit 1
     fi
   fi
+
+  if [ ! -x /usr/local/bin/kp ]; then 
+    echo "ERROR: Please install the kp utility from https://network.pivotal.io/products/build-service"
+    echo "       to /usr/local/bin/kp"
+    exit
+  fi
 }
 
 checkCloudAccess() {
@@ -1132,6 +1138,7 @@ createCluster() {
 
       $SSH_COMMAND -n "[ ! -d \$HOME/.kube-tkg ] && mkdir -p \$HOME/.kube-tkg"
       $SCP_COMMAND $HOME/.kube-tkg/config $SSH_USER@$SSH_HOST:${SSH_HOME}/.kube-tkg/  > /dev/null 2>&1
+      #tkg get credentials tdh-1 > /dev/null 2>&1
     else
       messageTitle "Verify TKG Managment Cluster"
       messagePrint " - Cluster Name"                "$TDH_TKGMC_NAME"
@@ -1545,3 +1552,104 @@ setDNSrecord() {
     rm -f $TMPROUTE53
   fi
 }
+
+listDeployments() {
+  printf "%-30s %-8s %-15s %-20s %-5s %s\n" "DEPLOYMENT" "CLOUD" "REGION" "MGMT-CLUSTER" "PLAN" "CONFIGURATION"
+  echo "----------------------------------------------------------------------------------------------------------------"
+
+  for deployment in $(ls -1 ${TDHPATH}/deployments/tkgmc*.cfg); do
+    PCF_TILE_PKS_VERSION=""
+    PCF_TILE_PAS_VERSION=""
+
+    . $deployment
+
+    dep=$(basename $deployment)
+
+    if [ "$PCF_TILE_PKS_VERSION" != "" ]; then
+      TILE="PKS $PCF_TILE_PKS_VERSION"
+    else
+      TILE="PAS $PCF_TILE_PAS_VERSION"
+    fi
+
+    printf "%-30s %-8s %-15s %-20s %-5s %s\n" $dep $TDH_TKGMC_INFRASTRUCTURE $TDH_TKGMC_REGION $TDH_TKGMC_NAME \
+           $TDH_TKGMC_PLAN "$TDH_TKGMC_CONFIG"
+  done
+
+  echo "----------------------------------------------------------------------------------------------------------------"
+}
+
+
+VerifyDemoEnvironment() {
+  if [ "${TKG_DEPLOYMENT}" != "" ]; then
+    if [ -f ${TDHPATH}/deployments/$TKG_DEPLOYMENT ]; then
+      . ${TDHPATH}/deployments/$TKG_DEPLOYMENT
+    
+      DOMAIN="apps-${TDH_TKGWC_NAME}.${TDH_TKGMC_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}"
+    else
+      echo "ERROR: can not find ${TDHPATH}/deployments/$TKG_DEPLOYMENT"; exit
+    fi
+
+    if [ "$TDH_TKGMC_INFRASTRUCTURE" == "minikube" ]; then 
+      messageTitle "Demo Environment"
+      messagePrint " - Deployment Config:"         "$TKG_DEPLOYMENT"
+      messagePrint " - Kubernetes Cluster"         "$TDH_TKGMC_INFRASTRUCTURE"
+    else
+      export WORKLOAD_CLUSTER=tkg-tanzu-demo-hub.cfg
+      export TDH_TKGWC_NAME=tdh-1
+      . ${TDHPATH}/deployments/$WORKLOAD_CLUSTER
+
+      messageTitle "TKG Demo Environment"
+      messagePrint " - Deployment Config:"         "$TKG_DEPLOYMENT"
+      messagePrint " - TKG Infrastructure"         "$TDH_TKGMC_INFRASTRUCTURE"
+      messagePrint " - TKG Management Cluster"     "$TDH_TKGMC_NAME"
+      messagePrint " - TKG Workload Cluster"       "$TDH_TKGWC_NAME"
+      messagePrint " - Kubernetes Context:"        "$TDH_TKGWC_NAME-admin@$TDH_TKGWC_NAME"
+      echo ""
+
+      echo -n "Is the environment setup correct ? (y/n): "; read x
+      answer_provided="n"
+      while [ "${answer_provided}" == "n" ]; do
+        if [ "${x}" == "n" -o "${x}" == "N" ]; then 
+          listDeployments
+          echo ""
+          echo "Please choose another deployment option:"
+          echo "       => export TKG_DEPLOYMENT=<DEPLOYMENT>"; exit
+        fi
+        echo -n "Is the environment setup correct ? (y/n): "; read x
+      done
+
+    fi
+    
+
+
+  else
+    listDeployments
+    echo ""
+    echo "ERROR: environment variable TKG_DEPLOYMENT not set. Pleae choose one from the list"
+    echo "       => export TKG_DEPLOYMENT=<DEPLOYMENT>"
+  fi
+
+  if [ "${TKG_CONFIG}" == "" ]; then
+    echo "ERROR: environment variable TKG_CONFIG has not been set"; exit
+  fi
+
+  if [ "${KUBECONFIG}" == "" ]; then
+    echo "ERROR: environment variable KUBECONFIG has not been set"; exit
+  fi
+
+echo bla
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
