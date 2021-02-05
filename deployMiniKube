@@ -1,0 +1,84 @@
+#!/bin/bash
+# ############################################################################################
+# File: ........: deployMiniKube
+# Language .....: bash
+# Author .......: Sacha Dubois, VMware
+# Description ..: Tanzu Demo Hub - Deploy TKG Workload Cluster
+# ############################################################################################
+
+export TANZU_DEMO_HUB=$(cd "$(pwd)/$(dirname $0)"; pwd)
+export TDHPATH=$(cd "$(pwd)/$(dirname $0)"; pwd)
+export DEBUG=1
+
+. $TANZU_DEMO_HUB/functions
+
+helm repo add bitnami https://charts.bitnami.com/bitnami > /dev/null 2>&1
+if [ $? -ne 0 ]; then  
+  echo "ERROR: failed to add helm registry https://charts.bitnami.com/bitnami"; exit
+fi
+
+InstallContour() {
+  NAMESPACE=ingress-contour
+  
+  kubectl get ns $NAMESPACE > /dev/null 2>&1
+  if [ $? -ne 0 ]; then
+    # --- INSTALL CONTOUR INGRESS ---
+    kubectl create ns $NAMESPACE > /dev/null 2>&1
+    helm install ingress bitnami/contour -n $NAMESPACE --version 3.3.1 > /dev/null 2>&1
+    if [ $? -ne 0 ]; then
+      echo "ERROR: failed to install bitnami/contour"
+      echo "       => helm install ingress bitnami/contour -n $NAMESPACE --version 3.3.1"
+      exit
+    fi
+
+    cnt=1
+    while [ $cnt -eq 0 ]; do
+      cnt=$(kubectl get pods -n ingress-contour | sed 1d | grep -vc Running)
+    done
+  fi
+}
+
+
+InstallCertManager() {
+  NAMESPACE=cert-manager 
+
+  kubectl get ns $NAMESPACE > /dev/null 2>&1
+  if [ $? -ne 0 ]; then 
+    # --- INSTALL CONTOUR INGRESS ---
+    kubectl create ns $NAMESPACE > /dev/null 2>&1
+    helm install ingress bitnami/contour -n $NAMESPACE --version 3.3.1 > /dev/null 2>&1
+    if [ $? -ne 0 ]; then  
+      echo "ERROR: failed to install bitnami/contour"
+      echo "       => helm install ingress bitnami/contour -n $NAMESPACE --version 3.3.1"
+      exit
+    fi
+
+    cnt=1
+    while [ $cnt -eq 0 ]; do
+      cnt=$(kubectl get pods -n ingress-contour | sed 1d | grep -vc Running)
+    done
+  fi
+}
+
+InstallMetallb() {
+  stt=$(minikube addons -p tanzu-demo-hub list -o json | jq -r '."metallb".Status')
+  if [ "$stt" != "enabled" ]; then
+    minikube_ip=$(minikube ip) 
+    echo "Pleawe enable minikube addon metallb and configure the the ip Pool. The minikube host"
+    echo "ip is ($minikube_ip), choose the IP Range in the same net."
+    echo "  => minikube addons -p tanzu-demo-hub enable metallb"
+    echo "  => minikube addons configure -p tanzu-demo-hub metallb"
+    echo "  => minikube stop"
+    echo "  => minikube minikube start -p tanzu-demo-hub"
+    echo "  => kubectl describe configmap config -n metallb-system"
+    exit
+  else
+    kubectl describe configmap config -n metallb-system
+  fi
+
+}
+
+InstallMetallb
+#InstallCertManager
+InstallContour
+
