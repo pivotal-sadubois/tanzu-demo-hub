@@ -860,6 +860,9 @@ if [ "${TDH_TKGWC_TBS}" == "true" ]; then
       echo "          | kbld -f /tmp/images-relocated.lock -f- \\"
       echo "          | kapp deploy -a tanzu-build-service -f- -y"
     fi
+
+    kp clusterbuilder list
+    echo "-----------------------------------------------------------------------------------------------------------"
   fi
 
   fil=$(ls -1 software/tbs/descriptor-* | tail -1)
