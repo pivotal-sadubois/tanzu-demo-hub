@@ -267,6 +267,48 @@ checkKubernetesServices() {
   missing_variables=0
 
   if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "minikube" ]; then
+    if [ "${service}" == "registry_docker" ]; then
+      if [ "${TDH_REGISTRY_DOCKER_NAME}" == "" -o "${TDH_REGISTRY_DOCKER_USER}" == "" -o "${TDH_REGISTRY_DOCKER_PASS}" == "" ]; then
+        missing_variables=1
+        echo ""
+        echo "  4MISSING ENVIRONMENT-VARIABES    DESCRIPTION        "
+        echo "  --------------------------------------------------------------------------------------------------------------"
+
+        if [ "${TDH_REGISTRY_DOCKER_NAME}" == "" ]; then
+          echo "  TDH_REGISTRY_DOCKER_NAME         (required) Docker Registry (hub.docker.com)"
+        fi
+
+        if [ "${TDH_REGISTRY_DOCKER_USER}" == "" ]; then
+          echo "  TDH_REGISTRY_DOCKER_USER         (required) Docker User"
+        fi
+
+        if [ "${TDH_REGISTRY_DOCKER_PASS}" == "" ]; then
+          echo "  TDH_REGISTRY_DOCKER_PASS         (required) Docker Password"
+        fi
+      fi
+    fi
+
+    if [ "${service}" == "registry_vmware" ]; then
+      if [ "${TDH_REGISTRY_VMWARE_NAME}" == "" -o "${TDH_REGISTRY_VMWARE_USER}" == "" -o "${TDH_REGISTRY_VMWARE_PASS}" == "" ]; then
+        missing_variables=1
+        echo ""
+        echo "  4MISSING ENVIRONMENT-VARIABES    DESCRIPTION        "
+        echo "  --------------------------------------------------------------------------------------------------------------"
+
+        if [ "${TDH_REGISTRY_VMWARE_NAME}" == "" ]; then
+          echo "  TDH_REGISTRY_VMWARE_NAME         (required) VMware Registry (registry.pivotal.io)"
+        fi
+
+        if [ "${TDH_REGISTRY_VMWARE_USER}" == "" ]; then
+          echo "  TDH_REGISTRY_VMWARE_USER         (required) VMware User"
+        fi
+
+        if [ "${TDH_REGISTRY_VMWARE_PASS}" == "" ]; then
+          echo "  TDH_REGISTRY_VMWARE_PASS         (required) VMware Password"
+        fi
+      fi
+    fi
+
     if [ "${service}" == "harbor" ]; then
       if [ "${TDH_SERVICE_REGISTRY_HARBOR}" == "true" ]; then
         if [ "${TDH_HARBOR_ADMIN_PASSWORD}" == "" -o "${TDH_HARBOR_STAGING_TLS_CERT}" == "" ]; then
@@ -1868,7 +1910,7 @@ getConfigMap() {
   CONFIG_MAP=$1
   KEY=$2
 
-  kubectl get configmap tanzu-demo-hub -o yaml | sed -e "s/\'\"//g" -e "s/\"\'//g" | yq e ".data.TDH_HARBOR_REGISTRY_ENABLED" - 
+  kubectl get configmap tanzu-demo-hub -o yaml | sed -e "s/\'\"//g" -e "s/\"\'//g" | yq e ".data.$KEY" - 
   #kubectl get configmap $CONFIG_MAP -o json | jq -r ".data.$KEY" | sed -e "s/\'\"//g" -e "s/\"\'//g"
 }
 
@@ -1893,8 +1935,42 @@ verifyRequiredServices() {
   fi
 }
 
+checkCLIcommands() {
+  cat="$1"
+  if [ "$cat" == "TKG" ]; then
+    if [ ! -x /usr/local/bin/tkg ]; then
+      echo "ERROR: /usr/local/bin/tkg not installed, please download package from https://my.vmware.com"
+      echo "       => search for VMware Tanzu Kubernetes Grid CLI for Mac"
+      exit
+    fi
+  fi
 
+  if [ "$sys" == "TOOLS" ]; then
+    CLI_COMMANDS="/usr/local/bin/jq:brew:jq /usr/local/bin/yq:brew:yq"
 
+    for arg in $CLI_COMMANDS; do
+      cmd=$(echo $arg | awk -F: '{ print $1 }') 
+      sys=$(echo $arg | awk -F: '{ print $2 }') 
+      pkg=$(echo $arg | awk -F: '{ print $3 }') 
+  
+      if [ $sys == "brew" ]; then
+        if [ ! -x $cmd ]; then
+          echo "ERROR: $cmd not installed, please install with brew"
+          echo "       => brew install $pkg"
+          exit
+        fi
+      fi
+  
+    done
+  fi
+}
 
+verifyDockerRegistry() {
+a=1
+}
+
+verifyVMwareRegistry() {
+a=1
+}
 
 
