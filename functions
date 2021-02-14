@@ -262,8 +262,65 @@ checkCloudCLI() {
   fi
 }
 
-checkCloudAccess() {
+checkKubernetesServices() {
+  service=$1
   missing_variables=0
+
+  if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "minikube" ]; then
+    if [ "${service}" == "harbor" ]; then
+      if [ "${TDH_SERVICE_REGISTRY_HARBOR}" == "true" ]; then
+        if [ "${TDH_HARBOR_ADMIN_PASSWORD}" == "" -o "${TDH_HARBOR_STAGING_TLS_CERT}" == "" ]; then
+          missing_variables=1
+          echo ""
+          echo "  4MISSING ENVIRONMENT-VARIABES    DESCRIPTION        "
+          echo "  --------------------------------------------------------------------------------------------------------------"
+
+          if [ "${TDH_HARBOR_ADMIN_PASSWORD}" == "" ]; then
+            echo "  TDH_HARBOR_ADMIN_PASSWORD        (required) Harbor Admin Password"
+          fi
+
+          if [ "${TDH_HARBOR_STAGING_TLS_CERT}" == "" ]; then
+            echo "  TDH_HARBOR_STAGING_TLS_CERT      (required) TLS Staging (true) or Productive (false)"
+          fi
+        fi
+      fi
+    fi
+  fi
+
+  if [ ${missing_variables} -eq 1 ]; then
+    echo "  --------------------------------------------------------------------------------------------------------------"
+    echo "  IMPORTANT: Please set the missing environment variables either in your shell or in the pcfconfig"
+    echo "             configuration file ~/.tanzu-demo-hub.cfg and set all variables with the 'export' notation"
+    echo "             ie. => export AZURE_PKS_TLS_CERTIFICATE=/home/demouser/certs/cert.pem"
+    echo "  --------------------------------------------------------------------------------------------------------------"
+    exit 1
+  fi
+}
+
+checkCloudAccess() {
+  service=$1
+  missing_variables=0
+
+  if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "minikube" ]; then
+    if [ "${TDH_MINIKUBE_PROFILE}" == "" ]; then
+      missing_variables=1
+      echo ""
+      echo "  4MISSING ENVIRONMENT-VARIABES    DESCRIPTION        "
+      echo "  --------------------------------------------------------------------------------------------------------------"
+    else
+      stt=$(minikube status | grep "^host:" | awk '{ print $NF }')
+      echo "MiniKube Status and Configuration"
+      messagePrint " - MiniKube Profile"                "$TDH_MINIKUBE_PROFILE"
+      messagePrint " - MiniKube Version"                "$(minikube version | head -1 | awk '{ print $NF }')"
+      messagePrint " - MiniKube Status"                 "$stt"
+      if [ "$stt" == "Stopped" ]; then 
+        echo "ERROR: Minukube is not running, start it first"
+        echo "       => minikube start -p tanzu-demo-hub"; exit
+      fi
+
+      messagePrint " - MiniKube ServerIP"               "$(minikube ip)"
+    fi
+  fi
 
   if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "vSphere" ]; then
     if [ "${VSPHERE_ADMIN}" == "" -o "${VSPHERE_PASSWORD}" == "" -o "${VSPHERE_SERVER}" == "" -o \
@@ -805,6 +862,20 @@ configureJumpHost() {
       [ $ret -ne 0 ] && sleep 10
     done
   fi
+}
+
+verifyHostedZone() {
+  zone=$1
+
+  ZONE_ID=$(aws route53 list-hosted-zones-by-name --dns-name ${zone} | jq -r ".HostedZones[] | select(.Name | \
+            scan(\"^$zone.\")).Id")
+  if [ "${ZONE_ID}" == "" ]; then
+    messagePrint "Create DNS Hosted Zone" "$zone"
+    route53createHostedZone $zone
+  else
+    messagePrint "Verify DNS Hosted Zone" "$zone"
+  fi
+
 }
 
 route53createHostedZone() {
@@ -1518,6 +1589,9 @@ setDNSrecord() {
   DNS_PREFIX="$2"
   DNS_SUFFIX="$3"
   HOSTNAME="$4"
+  TYPE="$5"
+
+  if [ "$TYPE" == "" ]; then TYPE=A; fi
   
   ZONE_ID=$(aws route53 list-hosted-zones-by-name --dns-name ${DNS_PREFIX}.${DNS_SUFFIX} | jq -r '.HostedZones[0].Id')
   ZONE_ID_STR=$(echo "${ZONE_ID}" | awk -F'/' '{ print $NF }')
@@ -1525,6 +1599,7 @@ setDNSrecord() {
   if [ "${ZONE_ID}" != "" ]; then
     ZONE="${HOSTNAME}.${DNS_PREFIX}.${DNS_SUFFIX}"
 
+#gaga12
     TMPROUTE53=/tmp/$$_tmp_route53.json
     echo "{"                                                            >  $TMPROUTE53
     echo "  \"Comment\": \"CREATE/DELETE/UPSERT a record \","           >> $TMPROUTE53
@@ -1532,7 +1607,7 @@ setDNSrecord() {
     echo "    \"Action\": \"UPSERT\","                                  >> $TMPROUTE53
     echo "    \"ResourceRecordSet\": {"                                 >> $TMPROUTE53
     echo "      \"Name\": \"${ZONE}\","                                 >> $TMPROUTE53
-    echo "      \"Type\": \"CNAME\","                                       >> $TMPROUTE53
+    echo "      \"Type\": \"$TYPE\","                                   >> $TMPROUTE53
     echo "      \"TTL\": 300,"                                          >> $TMPROUTE53
     echo "      \"ResourceRecords\": [{ \"Value\": \"$TKG_IPADRESS\"}]" >> $TMPROUTE53
     echo "    }"                                                        >> $TMPROUTE53
@@ -1588,6 +1663,7 @@ listDeployments() {
 
 
 VerifyDemoEnvironment() {
+  export TDH_PLATFORM=unknown
   if [ "${TKG_DEPLOYMENT}" != "" ]; then
     if [ -f ${TDHPATH}/deployments/$TKG_DEPLOYMENT ]; then
       . ${TDHPATH}/deployments/$TKG_DEPLOYMENT
@@ -1597,11 +1673,15 @@ VerifyDemoEnvironment() {
       echo "ERROR: can not find ${TDHPATH}/deployments/$TKG_DEPLOYMENT"; exit
     fi
 
-    if [ "$TDH_TKGMC_INFRASTRUCTURE" == "minikube" ]; then 
+    if [ "$TDH_MINIKUBE_PROFILE" != "" ]; then 
+      export TDH_PLATFORM=minikube
       messageTitle "Demo Environment"
       messagePrint " - Deployment Config:"         "$TKG_DEPLOYMENT"
-      messagePrint " - Kubernetes Cluster"         "$TDH_TKGMC_INFRASTRUCTURE"
+      messagePrint " - Kubernetes Infrastucture"   "minikube"
+      messagePrint " - Minikube Profile"           "$TDH_MINIKUBE_PROFILE"
+      messagePrint " - DNS Domain"                 "$TDH_ENVNAME.$AWS_HOSTED_DNS_DOMAIN"
     else
+      export TDH_PLATFORM=tkgm
       export WORKLOAD_CLUSTER=tkg-tanzu-demo-hub.cfg
       export TDH_TKGWC_NAME=tdh-1
       . ${TDHPATH}/deployments/$WORKLOAD_CLUSTER
@@ -1611,50 +1691,207 @@ VerifyDemoEnvironment() {
       messagePrint " - TKG Infrastructure"         "$TDH_TKGMC_INFRASTRUCTURE"
       messagePrint " - TKG Management Cluster"     "$TDH_TKGMC_NAME"
       messagePrint " - TKG Workload Cluster"       "$TDH_TKGWC_NAME"
+      messagePrint " - DNS Domain"                 "$TDH_TKGMC_ENVNAME.$AWS_HOSTED_DNS_DOMAIN"
       messagePrint " - Kubernetes Context:"        "$TDH_TKGWC_NAME-admin@$TDH_TKGWC_NAME"
       echo ""
 
-      echo -n "Is the environment setup correct ? (y/n): "; read x
-      answer_provided="n"
-      while [ "${answer_provided}" == "n" ]; do
-        if [ "${x}" == "n" -o "${x}" == "N" ]; then 
-          listDeployments
-          echo ""
-          echo "Please choose another deployment option:"
-          echo "       => export TKG_DEPLOYMENT=<DEPLOYMENT>"; exit
-        fi
-        echo -n "Is the environment setup correct ? (y/n): "; read x
-      done
+      if [ "${TKG_CONFIG}" == "" ]; then
+        echo "ERROR: environment variable TKG_CONFIG has not been set"; exit
+      fi
 
+      if [ "${KUBECONFIG}" == "" ]; then
+        echo "ERROR: environment variable KUBECONFIG has not been set"; exit
+      fi
     fi
-    
 
-
+    echo -n "Is the environment setup correct ? (y/n): "; read x
+    answer_provided="n"
+    while [ "${answer_provided}" == "n" ]; do
+      if [ "${x}" == "y" -o "${x}" == "Y" ]; then break; fi
+      if [ "${x}" == "n" -o "${x}" == "N" ]; then 
+        listDeployments
+        echo ""
+        echo "Please choose another deployment option:"
+        echo "       => export TKG_DEPLOYMENT=<DEPLOYMENT>"; exit
+      fi
+      echo -n "Is the environment setup correct ? (y/n): "; read x
+    done
   else
     listDeployments
     echo ""
     echo "ERROR: environment variable TKG_DEPLOYMENT not set. Pleae choose one from the list"
     echo "       => export TKG_DEPLOYMENT=<DEPLOYMENT>"; exit
   fi
+}
 
-  if [ "${TKG_CONFIG}" == "" ]; then
-    echo "ERROR: environment variable TKG_CONFIG has not been set"; exit
+VerifyTKGDemoPlatform() {
+echo tkgm
+}
+
+VerifyK8SDemoPlatform() {
+  minikube profile $TDH_MINIKUBE_PROFILE > /dev/null 2>&1
+  stt=$(minikube status -p $TDH_MINIKUBE_PROFILE -o json | jq -r '.Host')
+  if [ "$stt" != "Running" ]; then
+    echo "ERROR: minikube is not running, please start it by:"
+    echo "       => minikube start -p $TDH_MINIKUBE_PROFILE"; exit
   fi
 
-  if [ "${KUBECONFIG}" == "" ]; then
-    echo "ERROR: environment variable KUBECONFIG has not been set"; exit
+  ctx=$(kubectl config current-context)
+  if [ "$ctx" != "$TDH_MINIKUBE_PROFILE" ]; then
+    echo "ERROR: Kubernetes context is currently set to $crx. Please set it by:"
+    echo "       => kubectl config use-context $TDH_MINIKUBE_PROFILE"; exit
   fi
 
-echo bla
-
+  # --- CHECK FOR ADDONS ---
+  for val in metallb default-storageclass; do
+    stt=$(minikube addons list -o json | jq -r ".\"$val\".Status")
+    if [ "$stt" != "enabled" ]; then
+      echo "ERROR: Please enable minikube addon: $val"
+      echo "       => minikube addons enable $val"; exit
+    fi
+  done
 }
 
 
 
+VerifyServiceDependancies() {
+  if [ "$TDH_DEPENDANCY_CERT_MANAGER" == "true" ]; then 
+    INGRESS_NAMESPACE=cert-manager
+    HELM_CHART=jetstack/cert-manager
 
+    messagePrint "- Install Cert Manager" "bitnami/nginx-ingress-controller"
+    kubectl get namespace $INGRESS_NAMESPACE > /dev/null 2>&1
+    if [ $? -ne 0 ]; then kubectl create namespace $INGRESS_NAMESPACE > /dev/null 2>&1; fi
 
+    stt=$(helm list -n $INGRESS_NAMESPACE -o json | jq -r --arg key "cert-manager-" '.[] | select(.chart | contains($key)).status')
+    if [ "$stt" != "deployed" ]; then
+      helm install $HELM_CHART -n $INGRESS_NAMESPACE > /dev/null 2>&1
+      if [ $? -ne 0 ]; then
+        echo "ERROR: Failed to install $HELM_CHART"
+        echo "       => helm install stable $HELM_CHART -n $INGRESS_NAMESPACE"
+      fi
+    fi
 
+  fi
 
+  if [ "$TDH_DEPENDANCY_NGINX" == "true" ]; then 
+    INGRESS_NAMESPACE=ingress-nginx
+    HELM_CHART=bitnami/nginx-ingress-controller
+
+    messagePrint "- Install Ingress Controller" "$HELM_CHART"
+    kubectl get namespace $INGRESS_NAMESPACE > /dev/null 2>&1
+    if [ $? -ne 0 ]; then kubectl create namespace $INGRESS_NAMESPACE > /dev/null 2>&1; fi
+
+    stt=$(helm list -n nginx-ingress -o json | jq -r --arg key "ngress-controller" '.[] | select(.chart | contains($key)).status')
+    if [ "$stt" != "deployed" ]; then
+      helm install bitnami bitnami/nginx-ingress-controller -n $INGRESS_NAMESPACE > /dev/null 2>&1
+      if [ $? -ne 0 ]; then
+        echo "ERROR: Failed to install $HELM_CHART"
+        echo "       => helm install stable $HELM_CHART"
+      fi
+    fi
+
+    # --- SET CLUSTER DNS ---
+    ipa=$(kubectl get svc bitnami-nginx-ingress-controller -n nginx-ingress -o json 2>/dev/null | \
+          jq -r '.status.loadBalancer.ingress[].ip' 2>/dev/null)
+    while [ "${ipa}" == "" ]; do
+      sleep 10
+      ipa=$(kubectl get svc bitnami-nginx-ingress-controller -n nginx-ingress -o json 2>/dev/null | \
+            jq -r '.status.loadBalancer.ingress[].ip' 2>/dev/null)
+    done
+  
+    if [ "${ipa}" != "" ]; then
+      setTKGclusterDNS "$TDH_TKGWC_NAME" "${ipa}" "nginx"
+    else
+      echo "ERROR: Unable to get LoadBalancer IP-Adress of the Ingress"
+      echo "       => kubectl get svc envoy -n tanzu-system-ingress"
+      exit 1
+    fi
+  fi
+
+  if [ "$TDH_DEPENDANCY_CONTOUR" == "true" ]; then 
+    INGRESS_NAMESPACE=ingress-contour
+    HELM_CHART=bitnami/contour
+
+    stt=$(kubectl get ns -o json | jq -r --arg key "$INGRESS_NAMESPACE" '.items[] | select(.metadata.name == $key).status.phase')
+    if [ "${stt}" == "" ]; then
+      kubectl create ns $INGRESS_NAMESPACE > /dev/null 2>&1
+    fi
+
+    stt=$(helm list -n $INGRESS_NAMESPACE -o json | jq -r --arg key "contour-3" '.[] | select(.chart | contains($key)).status')
+    if [ "$stt" != "deployed" ]; then
+      messageTitle "Install Contour Ingress Controller" "$HELM_CHART"
+      helm install bitnami $HELM_CHART -n $INGRESS_NAMESPACE > /dev/null 2>&1
+      if [ $? -ne 0 ]; then
+        echo "ERROR: Failed to install $HELM_CHART"
+        echo "       => helm install stable $HELM_CHART"
+      fi
+    fi
+  fi
+}
+
+verifyKubernetesContext() {
+  echo "----------------------------------------------------------------------------------------------------------------"
+  kubectl config get-contexts
+  echo "----------------------------------------------------------------------------------------------------------------"
+
+  ret=""
+  while [ "$ret" != "y" -a "$ret" != "n" ]; do
+    echo -e "Is the Kubernetes Context correct ? <y/n>: \c"; read ret
+  done
+  echo ""
+
+  if [ "$ret" == "n" ]; then exit; fi
+}
+
+uodateConfigMap() {
+  CONFIG_MAP="$1"
+  KEY="$2"
+  VALUE="$3"
+
+  [ "$VALUE" == "True" ] && VALUE=true
+  [ "$VALUE" == "False" ] && VALUE=false
+
+  kubectl get cm $CONFIG_MAP -o yaml 2>/dev/null | sed -e "s/\'\"//g" -e "s/\"\'//g" | \
+          yq e '.data' - | grep ":" | egrep -v "^$KEY:" | sed 's/: /=/g' > /tmp/$CONFIG_MAP
+  echo "$KEY=$VALUE" >> /tmp/$CONFIG_MAP
+
+  kubectl create configmap $CONFIG_MAP --from-env-file=/tmp/$CONFIG_MAP --dry-run=client -o yaml | kubectl apply -f - > /dev/null 2>&1
+  if [ $? -ne 0 ]; then
+    echo "ERROR: updating config map $CONFIG_MAP"
+    echo "       => kubectl create configmap $CONFIG_MAP --from-literal=$KEY=$VALUE --from-literal=XXX=12 --dry-run=client -o yaml | \\"
+    echo "          kubectl apply -f -"; exit
+  fi  
+}
+
+getConfigMap() {
+  CONFIG_MAP=$1
+  KEY=$2
+
+  kubectl get configmap tanzu-demo-hub -o yaml | sed -e "s/\'\"//g" -e "s/\"\'//g" | yq e ".data.TDH_HARBOR_REGISTRY_ENABLED" - 
+  #kubectl get configmap $CONFIG_MAP -o json | jq -r ".data.$KEY" | sed -e "s/\'\"//g" -e "s/\"\'//g"
+}
+
+createConfigMap() {
+  kubectl delete configmap tanzu-demo-hub > /dev/null 2>&1
+  kubectl create configmap tanzu-demo-hub \
+       --from-literal=TDH_ENVNAME=$TDH_ENVNAME \
+       --from-literal=TDH_DOMAIN=$AWS_HOSTED_DNS_DOMAIN \
+       --from-literal=TDH_LB_CONTOUR=apps-contour \
+       --from-literal=TDH_LB_NGINX=apps-nginx 
+}
+
+verifyRequiredServices() {
+  flag=$1
+  desc="$2"
+
+  stt=$(getConfigMap tanzu-demo-hub $flag)
+  if [ "$stt" != "true" ]; then 
+    echo "ERROR: Service $desc requires to be enabled and installed"
+    echo "       Please set $flag=true in the deployment file"
+    exit
+  fi
+}
 
 
 
