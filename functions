@@ -387,7 +387,7 @@ checkCloudAccess() {
         echo "       => minikube -p tanzu-demo-hub start --cpus $TDH_MINIKUBE_CONFIG_CPU --memory $TDH_MINIKUBE_CONFIG_MEMORY"; exit
       fi
 
-      messagePrint " - MiniKube ServerIP"               "$(minikube ip)"
+      messagePrint " - MiniKube ServerIP"               "$(minikube ip -p tanzu-demo-hub)"
     fi
   fi
 
@@ -1812,11 +1812,12 @@ VerifyK8SDemoPlatform() {
   fi
 
   # --- CHECK FOR ADDONS ---
-  for val in metallb default-storageclass; do
+  #for val in metallb default-storageclass; do
+  for val in default-storageclass; do
     stt=$(minikube addons list -o json | jq -r ".\"$val\".Status")
     if [ "$stt" != "enabled" ]; then
       echo "ERROR: Please enable minikube addon: $val"
-      echo "       => minikube addons enable $val"; exit
+      echo "       => minikube addons enable $val -p tanzu-demo-hub"; exit
     fi
   done
 }
