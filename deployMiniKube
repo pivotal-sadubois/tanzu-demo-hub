@@ -62,9 +62,6 @@ if [ ! -f ${TDHPATH}/deployments/${K8S_DEPLOYMENT} ]; then
   exit 1
 else
   . ${TDHPATH}/deployments/${K8S_DEPLOYMENT}
-
-  #uodateConfigMap tanzu-demo-hub TDH_DOMAIN               $AWS_HOSTED_DNS_DOMAIN 
-  #uodateConfigMap tanzu-demo-hub TDH_ENVNAME              $TDH_ENVNAME
 fi
 
 # --- CHECK ENVIRONMENT VARIABLES ---
@@ -195,7 +192,7 @@ InstallMetallb() {
     echo "  => minikube addons -p tanzu-demo-hub enable metallb"
     echo "  => minikube addons configure -p tanzu-demo-hub metallb"
     echo "  => minikube stop"
-    echo "  => minikube minikube start -p tanzu-demo-hub"
+    echo "  => minikube minikube start -p tanzu-demo-hub --cpus 4 --memory 8192 -p"
     echo "  => kubectl describe configmap config -n metallb-system"
     exit
   else
@@ -224,7 +221,6 @@ TDH_HARBOR_STAGING_TLS_CERT=false
   if [ "${TDH_HARBOR_STAGING_TLS_CERT}" == "true" ]; then
     LETSENSCRIPT_SERVER="https://acme-staging-v02.api.letsencrypt.org/directory"
   else
-echo gaga
     LETSENSCRIPT_SERVER="https://acme-v02.api.letsencrypt.org/directory"
   fi
 
@@ -461,6 +457,14 @@ InstallHarborRegistry() {
     echo "portal:"                                                                                                              >> $HARBOR_VALUES
     echo "  tls:"                                                                                                               >> $HARBOR_VALUES
     echo "    existingSecret: $HARBOR_TLS_SECRET"                                                                               >> $HARBOR_VALUES
+    echo ""                                                                                                                     >> $HARBOR_VALUES
+    echo "persistence:"                                                                                                         >> $HARBOR_VALUES
+    echo "  enabled: true"                                                                                                      >> $HARBOR_VALUES
+    echo "  resourcePolicy: 'keep'"                                                                                             >> $HARBOR_VALUES
+    echo "  persistentVolumeClaim:"                                                                                             >> $HARBOR_VALUES
+    echo "    registry:"                                                                                                        >> $HARBOR_VALUES
+    echo "      accessMode: ReadWriteOnce"                                                                                      >> $HARBOR_VALUES
+    echo "      size: 20Gi"                                                                                                     >> $HARBOR_VALUES
 
     helm install harbor bitnami/harbor -f $HARBOR_VALUES --version 9.2.2 -n $NAMESPACE > /dev/null 2>&1
     if [ $? -ne 0 ]; then
@@ -475,14 +479,24 @@ InstallHarborRegistry() {
       if [ $cnt -eq 0 ]; then cnt=1; fi
       sleep 5
     done
+
+    # --- WAIT FOR HARBOR TO COME ONLINE ---
+    messagePrint " - Verify Harbor Reistry Access" "$HARBOR_HOSTNAME"
+    cnt=0
+    while [ $cnt -eq 0 ]; do
+      docker login $HARBOR_HOSTNAME -u admin -p $TDH_HARBOR_ADMIN_PASSWORD > /dev/null 2>&1
+      if [ $? -eq 0 ]; then cnt=1; fi
+      sleep 10
+    done
   fi
+
 
   ver=$(helm -n $NAMESPACE ls -o json | jq -r '.[].app_version')
   crt=$(helm -n $NAMESPACE ls -o json | jq -r '.[].chart')
   stt=$(helm -n $NAMESPACE ls -o json | jq -r '.[].status')
   dat=$(helm -n $NAMESPACE ls -o json | jq -r '.[].updated')
 
-  messageTitle "Install Harbor Reistry"
+  messageTitle "Verify Harbor Reistry"
   messagePrint " - Harbor Reistry Namespace:"         "$NAMESPACE"
   messagePrint " - Harbor Reistry Helm Chart:"        "$crt"
   messagePrint " - Harbor Reistry Version:"           "$ver"
@@ -544,8 +558,13 @@ if [ "$K8S_CLEAN_DEPLOYMENT" == "true" ]; then
   exit
 fi
 
+checkCLIcommands TOOLS
+checkCLIcommands TKG
 checkCloudAccess
 checkTDHAccess
+
+uodateConfigMap tanzu-demo-hub TDH_DOMAIN               $AWS_HOSTED_DNS_DOMAIN 
+uodateConfigMap tanzu-demo-hub TDH_ENVNAME              $TDH_ENVNAME
 
 VerifyK8SDemoPlatform
 InstallMetallb
@@ -553,5 +572,9 @@ InstallCertManager
 InstallContour
 createClusterIssuer
 InstallHarborRegistry
+installBuildService
+
+
+
 
 

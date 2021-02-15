@@ -258,6 +258,16 @@ checkCloudCLI() {
   if [ ! -x /usr/local/bin/kp ]; then 
     echo "ERROR: Please install the kp utility from https://network.pivotal.io/products/build-service"
     echo "       to /usr/local/bin/kp"
+    echo "       => sudo mv kp-darwin-0.2.0 /usr/local/bin/kp"
+    echo "       => sudo chmod a+x /usr/local/bin/kp"
+    exit
+  fi
+
+  if [ ! -x /usr/local/bin/kbld ]; then 
+    echo "ERROR: Please install the kp utility from https://network.pivotal.io/products/kbld" 
+    echo "       to /usr/local/bin/kbld"
+    echo "       => sudo mv kbld-darwin-amd64-0.29.0 /usr/local/bin/kbld"
+    echo "       => sudo chmod a+x /usr/local/bin/kbld"
     exit
   fi
 }
@@ -284,6 +294,23 @@ checkKubernetesServices() {
 
         if [ "${TDH_REGISTRY_DOCKER_PASS}" == "" ]; then
           echo "  TDH_REGISTRY_DOCKER_PASS         (required) Docker Password"
+        fi
+      fi
+    fi
+
+    if [ "${service}" == "github" ]; then
+      if [ "${TDH_GITHUB_USER}" == "" -o "${TDH_GITHUB_PASS}" == "" ]; then
+        missing_variables=1
+        echo ""
+        echo "  4MISSING ENVIRONMENT-VARIABES    DESCRIPTION        "
+        echo "  --------------------------------------------------------------------------------------------------------------"
+
+        if [ "${TDH_GITHUB_USER}" == "" ]; then
+          echo "  TDH_GITHUB_USER                  (required) Github User"
+        fi
+
+        if [ "${TDH_GITHUB_PASS}" == "" ]; then
+          echo "  TDH_GITHUB_PASS                  (required) VMware Password"
         fi
       fi
     fi
@@ -350,14 +377,14 @@ checkCloudAccess() {
       echo "  4MISSING ENVIRONMENT-VARIABES    DESCRIPTION        "
       echo "  --------------------------------------------------------------------------------------------------------------"
     else
-      stt=$(minikube status | grep "^host:" | awk '{ print $NF }')
+      stt=$(minikube status -p tanzu-demo-hub| grep "^host:" | awk '{ print $NF }')
       echo "MiniKube Status and Configuration"
       messagePrint " - MiniKube Profile"                "$TDH_MINIKUBE_PROFILE"
       messagePrint " - MiniKube Version"                "$(minikube version | head -1 | awk '{ print $NF }')"
       messagePrint " - MiniKube Status"                 "$stt"
-      if [ "$stt" == "Stopped" ]; then 
+      if [ "$stt" == "Stopped" -o "$stt" == "" ]; then 
         echo "ERROR: Minukube is not running, start it first"
-        echo "       => minikube start -p tanzu-demo-hub"; exit
+        echo "       => minikube -p tanzu-demo-hub start --cpus $TDH_MINIKUBE_CONFIG_CPU --memory $TDH_MINIKUBE_CONFIG_MEMORY"; exit
       fi
 
       messagePrint " - MiniKube ServerIP"               "$(minikube ip)"
@@ -1943,6 +1970,12 @@ checkCLIcommands() {
       echo "       => search for VMware Tanzu Kubernetes Grid CLI for Mac"
       exit
     fi
+
+    if [ ! -x /usr/local/bin/kp ]; then
+      echo "ERROR: /usr/local/bin/kp not installed, please download package from https://network.pivotal.io/products/build-service/"
+      echo "       => search for kp-darwin for Mac"
+      exit
+    fi
   fi
 
   if [ "$sys" == "TOOLS" ]; then
@@ -1972,5 +2005,110 @@ a=1
 verifyVMwareRegistry() {
 a=1
 }
+
+installBuildService() {
+  if [ "$TDH_SERVICE_BUILD_SERVICE" != "true" ]; then
+    uodateConfigMap tanzu-demo-hub TDH_SERVICE_BUILD_SERVICE        "false"
+    return
+  fi
+
+  messageTitle "Installing Tanzu Build Service"
+
+  cnt=$(ls -1 $TDHPATH/software/build-service-*.tar 2>/dev/null | wc -l | sed 's/  //g') 
+  if [ $cnt -eq 0 ]; then 
+    echo "ERROR: Download build-service-*.tar from https://network.pivotal.io/products/build-service and store it under"
+    echo "       => $TDHPATH/software"
+    exit
+  fi
+
+  TBS_FILE=$(ls -1tr $TDHPATH/software/build-service-*.tar | tail -1)
+  [ -d /tmp/build-service ] && rm -rf /tmp/build-service
+  mkdir /tmp/build-service
+  tar xf $TBS_FILE -C /tmp/build-service
+
+  # --- VERIFY SERVICE CONFIGURATION ---
+  checkKubernetesServices registry_vmware
+  checkKubernetesServices registry_docker
+  checkKubernetesServices github
+
+  # --- TESTING REGISTRY ---
+  messagePrint "Verify Docker Registry Access" "$TDH_REGISTRY_DOCKER_NAME"
+  docker login -u $TDH_REGISTRY_DOCKER_USER -p $TDH_REGISTRY_DOCKER_PASS > /dev/null 2>&1
+  if [ $? -ne 0 ]; then
+    echo "ERROR: Docker login does not work"
+    echo "       => docker login $TDH_REGISTRY_DOCKER_NAME -u $TDH_REGISTRY_DOCKER_USER -p $TDH_REGISTRY_DOCKER_PASS"; exit
+  fi
+
+  messagePrint "Verify VMware Registry Access" "$TDH_REGISTRY_VMWARE_NAME"
+  docker login $TDH_REGISTRY_VMWARE_NAME -u $TDH_REGISTRY_VMWARE_USER -p $TDH_REGISTRY_VMWARE_PASS > /dev/null 2>&1
+  if [ $? -ne 0 ]; then
+    echo "ERROR: Docker login does not work"
+    echo "       => docker login $TDH_REGISTRY_VMWARE_NAME -u $TDH_REGISTRY_VMWARE_USER -p $TDH_REGISTRY_VMWARE_PASS"; exit
+  fi
+
+  DNS_HARBOR=$(getConfigMap tanzu-demo-hub TDH_HARBOR_REGISTRY_DNS_HARBOR)
+  TDH_HARBOR_REGISTRY_DNS_HARBOR=$(getConfigMap tanzu-demo-hub TDH_HARBOR_REGISTRY_DNS_HARBOR)
+  TDH_HARBOR_REGISTRY_ADMIN_PASSWORD=$(getConfigMap tanzu-demo-hub TDH_HARBOR_REGISTRY_ADMIN_PASSWORD)
+  messagePrint "Verify Harbor Registry Access" "$TDH_HARBOR_REGISTRY_DNS_HARBOR"
+  docker login $TDH_HARBOR_REGISTRY_DNS_HARBOR -u admin -p $TDH_HARBOR_REGISTRY_ADMIN_PASSWORD > /dev/null 2>&1
+  if [ $? -ne 0 ]; then
+    echo "ERROR: Docker login does not work 1"
+    echo "       => docker login $TDH_HARBOR_REGISTRY_DNS_HARBOR -u admin -p $TDH_HARBOR_REGISTRY_ADMIN_PASSWORD"; exit
+  fi
+
+  messagePrint "- Relocate the images" "$TDH_REGISTRY_VMWARE_NAME/library/build-service"
+  kbld relocate -f /tmp/build-service/images.lock --lock-output /tmp/build-service/images-relocated.lock --repository $DNS_HARBOR/library/build-service > /dev/null 2>&1
+  if [ $? -ne 0 ]; then
+    echo "ERROR: Image Relocation faied"
+    echo "       => kbld relocate -f /tmp/build-service/images.lock --lock-output /tmp/build-service/images-relocated.lock \\"
+    echo "          --repository $DNS_HARBOR/library/build-service"; exit
+  fi
+
+  cnt=$(kubectl get namespace kpack build-service 2>/dev/null | egrep -c "kpack|build-service")
+  if [ $cnt -ne 2 ]; then
+    messagePrint "- Install Build Service" ""
+    echo "-----------------------------------------------------------------------------------------------------------"
+    ret=1; cnt=0
+    while [ $ret -ne 0 -a $cnt -lt 5 ]; do
+      ytt -f /tmp/build-service/values.yaml \
+          -f /tmp/build-service/manifests/ \
+          -v docker_repository="$DNS_HARBOR/library/build-service" \
+          -v docker_username="admin" \
+          -v docker_password="$TDH_HARBOR_REGISTRY_ADMIN_PASSWORD" \
+          | kbld -f /tmp/build-service/images-relocated.lock -f- \
+          | kapp deploy -a tanzu-build-service -f- -y > /dev/null 2>&1; ret=$?
+        if [ $ret -ne 0 ]; then break; fi
+        let cnt=cnt+1
+      done
+    echo "-----------------------------------------------------------------------------------------------------------"
+
+    if [ $ret -ne 0 ]; then
+      echo "ERROR: Installing Build Service"
+      echo "       => ytt -f /tmp/build-service/values.yaml \\"
+      echo "          -f /tmp/build-service/manifests/ \\"
+      echo "          -v docker_repository=\"$DNS_HARBOR/library/build-service\" \\"
+      echo "          -v docker_username=\"admin\" \\"
+      echo "          -v docker_password=\"$TDH_HARBOR_REGISTRY_ADMIN_PASSWORD\" \\"
+      echo "          | kbld -f /tmp/build-service/images-relocated.lock -f- \\"
+      echo "          | kapp deploy -a tanzu-build-service -f- -y"
+    fi
+
+    kp clusterbuilder list
+    echo "-----------------------------------------------------------------------------------------------------------"
+  fi
+
+  uodateConfigMap tanzu-demo-hub TDH_REGISTRY_VMWARE_NAME       $TDH_REGISTRY_VMWARE_NAME
+  uodateConfigMap tanzu-demo-hub TDH_REGISTRY_VMWARE_USER       $TDH_REGISTRY_VMWARE_USER
+  uodateConfigMap tanzu-demo-hub TDH_REGISTRY_VMWARE_PASS       $TDH_REGISTRY_VMWARE_PASS
+  uodateConfigMap tanzu-demo-hub TDH_REGISTRY_DOCKER_NAME       $TDH_REGISTRY_DOCKER_NAME
+  uodateConfigMap tanzu-demo-hub TDH_REGISTRY_DOCKER_USER       $TDH_REGISTRY_DOCKER_USER
+  uodateConfigMap tanzu-demo-hub TDH_REGISTRY_DOCKER_PASS       $TDH_REGISTRY_DOCKER_PASS
+  uodateConfigMap tanzu-demo-hub TDH_GITHUB_USER                $TDH_GITHUB_USER
+  uodateConfigMap tanzu-demo-hub TDH_GITHUB_PASS                $TDH_GITHUB_PASS
+
+
+}
+
+
 
 
