@@ -2082,7 +2082,8 @@ installBuildService() {
   fi
 
   messagePrint "- Relocate the images" "$TDH_REGISTRY_VMWARE_NAME/library/build-service"
-  kbld relocate -f /tmp/build-service/images.lock --lock-output /tmp/build-service/images-relocated.lock --repository $DNS_HARBOR/library/build-service > /dev/null 2>&1
+  kbld relocate -f /tmp/build-service/images.lock --lock-output /tmp/build-service/images-relocated.lock \
+       --repository $DNS_HARBOR/library/build-service > /dev/null 2>&1
   if [ $? -ne 0 ]; then
     echo "ERROR: Image Relocation faied"
     echo "       => kbld relocate -f /tmp/build-service/images.lock --lock-output /tmp/build-service/images-relocated.lock \\"
@@ -2097,6 +2098,7 @@ installBuildService() {
     while [ $ret -ne 0 -a $cnt -lt 5 ]; do
       ytt -f /tmp/build-service/values.yaml \
           -f /tmp/build-service/manifests/ \
+          -f $TDHPATH/certificates/ca.pem \
           -v docker_repository="$DNS_HARBOR/library/build-service" \
           -v docker_username="admin" \
           -v docker_password="$TDH_HARBOR_REGISTRY_ADMIN_PASSWORD" \
@@ -2111,6 +2113,7 @@ installBuildService() {
       echo "ERROR: Installing Build Service"
       echo "       => ytt -f /tmp/build-service/values.yaml \\"
       echo "          -f /tmp/build-service/manifests/ \\"
+      echo "          -f $TDHPATH/certificates/ca.pem \\"
       echo "          -v docker_repository=\"$DNS_HARBOR/library/build-service\" \\"
       echo "          -v docker_username=\"admin\" \\"
       echo "          -v docker_password=\"$TDH_HARBOR_REGISTRY_ADMIN_PASSWORD\" \\"
@@ -2177,5 +2180,86 @@ downloadFromPivnet() {
   fi
 }
 
+getRootCA() {
+  SECRET=$1
+  LETSENSCRIPT_INTERMEDIATE_CERT=""
+  LETSENSCRIPT_ROOT_CERT=""
+  THD_TLS_CERTIFICATE=tdh-cert.pem
+  THD_TLS_KEY=tdh-key.pem
+
+  [ ! -d $TDHPATH/certificates ] && mkdir $$TDHPATH/certificates
+
+  if [ ! -f $TDHPATH/certificates/ca.pem ]; then 
+    messageTitle "Get RootCA for TLS Certificate ($SECRET)"
+    kubectl get secret $SECRET -o json | jq -r '.data."tls.crt"' | base64 -d > $TDHPATH/certificates/$THD_TLS_CERTIFICATE
+    kubectl get secret $SECRET -o json | jq -r '.data."tls.key"' | base64 -d > $TDHPATH/certificates/$THD_TLS_KEY
+
+    txt=$(kubectl get secret $SECRET -o json | jq -r '.data."tls.crt"' | base64 -d | openssl x509 -noout -issuer) 
+    ca_country=$(echo $txt | awk -F'/' '{ print $2 }' | awk -F'=' '{ print $2 }') 
+    ca_issuer=$(echo $txt | awk -F'/' '{ print $3 }' | awk -F'=' '{ print $2 }') 
+    ca_cn=$(echo $txt | awk -F'/' '{ print $4 }' | awk -F'=' '{ print $2 }') 
+  
+    messagePrint " - TDH Certificate Issuer:"  "$ca_issuer"
+    messagePrint " - TDH Certificate File:"    "$THD_TLS_CERTIFICATE"
+    messagePrint " - TDH Certificate CN:"      "$ca_cn"
+  
+    if [ "$ca_issuer" == "Let's Encrypt" ]; then 
+      if [ "$ca_cn" == "R3" ]; then 
+        LETSENSCRIPT_INTERMEDIATE_CERT=$ca_cn
+        LETSENSCRIPT_INTERMEDIATE_CERT_FILE=lets-encrypt-r3.pem
+
+        url=https://letsencrypt.org/certs/lets-encrypt-r3.pem
+        curl $url 2>/dev/null > $TDHPATH/certificates/$LETSENSCRIPT_INTERMEDIATE_CERT_FILE
+        messagePrint " - Let's Encrypt Intermediate Certificate:"      "certificates/$LETSENSCRIPT_INTERMEDIATE_CERT"
+        messagePrint " - Let's Encrypt Intermediate Certificate Url:"  "$url"
+        messagePrint " - Let's Encrypt Intermediate Certificate File:" "certificates/$LETSENSCRIPT_INTERMEDIATE_CERT_FILE"
+      fi
+
+      if [ "$ca_cn" == "E1" ]; then 
+        LETSENSCRIPT_INTERMEDIATE_CERT=$ca_cn
+        LETSENSCRIPT_INTERMEDIATE_CERT_FILE=lets-encrypt-e1.pem
+
+        url=https://letsencrypt.org/certs/lets-encrypt-e1.pem
+        curl $url 2>/dev/null > $TDHPATH/certificates/$LETSENSCRIPT_INTERMEDIATE_CERT_FILE
+        messagePrint " - Let's Encrypt Intermediate Certificate:"      "certificates/$LETSENSCRIPT_INTERMEDIATE_CERT"
+        messagePrint " - Let's Encrypt Intermediate Certificate Url:"  "$url"
+        messagePrint " - Let's Encrypt Intermediate Certificate File:" "certificates/$LETSENSCRIPT_INTERMEDIATE_CERT_FILE"
+      fi
+
+      if [ "$LETSENSCRIPT_INTERMEDIATE_CERT_FILE" != "" ]; then
+        txt=$(openssl x509 -noout -in certificates/$LETSENSCRIPT_INTERMEDIATE_CERT_FILE -issuer)
+        ca_root_country=$(echo $txt | awk -F'/' '{ print $2 }' | awk -F'=' '{ print $2 }')
+        ca_root_issuer=$(echo $txt | awk -F'/' '{ print $3 }' | awk -F'=' '{ print $2 }')
+        ca_root_cn=$(echo $txt | awk -F'/' '{ print $4 }' | awk -F'=' '{ print $2 }')
+
+        if [ "$ca_root_cn" == "ISRG Root X1" ]; then
+          LETSENSCRIPT_ROOT_CERT=$ca_cn
+          LETSENSCRIPT_ROOT_CERT_FILE=isrgrootx1.pem
+  
+          url=https://letsencrypt.org/certs/isrgrootx1.pem
+          curl $url 2>/dev/null > $TDHPATH/certificates/$LETSENSCRIPT_ROOT_CERT_FILE
+          messagePrint " - Let's Encrypt Root Certificate:"      "certificates/$LETSENSCRIPT_ROOT_CERT"
+          messagePrint " - Let's Encrypt Root Certificate Url:"  "$url"
+          messagePrint " - Let's Encrypt Root Certificate File:" "certificates/$LETSENSCRIPT_ROOT_CERT_FILE"
+        fi
+
+        cat $TDHPATH/certificates/$LETSENSCRIPT_INTERMEDIATE_CERT_FILE $TDHPATH/certificates/$LETSENSCRIPT_ROOT_CERT_FILE > $TDHPATH/certificates/ca.pem
+      fi
+    else
+      echo "ERROR: Certificate Issuer unknown, Please place it manually to certificates/ca.pem"
+      exit
+    fi
+  fi
+
+  # --- VERIFY ROOTCA WITH CERTIFICATE ---
+  stt=$(openssl verify -CAfile certificates/ca.pem certificates/$THD_TLS_CERTIFICATE)
+  mo1=$(openssl x509 -noout -modulus -in certificates/$THD_TLS_CERTIFICATE | openssl md5)
+  mo2=$(openssl rsa -noout -modulus -in certificates/$THD_TLS_KEY | openssl md5) 
+  if [ "$mo1" == "$mo2" ]; then vry=ok; else vry=failed; fi
+
+  messageTitle "Verify RootCA with the Certificate ($SECRET)"
+  messagePrint " - Verify Cert ($THD_TLS_CERTIFICATE) with RootCA (ca.pem)"    "$stt"
+  messagePrint " - Verify Cert ($THD_TLS_CERTIFICATE) with CertKey ($THD_TLS_KEY)"  "$vry"
+}
 
 
