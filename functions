@@ -617,6 +617,52 @@ checkCloudAccess() {
   fi
 }
 
+checkTMCAccess() {
+  missing_variables=0
+
+  if [ "${TDH_DEPLOYMENT_CLOUD}" == "AWS" ]; then
+    if [ "${TMC_MANAGEMENT_CLUSTER}" == "" -o "${TMC_PROVISONER_NAME}" == "" ]; then
+      missing_variables=1
+      echo ""
+      echo "  2MISSING ENVIRONMENT-VARIABES    DESCRIPTION        "
+      echo "  --------------------------------------------------------------------------------------------------------------"
+  
+      if [ "${TMC_MANAGEMENT_CLUSTER}" == "" ]; then
+        echo "  TMC_MANAGEMENT_CLUSTER          (required) A Management Cluster deployed on AWS"
+      fi
+  
+      if [ "${TMC_PROVISONER_NAME}" == "" ]; then
+        echo "  TMC_PROVISONER_NAME             (required) The TMC Provisionert Name for AWS"
+      fi
+
+      if [ "${AWS_HOSTED_DNS_DOMAIN}" == "" ]; then
+        echo "  AWS_HOSTED_DNS_DOMAIN           (required) A DNS Domain managed by AWS Route 53 ie. yourdomain.com with a"
+        echo "                                  valid DNS Zone. => https://console.aws.amazon.com/route53"
+      fi
+    else
+      messageTitle "Supporting services access (Pivotal Network, AWS Route53)"
+      messagePrint " - Pivotal Network Token"           "$PCF_PIVNET_TOKEN"
+      messagePrint " - AWS Route53 Hosted DNS Domain"   "$AWS_HOSTED_DNS_DOMAIN"
+
+      # --- CHECK IF AWS CLI IS CONFIGURED ---
+      if [ ! -d ~/.aws -o -d ~/.aws/credentials ]; then
+        echo "ERROR: AWS CLI is not configured yet, please run aws configure"
+        echo "       => aws configure"
+        exit 1
+      fi
+    fi
+  fi
+
+  if [ ${missing_variables} -eq 1 ]; then
+    echo "  --------------------------------------------------------------------------------------------------------------"
+    echo "  IMPORTANT: Please set the missing environment variables either in your shell or in the pcfconfig"
+    echo "             configuration file ~/.pcfconfig and set all variables with the 'export' notation"
+    echo "             ie. => export AZURE_PKS_TLS_CERTIFICATE=/home/demouser/certs/cert.pem"
+    echo "  --------------------------------------------------------------------------------------------------------------"
+    exit 1
+  fi
+}
+
 checkTDHAccess() {
   missing_variables=0
 
