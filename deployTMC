@@ -1,0 +1,287 @@
+#!/bin/bash
+# ############################################################################################
+# File: ........: deployTMCwc
+# Language .....: bash
+# Author .......: Sacha Dubois, VMware
+# Description ..: Tanzu Demo Hub - Deploy TKG Workload Cluster
+# ############################################################################################
+
+export TANZU_DEMO_HUB=$(cd "$(pwd)/$(dirname $0)"; pwd)
+export TDHPATH=$(cd "$(pwd)/$(dirname $0)"; pwd)
+export TDH_DEPLOYMENT_ENV_NAME="awstkg"
+export TDH_DEPLOYMENT_CLOUD="AWS"
+export DEPLOY_PCF_DEPLOYMENT=aws_tkg_default.cfg
+
+. $TANZU_DEMO_HUB/functions
+
+usage() {
+  echo "USAGE: $0 [oprions] <cluster-template>"
+  echo "                   --clean/-c   # Clean previous installation and stop the jump server"
+  echo "                   --debug/-d   # Enable debugging"
+}
+
+listTemplates() {
+  echo "TKG CLUSTER TEMPLATES"
+  echo "-----------------------------------------------------------------------------------------------------------"
+  tmc cluster template list
+  echo "-----------------------------------------------------------------------------------------------------------"
+}
+
+listDeployments() {
+  printf "%-33s %-5s %-10s %-10s %s\n" "CONFIURATION" "CLOUD" "MGMT-CLUSTER" "MAINTAINER" "DESCRIPTION"
+  echo "-----------------------------------------------------------------------------------------------------------"
+
+  for deployment in $(ls -1 ${TDHPATH}/deployments/*.cfg); do
+    PCF_TILE_PKS_VERSION=""
+    PCF_TILE_PAS_VERSION=""
+
+    . $deployment
+
+    dep=$(basename $deployment)
+
+    if [ "$PCF_TILE_PKS_VERSION" != "" ]; then
+      TILE="PKS $PCF_TILE_PKS_VERSION"
+    else
+      TILE="PAS $PCF_TILE_PAS_VERSION"
+    fi
+
+    printf "%-33s %-5s %-12s %-10s %s\n" $dep $TDH_DEPLOYMENT_CLOUD $TDH_MANAGEMENT_CLUSTER \
+           $TDH_DEPLOYMENT_MAINTAINER "$TDH_DEPLOYMENT_DESCRIPTION"
+  done
+
+  echo "-----------------------------------------------------------------------------------------------------------"
+}
+
+createCluster() {
+  SSH_KEY_NAME=vmware-cloud-tmc
+  SSH_KEY_FILE=~/.tanzu-demo-hub/KeyPair-${SSH_KEY_NAME}-${AWS_REGION}.pem
+
+  #tmc cluster create -c sadubois-aws -g sadubois --name sadubois-demo -r eu-central-1 -s vmware-cloud-tmc 
+  #tmc cluster create -t aws-ha -c my-credential -s my-ssh-key" #template
+
+  #stt=$(tmc cluster list --group $TMC_CLUSTER_GROUP --name $TMC_CLUSTER_NAME --output json | \
+  stt=$(tmc cluster list --name $TMC_CLUSTER_NAME --output json | \
+        jq -r '.clusters[].status.status.state.state')
+  if [ "${stt}" == "DELETING" ]; then 
+    echo "ERROR: Cluster $TMC_CLUSTER_NAME is currently beeing deleted, please wait and try again later"
+    echo "       => tmc cluster list --name $TMC_CLUSTER_NAME"
+    echo ""; exit 1
+  fi
+
+  messageTitle "Creating Cluster"
+  messagePrint " - Cluster Name"             "$TMC_CLUSTER_NAME"
+  messagePrint " - Cluster Group"            "$TMC_CLUSTER_GROUP"
+  messagePrint " - Cluster Template"         "$DEPLOY_TKG_TEMPLATE"
+  messagePrint " - AWS Credentials"          "$TMC_ACCOUNT_NAME_AWS"
+  messagePrint " - AWS Region"               "$AWS_REGION"
+
+  if [ "${stt}" == "" ]; then 
+    echo "-----------------------------------------------------------------------------------------------------------"
+    tmc cluster create -c $TMC_ACCOUNT_NAME_AWS -g $TMC_CLUSTER_GROUP --name $TMC_CLUSTER_NAME \
+        -s $SSH_KEY_NAME --management-cluster-name $TDH_MANAGEMENT_CLUSTER -r $AWS_REGION \
+        --provisioner-name $TMC_ACCOUNT_NAME_AWS
+    echo "-----------------------------------------------------------------------------------------------------------"
+  fi
+
+  while [ 1 ]; do
+    #stt=$(tmc cluster list --group $TMC_CLUSTER_GROUP --name $TMC_CLUSTER_NAME --output json | \
+    stt=$(tmc cluster list --name $TMC_CLUSTER_NAME --output json | \
+         jq -r '.clusters[].status.phase')
+    if [ "${stt}" != "CREATING" ]; then break; fi
+ 
+    sleep 60
+  done
+
+  messagePrint " - Cluster Status"           "$stt"
+
+  #tmc cluster create -c sadubois-aws -g sadubois --name sadubois-demo -s vmware-cloud-tmc -t default
+  #tmc cluster list --group sadubois --name sadubois-demo --output json
+  #tmc cluster list --name sadubois-demo --output json | jq -r '.clusters[].status.status'
+}
+
+listClusters() {
+  #cat /tmp/2 | jq -r '.spec | select(.provisionedcluster.accountName == "smidgley-aws").provisionedcluster.accountName'
+  cnt=$(tmc cluster list --group sadubois --output json | jq -r '."totalCount"') 
+  cnt=$(tmc cluster list --output json | jq -r '."totalCount"') 
+  if [ $cnt -gt 0 ]; then
+    TMPFILE=/tmp/tdh_listCluster.tmp; rm -f $TMPFILE
+
+    echo "NAME                 KUBERNETES           PROVIDER   CREDENTIALS          REGION          STATE"
+    echo "-----------------------------------------------------------------------------------------------------------"
+
+    tmc cluster list --group $TMC_CLUSTER_GROUP --output json > $TMPFILE
+    tmc cluster list --output json > $TMPFILE
+    for cln in $(jq -r '.clusters[] | select(.status.type == "PROVISIONED").fullName.name' $TMPFILE | head -5); do
+      ver=$(jq -r --arg cluster "$cln" '.clusters[] | select(.fullName.name == $cluster)' $TMPFILE | \
+            jq -r '.spec.provisionedcluster.version')
+      acc=$(jq -r --arg cluster "$cln" '.clusters[] | select(.fullName.name == $cluster)' $TMPFILE | \
+            jq -r '.spec.provisionedcluster.accountName')
+      cpv=$(jq -r --arg cluster "$cln" '.clusters[] | select(.fullName.name == $cluster)' $TMPFILE | \
+            jq -r '.status.agent.metadata.cloudProvider')
+      reg=$(jq -r --arg cluster "$cln" '.clusters[] | select(.fullName.name == $cluster)' $TMPFILE | \
+            jq -r '.status.agent.metadata.region')
+      stt=$(jq -r --arg cluster "$cln" '.clusters[] | select(.fullName.name == $cluster)' $TMPFILE | \
+            jq -r '.status.status.state.state')
+
+      printf "%-20s %-20s %-10s %-20s %-15s %-10s\n" $cln $ver $cpv $acc $reg $stt
+
+    done
+
+
+#    tmc cluster list --output json | jq -r '.clusters[1] | [.fullName.name,.spec.provisionedcluster.version]'
+
+#  tmc cluster list --group $TMC_CLUSTER_GROUP
+  echo "-----------------------------------------------------------------------------------------------------------"
+
+    # --- CLEANUP ---
+    rm -f $TMPFILE
+  fi
+}
+
+echo ""
+echo "Tanzu Demo Hub - Deploy TKG Cluster"
+echo "by Sacha Dubois, VMware Inc,"
+echo "-----------------------------------------------------------------------------------------------------------"
+
+while [ "$1" != "" ]; do
+  case $1 in
+    -c)      DEPLOY_TKG_CLEAN=1;;
+    --clean) DEPLOY_TKG_CLEAN=1;;
+    -d)      DEPLOY_TKG_DEBUG=1;;
+    --debug) DEPLOY_TKG_DEBUG=1;;
+    *)       DEPLOY_TKG_TEMPLATE=$1;;
+  esac
+  shift
+done
+
+if [ "${DEPLOY_TKG_TEMPLATE}" == "" ]; then
+  #listTemplates
+  listDeployments
+  usage; exit 0
+fi
+
+# --- VERIFY DEPLOYMENT ---
+if [ ! -f ${TDHPATH}/deployments/${DEPLOY_TKG_TEMPLATE} ]; then
+  echo "ERROR: Deployment file $pcf_deployment can not be found in ${TDHPATH}/deployments"
+  exit 1
+else
+  . ${TDHPATH}/deployments/${DEPLOY_TKG_TEMPLATE}
+fi
+
+cnt=$(egrep -c "^TDH_DEPLOYMENT_CLOUD=" ${TDHPATH}/deployments/$DEPLOY_TKG_TEMPLATE)
+if [ $cnt -eq 0 ]; then
+  echo "ERROR: ${TDHPATH}/deployments/$DEPLOY_TKG_TEMPLATE is not a correct TANZU-DEMO-HUB deployment configuration file"
+  exit 1
+else
+  missing_variables=0
+  .  ${TDHPATH}/deployments/${DEPLOY_TKG_TEMPLATE}
+
+  # --- CHECK ENVIRONMENT VARIABLES ---
+  if [ -f ~/.tanzu-demo-hub.cfg ]; then
+    . ~/.tanzu-demo-hub.cfg
+  fi
+
+  # CHECK AWS ACCOUNTS
+  if [ "$TDH_DEPLOYMENT_CLOUD" == "AWS" ]; then 
+    if [ "${AWS_ACCESS_KEY}" == "" -o "${AWS_SECRET_KEY}" == "" -o "${AWS_REGION}" == "" ]; then
+      missing_variables=1
+
+
+      echo ""
+      echo "  MISSING ENVIRONMENT-VARIABES  DESCRIPTION        "
+      echo "  --------------------------------------------------------------------------------------------------------------"
+
+      if [ "${AWS_ACCESS_KEY}" == "" ]; then
+        echo "  AWS_ACCESS_KEY       (required) AWS Access Key"
+      fi
+
+      if [ "${AWS_SECRET_KEY}" == "" ]; then
+        echo "  AWS_SECRET_KEY       (required) AWS Secret Key"
+      fi
+
+      if [ "${AWS_REGION}" == "" ]; then
+        echo "  AWS_REGION           (required) AWS Region"
+      fi
+
+      if [ "${AWS_SSH_KEY_NAME}" == "" ]; then
+        echo "  AWS_SSH_KEY_NAME     (required) AWS SSH Key Name"
+      fi
+
+      if [ "${AWS_SSH_KEY_FILE}" == "" ]; then
+        echo "  AWS_SSH_KEY_FILE     (required) AWS SSH Key File"
+      fi
+      echo ""
+    fi
+  fi
+
+  if [ ${missing_variables} -eq 1 ]; then
+    echo "  --------------------------------------------------------------------------------------------------------------"
+    echo "  IMPORTANT: Please set the missing environment variables either in your shell or in the tanzu-demo-hub"
+    echo "             configuration file ~/.tanzu-demo-hub.cfg and set all variables with the 'export' notation"
+    echo "             ie. => export AZURE_PKS_TLS_CERTIFICATE=/home/demouser/certs/cert.pem"
+    echo "  --------------------------------------------------------------------------------------------------------------"
+    exit 1
+  fi
+fi
+
+#echo "export TMC_API_TOKEN==$TMC_SERVICE_TOKEN"
+#echo "tmc login -n $TMC_CONTEXT_NAME"
+#echo "tmc cluster auth kubeconfig get sadubois-test -p $TMC_PROVISONER_NAME -m $TDH_MANAGEMENT_CLUSTER > /tmp/sadubois-test.kubeconfig"
+#echo "export KUBECONFIG=/tmp/sadubois-test.kubeconfig"
+#echo "tmc cluster delete -m aws-hosted -p sadubois-aws affectionate-haibt7"
+
+# --- VERYFY TMC ACCESS ---
+checkCLIcommands TOOLS
+checkCLIcommands TKG
+tmcCheckLogin
+checkTDHAccess
+checkTMCAccess
+checkTMCcontext
+tmcCreateCluster
+getTDHClusterCredentials
+
+uodateConfigMap tanzu-demo-hub TDH_DOMAIN               $AWS_HOSTED_DNS_DOMAIN
+uodateConfigMap tanzu-demo-hub TDH_ENVNAME              $TDH_ENVNAME
+
+VerifyK8SDemoPlatform
+
+exit
+
+
+echo "XXXXXX"; exit
+# --- VERYFY ACCESS TO CLOUD ---
+checkCloudCLI
+checkCloudAccess
+checkTDHAccess
+checkKeyPairs
+
+# --- CREATE TKG CLUSTER AND JUMP SERVER
+createCluster
+sshEnvironment
+configureJumpHost
+configureLetsEnscript
+
+exit
+
+  # --- CHECK CLOUD AND JUMP SERVER ---
+  checkCloudAccess
+  configureJumpHost
+
+echo "$SSH_COMMAND"
+
+
+############
+#tmc login --name vmware-cloud-tmc
+#i $TMC_API_TOKEN is set 
+#? Select default log level info
+#? Management Cluster Name aws-hosted
+#? Provisioner Name 
+#√ Successfully created context vmware-cloud-tmc, to manage your contexts run `tmc system context -h`
+
+tmc system context 
+sdubois-a01:tanzu-demo-hub sdubois$ tmc system context list
+  NAME                                  ORG ID                                ENDPOINT                                
+  Tanzu End to End                      2f31c29c-e042-4ee4-8dbb-3e38b1f1eae5  tanzuendtoend.tmc.cloud.vmware.com:443  
+  fea0ee4b-bbf6-4444-b1d6-e493597d46a4  fea0ee4b-bbf6-4444-b1d6-e493597d46a4  tanzuemea.tmc.cloud.vmware.com:443      
+  sdubois@vmware.com                    2f31c29c-e042-4ee4-8dbb-3e38b1f1eae5  tanzuendtoend.tmc.cloud.vmware.com:443  
+  vmware-cloud-tmc                      fea0ee4b-bbf6-4444-b1d6-e493597d46a4  tanzuemea.tmc.cloud.vmware.com:443      
