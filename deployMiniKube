@@ -62,9 +62,6 @@ if [ ! -f ${TDHPATH}/deployments/${K8S_DEPLOYMENT} ]; then
   exit 1
 else
   . ${TDHPATH}/deployments/${K8S_DEPLOYMENT}
-
-  #uodateConfigMap tanzu-demo-hub TDH_DOMAIN               $AWS_HOSTED_DNS_DOMAIN 
-  #uodateConfigMap tanzu-demo-hub TDH_ENVNAME              $TDH_ENVNAME
 fi
 
 # --- CHECK ENVIRONMENT VARIABLES ---
@@ -187,15 +184,16 @@ InstallCertManager() {
 }
 
 InstallMetallb() {
+  adr=$(kubectl get configmap config -n metallb-system -o json | jq -r '.data.config' | yq e '.address-pools[].addresses[]' -)
   stt=$(minikube addons -p tanzu-demo-hub list -o json | jq -r '."metallb".Status')
-  if [ "$stt" != "enabled" ]; then
+  if [ "$stt" != "enabled" -o "$adr" == "-" -o "$adr" == "" ]; then
     minikube_ip=$(minikube ip) 
     echo "Pleawe enable minikube addon metallb and configure the the ip Pool. The minikube host"
     echo "ip is ($minikube_ip), choose the IP Range in the same net."
     echo "  => minikube addons -p tanzu-demo-hub enable metallb"
-    echo "  => minikube addons configure -p tanzu-demo-hub metallb"
-    echo "  => minikube stop"
-    echo "  => minikube minikube start -p tanzu-demo-hub"
+    echo "  => minikube addons configure metallb -p tanzu-demo-hub"
+    echo "  => minikube stop -p tanzu-demo-hub"
+    echo "  => minikube start -p tanzu-demo-hub"
     echo "  => kubectl describe configmap config -n metallb-system"
     exit
   else
@@ -224,13 +222,12 @@ TDH_HARBOR_STAGING_TLS_CERT=false
   if [ "${TDH_HARBOR_STAGING_TLS_CERT}" == "true" ]; then
     LETSENSCRIPT_SERVER="https://acme-staging-v02.api.letsencrypt.org/directory"
   else
-echo gaga
     LETSENSCRIPT_SERVER="https://acme-v02.api.letsencrypt.org/directory"
   fi
 
   kubectl get clusterissuer $TDH_TLS_ISSUER_NAME -n kube-system > /dev/null 2>&1
   if [ $? -ne 0 ]; then 
-    AWS_HOSTED_ZONE=$(aws route53 list-hosted-zones-by-name --dns-name local.pcfsdu.com | \
+    AWS_HOSTED_ZONE=$(aws route53 list-hosted-zones-by-name --dns-name ${TDH_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN} | \
                       jq -r ".HostedZones[] | select(.Name | scan(\"^${zone}.\")).Id")
     AWS_HOSTED_ZONE_ID=$(aws route53 list-hosted-zones \
                         --query "HostedZones[?starts_with(to_string(Name), '${TDH_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}.')]" | \
@@ -240,35 +237,35 @@ echo gaga
     messagePrint " - LetsEnscript Issuer Name"         "$TDH_TLS_ISSUER_NAME"
     messagePrint " - LetsEnscript Solver"              "route53"
     messagePrint " - LetsEnscript Solver ZoneID"       "$AWS_HOSTED_ZONE_ID"
-    messagePrint " - LetsEnscript DNSZone"             "*.apps-contour.local.pcfsdu.com"
-    messagePrint " - LetsEnscript DNSZone"             "*.apps-nginx.local.pcfsdu.com"
+    messagePrint " - LetsEnscript DNSZone"             "*.apps-contour.${TDH_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}"
+    messagePrint " - LetsEnscript DNSZone"             "*.apps-nginx.${TDH_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}"
 
-    echo "apiVersion: cert-manager.io/v1alpha2"                                  >  $TDH_TLS_ISSUER_NAME
-    echo "kind: ClusterIssuer"                                                   >> $TDH_TLS_ISSUER_NAME
-    echo "metadata:"                                                             >> $TDH_TLS_ISSUER_NAME
-    echo "  name: $TDH_TLS_ISSUER_NAME"                                          >> $TDH_TLS_ISSUER_NAME
-    echo "spec:"                                                                 >> $TDH_TLS_ISSUER_NAME
-    echo "  acme:"                                                               >> $TDH_TLS_ISSUER_NAME
-    echo "    email: sdubois@vmware.com"                                         >> $TDH_TLS_ISSUER_NAME
-    echo "    privateKeySecretRef:"                                              >> $TDH_TLS_ISSUER_NAME
-    echo "      name: $TDH_TLS_ISSUER_NAME"                                      >> $TDH_TLS_ISSUER_NAME
-    echo "    server: $LETSENSCRIPT_SERVER"                                      >> $TDH_TLS_ISSUER_NAME
-    echo "    solvers:"                                                          >> $TDH_TLS_ISSUER_NAME
-    echo "    - selector:"                                                       >> $TDH_TLS_ISSUER_NAME
-    echo "        dnsZones:"                                                     >> $TDH_TLS_ISSUER_NAME
-    echo "          - \"$HARBOR_HOSTNAME\""                                      >> $TDH_TLS_ISSUER_NAME
-    echo "          - \"$NOTARY_HOSTNAME\""                                      >> $TDH_TLS_ISSUER_NAME
-    echo "          - \"*.apps-contour.local.pcfsdu.com\""                       >> $TDH_TLS_ISSUER_NAME
-    echo "          - \"*.apps-nginx.local.pcfsdu.com\""                         >> $TDH_TLS_ISSUER_NAME
-    echo "      dns01:"                                                          >> $TDH_TLS_ISSUER_NAME
-    echo "        route53:"                                                      >> $TDH_TLS_ISSUER_NAME
-    echo "          region: $AWS_REGION"                                         >> $TDH_TLS_ISSUER_NAME
-    echo "          accessKeyID: $AWS_CERT_ACCESS_KEY"                           >> $TDH_TLS_ISSUER_NAME
-    echo "          secretAccessKeySecretRef:"                                   >> $TDH_TLS_ISSUER_NAME
-    echo "            name: route53-credentials-secret"                          >> $TDH_TLS_ISSUER_NAME
-    echo "            key: aws-credentials"                                      >> $TDH_TLS_ISSUER_NAME
-    echo "          # you can also assume a role with these credentials"         >> $TDH_TLS_ISSUER_NAME
-    echo "          hostedZoneID: $AWS_HOSTED_ZONE_ID"                           >> $TDH_TLS_ISSUER_NAME
+    echo "apiVersion: cert-manager.io/v1alpha2"                                    >  $TDH_TLS_ISSUER_NAME
+    echo "kind: ClusterIssuer"                                                     >> $TDH_TLS_ISSUER_NAME
+    echo "metadata:"                                                               >> $TDH_TLS_ISSUER_NAME
+    echo "  name: $TDH_TLS_ISSUER_NAME"                                            >> $TDH_TLS_ISSUER_NAME
+    echo "spec:"                                                                   >> $TDH_TLS_ISSUER_NAME
+    echo "  acme:"                                                                 >> $TDH_TLS_ISSUER_NAME
+    echo "    email: sdubois@vmware.com"                                           >> $TDH_TLS_ISSUER_NAME
+    echo "    privateKeySecretRef:"                                                >> $TDH_TLS_ISSUER_NAME
+    echo "      name: $TDH_TLS_ISSUER_NAME"                                        >> $TDH_TLS_ISSUER_NAME
+    echo "    server: $LETSENSCRIPT_SERVER"                                        >> $TDH_TLS_ISSUER_NAME
+    echo "    solvers:"                                                            >> $TDH_TLS_ISSUER_NAME
+    echo "    - selector:"                                                         >> $TDH_TLS_ISSUER_NAME
+    echo "        dnsZones:"                                                       >> $TDH_TLS_ISSUER_NAME
+    echo "          - \"$HARBOR_HOSTNAME\""                                        >> $TDH_TLS_ISSUER_NAME
+    echo "          - \"$NOTARY_HOSTNAME\""                                        >> $TDH_TLS_ISSUER_NAME
+    echo "          - \"*.apps-contour.${TDH_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}\""  >> $TDH_TLS_ISSUER_NAME
+    echo "          - \"*.apps-nginx.${TDH_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}\""    >> $TDH_TLS_ISSUER_NAME
+    echo "      dns01:"                                                            >> $TDH_TLS_ISSUER_NAME
+    echo "        route53:"                                                        >> $TDH_TLS_ISSUER_NAME
+    echo "          region: $AWS_REGION"                                           >> $TDH_TLS_ISSUER_NAME
+    echo "          accessKeyID: $AWS_CERT_ACCESS_KEY"                             >> $TDH_TLS_ISSUER_NAME
+    echo "          secretAccessKeySecretRef:"                                     >> $TDH_TLS_ISSUER_NAME
+    echo "            name: route53-credentials-secret"                            >> $TDH_TLS_ISSUER_NAME
+    echo "            key: aws-credentials"                                        >> $TDH_TLS_ISSUER_NAME
+    echo "          # you can also assume a role with these credentials"           >> $TDH_TLS_ISSUER_NAME
+    echo "          hostedZoneID: $AWS_HOSTED_ZONE_ID"                             >> $TDH_TLS_ISSUER_NAME
 
     # --- CREATE/RECREATE AWS ROUTE53 SECRET ---
     kubectl -n cert-manager delete secret route53-credentials-secret > /dev/null 2>&1
@@ -339,8 +336,8 @@ echo gaga
     echo "  dnsNames:"                                          >> $CERTIFICATE_CONFIG
     #echo "  - \"$HARBOR_HOSTNAME\""                             >> $CERTIFICATE_CONFIG
     #echo "  - \"$NOTARY_HOSTNAME\""                             >> $CERTIFICATE_CONFIG
-    echo "  - '*.apps-contour.local.pcfsdu.com'"                >> $CERTIFICATE_CONFIG
-    echo "  - '*.apps-nginx.local.pcfsdu.com'"                  >> $CERTIFICATE_CONFIG
+    echo "  - '*.apps-contour.${TDH_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}'"     >> $CERTIFICATE_CONFIG
+    echo "  - '*.apps-nginx.${TDH_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}'"       >> $CERTIFICATE_CONFIG
 
     kubectl create -f $CERTIFICATE_CONFIG > /dev/null 2>&1
     if [ $? -ne 0 ]; then
@@ -461,6 +458,14 @@ InstallHarborRegistry() {
     echo "portal:"                                                                                                              >> $HARBOR_VALUES
     echo "  tls:"                                                                                                               >> $HARBOR_VALUES
     echo "    existingSecret: $HARBOR_TLS_SECRET"                                                                               >> $HARBOR_VALUES
+    echo ""                                                                                                                     >> $HARBOR_VALUES
+    echo "persistence:"                                                                                                         >> $HARBOR_VALUES
+    echo "  enabled: true"                                                                                                      >> $HARBOR_VALUES
+    echo "  resourcePolicy: 'keep'"                                                                                             >> $HARBOR_VALUES
+    echo "  persistentVolumeClaim:"                                                                                             >> $HARBOR_VALUES
+    echo "    registry:"                                                                                                        >> $HARBOR_VALUES
+    echo "      accessMode: ReadWriteOnce"                                                                                      >> $HARBOR_VALUES
+    echo "      size: 20Gi"                                                                                                     >> $HARBOR_VALUES
 
     helm install harbor bitnami/harbor -f $HARBOR_VALUES --version 9.2.2 -n $NAMESPACE > /dev/null 2>&1
     if [ $? -ne 0 ]; then
@@ -475,14 +480,24 @@ InstallHarborRegistry() {
       if [ $cnt -eq 0 ]; then cnt=1; fi
       sleep 5
     done
+
+    # --- WAIT FOR HARBOR TO COME ONLINE ---
+    messagePrint " - Verify Harbor Reistry Access" "$HARBOR_HOSTNAME"
+    cnt=0
+    while [ $cnt -eq 0 ]; do
+      docker login $HARBOR_HOSTNAME -u admin -p $TDH_HARBOR_ADMIN_PASSWORD > /dev/null 2>&1
+      if [ $? -eq 0 ]; then cnt=1; fi
+      sleep 10
+    done
   fi
+
 
   ver=$(helm -n $NAMESPACE ls -o json | jq -r '.[].app_version')
   crt=$(helm -n $NAMESPACE ls -o json | jq -r '.[].chart')
   stt=$(helm -n $NAMESPACE ls -o json | jq -r '.[].status')
   dat=$(helm -n $NAMESPACE ls -o json | jq -r '.[].updated')
 
-  messageTitle "Install Harbor Reistry"
+  messageTitle "Verify Harbor Reistry"
   messagePrint " - Harbor Reistry Namespace:"         "$NAMESPACE"
   messagePrint " - Harbor Reistry Helm Chart:"        "$crt"
   messagePrint " - Harbor Reistry Version:"           "$ver"
@@ -515,7 +530,7 @@ export TDH_TLS_ISSUER_CONFIG=/tmp/issuer-dns-manager1.yaml
 if [ "$K8S_CLEAN_CERTIFICATES" == "true" ]; then 
   messagePrint "Cleaning Let's Enscript Certificate request" "clusterissuer,certificate,order,challenge,CertificateRequest"
   kubectl delete clusterissuer,certificate,order,challenge,CertificateRequest --all > /dev/null 2>&1
-  kubectl delete secret tanzu-demo-hub-tls local-pcfsdu-com-tls $TDH_TLS_SECRET $TDH_TLS_ISSUER_NAME > /dev/null 2>&1
+  kubectl elete secret tanzu-demo-hub-tls $TDH_TLS_SECRET $TDH_TLS_ISSUER_NAME > /dev/null 2>&1
 
   kubectl delete secret -n cert-manager $TDH_TLS_ISSUER_NAME > /dev/null 2>&1
 
@@ -544,8 +559,13 @@ if [ "$K8S_CLEAN_DEPLOYMENT" == "true" ]; then
   exit
 fi
 
+checkCLIcommands TOOLS
+checkCLIcommands TKG
 checkCloudAccess
 checkTDHAccess
+
+uodateConfigMap tanzu-demo-hub TDH_DOMAIN               $AWS_HOSTED_DNS_DOMAIN 
+uodateConfigMap tanzu-demo-hub TDH_ENVNAME              $TDH_ENVNAME
 
 VerifyK8SDemoPlatform
 InstallMetallb
@@ -553,5 +573,10 @@ InstallCertManager
 InstallContour
 createClusterIssuer
 InstallHarborRegistry
+getRootCA tanzu-demo-hub-tls
+installBuildService
+
+
+
 
 
