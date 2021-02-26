@@ -698,8 +698,9 @@ checkTDHAccess() {
     #fi
   else
     messageTitle "Supporting services access (Pivotal Network, AWS Route53)"
-    messagePrint " - Pivotal Network Token"           "$PCF_PIVNET_TOKEN"
-    messagePrint " - AWS Route53 Hosted DNS Domain"   "$AWS_HOSTED_DNS_DOMAIN"
+    messagePrint " - Pivotal Network Token"            "$PCF_PIVNET_TOKEN"
+    messagePrint " - AWS Route53 Hosted DNS Domain"    "$AWS_HOSTED_DNS_DOMAIN"
+    messagePrint " - AWS Route53 Hosted DNS SubDomain" "$TDH_DEPLOYMENT_ENVNAME"
 
     # --- VERIFY PIVNET ACCESS ---
     pivnetAPI $PCF_PIVNET_TOKEN
@@ -2066,6 +2067,131 @@ checkCLIcommands() {
   
     done
   fi
+}
+
+checkTMCAccess() {
+  missing_variables=0
+
+  if [ "${TDH_DEPLOYMENT_CLOUD}" == "AWS" ]; then
+    TMC_ACCOUNT_NAME=$TMC_ACCOUNT_NAME_AWS
+
+    if [ "${TMC_MANAGEMENT_CLUSTER}" == "" -o "${TMC_PROVISONER_NAME}" == "" -o "${TMC_ACCOUNT_NAME_AWS}" == "" -o "${TMC_CLUSTER_GROUP}" == "" ]; then
+      missing_variables=1
+      echo ""
+      echo "  2MISSING ENVIRONMENT-VARIABES    DESCRIPTION        "
+      echo "  --------------------------------------------------------------------------------------------------------------"
+
+      if [ "${TMC_CLUSTER_GROUP}" == "" ]; then
+        echo "  TMC_CLUSTER_GROUP               (required) The name of the TMC Cluster Group"
+      fi
+
+      if [ "${TMC_ACCOUNT_NAME_AWS}" == "" ]; then
+        echo "  TMC_ACCOUNT_NAME_AWS            (required) The name of the TMC Account Name"
+      fi
+
+      if [ "${TMC_MANAGEMENT_CLUSTER}" == "" ]; then
+        echo "  TMC_MANAGEMENT_CLUSTER          (required) The name of the TKGm Management Cluster"
+      fi
+
+      if [ "${TMC_PROVISONER_NAME}" == "" ]; then
+        echo "  TMC_PROVISONER_NAME             (required) The TMC Provisioner name"
+      fi
+
+      if [ "${TMC_SSH_KEY_NAME_AWS}" == "" ]; then
+        echo "  TMC_SSH_KEY_NAME_AWS            (required) AWS SSH Key name for Region"
+      fi
+    else
+      messageTitle "Tanzu Mission Control (TMC) - Config" 
+      messagePrint " - TMC Cluster Group"               "$TMC_CLUSTER_GROUP"
+      messagePrint " - TMC Cluster Name"                "$TMC_CLUSTER_NAME"
+      messagePrint " - TMC Context Name"                "$TMC_CONTEXT_NAME"
+      messagePrint " - TMC AWS Account Name"            "$TMC_ACCOUNT_NAME_AWS"
+      messagePrint " - TMC Management Cluster"          "$TMC_MANAGEMENT_CLUSTER"
+      messagePrint " - TMC Provisioner Name"            "$TMC_PROVISONER_NAME"
+
+      # --- CHECK IF AWS CLI IS CONFIGURED ---
+      if [ ! -d ~/.aws -o -d ~/.aws/credentials ]; then
+        echo "ERROR: AWS CLI is not configured yet, please run aws configure"
+        echo "       => aws configure"
+        exit 1
+      fi
+    fi
+  fi
+
+  if [ ${missing_variables} -eq 1 ]; then
+    echo "  --------------------------------------------------------------------------------------------------------------"
+    echo "  IMPORTANT: Please set the missing environment variables either in your shell or in the pcfconfig"
+    echo "             configuration file ~/.pcfconfig and set all variables with the 'export' notation"
+    echo "             ie. => export AZURE_PKS_TLS_CERTIFICATE=/home/demouser/certs/cert.pem"
+    echo "  --------------------------------------------------------------------------------------------------------------"
+    exit 1
+  fi
+}
+
+checkTMCcontext() {
+  tmc_context=$(tmc system context current -o json 2>/dev/null | jq -r '.full_name.name')
+  if [ "$tmc_context" == "" -o "$tmc_context" != "$TMC_CONTEXT_NAME" ]; then 
+    tmc system context use $TMC_CONTEXT_NAME > /dev/null 2>&1
+    if [ $? -ne 0 ]; then
+      echo "ERROR: Can not set TMC Context to $TMC_CONTEXT_NAME"
+      echo "       => tmc system context use $TMC_CONTEXT_NAME"
+      exit 1
+    fi 
+  fi 
+}
+
+tmcCreateCluster() {
+  stt=$(tmc cluster list -m $TMC_MANAGEMENT_CLUSTER --name $TMC_CLUSTER_NAME -o json 2>/dev/null | jq -r '.clusters[].status.phase' 2>/dev/null) 
+
+  if [ "$stt" == "DELETING" ]; then                                         
+     echo "ERROR: Cluster is currently on deleting, please try again later"; exit 1
+  fi
+
+  if [ "$stt" == "" -o "$stt" != "READY" ]; then
+    messageTitle "TMC Create Cluster"     
+    messagePrint " - Cluster Name"           "$TMC_CLUSTER_NAME"
+    messagePrint " - Provisioner Name"       "$TMC_PROVISONER_NAME"
+    messagePrint " - TKG Management Cluster" "$TMC_MANAGEMENT_CLUSTER"
+    messagePrint " - Account Name"           "$TMC_ACCOUNT_NAME"
+    tmc cluster create -m $TMC_MANAGEMENT_CLUSTER -p $TMC_PROVISONER_NAME --ssh-key-name $TMC_SSH_KEY_NAME_AWS \
+                       -c $TMC_ACCOUNT_NAME -r $AWS_REGION -n $TMC_CLUSTER_NAME -q $TDH_TKGWC_WORKERNODES \
+                       --availability-zone ${AWS_REGION}a
+
+    messagePrint " - Cluster Status"         "creating ...."
+    stt=""
+    while [ "$stt" != "READY" ]; do
+      stt=$(tmc cluster list -m $TMC_MANAGEMENT_CLUSTER --name $TMC_CLUSTER_NAME -o json 2>/dev/null | \
+            jq -r '.clusters[].status.phase' 2>/dev/null | head -1)
+
+      sleep 10
+    done
+  fi
+
+  messageTitle "TMC Verify Cluster"     
+  messagePrint " - Cluster Name"           "$TMC_CLUSTER_NAME"
+  messagePrint " - TKG Management Cluster" "$TMC_MANAGEMENT_CLUSTER"
+  messagePrint " - Cluster Status"         "$stt"
+  messagePrint " - Provisioner Name"       "$TMC_PROVISONER_NAME"
+  messagePrint " - Account Name"           "$TMC_ACCOUNT_NAME"
+  echo "----------------------------------------------------------------------------------------"
+  echo " TO-DELETE-THE-CLUSTER"
+  echo " => tmc cluster delete -m $TMC_MANAGEMENT_CLUSTER -p $TMC_PROVISONER_NAME $TMC_CLUSTER_NAME"
+  echo "----------------------------------------------------------------------------------------"
+}
+
+getTDHClusterCredentials() {
+  messageTitle "TMC Get TKG Cluster Credentials"
+  messagePrint " - Cluster Name"           "$TMC_CLUSTER_NAME"
+  messagePrint " - Kubeconfig File"        "/tmp/${TMC_CLUSTER_NAME}.kubeconfig"
+  messagePrint " - Kubernetes Context"     "$TMC_CLUSTER_NAME"
+
+  tmc cluster auth kubeconfig get $TMC_CLUSTER_NAME -p $TMC_PROVISONER_NAME -m $TMC_MANAGEMENT_CLUSTER > /tmp/${TMC_CLUSTER_NAME}.kubeconfig
+  export KUBECONFIG=/tmp/${TMC_CLUSTER_NAME}.kubeconfig
+
+  kubectl config use-context $TMC_CLUSTER_NAME 
+  echo "----------------------------------------------------------------------------------------"
+  kubectl config get-contexts
+  echo "----------------------------------------------------------------------------------------"
 }
 
 verifyDockerRegistry() {
