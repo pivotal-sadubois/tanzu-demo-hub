@@ -224,6 +224,12 @@ else
   fi
 fi
 
+export TDH_DEPLOYMENT_ENV_NAME=$TDH_INFRASTRUCTURE
+export TDH_TLS_CERT=tanzu-demo-hub
+export TDH_TLS_SECRET=${TDH_TLS_CERT}-tls
+export TDH_TLS_ISSUER_NAME=letsencrypt-staging
+export TDH_TLS_ISSUER_CONFIG=/tmp/issuer-dns-manager1.yaml
+
 #echo "export TMC_API_TOKEN==$TMC_SERVICE_TOKEN"
 #echo "tmc login -n $TMC_CONTEXT_NAME"
 #echo "tmc cluster auth kubeconfig get sadubois-test -p $TMC_PROVISONER_NAME -m $TDH_MANAGEMENT_CLUSTER > /tmp/sadubois-test.kubeconfig"
@@ -243,7 +249,12 @@ getTDHClusterCredentials
 uodateConfigMap tanzu-demo-hub TDH_DOMAIN               $AWS_HOSTED_DNS_DOMAIN
 uodateConfigMap tanzu-demo-hub TDH_ENVNAME              $TDH_ENVNAME
 
-VerifyK8SDemoPlatform
+InstallCertManager
+InstallContour
+createClusterIssuer
+exit
+InstallHarborRegistry
+getRootCA tanzu-demo-hub-tls
 
 exit
 
