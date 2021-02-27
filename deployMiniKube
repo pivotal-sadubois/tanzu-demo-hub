@@ -74,7 +74,7 @@ if [ $? -ne 0 ]; then
   echo "ERROR: failed to add helm registry https://charts.bitnami.com/bitnami"; exit
 fi
 
-InstallContour() {
+InstallContour_delete_me() {
   if [ "$TDH_SERVICE_INGRESS_CONTOUR" != "true" ]; then
     uodateConfigMap tanzu-demo-hub TDH_INGRESS_CONTOUR_ENABLED        "false"
     return
@@ -132,7 +132,7 @@ InstallContour() {
   uodateConfigMap tanzu-demo-hub TDH_INGRESS_CONTOUR_CHART_UPDATE   "$dat"
 }
 
-InstallCertManager() {
+InstallCertManager_delete_me() {
   NAMESPACE=cert-manager 
 
   kubectl get ns $NAMESPACE > /dev/null 2>&1
@@ -214,11 +214,10 @@ InstallMetallb() {
   fi
 }
 
-createClusterIssuer() {
+createClusterIssuer_delete_me() {
   #https://cert-manager.io/docs/tutorials/acme/dns-validation/
   NAMESPACE=cert-manager
 
-TDH_HARBOR_STAGING_TLS_CERT=false
   if [ "${TDH_HARBOR_STAGING_TLS_CERT}" == "true" ]; then
     LETSENSCRIPT_SERVER="https://acme-staging-v02.api.letsencrypt.org/directory"
   else
@@ -405,7 +404,7 @@ TDH_HARBOR_STAGING_TLS_CERT=false
   echo "------------------------------------------------------------------------------------------------------------------------"
 }
 
-InstallHarborRegistry() {
+InstallHarborRegistry_delete_me() {
   NAMESPACE=registry-harbor
   HARBOR_TLS_SECRET=$TDH_TLS_SECRET
   NOTARY_TLS_SECRET=$TDH_TLS_SECRET

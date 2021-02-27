@@ -252,25 +252,23 @@ uodateConfigMap tanzu-demo-hub TDH_ENVNAME              $TDH_ENVNAME
 InstallCertManager
 InstallContour
 createClusterIssuer
-exit
-InstallHarborRegistry
+#InstallHarborRegistry
 getRootCA tanzu-demo-hub-tls
 
-exit
+echo "-----------------------------------------------------------------------------------------------------------"
+echo "Tanzu Kubernetes Grid Cluster ($TMC_CLUSTER_NAME) build completed"
+echo "-----------------------------------------------------------------------------------------------------------"
+echo "1.) Set KUBECONFIG and set the cluster context"
+echo "    => export KUBECONFIG=/tmp/${TMC_CLUSTER_NAME}.kubeconfig"
+echo "    => kubectl config use-context $TMC_CLUSTER_NAME"
+echo "    => kubectl config get-contexts"
+echo "2.) Relaxing Pod Security in cluster ($TMC_CLUSTER_NAME)"
+echo "    => kubectl create clusterrolebinding tanzu-demo-hub-privileged-cluster-role-binding \\"
+echo "        --clusterrole=vmware-system-tmc-psp-privileged --group=system:authenticated"
+echo "3.) Delete Cluster if not used anymore"
+echo "    => tmc cluster delete -m $TMC_MANAGEMENT_CLUSTER -p $TMC_PROVISONER_NAME $TMC_CLUSTER_NAME"
 
 
-echo "XXXXXX"; exit
-# --- VERYFY ACCESS TO CLOUD ---
-checkCloudCLI
-checkCloudAccess
-checkTDHAccess
-checkKeyPairs
-
-# --- CREATE TKG CLUSTER AND JUMP SERVER
-createCluster
-sshEnvironment
-configureJumpHost
-configureLetsEnscript
 
 exit
 

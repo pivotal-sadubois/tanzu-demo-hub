@@ -2794,3 +2794,113 @@ InstallCertManager() {
   uodateConfigMap tanzu-demo-hub TDH_CERTMANAGER_CHART_UPDATE   "$dat"
 }
 
+InstallHarborRegistry() {
+  NAMESPACE=registry-harbor
+  HARBOR_TLS_SECRET=$TDH_TLS_SECRET
+  NOTARY_TLS_SECRET=$TDH_TLS_SECRET
+  HARBOR_HOSTNAME="harbor.apps-contour.$TDH_ENVNAME.$AWS_HOSTED_DNS_DOMAIN"
+  NOTARY_HOSTNAME="notary.apps-contour.$TDH_ENVNAME.$AWS_HOSTED_DNS_DOMAIN"
+
+  kubectl get ns $NAMESPACE > /dev/null 2>&1
+  if [ $? -ne 0 ]; then
+    messageTitle "Install Harbor Reistry"
+
+    # --- VERIFY SERVICE CONFIGURATION ---
+    checkKubernetesServices harbor
+
+    messagePrint " - Harbor Registry/Notary Server"        "harbor.apps-contour.$TDH_ENVNAME.$AWS_HOSTED_DNS_DOMAIN"
+    messagePrint "  "                                      "notary.apps-contour.$TDH_ENVNAME.$AWS_HOSTED_DNS_DOMAIN"
+    messagePrint " - Harbor Admin Password"                $(maskPassword "$TDH_HARBOR_ADMIN_PASSWORD")
+    messagePrint " - Harbor TLS Staging Cert"              "$TDH_HARBOR_STAGING_TLS_CERT"
+
+    # --- INSTALL CONTOUR INGRESS ---
+    kubectl create ns $NAMESPACE > /dev/null 2>&1
+    helm uninstall harbor -n $NAMESPACE > /dev/null 2>&1
+
+    # --- COPY SECRET TO NAMESPACE ---
+    kubectl get secret tanzu-demo-hub-tls --namespace=default  -oyaml | grep -v '^\s*namespace:\s' | \
+    kubectl apply --namespace=registry-harbor -f -
+
+    HARBOR_VALUES=/tmp/harbor_values.yaml
+    echo "harborAdminPassword: $TDH_HARBOR_ADMIN_PASSWORD"                                                                      >  $HARBOR_VALUES
+    echo ""                                                                                                                     >> $HARBOR_VALUES
+    echo "service:"                                                                                                             >> $HARBOR_VALUES
+    echo "  type: ClusterIP"                                                                                                    >> $HARBOR_VALUES
+    echo "  tls:"                                                                                                               >> $HARBOR_VALUES
+    echo "    enabled: true"                                                                                                    >> $HARBOR_VALUES
+    echo "    existingSecret: $HARBOR_TLS_SECRET"                                                                               >> $HARBOR_VALUES
+    echo "    notaryExistingSecret: $NOTARY_TLS_SECRET"                                                                         >> $HARBOR_VALUES
+    echo ""                                                                                                                     >> $HARBOR_VALUES
+    echo "ingress:"                                                                                                             >> $HARBOR_VALUES
+    echo "  enabled: true"                                                                                                      >> $HARBOR_VALUES
+    echo "  hosts:"                                                                                                             >> $HARBOR_VALUES
+    echo "    core: $HARBOR_HOSTNAME"                                                                                           >> $HARBOR_VALUES
+    echo "    notary: $NOTARY_HOSTNAME"                                                                                         >> $HARBOR_VALUES
+    echo "  annotations:"                                                                                                       >> $HARBOR_VALUES
+    #echo "    cert-manager.io/cluster-issuer: letsencrypt-staging  # use letsencrypt-staging cluster issuer for TLS certs"      >> $HARBOR_VALUES
+    #echo "    kubernetes.io/tls-acme: \"true\"                     # using ACME certificates for TLS"                           >> $HARBOR_VALUES
+    echo "    ingress.kubernetes.io/force-ssl-redirect: \"true\"   # force https, even if http is requested"                    >> $HARBOR_VALUES
+    echo "    kubernetes.io/ingress.class: contour                 # using Contour for ingress"                                 >> $HARBOR_VALUES
+
+    echo "externalURL: https://harbor.apps-contour.$TDH_ENVNAME.$AWS_HOSTED_DNS_DOMAIN"                                         >> $HARBOR_VALUES
+    echo ""                                                                                                                     >> $HARBOR_VALUES
+    echo "portal:"                                                                                                              >> $HARBOR_VALUES
+    echo "  tls:"                                                                                                               >> $HARBOR_VALUES
+    echo "    existingSecret: $HARBOR_TLS_SECRET"                                                                               >> $HARBOR_VALUES
+    echo ""                                                                                                                     >> $HARBOR_VALUES
+    echo "persistence:"                                                                                                         >> $HARBOR_VALUES
+    echo "  enabled: true"                                                                                                      >> $HARBOR_VALUES
+    echo "  resourcePolicy: 'keep'"                                                                                             >> $HARBOR_VALUES
+    echo "  persistentVolumeClaim:"                                                                                             >> $HARBOR_VALUES
+    echo "    registry:"                                                                                                        >> $HARBOR_VALUES
+    echo "      accessMode: ReadWriteOnce"                                                                                      >> $HARBOR_VALUES
+    echo "      size: 20Gi"                                                                                                     >> $HARBOR_VALUES
+
+    helm install harbor bitnami/harbor -f $HARBOR_VALUES --version 9.2.2 -n $NAMESPACE > /dev/null 2>&1
+    if [ $? -ne 0 ]; then
+      echo "ERROR: failed to install bitnami/harbor"
+      echo "       => helm install harbor bitnami/harbor -f $HARBOR_VALUES --version 9.2.2 -n $NAMESPACE"
+      exit
+    fi
+
+    cnt=0
+    while [ $cnt -eq 0 ]; do
+      cnt=$(kubectl get pods -n registry-harbor | sed 1d | grep -vc Running)
+      if [ $cnt -eq 0 ]; then cnt=1; fi
+      sleep 5
+    done
+
+    # --- WAIT FOR HARBOR TO COME ONLINE ---
+    messagePrint " - Verify Harbor Reistry Access" "$HARBOR_HOSTNAME"
+    cnt=0
+    while [ $cnt -eq 0 ]; do
+      docker login $HARBOR_HOSTNAME -u admin -p $TDH_HARBOR_ADMIN_PASSWORD > /dev/null 2>&1
+      if [ $? -eq 0 ]; then cnt=1; fi
+      sleep 10
+    done
+  fi
+
+
+  ver=$(helm -n $NAMESPACE ls -o json | jq -r '.[].app_version')
+  crt=$(helm -n $NAMESPACE ls -o json | jq -r '.[].chart')
+  stt=$(helm -n $NAMESPACE ls -o json | jq -r '.[].status')
+  dat=$(helm -n $NAMESPACE ls -o json | jq -r '.[].updated')
+
+  messageTitle "Verify Harbor Reistry"
+  messagePrint " - Harbor Reistry Namespace:"         "$NAMESPACE"
+  messagePrint " - Harbor Reistry Helm Chart:"        "$crt"
+  messagePrint " - Harbor Reistry Version:"           "$ver"
+  messagePrint " - Harbor Reistry Status:"            "$stt"
+  messagePrint " - Harbor Reistry Installed/Updated:" "$dat"
+
+  # --- STORE SETTINGS IN CONFIGMAP ---
+  uodateConfigMap tanzu-demo-hub TDH_HARBOR_REGISTRY_ENABLED        "true"
+  uodateConfigMap tanzu-demo-hub TDH_HARBOR_REGISTRY_ADMIN_PASSWORD "$TDH_HARBOR_ADMIN_PASSWORD"
+  uodateConfigMap tanzu-demo-hub TDH_HARBOR_REGISTRY_DNS_HARBOR     "$HARBOR_HOSTNAME"
+  uodateConfigMap tanzu-demo-hub TDH_HARBOR_REGISTRY_DNS_NOTARY     "$NOTARY_HOSTNAME"
+  uodateConfigMap tanzu-demo-hub TDH_HARBOR_REGISTRY_CHART_NAME     "$crt"
+  uodateConfigMap tanzu-demo-hub TDH_HARBOR_REGISTRY_CHART_VERSION  "$ver"
+  uodateConfigMap tanzu-demo-hub TDH_HARBOR_REGISTRY_CHART_STATUS   "$stt"
+  uodateConfigMap tanzu-demo-hub TDH_HARBOR_REGISTRY_CHART_UPDATE   "$dat"
+}
+
