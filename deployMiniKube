@@ -565,6 +565,8 @@ checkTDHAccess
 
 uodateConfigMap tanzu-demo-hub TDH_DOMAIN               $AWS_HOSTED_DNS_DOMAIN 
 uodateConfigMap tanzu-demo-hub TDH_ENVNAME              $TDH_ENVNAME
+uodateConfigMap tanzu-demo-hub TDH_DEPLOYMENT_TYPE      "minikube" 
+uodateConfigMap tanzu-demo-hub TDH_MANAGED_BY_TMC       "false" 
 
 VerifyK8SDemoPlatform
 InstallMetallb

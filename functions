@@ -2237,6 +2237,19 @@ getTDHClusterCredentials() {
   messagePrint " - Kubeconfig File"        "/tmp/${TMC_CLUSTER_NAME}.kubeconfig"
   messagePrint " - Kubernetes Context"     "$TMC_CLUSTER_NAME"
 
+  ret=1; cnt=0
+  while [ $ret -ne 0 -a $cnt -lt 5 ]; do
+    tmc cluster auth kubeconfig get $TMC_CLUSTER_NAME -p $TMC_PROVISONER_NAME -m $TMC_MANAGEMENT_CLUSTER > /dev/null 2>&1; ret=$?
+    sleep 10
+    let cnt=cnt+1
+  done
+
+  if [ $ret -ne 0 ]; then 
+    echo "ERROR: Failled to retrieve cluster credentials, aborting"
+    echo "       => tmc cluster auth kubeconfig get $TMC_CLUSTER_NAME -p $TMC_PROVISONER_NAME -m $TMC_MANAGEMENT_CLUSTER"
+    exit
+  fi
+
   tmc cluster auth kubeconfig get $TMC_CLUSTER_NAME -p $TMC_PROVISONER_NAME -m $TMC_MANAGEMENT_CLUSTER > /tmp/${TMC_CLUSTER_NAME}.kubeconfig
   export KUBECONFIG=/tmp/${TMC_CLUSTER_NAME}.kubeconfig
   chmod 600 /tmp/${TMC_CLUSTER_NAME}.kubeconfig
