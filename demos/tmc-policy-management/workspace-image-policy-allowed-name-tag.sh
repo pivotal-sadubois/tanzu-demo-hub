@@ -105,13 +105,14 @@ for n in $(tmc workspace image-policy list --workspace-name $WORKSPACE_TEST | eg
   tmc workspace image-policy delete --workspace-name $WORKSPACE_TEST $n > /dev/null 2>&1
 done 
 
-if [ 1 -eq 2 ]; then
 tmc cluster namespace delete --cluster-name $TDH_CLUSTER_NAME -p $TDH_PROVISONER_NAME -m $TDH_MANAGEMENT_CLUSTER $NAMESPACE_TEST > /dev/null 2>&1
 tmc cluster namespace delete --cluster-name $TDH_CLUSTER_NAME -p $TDH_PROVISONER_NAME -m $TDH_MANAGEMENT_CLUSTER $NAMESPACE_PROD > /dev/null 2>&1
 tmc cluster namespace delete --cluster-name $TDH_CLUSTER_NAME \
    -p $TDH_PROVISONER_NAME -m $TDH_MANAGEMENT_CLUSTER demo-apps-test > /dev/null 2>&1
 tmc cluster namespace delete --cluster-name $TDH_CLUSTER_NAME \
    -p $TDH_PROVISONER_NAME -m $TDH_MANAGEMENT_CLUSTER demo-apps-prod > /dev/null 2>&1
+kubectl delete $NAMESPACE_TEST > /dev/null 2>&1
+kubectl delete $NAMESPACE_PROD > /dev/null 2>&1
 tmc workspace delete "tdh-ws-prod" > /dev/null 2>&1
 tmc workspace delete "tdh-ws-test" > /dev/null 2>&1
 
@@ -166,18 +167,13 @@ slntCmd "docker tag $DOCKER_IMAGE:0.2.0 $TDH_HARBOR_REGISTRY_DNS_HARBOR/library/
 #execCmd "docker tag $DOCKER_IMAGE:0.2.0 $TDH_HARBOR_REGISTRY_DNS_HARBOR/library/$DOCKER_IMAGE:production"
 execCmd "docker push $TDH_HARBOR_REGISTRY_DNS_HARBOR/library/$DOCKER_IMAGE:0.2.0"
 
-prtHead "Tag Docker Image ($DOCKER_IMAGE:0.2.0) as 'production'"
-slntCmd "docker tag $TDH_HARBOR_REGISTRY_DNS_HARBOR/library/$DOCKER_IMAGE:0.2.0 $TDH_HARBOR_REGISTRY_DNS_HARBOR/library/$DOCKER_IMAGE:production"
-echo
-
 prtHead "Show available Image-Policy templates"
 execCmd "tmc organization image-policy template list"
-fi
 
 prtHead "Create Image Policy - Allowed Name Tag for Workspace ($WORKSPACE_TEST)"
 execCmd "tmc workspace image-policy create -r allowed-name-tag --workspace-name $WORKSPACE_TEST -n tdh-allowed-name-tag-http-echo --image-name "*/http-echo" -t 0.2.0"
 
-sleep 20
+sleep 150
 execCmd "kubectl get vmware-system-tmc-allowed-images-v1.constraints.gatekeeper.sh"
 execCmd "kubectl describe vmware-system-tmc-allowed-images-v1.constraints.gatekeeper.sh"
 
@@ -188,12 +184,17 @@ execCmd "kubectl -n $NAMESPACE_TEST run http-echo --image=$TDH_HARBOR_REGISTRY_D
 prtHead "Create Image Policy - Allowed Name Tag for Workspace ($WORKSPACE_PROD)"
 execCmd "tmc workspace image-policy create -r allowed-name-tag --workspace-name $WORKSPACE_PROD -n tdh-allowed-name-tag-production -t \"production\""
 
-sleep 20
+sleep 150
 execCmd "kubectl get vmware-system-tmc-allowed-images-v1.constraints.gatekeeper.sh"
 execCmd "kubectl describe vmware-system-tmc-allowed-images-v1.constraints.gatekeeper.sh"
 
 prtHead "Deploy Container (http-echo:latest) to kubernetes namespace: $NAMESPACE_PROD"
 execCmd "kubectl -n $NAMESPACE_PROD run http-echo --image=$TDH_HARBOR_REGISTRY_DNS_HARBOR/library/http-echo:latest -- -text=\"http-echo version: latest\""
+
+prtHead "Tag Docker Image ($DOCKER_IMAGE:0.2.0) as 'production'"
+slntCmd "docker tag $TDH_HARBOR_REGISTRY_DNS_HARBOR/library/$DOCKER_IMAGE:0.2.0 $TDH_HARBOR_REGISTRY_DNS_HARBOR/library/$DOCKER_IMAGE:production"
+echo
+
 execCmd "kubectl -n $NAMESPACE_PROD run http-echo --image=$TDH_HARBOR_REGISTRY_DNS_HARBOR/library/http-echo:production -- -text=\"http-echo version: production\""
 
 echo "     -----------------------------------------------------------------------------------------------------------"
