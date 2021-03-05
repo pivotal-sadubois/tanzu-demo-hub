@@ -20,6 +20,19 @@ prtText() {
   printf "%2s   %s\n" "" "$1"
 }
 
+lineFed() {
+  echo
+}
+
+slntCmd() {
+  bold=$(tput bold)
+  normal=$(tput sgr0)
+
+  echo -e "     => ${bold}$1${normal}\c"; read x
+  eval "$1" 2>&1 | sed -e '/^$/d' -e 's/^/     /g'
+  if [ $? -ne 0 ]; then exit 1; fi
+}
+
 execCmd() {
   bold=$(tput bold)
   normal=$(tput sgr0)
@@ -1790,7 +1803,6 @@ setDNSrecord() {
   if [ "${ZONE_ID}" != "" ]; then
     ZONE="${HOSTNAME}.${DNS_PREFIX}.${DNS_SUFFIX}"
 
-#gaga12
     TMPROUTE53=/tmp/$$_tmp_route53.json
     echo "{"                                                            >  $TMPROUTE53
     echo "  \"Comment\": \"CREATE/DELETE/UPSERT a record \","           >> $TMPROUTE53
@@ -2231,6 +2243,10 @@ tmcCreateCluster() {
   echo "----------------------------------------------------------------------------------------"
 }
 
+alignStr() {
+  printf "%-25s" "$1"
+}
+
 getTDHClusterCredentials() {
   messageTitle "TMC Get TKG Cluster Credentials"
   messagePrint " - Cluster Name"           "$TMC_CLUSTER_NAME"
@@ -2238,9 +2254,9 @@ getTDHClusterCredentials() {
   messagePrint " - Kubernetes Context"     "$TMC_CLUSTER_NAME"
 
   ret=1; cnt=0
-  while [ $ret -ne 0 -a $cnt -lt 5 ]; do
+  while [ $ret -ne 0 -a $cnt -lt 10 ]; do
     tmc cluster auth kubeconfig get $TMC_CLUSTER_NAME -p $TMC_PROVISONER_NAME -m $TMC_MANAGEMENT_CLUSTER > /dev/null 2>&1; ret=$?
-    sleep 10
+    sleep 60
     let cnt=cnt+1
   done
 
@@ -2282,7 +2298,10 @@ installBuildService() {
   fi
 
   # --- DOWNLOAD BUILD_SERVICE BINARIES ---
-  downloadFromPivnet build-service $TDH_SERVICE_BUILD_SERVICE_VERSION
+  downloadFromPivnet build-service $TDH_SERVICE_BUILD_SERVICE_VERSION "build-service-$TDH_SERVICE_BUILD_SERVICE_VERSION.tar"
+
+  # --- DOWNLOAD BUILD_SERVICE DEPENDANCIES ---
+  downloadFromPivnet tbs-dependencies $TDH_SERVICE_BUILD_SERVICE_DEPENDANCIESN "descriptor-$TDH_SERVICE_BUILD_SERVICE_DEPENDANCIESN.yaml"
 
   messageTitle "Installing Tanzu Build Service"
   TBS_FILE="/tmp/build-service-$TDH_SERVICE_BUILD_SERVICE_VERSION.tar"
@@ -2331,6 +2350,11 @@ installBuildService() {
 
   cnt=$(kubectl get namespace kpack build-service 2>/dev/null | egrep -c "kpack|build-service")
   if [ $cnt -ne 2 ]; then
+#    messagePrint "- Import Dependency Descriptors"
+#echo "kp import -f /tmp/descriptor-$TDH_SERVICE_BUILD_SERVICE_DEPENDANCIESN.yaml"
+#    #kp import -f /tmp/descriptor-$TDH_SERVICE_BUILD_SERVICE_DEPENDANCIESN.yaml > /dev/null 2>&1
+#    kp import -f /tmp/descriptor-$TDH_SERVICE_BUILD_SERVICE_DEPENDANCIESN.yaml 
+
     messagePrint "- Install Build Service" ""
     echo "-----------------------------------------------------------------------------------------------------------"
     ret=1; cnt=0
@@ -2377,7 +2401,9 @@ installBuildService() {
 
 downloadFromPivnet() {
   PRODUCT_SLUG=$1
-  SLUG_VER=$2
+  SLUG_VER="$2"
+  SLUG_STR="$3"
+
 
   for pid in $(pivnetAPI $PCF_PIVNET_TOKEN GET products/$PRODUCT_SLUG/releases 2> /dev/null | \
              jq -r ".releases[] | select(.version | scan(\"^$SLUG_VER\")).id"); do
@@ -2885,14 +2911,19 @@ InstallHarborRegistry() {
 
     # --- WAIT FOR HARBOR TO COME ONLINE ---
     messagePrint " - Verify Harbor Reistry Access" "$HARBOR_HOSTNAME"
-    cnt=0
-    while [ $cnt -eq 0 ]; do
-      docker login $HARBOR_HOSTNAME -u admin -p $TDH_HARBOR_ADMIN_PASSWORD > /dev/null 2>&1
-      if [ $? -eq 0 ]; then cnt=1; fi
-      sleep 10
+    ret=1; cnt=0
+    while [ $ret -ne 0 -a $cnt -le 5 ]; do
+      docker login $HARBOR_HOSTNAME -u admin -p $TDH_HARBOR_ADMIN_PASSWORD > /dev/null 2>&1; ret=$?
+      sleep 60
+      let cnt=cnt+1
     done
-  fi
 
+    if [ $ret -ne 0 ]; then
+      echo "ERROR: failed to login to registry"
+      echo "       => docker login $HARBOR_HOSTNAME -u admin -p $TDH_HARBOR_ADMIN_PASSWORD"
+      exit
+    fi
+  fi
 
   ver=$(helm -n $NAMESPACE ls -o json | jq -r '.[].app_version')
   crt=$(helm -n $NAMESPACE ls -o json | jq -r '.[].chart')
@@ -2916,4 +2947,29 @@ InstallHarborRegistry() {
   uodateConfigMap tanzu-demo-hub TDH_HARBOR_REGISTRY_CHART_STATUS   "$stt"
   uodateConfigMap tanzu-demo-hub TDH_HARBOR_REGISTRY_CHART_UPDATE   "$dat"
 }
+
+tdh_verifyTKGcluster() {
+  messageTitle "TKG Cluster Information"
+  messagePrint " - Cluster Name"           "$TDH_CLUSTER_NAME"
+  messagePrint " - TKG Management Cluster" "$TDH_MANAGEMENT_CLUSTER"
+  messagePrint " - Provisioner Name"       "$TDH_PROVISONER_NAME"
+  messagePrint " - Account Name"           "$TDH_MISSION_CONTROL_ACCOUNT_NAME"
+  echo 
+
+  echo -n "Do you want detailed infos of the TKG cluster setup setup ($TDH_CLUSTER_NAME) ? (y/n): "; read cluster_info
+  answer_provided="n"
+  while [ "${answer_provided}" == "n" ]; do
+    if [ "${cluster_info}" == "y" -o "${cluster_info}" == "Y" ]; then break; fi
+    if [ "${cluster_info}" == "n" -o "${cluster_info}" == "N" ]; then break; fi
+    echo -n "Do you want detailed infos of the TKG cluster setup setup ($TDH_CLUSTER_NAME) ? (y/n): "; read cluster_info
+  done
+  echo 
+
+  if [ "${cluster_info}" == "y" -o "${cluster_info}" == "Y" ]; then
+    prtHead "Show TDK Cluster infos ($TDH_CLUSTER_NAME)"
+    execCmd "tmc cluster list $TDH_CLUSTER_NAME -m $TDH_MANAGEMENT_CLUSTER -p $TDH_PROVISONER_NAME"
+    execCmd "tmc cluster get $TDH_CLUSTER_NAME -m $TDH_MANAGEMENT_CLUSTER -p $TDH_PROVISONER_NAME"
+  fi
+}
+
 
