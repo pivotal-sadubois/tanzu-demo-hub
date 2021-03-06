@@ -420,7 +420,7 @@ checkCloudAccess() {
       messagePrint " - MiniKube Status"                 "$stt"
       if [ "$stt" == "Stopped" -o "$stt" == "" ]; then 
         echo "ERROR: Minukube is not running, start it first"
-        echo "       => minikube -p tanzu-demo-hub start --cpus $TDH_MINIKUBE_CONFIG_CPU --memory $TDH_MINIKUBE_CONFIG_MEMORY"; exit
+        echo "       => minikube -p tanzu-demo-hub start --driver=hyperkit --cpus $TDH_MINIKUBE_CONFIG_CPU --memory $TDH_MINIKUBE_CONFIG_MEMORY"; exit
       fi
 
       messagePrint " - MiniKube ServerIP"               "$(minikube ip -p tanzu-demo-hub)"
@@ -2113,7 +2113,7 @@ checkCLIcommands() {
     fi
   fi
 
-  if [ "$sys" == "TOOLS" ]; then
+  if [ "$cat" == "TOOLS" ]; then
     CLI_COMMANDS="/usr/local/bin/jq:brew:jq /usr/local/bin/yq:brew:yq"
 
     for arg in $CLI_COMMANDS; do
