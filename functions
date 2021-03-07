@@ -83,6 +83,8 @@ pivnetAPIdownload() {
 
   if [ ! -f /tmp/$FILE_NAME ]; then
     echo "ERROR: Error downloading file from PIVNET /tmp/$FILE_NAME"
+    echo "       SLUG:$PRODUCT_SLUG, PRODUCT_ID:$PRODUCT_ID"
+    exit
   fi
 
   return 0
@@ -2297,11 +2299,14 @@ installBuildService() {
     exit
   fi
 
+echo hhhh1
   # --- DOWNLOAD BUILD_SERVICE BINARIES ---
   downloadFromPivnet build-service $TDH_SERVICE_BUILD_SERVICE_VERSION "build-service-$TDH_SERVICE_BUILD_SERVICE_VERSION.tar"
 
+echo hhhh2
   # --- DOWNLOAD BUILD_SERVICE DEPENDANCIES ---
   downloadFromPivnet tbs-dependencies $TDH_SERVICE_BUILD_SERVICE_DEPENDANCIESN "descriptor-$TDH_SERVICE_BUILD_SERVICE_DEPENDANCIESN.yaml"
+echo hhhh3
 
   messageTitle "Installing Tanzu Build Service"
   TBS_FILE="/tmp/build-service-$TDH_SERVICE_BUILD_SERVICE_VERSION.tar"
@@ -2452,12 +2457,25 @@ getRootCA() {
   THD_TLS_CERTIFICATE=tdh-cert.pem
   THD_TLS_KEY=tdh-key.pem
 
-  [ ! -d $TDHPATH/certificates ] && mkdir $$TDHPATH/certificates
+  # --- CREATE CERTIFICATES DIRECTORY ---
+  [ ! -d $TDHPATH/certificates ] && mkdir $TDHPATH/certificates
 
-  if [ ! -f $TDHPATH/certificates/ca.pem ]; then 
+  if [ ! -f $TDHPATH/certificates/ca.pem -o $TDHPATH/certificates/$THD_TLS_CERTIFICATE -o $TDHPATH/certificates/$THD_TLS_KEY ]; then 
     messageTitle "Get RootCA for TLS Certificate ($SECRET)"
     kubectl get secret $SECRET -o json | jq -r '.data."tls.crt"' | base64 -d > $TDHPATH/certificates/$THD_TLS_CERTIFICATE
     kubectl get secret $SECRET -o json | jq -r '.data."tls.key"' | base64 -d > $TDHPATH/certificates/$THD_TLS_KEY
+
+    if [ ! -f $TDHPATH/certificates/$THD_TLS_CERTIFICATE ]; then 
+      echo "ERROR: Failed to get tdh-cert.pem"
+      echo "       => kubectl get secret $SECRET -o json | jq -r '.data."tls.crt"' | base64 -d > $TDHPATH/certificates/$THD_TLS_CERTIFICATE"
+      exit
+    fi
+
+    if [ ! -f $TDHPATH/certificates/$THD_TLS_KEY ]; then 
+      echo "ERROR: Failed to get $THD_TLS_KEY"
+      echo "       => kubectl get secret $SECRET -o json | jq -r '.data."tls.key"' | base64 -d > $TDHPATH/certificates/$THD_TLS_KEY"
+      exit
+    fi
 
     txt=$(kubectl get secret $SECRET -o json | jq -r '.data."tls.crt"' | base64 -d | openssl x509 -noout -issuer) 
     ca_country=$(echo $txt | awk -F'/' '{ print $2 }' | awk -F'=' '{ print $2 }') 
@@ -2475,9 +2493,15 @@ getRootCA() {
 
         url=https://letsencrypt.org/certs/lets-encrypt-r3.pem
         curl $url 2>/dev/null > $TDHPATH/certificates/$LETSENSCRIPT_INTERMEDIATE_CERT_FILE
-        messagePrint " - Let's Encrypt Intermediate Certificate:"      "certificates/$LETSENSCRIPT_INTERMEDIATE_CERT"
-        messagePrint " - Let's Encrypt Intermediate Certificate Url:"  "$url"
-        messagePrint " - Let's Encrypt Intermediate Certificate File:" "certificates/$LETSENSCRIPT_INTERMEDIATE_CERT_FILE"
+        if [ $? -eq 0 ]; then
+          messagePrint " - Let's Encrypt Intermediate Certificate:"      "certificates/$LETSENSCRIPT_INTERMEDIATE_CERT"
+          messagePrint " - Let's Encrypt Intermediate Certificate Url:"  "$url"
+          messagePrint " - Let's Encrypt Intermediate Certificate File:" "certificates/$LETSENSCRIPT_INTERMEDIATE_CERT_FILE"
+        else
+          echo "ERROR: Failed to optiain the root certidicate ertificates/$LETSENSCRIPT_INTERMEDIATE_CERT"
+          echo "       => curl $url > $TDHPATH/certificates/$LETSENSCRIPT_INTERMEDIATE_CERT_FILE"
+          exit
+        fi
       fi
 
       if [ "$ca_cn" == "E1" ]; then 
@@ -2486,9 +2510,15 @@ getRootCA() {
 
         url=https://letsencrypt.org/certs/lets-encrypt-e1.pem
         curl $url 2>/dev/null > $TDHPATH/certificates/$LETSENSCRIPT_INTERMEDIATE_CERT_FILE
-        messagePrint " - Let's Encrypt Intermediate Certificate:"      "certificates/$LETSENSCRIPT_INTERMEDIATE_CERT"
-        messagePrint " - Let's Encrypt Intermediate Certificate Url:"  "$url"
-        messagePrint " - Let's Encrypt Intermediate Certificate File:" "certificates/$LETSENSCRIPT_INTERMEDIATE_CERT_FILE"
+        if [ $? -eq 0 ]; then
+          messagePrint " - Let's Encrypt Intermediate Certificate:"      "certificates/$LETSENSCRIPT_INTERMEDIATE_CERT"
+          messagePrint " - Let's Encrypt Intermediate Certificate Url:"  "$url"
+          messagePrint " - Let's Encrypt Intermediate Certificate File:" "certificates/$LETSENSCRIPT_INTERMEDIATE_CERT_FILE"
+        else
+          echo "ERROR: Failed to optiain the root certidicate ertificates/$LETSENSCRIPT_INTERMEDIATE_CERT"
+          echo "       => curl $url > $TDHPATH/certificates/$LETSENSCRIPT_INTERMEDIATE_CERT_FILE"
+          exit
+        fi
       fi
 
       if [ "$LETSENSCRIPT_INTERMEDIATE_CERT_FILE" != "" ]; then
