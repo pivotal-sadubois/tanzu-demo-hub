@@ -80,6 +80,7 @@ pivnetAPIdownload() {
   # --- LOGIN INTO PIVNET ---
   wget -O /tmp/$FILE_NAME --header="Authorization: Bearer $token" \
   https://network.pivotal.io/api/v2/products/$PRODUCT_SLUG/releases/$PRODUCT_ID/product_files/$PRODUCT_FILE/download > /dev/null 2>&1
+echo "FILE_NAME:$FILE_NAME"
 
   if [ ! -f /tmp/$FILE_NAME ]; then
     echo "ERROR: Error downloading file from PIVNET /tmp/$FILE_NAME"
@@ -2116,7 +2117,7 @@ checkCLIcommands() {
   fi
 
   if [ "$cat" == "TOOLS" ]; then
-    CLI_COMMANDS="/usr/local/bin/jq:brew:jq /usr/local/bin/yq:brew:yq"
+    CLI_COMMANDS="/usr/local/bin/jq:brew:jq /usr/local/bin/yq:brew:yq /usr/local/bin/wget:brew:wget"
 
     for arg in $CLI_COMMANDS; do
       cmd=$(echo $arg | awk -F: '{ print $1 }') 
@@ -2299,14 +2300,11 @@ installBuildService() {
     exit
   fi
 
-echo hhhh1
   # --- DOWNLOAD BUILD_SERVICE BINARIES ---
   downloadFromPivnet build-service $TDH_SERVICE_BUILD_SERVICE_VERSION "build-service-$TDH_SERVICE_BUILD_SERVICE_VERSION.tar"
 
-echo hhhh2
   # --- DOWNLOAD BUILD_SERVICE DEPENDANCIES ---
-  downloadFromPivnet tbs-dependencies $TDH_SERVICE_BUILD_SERVICE_DEPENDANCIESN "descriptor-$TDH_SERVICE_BUILD_SERVICE_DEPENDANCIESN.yaml"
-echo hhhh3
+  downloadFromPivnet tbs-dependencies $TDH_SERVICE_BUILD_SERVICE_DEPENDANCIES "descriptor-$TDH_SERVICE_BUILD_SERVICE_DEPENDANCIES.yaml"
 
   messageTitle "Installing Tanzu Build Service"
   TBS_FILE="/tmp/build-service-$TDH_SERVICE_BUILD_SERVICE_VERSION.tar"
@@ -2408,7 +2406,6 @@ downloadFromPivnet() {
   PRODUCT_SLUG=$1
   SLUG_VER="$2"
   SLUG_STR="$3"
-
 
   for pid in $(pivnetAPI $PCF_PIVNET_TOKEN GET products/$PRODUCT_SLUG/releases 2> /dev/null | \
              jq -r ".releases[] | select(.version | scan(\"^$SLUG_VER\")).id"); do
