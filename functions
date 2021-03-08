@@ -416,14 +416,23 @@ checkCloudAccess() {
       echo "  4MISSING ENVIRONMENT-VARIABES    DESCRIPTION        "
       echo "  --------------------------------------------------------------------------------------------------------------"
     else
+      cpu=$(cat ~/.minikube/profiles/tanzu-demo-hub/config.json | jq -r '.CPUs')
+      mem=$(cat ~/.minikube/profiles/tanzu-demo-hub/config.json | jq -r '.Memory')
+      drv=$(cat ~/.minikube/profiles/tanzu-demo-hub/config.json | jq -r '.Driver')
       stt=$(minikube status -p tanzu-demo-hub| grep "^host:" | awk '{ print $NF }')
       echo "MiniKube Status and Configuration"
       messagePrint " - MiniKube Profile"                "$TDH_MINIKUBE_PROFILE"
       messagePrint " - MiniKube Version"                "$(minikube version | head -1 | awk '{ print $NF }')"
       messagePrint " - MiniKube Status"                 "$stt"
+      messagePrint " - Minikube Memory"            "$mem"
+      messagePrint " - Minikube CPU's"             "$cpu"
+      messagePrint " - Minikube Driver"            "$drv"
+#gaga
+
       if [ "$stt" == "Stopped" -o "$stt" == "" ]; then 
         echo "ERROR: Minukube is not running, start it first"
-        echo "       => minikube -p tanzu-demo-hub start --driver=hyperkit --cpus $TDH_MINIKUBE_CONFIG_CPU --memory $TDH_MINIKUBE_CONFIG_MEMORY"; exit
+        echo "       => minikube -p tanzu-demo-hub start --driver=hyperkit --cpus $TDH_MINIKUBE_CONFIG_CPU --memory $TDH_MINIKUBE_CONFIG_MEMORY --disk-size $TDH_MINIKUBE_CONFIG_DISK"; exit
+        echo "       => cat ~/.minikube/profiles/tanzu-demo-hub/config.json"
       fi
 
       messagePrint " - MiniKube ServerIP"               "$(minikube ip -p tanzu-demo-hub)"
@@ -1880,12 +1889,19 @@ VerifyDemoEnvironment() {
     fi
 
     if [ "$TDH_MINIKUBE_PROFILE" != "" ]; then 
+      cpu=$(cat ~/.minikube/profiles/tanzu-demo-hub/config.json | jq -r '.CPUs')
+      mem=$(cat ~/.minikube/profiles/tanzu-demo-hub/config.json | jq -r '.Memory')
+      drv=$(cat ~/.minikube/profiles/tanzu-demo-hub/config.json | jq -r '.Driver')
       export TDH_PLATFORM=minikube
       messageTitle "Demo Environment"
       messagePrint " - Deployment Config:"         "$TKG_DEPLOYMENT"
       messagePrint " - Kubernetes Infrastucture"   "minikube"
       messagePrint " - Minikube Profile"           "$TDH_MINIKUBE_PROFILE"
-      messagePrint " - DNS Domain"                 "$TDH_ENVNAME.$AWS_HOSTED_DNS_DOMAIN"
+      messagePrint " - Minikube Domain"            "$TDH_ENVNAME.$AWS_HOSTED_DNS_DOMAIN"
+      messagePrint " - Minikube Memory"            "$mem"
+      messagePrint " - Minikube CPU's"             "$cpu"
+      messagePrint " - Minikube Driver"            "$drv"
+#gaga
     else
       export TDH_PLATFORM=tkgm
       export WORKLOAD_CLUSTER=tkg-tanzu-demo-hub.cfg
@@ -2301,12 +2317,8 @@ installBuildService() {
   fi
 
   # --- DOWNLOAD BUILD_SERVICE BINARIES ---
-  downloadFromPivnet build-service $TDH_SERVICE_BUILD_SERVICE_VERSION "build-service-$TDH_SERVICE_BUILD_SERVICE_VERSION.tar"
+  downloadFromPivnet build-service $TDH_SERVICE_BUILD_SERVICE_VERSION "$TDH_SERVICE_BUILD_SERVICE_VERSION" "build-service-$TDH_SERVICE_BUILD_SERVICE_VERSION.tar"
 
-  # --- DOWNLOAD BUILD_SERVICE DEPENDANCIES ---
-  downloadFromPivnet tbs-dependencies $TDH_SERVICE_BUILD_SERVICE_DEPENDANCIES "descriptor-$TDH_SERVICE_BUILD_SERVICE_DEPENDANCIES.yaml"
-
-  messageTitle "Installing Tanzu Build Service"
   TBS_FILE="/tmp/build-service-$TDH_SERVICE_BUILD_SERVICE_VERSION.tar"
   [ -d /tmp/build-service ] && rm -rf /tmp/build-service
   mkdir /tmp/build-service
@@ -2351,45 +2363,55 @@ installBuildService() {
     echo "          --repository $DNS_HARBOR/library/build-service"; exit
   fi
 
-  cnt=$(kubectl get namespace kpack build-service 2>/dev/null | egrep -c "kpack|build-service")
-  if [ $cnt -ne 2 ]; then
-#    messagePrint "- Import Dependency Descriptors"
-#echo "kp import -f /tmp/descriptor-$TDH_SERVICE_BUILD_SERVICE_DEPENDANCIESN.yaml"
-#    #kp import -f /tmp/descriptor-$TDH_SERVICE_BUILD_SERVICE_DEPENDANCIESN.yaml > /dev/null 2>&1
-#    kp import -f /tmp/descriptor-$TDH_SERVICE_BUILD_SERVICE_DEPENDANCIESN.yaml 
-
-    messagePrint "- Install Build Service" ""
+  # --- DEPLOY KAPP ---
+  stt=$(kapp inspect -a tanzu-build-service 2>/dev/null | tail -1)
+  if [ "$stt" != "Succeeded" ]; then
+    messageTitle "Installing Tanzu Build Service"
+    messagePrint "- Install Build Service (kapp)" "tanzu-build-service"
     echo "-----------------------------------------------------------------------------------------------------------"
-    ret=1; cnt=0
-    while [ $ret -ne 0 -a $cnt -lt 5 ]; do
       ytt -f /tmp/build-service/values.yaml \
           -f /tmp/build-service/manifests/ \
           -f $TDHPATH/certificates/ca.pem \
           -v docker_repository="$DNS_HARBOR/library/build-service" \
           -v docker_username="admin" \
-          -v docker_password="$TDH_HARBOR_REGISTRY_ADMIN_PASSWORD" \
-          | kbld -f /tmp/build-service/images-relocated.lock -f- \
+          -v docker_password="$TDH_HARBOR_REGISTRY_ADMIN_PASSWORD" 2>/dev/null \
+          | kbld -f /tmp/build-service/images-relocated.lock -f- 2>/dev/null \
           | kapp deploy -a tanzu-build-service -f- -y > /dev/null 2>&1; ret=$?
-        if [ $ret -ne 0 ]; then break; fi
-        let cnt=cnt+1
-      done
+
+    cnt=$(kapp inspect -a tanzu-build-service --json | jq -r '.Tables[].Rows[].reconcile_state' | grep -vc "ok")
+    while [ $cnt -ne 0 ]; do
+      cnt=$(kapp inspect -a tanzu-build-service --json | jq -r '.Tables[].Rows[].reconcile_state' | grep -vc "ok")
+      sleep 360
+    done
+  else
+    messageTitle "Verify Tanzu Build Service"
+    messagePrint "- Veriify Build Service (kapp)" "tanzu-build-service"
+  fi
+
+  # --- DOWNLOAD KP UTILITY ---
+  if [ ! -f /usr/local/bin/kp ]; then 
+    downloadFromPivnet build-service $TDH_SERVICE_BUILD_SERVICE_VERSION $TDH_SERVICE_BUILD_SERVICE_KP "kp-darwin"
+
+    echo "INFO: Please copy the file /tmp/kp-darwin-$TDH_SERVICE_BUILD_SERVICE_KP /usr/local/bin"
+    echo "      => sudo mv /tmp/kp-darwin-$TDH_SERVICE_BUILD_SERVICE_KP /usr/local/bin"
+    echo "      => sudo chmod a+x /usr/local/bin/kp"
+  fi
+
+  kp clusterbuilder list > /dev/null 2>&1
+  if [ $? -ne 0 ]; then 
+    # --- DOWNLOAD BUILD_SERVICE DEPENDANCIES ---
+    downloadFromPivnet tbs-dependencies $TDH_SERVICE_BUILD_SERVICE_DEPENDANCIES $TDH_SERVICE_BUILD_SERVICE_DEPENDANCIES "descriptor-$TDH_SERVICE_BUILD_SERVICE_DEPENDANCIES.yaml"
+
+    messagePrint "- Import Dependency Descriptors"
+    kp import -f /tmp/descriptor-$TDH_SERVICE_BUILD_SERVICE_DEPENDANCIES.yaml 
+  else
+    messagePrint "- Verify Dependency Descriptors"
     echo "-----------------------------------------------------------------------------------------------------------"
-
-    if [ $ret -ne 0 ]; then
-      echo "ERROR: Installing Build Service"
-      echo "       => ytt -f /tmp/build-service/values.yaml \\"
-      echo "          -f /tmp/build-service/manifests/ \\"
-      echo "          -f $TDHPATH/certificates/ca.pem \\"
-      echo "          -v docker_repository=\"$DNS_HARBOR/library/build-service\" \\"
-      echo "          -v docker_username=\"admin\" \\"
-      echo "          -v docker_password=\"$TDH_HARBOR_REGISTRY_ADMIN_PASSWORD\" \\"
-      echo "          | kbld -f /tmp/build-service/images-relocated.lock -f- \\"
-      echo "          | kapp deploy -a tanzu-build-service -f- -y"
-    fi
-
-    kp clusterbuilder list
+    kp clusterbuilder list | sed '$d'
     echo "-----------------------------------------------------------------------------------------------------------"
   fi
+
+#https://github.com/pivotal-sadubois/spring-petclinic.git
 
   uodateConfigMap tanzu-demo-hub TDH_SERVICE_BUILD_SERVICE_VERSION  $TDH_SERVICE_BUILD_SERVICE_VERSION
   uodateConfigMap tanzu-demo-hub TDH_REGISTRY_VMWARE_NAME           $TDH_REGISTRY_VMWARE_NAME
@@ -2405,12 +2427,13 @@ installBuildService() {
 downloadFromPivnet() {
   PRODUCT_SLUG=$1
   SLUG_VER="$2"
-  SLUG_STR="$3"
+  PROD_VER="$3"
+  PROD_STR="$4"
 
   for pid in $(pivnetAPI $PCF_PIVNET_TOKEN GET products/$PRODUCT_SLUG/releases 2> /dev/null | \
              jq -r ".releases[] | select(.version | scan(\"^$SLUG_VER\")).id"); do
     fid=$(pivnetAPI $PCF_PIVNET_TOKEN GET products/$PRODUCT_SLUG/releases/$pid 2>/dev/null | \
-          jq -r ".product_files[] | select(.name | scan(\"^$SLUG_STR\")) | select(.file_version | scan(\"$SLUG_VER\")).id")
+          jq -r ".product_files[] | select(.name | scan(\"^$PROD_STR\")) | select(.file_version | scan(\"$PROD_VER\")).id")
 
     if [ "${fid}" != "" ]; then
       # --- ACCEPT EULA ---
@@ -2920,7 +2943,7 @@ InstallHarborRegistry() {
     echo "  persistentVolumeClaim:"                                                                                             >> $HARBOR_VALUES
     echo "    registry:"                                                                                                        >> $HARBOR_VALUES
     echo "      accessMode: ReadWriteOnce"                                                                                      >> $HARBOR_VALUES
-    echo "      size: 20Gi"                                                                                                     >> $HARBOR_VALUES
+    echo "      size: 50Gi"                                                                                                     >> $HARBOR_VALUES
 
     helm install harbor bitnami/harbor -f $HARBOR_VALUES --version 9.2.2 -n $NAMESPACE > /dev/null 2>&1
     if [ $? -ne 0 ]; then
