@@ -1,3 +1,35 @@
-https://tanzu.vmware.com/content/blog/getting-started-with-vmware-tanzu-build-service-1-0
+
+                                                                                      
+            ____             _               ____      _      ____ _ _       _        
+           / ___| _ __  _ __(_)_ __   __ _  |  _ \ ___| |_   / ___| (_)_ __ (_) ___   
+           \___ \|  _ \|  __| |  _ \ / _  | | |_) / _ \ __| | |   | | |  _ \| |/ __|  
+            ___) | |_) | |  | | | | | (_| | |  __/  __/ |_  | |___| | | | | | | (__   
+           |____/| .__/|_|  |_|_| |_|\__, | |_|   \___|\__|  \____|_|_|_| |_|_|\___|  
+                 |_|                 |___/                                            
+                                                                                      
+                                   ____                                               
+                                  |  _ \  ___ _ __ ___   ___                          
+                                  | | | |/ _ \  _   _ \ / _ \                         
+                                  | |_| |  __/ | | | | | (_) |                        
+                                  |____/ \___|_| |_| |_|\___/                         
+                                                                                      
+          ----------------------------------------------------------------------------
+                        Demonstration for VMware Tanzu Build Service (TBS)            
+                                   by Sacha Dubois, VMware Inc                        
+          ----------------------------------------------------------------------------
+                                                                                      
+=> Original Demo as described here: 
+  Getting Started with VMware Tanzu Build Service 1.0
+  https://tanzu.vmware.com/content/blog/getting-started-with-vmware-tanzu-build-service-1-0
+
+=> Demo Prerequisits
+  Demo requires a Kubernetes cluster ready with the following services configured 
+  - Harbor Registry
+  - Contour LoadBalancer
+  - Local Docker running
+
+  Its additionally required to have a GITHub account ready with SSH Authentification
+
+
 
 
