@@ -33,6 +33,17 @@ slntCmd() {
   if [ $? -ne 0 ]; then exit 1; fi
 }
 
+fakeCmd() {
+  bold=$(tput bold)
+  normal=$(tput sgr0)
+
+  echo -e "     => ${bold}$1${normal}\c"; read x
+  echo "     -----------------------------------------------------------------------------------------------------------"
+  cat /tmp/log | sed -e '/^$/d' -e 's/^/     /g'
+  echo "     -----------------------------------------------------------------------------------------------------------"
+  echo ""
+}
+
 execCmd() {
   bold=$(tput bold)
   normal=$(tput sgr0)
@@ -416,18 +427,25 @@ checkCloudAccess() {
       echo "  4MISSING ENVIRONMENT-VARIABES    DESCRIPTION        "
       echo "  --------------------------------------------------------------------------------------------------------------"
     else
-      cpu=$(cat ~/.minikube/profiles/tanzu-demo-hub/config.json | jq -r '.CPUs')
-      mem=$(cat ~/.minikube/profiles/tanzu-demo-hub/config.json | jq -r '.Memory')
-      drv=$(cat ~/.minikube/profiles/tanzu-demo-hub/config.json | jq -r '.Driver')
+      if [ -f ~/.minikube/profiles/tanzu-demo-hub/config.json ]; then 
+        cpu=$(cat ~/.minikube/profiles/tanzu-demo-hub/config.json | jq -r '.CPUs')
+        dsk=$(cat ~/.minikube/profiles/tanzu-demo-hub/config.json | jq -r '.Disk')
+        mem=$(cat ~/.minikube/profiles/tanzu-demo-hub/config.json | jq -r '.Memory')
+        drv=$(cat ~/.minikube/profiles/tanzu-demo-hub/config.json | jq -r '.Driver')
+      else
+        echo "ERROR: Minukube is not running, start it first"
+        echo "       => minikube -p tanzu-demo-hub start --driver=hyperkit --cpus $TDH_MINIKUBE_CONFIG_CPU --memory $TDH_MINIKUBE_CONFIG_MEMORY --disk-size $TDH_MINIKUBE_CONFIG_DISK"; exit
+      fi
+
       stt=$(minikube status -p tanzu-demo-hub| grep "^host:" | awk '{ print $NF }')
       echo "MiniKube Status and Configuration"
       messagePrint " - MiniKube Profile"                "$TDH_MINIKUBE_PROFILE"
       messagePrint " - MiniKube Version"                "$(minikube version | head -1 | awk '{ print $NF }')"
       messagePrint " - MiniKube Status"                 "$stt"
-      messagePrint " - Minikube Memory"            "$mem"
-      messagePrint " - Minikube CPU's"             "$cpu"
-      messagePrint " - Minikube Driver"            "$drv"
-#gaga
+      messagePrint " - Minikube Disk"                  "$dsk"
+      messagePrint " - Minikube Memory"                "$mem"
+      messagePrint " - Minikube CPU's"                 "$cpu"
+      messagePrint " - Minikube Driver"                "$drv"
 
       if [ "$stt" == "Stopped" -o "$stt" == "" ]; then 
         echo "ERROR: Minukube is not running, start it first"
@@ -1966,7 +1984,7 @@ VerifyK8SDemoPlatform() {
 
   # --- CHECK FOR ADDONS ---
   #for val in metallb default-storageclass; do
-  for val in default-storageclass; do
+  for val in default-storageclass metrics-server; do
     stt=$(minikube addons list -o json | jq -r ".\"$val\".Status")
     if [ "$stt" != "enabled" ]; then
       echo "ERROR: Please enable minikube addon: $val"
@@ -2158,11 +2176,15 @@ checkTMCAccess() {
   if [ "${TDH_DEPLOYMENT_CLOUD}" == "AWS" ]; then
     TMC_ACCOUNT_NAME=$TMC_ACCOUNT_NAME_AWS
 
-    if [ "${TMC_MANAGEMENT_CLUSTER}" == "" -o "${TMC_PROVISONER_NAME}" == "" -o "${TMC_ACCOUNT_NAME_AWS}" == "" -o "${TMC_CLUSTER_GROUP}" == "" ]; then
+    if [ "${TMC_MANAGEMENT_CLUSTER}" == "" -o "${TMC_PROVISONER_NAME}" == "" -o "${TMC_ACCOUNT_NAME_AWS}" == "" -o "${TMC_CLUSTER_GROUP}" == "" -o "${TMC_USER}" == "" ]; then
       missing_variables=1
       echo ""
       echo "  2MISSING ENVIRONMENT-VARIABES    DESCRIPTION        "
       echo "  --------------------------------------------------------------------------------------------------------------"
+
+      if [ "${TMC_USER}" == "" ]; then
+        echo "  TMC_USER                        (required) The name of the TMC UserID"
+      fi
 
       if [ "${TMC_CLUSTER_GROUP}" == "" ]; then
         echo "  TMC_CLUSTER_GROUP               (required) The name of the TMC Cluster Group"
@@ -2183,8 +2205,14 @@ checkTMCAccess() {
       if [ "${TMC_SSH_KEY_NAME_AWS}" == "" ]; then
         echo "  TMC_SSH_KEY_NAME_AWS            (required) AWS SSH Key name for Region"
       fi
+      TMC_CLUSTER_NAME="tdh-aws-${TMC_USER}"
+      TMC_CLUSTER_GROUP=tanzu-demo-hub
     else
+      TMC_CLUSTER_NAME="tdh-aws-${TMC_USER}"
+      TMC_CLUSTER_GROUP=tanzu-demo-hub
+
       messageTitle "Tanzu Mission Control (TMC) - Config" 
+      messagePrint " - TMC User"                        "$TMC_USER"
       messagePrint " - TMC Cluster Group"               "$TMC_CLUSTER_GROUP"
       messagePrint " - TMC Cluster Name"                "$TMC_CLUSTER_NAME"
       messagePrint " - TMC Context Name"                "$TMC_CONTEXT_NAME"
@@ -2199,6 +2227,10 @@ checkTMCAccess() {
         exit 1
       fi
     fi
+
+
+   tmc clustergroup create -n tanzu-demo-hub -d "Tanzu Demo Hub by Sacha Dubois" > /dev/null 2>&1
+
   fi
 
   if [ ${missing_variables} -eq 1 ]; then
@@ -2233,11 +2265,13 @@ tmcCreateCluster() {
   if [ "$stt" == "" -o "$stt" != "READY" ]; then
     messageTitle "TMC Create Cluster"     
     messagePrint " - Cluster Name"           "$TMC_CLUSTER_NAME"
+    messagePrint " - TMC Cluster Group"      "$TMC_CLUSTER_GROUP"
     messagePrint " - Provisioner Name"       "$TMC_PROVISONER_NAME"
     messagePrint " - TKG Management Cluster" "$TMC_MANAGEMENT_CLUSTER"
     messagePrint " - Account Name"           "$TMC_ACCOUNT_NAME"
     tmc cluster create -m $TMC_MANAGEMENT_CLUSTER -p $TMC_PROVISONER_NAME --ssh-key-name $TMC_SSH_KEY_NAME_AWS \
                        -c $TMC_ACCOUNT_NAME -r $AWS_REGION -n $TMC_CLUSTER_NAME -q $TDH_TKGWC_WORKERNODES \
+                       -g $TMC_CLUSTER_GROUP \
                        --availability-zone ${AWS_REGION}a
 
     messagePrint " - Cluster Status"         "creating ...."
@@ -2329,14 +2363,6 @@ installBuildService() {
   checkKubernetesServices registry_docker
   checkKubernetesServices github
 
-  # --- TESTING REGISTRY ---
-  messagePrint "Verify Docker Registry Access" "$TDH_REGISTRY_DOCKER_NAME"
-  docker login -u $TDH_REGISTRY_DOCKER_USER -p $TDH_REGISTRY_DOCKER_PASS > /dev/null 2>&1
-  if [ $? -ne 0 ]; then
-    echo "ERROR: Docker login does not work"
-    echo "       => docker login $TDH_REGISTRY_DOCKER_NAME -u $TDH_REGISTRY_DOCKER_USER -p $TDH_REGISTRY_DOCKER_PASS"; exit
-  fi
-
   messagePrint "Verify VMware Registry Access" "$TDH_REGISTRY_VMWARE_NAME"
   docker login $TDH_REGISTRY_VMWARE_NAME -u $TDH_REGISTRY_VMWARE_USER -p $TDH_REGISTRY_VMWARE_PASS > /dev/null 2>&1
   if [ $? -ne 0 ]; then
@@ -2344,48 +2370,84 @@ installBuildService() {
     echo "       => docker login $TDH_REGISTRY_VMWARE_NAME -u $TDH_REGISTRY_VMWARE_USER -p $TDH_REGISTRY_VMWARE_PASS"; exit
   fi
 
-  DNS_HARBOR=$(getConfigMap tanzu-demo-hub TDH_HARBOR_REGISTRY_DNS_HARBOR)
-  TDH_HARBOR_REGISTRY_DNS_HARBOR=$(getConfigMap tanzu-demo-hub TDH_HARBOR_REGISTRY_DNS_HARBOR)
-  TDH_HARBOR_REGISTRY_ADMIN_PASSWORD=$(getConfigMap tanzu-demo-hub TDH_HARBOR_REGISTRY_ADMIN_PASSWORD)
-  messagePrint "Verify Harbor Registry Access" "$TDH_HARBOR_REGISTRY_DNS_HARBOR"
-  docker login $TDH_HARBOR_REGISTRY_DNS_HARBOR -u admin -p $TDH_HARBOR_REGISTRY_ADMIN_PASSWORD > /dev/null 2>&1
-  if [ $? -ne 0 ]; then
-    echo "ERROR: Docker login does not work 1"
-    echo "       => docker login $TDH_HARBOR_REGISTRY_DNS_HARBOR -u admin -p $TDH_HARBOR_REGISTRY_ADMIN_PASSWORD"; exit
+  #########################################################################################################################
+  ################################# TANZU BUILD SERVICE (TBS) - ON DOCKER REGISTRY ########################################
+  #########################################################################################################################
+
+  if [ "$TDH_SERVICE_REGISTRY_DOCKER" == "true1" ]; then
+    DNS_DOCKER=$(getConfigMap tanzu-demo-hub TDH_REGISTRY_DOCKER_NAME)
+    TDH_REGISTRY_DOCKER_NAME=$(getConfigMap tanzu-demo-hub TDH_REGISTRY_DOCKER_NAME)
+    TDH_REGISTRY_DOCKER_PASS=$(getConfigMap tanzu-demo-hub TDH_REGISTRY_DOCKER_PASS)
+
+    # --- TESTING REGISTRY ---
+    messagePrint "Verify Docker Registry Access" "$TDH_REGISTRY_DOCKER_NAME"
+    docker login -u $TDH_REGISTRY_DOCKER_USER -p $TDH_REGISTRY_DOCKER_PASS > /dev/null 2>&1
+    if [ $? -ne 0 ]; then
+      echo "ERROR: Docker login does not work"
+      echo "       => docker login $TDH_REGISTRY_DOCKER_NAME -u $TDH_REGISTRY_DOCKER_USER -p $TDH_REGISTRY_DOCKER_PASS"; exit
+    fi
+
+    messagePrint "- Relocate images to" "$TDH_REGISTRY_DOCKER_NAME/$TDH_REGISTRY_DOCKER_USER/build-service"
+    kbld relocate -f /tmp/build-service/images.lock --lock-output /tmp/build-service/images-relocated.lock \
+         --repository $TDH_REGISTRY_DOCKER_NAME/$TDH_REGISTRY_DOCKER_USER/build-service > /dev/null 2>&1
+    if [ $? -ne 0 ]; then
+      echo "ERROR: Image Relocation faied"
+      echo "       => kbld relocate -f /tmp/build-service/images.lock --lock-output /tmp/build-service/images-relocated.lock \\"
+      echo "          --repository $TDH_REGISTRY_DOCKER_NAME/$TDH_REGISTRY_DOCKER_USER/build-service"; exit
+    fi
   fi
 
-  messagePrint "- Relocate the images" "$TDH_REGISTRY_VMWARE_NAME/library/build-service"
-  kbld relocate -f /tmp/build-service/images.lock --lock-output /tmp/build-service/images-relocated.lock \
-       --repository $DNS_HARBOR/library/build-service > /dev/null 2>&1
-  if [ $? -ne 0 ]; then
-    echo "ERROR: Image Relocation faied"
-    echo "       => kbld relocate -f /tmp/build-service/images.lock --lock-output /tmp/build-service/images-relocated.lock \\"
-    echo "          --repository $DNS_HARBOR/library/build-service"; exit
-  fi
+  #########################################################################################################################
+  ################################# TANZU BUILD SERVICE (TBS) - ON HARBOR REGISTRY ########################################
+  #########################################################################################################################
 
-  # --- DEPLOY KAPP ---
-  stt=$(kapp inspect -a tanzu-build-service 2>/dev/null | tail -1)
-  if [ "$stt" != "Succeeded" ]; then
-    messageTitle "Installing Tanzu Build Service"
-    messagePrint "- Install Build Service (kapp)" "tanzu-build-service"
-    echo "-----------------------------------------------------------------------------------------------------------"
-      ytt -f /tmp/build-service/values.yaml \
-          -f /tmp/build-service/manifests/ \
-          -f $TDHPATH/certificates/ca.pem \
-          -v docker_repository="$DNS_HARBOR/library/build-service" \
-          -v docker_username="admin" \
-          -v docker_password="$TDH_HARBOR_REGISTRY_ADMIN_PASSWORD" 2>/dev/null \
-          | kbld -f /tmp/build-service/images-relocated.lock -f- 2>/dev/null \
-          | kapp deploy -a tanzu-build-service -f- -y > /dev/null 2>&1; ret=$?
+  if [ "$TDH_SERVICE_REGISTRY_HARBOR" == "true" ]; then 
+    DNS_HARBOR=$(getConfigMap tanzu-demo-hub TDH_HARBOR_REGISTRY_DNS_HARBOR)
+    TDH_HARBOR_REGISTRY_DNS_HARBOR=$(getConfigMap tanzu-demo-hub TDH_HARBOR_REGISTRY_DNS_HARBOR)
+    TDH_HARBOR_REGISTRY_ADMIN_PASSWORD=$(getConfigMap tanzu-demo-hub TDH_HARBOR_REGISTRY_ADMIN_PASSWORD)
+    messagePrint "Verify Harbor Registry Access" "$TDH_HARBOR_REGISTRY_DNS_HARBOR"
+    docker login $TDH_HARBOR_REGISTRY_DNS_HARBOR -u admin -p $TDH_HARBOR_REGISTRY_ADMIN_PASSWORD > /dev/null 2>&1
+    if [ $? -ne 0 ]; then
+      echo "ERROR: Docker login does not work 1"
+      echo "       => docker login $TDH_HARBOR_REGISTRY_DNS_HARBOR -u admin -p $TDH_HARBOR_REGISTRY_ADMIN_PASSWORD"; exit
+    fi
 
-    cnt=$(kapp inspect -a tanzu-build-service --json | jq -r '.Tables[].Rows[].reconcile_state' | grep -vc "ok")
-    while [ $cnt -ne 0 ]; do
+    messagePrint "- Relocate the images" "$TDH_REGISTRY_VMWARE_NAME/library/build-service"
+    kbld relocate -f /tmp/build-service/images.lock --lock-output /tmp/build-service/images-relocated.lock \
+         --repository $DNS_HARBOR/library/build-service > /dev/null 2>&1
+    if [ $? -ne 0 ]; then
+      echo "ERROR: Image Relocation faied"
+      echo "       => kbld relocate -f /tmp/build-service/images.lock --lock-output /tmp/build-service/images-relocated.lock \\"
+      echo "          --repository $DNS_HARBOR/library/build-service"; exit
+    fi
+
+    # --- DEPLOY KAPP ---
+    stt=$(kapp inspect -a tanzu-build-service 2>/dev/null | tail -1)
+    if [ "$stt" != "Succeeded" ]; then
+      messageTitle "Installing Tanzu Build Service"
+      messagePrint "- Install Build Service (kapp)" "tanzu-build-service"
+      echo "-----------------------------------------------------------------------------------------------------------"
+      echo " WARNING: This process may take ut to 2h for the deployment, Please run kapp manually to get more info"
+      echo "          => kapp inspect -a tanzu-build-service --column Namespace,name,reconcile_state | grep -v ok"
+      echo "-----------------------------------------------------------------------------------------------------------"
+        ytt -f /tmp/build-service/values.yaml \
+            -f /tmp/build-service/manifests/ \
+            -f $TDHPATH/certificates/ca.pem \
+            -v docker_repository="$DNS_HARBOR/library/build-service" \
+            -v docker_username="admin" \
+            -v docker_password="$TDH_HARBOR_REGISTRY_ADMIN_PASSWORD" 2>/dev/null \
+            | kbld -f /tmp/build-service/images-relocated.lock -f- 2>/dev/null \
+            | kapp deploy -a tanzu-build-service -f- -y > /dev/null 2>&1; ret=$?
+  
       cnt=$(kapp inspect -a tanzu-build-service --json | jq -r '.Tables[].Rows[].reconcile_state' | grep -vc "ok")
-      sleep 360
-    done
-  else
-    messageTitle "Verify Tanzu Build Service"
-    messagePrint "- Veriify Build Service (kapp)" "tanzu-build-service"
+      while [ $cnt -ne 0 ]; do
+        cnt=$(kapp inspect -a tanzu-build-service --json | jq -r '.Tables[].Rows[].reconcile_state' | grep -vc "ok")
+        sleep 360
+      done
+    else
+      messageTitle "Verify Tanzu Build Service"
+      messagePrint "- Veriify Build Service (kapp)" "tanzu-build-service"
+    fi
   fi
 
   # --- DOWNLOAD KP UTILITY ---
@@ -2413,6 +2475,7 @@ installBuildService() {
 
 #https://github.com/pivotal-sadubois/spring-petclinic.git
 
+  uodateConfigMap tanzu-demo-hub TDH_SERVICE_BUILD_SERVICE          "true"
   uodateConfigMap tanzu-demo-hub TDH_SERVICE_BUILD_SERVICE_VERSION  $TDH_SERVICE_BUILD_SERVICE_VERSION
   uodateConfigMap tanzu-demo-hub TDH_REGISTRY_VMWARE_NAME           $TDH_REGISTRY_VMWARE_NAME
   uodateConfigMap tanzu-demo-hub TDH_REGISTRY_VMWARE_USER           $TDH_REGISTRY_VMWARE_USER
@@ -2627,7 +2690,6 @@ messageTitle "Verify Ingress Contour"
   else
     ipa=$(kubectl describe svc ingress-contour-envoy --namespace ingress-contour | grep Ingress | awk '{print $3}')
     setDNSalias "$ipa" "${TDH_ENVNAME}" "${AWS_HOSTED_DNS_DOMAIN}" "*.apps-contour" "A"
-#jjjjjjjjjjjjjjjjjjj
   fi
 
   # --- STORE SETTINGS IN CONFIGMAP ---
@@ -2884,6 +2946,12 @@ InstallCertManager() {
 }
 
 InstallHarborRegistry() {
+#gaga
+  if [ "$TDH_SERVICE_BUILD_SERVICE" != "true" ]; then
+    uodateConfigMap tanzu-demo-hub TDH_SERVICE_BUILD_SERVICE        "false"
+    return
+  fi
+
   NAMESPACE=registry-harbor
   HARBOR_TLS_SECRET=$TDH_TLS_SECRET
   NOTARY_TLS_SECRET=$TDH_TLS_SECRET
