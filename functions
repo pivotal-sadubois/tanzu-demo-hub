@@ -428,18 +428,18 @@ checkCloudAccess() {
       echo "  4MISSING ENVIRONMENT-VARIABES    DESCRIPTION        "
       echo "  --------------------------------------------------------------------------------------------------------------"
     else
-      if [ -f ~/.minikube/profiles/tanzu-demo-hub/config.json ]; then 
-        cpu=$(cat ~/.minikube/profiles/tanzu-demo-hub/config.json | jq -r '.CPUs')
-        dsk=$(cat ~/.minikube/profiles/tanzu-demo-hub/config.json | jq -r '.Disk')
-        mem=$(cat ~/.minikube/profiles/tanzu-demo-hub/config.json | jq -r '.Memory')
-        drv=$(cat ~/.minikube/profiles/tanzu-demo-hub/config.json | jq -r '.Driver')
+      if [ -f ~/.minikube/profiles/$TDH_MINIKUBE_PROFILE/config.json ]; then 
+        cpu=$(cat ~/.minikube/profiles/$TDH_MINIKUBE_PROFILE/config.json | jq -r '.CPUs')
+        dsk=$(cat ~/.minikube/profiles/$TDH_MINIKUBE_PROFILE/config.json | jq -r '.Disk')
+        mem=$(cat ~/.minikube/profiles/$TDH_MINIKUBE_PROFILE/config.json | jq -r '.Memory')
+        drv=$(cat ~/.minikube/profiles/$TDH_MINIKUBE_PROFILE/config.json | jq -r '.Driver')
       else
         echo "ERROR: Minukube is not running, start it first"
-        echo "       => minikube -p tanzu-demo-hub start --driver=hyperkit --cpus $TDH_MINIKUBE_CONFIG_CPU --memory $TDH_MINIKUBE_CONFIG_MEMORY --disk-size $TDH_MINIKUBE_CONFIG_DISK --nodes=$TDH_MINIKUBE_NODES"; exit
+        echo "       => minikube -p $TDH_MINIKUBE_PROFILE start --driver=hyperkit --cpus $TDH_MINIKUBE_CONFIG_CPU --memory $TDH_MINIKUBE_CONFIG_MEMORY --disk-size $TDH_MINIKUBE_CONFIG_DISK --nodes=$TDH_MINIKUBE_NODES"; exit
       fi
 
-      stt=$(minikube status -p tanzu-demo-hub| grep "^host:" | awk '{ print $NF }')
-      echo "MiniKube Status and Configuration"
+      stt=$(minikube status -p $TDH_MINIKUBE_PROFILE| grep "^host:" | awk '{ print $NF }')
+      messageTitle "MiniKube Status and Configuration"
       messagePrint " - MiniKube Profile"                "$TDH_MINIKUBE_PROFILE"
       messagePrint " - MiniKube Version"                "$(minikube version | head -1 | awk '{ print $NF }')"
       messagePrint " - MiniKube Status"                 "$stt"
@@ -450,11 +450,22 @@ checkCloudAccess() {
 
       if [ "$stt" == "Stopped" -o "$stt" == "" ]; then 
         echo "ERROR: Minukube is not running, start it first"
-        echo "       => minikube -p tanzu-demo-hub start --driver=hyperkit --cpus $TDH_MINIKUBE_CONFIG_CPU --memory $TDH_MINIKUBE_CONFIG_MEMORY --disk-size $TDH_MINIKUBE_CONFIG_DISK"; exit
+        echo "       => minikube -p $TDH_MINIKUBE_PROFILE start --driver=hyperkit --cpus $TDH_MINIKUBE_CONFIG_CPU --memory $TDH_MINIKUBE_CONFIG_MEMORY --disk-size $TDH_MINIKUBE_CONFIG_DISK"; exit
         echo "       => cat ~/.minikube/profiles/tanzu-demo-hub/config.json"
       fi
 
-      messagePrint " - MiniKube ServerIP"               "$(minikube ip -p tanzu-demo-hub)"
+      messagePrint " - MiniKube ServerIP"               "$(minikube ip -p $TDH_MINIKUBE_PROFILE)"
+    fi
+
+    cnt=$(tmc cluster list --name $TDH_MINIKUBE_PROFILE > /dev/null 2>&1 | egrep -c " $TDH_MINIKUBE_PROFILE ")
+    if [ $cnt -eq 0 ]; then 
+      messageTitle "Attach Minikube Cluster to TMC"
+      messagePrint " - TMC Cluster Name"                "$TDH_MINIKUBE_PROFILE"
+      messagePrint " - TMC Clustergroup"                "tanzu-demo-hub"
+      echo "  --------------------------------------------------------------------------------------------------------------"
+      tmc cluster attach -n $TDH_MINIKUBE_PROFILE -g tanzu-demo-hub -p minikube
+      kubectl apply -f k8s-attach-manifest.yaml
+      echo "  --------------------------------------------------------------------------------------------------------------"
     fi
   fi
 
@@ -1989,7 +2000,7 @@ VerifyK8SDemoPlatform() {
     stt=$(minikube addons list -o json | jq -r ".\"$val\".Status")
     if [ "$stt" != "enabled" ]; then
       echo "ERROR: Please enable minikube addon: $val"
-      echo "       => minikube addons enable $val -p tanzu-demo-hub"; exit
+      echo "       => minikube addons enable $val -p $TDH_MINIKUBE_PROFILE"; exit
     fi
   done
 }
