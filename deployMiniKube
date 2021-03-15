@@ -193,7 +193,7 @@ InstallMetallb() {
     echo "  => minikube addons -p tanzu-demo-hub enable metallb"
     echo "  => minikube addons configure metallb -p tanzu-demo-hub"
     echo "  => minikube stop -p tanzu-demo-hub"
-    echo "  => minikube start -p tanzu-demo-hub"
+    echo "  => minikube -p tanzu-demo-hub start --driver=hyperkit --cpus $TDH_MINIKUBE_CONFIG_CPU --memory $TDH_MINIKUBE_CONFIG_MEMORY"
     echo "  => kubectl describe configmap config -n metallb-system"
     exit
   else

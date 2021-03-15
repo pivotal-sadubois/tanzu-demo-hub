@@ -2206,10 +2206,8 @@ checkTMCAccess() {
         echo "  TMC_SSH_KEY_NAME_AWS            (required) AWS SSH Key name for Region"
       fi
       TMC_CLUSTER_NAME="tdh-aws-${TMC_USER}"
-      TMC_CLUSTER_GROUP=tanzu-demo-hub
     else
       TMC_CLUSTER_NAME="tdh-aws-${TMC_USER}"
-      TMC_CLUSTER_GROUP=tanzu-demo-hub
 
       messageTitle "Tanzu Mission Control (TMC) - Config" 
       messagePrint " - TMC User"                        "$TMC_USER"
