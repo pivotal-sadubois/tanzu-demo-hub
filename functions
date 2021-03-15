@@ -421,6 +421,7 @@ checkCloudAccess() {
   missing_variables=0
 
   if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "minikube" ]; then
+    TDH_MINIKUBE_PROFILE="tdh-minikube-${TMC_USER}"
     if [ "${TDH_MINIKUBE_PROFILE}" == "" ]; then
       missing_variables=1
       echo ""
@@ -434,7 +435,7 @@ checkCloudAccess() {
         drv=$(cat ~/.minikube/profiles/tanzu-demo-hub/config.json | jq -r '.Driver')
       else
         echo "ERROR: Minukube is not running, start it first"
-        echo "       => minikube -p tanzu-demo-hub start --driver=hyperkit --cpus $TDH_MINIKUBE_CONFIG_CPU --memory $TDH_MINIKUBE_CONFIG_MEMORY --disk-size $TDH_MINIKUBE_CONFIG_DISK"; exit
+        echo "       => minikube -p tanzu-demo-hub start --driver=hyperkit --cpus $TDH_MINIKUBE_CONFIG_CPU --memory $TDH_MINIKUBE_CONFIG_MEMORY --disk-size $TDH_MINIKUBE_CONFIG_DISK --nodes=$TDH_MINIKUBE_NODES"; exit
       fi
 
       stt=$(minikube status -p tanzu-demo-hub| grep "^host:" | awk '{ print $NF }')
