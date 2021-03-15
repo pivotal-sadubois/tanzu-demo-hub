@@ -2277,7 +2277,7 @@ tmcCreateCluster() {
     tmc cluster create -m $TMC_MANAGEMENT_CLUSTER -p $TMC_PROVISONER_NAME --ssh-key-name $TMC_SSH_KEY_NAME_AWS \
                        -c $TMC_ACCOUNT_NAME -r $AWS_REGION -n $TMC_CLUSTER_NAME -q $TDH_TKGWC_WORKERNODES \
                        -g $TMC_CLUSTER_GROUP \
-                       -t $TMC_TKGWC_TEMPLATE \
+                       -t $TDH_TKGWC_TEMPLATE \
                        --version $TMC_KUBERNETES_VERSION \
                        --availability-zone ${AWS_REGION}a
 
