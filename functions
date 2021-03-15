@@ -457,7 +457,7 @@ checkCloudAccess() {
       messagePrint " - MiniKube ServerIP"               "$(minikube ip -p $TDH_MINIKUBE_PROFILE)"
     fi
 
-    cnt=$(tmc cluster list --name $TDH_MINIKUBE_PROFILE > /dev/null 2>&1 | egrep -c " $TDH_MINIKUBE_PROFILE ")
+    cnt=$(tmc cluster list --name $TDH_MINIKUBE_PROFILE 2> /dev/null | egrep -c " $TDH_MINIKUBE_PROFILE ")
     if [ $cnt -eq 0 ]; then 
       messageTitle "Attach Minikube Cluster to TMC"
       messagePrint " - TMC Cluster Name"                "$TDH_MINIKUBE_PROFILE"
