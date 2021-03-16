@@ -185,15 +185,15 @@ InstallCertManager_delete_me() {
 
 InstallMetallb() {
   adr=$(kubectl get configmap config -n metallb-system -o json | jq -r '.data.config' | yq e '.address-pools[].addresses[]' -)
-  stt=$(minikube addons -p tanzu-demo-hub list -o json | jq -r '."metallb".Status')
+  stt=$(minikube addons -p $TDH_MINIKUBE_PROFILE list -o json | jq -r '."metallb".Status')
   if [ "$stt" != "enabled" -o "$adr" == "-" -o "$adr" == "" ]; then
     minikube_ip=$(minikube ip) 
     echo "Pleawe enable minikube addon metallb and configure the the ip Pool. The minikube host"
     echo "ip is ($minikube_ip), choose the IP Range in the same net."
-    echo "  => minikube addons -p tanzu-demo-hub enable metallb"
-    echo "  => minikube addons configure metallb -p tanzu-demo-hub"
-    echo "  => minikube stop -p tanzu-demo-hub"
-    echo "  => minikube -p tanzu-demo-hub start --driver=hyperkit --cpus $TDH_MINIKUBE_CONFIG_CPU --memory $TDH_MINIKUBE_CONFIG_MEMORY"
+    echo "  => minikube addons -p $TDH_MINIKUBE_PROFILE enable metallb"
+    echo "  => minikube addons configure metallb -p $TDH_MINIKUBE_PROFILE"
+    echo "  => minikube -p $TDH_MINIKUBE_PROFILE stop"
+    echo "  => minikube -p $TDH_MINIKUBE_PROFILE start"
     echo "  => kubectl describe configmap config -n metallb-system"
     exit
   else
