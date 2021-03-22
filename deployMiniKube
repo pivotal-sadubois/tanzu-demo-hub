@@ -69,11 +69,6 @@ if [ -f ~/.tanzu-demo-hub.cfg ]; then
   . ~/.tanzu-demo-hub.cfg
 fi
 
-helm repo add bitnami https://charts.bitnami.com/bitnami > /dev/null 2>&1
-if [ $? -ne 0 ]; then  
-  echo "ERROR: failed to add helm registry https://charts.bitnami.com/bitnami"; exit
-fi
-
 InstallContour_delete_me() {
   if [ "$TDH_SERVICE_INGRESS_CONTOUR" != "true" ]; then
     uodateConfigMap tanzu-demo-hub TDH_INGRESS_CONTOUR_ENABLED        "false"

@@ -33,6 +33,11 @@ prtHead() {
   printf "%2d.) %s\n" $tocindex "$1"
 }
 
+prtRead() {
+  if [ "${tocindex}" == "" ]; then tocindex=1; else let tocindex=tocindex+1; fi
+  printf "%2s   %s" "" "$1"; read x
+}
+
 prtText() {
   if [ "${tocindex}" == "" ]; then tocindex=1; else let tocindex=tocindex+1; fi
   printf "%2s   %s\n" "" "$1"
@@ -2043,6 +2048,11 @@ VerifyServiceDependancies() {
     INGRESS_NAMESPACE=cert-manager
     HELM_CHART=jetstack/cert-manager
 
+    helm repo add bitnami https://charts.bitnami.com/bitnami > /dev/null 2>&1
+    if [ $? -ne 0 ]; then
+      echo "ERROR: failed to add helm registry https://charts.bitnami.com/bitnami"; exit
+    fi
+
     messagePrint "- Install Cert Manager" "bitnami/nginx-ingress-controller"
     kubectl get namespace $INGRESS_NAMESPACE > /dev/null 2>&1
     if [ $? -ne 0 ]; then kubectl create namespace $INGRESS_NAMESPACE > /dev/null 2>&1; fi
@@ -2061,6 +2071,11 @@ VerifyServiceDependancies() {
   if [ "$TDH_DEPENDANCY_NGINX" == "true" ]; then 
     INGRESS_NAMESPACE=ingress-nginx
     HELM_CHART=bitnami/nginx-ingress-controller
+
+    helm repo add bitnami https://charts.bitnami.com/bitnami > /dev/null 2>&1
+    if [ $? -ne 0 ]; then
+      echo "ERROR: failed to add helm registry https://charts.bitnami.com/bitnami"; exit
+    fi
 
     messagePrint "- Install Ingress Controller" "$HELM_CHART"
     kubectl get namespace $INGRESS_NAMESPACE > /dev/null 2>&1
@@ -2100,6 +2115,11 @@ VerifyServiceDependancies() {
     stt=$(kubectl get ns -o json | jq -r --arg key "$INGRESS_NAMESPACE" '.items[] | select(.metadata.name == $key).status.phase')
     if [ "${stt}" == "" ]; then
       kubectl create ns $INGRESS_NAMESPACE > /dev/null 2>&1
+    fi
+
+    helm repo add bitnami https://charts.bitnami.com/bitnami > /dev/null 2>&1
+    if [ $? -ne 0 ]; then
+      echo "ERROR: failed to add helm registry https://charts.bitnami.com/bitnami"; exit
     fi
 
     stt=$(helm list -n $INGRESS_NAMESPACE -o json | jq -r --arg key "contour-3" '.[] | select(.chart | contains($key)).status')
@@ -2194,7 +2214,7 @@ checkCLIcommands() {
   fi
 
   if [ "$cat" == "TOOLS" ]; then
-    CLI_COMMANDS="/usr/local/bin/jq:brew:jq /usr/local/bin/yq:brew:yq /usr/local/bin/wget:brew:wget"
+    CLI_COMMANDS="/usr/local/bin/jq:brew:jq /usr/local/bin/yq:brew:yq /usr/local/bin/wget:brew:wget /usr/local/bin/mc:brew:minio/stable/mc /usr/local/bin/helm:brew:helm"
 
     for arg in $CLI_COMMANDS; do
       cmd=$(echo $arg | awk -F: '{ print $1 }') 
@@ -2468,9 +2488,9 @@ installMinio() {
 
   TDH_DOMAIN=$(getConfigMap tanzu-demo-hub TDH_DOMAIN)
   TDH_ENVNAME=$(getConfigMap tanzu-demo-hub TDH_ENVNAME)
+  DOMAIN=$(getConfigMap tanzu-demo-hub TDH_INGRESS_CONTOUR_LB_DOMAIN)
 
-
-  cnt=$(helm list -q | egrep -c "^minio")
+  cnt=$(helm list -q | egrep -c "^tdh-minio")
   if [ $cnt -eq 0 ]; then
     messageTitle "Installing Minio"
     HELM_VALUES=/tmp/helm_values.yaml
@@ -2482,12 +2502,16 @@ installMinio() {
     echo "    kubernetes.io/ingress.class: contour"                                                                             >> $HELM_VALUES
     echo "    ingress.kubernetes.io/force-ssl-redirect: \"true\""                                                               >> $HELM_VALUES
     echo "  path: /"                                                                                                            >> $HELM_VALUES
+    echo "  hostname: minio.$DOMAIN"                                                                                            >> $HELM_VALUES
     echo "  tls: true"                                                                                                          >> $HELM_VALUES
     echo "  servicePort: minio"                                                                                                 >> $HELM_VALUES
     echo "  extraTls:"                                                                                                          >> $HELM_VALUES
     echo "  - hosts:"                                                                                                           >> $HELM_VALUES
-    echo "      - minio.$TDH_ENVNAME.$TDH_DOMAIN"                                                                               >> $HELM_VALUES
+    echo "      - minio.$DOMAIN"                                                                                                >> $HELM_VALUES
     echo "    secretName: tanzu-demo-hub-tls"                                                                                   >> $HELM_VALUES
+    echo "  extraHosts:"                                                                                                        >> $HELM_VALUES
+    echo "    - name: tdh-postgres-backup.minio.$DOMAIN"                                                                        >> $HELM_VALUES
+    echo "      path: /"                                                                                                        >> $HELM_VALUES
 
     messagePrint " - Deploy the Postgres operator" "postgres-operator"
     helm install tdh-minio bitnami/minio -f ${HELM_VALUES} > /dev/null 2>&1
@@ -2511,9 +2535,26 @@ installMinio() {
   messagePrint " - Helm Chart Version"             "$ver"
   messagePrint " - Helm Chart Status"              "$stt"
   messagePrint " - Helm Chart Installed/Updated"   "$dat"
-  messagePrint " - Minio Management Portal"        "https://minio.$TDH_ENVNAME.$TDH_DOMAIN"
+  messagePrint " - Minio Internal Name"            "tdh-minio.default.svc.cluster.local"
+  messagePrint " - Minio Management Portal"        "https://minio.$DOMAIN"
   messagePrint " - Minio Access Key"               "$ACCESS_KEY"
   messagePrint " - Minio Secret Key"               "$SECRET_KEY"
+  echo "-----------------------------------------------------------------------------------------------------------"
+  echo " Test Minio S3 Access: (https://docs.min.io/docs/minio-client-complete-guide)"
+  echo " => brew install minio/stable/mc"
+  echo " => mc alias set minio https://minio.$DOMAIN $ACCESS_KEY $SECRET_KEY"
+  echo " => mc ls minio"
+  echo "-----------------------------------------------------------------------------------------------------------"
+  
+  sleep 10
+  mc alias set minio https://minio.$DOMAIN $ACCESS_KEY $SECRET_KEY > /dev/null 2>&1
+  if [ $? -ne 0 ]; then 
+    echo "ERROR: Unable to configure Minio Client (mc)"
+    echo "       => mc alias set minio https://minio.$DOMAIN $ACCESS_KEY $SECRET_KEY"
+    exit
+  fi
+
+  #mc mb minio/tdh-postgres-backup > /dev/null 2>&1
 
   # --- STORE SETTINGS IN CONFIGMAP ---
   uodateConfigMap tanzu-demo-hub TDH_SERVICE_MINIO                "true"
