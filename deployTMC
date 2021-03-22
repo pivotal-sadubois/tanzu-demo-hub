@@ -166,7 +166,10 @@ if [ ! -f ${TDHPATH}/deployments/${DEPLOY_TKG_TEMPLATE} ]; then
   exit 1
 else
   . ${TDHPATH}/deployments/${DEPLOY_TKG_TEMPLATE}
+
+  export TMC_CLUSTER_GROUP=$TDH_DEPLOYMENT_CLUSTERGROUP
 fi
+
 
 cnt=$(egrep -c "^TDH_DEPLOYMENT_CLOUD=" ${TDHPATH}/deployments/$DEPLOY_TKG_TEMPLATE)
 if [ $cnt -eq 0 ]; then
@@ -175,6 +178,7 @@ if [ $cnt -eq 0 ]; then
 else
   missing_variables=0
   .  ${TDHPATH}/deployments/${DEPLOY_TKG_TEMPLATE}
+  export TMC_CLUSTER_GROUP=$TDH_DEPLOYMENT_CLUSTERGROUP
 
   # --- CHECK ENVIRONMENT VARIABLES ---
   if [ -f ~/.tanzu-demo-hub.cfg ]; then
@@ -271,7 +275,7 @@ echo "--------------------------------------------------------------------------
 echo "Tanzu Kubernetes Grid Cluster ($TMC_CLUSTER_NAME) build completed"
 echo "-----------------------------------------------------------------------------------------------------------"
 echo "1.) Set KUBECONFIG and set the cluster context"
-echo "    => export KUBECONFIG=/tmp/${TMC_CLUSTER_NAME}.kubeconfig"
+echo "    => export KUBECONFIG=/tmp/${TMC_CLUSTER_NAME}.kubeconfig:~/.kube/config"
 echo "    => kubectl config use-context $TMC_CLUSTER_NAME"
 echo "    => kubectl config get-contexts"
 echo "2.) Relaxing Pod Security in cluster ($TMC_CLUSTER_NAME)"

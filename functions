@@ -6,6 +6,24 @@
 # Description ..: Tanzu Demo Hub - Cluster Installation
 # ############################################################################################
 
+alias cat='/usr/local/bin/bat -p'
+
+cat() {
+  if [ -f /usr/local/bin/bat ]; then 
+    /usr/local/bin/bat -p $*
+  else
+    cat $*
+  fi
+}
+
+#if [ -f /usr/local/bin/bat ]; then 
+#  alias cat='/usr/local/bin/bat -p'
+#  alias CAT='/usr/local/bin/bat -p'
+#else
+#  alias cat="cat"
+#  alias CAT="cat"
+#fi
+
 waitCmd() {
   read
 }
@@ -38,9 +56,23 @@ fakeCmd() {
   normal=$(tput sgr0)
 
   echo -e "     => ${bold}$1${normal}\c"; read x
-  echo "     -----------------------------------------------------------------------------------------------------------"
-  cat /tmp/log | sed -e '/^$/d' -e 's/^/     /g'
-  echo "     -----------------------------------------------------------------------------------------------------------"
+  echo "     -------------------------------------------------------------------------------------------------------------------------------------------------------"
+  cat /tmp/log | sed -e 's/^/     /g'
+  echo "     -------------------------------------------------------------------------------------------------------------------------------------------------------"
+  echo ""
+}
+
+execCat() {
+  echo -e "     => cat $1\c"; read x
+  echo "     -------------------------------------------------------------------------------------------------------------------------------------------------------"
+
+  if [ -f /usr/local/bin/bat ]; then
+    /usr/local/bin/bat -p --color always $1 | sed 's/^/     /g'
+  else
+    cat $1
+  fi
+
+  echo "     -------------------------------------------------------------------------------------------------------------------------------------------------------"
   echo ""
 }
 
@@ -49,10 +81,10 @@ execCmd() {
   normal=$(tput sgr0)
 
   echo -e "     => ${bold}$1${normal}\c"; read x
-  echo "     -----------------------------------------------------------------------------------------------------------"
-  eval "$1" 2>&1 | sed -e '/^$/d' -e 's/^/     /g'
+  echo "     -------------------------------------------------------------------------------------------------------------------------------------------------------"
+  eval "$1" 2>&1 | sed -e 's/^/     /g'
   #$1 | sed -e '/^$/d' -e 's/^/     /g'
-  echo "     -----------------------------------------------------------------------------------------------------------"
+  echo "     -------------------------------------------------------------------------------------------------------------------------------------------------------"
   echo ""
   if [ $? -ne 0 ]; then exit 1; fi
 }
@@ -1931,7 +1963,6 @@ VerifyDemoEnvironment() {
       messagePrint " - Minikube Memory"            "$mem"
       messagePrint " - Minikube CPU's"             "$cpu"
       messagePrint " - Minikube Driver"            "$drv"
-#gaga
     else
       export TDH_PLATFORM=tkgm
       export WORKLOAD_CLUSTER=tkg-tanzu-demo-hub.cfg
@@ -2358,6 +2389,247 @@ verifyVMwareRegistry() {
 a=1
 }
 
+installSpringCloudGateway() {
+  NAMESPACE=spring-cloud-gateway
+
+  if [ "$TDH_SERVICE_SPRING_CLOUD_GATEWAY" != "true" ]; then
+    uodateConfigMap tanzu-demo-hub TDH_SERVICE_SPRING_CLOUD_GATEWAY        "false"
+    return
+  fi
+
+  # --- DOWNLOAD BUILD_SERVICE BINARIES ---
+  downloadFromPivnet spring-cloud-gateway-for-kubernetes $TDH_SERVICE_SPRING_CLOUD_GATEWAY_VERSION \
+      "$TDH_SERVICE_SPRING_CLOUD_GATEWAY_VERSION" "Spring Cloud Gateway for Kubernetes Installer"
+
+  TBS_FILE="/tmp/spring-cloud-gateway-k8s-$TDH_SERVICE_SPRING_CLOUD_GATEWAY_VERSION.tgz"
+  [ -d /tmp/spring-cloud-gateway ] && rm -rf /tmp/spring-cloud-gateway
+  mkdir -p /tmp/spring-cloud-gateway
+  tar xfz $TBS_FILE -C /tmp/spring-cloud-gateway
+
+  messagePrint "Verify VMware Registry Access" "$TDH_REGISTRY_VMWARE_NAME"
+  docker login $TDH_REGISTRY_VMWARE_NAME -u $TDH_REGISTRY_VMWARE_USER -p $TDH_REGISTRY_VMWARE_PASS > /dev/null 2>&1
+  if [ $? -ne 0 ]; then
+    echo "ERROR: Docker login does not work"
+    echo "       => docker login $TDH_REGISTRY_VMWARE_NAME -u $TDH_REGISTRY_VMWARE_USER -p $TDH_REGISTRY_VMWARE_PASS"; exit
+  fi
+
+  #########################################################################################################################
+  ################################# TANZU BUILD SERVICE (TBS) - ON HARBOR REGISTRY ########################################
+  #########################################################################################################################
+
+  if [ "$TDH_SERVICE_REGISTRY_HARBOR" == "true" ]; then
+    DNS_HARBOR=$(getConfigMap tanzu-demo-hub TDH_HARBOR_REGISTRY_DNS_HARBOR)
+    TDH_HARBOR_REGISTRY_DNS_HARBOR=$(getConfigMap tanzu-demo-hub TDH_HARBOR_REGISTRY_DNS_HARBOR)
+    TDH_HARBOR_REGISTRY_ADMIN_PASSWORD=$(getConfigMap tanzu-demo-hub TDH_HARBOR_REGISTRY_ADMIN_PASSWORD)
+    messagePrint "Verify Harbor Registry Access" "$TDH_HARBOR_REGISTRY_DNS_HARBOR"
+    docker login $TDH_HARBOR_REGISTRY_DNS_HARBOR -u admin -p $TDH_HARBOR_REGISTRY_ADMIN_PASSWORD > /dev/null 2>&1
+    if [ $? -ne 0 ]; then
+      echo "ERROR: Docker login does not work 1"
+      echo "       => docker login $TDH_HARBOR_REGISTRY_DNS_HARBOR -u admin -p $TDH_HARBOR_REGISTRY_ADMIN_PASSWORD"; exit
+    fi
+
+    kubectl get ns $NAMESPACE > /dev/null 2>&1
+    if [ $? -ne 0 ]; then
+      # --- INSTALL CONTOUR INGRESS ---
+      messageTitle "Installing Spring Cloud Gateway"
+
+      messagePrint "- Relocate the images" "$TDH_REGISTRY_VMWARE_NAME/library/build-service"
+      cd /tmp/spring-cloud-gateway/spring-cloud-gateway-k8s-$TDH_SERVICE_SPRING_CLOUD_GATEWAY_VERSION
+      scripts/relocate-images.sh $DNS_HARBOR/library/spring-cloud-gateway > /dev/null 2>&1
+      if [ $? -ne 0 ]; then
+        echo "ERROR: Image Relocation failed"
+        echo "       => cd /tmp/spring-cloud-gateway/spring-cloud-gateway-k8s-$TDH_SERVICE_SPRING_CLOUD_GATEWAY_VERSION"
+        echo "       => scripts/relocate-images.sh $DNS_HARBOR/library/spring-cloud-gateway" 
+      fi
+
+      messagePrint "- Deploy Spring Cloud Gateway" "$NAMESPACE"
+      echo "-----------------------------------------------------------------------------------------------------------"
+      cd /tmp/spring-cloud-gateway/spring-cloud-gateway-k8s-$TDH_SERVICE_SPRING_CLOUD_GATEWAY_VERSION
+      ./scripts/install-spring-cloud-gateway.sh
+      echo "-----------------------------------------------------------------------------------------------------------"
+      if [ $? -ne 0 ]; then
+        echo "ERROR: Image Relocation failed"
+        echo "       => cd /tmp/spring-cloud-gateway/spring-cloud-gateway-k8s-$TDH_SERVICE_SPRING_CLOUD_GATEWAY_VERSION"
+        echo "       => ./scripts/install-spring-cloud-gateway.sh"
+      fi
+    else
+      messageTitle "Verify Spring Cloud Gateway"
+    fi
+  fi
+} 
+#hhhhhhhhhhhhhhhh
+
+installMinio() {
+  if [ "$TDH_SERVICE_MINIO" != "true" ]; then
+    uodateConfigMap tanzu-demo-hub TDH_SERVICE_MINIO        "false"
+    helm uninstall minio > /dev/null 2>&1
+    return
+  fi
+
+  TDH_DOMAIN=$(getConfigMap tanzu-demo-hub TDH_DOMAIN)
+  TDH_ENVNAME=$(getConfigMap tanzu-demo-hub TDH_ENVNAME)
+
+
+  cnt=$(helm list -q | egrep -c "^minio")
+  if [ $cnt -eq 0 ]; then
+    messageTitle "Installing Minio"
+    HELM_VALUES=/tmp/helm_values.yaml
+    echo ""                                                                                                                     >  $HELM_VALUES
+    echo "ingress:"                                                                                                             >> $HELM_VALUES
+    echo "  enabled: true"                                                                                                      >> $HELM_VALUES
+    echo "  certManager: false"                                                                                                 >> $HELM_VALUES
+    echo "  annotations:"                                                                                                       >> $HELM_VALUES
+    echo "    kubernetes.io/ingress.class: contour"                                                                             >> $HELM_VALUES
+    echo "    ingress.kubernetes.io/force-ssl-redirect: \"true\""                                                               >> $HELM_VALUES
+    echo "  path: /"                                                                                                            >> $HELM_VALUES
+    echo "  tls: true"                                                                                                          >> $HELM_VALUES
+    echo "  servicePort: minio"                                                                                                 >> $HELM_VALUES
+    echo "  extraTls:"                                                                                                          >> $HELM_VALUES
+    echo "  - hosts:"                                                                                                           >> $HELM_VALUES
+    echo "      - minio.$TDH_ENVNAME.$TDH_DOMAIN"                                                                               >> $HELM_VALUES
+    echo "    secretName: tanzu-demo-hub-tls"                                                                                   >> $HELM_VALUES
+
+    messagePrint " - Deploy the Postgres operator" "postgres-operator"
+    helm install tdh-minio bitnami/minio -f ${HELM_VALUES} > /dev/null 2>&1
+    if [ $? -ne 0 ]; then
+      echo "ERROR: Failed to deploy Minio Helm Chart"
+      echo "       => helm install tdh-minio bitnami/minio -f ${HELM_VALUES}"
+      exit
+    fi
+  fi
+
+  ver=$(helm ls -o json | jq -r --arg chart "postgres-operator" '.[] | select(.name == $chart).app_version')
+  crt=$(helm ls -o json | jq -r --arg chart "postgres-operator" '.[] | select(.name == $chart).chart')
+  stt=$(helm ls -o json | jq -r --arg chart "postgres-operator" '.[] | select(.name == $chart).status')
+  dat=$(helm ls -o json | jq -r --arg chart "postgres-operator" '.[] | select(.name == $chart).updated')
+  ACCESS_KEY=$(kubectl get secret --namespace default tdh-minio -o jsonpath="{.data.access-key}" | base64 --decode)
+  SECRET_KEY=$(kubectl get secret --namespace default tdh-minio -o jsonpath="{.data.secret-key}" | base64 --decode)
+
+  messageTitle "Verify Minio S3"
+  messagePrint " - Helm Chart"                     "$crt"
+  messagePrint " - Helm Chart Name"                "minio"
+  messagePrint " - Helm Chart Version"             "$ver"
+  messagePrint " - Helm Chart Status"              "$stt"
+  messagePrint " - Helm Chart Installed/Updated"   "$dat"
+  messagePrint " - Minio Management Portal"        "https://minio.$TDH_ENVNAME.$TDH_DOMAIN"
+  messagePrint " - Minio Access Key"               "$ACCESS_KEY"
+  messagePrint " - Minio Secret Key"               "$SECRET_KEY"
+
+  # --- STORE SETTINGS IN CONFIGMAP ---
+  uodateConfigMap tanzu-demo-hub TDH_SERVICE_MINIO                "true"
+  uodateConfigMap tanzu-demo-hub TDH_SERVICE_MINIO_INTERNAL_NAME  "tdh-minio.default.svc.cluster.local:9000"
+  uodateConfigMap tanzu-demo-hub TDH_SERVICE_MINIO_ACCESS_KEY     "$ACCESS_KEY"
+  uodateConfigMap tanzu-demo-hub TDH_SERVICE_MINIO_SECRET_KEY     "$SECRET_KEY"
+}
+
+installTanzuDataPostgres() {
+  NAMESPACE=postgres-operator
+
+  if [ "$TDH_SERVICE_TANZU_DATA_POSTGRES" != "true" ]; then
+    uodateConfigMap tanzu-demo-hub TDH_SERVICE_TANZU_DATA_POSTGRES        "false"
+    kubectl delete -n $NAMESPACE > /dev/null 2>&1
+    helm uninstall tdh-pgadmin > /dev/null 2>&1
+    helm uninstall postgres-operator > /dev/null 2>&1
+    return
+  fi
+
+  # --- DOWNLOAD BUILD_SERVICE BINARIES ---
+  downloadFromPivnet tanzu-sql-postgres $TDH_SERVICE_TANZU_DATA_POSTGRES_VERSION "$TDH_SERVICE_TANZU_DATA_POSTGRES_VERSION" "Postgres for VMware Tanzu v$TDH_SERVICE_TANZU_DATA_POSTGRES_VERSION"
+
+  TBS_FILE="/tmp/postgres-for-kubernetes-v$TDH_SERVICE_TANZU_DATA_POSTGRES_VERSION.tar.gz"
+  [ -d /tmp/postgres-for-kubernetes ] && rm -rf /tmp/postgres-for-kubernetes
+  mkdir -p /tmp/postgres-for-kubernetes
+  tar xfz $TBS_FILE -C /tmp/postgres-for-kubernetes
+
+  if [ "$TDH_SERVICE_REGISTRY_HARBOR" == "true" ]; then
+    DNS_HARBOR=$(getConfigMap tanzu-demo-hub TDH_HARBOR_REGISTRY_DNS_HARBOR)
+    TDH_HARBOR_REGISTRY_DNS_HARBOR=$(getConfigMap tanzu-demo-hub TDH_HARBOR_REGISTRY_DNS_HARBOR)
+    TDH_HARBOR_REGISTRY_ADMIN_PASSWORD=$(getConfigMap tanzu-demo-hub TDH_HARBOR_REGISTRY_ADMIN_PASSWORD)
+    messagePrint "Verify Harbor Registry Access" "$TDH_HARBOR_REGISTRY_DNS_HARBOR"
+    docker login $TDH_HARBOR_REGISTRY_DNS_HARBOR -u admin -p $TDH_HARBOR_REGISTRY_ADMIN_PASSWORD > /dev/null 2>&1
+    if [ $? -ne 0 ]; then
+      echo "ERROR: Docker login does not work 1"
+      echo "       => docker login $TDH_HARBOR_REGISTRY_DNS_HARBOR -u admin -p $TDH_HARBOR_REGISTRY_ADMIN_PASSWORD"; exit
+    fi
+
+    cnt=$(helm list -q | egrep -c "^postgres-operator") 
+    if [ $cnt -eq 0 ]; then
+      messageTitle "Installing Postgres Operator"
+
+      # --- CREATE NAMESPACE ---
+      #kubectl create namespace $NAMESPACE > /dev/null 2>&1
+
+      # --- INSTALL CONTOUR INGRESS ---
+      POSTGRES_INSTALL_PATH="/tmp/postgres-for-kubernetes/postgres-for-kubernetes-v$TDH_SERVICE_TANZU_DATA_POSTGRES_VERSION"
+      REGISTRY="harbor.apps-contour.local.pcfsdu.com/library"
+
+      docker load -i ${POSTGRES_INSTALL_PATH}/images/postgres-instance  > /dev/null 2>&1
+      docker load -i ${POSTGRES_INSTALL_PATH}/images/postgres-operator  > /dev/null 2>&1
+
+      messagePrint " - Reocate Images (postgres-instance) to Harbor" "$REGISTRY/postgres-instance"
+      INSTANCE_IMAGE_NAME="${REGISTRY}/postgres-instance:$(cat $POSTGRES_INSTALL_PATH/images/postgres-instance-tag)"
+      docker tag $(cat $POSTGRES_INSTALL_PATH/images/postgres-instance-id) ${INSTANCE_IMAGE_NAME}  > /dev/null 2>&1
+      docker push ${INSTANCE_IMAGE_NAME}  > /dev/null 2>&1
+
+      messagePrint " - Reocate Images (postgres-operator) to Harbor" "$REGISTRY/postgres-operator"
+      OPERATOR_IMAGE_NAME="${REGISTRY}/postgres-operator:$(cat $POSTGRES_INSTALL_PATH/images/postgres-operator-tag)"
+      docker tag $(cat $POSTGRES_INSTALL_PATH/images/postgres-operator-id) ${OPERATOR_IMAGE_NAME}  > /dev/null 2>&1
+      docker push ${OPERATOR_IMAGE_NAME}  > /dev/null 2>&1
+
+      # --- CLEANUP DOCKER IMAGES ---
+      #for n in $(docker images | egrep "postgres-(operator|instance) " | awk '{ print $3 }'); do
+      #  docker image rm $n -f > /dev/null 2>&1
+      #done
+
+      messagePrint "Customize Postgres Helm Chart Values" "/tmp/values-overrides.yaml"
+      sed -e "s+operatorImageRepository: postgres-operator+operatorImageRepository: $REGISTRY/postgres-operator+g" \
+          -e "s+postgresImageRepository: postgres-instance+postgresImageRepository: $REGISTRY/postgres-instance+g" \
+          ${POSTGRES_INSTALL_PATH}/operator/values.yaml > /tmp/values-overrides.yaml
+      if [ "${DEBUG}" == "1" ]; then
+        echo "-----------------------------------------------------------------------------------------------------------"
+        cat /tmp/values-overrides.yaml
+        echo "-----------------------------------------------------------------------------------------------------------"
+      fi
+
+      messagePrint " - Deploy the Postgres operator" "postgres-operator"
+      #helm install postgres-operator -n $NAMESPACE -f /tmp/values-overrides.yaml ${POSTGRES_INSTALL_PATH}/operator/ > /dev/null 2>&1
+      helm install postgres-operator -f /tmp/values-overrides.yaml ${POSTGRES_INSTALL_PATH}/operator/ > /dev/null 2>&1
+      if [ $? -ne 0 ]; then
+        echo "ERROR: Failed to deploy Postgres Helm Chart"
+        echo "       => helm install postgres-operator -n $NAMESPACE -f /tmp/values-overrides.yaml ${POSTGRES_INSTALL_PATH}/operator/"
+        exit
+      fi
+    fi
+
+    ver=$(helm ls -o json | jq -r --arg chart "postgres-operator" '.[] | select(.name == $chart).app_version')
+    crt=$(helm ls -o json | jq -r --arg chart "postgres-operator" '.[] | select(.name == $chart).chart')
+    stt=$(helm ls -o json | jq -r --arg chart "postgres-operator" '.[] | select(.name == $chart).status')
+    dat=$(helm ls -o json | jq -r --arg chart "postgres-operator" '.[] | select(.name == $chart).updated')
+    
+    messageTitle "Verify Postgres Operator"  
+    messagePrint " - Helm Chart"                     "$crt"
+    messagePrint " - Helm Chart Name"                "postgres-operator"
+    messagePrint " - Helm Chart Version"             "$ver"
+    messagePrint " - Helm Chart Status"              "$stt"
+    messagePrint " - Helm Chart Installed/Updated"   "$dat"
+
+    ver=$(helm ls -o json | jq -r --arg chart "tdh-pgadmin" '.[] | select(.name == $chart).app_version')
+    crt=$(helm ls -o json | jq -r --arg chart "tdh-pgadmin" '.[] | select(.name == $chart).chart')
+    stt=$(helm ls -o json | jq -r --arg chart "tdh-pgadmin" '.[] | select(.name == $chart).status')
+    dat=$(helm ls -o json | jq -r --arg chart "tdh-pgadmin" '.[] | select(.name == $chart).updated')
+
+    messageTitle "Verify pgAdmin" 
+    messagePrint " - Helm Chart"                     "$crt"
+    messagePrint " - Helm Chart Name"                "tdh-pgadmin"
+    messagePrint " - Helm Chart Version"             "$ver"
+    messagePrint " - Helm Chart Status"              "$stt"
+    messagePrint " - Helm Chart Installed/Updated"   "$dat"
+  fi
+
+  uodateConfigMap tanzu-demo-hub TDH_SERVICE_TANZU_DATA_POSTGRES          "true"
+  uodateConfigMap tanzu-demo-hub TDH_SERVICE_TANZU_DATA_POSTGRES_VERSION  $TDH_SERVICE_TANZU_DATA_POSTGRES_VERSION
+} 
+
 installBuildService() {
   if [ "$TDH_SERVICE_BUILD_SERVICE" != "true" ]; then
     uodateConfigMap tanzu-demo-hub TDH_SERVICE_BUILD_SERVICE        "false"
@@ -2485,7 +2757,7 @@ installBuildService() {
     downloadFromPivnet tbs-dependencies $TDH_SERVICE_BUILD_SERVICE_DEPENDANCIES $TDH_SERVICE_BUILD_SERVICE_DEPENDANCIES "descriptor-$TDH_SERVICE_BUILD_SERVICE_DEPENDANCIES.yaml"
 
     messagePrint "- Import Dependency Descriptors"
-    kp import -f /tmp/descriptor-$TDH_SERVICE_BUILD_SERVICE_DEPENDANCIES.yaml 
+    kp import -f /tmp/descriptor-$TDH_SERVICE_BUILD_SERVICE_DEPENDANCIES.yaml > /dev/null 2>&1
   else
     messagePrint "- Verify Dependency Descriptors"
     echo "-----------------------------------------------------------------------------------------------------------"
@@ -2516,7 +2788,7 @@ downloadFromPivnet() {
   for pid in $(pivnetAPI $PCF_PIVNET_TOKEN GET products/$PRODUCT_SLUG/releases 2> /dev/null | \
              jq -r ".releases[] | select(.version | scan(\"^$SLUG_VER\")).id"); do
     fid=$(pivnetAPI $PCF_PIVNET_TOKEN GET products/$PRODUCT_SLUG/releases/$pid 2>/dev/null | \
-          jq -r ".product_files[] | select(.name | scan(\"^$PROD_STR\")) | select(.file_version | scan(\"$PROD_VER\")).id")
+          jq -r ".product_files[] | select(.name | scan(\"^$PROD_STR\")) | select(.file_type == \"Software\") | select(.file_version | scan(\"$PROD_VER\")).id")
 
     if [ "${fid}" != "" ]; then
       # --- ACCEPT EULA ---
@@ -2538,14 +2810,14 @@ downloadFromPivnet() {
        awk -F'/' '{ print $NF }')
 
   if [ ! -f /tmp/$file ]; then
-    messageTitle "Download (äPRODUCT_SLUG) from PIVNET"
+    messageTitle "Download ($PRODUCT_SLUG) from PIVNET"
     messagePrint " - Product Name:" "$PRODUCT_SLUG"
     messagePrint " - Product Slug:" "$SLUG_VER"
     messagePrint " - Product FileID:" "$fid"
     messagePrint " - Download Location:" "/tmp/$file"
     pivnetAPIdownload $PCF_PIVNET_TOKEN $PRODUCT_SLUG $pid $fid $file
   else
-    messageTitle "Verify PIVNET Download (äPRODUCT_SLUG)"
+    messageTitle "Verify PIVNET Download ($PRODUCT_SLUG)"
     messagePrint " - Product Name:" "$PRODUCT_SLUG"
     messagePrint " - Product Slug:" "$SLUG_VER"
     messagePrint " - Product FileID:" "$fid"
@@ -2966,7 +3238,6 @@ InstallCertManager() {
 }
 
 InstallHarborRegistry() {
-#gaga
   if [ "$TDH_SERVICE_BUILD_SERVICE" != "true" ]; then
     uodateConfigMap tanzu-demo-hub TDH_SERVICE_BUILD_SERVICE        "false"
     return
