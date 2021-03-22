@@ -2163,7 +2163,7 @@ checkCLIcommands() {
   fi
 
   if [ "$cat" == "TOOLS" ]; then
-    CLI_COMMANDS="/usr/local/bin/jq:brew:jq /usr/local/bin/yq:brew:yq /usr/local/bin/wget:brew:wget"
+    CLI_COMMANDS="/usr/local/bin/jq:brew:jq /usr/local/bin/yq:brew:yq /usr/local/bin/wget:brew:wget /usr/local/bin/helm:brew:helm"
 
     for arg in $CLI_COMMANDS; do
       cmd=$(echo $arg | awk -F: '{ print $1 }') 
