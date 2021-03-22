@@ -8,13 +8,13 @@
 
 alias cat='/usr/local/bin/bat -p'
 
-cat() {
-  if [ -f /usr/local/bin/bat ]; then 
-    /usr/local/bin/bat -p $*
-  else
-    cat $*
-  fi
-}
+#cat() {
+#  if [ -f /usr/local/bin/bat ]; then 
+#    /usr/local/bin/bat -p $*
+#  else
+#    cat $*
+#  fi
+#}
 
 #if [ -f /usr/local/bin/bat ]; then 
 #  alias cat='/usr/local/bin/bat -p'
@@ -459,11 +459,15 @@ checkCloudAccess() {
 
   if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "minikube" ]; then
     TDH_MINIKUBE_PROFILE="tdh-minikube-${TMC_USER}"
-    if [ "${TDH_MINIKUBE_PROFILE}" == "" ]; then
+    if [ "${TDH_MINIKUBE_PROFILE}" == "" -o "${TMC_USER}" == "" ]; then
       missing_variables=1
       echo ""
       echo "  4MISSING ENVIRONMENT-VARIABES    DESCRIPTION        "
       echo "  --------------------------------------------------------------------------------------------------------------"
+
+      if [ "${TMC_USER}" == "" ]; then
+        echo "  TMC_USER                        (required) The name of the TMC UserID"
+      fi
     else
       if [ -f ~/.minikube/profiles/$TDH_MINIKUBE_PROFILE/config.json ]; then 
         cpu=$(cat ~/.minikube/profiles/$TDH_MINIKUBE_PROFILE/config.json | jq -r '.CPUs')
@@ -472,7 +476,7 @@ checkCloudAccess() {
         drv=$(cat ~/.minikube/profiles/$TDH_MINIKUBE_PROFILE/config.json | jq -r '.Driver')
       else
         echo "ERROR: Minukube is not running, start it first"
-        echo "       => minikube -p $TDH_MINIKUBE_PROFILE start --driver=hyperkit --cpus $TDH_MINIKUBE_CONFIG_CPU --memory $TDH_MINIKUBE_CONFIG_MEMORY --disk-size $TDH_MINIKUBE_CONFIG_DISK --nodes=$TDH_MINIKUBE_NODES"; exit
+        echo "       => 1minikube -p $TDH_MINIKUBE_PROFILE start --driver=hyperkit --cpus $TDH_MINIKUBE_CONFIG_CPU --memory $TDH_MINIKUBE_CONFIG_MEMORY --disk-size $TDH_MINIKUBE_CONFIG_DISK --nodes=$TDH_MINIKUBE_NODES"; exit
       fi
 
       stt=$(minikube status -p $TDH_MINIKUBE_PROFILE| grep "^host:" | awk '{ print $NF }')
@@ -492,17 +496,17 @@ checkCloudAccess() {
       fi
 
       messagePrint " - MiniKube ServerIP"               "$(minikube ip -p $TDH_MINIKUBE_PROFILE)"
-    fi
 
-    cnt=$(tmc cluster list --name $TDH_MINIKUBE_PROFILE 2> /dev/null | egrep -c " $TDH_MINIKUBE_PROFILE ")
-    if [ $cnt -eq 0 ]; then 
-      messageTitle "Attach Minikube Cluster to TMC"
-      messagePrint " - TMC Cluster Name"                "$TDH_MINIKUBE_PROFILE"
-      messagePrint " - TMC Clustergroup"                "tanzu-demo-hub"
-      echo "  --------------------------------------------------------------------------------------------------------------"
-      tmc cluster attach -n $TDH_MINIKUBE_PROFILE -g tanzu-demo-hub -p minikube
-      kubectl apply -f k8s-attach-manifest.yaml
-      echo "  --------------------------------------------------------------------------------------------------------------"
+      cnt=$(tmc cluster list --name $TDH_MINIKUBE_PROFILE 2> /dev/null | egrep -c " $TDH_MINIKUBE_PROFILE ")
+      if [ $cnt -eq 0 ]; then 
+        messageTitle "Attach Minikube Cluster to TMC"
+        messagePrint " - TMC Cluster Name"                "$TDH_MINIKUBE_PROFILE"
+        messagePrint " - TMC Clustergroup"                "tanzu-demo-hub"
+        echo "  --------------------------------------------------------------------------------------------------------------"
+        tmc cluster attach -n $TDH_MINIKUBE_PROFILE -g tanzu-demo-hub -p minikube
+        kubectl apply -f k8s-attach-manifest.yaml
+        echo "  --------------------------------------------------------------------------------------------------------------"
+      fi
     fi
   fi
 
