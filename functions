@@ -2157,6 +2157,7 @@ uodateConfigMap() {
   KEY="$2"
   VALUE="$3"
 
+  [ "$VALUE" == "" ] && VALUE="<empty>"
   [ "$VALUE" == "True" ] && VALUE=true
   [ "$VALUE" == "False" ] && VALUE=false
 
