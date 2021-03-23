@@ -570,7 +570,7 @@ InstallContour
 createClusterIssuer
 InstallHarborRegistry
 getRootCA tanzu-demo-hub-tls
-#installBuildService
+installBuildService
 installTanzuDataPostgres
 installSpringCloudGateway
 installMinio
