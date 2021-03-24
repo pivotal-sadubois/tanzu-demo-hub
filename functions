@@ -2170,8 +2170,8 @@ uodateConfigMap() {
   kubectl create configmap $CONFIG_MAP --from-env-file=/tmp/$CONFIG_MAP --dry-run=client -o yaml | kubectl apply -f - > /dev/null 2>&1
   if [ $? -ne 0 ]; then
     echo "ERROR: updating config map $CONFIG_MAP"
-    echo "       => kubectl create configmap $CONFIG_MAP --from-literal=$KEY=$VALUE --from-literal=XXX=12 --dry-run=client -o yaml | \\"
-    echo "          kubectl apply -f -"; exit
+    echo "       => kubectl create configmap $CONFIG_MAP --from-env-file=/tmp/$CONFIG_MAP --dry-run=client -o yaml | kubectl apply -f -"
+    exit
   fi  
 }
 
