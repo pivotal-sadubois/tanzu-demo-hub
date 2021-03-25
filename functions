@@ -1,12 +1,28 @@
 #!/bin/bash
 # ############################################################################################
 # File: ........: functions
-# Language .....: bash 
+# Language .....: bash
 # Author .......: Sacha Dubois, VMware
 # Description ..: Tanzu Demo Hub - Cluster Installation
 # ############################################################################################
 
 alias cat='/usr/local/bin/bat -p'
+
+cat() {
+  if [ -f /usr/local/bin/bat ]; then 
+    /usr/local/bin/bat -p $*
+  else
+    cat $*
+  fi
+}
+
+#if [ -f /usr/local/bin/bat ]; then 
+#  alias cat='/usr/local/bin/bat -p'
+#  alias CAT='/usr/local/bin/bat -p'
+#else
+#  alias cat="cat"
+#  alias CAT="cat"
+#fi
 
 waitCmd() {
   read
@@ -443,15 +459,11 @@ checkCloudAccess() {
 
   if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "minikube" ]; then
     TDH_MINIKUBE_PROFILE="tdh-minikube-${TMC_USER}"
-    if [ "${TDH_MINIKUBE_PROFILE}" == "" -o "${TMC_USER}" == "" ]; then
+    if [ "${TDH_MINIKUBE_PROFILE}" == "" ]; then
       missing_variables=1
       echo ""
       echo "  4MISSING ENVIRONMENT-VARIABES    DESCRIPTION        "
       echo "  --------------------------------------------------------------------------------------------------------------"
-
-      if [ "${TMC_USER}" == "" ]; then
-        echo "  TMC_USER                        (required) The name of the TMC UserID"
-      fi
     else
       if [ -f ~/.minikube/profiles/$TDH_MINIKUBE_PROFILE/config.json ]; then 
         cpu=$(cat ~/.minikube/profiles/$TDH_MINIKUBE_PROFILE/config.json | jq -r '.CPUs')
@@ -480,17 +492,17 @@ checkCloudAccess() {
       fi
 
       messagePrint " - MiniKube ServerIP"               "$(minikube ip -p $TDH_MINIKUBE_PROFILE)"
+    fi
 
-      cnt=$(tmc cluster list --name $TDH_MINIKUBE_PROFILE 2> /dev/null | egrep -c " $TDH_MINIKUBE_PROFILE ")
-      if [ $cnt -eq 0 ]; then 
-        messageTitle "Attach Minikube Cluster to TMC"
-        messagePrint " - TMC Cluster Name"                "$TDH_MINIKUBE_PROFILE"
-        messagePrint " - TMC Clustergroup"                "tanzu-demo-hub"
-        echo "  --------------------------------------------------------------------------------------------------------------"
-        tmc cluster attach -n $TDH_MINIKUBE_PROFILE -g tanzu-demo-hub -p minikube
-        kubectl apply -f k8s-attach-manifest.yaml
-        echo "  --------------------------------------------------------------------------------------------------------------"
-      fi
+    cnt=$(tmc cluster list --name $TDH_MINIKUBE_PROFILE 2> /dev/null | egrep -c " $TDH_MINIKUBE_PROFILE ")
+    if [ $cnt -eq 0 ]; then 
+      messageTitle "Attach Minikube Cluster to TMC"
+      messagePrint " - TMC Cluster Name"                "$TDH_MINIKUBE_PROFILE"
+      messagePrint " - TMC Clustergroup"                "tanzu-demo-hub"
+      echo "  --------------------------------------------------------------------------------------------------------------"
+      tmc cluster attach -n $TDH_MINIKUBE_PROFILE -g tanzu-demo-hub -p minikube
+      kubectl apply -f k8s-attach-manifest.yaml
+      echo "  --------------------------------------------------------------------------------------------------------------"
     fi
   fi
 
@@ -1063,11 +1075,11 @@ configureJumpHost() {
   if [ "${stt}" == "" ]; then
     # --- COPY THE AWS DIRECTORY ---
     $SSH_COMMAND -n "[ ! -d $SSH_HOME/tanzu-demo-hub/software ] && mkdir -p $SSH_HOME/tanzu-demo-hub/software"
-    if [ "$TDH_TKGMC_INFRASTRUCTURE" == "Azure" ]; then
+    if [ "$TDH_TKGMC_INFRASTRUCTURE" == "Azure" ]; then 
       $SCP_COMMAND -r ${TDHPATH}/software/tkg-* ${SSH_USER}@${SSH_HOST}:${SSH_HOME}/tanzu-demo-hub/software > /dev/null 2>&1
     fi
 
-    if [ "$TDH_TKGMC_INFRASTRUCTURE" == "vSphere" ]; then
+    if [ "$TDH_TKGMC_INFRASTRUCTURE" == "vSphere" ]; then 
       $SCP_COMMAND -r ${TDHPATH}/software/tkg-* ${SSH_USER}@${SSH_HOST}:${SSH_HOME}/tanzu-demo-hub/software > /dev/null 2>&1
       $SCP_COMMAND -r ${TDHPATH}/software/pho* ${SSH_USER}@${SSH_HOST}:${SSH_HOME}/tanzu-demo-hub/ > /dev/null 2>&1
     fi
@@ -1078,7 +1090,7 @@ configureJumpHost() {
   if [ "${stt}" == "" ]; then
     messagePrint " - Install TKG Utilities"   "tkg, ytt, kapp, kbld, kubectl, kind"
     $SSH_COMMAND -n "[ -d $SSH_HOME/tanzu-demo-hub ] && chmod a+x ${TDHHOME}/scripts/InstallTKGutilities.sh && \
-        sudo ${TDHHOME}/scripts/InstallTKGutilities.sh \"$SSH_HOME/tanzu-demo-hub\" > /dev/null 2>&1"
+        sudo ${TDHHOME}/scripts/InstallTKGutilities.sh \"$SSH_HOME/tanzu-demo-hub\" $TDH_TKGMC_INFRASTRUCTURE > /dev/null 2>&1"
     #$SSH_COMMAND -n "[ -d $SSH_HOME/tanzu-demo-hub ] && chmod a+x ${TDHHOME}/scripts/InstallTKGutilities.sh && \
     #    sudo ${TDHHOME}/scripts/InstallTKGutilities.sh \"$SSH_HOME/tanzu-demo-hub\"" 
 
@@ -1323,8 +1335,11 @@ createCluster() {
     echo "AZURE_LOCATION: $AZURE_LOCATION"                                            >> $TKG_TEMPLATE
     echo "AZURE_SUBSCRIPTION_ID: $AZURE_SUBSCRIPTION_ID"                              >> $TKG_TEMPLATE
 
+    MPDE=azure
+
     stt=$(tkg get mc --name $TDH_TKGMC_NAME -o json | jq -r '.[].status')
     if [ "${stt}" != "Success" ]; then
+echo gaga
       echo "----------------------------------------------------------------------------------------------------------------"
       echo "tkg init -q -i $MPDE -p dev --ceip-participation true --cni $TDH_TKGMC_CNI -v 0 \\"
       echo "         --name $TDH_TKGMC_NAME --config $TKG_TEMPLATE --kubeconfig=$TKG_KUBECONFIG"
@@ -2149,21 +2164,18 @@ uodateConfigMap() {
   KEY="$2"
   VALUE="$3"
 
-  [ "$VALUE" == "" ] && VALUE="<empty>"
   [ "$VALUE" == "True" ] && VALUE=true
   [ "$VALUE" == "False" ] && VALUE=false
 
-  kubectl get cm tanzu-demo-hub -o json | jq -r '.data' | egrep ": " | sed -e 's/^ *"//g' -e 's/: /=/g' -e 's/"=/=/g' -e 's/\\\"//g' -e 's/,$//g' -e 's/"//g' | \
-          egrep -v "^$KEY:" > /tmp/$CONFIG_MAP
-  #kubectl get cm $CONFIG_MAP -o yaml 2>/dev/null | sed -e "s/\'\"//g" -e "s/\"\'//g" | \
-  #        yy e '.data' - | grep ":" | egrep -v "^$KEY:" | sed 's/: /=/g' > /tmp/$CONFIG_MAP
+  kubectl get cm $CONFIG_MAP -o yaml 2>/dev/null | sed -e "s/\'\"//g" -e "s/\"\'//g" | \
+          yq e '.data' - | grep ":" | egrep -v "^$KEY:" | sed 's/: /=/g' > /tmp/$CONFIG_MAP
   echo "$KEY=$VALUE" >> /tmp/$CONFIG_MAP
 
   kubectl create configmap $CONFIG_MAP --from-env-file=/tmp/$CONFIG_MAP --dry-run=client -o yaml | kubectl apply -f - > /dev/null 2>&1
   if [ $? -ne 0 ]; then
     echo "ERROR: updating config map $CONFIG_MAP"
-    echo "       => kubectl create configmap $CONFIG_MAP --from-env-file=/tmp/$CONFIG_MAP --dry-run=client -o yaml | kubectl apply -f -"
-    exit
+    echo "       => kubectl create configmap $CONFIG_MAP --from-literal=$KEY=$VALUE --from-literal=XXX=12 --dry-run=client -o yaml | \\"
+    echo "          kubectl apply -f -"; exit
   fi  
 }
 
@@ -2171,8 +2183,8 @@ getConfigMap() {
   CONFIG_MAP=$1
   KEY=$2
 
-  kubectl get configmap tanzu-demo-hub -o json | jq -r ".data.$KEY" | sed 's/"//g'
-  #kubectl get configmap tanzu-demo-hub -o yaml | sed -e "s/\'\"//g" -e "s/\"\'//g" | yq e ".data.$KEY" - 
+  kubectl get configmap tanzu-demo-hub -o yaml | sed -e "s/\'\"//g" -e "s/\"\'//g" | yq e ".data.$KEY" - 
+  #kubectl get configmap $CONFIG_MAP -o json | jq -r ".data.$KEY" | sed -e "s/\'\"//g" -e "s/\"\'//g"
 }
 
 createConfigMap() {
@@ -2224,7 +2236,7 @@ checkCLIcommands() {
   fi
 
   if [ "$cat" == "TOOLS" ]; then
-    CLI_COMMANDS="/usr/local/bin/jq:brew:jq /usr/local/bin/wget:brew:wget /usr/local/bin/mc:brew:minio/stable/mc /usr/local/bin/helm:brew:helm"
+    CLI_COMMANDS="/usr/local/bin/jq:brew:jq /usr/local/bin/yq:brew:yq /usr/local/bin/wget:brew:wget /usr/local/bin/mc:brew:minio/stable/mc /usr/local/bin/helm:brew:helm"
 
     for arg in $CLI_COMMANDS; do
       cmd=$(echo $arg | awk -F: '{ print $1 }') 
@@ -2815,6 +2827,8 @@ installBuildService() {
     kp clusterbuilder list | sed '$d'
     echo "-----------------------------------------------------------------------------------------------------------"
   fi
+
+#https://github.com/pivotal-sadubois/spring-petclinic.git
 
   uodateConfigMap tanzu-demo-hub TDH_SERVICE_BUILD_SERVICE          "true"
   uodateConfigMap tanzu-demo-hub TDH_SERVICE_BUILD_SERVICE_VERSION  $TDH_SERVICE_BUILD_SERVICE_VERSION
