@@ -20,8 +20,6 @@ mv tkg/kbld-linux-amd64-*   /usr/local/bin/kbld   && chmod +x /usr/local/bin/kbl
 mv tkg/tkg-linux-amd64-*    /usr/local/bin/tkg    && chmod +x /usr/local/bin/tkg
 mv tkg/ytt-linux-amd64-*    /usr/local/bin/ytt    && chmod +x /usr/local/bin/ytt
 
-echo "grässeres archschloch"
-exit
 ## INSTALL TKG EXTENSIONS
 #mkdir -p $TDHPATH/extensions && cd $TDHPATH/extensions
 #tar xfz $TDHPATH/software/tkg-extensions-manifests-v1.2.0-vmware.1.tar-2.gz
