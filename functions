@@ -1074,7 +1074,15 @@ configureJumpHost() {
   stt=$($SSH_COMMAND -n "[ -d /home/ubuntu/tanzu-demo-hub/software ] && echo true")
   if [ "${stt}" == "" ]; then
     # --- COPY THE AWS DIRECTORY ---
-    $SCP_COMMAND -r ${TDHPATH}/software ${SSH_USER}@${SSH_HOST}:${SSH_HOME}/tanzu-demo-hub/ > /dev/null 2>&1
+    $SSH_COMMAND -n "[ ! -d $SSH_HOME/tanzu-demo-hub/software ] && mkdir -p $SSH_HOME/tanzu-demo-hub/software"
+    if [ "$TDH_TKGMC_INFRASTRUCTURE" == "Azure" ]; then 
+      $SCP_COMMAND -r ${TDHPATH}/software/tkg-* ${SSH_USER}@${SSH_HOST}:${SSH_HOME}/tanzu-demo-hub/software > /dev/null 2>&1
+    fi
+
+    if [ "$TDH_TKGMC_INFRASTRUCTURE" == "vSphere" ]; then 
+      $SCP_COMMAND -r ${TDHPATH}/software/tkg-* ${SSH_USER}@${SSH_HOST}:${SSH_HOME}/tanzu-demo-hub/software > /dev/null 2>&1
+      $SCP_COMMAND -r ${TDHPATH}/software/pho* ${SSH_USER}@${SSH_HOST}:${SSH_HOME}/tanzu-demo-hub/ > /dev/null 2>&1
+    fi
   fi
 
   # --- INSTALL TKG UTILITES ---
@@ -2197,11 +2205,22 @@ verifyRequiredServices() {
   fi
 }
 
+checkTKGdownloads() {
+  kpl=$(ls -1 software | egrep -c "^kp-linux|photon")
+  ptl=$(ls -1 software | egrep -c "^photon")
+  tkg=$(ls -1 software | egrep -c "^tkg-linux")
+  if [ $tkg -eq 0 ]; then 
+    echo "ERROR: Please download TKG Utilies from https://www.vmware.com/go/get-tkg"
+    echo "       => $TANZU_DEMO_HUB/software/tkg-linux-amd64-vx.x.x-vmware.x.tar.gz"
+    exit
+  fi
+}
+
 checkCLIcommands() {
   cat="$1"
   if [ "$cat" == "TKG" ]; then
     if [ ! -x /usr/local/bin/tkg ]; then
-      echo "ERROR: /usr/local/bin/tkg not installed, please download package from https://my.vmware.com"
+      echo "ERROR: /usr/local/bin/tkg not installed, please download package from https://www.vmware.com/go/get-tkg"
       echo "       => search for VMware Tanzu Kubernetes Grid CLI for Mac"
       exit
     fi
