@@ -1,0 +1,20 @@
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: https-ingress
+  namespace: NAMESPACE
+  labels:
+    app: echoserver
+spec:
+  tls:
+  - secretName: https-secret
+    hosts:
+      - petclinic.DNS_DOMAIN
+  rules:
+  - host: petclinic.DNS_DOMAIN
+    http:
+      paths:
+      - path: /
+        backend:
+          serviceName: petclinic
+          servicePort: 8080

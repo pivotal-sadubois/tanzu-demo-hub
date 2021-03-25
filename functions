@@ -1,10 +1,12 @@
 #!/bin/bash
 # ############################################################################################
 # File: ........: functions
-# Language .....: bash
+# Language .....: bash 
 # Author .......: Sacha Dubois, VMware
 # Description ..: Tanzu Demo Hub - Cluster Installation
 # ############################################################################################
+
+alias cat='/usr/local/bin/bat -p'
 
 waitCmd() {
   read
@@ -15,9 +17,52 @@ prtHead() {
   printf "%2d.) %s\n" $tocindex "$1"
 }
 
+prtRead() {
+  if [ "${tocindex}" == "" ]; then tocindex=1; else let tocindex=tocindex+1; fi
+  printf "%2s   %s" "" "$1"; read x
+}
+
 prtText() {
   if [ "${tocindex}" == "" ]; then tocindex=1; else let tocindex=tocindex+1; fi
   printf "%2s   %s\n" "" "$1"
+}
+
+lineFed() {
+  echo
+}
+
+slntCmd() {
+  bold=$(tput bold)
+  normal=$(tput sgr0)
+
+  echo -e "     => ${bold}$1${normal}\c"; read x
+  eval "$1" 2>&1 | sed -e '/^$/d' -e 's/^/     /g'
+  if [ $? -ne 0 ]; then exit 1; fi
+}
+
+fakeCmd() {
+  bold=$(tput bold)
+  normal=$(tput sgr0)
+
+  echo -e "     => ${bold}$1${normal}\c"; read x
+  echo "     -------------------------------------------------------------------------------------------------------------------------------------------------------"
+  cat /tmp/log | sed -e 's/^/     /g'
+  echo "     -------------------------------------------------------------------------------------------------------------------------------------------------------"
+  echo ""
+}
+
+execCat() {
+  echo -e "     => cat $1\c"; read x
+  echo "     -------------------------------------------------------------------------------------------------------------------------------------------------------"
+
+  if [ -f /usr/local/bin/bat ]; then
+    /usr/local/bin/bat -p --color always $1 | sed 's/^/     /g'
+  else
+    cat $1
+  fi
+
+  echo "     -------------------------------------------------------------------------------------------------------------------------------------------------------"
+  echo ""
 }
 
 execCmd() {
@@ -25,10 +70,10 @@ execCmd() {
   normal=$(tput sgr0)
 
   echo -e "     => ${bold}$1${normal}\c"; read x
-  echo "     -----------------------------------------------------------------------------------------------------------"
-  eval "$1" 2>&1 | sed -e '/^$/d' -e 's/^/     /g'
+  echo "     -------------------------------------------------------------------------------------------------------------------------------------------------------"
+  eval "$1" 2>&1 | sed -e 's/^/     /g'
   #$1 | sed -e '/^$/d' -e 's/^/     /g'
-  echo "     -----------------------------------------------------------------------------------------------------------"
+  echo "     -------------------------------------------------------------------------------------------------------------------------------------------------------"
   echo ""
   if [ $? -ne 0 ]; then exit 1; fi
 }
@@ -67,9 +112,12 @@ pivnetAPIdownload() {
   # --- LOGIN INTO PIVNET ---
   wget -O /tmp/$FILE_NAME --header="Authorization: Bearer $token" \
   https://network.pivotal.io/api/v2/products/$PRODUCT_SLUG/releases/$PRODUCT_ID/product_files/$PRODUCT_FILE/download > /dev/null 2>&1
+echo "FILE_NAME:$FILE_NAME"
 
   if [ ! -f /tmp/$FILE_NAME ]; then
     echo "ERROR: Error downloading file from PIVNET /tmp/$FILE_NAME"
+    echo "       SLUG:$PRODUCT_SLUG, PRODUCT_ID:$PRODUCT_ID"
+    exit
   fi
 
   return 0
@@ -394,23 +442,55 @@ checkCloudAccess() {
   missing_variables=0
 
   if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "minikube" ]; then
-    if [ "${TDH_MINIKUBE_PROFILE}" == "" ]; then
+    TDH_MINIKUBE_PROFILE="tdh-minikube-${TMC_USER}"
+    if [ "${TDH_MINIKUBE_PROFILE}" == "" -o "${TMC_USER}" == "" ]; then
       missing_variables=1
       echo ""
       echo "  4MISSING ENVIRONMENT-VARIABES    DESCRIPTION        "
       echo "  --------------------------------------------------------------------------------------------------------------"
+
+      if [ "${TMC_USER}" == "" ]; then
+        echo "  TMC_USER                        (required) The name of the TMC UserID"
+      fi
     else
-      stt=$(minikube status -p tanzu-demo-hub| grep "^host:" | awk '{ print $NF }')
-      echo "MiniKube Status and Configuration"
+      if [ -f ~/.minikube/profiles/$TDH_MINIKUBE_PROFILE/config.json ]; then 
+        cpu=$(cat ~/.minikube/profiles/$TDH_MINIKUBE_PROFILE/config.json | jq -r '.CPUs')
+        dsk=$(cat ~/.minikube/profiles/$TDH_MINIKUBE_PROFILE/config.json | jq -r '.Disk')
+        mem=$(cat ~/.minikube/profiles/$TDH_MINIKUBE_PROFILE/config.json | jq -r '.Memory')
+        drv=$(cat ~/.minikube/profiles/$TDH_MINIKUBE_PROFILE/config.json | jq -r '.Driver')
+      else
+        echo "ERROR: Minukube is not running, start it first"
+        echo "       => minikube -p $TDH_MINIKUBE_PROFILE start --driver=hyperkit --cpus $TDH_MINIKUBE_CONFIG_CPU --memory $TDH_MINIKUBE_CONFIG_MEMORY --disk-size $TDH_MINIKUBE_CONFIG_DISK --nodes=$TDH_MINIKUBE_NODES"; exit
+      fi
+
+      stt=$(minikube status -p $TDH_MINIKUBE_PROFILE| grep "^host:" | awk '{ print $NF }')
+      messageTitle "MiniKube Status and Configuration"
       messagePrint " - MiniKube Profile"                "$TDH_MINIKUBE_PROFILE"
       messagePrint " - MiniKube Version"                "$(minikube version | head -1 | awk '{ print $NF }')"
       messagePrint " - MiniKube Status"                 "$stt"
+      messagePrint " - Minikube Disk"                  "$dsk"
+      messagePrint " - Minikube Memory"                "$mem"
+      messagePrint " - Minikube CPU's"                 "$cpu"
+      messagePrint " - Minikube Driver"                "$drv"
+
       if [ "$stt" == "Stopped" -o "$stt" == "" ]; then 
         echo "ERROR: Minukube is not running, start it first"
-        echo "       => minikube -p tanzu-demo-hub start --cpus $TDH_MINIKUBE_CONFIG_CPU --memory $TDH_MINIKUBE_CONFIG_MEMORY"; exit
+        echo "       => minikube -p $TDH_MINIKUBE_PROFILE start --driver=hyperkit --cpus $TDH_MINIKUBE_CONFIG_CPU --memory $TDH_MINIKUBE_CONFIG_MEMORY --disk-size $TDH_MINIKUBE_CONFIG_DISK"; exit
+        echo "       => cat ~/.minikube/profiles/tanzu-demo-hub/config.json"
       fi
 
-      messagePrint " - MiniKube ServerIP"               "$(minikube ip -p tanzu-demo-hub)"
+      messagePrint " - MiniKube ServerIP"               "$(minikube ip -p $TDH_MINIKUBE_PROFILE)"
+
+      cnt=$(tmc cluster list --name $TDH_MINIKUBE_PROFILE 2> /dev/null | egrep -c " $TDH_MINIKUBE_PROFILE ")
+      if [ $cnt -eq 0 ]; then 
+        messageTitle "Attach Minikube Cluster to TMC"
+        messagePrint " - TMC Cluster Name"                "$TDH_MINIKUBE_PROFILE"
+        messagePrint " - TMC Clustergroup"                "tanzu-demo-hub"
+        echo "  --------------------------------------------------------------------------------------------------------------"
+        tmc cluster attach -n $TDH_MINIKUBE_PROFILE -g tanzu-demo-hub -p minikube
+        kubectl apply -f k8s-attach-manifest.yaml
+        echo "  --------------------------------------------------------------------------------------------------------------"
+      fi
     fi
   fi
 
@@ -617,6 +697,52 @@ checkCloudAccess() {
   fi
 }
 
+checkTMCAccess() {
+  missing_variables=0
+
+  if [ "${TDH_DEPLOYMENT_CLOUD}" == "AWS" ]; then
+    if [ "${TMC_MANAGEMENT_CLUSTER}" == "" -o "${TMC_PROVISONER_NAME}" == "" ]; then
+      missing_variables=1
+      echo ""
+      echo "  2MISSING ENVIRONMENT-VARIABES    DESCRIPTION        "
+      echo "  --------------------------------------------------------------------------------------------------------------"
+  
+      if [ "${TMC_MANAGEMENT_CLUSTER}" == "" ]; then
+        echo "  TMC_MANAGEMENT_CLUSTER          (required) A Management Cluster deployed on AWS"
+      fi
+  
+      if [ "${TMC_PROVISONER_NAME}" == "" ]; then
+        echo "  TMC_PROVISONER_NAME             (required) The TMC Provisionert Name for AWS"
+      fi
+
+      if [ "${AWS_HOSTED_DNS_DOMAIN}" == "" ]; then
+        echo "  AWS_HOSTED_DNS_DOMAIN           (required) A DNS Domain managed by AWS Route 53 ie. yourdomain.com with a"
+        echo "                                  valid DNS Zone. => https://console.aws.amazon.com/route53"
+      fi
+    else
+      messageTitle "Supporting services access (Pivotal Network, AWS Route53)"
+      messagePrint " - Pivotal Network Token"           "$PCF_PIVNET_TOKEN"
+      messagePrint " - AWS Route53 Hosted DNS Domain"   "$AWS_HOSTED_DNS_DOMAIN"
+
+      # --- CHECK IF AWS CLI IS CONFIGURED ---
+      if [ ! -d ~/.aws -o -d ~/.aws/credentials ]; then
+        echo "ERROR: AWS CLI is not configured yet, please run aws configure"
+        echo "       => aws configure"
+        exit 1
+      fi
+    fi
+  fi
+
+  if [ ${missing_variables} -eq 1 ]; then
+    echo "  --------------------------------------------------------------------------------------------------------------"
+    echo "  IMPORTANT: Please set the missing environment variables either in your shell or in the pcfconfig"
+    echo "             configuration file ~/.pcfconfig and set all variables with the 'export' notation"
+    echo "             ie. => export AZURE_PKS_TLS_CERTIFICATE=/home/demouser/certs/cert.pem"
+    echo "  --------------------------------------------------------------------------------------------------------------"
+    exit 1
+  fi
+}
+
 checkTDHAccess() {
   missing_variables=0
 
@@ -654,7 +780,7 @@ checkTDHAccess() {
     messageTitle "Supporting services access (Pivotal Network, AWS Route53)"
     messagePrint " - Pivotal Network Token"            "$PCF_PIVNET_TOKEN"
     messagePrint " - AWS Route53 Hosted DNS Domain"    "$AWS_HOSTED_DNS_DOMAIN"
-    messagePrint " - AWS Route53 Hosted DNS SubDomain" "$TDH_DEPLOYMENT_ENVNAME"
+    messagePrint " - AWS Route53 Hosted DNS SubDomain" "$TDH_ENVNAME"
 
     # --- VERIFY PIVNET ACCESS ---
     pivnetAPI $PCF_PIVNET_TOKEN
@@ -936,7 +1062,15 @@ configureJumpHost() {
   stt=$($SSH_COMMAND -n "[ -d /home/ubuntu/tanzu-demo-hub/software ] && echo true")
   if [ "${stt}" == "" ]; then
     # --- COPY THE AWS DIRECTORY ---
-    $SCP_COMMAND -r ${TDHPATH}/software ${SSH_USER}@${SSH_HOST}:${SSH_HOME}/tanzu-demo-hub/ > /dev/null 2>&1
+    $SSH_COMMAND -n "[ ! -d $SSH_HOME/tanzu-demo-hub/software ] && mkdir -p $SSH_HOME/tanzu-demo-hub/software"
+    if [ "$TDH_TKGMC_INFRASTRUCTURE" == "Azure" ]; then
+      $SCP_COMMAND -r ${TDHPATH}/software/tkg-* ${SSH_USER}@${SSH_HOST}:${SSH_HOME}/tanzu-demo-hub/software > /dev/null 2>&1
+    fi
+
+    if [ "$TDH_TKGMC_INFRASTRUCTURE" == "vSphere" ]; then
+      $SCP_COMMAND -r ${TDHPATH}/software/tkg-* ${SSH_USER}@${SSH_HOST}:${SSH_HOME}/tanzu-demo-hub/software > /dev/null 2>&1
+      $SCP_COMMAND -r ${TDHPATH}/software/pho* ${SSH_USER}@${SSH_HOST}:${SSH_HOME}/tanzu-demo-hub/ > /dev/null 2>&1
+    fi
   fi
 
   # --- INSTALL TKG UTILITES ---
@@ -1035,7 +1169,7 @@ route53setNSrecord () {
   aws route53 change-resource-record-sets --hosted-zone-id $ZONE_ID \
       --change-batch file://${TMPROUTE53} > /dev/null 2>&1
   if [ $? -ne 0 ]; then
-    echo "ERROR: failed to set DNS for $hnm"
+    echo "4ERROR: failed to set DNS for $hnm"
     echo "       => aws route53 change-resource-record-sets --hosted-zone-id \"${ZONE_ID}\" \\"
     echo "              --change-batch file://${TMPROUTE53}"
     cat /tmp/$$_zone_record
@@ -1150,7 +1284,7 @@ EOF
 
    aws route53 change-resource-record-sets --hosted-zone-id "${ZONE_ID}" --change-batch file:///tmp/$$_zone_record > /dev/null 2>&1
    if [ $? -ne 0 ]; then
-     echo "ERROR: failed to set DNS for $hnm"
+     echo "5ERROR: failed to set DNS for $hnm"
      echo "       => aws route53 change-resource-record-sets --hosted-zone-id "${ZONE_ID}" --change-batch file:///tmp/$$_zone_record"
      cat /tmp/$$_zone_record
      exit 1
@@ -1387,7 +1521,7 @@ setTKGclusterDNS() {
       aws route53 change-resource-record-sets --hosted-zone-id $ZONE_ID \
           --change-batch file://${TMPROUTE53} > /dev/null 2>&1
       if [ $? -ne 0 ]; then
-        echo "ERROR: failed to set DNS for $hnm"
+        echo "1ERROR: failed to set DNS for $hnm"
         echo "       => aws route53 change-resource-record-sets --hosted-zone-id \"${ZONE_ID}\" \\"
         echo "              --change-batch file://${TMPROUTE53}"
         cat $TMPROUTE53
@@ -1406,6 +1540,8 @@ setTKGclusterDNS() {
         jq -r '.LoadBalancerDescriptions[0].CanonicalHostedZoneNameID')
     ZONE_ID=$(aws route53 list-hosted-zones-by-name --dns-name ${DNS_PREFIX}.${DNS_SUFFIX} | jq -r '.HostedZones[0].Id')
   
+echo "TDH_TKGMC_INFRASTRUCTURE:$TDH_TKGMC_INFRASTRUCTURE"
+#jjjjjjjjjjjjjjjjjjj
     ALIAS=$(aws route53 list-resource-record-sets --hosted-zone-id $ZONE_ID \
             --query "ResourceRecordSets[?contains(Name, '${TKG_INGRESS}-${TKG_CLUSTER}.${DNS_PREFIX}.${DNS_SUFFIX}')].AliasTarget.DNSName" | \
             jq -r '.[]' | sed -e 's/dualstack\.//g' -e 's/\.$//g' )
@@ -1435,7 +1571,7 @@ setTKGclusterDNS() {
         aws route53 change-resource-record-sets --hosted-zone-id $ZONE_ID \
             --change-batch file://${TMPROUTE53} > /dev/null 2>&1
         if [ $? -ne 0 ]; then
-          echo "ERROR: failed to set DNS for $hnm"
+          echo "2ERROR: failed to set DNS for $hnm"
           echo "       => aws route53 change-resource-record-sets --hosted-zone-id \"${ZONE_ID}\" \\"
           echo "              --change-batch file://${TMPROUTE53}"
           cat $TMPROUTE53
@@ -1677,6 +1813,56 @@ exit
   fi
 }
 
+setDNSalias() {
+  TKG_IPADRESS="$1"
+  DNS_PREFIX="$2"
+  DNS_SUFFIX="$3"
+  HOSTNAME="$4"
+  TYPE="$5"
+
+  AWS_LB_NAME=$(aws elb --region $AWS_REGION describe-load-balancers | \
+                jq -r --arg n $TKG_IPADRESS '.LoadBalancerDescriptions[] | select(.DNSName == $n).LoadBalancerName')
+  AWS_LB_ZONE=$(aws elb --region $AWS_REGION describe-load-balancers | \
+                jq -r --arg n $TKG_IPADRESS '.LoadBalancerDescriptions[] | select(.DNSName == $n).CanonicalHostedZoneNameID')
+
+  ZONE_ID=$(aws route53 list-hosted-zones-by-name --dns-name ${DNS_PREFIX}.${DNS_SUFFIX} | jq -r '.HostedZones[0].Id')
+  ZONE_ID_STR=$(echo "${ZONE_ID}" | awk -F'/' '{ print $NF }')
+
+  if [ "${ZONE_ID}" != "" ]; then
+    ZONE="${HOSTNAME}.${DNS_PREFIX}.${DNS_SUFFIX}"
+
+    TMPROUTE53=/tmp/$$_tmp_route53.json
+    echo "{"                                                   >  $TMPROUTE53
+    echo "  \"Comment\": \"CREATE/DELETE/UPSERT a record \","  >> $TMPROUTE53
+    echo "  \"Changes\": [{"                                   >> $TMPROUTE53
+    echo "  \"Action\": \"UPSERT\","                           >> $TMPROUTE53
+    echo "  \"ResourceRecordSet\": {"                          >> $TMPROUTE53
+    echo "    \"Name\": \"${ZONE}\","                          >> $TMPROUTE53
+    echo "    \"Type\": \"A\","                                >> $TMPROUTE53
+    echo "    \"AliasTarget\": {"                              >> $TMPROUTE53
+    echo "      \"HostedZoneId\": \"${AWS_LB_ZONE}\","         >> $TMPROUTE53
+    echo "      \"DNSName\": \"dualstack.${TKG_IPADRESS}.\","  >> $TMPROUTE53
+    echo "      \"EvaluateTargetHealth\": true"                >> $TMPROUTE53
+    echo "    }"                                               >> $TMPROUTE53
+    echo "}}]"                                                 >> $TMPROUTE53
+    echo "}"                                                   >> $TMPROUTE53
+
+    aws route53 change-resource-record-sets --hosted-zone-id $ZONE_ID \
+        --change-batch file://${TMPROUTE53} > /dev/null 2>&1
+    if [ $? -ne 0 ]; then
+      echo "2ERROR: failed to set DNS for $hnm"
+      echo "       => aws route53 change-resource-record-sets --hosted-zone-id \"${ZONE_ID}\" \\"
+      echo "              --change-batch file://${TMPROUTE53}"
+      cat $TMPROUTE53
+      exit 1
+    fi
+
+    rm -f $TMPROUTE53
+  fi
+}
+
+
+
 setDNSrecord() {
   TKG_IPADRESS="$1"
   DNS_PREFIX="$2"
@@ -1692,7 +1878,6 @@ setDNSrecord() {
   if [ "${ZONE_ID}" != "" ]; then
     ZONE="${HOSTNAME}.${DNS_PREFIX}.${DNS_SUFFIX}"
 
-#gaga12
     TMPROUTE53=/tmp/$$_tmp_route53.json
     echo "{"                                                            >  $TMPROUTE53
     echo "  \"Comment\": \"CREATE/DELETE/UPSERT a record \","           >> $TMPROUTE53
@@ -1710,7 +1895,7 @@ setDNSrecord() {
     aws route53 change-resource-record-sets --hosted-zone-id $ZONE_ID \
         --change-batch file://${TMPROUTE53} > /dev/null 2>&1
     if [ $? -ne 0 ]; then
-      echo "ERROR: failed to set DNS for $hnm"
+      echo "3ERROR: failed to set DNS for $hnm"
       echo "       => aws route53 change-resource-record-sets --hosted-zone-id \"${ZONE_ID}\" \\"
       echo "              --change-batch file://${TMPROUTE53}"
       cat $TMPROUTE53
@@ -1767,12 +1952,18 @@ VerifyDemoEnvironment() {
     fi
 
     if [ "$TDH_MINIKUBE_PROFILE" != "" ]; then 
+      cpu=$(cat ~/.minikube/profiles/tanzu-demo-hub/config.json | jq -r '.CPUs')
+      mem=$(cat ~/.minikube/profiles/tanzu-demo-hub/config.json | jq -r '.Memory')
+      drv=$(cat ~/.minikube/profiles/tanzu-demo-hub/config.json | jq -r '.Driver')
       export TDH_PLATFORM=minikube
       messageTitle "Demo Environment"
       messagePrint " - Deployment Config:"         "$TKG_DEPLOYMENT"
       messagePrint " - Kubernetes Infrastucture"   "minikube"
       messagePrint " - Minikube Profile"           "$TDH_MINIKUBE_PROFILE"
-      messagePrint " - DNS Domain"                 "$TDH_ENVNAME.$AWS_HOSTED_DNS_DOMAIN"
+      messagePrint " - Minikube Domain"            "$TDH_ENVNAME.$AWS_HOSTED_DNS_DOMAIN"
+      messagePrint " - Minikube Memory"            "$mem"
+      messagePrint " - Minikube CPU's"             "$cpu"
+      messagePrint " - Minikube Driver"            "$drv"
     else
       export TDH_PLATFORM=tkgm
       export WORKLOAD_CLUSTER=tkg-tanzu-demo-hub.cfg
@@ -1837,11 +2028,11 @@ VerifyK8SDemoPlatform() {
 
   # --- CHECK FOR ADDONS ---
   #for val in metallb default-storageclass; do
-  for val in default-storageclass; do
+  for val in default-storageclass metrics-server; do
     stt=$(minikube addons list -o json | jq -r ".\"$val\".Status")
     if [ "$stt" != "enabled" ]; then
       echo "ERROR: Please enable minikube addon: $val"
-      echo "       => minikube addons enable $val -p tanzu-demo-hub"; exit
+      echo "       => minikube addons enable $val -p $TDH_MINIKUBE_PROFILE"; exit
     fi
   done
 }
@@ -1852,6 +2043,11 @@ VerifyServiceDependancies() {
   if [ "$TDH_DEPENDANCY_CERT_MANAGER" == "true" ]; then 
     INGRESS_NAMESPACE=cert-manager
     HELM_CHART=jetstack/cert-manager
+
+    helm repo add bitnami https://charts.bitnami.com/bitnami > /dev/null 2>&1
+    if [ $? -ne 0 ]; then
+      echo "ERROR: failed to add helm registry https://charts.bitnami.com/bitnami"; exit
+    fi
 
     messagePrint "- Install Cert Manager" "bitnami/nginx-ingress-controller"
     kubectl get namespace $INGRESS_NAMESPACE > /dev/null 2>&1
@@ -1871,6 +2067,11 @@ VerifyServiceDependancies() {
   if [ "$TDH_DEPENDANCY_NGINX" == "true" ]; then 
     INGRESS_NAMESPACE=ingress-nginx
     HELM_CHART=bitnami/nginx-ingress-controller
+
+    helm repo add bitnami https://charts.bitnami.com/bitnami > /dev/null 2>&1
+    if [ $? -ne 0 ]; then
+      echo "ERROR: failed to add helm registry https://charts.bitnami.com/bitnami"; exit
+    fi
 
     messagePrint "- Install Ingress Controller" "$HELM_CHART"
     kubectl get namespace $INGRESS_NAMESPACE > /dev/null 2>&1
@@ -1912,6 +2113,11 @@ VerifyServiceDependancies() {
       kubectl create ns $INGRESS_NAMESPACE > /dev/null 2>&1
     fi
 
+    helm repo add bitnami https://charts.bitnami.com/bitnami > /dev/null 2>&1
+    if [ $? -ne 0 ]; then
+      echo "ERROR: failed to add helm registry https://charts.bitnami.com/bitnami"; exit
+    fi
+
     stt=$(helm list -n $INGRESS_NAMESPACE -o json | jq -r --arg key "contour-3" '.[] | select(.chart | contains($key)).status')
     if [ "$stt" != "deployed" ]; then
       messageTitle "Install Contour Ingress Controller" "$HELM_CHART"
@@ -1943,18 +2149,21 @@ uodateConfigMap() {
   KEY="$2"
   VALUE="$3"
 
+  [ "$VALUE" == "" ] && VALUE="<empty>"
   [ "$VALUE" == "True" ] && VALUE=true
   [ "$VALUE" == "False" ] && VALUE=false
 
-  kubectl get cm $CONFIG_MAP -o yaml 2>/dev/null | sed -e "s/\'\"//g" -e "s/\"\'//g" | \
-          yq e '.data' - | grep ":" | egrep -v "^$KEY:" | sed 's/: /=/g' > /tmp/$CONFIG_MAP
+  kubectl get cm tanzu-demo-hub -o json | jq -r '.data' | egrep ": " | sed -e 's/^ *"//g' -e 's/: /=/g' -e 's/"=/=/g' -e 's/\\\"//g' -e 's/,$//g' -e 's/"//g' | \
+          egrep -v "^$KEY:" > /tmp/$CONFIG_MAP
+  #kubectl get cm $CONFIG_MAP -o yaml 2>/dev/null | sed -e "s/\'\"//g" -e "s/\"\'//g" | \
+  #        yy e '.data' - | grep ":" | egrep -v "^$KEY:" | sed 's/: /=/g' > /tmp/$CONFIG_MAP
   echo "$KEY=$VALUE" >> /tmp/$CONFIG_MAP
 
   kubectl create configmap $CONFIG_MAP --from-env-file=/tmp/$CONFIG_MAP --dry-run=client -o yaml | kubectl apply -f - > /dev/null 2>&1
   if [ $? -ne 0 ]; then
     echo "ERROR: updating config map $CONFIG_MAP"
-    echo "       => kubectl create configmap $CONFIG_MAP --from-literal=$KEY=$VALUE --from-literal=XXX=12 --dry-run=client -o yaml | \\"
-    echo "          kubectl apply -f -"; exit
+    echo "       => kubectl create configmap $CONFIG_MAP --from-env-file=/tmp/$CONFIG_MAP --dry-run=client -o yaml | kubectl apply -f -"
+    exit
   fi  
 }
 
@@ -1962,8 +2171,8 @@ getConfigMap() {
   CONFIG_MAP=$1
   KEY=$2
 
-  kubectl get configmap tanzu-demo-hub -o yaml | sed -e "s/\'\"//g" -e "s/\"\'//g" | yq e ".data.$KEY" - 
-  #kubectl get configmap $CONFIG_MAP -o json | jq -r ".data.$KEY" | sed -e "s/\'\"//g" -e "s/\"\'//g"
+  kubectl get configmap tanzu-demo-hub -o json | jq -r ".data.$KEY" | sed 's/"//g'
+  #kubectl get configmap tanzu-demo-hub -o yaml | sed -e "s/\'\"//g" -e "s/\"\'//g" | yq e ".data.$KEY" - 
 }
 
 createConfigMap() {
@@ -1987,11 +2196,22 @@ verifyRequiredServices() {
   fi
 }
 
+checkTKGdownloads() {
+  kpl=$(ls -1 software | egrep -c "^kp-linux|photon")
+  ptl=$(ls -1 software | egrep -c "^photon")
+  tkg=$(ls -1 software | egrep -c "^tkg-linux")
+  if [ $tkg -eq 0 ]; then 
+    echo "ERROR: Please download TKG Utilies from https://www.vmware.com/go/get-tkg"
+    echo "       => $TANZU_DEMO_HUB/software/tkg-linux-amd64-vx.x.x-vmware.x.tar.gz"
+    exit
+  fi
+}
+
 checkCLIcommands() {
   cat="$1"
   if [ "$cat" == "TKG" ]; then
     if [ ! -x /usr/local/bin/tkg ]; then
-      echo "ERROR: /usr/local/bin/tkg not installed, please download package from https://my.vmware.com"
+      echo "ERROR: /usr/local/bin/tkg not installed, please download package from https://www.vmware.com/go/get-tkg"
       echo "       => search for VMware Tanzu Kubernetes Grid CLI for Mac"
       exit
     fi
@@ -2003,8 +2223,8 @@ checkCLIcommands() {
     fi
   fi
 
-  if [ "$sys" == "TOOLS" ]; then
-    CLI_COMMANDS="/usr/local/bin/jq:brew:jq /usr/local/bin/yq:brew:yq"
+  if [ "$cat" == "TOOLS" ]; then
+    CLI_COMMANDS="/usr/local/bin/jq:brew:jq /usr/local/bin/wget:brew:wget /usr/local/bin/mc:brew:minio/stable/mc /usr/local/bin/helm:brew:helm"
 
     for arg in $CLI_COMMANDS; do
       cmd=$(echo $arg | awk -F: '{ print $1 }') 
@@ -2029,11 +2249,19 @@ checkTMCAccess() {
   if [ "${TDH_DEPLOYMENT_CLOUD}" == "AWS" ]; then
     TMC_ACCOUNT_NAME=$TMC_ACCOUNT_NAME_AWS
 
-    if [ "${TMC_MANAGEMENT_CLUSTER}" == "" -o "${TMC_PROVISONER_NAME}" == "" -o "${TMC_ACCOUNT_NAME_AWS}" == "" -o "${TMC_CLUSTER_GROUP}" == "" ]; then
+    if [ "${TMC_MANAGEMENT_CLUSTER}" == "" -o "${TMC_PROVISONER_NAME}" == "" -o "${TMC_ACCOUNT_NAME_AWS}" == "" -o "${TMC_CLUSTER_GROUP}" == "" -o "${TMC_USER}" == "" -o "${TMC_KUBERNETES_VERSION}" == "" ]; then
       missing_variables=1
       echo ""
       echo "  2MISSING ENVIRONMENT-VARIABES    DESCRIPTION        "
       echo "  --------------------------------------------------------------------------------------------------------------"
+
+      if [ "${TMC_KUBERNETES_VERSION}" == "" ]; then
+        echo "  TMC_KUBERNETES_VERSION          (required) The Kubernetes version for the cluster e.g. 1.19.1-3-amazon2"
+      fi
+
+      if [ "${TMC_USER}" == "" ]; then
+        echo "  TMC_USER                        (required) The name of the TMC UserID"
+      fi
 
       if [ "${TMC_CLUSTER_GROUP}" == "" ]; then
         echo "  TMC_CLUSTER_GROUP               (required) The name of the TMC Cluster Group"
@@ -2054,8 +2282,12 @@ checkTMCAccess() {
       if [ "${TMC_SSH_KEY_NAME_AWS}" == "" ]; then
         echo "  TMC_SSH_KEY_NAME_AWS            (required) AWS SSH Key name for Region"
       fi
+      TMC_CLUSTER_NAME="tdh-aws-${TMC_USER}"
     else
+      TMC_CLUSTER_NAME="tdh-aws-${TMC_USER}"
+
       messageTitle "Tanzu Mission Control (TMC) - Config" 
+      messagePrint " - TMC User"                        "$TMC_USER"
       messagePrint " - TMC Cluster Group"               "$TMC_CLUSTER_GROUP"
       messagePrint " - TMC Cluster Name"                "$TMC_CLUSTER_NAME"
       messagePrint " - TMC Context Name"                "$TMC_CONTEXT_NAME"
@@ -2070,6 +2302,10 @@ checkTMCAccess() {
         exit 1
       fi
     fi
+
+
+   tmc clustergroup create -n tanzu-demo-hub -d "Tanzu Demo Hub by Sacha Dubois" > /dev/null 2>&1
+
   fi
 
   if [ ${missing_variables} -eq 1 ]; then
@@ -2095,7 +2331,8 @@ checkTMCcontext() {
 }
 
 tmcCreateCluster() {
-  stt=$(tmc cluster list -m $TMC_MANAGEMENT_CLUSTER --name $TMC_CLUSTER_NAME -o json 2>/dev/null | jq -r '.clusters[].status.phase' 2>/dev/null) 
+  # steve: missing provisioner, returned sacha's cluster
+  stt=$(tmc cluster list -m $TMC_MANAGEMENT_CLUSTER -p $TMC_PROVISIONER_NAME --name $TMC_CLUSTER_NAME -o json 2>/dev/null | jq -r '.clusters[].status.phase' 2>/dev/null) 
 
   if [ "$stt" == "DELETING" ]; then                                         
      echo "ERROR: Cluster is currently on deleting, please try again later"; exit 1
@@ -2103,12 +2340,19 @@ tmcCreateCluster() {
 
   if [ "$stt" == "" -o "$stt" != "READY" ]; then
     messageTitle "TMC Create Cluster"     
-    messagePrint " - Cluster Name"           "$TMC_CLUSTER_NAME"
+    messagePrint " - TMC Cluster Name"       "$TMC_CLUSTER_NAME"
+    messagePrint " - TMC Cluster Group"      "$TMC_CLUSTER_GROUP"
+    messagePrint " - TMC Template"           "$TMC_TKGWC_TEMPLATE"
     messagePrint " - Provisioner Name"       "$TMC_PROVISONER_NAME"
     messagePrint " - TKG Management Cluster" "$TMC_MANAGEMENT_CLUSTER"
     messagePrint " - Account Name"           "$TMC_ACCOUNT_NAME"
+    messagePrint " - Kubernetes Version"     "$TMC_KUBERNETES_VERSION"
+
     tmc cluster create -m $TMC_MANAGEMENT_CLUSTER -p $TMC_PROVISONER_NAME --ssh-key-name $TMC_SSH_KEY_NAME_AWS \
-                       -c $TMC_ACCOUNT_NAME -r $AWS_REGION -n $TMC_CLUSTER_NAME -q $TDH_TKGWC_WORKERNODES \
+                       -c $TMC_ACCOUNT_NAME -r $AWS_REGION -n $TMC_CLUSTER_NAME -q $TMC_TKGWC_WORKERNODES \
+                       -g $TMC_CLUSTER_GROUP \
+                       -t $TMC_TKGWC_TEMPLATE \
+                       --version $TMC_KUBERNETES_VERSION \
                        --availability-zone ${AWS_REGION}a
 
     messagePrint " - Cluster Status"         "creating ...."
@@ -2133,18 +2377,37 @@ tmcCreateCluster() {
   echo "----------------------------------------------------------------------------------------"
 }
 
+alignStr() {
+  printf "%-25s" "$1"
+}
+
 getTDHClusterCredentials() {
   messageTitle "TMC Get TKG Cluster Credentials"
   messagePrint " - Cluster Name"           "$TMC_CLUSTER_NAME"
   messagePrint " - Kubeconfig File"        "/tmp/${TMC_CLUSTER_NAME}.kubeconfig"
   messagePrint " - Kubernetes Context"     "$TMC_CLUSTER_NAME"
 
+  ret=1; cnt=0
+  while [ $ret -ne 0 -a $cnt -lt 10 ]; do
+    tmc cluster auth kubeconfig get $TMC_CLUSTER_NAME -p $TMC_PROVISONER_NAME -m $TMC_MANAGEMENT_CLUSTER > /dev/null 2>&1; ret=$?
+    sleep 60
+    let cnt=cnt+1
+  done
+
+  if [ $ret -ne 0 ]; then 
+    echo "ERROR: Failled to retrieve cluster credentials, aborting"
+    echo "       => tmc cluster auth kubeconfig get $TMC_CLUSTER_NAME -p $TMC_PROVISONER_NAME -m $TMC_MANAGEMENT_CLUSTER"
+    exit
+  fi
+
   tmc cluster auth kubeconfig get $TMC_CLUSTER_NAME -p $TMC_PROVISONER_NAME -m $TMC_MANAGEMENT_CLUSTER > /tmp/${TMC_CLUSTER_NAME}.kubeconfig
   export KUBECONFIG=/tmp/${TMC_CLUSTER_NAME}.kubeconfig
+  chmod 600 /tmp/${TMC_CLUSTER_NAME}.kubeconfig
 
   kubectl config use-context $TMC_CLUSTER_NAME 
   echo "----------------------------------------------------------------------------------------"
-  kubectl config get-contexts
+  echo "export KUBECONFIG=/tmp/${TMC_CLUSTER_NAME}.kubeconfig"
+  echo "kubectl config get-contexts"
   echo "----------------------------------------------------------------------------------------"
 }
 
@@ -2155,6 +2418,268 @@ a=1
 verifyVMwareRegistry() {
 a=1
 }
+
+installSpringCloudGateway() {
+  NAMESPACE=spring-cloud-gateway
+
+  if [ "$TDH_SERVICE_SPRING_CLOUD_GATEWAY" != "true" ]; then
+    uodateConfigMap tanzu-demo-hub TDH_SERVICE_SPRING_CLOUD_GATEWAY        "false"
+    return
+  fi
+
+  # --- DOWNLOAD BUILD_SERVICE BINARIES ---
+  downloadFromPivnet spring-cloud-gateway-for-kubernetes $TDH_SERVICE_SPRING_CLOUD_GATEWAY_VERSION \
+      "$TDH_SERVICE_SPRING_CLOUD_GATEWAY_VERSION" "Spring Cloud Gateway for Kubernetes Installer"
+
+  TBS_FILE="/tmp/spring-cloud-gateway-k8s-$TDH_SERVICE_SPRING_CLOUD_GATEWAY_VERSION.tgz"
+  [ -d /tmp/spring-cloud-gateway ] && rm -rf /tmp/spring-cloud-gateway
+  mkdir -p /tmp/spring-cloud-gateway
+  tar xfz $TBS_FILE -C /tmp/spring-cloud-gateway
+
+  messagePrint "Verify VMware Registry Access" "$TDH_REGISTRY_VMWARE_NAME"
+  docker login $TDH_REGISTRY_VMWARE_NAME -u $TDH_REGISTRY_VMWARE_USER -p $TDH_REGISTRY_VMWARE_PASS > /dev/null 2>&1
+  if [ $? -ne 0 ]; then
+    echo "ERROR: Docker login does not work"
+    echo "       => docker login $TDH_REGISTRY_VMWARE_NAME -u $TDH_REGISTRY_VMWARE_USER -p $TDH_REGISTRY_VMWARE_PASS"; exit
+  fi
+
+  #########################################################################################################################
+  ################################# TANZU BUILD SERVICE (TBS) - ON HARBOR REGISTRY ########################################
+  #########################################################################################################################
+
+  if [ "$TDH_SERVICE_REGISTRY_HARBOR" == "true" ]; then
+    DNS_HARBOR=$(getConfigMap tanzu-demo-hub TDH_HARBOR_REGISTRY_DNS_HARBOR)
+    TDH_HARBOR_REGISTRY_DNS_HARBOR=$(getConfigMap tanzu-demo-hub TDH_HARBOR_REGISTRY_DNS_HARBOR)
+    TDH_HARBOR_REGISTRY_ADMIN_PASSWORD=$(getConfigMap tanzu-demo-hub TDH_HARBOR_REGISTRY_ADMIN_PASSWORD)
+    messagePrint "Verify Harbor Registry Access" "$TDH_HARBOR_REGISTRY_DNS_HARBOR"
+    docker login $TDH_HARBOR_REGISTRY_DNS_HARBOR -u admin -p $TDH_HARBOR_REGISTRY_ADMIN_PASSWORD > /dev/null 2>&1
+    if [ $? -ne 0 ]; then
+      echo "ERROR: Docker login does not work 1"
+      echo "       => docker login $TDH_HARBOR_REGISTRY_DNS_HARBOR -u admin -p $TDH_HARBOR_REGISTRY_ADMIN_PASSWORD"; exit
+    fi
+
+    kubectl get ns $NAMESPACE > /dev/null 2>&1
+    if [ $? -ne 0 ]; then
+      # --- INSTALL CONTOUR INGRESS ---
+      messageTitle "Installing Spring Cloud Gateway"
+
+      messagePrint "- Relocate the images" "$TDH_REGISTRY_VMWARE_NAME/library/build-service"
+      cd /tmp/spring-cloud-gateway/spring-cloud-gateway-k8s-$TDH_SERVICE_SPRING_CLOUD_GATEWAY_VERSION
+      scripts/relocate-images.sh $DNS_HARBOR/library/spring-cloud-gateway > /dev/null 2>&1
+      if [ $? -ne 0 ]; then
+        echo "ERROR: Image Relocation failed"
+        echo "       => cd /tmp/spring-cloud-gateway/spring-cloud-gateway-k8s-$TDH_SERVICE_SPRING_CLOUD_GATEWAY_VERSION"
+        echo "       => scripts/relocate-images.sh $DNS_HARBOR/library/spring-cloud-gateway" 
+      fi
+
+      messagePrint "- Deploy Spring Cloud Gateway" "$NAMESPACE"
+      echo "-----------------------------------------------------------------------------------------------------------"
+      cd /tmp/spring-cloud-gateway/spring-cloud-gateway-k8s-$TDH_SERVICE_SPRING_CLOUD_GATEWAY_VERSION
+      ./scripts/install-spring-cloud-gateway.sh
+      echo "-----------------------------------------------------------------------------------------------------------"
+      if [ $? -ne 0 ]; then
+        echo "ERROR: Image Relocation failed"
+        echo "       => cd /tmp/spring-cloud-gateway/spring-cloud-gateway-k8s-$TDH_SERVICE_SPRING_CLOUD_GATEWAY_VERSION"
+        echo "       => ./scripts/install-spring-cloud-gateway.sh"
+      fi
+    else
+      messageTitle "Verify Spring Cloud Gateway"
+    fi
+  fi
+} 
+#hhhhhhhhhhhhhhhh
+
+installMinio() {
+  if [ "$TDH_SERVICE_MINIO" != "true" ]; then
+    uodateConfigMap tanzu-demo-hub TDH_SERVICE_MINIO        "false"
+    helm uninstall minio > /dev/null 2>&1
+    return
+  fi
+
+  TDH_DOMAIN=$(getConfigMap tanzu-demo-hub TDH_DOMAIN)
+  TDH_ENVNAME=$(getConfigMap tanzu-demo-hub TDH_ENVNAME)
+  DOMAIN=$(getConfigMap tanzu-demo-hub TDH_INGRESS_CONTOUR_LB_DOMAIN)
+
+  cnt=$(helm list -q | egrep -c "^tdh-minio")
+  if [ $cnt -eq 0 ]; then
+    messageTitle "Installing Minio"
+    HELM_VALUES=/tmp/helm_values.yaml
+    echo ""                                                                                                                     >  $HELM_VALUES
+    echo "ingress:"                                                                                                             >> $HELM_VALUES
+    echo "  enabled: true"                                                                                                      >> $HELM_VALUES
+    echo "  certManager: false"                                                                                                 >> $HELM_VALUES
+    echo "  annotations:"                                                                                                       >> $HELM_VALUES
+    echo "    kubernetes.io/ingress.class: contour"                                                                             >> $HELM_VALUES
+    echo "    ingress.kubernetes.io/force-ssl-redirect: \"true\""                                                               >> $HELM_VALUES
+    echo "  path: /"                                                                                                            >> $HELM_VALUES
+    echo "  hostname: minio.$DOMAIN"                                                                                            >> $HELM_VALUES
+    echo "  tls: true"                                                                                                          >> $HELM_VALUES
+    echo "  servicePort: minio"                                                                                                 >> $HELM_VALUES
+    echo "  extraTls:"                                                                                                          >> $HELM_VALUES
+    echo "  - hosts:"                                                                                                           >> $HELM_VALUES
+    echo "      - minio.$DOMAIN"                                                                                                >> $HELM_VALUES
+    echo "    secretName: tanzu-demo-hub-tls"                                                                                   >> $HELM_VALUES
+    echo "  extraHosts:"                                                                                                        >> $HELM_VALUES
+    echo "    - name: tdh-postgres-backup.minio.$DOMAIN"                                                                        >> $HELM_VALUES
+    echo "      path: /"                                                                                                        >> $HELM_VALUES
+
+    messagePrint " - Deploy the Postgres operator" "postgres-operator"
+    helm install tdh-minio bitnami/minio -f ${HELM_VALUES} > /dev/null 2>&1
+    if [ $? -ne 0 ]; then
+      echo "ERROR: Failed to deploy Minio Helm Chart"
+      echo "       => helm install tdh-minio bitnami/minio -f ${HELM_VALUES}"
+      exit
+    fi
+  fi
+
+  ver=$(helm ls -o json | jq -r --arg chart "postgres-operator" '.[] | select(.name == $chart).app_version')
+  crt=$(helm ls -o json | jq -r --arg chart "postgres-operator" '.[] | select(.name == $chart).chart')
+  stt=$(helm ls -o json | jq -r --arg chart "postgres-operator" '.[] | select(.name == $chart).status')
+  dat=$(helm ls -o json | jq -r --arg chart "postgres-operator" '.[] | select(.name == $chart).updated')
+  ACCESS_KEY=$(kubectl get secret --namespace default tdh-minio -o jsonpath="{.data.access-key}" | base64 --decode)
+  SECRET_KEY=$(kubectl get secret --namespace default tdh-minio -o jsonpath="{.data.secret-key}" | base64 --decode)
+
+  messageTitle "Verify Minio S3"
+  messagePrint " - Helm Chart"                     "$crt"
+  messagePrint " - Helm Chart Name"                "minio"
+  messagePrint " - Helm Chart Version"             "$ver"
+  messagePrint " - Helm Chart Status"              "$stt"
+  messagePrint " - Helm Chart Installed/Updated"   "$dat"
+  messagePrint " - Minio Internal Name"            "tdh-minio.default.svc.cluster.local"
+  messagePrint " - Minio Management Portal"        "https://minio.$DOMAIN"
+  messagePrint " - Minio Access Key"               "$ACCESS_KEY"
+  messagePrint " - Minio Secret Key"               "$SECRET_KEY"
+  echo "-----------------------------------------------------------------------------------------------------------"
+  echo " Test Minio S3 Access: (https://docs.min.io/docs/minio-client-complete-guide)"
+  echo " => brew install minio/stable/mc"
+  echo " => mc alias set minio https://minio.$DOMAIN $ACCESS_KEY $SECRET_KEY"
+  echo " => mc ls minio"
+  echo "-----------------------------------------------------------------------------------------------------------"
+  
+  sleep 10
+  mc alias set minio https://minio.$DOMAIN $ACCESS_KEY $SECRET_KEY > /dev/null 2>&1
+  if [ $? -ne 0 ]; then 
+    echo "ERROR: Unable to configure Minio Client (mc)"
+    echo "       => mc alias set minio https://minio.$DOMAIN $ACCESS_KEY $SECRET_KEY"
+    exit
+  fi
+
+  #mc mb minio/tdh-postgres-backup > /dev/null 2>&1
+
+  # --- STORE SETTINGS IN CONFIGMAP ---
+  uodateConfigMap tanzu-demo-hub TDH_SERVICE_MINIO                "true"
+  uodateConfigMap tanzu-demo-hub TDH_SERVICE_MINIO_INTERNAL_NAME  "tdh-minio.default.svc.cluster.local:9000"
+  uodateConfigMap tanzu-demo-hub TDH_SERVICE_MINIO_ACCESS_KEY     "$ACCESS_KEY"
+  uodateConfigMap tanzu-demo-hub TDH_SERVICE_MINIO_SECRET_KEY     "$SECRET_KEY"
+}
+
+installTanzuDataPostgres() {
+  NAMESPACE=postgres-operator
+
+  if [ "$TDH_SERVICE_TANZU_DATA_POSTGRES" != "true" ]; then
+    uodateConfigMap tanzu-demo-hub TDH_SERVICE_TANZU_DATA_POSTGRES        "false"
+    kubectl delete -n $NAMESPACE > /dev/null 2>&1
+    helm uninstall tdh-pgadmin > /dev/null 2>&1
+    helm uninstall postgres-operator > /dev/null 2>&1
+    return
+  fi
+
+  # --- DOWNLOAD BUILD_SERVICE BINARIES ---
+  downloadFromPivnet tanzu-sql-postgres $TDH_SERVICE_TANZU_DATA_POSTGRES_VERSION "$TDH_SERVICE_TANZU_DATA_POSTGRES_VERSION" "Postgres for VMware Tanzu v$TDH_SERVICE_TANZU_DATA_POSTGRES_VERSION"
+
+  TBS_FILE="/tmp/postgres-for-kubernetes-v$TDH_SERVICE_TANZU_DATA_POSTGRES_VERSION.tar.gz"
+  [ -d /tmp/postgres-for-kubernetes ] && rm -rf /tmp/postgres-for-kubernetes
+  mkdir -p /tmp/postgres-for-kubernetes
+  tar xfz $TBS_FILE -C /tmp/postgres-for-kubernetes
+
+  if [ "$TDH_SERVICE_REGISTRY_HARBOR" == "true" ]; then
+    DNS_HARBOR=$(getConfigMap tanzu-demo-hub TDH_HARBOR_REGISTRY_DNS_HARBOR)
+    TDH_HARBOR_REGISTRY_DNS_HARBOR=$(getConfigMap tanzu-demo-hub TDH_HARBOR_REGISTRY_DNS_HARBOR)
+    TDH_HARBOR_REGISTRY_ADMIN_PASSWORD=$(getConfigMap tanzu-demo-hub TDH_HARBOR_REGISTRY_ADMIN_PASSWORD)
+    messagePrint "Verify Harbor Registry Access" "$TDH_HARBOR_REGISTRY_DNS_HARBOR"
+    docker login $TDH_HARBOR_REGISTRY_DNS_HARBOR -u admin -p $TDH_HARBOR_REGISTRY_ADMIN_PASSWORD > /dev/null 2>&1
+    if [ $? -ne 0 ]; then
+      echo "ERROR: Docker login does not work 1"
+      echo "       => docker login $TDH_HARBOR_REGISTRY_DNS_HARBOR -u admin -p $TDH_HARBOR_REGISTRY_ADMIN_PASSWORD"; exit
+    fi
+
+    cnt=$(helm list -q | egrep -c "^postgres-operator") 
+    if [ $cnt -eq 0 ]; then
+      messageTitle "Installing Postgres Operator"
+
+      # --- CREATE NAMESPACE ---
+      #kubectl create namespace $NAMESPACE > /dev/null 2>&1
+
+      # --- INSTALL CONTOUR INGRESS ---
+      POSTGRES_INSTALL_PATH="/tmp/postgres-for-kubernetes/postgres-for-kubernetes-v$TDH_SERVICE_TANZU_DATA_POSTGRES_VERSION"
+      REGISTRY="harbor.apps-contour.local.pcfsdu.com/library"
+
+      docker load -i ${POSTGRES_INSTALL_PATH}/images/postgres-instance  > /dev/null 2>&1
+      docker load -i ${POSTGRES_INSTALL_PATH}/images/postgres-operator  > /dev/null 2>&1
+
+      messagePrint " - Reocate Images (postgres-instance) to Harbor" "$REGISTRY/postgres-instance"
+      INSTANCE_IMAGE_NAME="${REGISTRY}/postgres-instance:$(cat $POSTGRES_INSTALL_PATH/images/postgres-instance-tag)"
+      docker tag $(cat $POSTGRES_INSTALL_PATH/images/postgres-instance-id) ${INSTANCE_IMAGE_NAME}  > /dev/null 2>&1
+      docker push ${INSTANCE_IMAGE_NAME}  > /dev/null 2>&1
+
+      messagePrint " - Reocate Images (postgres-operator) to Harbor" "$REGISTRY/postgres-operator"
+      OPERATOR_IMAGE_NAME="${REGISTRY}/postgres-operator:$(cat $POSTGRES_INSTALL_PATH/images/postgres-operator-tag)"
+      docker tag $(cat $POSTGRES_INSTALL_PATH/images/postgres-operator-id) ${OPERATOR_IMAGE_NAME}  > /dev/null 2>&1
+      docker push ${OPERATOR_IMAGE_NAME}  > /dev/null 2>&1
+
+      # --- CLEANUP DOCKER IMAGES ---
+      #for n in $(docker images | egrep "postgres-(operator|instance) " | awk '{ print $3 }'); do
+      #  docker image rm $n -f > /dev/null 2>&1
+      #done
+
+      messagePrint "Customize Postgres Helm Chart Values" "/tmp/values-overrides.yaml"
+      sed -e "s+operatorImageRepository: postgres-operator+operatorImageRepository: $REGISTRY/postgres-operator+g" \
+          -e "s+postgresImageRepository: postgres-instance+postgresImageRepository: $REGISTRY/postgres-instance+g" \
+          ${POSTGRES_INSTALL_PATH}/operator/values.yaml > /tmp/values-overrides.yaml
+      if [ "${DEBUG}" == "1" ]; then
+        echo "-----------------------------------------------------------------------------------------------------------"
+        cat /tmp/values-overrides.yaml
+        echo "-----------------------------------------------------------------------------------------------------------"
+      fi
+
+      messagePrint " - Deploy the Postgres operator" "postgres-operator"
+      #helm install postgres-operator -n $NAMESPACE -f /tmp/values-overrides.yaml ${POSTGRES_INSTALL_PATH}/operator/ > /dev/null 2>&1
+      helm install postgres-operator -f /tmp/values-overrides.yaml ${POSTGRES_INSTALL_PATH}/operator/ > /dev/null 2>&1
+      if [ $? -ne 0 ]; then
+        echo "ERROR: Failed to deploy Postgres Helm Chart"
+        echo "       => helm install postgres-operator -n $NAMESPACE -f /tmp/values-overrides.yaml ${POSTGRES_INSTALL_PATH}/operator/"
+        exit
+      fi
+    fi
+
+    ver=$(helm ls -o json | jq -r --arg chart "postgres-operator" '.[] | select(.name == $chart).app_version')
+    crt=$(helm ls -o json | jq -r --arg chart "postgres-operator" '.[] | select(.name == $chart).chart')
+    stt=$(helm ls -o json | jq -r --arg chart "postgres-operator" '.[] | select(.name == $chart).status')
+    dat=$(helm ls -o json | jq -r --arg chart "postgres-operator" '.[] | select(.name == $chart).updated')
+    
+    messageTitle "Verify Postgres Operator"  
+    messagePrint " - Helm Chart"                     "$crt"
+    messagePrint " - Helm Chart Name"                "postgres-operator"
+    messagePrint " - Helm Chart Version"             "$ver"
+    messagePrint " - Helm Chart Status"              "$stt"
+    messagePrint " - Helm Chart Installed/Updated"   "$dat"
+
+    ver=$(helm ls -o json | jq -r --arg chart "tdh-pgadmin" '.[] | select(.name == $chart).app_version')
+    crt=$(helm ls -o json | jq -r --arg chart "tdh-pgadmin" '.[] | select(.name == $chart).chart')
+    stt=$(helm ls -o json | jq -r --arg chart "tdh-pgadmin" '.[] | select(.name == $chart).status')
+    dat=$(helm ls -o json | jq -r --arg chart "tdh-pgadmin" '.[] | select(.name == $chart).updated')
+
+    messageTitle "Verify pgAdmin" 
+    messagePrint " - Helm Chart"                     "$crt"
+    messagePrint " - Helm Chart Name"                "tdh-pgadmin"
+    messagePrint " - Helm Chart Version"             "$ver"
+    messagePrint " - Helm Chart Status"              "$stt"
+    messagePrint " - Helm Chart Installed/Updated"   "$dat"
+  fi
+
+  uodateConfigMap tanzu-demo-hub TDH_SERVICE_TANZU_DATA_POSTGRES          "true"
+  uodateConfigMap tanzu-demo-hub TDH_SERVICE_TANZU_DATA_POSTGRES_VERSION  $TDH_SERVICE_TANZU_DATA_POSTGRES_VERSION
+} 
 
 installBuildService() {
   if [ "$TDH_SERVICE_BUILD_SERVICE" != "true" ]; then
@@ -2169,9 +2694,8 @@ installBuildService() {
   fi
 
   # --- DOWNLOAD BUILD_SERVICE BINARIES ---
-  downloadFromPivnet build-service $TDH_SERVICE_BUILD_SERVICE_VERSION
+  downloadFromPivnet build-service $TDH_SERVICE_BUILD_SERVICE_VERSION "$TDH_SERVICE_BUILD_SERVICE_VERSION" "build-service-$TDH_SERVICE_BUILD_SERVICE_VERSION.tar"
 
-  messageTitle "Installing Tanzu Build Service"
   TBS_FILE="/tmp/build-service-$TDH_SERVICE_BUILD_SERVICE_VERSION.tar"
   [ -d /tmp/build-service ] && rm -rf /tmp/build-service
   mkdir /tmp/build-service
@@ -2182,14 +2706,6 @@ installBuildService() {
   checkKubernetesServices registry_docker
   checkKubernetesServices github
 
-  # --- TESTING REGISTRY ---
-  messagePrint "Verify Docker Registry Access" "$TDH_REGISTRY_DOCKER_NAME"
-  docker login -u $TDH_REGISTRY_DOCKER_USER -p $TDH_REGISTRY_DOCKER_PASS > /dev/null 2>&1
-  if [ $? -ne 0 ]; then
-    echo "ERROR: Docker login does not work"
-    echo "       => docker login $TDH_REGISTRY_DOCKER_NAME -u $TDH_REGISTRY_DOCKER_USER -p $TDH_REGISTRY_DOCKER_PASS"; exit
-  fi
-
   messagePrint "Verify VMware Registry Access" "$TDH_REGISTRY_VMWARE_NAME"
   docker login $TDH_REGISTRY_VMWARE_NAME -u $TDH_REGISTRY_VMWARE_USER -p $TDH_REGISTRY_VMWARE_PASS > /dev/null 2>&1
   if [ $? -ne 0 ]; then
@@ -2197,60 +2713,110 @@ installBuildService() {
     echo "       => docker login $TDH_REGISTRY_VMWARE_NAME -u $TDH_REGISTRY_VMWARE_USER -p $TDH_REGISTRY_VMWARE_PASS"; exit
   fi
 
-  DNS_HARBOR=$(getConfigMap tanzu-demo-hub TDH_HARBOR_REGISTRY_DNS_HARBOR)
-  TDH_HARBOR_REGISTRY_DNS_HARBOR=$(getConfigMap tanzu-demo-hub TDH_HARBOR_REGISTRY_DNS_HARBOR)
-  TDH_HARBOR_REGISTRY_ADMIN_PASSWORD=$(getConfigMap tanzu-demo-hub TDH_HARBOR_REGISTRY_ADMIN_PASSWORD)
-  messagePrint "Verify Harbor Registry Access" "$TDH_HARBOR_REGISTRY_DNS_HARBOR"
-  docker login $TDH_HARBOR_REGISTRY_DNS_HARBOR -u admin -p $TDH_HARBOR_REGISTRY_ADMIN_PASSWORD > /dev/null 2>&1
-  if [ $? -ne 0 ]; then
-    echo "ERROR: Docker login does not work 1"
-    echo "       => docker login $TDH_HARBOR_REGISTRY_DNS_HARBOR -u admin -p $TDH_HARBOR_REGISTRY_ADMIN_PASSWORD"; exit
-  fi
+  #########################################################################################################################
+  ################################# TANZU BUILD SERVICE (TBS) - ON DOCKER REGISTRY ########################################
+  #########################################################################################################################
 
-  messagePrint "- Relocate the images" "$TDH_REGISTRY_VMWARE_NAME/library/build-service"
-  kbld relocate -f /tmp/build-service/images.lock --lock-output /tmp/build-service/images-relocated.lock \
-       --repository $DNS_HARBOR/library/build-service > /dev/null 2>&1
-  if [ $? -ne 0 ]; then
-    echo "ERROR: Image Relocation faied"
-    echo "       => kbld relocate -f /tmp/build-service/images.lock --lock-output /tmp/build-service/images-relocated.lock \\"
-    echo "          --repository $DNS_HARBOR/library/build-service"; exit
-  fi
+  if [ "$TDH_SERVICE_REGISTRY_DOCKER" == "true1" ]; then
+    DNS_DOCKER=$(getConfigMap tanzu-demo-hub TDH_REGISTRY_DOCKER_NAME)
+    TDH_REGISTRY_DOCKER_NAME=$(getConfigMap tanzu-demo-hub TDH_REGISTRY_DOCKER_NAME)
+    TDH_REGISTRY_DOCKER_PASS=$(getConfigMap tanzu-demo-hub TDH_REGISTRY_DOCKER_PASS)
 
-  cnt=$(kubectl get namespace kpack build-service 2>/dev/null | egrep -c "kpack|build-service")
-  if [ $cnt -ne 2 ]; then
-    messagePrint "- Install Build Service" ""
-    echo "-----------------------------------------------------------------------------------------------------------"
-    ret=1; cnt=0
-    while [ $ret -ne 0 -a $cnt -lt 5 ]; do
-      ytt -f /tmp/build-service/values.yaml \
-          -f /tmp/build-service/manifests/ \
-          -f $TDHPATH/certificates/ca.pem \
-          -v docker_repository="$DNS_HARBOR/library/build-service" \
-          -v docker_username="admin" \
-          -v docker_password="$TDH_HARBOR_REGISTRY_ADMIN_PASSWORD" \
-          | kbld -f /tmp/build-service/images-relocated.lock -f- \
-          | kapp deploy -a tanzu-build-service -f- -y > /dev/null 2>&1; ret=$?
-        if [ $ret -ne 0 ]; then break; fi
-        let cnt=cnt+1
-      done
-    echo "-----------------------------------------------------------------------------------------------------------"
-
-    if [ $ret -ne 0 ]; then
-      echo "ERROR: Installing Build Service"
-      echo "       => ytt -f /tmp/build-service/values.yaml \\"
-      echo "          -f /tmp/build-service/manifests/ \\"
-      echo "          -f $TDHPATH/certificates/ca.pem \\"
-      echo "          -v docker_repository=\"$DNS_HARBOR/library/build-service\" \\"
-      echo "          -v docker_username=\"admin\" \\"
-      echo "          -v docker_password=\"$TDH_HARBOR_REGISTRY_ADMIN_PASSWORD\" \\"
-      echo "          | kbld -f /tmp/build-service/images-relocated.lock -f- \\"
-      echo "          | kapp deploy -a tanzu-build-service -f- -y"
+    # --- TESTING REGISTRY ---
+    messagePrint "Verify Docker Registry Access" "$TDH_REGISTRY_DOCKER_NAME"
+    docker login -u $TDH_REGISTRY_DOCKER_USER -p $TDH_REGISTRY_DOCKER_PASS > /dev/null 2>&1
+    if [ $? -ne 0 ]; then
+      echo "ERROR: Docker login does not work"
+      echo "       => docker login $TDH_REGISTRY_DOCKER_NAME -u $TDH_REGISTRY_DOCKER_USER -p $TDH_REGISTRY_DOCKER_PASS"; exit
     fi
 
-    kp clusterbuilder list
+    messagePrint "- Relocate images to" "$TDH_REGISTRY_DOCKER_NAME/$TDH_REGISTRY_DOCKER_USER/build-service"
+    kbld relocate -f /tmp/build-service/images.lock --lock-output /tmp/build-service/images-relocated.lock \
+         --repository $TDH_REGISTRY_DOCKER_NAME/$TDH_REGISTRY_DOCKER_USER/build-service > /dev/null 2>&1
+    if [ $? -ne 0 ]; then
+      echo "ERROR: Image Relocation faied"
+      echo "       => kbld relocate -f /tmp/build-service/images.lock --lock-output /tmp/build-service/images-relocated.lock \\"
+      echo "          --repository $TDH_REGISTRY_DOCKER_NAME/$TDH_REGISTRY_DOCKER_USER/build-service"; exit
+    fi
+  fi
+
+  #########################################################################################################################
+  ################################# TANZU BUILD SERVICE (TBS) - ON HARBOR REGISTRY ########################################
+  #########################################################################################################################
+
+  if [ "$TDH_SERVICE_REGISTRY_HARBOR" == "true" ]; then 
+    DNS_HARBOR=$(getConfigMap tanzu-demo-hub TDH_HARBOR_REGISTRY_DNS_HARBOR)
+    TDH_HARBOR_REGISTRY_DNS_HARBOR=$(getConfigMap tanzu-demo-hub TDH_HARBOR_REGISTRY_DNS_HARBOR)
+    TDH_HARBOR_REGISTRY_ADMIN_PASSWORD=$(getConfigMap tanzu-demo-hub TDH_HARBOR_REGISTRY_ADMIN_PASSWORD)
+    messagePrint "Verify Harbor Registry Access" "$TDH_HARBOR_REGISTRY_DNS_HARBOR"
+    docker login $TDH_HARBOR_REGISTRY_DNS_HARBOR -u admin -p $TDH_HARBOR_REGISTRY_ADMIN_PASSWORD > /dev/null 2>&1
+    if [ $? -ne 0 ]; then
+      echo "ERROR: Docker login does not work 1"
+      echo "       => docker login $TDH_HARBOR_REGISTRY_DNS_HARBOR -u admin -p $TDH_HARBOR_REGISTRY_ADMIN_PASSWORD"; exit
+    fi
+
+    messagePrint "- Relocate the images" "$TDH_REGISTRY_VMWARE_NAME/library/build-service"
+    kbld relocate -f /tmp/build-service/images.lock --lock-output /tmp/build-service/images-relocated.lock \
+         --repository $DNS_HARBOR/library/build-service > /dev/null 2>&1
+    if [ $? -ne 0 ]; then
+      echo "ERROR: Image Relocation faied"
+      echo "       => kbld relocate -f /tmp/build-service/images.lock --lock-output /tmp/build-service/images-relocated.lock \\"
+      echo "          --repository $DNS_HARBOR/library/build-service"; exit
+    fi
+
+    # --- DEPLOY KAPP ---
+    stt=$(kapp inspect -a tanzu-build-service 2>/dev/null | tail -1)
+    if [ "$stt" != "Succeeded" ]; then
+      messageTitle "Installing Tanzu Build Service"
+      messagePrint "- Install Build Service (kapp)" "tanzu-build-service"
+      echo "-----------------------------------------------------------------------------------------------------------"
+      echo " WARNING: This process may take ut to 2h for the deployment, Please run kapp manually to get more info"
+      echo "          => kapp inspect -a tanzu-build-service --column Namespace,name,reconcile_state | grep -v ok"
+      echo "-----------------------------------------------------------------------------------------------------------"
+        ytt -f /tmp/build-service/values.yaml \
+            -f /tmp/build-service/manifests/ \
+            -f $TDHPATH/certificates/ca.pem \
+            -v docker_repository="$DNS_HARBOR/library/build-service" \
+            -v docker_username="admin" \
+            -v docker_password="$TDH_HARBOR_REGISTRY_ADMIN_PASSWORD" 2>/dev/null \
+            | kbld -f /tmp/build-service/images-relocated.lock -f- 2>/dev/null \
+            | kapp deploy -a tanzu-build-service -f- -y > /dev/null 2>&1; ret=$?
+  
+      cnt=$(kapp inspect -a tanzu-build-service --json | jq -r '.Tables[].Rows[].reconcile_state' | grep -vc "ok")
+      while [ $cnt -ne 0 ]; do
+        cnt=$(kapp inspect -a tanzu-build-service --json | jq -r '.Tables[].Rows[].reconcile_state' | grep -vc "ok")
+        sleep 360
+      done
+    else
+      messageTitle "Verify Tanzu Build Service"
+      messagePrint "- Veriify Build Service (kapp)" "tanzu-build-service"
+    fi
+  fi
+
+  # --- DOWNLOAD KP UTILITY ---
+  if [ ! -f /usr/local/bin/kp ]; then 
+    downloadFromPivnet build-service $TDH_SERVICE_BUILD_SERVICE_VERSION $TDH_SERVICE_BUILD_SERVICE_KP "kp-darwin"
+
+    echo "INFO: Please copy the file /tmp/kp-darwin-$TDH_SERVICE_BUILD_SERVICE_KP /usr/local/bin"
+    echo "      => sudo mv /tmp/kp-darwin-$TDH_SERVICE_BUILD_SERVICE_KP /usr/local/bin"
+    echo "      => sudo chmod a+x /usr/local/bin/kp"
+  fi
+
+  kp clusterbuilder list > /dev/null 2>&1
+  if [ $? -ne 0 ]; then 
+    # --- DOWNLOAD BUILD_SERVICE DEPENDANCIES ---
+    downloadFromPivnet tbs-dependencies $TDH_SERVICE_BUILD_SERVICE_DEPENDANCIES $TDH_SERVICE_BUILD_SERVICE_DEPENDANCIES "descriptor-$TDH_SERVICE_BUILD_SERVICE_DEPENDANCIES.yaml"
+
+    messagePrint "- Import Dependency Descriptors"
+    kp import -f /tmp/descriptor-$TDH_SERVICE_BUILD_SERVICE_DEPENDANCIES.yaml > /dev/null 2>&1
+  else
+    messagePrint "- Verify Dependency Descriptors"
+    echo "-----------------------------------------------------------------------------------------------------------"
+    kp clusterbuilder list | sed '$d'
     echo "-----------------------------------------------------------------------------------------------------------"
   fi
 
+  uodateConfigMap tanzu-demo-hub TDH_SERVICE_BUILD_SERVICE          "true"
   uodateConfigMap tanzu-demo-hub TDH_SERVICE_BUILD_SERVICE_VERSION  $TDH_SERVICE_BUILD_SERVICE_VERSION
   uodateConfigMap tanzu-demo-hub TDH_REGISTRY_VMWARE_NAME           $TDH_REGISTRY_VMWARE_NAME
   uodateConfigMap tanzu-demo-hub TDH_REGISTRY_VMWARE_USER           $TDH_REGISTRY_VMWARE_USER
@@ -2264,12 +2830,14 @@ installBuildService() {
 
 downloadFromPivnet() {
   PRODUCT_SLUG=$1
-  SLUG_VER=$2
+  SLUG_VER="$2"
+  PROD_VER="$3"
+  PROD_STR="$4"
 
   for pid in $(pivnetAPI $PCF_PIVNET_TOKEN GET products/$PRODUCT_SLUG/releases 2> /dev/null | \
              jq -r ".releases[] | select(.version | scan(\"^$SLUG_VER\")).id"); do
     fid=$(pivnetAPI $PCF_PIVNET_TOKEN GET products/$PRODUCT_SLUG/releases/$pid 2>/dev/null | \
-          jq -r ".product_files[] | select(.name | scan(\"^$SLUG_STR\")) | select(.file_version | scan(\"$SLUG_VER\")).id")
+          jq -r ".product_files[] | select(.name | scan(\"^$PROD_STR\")) | select(.file_type == \"Software\") | select(.file_version | scan(\"$PROD_VER\")).id")
 
     if [ "${fid}" != "" ]; then
       # --- ACCEPT EULA ---
@@ -2291,14 +2859,14 @@ downloadFromPivnet() {
        awk -F'/' '{ print $NF }')
 
   if [ ! -f /tmp/$file ]; then
-    messageTitle "Download (äPRODUCT_SLUG) from PIVNET"
+    messageTitle "Download ($PRODUCT_SLUG) from PIVNET"
     messagePrint " - Product Name:" "$PRODUCT_SLUG"
     messagePrint " - Product Slug:" "$SLUG_VER"
     messagePrint " - Product FileID:" "$fid"
     messagePrint " - Download Location:" "/tmp/$file"
     pivnetAPIdownload $PCF_PIVNET_TOKEN $PRODUCT_SLUG $pid $fid $file
   else
-    messageTitle "Verify PIVNET Download (äPRODUCT_SLUG)"
+    messageTitle "Verify PIVNET Download ($PRODUCT_SLUG)"
     messagePrint " - Product Name:" "$PRODUCT_SLUG"
     messagePrint " - Product Slug:" "$SLUG_VER"
     messagePrint " - Product FileID:" "$fid"
@@ -2313,12 +2881,25 @@ getRootCA() {
   THD_TLS_CERTIFICATE=tdh-cert.pem
   THD_TLS_KEY=tdh-key.pem
 
-  [ ! -d $TDHPATH/certificates ] && mkdir $$TDHPATH/certificates
+  # --- CREATE CERTIFICATES DIRECTORY ---
+  [ ! -d $TDHPATH/certificates ] && mkdir $TDHPATH/certificates
 
-  if [ ! -f $TDHPATH/certificates/ca.pem ]; then 
+  if [ ! -f $TDHPATH/certificates/ca.pem -o $TDHPATH/certificates/$THD_TLS_CERTIFICATE -o $TDHPATH/certificates/$THD_TLS_KEY ]; then 
     messageTitle "Get RootCA for TLS Certificate ($SECRET)"
     kubectl get secret $SECRET -o json | jq -r '.data."tls.crt"' | base64 -d > $TDHPATH/certificates/$THD_TLS_CERTIFICATE
     kubectl get secret $SECRET -o json | jq -r '.data."tls.key"' | base64 -d > $TDHPATH/certificates/$THD_TLS_KEY
+
+    if [ ! -f $TDHPATH/certificates/$THD_TLS_CERTIFICATE ]; then 
+      echo "ERROR: Failed to get tdh-cert.pem"
+      echo "       => kubectl get secret $SECRET -o json | jq -r '.data."tls.crt"' | base64 -d > $TDHPATH/certificates/$THD_TLS_CERTIFICATE"
+      exit
+    fi
+
+    if [ ! -f $TDHPATH/certificates/$THD_TLS_KEY ]; then 
+      echo "ERROR: Failed to get $THD_TLS_KEY"
+      echo "       => kubectl get secret $SECRET -o json | jq -r '.data."tls.key"' | base64 -d > $TDHPATH/certificates/$THD_TLS_KEY"
+      exit
+    fi
 
     txt=$(kubectl get secret $SECRET -o json | jq -r '.data."tls.crt"' | base64 -d | openssl x509 -noout -issuer) 
     ca_country=$(echo $txt | awk -F'/' '{ print $2 }' | awk -F'=' '{ print $2 }') 
@@ -2336,9 +2917,15 @@ getRootCA() {
 
         url=https://letsencrypt.org/certs/lets-encrypt-r3.pem
         curl $url 2>/dev/null > $TDHPATH/certificates/$LETSENSCRIPT_INTERMEDIATE_CERT_FILE
-        messagePrint " - Let's Encrypt Intermediate Certificate:"      "certificates/$LETSENSCRIPT_INTERMEDIATE_CERT"
-        messagePrint " - Let's Encrypt Intermediate Certificate Url:"  "$url"
-        messagePrint " - Let's Encrypt Intermediate Certificate File:" "certificates/$LETSENSCRIPT_INTERMEDIATE_CERT_FILE"
+        if [ $? -eq 0 ]; then
+          messagePrint " - Let's Encrypt Intermediate Certificate:"      "certificates/$LETSENSCRIPT_INTERMEDIATE_CERT"
+          messagePrint " - Let's Encrypt Intermediate Certificate Url:"  "$url"
+          messagePrint " - Let's Encrypt Intermediate Certificate File:" "certificates/$LETSENSCRIPT_INTERMEDIATE_CERT_FILE"
+        else
+          echo "ERROR: Failed to optiain the root certidicate ertificates/$LETSENSCRIPT_INTERMEDIATE_CERT"
+          echo "       => curl $url > $TDHPATH/certificates/$LETSENSCRIPT_INTERMEDIATE_CERT_FILE"
+          exit
+        fi
       fi
 
       if [ "$ca_cn" == "E1" ]; then 
@@ -2347,9 +2934,15 @@ getRootCA() {
 
         url=https://letsencrypt.org/certs/lets-encrypt-e1.pem
         curl $url 2>/dev/null > $TDHPATH/certificates/$LETSENSCRIPT_INTERMEDIATE_CERT_FILE
-        messagePrint " - Let's Encrypt Intermediate Certificate:"      "certificates/$LETSENSCRIPT_INTERMEDIATE_CERT"
-        messagePrint " - Let's Encrypt Intermediate Certificate Url:"  "$url"
-        messagePrint " - Let's Encrypt Intermediate Certificate File:" "certificates/$LETSENSCRIPT_INTERMEDIATE_CERT_FILE"
+        if [ $? -eq 0 ]; then
+          messagePrint " - Let's Encrypt Intermediate Certificate:"      "certificates/$LETSENSCRIPT_INTERMEDIATE_CERT"
+          messagePrint " - Let's Encrypt Intermediate Certificate Url:"  "$url"
+          messagePrint " - Let's Encrypt Intermediate Certificate File:" "certificates/$LETSENSCRIPT_INTERMEDIATE_CERT_FILE"
+        else
+          echo "ERROR: Failed to optiain the root certidicate ertificates/$LETSENSCRIPT_INTERMEDIATE_CERT"
+          echo "       => curl $url > $TDHPATH/certificates/$LETSENSCRIPT_INTERMEDIATE_CERT_FILE"
+          exit
+        fi
       fi
 
       if [ "$LETSENSCRIPT_INTERMEDIATE_CERT_FILE" != "" ]; then
@@ -2386,6 +2979,455 @@ getRootCA() {
   messageTitle "Verify RootCA with the Certificate ($SECRET)"
   messagePrint " - Verify Cert ($THD_TLS_CERTIFICATE) with RootCA (ca.pem)"    "$stt"
   messagePrint " - Verify Cert ($THD_TLS_CERTIFICATE) with CertKey ($THD_TLS_KEY)"  "$vry"
+}
+
+InstallContour() {
+  if [ "$TDH_SERVICE_INGRESS_CONTOUR" != "true" ]; then
+    uodateConfigMap tanzu-demo-hub TDH_INGRESS_CONTOUR_ENABLED        "false"
+    return
+  fi
+
+  NAMESPACE=ingress-contour
+
+  kubectl get ns $NAMESPACE > /dev/null 2>&1
+  if [ $? -ne 0 ]; then
+    # --- INSTALL CONTOUR INGRESS ---
+    messageTitle "Install Ingress Contour"
+    kubectl create ns $NAMESPACE > /dev/null 2>&1
+    helm install ingress bitnami/contour -n $NAMESPACE --version 3.3.1 > /dev/null 2>&1
+    if [ $? -ne 0 ]; then
+      echo "ERROR: failed to install bitnami/contour"
+      echo "       => helm install ingress bitnami/contour -n $NAMESPACE --version 3.3.1"
+      exit
+    fi
+
+    cnt=0
+    while [ $cnt -eq 0 ]; do
+      cnt=$(kubectl get pods -n ingress-contour | sed 1d | grep -vc Running)
+      if [ $cnt -eq 0 ]; then cnt=1; fi
+      sleep 5
+    done
+  fi
+
+  ver=$(helm -n $NAMESPACE ls -o json | jq -r '.[].app_version')
+  crt=$(helm -n $NAMESPACE ls -o json | jq -r '.[].chart')
+  stt=$(helm -n $NAMESPACE ls -o json | jq -r '.[].status')
+  dat=$(helm -n $NAMESPACE ls -o json | jq -r '.[].updated')
+
+messageTitle "Verify Ingress Contour"
+  messagePrint " - Ingress Contour Namespace:"         "$NAMESPACE"
+  messagePrint " - Ingress Contour Helm Chart:"        "$crt"
+  messagePrint " - Ingress Contour Version:"           "$ver"
+  messagePrint " - Ingress Contour Status:"            "$stt"
+  messagePrint " - Ingress Contour Installed/Updated:" "$dat"
+
+  # --- VERIFY DNS DOMAIN ---
+  verifyHostedZone ${TDH_ENVNAME}.$AWS_HOSTED_DNS_DOMAIN
+
+  # --- SET DNS RECORD ---
+  if [ "$TDH_INFRASTRUCTURE" == "minikube" ]; then 
+    ipa=$(kubectl describe svc ingress-contour-envoy --namespace ingress-contour | grep Ingress | awk '{print $3}')
+    setDNSrecord "$ipa" "${TDH_ENVNAME}" "${AWS_HOSTED_DNS_DOMAIN}" "*.apps-contour" "A"
+  else
+    ipa=$(kubectl describe svc ingress-contour-envoy --namespace ingress-contour | grep Ingress | awk '{print $3}')
+    setDNSalias "$ipa" "${TDH_ENVNAME}" "${AWS_HOSTED_DNS_DOMAIN}" "*.apps-contour" "A"
+  fi
+
+  # --- STORE SETTINGS IN CONFIGMAP ---
+  uodateConfigMap tanzu-demo-hub TDH_INGRESS_CONTOUR_ENABLED        "true"
+  uodateConfigMap tanzu-demo-hub TDH_INGRESS_CONTOUR_LB_IP          "$ipa"
+  uodateConfigMap tanzu-demo-hub TDH_INGRESS_CONTOUR_LB_DOMAIN      "apps-contour.$TDH_ENVNAME.$AWS_HOSTED_DNS_DOMAIN"
+  uodateConfigMap tanzu-demo-hub TDH_INGRESS_CONTOUR_NAMESPACE      "$NAMESPACE"
+  uodateConfigMap tanzu-demo-hub TDH_INGRESS_CONTOUR_CHART_NAME     "$crt"
+  uodateConfigMap tanzu-demo-hub TDH_INGRESS_CONTOUR_CHART_VERSION  "$ver"
+  uodateConfigMap tanzu-demo-hub TDH_INGRESS_CONTOUR_CHART_STATUS   "$stt"
+  uodateConfigMap tanzu-demo-hub TDH_INGRESS_CONTOUR_CHART_UPDATE   "$dat"
+}
+
+createClusterIssuer() {
+  #https://cert-manager.io/docs/tutorials/acme/dns-validation/
+  NAMESPACE=cert-manager
+
+  if [ "${TDH_HARBOR_STAGING_TLS_CERT}" == "true" ]; then
+    LETSENSCRIPT_SERVER="https://acme-staging-v02.api.letsencrypt.org/directory"
+  else
+    LETSENSCRIPT_SERVER="https://acme-v02.api.letsencrypt.org/directory"
+  fi
+
+  kubectl get clusterissuer $TDH_TLS_ISSUER_NAME -n kube-system > /dev/null 2>&1
+  if [ $? -ne 0 ]; then
+    AWS_HOSTED_ZONE=$(aws route53 list-hosted-zones-by-name --dns-name ${TDH_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN} | \
+                      jq -r ".HostedZones[] | select(.Name | scan(\"^${zone}.\")).Id")
+    AWS_HOSTED_ZONE_ID=$(aws route53 list-hosted-zones \
+                        --query "HostedZones[?starts_with(to_string(Name), '${TDH_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}.')]" | \
+                        jq -r '.[].Id' | awk -F '/' '{ print $NF }')
+
+    messageTitle "Create LetsEnscript ClusterIssuer"
+    messagePrint " - LetsEnscript Issuer Name"         "$TDH_TLS_ISSUER_NAME"
+    messagePrint " - LetsEnscript Solver"              "route53"
+    messagePrint " - LetsEnscript Solver ZoneID"       "$AWS_HOSTED_ZONE_ID"
+    messagePrint " - LetsEnscript DNSZone"             "*.apps-contour.${TDH_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}"
+    messagePrint " - LetsEnscript DNSZone"             "*.apps-nginx.${TDH_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}"
+
+echo "TDH_TLS_ISSUER_NAME:$TDH_TLS_ISSUER_NAME"
+    echo "apiVersion: cert-manager.io/v1alpha2"                                    >  $TDH_TLS_ISSUER_NAME
+    echo "kind: ClusterIssuer"                                                     >> $TDH_TLS_ISSUER_NAME
+    echo "metadata:"                                                               >> $TDH_TLS_ISSUER_NAME
+    echo "  name: $TDH_TLS_ISSUER_NAME"                                            >> $TDH_TLS_ISSUER_NAME
+    echo "spec:"                                                                   >> $TDH_TLS_ISSUER_NAME
+    echo "  acme:"                                                                 >> $TDH_TLS_ISSUER_NAME
+    echo "    email: sdubois@vmware.com"                                           >> $TDH_TLS_ISSUER_NAME
+    echo "    privateKeySecretRef:"                                                >> $TDH_TLS_ISSUER_NAME
+    echo "      name: $TDH_TLS_ISSUER_NAME"                                        >> $TDH_TLS_ISSUER_NAME
+    echo "    server: $LETSENSCRIPT_SERVER"                                        >> $TDH_TLS_ISSUER_NAME
+    echo "    solvers:"                                                            >> $TDH_TLS_ISSUER_NAME
+    echo "    - selector:"                                                         >> $TDH_TLS_ISSUER_NAME
+    echo "        dnsZones:"                                                       >> $TDH_TLS_ISSUER_NAME
+    echo "          - \"$HARBOR_HOSTNAME\""                                        >> $TDH_TLS_ISSUER_NAME
+    echo "          - \"$NOTARY_HOSTNAME\""                                        >> $TDH_TLS_ISSUER_NAME
+    echo "          - \"*.apps-contour.${TDH_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}\""  >> $TDH_TLS_ISSUER_NAME
+    echo "          - \"*.apps-nginx.${TDH_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}\""    >> $TDH_TLS_ISSUER_NAME
+    echo "      dns01:"                                                            >> $TDH_TLS_ISSUER_NAME
+    echo "        route53:"                                                        >> $TDH_TLS_ISSUER_NAME
+    echo "          region: $AWS_REGION"                                           >> $TDH_TLS_ISSUER_NAME
+    echo "          accessKeyID: $AWS_CERT_ACCESS_KEY"                             >> $TDH_TLS_ISSUER_NAME
+    echo "          secretAccessKeySecretRef:"                                     >> $TDH_TLS_ISSUER_NAME
+    echo "            name: route53-credentials-secret"                            >> $TDH_TLS_ISSUER_NAME
+    echo "            key: aws-credentials"                                        >> $TDH_TLS_ISSUER_NAME
+    echo "          # you can also assume a role with these credentials"           >> $TDH_TLS_ISSUER_NAME
+    echo "          hostedZoneID: $AWS_HOSTED_ZONE_ID"                             >> $TDH_TLS_ISSUER_NAME
+
+    # --- CREATE/RECREATE AWS ROUTE53 SECRET ---
+    kubectl -n cert-manager delete secret route53-credentials-secret > /dev/null 2>&1
+    kubectl -n default delete secret route53-credentials-secret > /dev/null 2>&1
+    kubectl -n cert-manager create secret generic route53-credentials-secret \
+            --from-literal=aws-credentials="$AWS_CERT_SECRET_KEY" > /dev/null 2>&1
+
+    # --- RECREATE ISSUER ---
+    kubectl -n $NAMESPACE delete --all clusterissuer,certificate,order,challenge > /dev/null 2>&1
+    sleep 60
+    kubectl -n $NAMESPACE apply -f $TDH_TLS_ISSUER_NAME
+    if [ $? -ne 0 ]; then
+      echo "ERROR: failed to deploy letsenscript issuer"
+      echo "       => kubectl -n $NAMESPACE apply -f $TDH_TLS_ISSUER_NAME"
+      exit
+    fi
+
+    cnt=0
+    while [ $cnt -eq 0 ]; do
+      # --- VERIFY ISSUER ---
+      issuer_reason=$(kubectl get clusterissuer $TDH_TLS_ISSUER_NAME -n kube-system -o json 2>/dev/null | \
+                    jq -r '.status.conditions[].reason' 2>/dev/null)
+      issuer_status=$(kubectl get clusterissuer $TDH_TLS_ISSUER_NAME -n kube-system -o json 2>/dev/null | \
+                    jq -r '.status.conditions[].status' 2>/dev/null)
+
+      if [ "$issuer_reason" == "ACMEAccountRegistered" -a "$issuer_status" == "True" ]; then cnt=1; fi
+      sleep 5
+    done
+
+    messagePrint " - LetsEnscript Request Reason"      "$issuer_reason"
+    messagePrint " - LetsEnscript Request Status"      "$issuer_status"
+  else
+    issuer_reason=$(kubectl get clusterissuer letsencrypt-staging -n kube-system -o json 2>/dev/null | \
+                  jq -r '.status.conditions[].reason')
+    issuer_status=$(kubectl get clusterissuer letsencrypt-staging -n kube-system -o json 2>/dev/null | \
+                  jq -r '.status.conditions[].status')
+    issuer_date=$(kubectl get clusterissuer letsencrypt-staging -n kube-system -o json 2>/dev/null | \
+                  jq -r '.status.conditions[].lastTransitionTime')
+
+    messageTitle "Verify LetsEnscript ClusterIssuer"
+    messagePrint " - LetsEnscript Issuer Name"         "$TDH_TLS_ISSUER_NAME"
+    messagePrint " - LetsEnscript DNSZone"             "$HARBOR_HOSTNAME"
+    messagePrint " - LetsEnscript DNSZone"             "$NOTARY_HOSTNAME"
+    messagePrint " - LetsEnscript DNSZone"             "$SACHA_HOSTNAME"
+    messagePrint " - LetsEnscript Request Requested"   "$issuer_date"
+    messagePrint " - LetsEnscript Request Reason"      "$issuer_reason"
+    messagePrint " - LetsEnscript Request Status"      "$issuer_status"
+  fi
+
+  # --- CREATE CERTIFICATE ---
+  stt_rdy=$(kubectl get certificate $TDH_TLS_CERT -o json 2>/dev/null | \
+            jq -r '.status.conditions[] | select(.type == "Ready").status')
+  kubectl get secret $TDH_TLS_SECRET > /dev/null 2>&1; stt_sec=$?
+  kubectl get certificate $TDH_TLS_CERT > /dev/null 2>&1; stt_crt=$?
+  if [ "${stt_rdy}" == "Frue" -o $stt_sec -ne 0 -o $stt_crt -ne 0 ]; then
+    messageTitle "Create LetsEnscript Certificate"
+    CERTIFICATE_CONFIG=/tmp/certificate.yaml
+    echo "apiVersion: cert-manager.io/v1"                       >  $CERTIFICATE_CONFIG
+    echo "kind: Certificate"                                    >> $CERTIFICATE_CONFIG
+    echo "metadata:"                                            >> $CERTIFICATE_CONFIG
+    echo "  name: $TDH_TLS_CERT"                                >> $CERTIFICATE_CONFIG
+    echo "  namespace: default"                                 >> $CERTIFICATE_CONFIG
+    echo "spec:"                                                >> $CERTIFICATE_CONFIG
+    echo "  secretName: $TDH_TLS_SECRET"                        >> $CERTIFICATE_CONFIG
+    echo "  issuerRef:"                                         >> $CERTIFICATE_CONFIG
+    echo "    name: letsencrypt-staging"                        >> $CERTIFICATE_CONFIG
+    echo "    kind: ClusterIssuer"                              >> $CERTIFICATE_CONFIG
+    echo "  dnsNames:"                                          >> $CERTIFICATE_CONFIG
+    #echo "  - \"$HARBOR_HOSTNAME\""                             >> $CERTIFICATE_CONFIG
+    #echo "  - \"$NOTARY_HOSTNAME\""                             >> $CERTIFICATE_CONFIG
+    echo "  - '*.apps-contour.${TDH_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}'"     >> $CERTIFICATE_CONFIG
+    echo "  - '*.apps-nginx.${TDH_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}'"       >> $CERTIFICATE_CONFIG
+
+    kubectl create -f $CERTIFICATE_CONFIG > /dev/null 2>&1
+    if [ $? -ne 0 ]; then
+      echo "ERROR: failed to deploy letsenscript certificate"
+      echo "       => kubectl create -f $CERTIFICATE_CONFIG"
+      exit
+    fi
+
+    sleep 30
+
+    cnt=0
+    while [ $cnt -eq 0 ]; do
+      stt=$(kubectl get certificate $TDH_TLS_CERT -o json 2>/dev/null | \
+            jq -r '.status.conditions[] | select(.type == "Ready").status')
+      if [ "$stt" == "True" ]; then cnt=1; fi
+      sleep 5
+    done
+
+    if [ "$stt" == "True" ]; then
+      tim=$(kubectl get certificate $TDH_TLS_CERT -o json 2>/dev/null | jq -r '.status.conditions[].lastTransitionTime')
+      msg=$(kubectl get certificate $TDH_TLS_CERT -o json 2>/dev/null | jq -r '.status.conditions[].message')
+      tim=$(kubectl get certificate $TDH_TLS_CERT -o json 2>/dev/null | jq -r '.status.conditions[].lastTransitionTime')
+      messagePrint " - LetsEnscript Certificate Name"         "$TDH_TLS_CERT"
+      messagePrint " - LetsEnscript Certificate Issued"       "$tim"
+      messagePrint " - LetsEnscript Certificate Message"      "$msg"
+      messagePrint " - LetsEnscript Certificate Status"       "$stt"
+      messagePrint " - LetsEnscript Certificate Secret"       "${TDH_TLS_SECRET}"
+    else
+      messagePrint " - LetsEnscript Certificate Status"       "$stt"
+      echo "------------------------------------------------------------------------------------------------------------------------"
+      kubectl describe certificate $TDH_TLS_CERT
+      echo "------------------------------------------------------------------------------------------------------------------------"
+      echo "=> kubectl describe clusterissuer letsencrypt-staging"
+      echo "=> kubectl describe order"
+      echo "=> kubectl describe challenge"
+      echo "=> kubectl describe certificate"
+      exit
+    fi
+  else
+    stt=$(kubectl get certificate $TDH_TLS_CERT -o json 2>/dev/null | jq -r '.status.conditions[].status')
+    if [ "$stt" != "True" ]; then
+      messagePrint " - LetsEnscript Certificate Status"       "$stt"
+      echo "------------------------------------------------------------------------------------------------------------------------"
+      kubectl describe certificate $TDH_TLS_CERT
+      echo "------------------------------------------------------------------------------------------------------------------------"
+      echo "=> kubectl describe clusterissuer letsencrypt-staging"
+      echo "=> kubectl describe order"
+      echo "=> kubectl describe challenge"
+      echo "=> kubectl describe certificate"
+      exit
+    fi
+  fi
+
+  messageTitle "Verify LetsEnscript Certificate"
+  messagePrint " - LetsEnscript Certificate Name"       "$TDH_TLS_CERT"
+  messagePrint " - LetsEnscript Certificate Secret"     "$TDH_TLS_SECRET"
+
+  # --- STORE SETTINGS IN CONFIGMAP ---
+  uodateConfigMap tanzu-demo-hub TDH_CERTIFICATE_NAME   "$TDH_TLS_CERT"
+  uodateConfigMap tanzu-demo-hub TDH_CERTIFICATE_SECRET "$TDH_TLS_SECRET"
+
+  echo "------------------------------------------------------------------------------------------------------------------------"
+  kubectl get secret tanzu-demo-hub-tls -o json | jq -r '.data."tls.crt"' | base64 -d | \
+          openssl x509 -inform pem -noout -text | grep $AWS_HOSTED_DNS_DOMAIN
+  echo "------------------------------------------------------------------------------------------------------------------------"
+}
+
+InstallCertManager() {
+  NAMESPACE=cert-manager
+
+  kubectl get ns $NAMESPACE > /dev/null 2>&1
+  if [ $? -ne 0 ]; then
+    # --- INSTALL CONTOUR INGRESS ---
+    messageTitle "Install Cert Manager"
+
+    kubectl create ns $NAMESPACE > /dev/null 2>&1
+    helm repo add jetstack https://charts.jetstack.io -n $NAMESPACE > /dev/null 2>&1
+    #helm install cert-manager jetstack/cert-manager --namespace cert-manager \
+    #   --version v1.0.2 --set installCRDs=true > /dev/null 2>&1
+
+    helm install cert-manager jetstack/cert-manager -n cert-manager --version v1.1.0 --set installCRDs=true > /dev/null 2>&1
+    if [ $? -ne 0 ]; then
+      echo "ERROR: failed to install jetstack/cert-manager "
+      echo "       => helm install cert-manager jetstack/cert-manager --namespace cert-manager \\"
+      echo "          --version v1.1.0 --set installCRDs=true"
+      exit
+    fi
+
+    cnt=0
+    while [ $cnt -eq 0 ]; do
+      cnt=$(kubectl get pods -n $NAMESPACE | sed 1d | grep -vc Running)
+      if [ $cnt -eq 0 ]; then cnt=1; fi
+
+      sleep 5
+    done
+  fi
+
+  ver=$(helm -n cert-manager ls -o json | jq -r '.[].app_version')
+  crt=$(helm -n cert-manager ls -o json | jq -r '.[].chart')
+  stt=$(helm -n cert-manager ls -o json | jq -r '.[].status')
+  dat=$(helm -n cert-manager ls -o json | jq -r '.[].updated')
+
+  messageTitle "Verify Cert Manager"
+  messagePrint " - Cert Manager Namespace:"         "$NAMESPACE"
+  messagePrint " - Cert Manager Helm Chart:"        "$crt"
+  messagePrint " - Cert Manager Version:"           "$ver"
+  messagePrint " - Cert Manager Status:"            "$stt"
+  messagePrint " - Cert Manager Installed/Updated:" "$dat"
+
+  # --- STORE SETTINGS IN CONFIGMAP ---
+  uodateConfigMap tanzu-demo-hub TDH_CERTMANAGER_ENABLED        "true"
+  uodateConfigMap tanzu-demo-hub TDH_CERTMANAGER_NAMESPACE      "$NAMESPACE"
+  uodateConfigMap tanzu-demo-hub TDH_CERTMANAGER_CHART_NAME     "$crt"
+  uodateConfigMap tanzu-demo-hub TDH_CERTMANAGER_CHART_VERSION  "$ver"
+  uodateConfigMap tanzu-demo-hub TDH_CERTMANAGER_CHART_STATUS   "$stt"
+  uodateConfigMap tanzu-demo-hub TDH_CERTMANAGER_CHART_UPDATE   "$dat"
+}
+
+InstallHarborRegistry() {
+  if [ "$TDH_SERVICE_BUILD_SERVICE" != "true" ]; then
+    uodateConfigMap tanzu-demo-hub TDH_SERVICE_BUILD_SERVICE        "false"
+    return
+  fi
+
+  NAMESPACE=registry-harbor
+  HARBOR_TLS_SECRET=$TDH_TLS_SECRET
+  NOTARY_TLS_SECRET=$TDH_TLS_SECRET
+  HARBOR_HOSTNAME="harbor.apps-contour.$TDH_ENVNAME.$AWS_HOSTED_DNS_DOMAIN"
+  NOTARY_HOSTNAME="notary.apps-contour.$TDH_ENVNAME.$AWS_HOSTED_DNS_DOMAIN"
+
+  kubectl get ns $NAMESPACE > /dev/null 2>&1
+  if [ $? -ne 0 ]; then
+    messageTitle "Install Harbor Reistry"
+
+    # --- VERIFY SERVICE CONFIGURATION ---
+    checkKubernetesServices harbor
+
+    messagePrint " - Harbor Registry/Notary Server"        "harbor.apps-contour.$TDH_ENVNAME.$AWS_HOSTED_DNS_DOMAIN"
+    messagePrint "  "                                      "notary.apps-contour.$TDH_ENVNAME.$AWS_HOSTED_DNS_DOMAIN"
+    messagePrint " - Harbor Admin Password"                $(maskPassword "$TDH_HARBOR_ADMIN_PASSWORD")
+    messagePrint " - Harbor TLS Staging Cert"              "$TDH_HARBOR_STAGING_TLS_CERT"
+
+    # --- INSTALL CONTOUR INGRESS ---
+    kubectl create ns $NAMESPACE > /dev/null 2>&1
+    helm uninstall harbor -n $NAMESPACE > /dev/null 2>&1
+
+    # --- COPY SECRET TO NAMESPACE ---
+    kubectl get secret tanzu-demo-hub-tls --namespace=default  -oyaml | grep -v '^\s*namespace:\s' | \
+    kubectl apply --namespace=registry-harbor -f -
+
+    HARBOR_VALUES=/tmp/harbor_values.yaml
+    echo "harborAdminPassword: $TDH_HARBOR_ADMIN_PASSWORD"                                                                      >  $HARBOR_VALUES
+    echo ""                                                                                                                     >> $HARBOR_VALUES
+    echo "service:"                                                                                                             >> $HARBOR_VALUES
+    echo "  type: ClusterIP"                                                                                                    >> $HARBOR_VALUES
+    echo "  tls:"                                                                                                               >> $HARBOR_VALUES
+    echo "    enabled: true"                                                                                                    >> $HARBOR_VALUES
+    echo "    existingSecret: $HARBOR_TLS_SECRET"                                                                               >> $HARBOR_VALUES
+    echo "    notaryExistingSecret: $NOTARY_TLS_SECRET"                                                                         >> $HARBOR_VALUES
+    echo ""                                                                                                                     >> $HARBOR_VALUES
+    echo "ingress:"                                                                                                             >> $HARBOR_VALUES
+    echo "  enabled: true"                                                                                                      >> $HARBOR_VALUES
+    echo "  hosts:"                                                                                                             >> $HARBOR_VALUES
+    echo "    core: $HARBOR_HOSTNAME"                                                                                           >> $HARBOR_VALUES
+    echo "    notary: $NOTARY_HOSTNAME"                                                                                         >> $HARBOR_VALUES
+    echo "  annotations:"                                                                                                       >> $HARBOR_VALUES
+    #echo "    cert-manager.io/cluster-issuer: letsencrypt-staging  # use letsencrypt-staging cluster issuer for TLS certs"      >> $HARBOR_VALUES
+    #echo "    kubernetes.io/tls-acme: \"true\"                     # using ACME certificates for TLS"                           >> $HARBOR_VALUES
+    echo "    ingress.kubernetes.io/force-ssl-redirect: \"true\"   # force https, even if http is requested"                    >> $HARBOR_VALUES
+    echo "    kubernetes.io/ingress.class: contour                 # using Contour for ingress"                                 >> $HARBOR_VALUES
+
+    echo "externalURL: https://harbor.apps-contour.$TDH_ENVNAME.$AWS_HOSTED_DNS_DOMAIN"                                         >> $HARBOR_VALUES
+    echo ""                                                                                                                     >> $HARBOR_VALUES
+    echo "portal:"                                                                                                              >> $HARBOR_VALUES
+    echo "  tls:"                                                                                                               >> $HARBOR_VALUES
+    echo "    existingSecret: $HARBOR_TLS_SECRET"                                                                               >> $HARBOR_VALUES
+    echo ""                                                                                                                     >> $HARBOR_VALUES
+    echo "persistence:"                                                                                                         >> $HARBOR_VALUES
+    echo "  enabled: true"                                                                                                      >> $HARBOR_VALUES
+    echo "  resourcePolicy: 'keep'"                                                                                             >> $HARBOR_VALUES
+    echo "  persistentVolumeClaim:"                                                                                             >> $HARBOR_VALUES
+    echo "    registry:"                                                                                                        >> $HARBOR_VALUES
+    echo "      accessMode: ReadWriteOnce"                                                                                      >> $HARBOR_VALUES
+    echo "      size: 50Gi"                                                                                                     >> $HARBOR_VALUES
+
+    helm install harbor bitnami/harbor -f $HARBOR_VALUES --version 9.2.2 -n $NAMESPACE > /dev/null 2>&1
+    if [ $? -ne 0 ]; then
+      echo "ERROR: failed to install bitnami/harbor"
+      echo "       => helm install harbor bitnami/harbor -f $HARBOR_VALUES --version 9.2.2 -n $NAMESPACE"
+      exit
+    fi
+
+    cnt=0
+    while [ $cnt -eq 0 ]; do
+      cnt=$(kubectl get pods -n registry-harbor | sed 1d | grep -vc Running)
+      if [ $cnt -eq 0 ]; then cnt=1; fi
+      sleep 5
+    done
+
+    # --- WAIT FOR HARBOR TO COME ONLINE ---
+    messagePrint " - Verify Harbor Reistry Access" "$HARBOR_HOSTNAME"
+    ret=1; cnt=0
+    while [ $ret -ne 0 -a $cnt -le 5 ]; do
+      docker login $HARBOR_HOSTNAME -u admin -p $TDH_HARBOR_ADMIN_PASSWORD > /dev/null 2>&1; ret=$?
+      sleep 60
+      let cnt=cnt+1
+    done
+
+    if [ $ret -ne 0 ]; then
+      echo "ERROR: failed to login to registry"
+      echo "       => docker login $HARBOR_HOSTNAME -u admin -p $TDH_HARBOR_ADMIN_PASSWORD"
+      exit
+    fi
+  fi
+
+  ver=$(helm -n $NAMESPACE ls -o json | jq -r '.[].app_version')
+  crt=$(helm -n $NAMESPACE ls -o json | jq -r '.[].chart')
+  stt=$(helm -n $NAMESPACE ls -o json | jq -r '.[].status')
+  dat=$(helm -n $NAMESPACE ls -o json | jq -r '.[].updated')
+
+  messageTitle "Verify Harbor Reistry"
+  messagePrint " - Harbor Reistry Namespace:"         "$NAMESPACE"
+  messagePrint " - Harbor Reistry Helm Chart:"        "$crt"
+  messagePrint " - Harbor Reistry Version:"           "$ver"
+  messagePrint " - Harbor Reistry Status:"            "$stt"
+  messagePrint " - Harbor Reistry Installed/Updated:" "$dat"
+
+  # --- STORE SETTINGS IN CONFIGMAP ---
+  uodateConfigMap tanzu-demo-hub TDH_HARBOR_REGISTRY_ENABLED        "true"
+  uodateConfigMap tanzu-demo-hub TDH_HARBOR_REGISTRY_ADMIN_PASSWORD "$TDH_HARBOR_ADMIN_PASSWORD"
+  uodateConfigMap tanzu-demo-hub TDH_HARBOR_REGISTRY_DNS_HARBOR     "$HARBOR_HOSTNAME"
+  uodateConfigMap tanzu-demo-hub TDH_HARBOR_REGISTRY_DNS_NOTARY     "$NOTARY_HOSTNAME"
+  uodateConfigMap tanzu-demo-hub TDH_HARBOR_REGISTRY_CHART_NAME     "$crt"
+  uodateConfigMap tanzu-demo-hub TDH_HARBOR_REGISTRY_CHART_VERSION  "$ver"
+  uodateConfigMap tanzu-demo-hub TDH_HARBOR_REGISTRY_CHART_STATUS   "$stt"
+  uodateConfigMap tanzu-demo-hub TDH_HARBOR_REGISTRY_CHART_UPDATE   "$dat"
+}
+
+tdh_verifyTKGcluster() {
+  messageTitle "TKG Cluster Information"
+  messagePrint " - Cluster Name"           "$TDH_CLUSTER_NAME"
+  messagePrint " - TKG Management Cluster" "$TDH_MANAGEMENT_CLUSTER"
+  messagePrint " - Provisioner Name"       "$TDH_PROVISONER_NAME"
+  messagePrint " - Account Name"           "$TDH_MISSION_CONTROL_ACCOUNT_NAME"
+  echo 
+
+  echo -n "Do you want detailed infos of the TKG cluster setup setup ($TDH_CLUSTER_NAME) ? (y/n): "; read cluster_info
+  answer_provided="n"
+  while [ "${answer_provided}" == "n" ]; do
+    if [ "${cluster_info}" == "y" -o "${cluster_info}" == "Y" ]; then break; fi
+    if [ "${cluster_info}" == "n" -o "${cluster_info}" == "N" ]; then break; fi
+    echo -n "Do you want detailed infos of the TKG cluster setup setup ($TDH_CLUSTER_NAME) ? (y/n): "; read cluster_info
+  done
+  echo 
+
+  if [ "${cluster_info}" == "y" -o "${cluster_info}" == "Y" ]; then
+    prtHead "Show TDK Cluster infos ($TDH_CLUSTER_NAME)"
+    execCmd "tmc cluster list $TDH_CLUSTER_NAME -m $TDH_MANAGEMENT_CLUSTER -p $TDH_PROVISONER_NAME"
+    execCmd "tmc cluster get $TDH_CLUSTER_NAME -m $TDH_MANAGEMENT_CLUSTER -p $TDH_PROVISONER_NAME"
+  fi
 }
 
 

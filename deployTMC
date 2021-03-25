@@ -166,7 +166,10 @@ if [ ! -f ${TDHPATH}/deployments/${DEPLOY_TKG_TEMPLATE} ]; then
   exit 1
 else
   . ${TDHPATH}/deployments/${DEPLOY_TKG_TEMPLATE}
+
+  export TMC_CLUSTER_GROUP=$TDH_DEPLOYMENT_CLUSTERGROUP
 fi
+
 
 cnt=$(egrep -c "^TDH_DEPLOYMENT_CLOUD=" ${TDHPATH}/deployments/$DEPLOY_TKG_TEMPLATE)
 if [ $cnt -eq 0 ]; then
@@ -175,6 +178,7 @@ if [ $cnt -eq 0 ]; then
 else
   missing_variables=0
   .  ${TDHPATH}/deployments/${DEPLOY_TKG_TEMPLATE}
+  export TMC_CLUSTER_GROUP=$TDH_DEPLOYMENT_CLUSTERGROUP
 
   # --- CHECK ENVIRONMENT VARIABLES ---
   if [ -f ~/.tanzu-demo-hub.cfg ]; then
@@ -224,6 +228,12 @@ else
   fi
 fi
 
+export TDH_DEPLOYMENT_ENV_NAME=$TDH_INFRASTRUCTURE
+export TDH_TLS_CERT=tanzu-demo-hub
+export TDH_TLS_SECRET=${TDH_TLS_CERT}-tls
+export TDH_TLS_ISSUER_NAME=letsencrypt-staging
+export TDH_TLS_ISSUER_CONFIG=/tmp/issuer-dns-manager1.yaml
+
 #echo "export TMC_API_TOKEN==$TMC_SERVICE_TOKEN"
 #echo "tmc login -n $TMC_CONTEXT_NAME"
 #echo "tmc cluster auth kubeconfig get sadubois-test -p $TMC_PROVISONER_NAME -m $TDH_MANAGEMENT_CLUSTER > /tmp/sadubois-test.kubeconfig"
@@ -242,24 +252,46 @@ getTDHClusterCredentials
 
 uodateConfigMap tanzu-demo-hub TDH_DOMAIN               $AWS_HOSTED_DNS_DOMAIN
 uodateConfigMap tanzu-demo-hub TDH_ENVNAME              $TDH_ENVNAME
+uodateConfigMap tanzu-demo-hub TDH_DEPLOYMENT_TYPE      "minikube"
+uodateConfigMap tanzu-demo-hub TDH_MANAGED_BY_TMC       "true"
 
-VerifyK8SDemoPlatform
+uodateConfigMap tanzu-demo-hub TDH_CLUSTER_NAME                   "$TMC_CLUSTER_NAME"
+uodateConfigMap tanzu-demo-hub TDH_MANAGEMENT_CLUSTER             "$TMC_MANAGEMENT_CLUSTER"
+uodateConfigMap tanzu-demo-hub TDH_PROVISONER_NAME                "$TMC_PROVISONER_NAME"
+uodateConfigMap tanzu-demo-hub TDH_MISSION_CONTROL_ACCOUNT_NAME   "$TMC_ACCOUNT_NAME"
 
-exit
+ kubectl create clusterrolebinding tanzu-demo-hub-privileged-cluster-role-binding \
+        --clusterrole=vmware-system-tmc-psp-privileged --group=system:authenticated
+
+InstallCertManager
+InstallContour
+createClusterIssuer
+InstallHarborRegistry
+getRootCA tanzu-demo-hub-tls
+installBuildService
 
 
-echo "XXXXXX"; exit
-# --- VERYFY ACCESS TO CLOUD ---
-checkCloudCLI
-checkCloudAccess
-checkTDHAccess
-checkKeyPairs
+echo "-----------------------------------------------------------------------------------------------------------"
+echo "Tanzu Kubernetes Grid Cluster ($TMC_CLUSTER_NAME) build completed"
+echo "-----------------------------------------------------------------------------------------------------------"
+echo "1.) Set KUBECONFIG and set the cluster context"
+echo "    => export KUBECONFIG=/tmp/${TMC_CLUSTER_NAME}.kubeconfig:~/.kube/config"
+echo "    => kubectl config use-context $TMC_CLUSTER_NAME"
+echo "    => kubectl config get-contexts"
+echo "2.) Relaxing Pod Security in cluster ($TMC_CLUSTER_NAME)"
+echo "    # Allow Privileged Pods for the Cluster"
+echo "    => kubectl create clusterrolebinding tanzu-demo-hub-privileged-cluster-role-binding \\"
+echo "        --clusterrole=vmware-system-tmc-psp-privileged --group=system:authenticated"
+echo "    # Allow Privileged Pods for a Namespace (my-namespace)"
+echo "    => kubectl create rolebinding tanzu-demo-hub-privileged-my-namespace-role-binding \\"
+echo "        --clusterrole=vmware-system-tmc-psp-privileged --group=system:authenticated -n my-namespace"
+echo "3.) Delete Cluster if not used anymore"
+echo "    => tmc cluster delete -m $TMC_MANAGEMENT_CLUSTER -p $TMC_PROVISONER_NAME $TMC_CLUSTER_NAME"
 
-# --- CREATE TKG CLUSTER AND JUMP SERVER
-createCluster
-sshEnvironment
-configureJumpHost
-configureLetsEnscript
+#kubectl rollout restart deployment echoserver-1 -n contour-ingress-demo
+#kubectl get pods -n contour-ingress-demo
+#kubectl create rolebinding tanzu-demo-hub-privileged-my-namespace-role-binding --clusterrole=vmware-system-tmc-psp-privileged --group=system:authenticated -n contour-ingress-demo
+
 
 exit
 
