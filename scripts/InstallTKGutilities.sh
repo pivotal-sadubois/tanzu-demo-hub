@@ -7,6 +7,8 @@ TDHENV=$2; cd /tmp
 TKG_ARCHIVE=$(ls -1 $TDHPATH/software/tkg-linux* | tail -1) 
 tar xfz $TKG_ARCHIVE
 
+if [ ! -d ./tkg ]; then exit; fi
+
 mv tkg/imgpkg-linux-amd64-v0.2.0+vmware.1 /usr/local/bin/imgpkg && chmod +x /usr/local/bin/imgpkg
 mv tkg/kapp-linux-amd64-v0.33.0+vmware.1  /usr/local/bin/kapp   && chmod +x /usr/local/bin/kapp
 mv tkg/kbld-linux-amd64-v0.24.0+vmware.1  /usr/local/bin/kbld   && chmod +x /usr/local/bin/kbld
