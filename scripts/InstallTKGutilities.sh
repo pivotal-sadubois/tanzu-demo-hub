@@ -7,6 +7,7 @@ TDHENV=$2; cd /tmp
 TKG_ARCHIVE=$(ls -1 $TDHPATH/software/tkg-linux* | tail -1) 
 tar xfz $TKG_ARCHIVE
 
+ls -la ./tkg
 if [ ! -d ./tkg ]; then exit; echo archscloch; fi
 echo "grässeres archschloch"
 exit
