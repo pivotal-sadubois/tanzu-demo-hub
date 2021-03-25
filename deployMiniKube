@@ -179,7 +179,7 @@ InstallCertManager_delete_me() {
 }
 
 InstallMetallb() {
-  adr=$(kubectl get configmap config -n metallb-system -o json | jq -r '.data.config' | yq e '.address-pools[].addresses[]' -)
+  adr=$(kubectl get configmap config -n metallb-system -o json | jq -r '.data.config' | egrep "[0-9]-[0-9]" | awk '{ print $2 }') 
   stt=$(minikube addons -p $TDH_MINIKUBE_PROFILE list -o json | jq -r '."metallb".Status')
   if [ "$stt" != "enabled" -o "$adr" == "-" -o "$adr" == "" ]; then
     minikube_ip=$(minikube ip) 
