@@ -189,6 +189,7 @@ sshEnvironment() {
   fi
 
   if [ "${TDH_DEPLOYMENT_CLOUD}" == "AWS" ]; then
+echo gaga1
     SSH_HOST=$(aws ec2 --region=$AWS_REGION describe-instances \
                      --filters Name=tag:sigs.k8s.io/cluster-api-provider-aws/role,Values="bastion" | \
              jq -r '.Reservations[].Instances[].PublicDnsName')
@@ -201,6 +202,8 @@ sshEnvironment() {
     SSH_COMMAND="ssh -q $SSH_OPTIONS -i $SSH_KEY_FILE ${SSH_USER}@${SSH_HOST}"
     SCP_COMMAND="scp -r $SCP_OPTIONS -i $SSH_KEY_FILE"
     SSH_DISPLAY="ssh -i $SSH_KEY_FILE ${SSH_USER}@${SSH_HOST}"
+echo "SSH_DISPLAY:$SSH_DISPLAY"
+echo gaga2
   fi
 
   if [ "${TDH_DEPLOYMENT_CLOUD}" == "GCP" ]; then
@@ -1020,7 +1023,8 @@ createENVfile() {
 }
 
 configureJumpHost() {
-  messagePrint "Configure Jump Server" "$SSH_HOST"
+  messagePrint "1 Configure Jump Server" "$SSH_HOST"
+echo "$SSH_COMMAND -n id "
 
   # --- WAIT UNTIL SSH DEAMON IS READY NO JUMPHOST ----
   ret=1
@@ -1201,23 +1205,18 @@ route53deleteHostedZone() {
 }
 
 checkKeyPairs_old() {
-echo hallo1
   SSH_KEY_NAME=vmware-cloud-tmc
   SSH_KEY_FILE=~/.tanzu-demo-hub/KeyPair-${SSH_KEY_NAME}-${AWS_REGION}.pem
 
-echo hallo2
   #"KeyFingerprint": "a8:c4:01:2b:12:7e:0d:8f:56:8c:38:80:cf:8b:6d:53:13:9c:28:cd",
   #aws ec2 --region=eu-central-1 create-key-pair --dry-run --key-name sacha
   #/tmp/key.pem
-echo hallo3
 
   if [ ! -d ~/.tanzu-demo-hub ] ; then mkdir ~/.tanzu-demo-hub; fi
-echo hallo4
 
   # --- VERIFY KEY-PAIR ---
   key=$(aws ec2 --region=$AWS_REGION describe-key-pairs | \
         jq -r --arg key "$SSH_KEY_NAME" '.KeyPairs[] | select(.KeyName == $key).KeyFingerprint')
-echo hallo5
 
   # --- CREATE ONE IF IT DOES NOT EXIST ---
   if [ "${key}" == "" ]; then
@@ -1225,7 +1224,6 @@ echo hallo5
        jq -r '.KeyMaterial' > $SSH_KEY_FILE
     chmod 600 $SSH_KEY_FILE
   fi
-echo hallo6
 
   if [ -f "${SSH_KEY_FILE}" ]; then
     kfp=$(openssl pkcs8 -in $SSH_KEY_FILE -inform PEM -outform DER -topk8 -nocrypt | openssl sha1 -c)
@@ -1236,7 +1234,6 @@ echo hallo6
       exit
     fi
   fi
-echo hallo7
 }
 
 maskPassword() {
@@ -3432,4 +3429,638 @@ tdh_verifyTKGcluster() {
   fi
 }
 
+cleanAWSenv() {
+  # --- DELETE HOSTED ZONE ---
+  domain="$ENV_NAME.$AWS_HOSTED_DNS_DOMAIN"
+  ZONE_ID=$(aws route53 list-hosted-zones-by-name --dns-name ${domain} | \
+            jq -r ".HostedZones[] | select(.Name | scan(\"^$domain.\")).Id")
+
+  if [ "${ZONE_ID}" != "" ]; then
+    messagePrint " - Deleting DNS Hosted Zone:" "$ZONE_ID"
+    route53deleteHostedZone $ZONE_ID
+  fi
+
+  # --- DELETE INSTANCES ---
+  SECGRP=/tmp/$$_aws_routing_table.json
+  aws --region $AWS_LOCATION ec2 describe-instances > $SECGRP
+  tot=$(grep -c "InstanceId" $SECGRP); i=0; let tot=tot-1
+  while [ $i -le $tot ]; do
+    gid=$(jq -r ".Reservations[$i].Instances[].InstanceId" 2>/dev/null $SECGRP)
+
+    cnt=$(jq -r ".Reservations[$i].Instances[].Tags[].Value" 2>/dev/null $SECGRP | egrep -c "^${ENV_NAME}|p-bosh")
+    if [ $cnt -gt 0 ]; then
+      cnt=$(jq -r ".Reservations[$i].Instances[].State.Name" 2>/dev/null $SECGRP | egrep -c "terminated")
+      if [ $cnt -eq 0 ]; then
+        messagePrint " - Terminate Instance:" "$gid"
+        aws --region $AWS_LOCATION ec2 terminate-instances --instance-ids $gid > /dev/null 2>&1
+        if [ $? -ne 0 ]; then
+          echo "ERROR: failled to Terminage Instance: $gid"
+          echo "aws --region $AWS_LOCATION ec2 terminate-instances  --instance-ids $gid"
+          exit 1
+        fi
+
+        sleep 30
+      fi
+    fi
+
+    let i=i+1
+  done
+
+  # --- CLEANUP ---
+  rm -f $SECGRP
+
+  # --- IAM DELETE ROLES ---
+  TMPAWS=/tmp/$$_aws.json
+  aws --region $AWS_LOCATION iam list-instance-profiles > $TMPAWS
+  tot=$(grep -c "InstanceProfileId" $TMPAWS); i=0; let tot=tot-1
+  while [ $i -le $tot ]; do
+    arn=$(jq -r ".InstanceProfiles[$i].InstanceProfileId" 2>/dev/null $TMPAWS)
+    nam=$(jq -r ".InstanceProfiles[$i].InstanceProfileName" 2>/dev/null $TMPAWS)
+
+    cnt=$(echo $nam | egrep -c "^${ENV_NAME}_")
+    if [ $cnt -gt 0 ]; then
+      messagePrint " - Delete IAM Instance Profile:" "$nam"
+      for rol in $(jq -r ".InstanceProfiles[$i].Roles[].RoleName" 2>/dev/null $TMPAWS); do
+        aws --region $AWS_LOCATION iam remove-role-from-instance-profile \
+           --instance-profile-name $nam --role-name $rol
+      done
+
+      aws --region $AWS_LOCATION iam delete-instance-profile --instance-profile-name $nam > /dev/null 2>&1
+      if [ $? -ne 0 ]; then
+        echo "ERROR: failled to delete IAM Instance Profile: $nam"
+        echo "aws --region $AWS_LOCATION iam delete-instance-profile --instance-profile-name $nam"
+        exit 1
+      fi
+    fi
+    let i=i+1
+  done
+
+  # --- DELETE KMS ALIASES ---
+  aws --region eu-central-1 kms list-aliases --query "Aliases[?contains(to_string(AliasName),'$ENV_NAME')]" > $TMPAWS
+  tot=$(grep -c "PolicyName" $TMPAWS); i=0
+  while [ $i -lt $tot ]; do
+    tid=$(jq -r ".[$i].TargetKeyId" 2>/dev/null $TMPAWS)
+    arn=$(jq -r ".[$i].AliasArn" 2>/dev/null $TMPAWS)
+    nam=$(jq -r ".[$i].AliasName" 2>/dev/null $TMPAWS)
+
+    messagePrint " - Delete KMS Alias:" "$nam"
+  done
+
+  # --- IAM DELETE ROLES ---
+  TMPAWS=/tmp/$$_aws.json
+  aws --region $AWS_LOCATION iam list-roles --query "Roles[?starts_with(to_string(RoleName), '$ENV_NAME')]" > $TMPAWS
+
+  tot=$(grep -c "RoleName" $TMPAWS); i=0
+  while [ $i -lt $tot ]; do
+    rid=$(jq -r ".[$i].RoleId" 2>/dev/null $TMPAWS)
+    arn=$(jq -r ".[$i].Arn" 2>/dev/null $TMPAWS)
+    nam=$(jq -r ".[$i].RoleName" 2>/dev/null $TMPAWS)
+
+    messagePrint " - Delete IAM Role:" "$nam"
+
+    for tmp in $(aws --region $AWS_LOCATION  iam list-policies | jq -r '.Policies[].Arn' | grep $ENV_NAME); do
+      usr=$(aws --region $AWS_LOCATION iam list-entities-for-policy --policy-arn $tmp | jq -r '.PolicyUsers[].UserName')
+      grp=$(aws --region $AWS_LOCATION iam list-entities-for-policy --policy-arn $tmp | jq -r '.PolicyGroups[].GroupName')
+      rol=$(aws --region $AWS_LOCATION iam list-entities-for-policy --policy-arn $tmp | jq -r '.PolicyRoles[].RoleName')
+      if [ "${usr}" != "" ]; then
+        aws --region $AWS_LOCATION iam detach-user-policy --policy-arn $tmp --user-name $usr
+      fi
+
+      if [ "${rol}" != "" ]; then
+        aws --region $AWS_LOCATION iam detach-role-policy --policy-arn $tmp --role-name $rol
+      fi
+
+      if [ "${grp}" != "" ]; then
+        aws --region $AWS_LOCATION iam detach-user-policy --policy-arn $tmp --group-name $usr
+      fi
+
+      aws iam delete-policy --policy-arn $tmp
+    done
+
+    for pol in $(aws --region $AWS_LOCATION iam list-attached-role-policies --role-name $nam | \
+        jq -r ".AttachedPolicies[].PolicyArn"); do
+
+      aws --region $AWS_LOCATION iam detach-role-policy --role-name $nam --policy-arn $pol
+      aws --region $AWS_LOCATION iam delete-role-policy --role-name $nam --policy-name $pol
+    done
+
+    # --- DELETE ROLE POLICY ---
+    for pol in $(aws --region $AWS_LOCATION iam list-role-policies --role-name $nam | \
+                 jq -r '.PolicyNames[]'); do
+
+      aws --region $AWS_LOCATION iam delete-role-policy --role-name $nam --policy-name $pol
+    done
+
+    aws --region $AWS_LOCATION iam delete-role --role-name $nam > /dev/null 2>&1
+    if [ $? -ne 0 ]; then
+      echo "ERROR: failled to delete IAM Role: $nam"
+      echo "       aws --region $AWS_LOCATION iam delete-role --role-name $nam"
+      exit 1
+    fi
+    let i=i+1
+  done
+
+  # --- CLEANUP ---
+  rm -f $TMPAWS
+
+  # --- IAM DELETE USERS ---
+  for arn in $(aws --region $AWS_LOCATION iam list-users | jq -r '.Users[].UserName' 2>/dev/null); do
+    cnt=$(echo $arn | egrep -c "^${ENV_NAME}_")
+    if [ $cnt -gt 0 ]; then
+      messagePrint " - Cleaning up iam User:" "$arn"
+
+      # --- DETACH POLICY ---
+      for pol in $(aws --region $AWS_LOCATION iam list-attached-user-policies --user-name $arn | \
+          jq -r ".AttachedPolicies[].PolicyArn"); do
+
+        aws --region $AWS_LOCATION iam detach-user-policy --user-name $arn --policy-arn $pol
+      done
+
+      # --- DELETE POLICY ---
+      for pol in $(aws --region $AWS_LOCATION iam list-attached-user-policies --user-name $arn | \
+          jq -r ".AttachedPolicies[].PolicyName"); do
+
+        aws --region $AWS_LOCATION iam delete-user-policy --user-name $arn --policy-name $pol
+      done
+
+      # --- DELETE ACCESS-KEYS ---
+      for key in $(aws --region $AWS_LOCATION iam list-access-keys --user-name $arn | \
+          jq -r ".AccessKeyMetadata[].AccessKeyId"); do
+
+        aws --region $AWS_LOCATION iam delete-access-key --access-key-id $key --user-name $arn
+      done
+
+      aws --region $AWS_LOCATION iam delete-user --user-name $arn
+      if [ $? -ne 0 ]; then
+        echo "ERROR: failled to delete User"
+        echo "aws --region $AWS_LOCATION iam delete-user --user-name $arn"
+        exit 1
+      fi
+    fi
+  done
+
+  # --- DELETE LOAD BALANCERS ---
+  TMPAWS=/tmp/$$_aws.json
+  for nam in $(aws --region $AWS_LOCATION elb describe-load-balancers | jq -r '.LoadBalancerDescriptions[].LoadBalancerName' 2>/dev/null); do
+    aws --region $AWS_LOCATION elb describe-load-balancers --load-balancer-names $nam >/dev/null 2>&1
+    if [ $? -eq 0 ]; then
+      for tag in $(aws --region $AWS_LOCATION elb describe-tags --load-balancer-name $nam 2>/dev/null | \
+        jq -r '.TagDescriptions[].Tags[].Value'); do
+
+        # --- DELETE LOAD-BALANCERS WITH TAG ENV_NAME ---
+        enm=$(aws --region $AWS_LOCATION elb describe-tags --load-balancer-name $nam | \
+            jq -r '.TagDescriptions[].Tags[].Value' | grep -c "${ENV_NAME}")
+
+        # --- CLEANUOP NGINX-INGRESS-LOADBALANCER ---
+        cnt=$(echo $tag | egrep -c "nginx-ingress-controller")
+        if [ ${cnt} -gt 0 -o ${enm} -gt 0 ]; then
+          messagePrint " - Cleaning up elp Load-Balancers:" "$nam"
+          aws --region $AWS_LOCATION elb delete-load-balancer --load-balancer-name $nam >/dev/null 2>&1
+          if [ $? -ne 0 ]; then
+            echo "ERROR: failled to delete load-balancer: $nam"
+            echo "aws --region $AWS_LOCATION elb delete-load-balancer --load-balancer-name $nam"
+            exit 1
+          fi
+        fi
+      done
+    fi
+  done
+
+  rm -f $TMPAWS
+
+  # --- DELETE LOAD BALANCERS ---
+  for arn in $(aws --region $AWS_LOCATION elbv2 describe-load-balancers | jq -r '.LoadBalancers[].LoadBalancerArn' 2>/dev/null); do
+    nam=$(aws --region $AWS_LOCATION elbv2 describe-load-balancers --load-balancer-arns $arn | \
+        jq -r '.LoadBalancers[].LoadBalancerName')
+
+    cnt=$(echo $nam | egrep -c "^${ENV_NAME}-")
+    if [ $cnt -gt 0 ]; then
+      aws --region $AWS_LOCATION elbv2 delete-load-balancer --load-balancer-arn $arn
+      messagePrint " - Cleaning up elpv2 LoadBalancers:" "$nam"
+    fi
+  done
+
+  # --- DELETE TARGET GROUPS ---
+  SECGRP=/tmp/$$_aws_tgp.json
+  aws --region $AWS_LOCATION elbv2 describe-target-groups > $SECGRP
+  tot=$(grep -c "TargetGroupArn" $SECGRP); i=0; let tot=tot-1
+  while [ $i -le $tot ]; do
+    sid=$(jq -r ".TargetGroups[$i].TargetGroupArn" 2>/dev/null $SECGRP)
+    snm=$(jq -r ".TargetGroups[$i].TargetGroupName" 2>/dev/null $SECGRP)
+
+    cnt=$(echo "$snm" | egrep -c "^${ENV_NAME}-")
+    if [ $cnt -gt 0 ]; then
+      messagePrint " - Delete Target Group:" "$snm"
+      aws --region $AWS_LOCATION elbv2 delete-target-group --target-group-arn $sid > /dev/null 2>&1
+      if [ $? -ne 0 ]; then
+        echo "ERROR: failled to delete Target group"
+        echo "aws --region $AWS_LOCATION elbv2 delete-target-group --target-group-arn $sid"
+        exit 1
+      fi
+    fi
+    let i=i+1
+  done
+
+  # --- CLEANUP ---
+  rm -f $SECGRP
+
+  for key in $(aws --region $AWS_LOCATION ec2 describe-key-pairs | jq -r '.KeyPairs[].KeyName' 2>/dev/null); do
+    cnt=$(echo $key | egrep -c "^${ENV_NAME}-")
+    if [ $cnt -gt 0 ]; then
+      messagePrint " - Delete KeyPair:" "$key"
+      aws --region $AWS_LOCATION ec2 delete-key-pair --key-name $key >/dev/null 2>&1
+      if [ $? -ne 0 ]; then
+        aws --region $AWS_LOCATION ec2 delete-key-pair --key-name $key
+        exit 1
+      fi
+    fi
+  done
+
+  # --- DELETE VPC's ---
+  TMPVCP=/tmp/$$_aws_vpc.json
+  aws --region $AWS_LOCATION ec2 describe-vpcs > $TMPVCP
+  tot=$(grep -c "VpcId" $TMPVCP); i=0; let tot=tot-1
+  while [ $i -le $tot ]; do
+    vpc=$(jq -r ".Vpcs[$i].VpcId" 2>/dev/null $TMPVCP)
+    cnt=$(jq -r ".Vpcs[$i].Tags[].Value" 2>/dev/null $TMPVCP | egrep -c "^${ENV_NAME}|pcfjump")
+    if [ $cnt -eq 0 ]; then let i=i+1; continue; fi
+    messagePrint " VPC Ressources:" "$vpc"
+
+    # --- DELETE NAT GATEWAY ---
+    for id in $(aws --region $AWS_LOCATION ec2 describe-nat-gateways --filter "Name=vpc-id,Values=$vpc" | \
+                jq -r ".NatGateways[].NatGatewayId" 2>/dev/null $TMPVAL); do
+
+      messagePrint "  - 1Delete NAT Gateway:" "$id"
+      aws --region $AWS_LOCATION ec2 delete-nat-gateway --nat-gateway-id $id > /dev/null 2>&1
+      if [ $? -ne 0 ]; then
+        echo "ERROR: failled to NAT Gateway: $id"
+        echo "aws --region $AWS_LOCATION ec2 delete-nat-gateway --nat-gateway-id $id"
+        #exit 1
+      fi
+    done
+
+    sleep 10
+
+    # --- CLEANUP ---
+    rm -f $TMPAWS
+
+    # --- DELETE LOAD BALANCERS ---
+    for nam in $(aws --region $AWS_LOCATION elb describe-load-balancers | \
+         jq -r '.LoadBalancerDescriptions[].LoadBalancerName' 2>/dev/null); do
+      tvpc=$(aws --region $AWS_LOCATION elb describe-load-balancers --load-balancer-name $nam | \
+          jq -r '.LoadBalancerDescriptions[].VPCId')
+      if [ "$tvpc" == "${vpc}" ]; then
+        aws --region $AWS_LOCATION elb delete-load-balancer --load-balancer-name $nam
+        messagePrint "  - Cleaning up elp LoadBalancers:" "$nam"
+        sleep 30
+      fi
+    done
+
+    # --- DELETE INTERNET GATEWAYS ---
+    for id in $(aws --region $AWS_LOCATION ec2 describe-internet-gateways --filter "Name=attachment.vpc-id,Values=$vpc" | \
+                jq -r ".InternetGateways[].InternetGatewayId" 2>/dev/null); do
+
+      messagePrint "  - Detach Internet Gateway:" "$id"
+      aws --region $AWS_LOCATION ec2 detach-internet-gateway --internet-gateway-id $id --vpc-id $vpc > /dev/null 2>&1
+      if [ $? -ne 0 ]; then
+        echo "ERROR: failled to detach internet gateway: $id"
+        echo "aws --region $AWS_LOCATION ec2 detach-internet-gateway --internet-gateway-id $id --vpc-id $vpc"
+        exit 1
+      fi
+
+      messagePrint "  - Delete Internet Gateway:" "$id"
+      aws --region $AWS_LOCATION ec2 delete-internet-gateway --internet-gateway-id $id > /dev/null 2>&1
+      if [ $? -ne 0 ]; then
+        echo "ERROR: failled to delete internet gateway: $id"
+        echo "aws --region $AWS_LOCATION ec2 delete-internet-gateway --internet-gateway-id $id"
+        exit 1
+      fi
+    done
+
+    # --- DELETE SUBNETS ---
+    for id in $(aws --region $AWS_LOCATION ec2 describe-subnets --filter "Name=vpc-id,Values=$vpc" | \
+                jq -r ".Subnets[].SubnetId" 2>/dev/null); do
+
+      messagePrint "  - Delete Subnet:" "$id"
+      aws --region $AWS_LOCATION ec2 delete-subnet --subnet-id $id > /dev/null 2>&1
+      if [ $? -ne 0 ]; then
+        echo "ERROR: failled to deleting subnet: $id"
+        echo "aws --region $AWS_LOCATION ec2 delete-subnet --subnet-id $id"
+        exit 1
+      fi
+    done
+
+    SECGRP=/tmp/$$_aws_security_groups.json
+    aws --region $AWS_LOCATION ec2 describe-security-groups --filter "Name=vpc-id,Values=$vpc" > $SECGRP
+    tot=$(grep -c "GroupName" $SECGRP); i=0; let tot=tot-1
+    while [ $i -le $tot ]; do
+      gnm=$(jq -r ".SecurityGroups[$i].GroupName" 2>/dev/null $SECGRP)
+      gid=$(jq -r ".SecurityGroups[$i].GroupId" 2>/dev/null $SECGRP)
+
+      cnt=$(jq -r ".SecurityGroups[$i].Tags[].Value" 2>/dev/null $SECGRP | egrep -c "^${ENV_NAME}")
+      if [ $cnt -gt 0 ]; then
+        messagePrint "  - Delete Security Group:" "$gnm"
+        aws --region $AWS_LOCATION ec2 delete-security-group --group-id $gid > /dev/null 2>&1
+        if [ $? -ne 0 ]; then
+          aws --region $AWS_LOCATION ec2 delete-security-group --group-name $gnm > /dev/null 2>&1
+          if [ $? -ne 0 ]; then
+            echo "ERROR: failled to delete security group"
+            echo "aws --region $AWS_LOCATION ec2 delete-security-group --group-id $gid"
+            echo "aws --region $AWS_LOCATION ec2 delete-security-group --group-name $gnm"
+            exit 1
+          fi
+        fi
+      fi
+      let i=i+1
+    done
+
+   # --- DELETE ALL SCURITY GROUPS ATTACHED TO THIS VPC ---
+    for gid in $(aws --region $AWS_LOCATION ec2 describe-security-groups | \
+         jq -r '.SecurityGroups[].GroupId' 2>/dev/null); do
+      sgnm=$(aws --region $AWS_LOCATION ec2 describe-security-groups --group-ids  $gid | \
+          jq -r '.SecurityGroups[].GroupName')
+      tvpc=$(aws --region $AWS_LOCATION ec2 describe-security-groups --group-ids  $gid | \
+          jq -r '.SecurityGroups[].VpcId')
+      if [ "$tvpc" == "${vpc}" -a "${sgnm}" != "default" ]; then
+        messagePrint "  - Cleaning up SecurityGroup:" "$gid"
+        aws --region $AWS_LOCATION ec2 delete-security-group --group-id $gid > /dev/null 2>&1
+        if [ $? -ne 0 ]; then
+          echo "ERROR: failled to delete security group"
+          echo "aws --region $AWS_LOCATION ec2 delete-security-group --group-id $gid"
+          exit 1
+        fi
+      fi
+
+      sleep 30
+    done
+
+    # --- CLEANUP ---
+    rm -f $SECGRP
+
+echo gaga1
+    # --- DELETE ROUTING TABLES ---
+    for id in $(aws --region $AWS_LOCATION ec2 describe-route-tables --filter "Name=vpc-id,Values=$vpc" | \
+                jq -r ".RouteTables[].RouteTableId" 2>/dev/null); do
+echo "ID:$id"
+
+      messagePrint "  - Delete Routing Table:" "$id"
+      aws --region $AWS_LOCATION ec2 delete-route-table --route-table-id $id> /dev/null 2>&1
+      #if [ $? -ne 0 ]; then
+      #  echo "ERROR: failled to delete routing table: $id"
+      #  echo "aws --region $AWS_LOCATION ec2 delete-route-table --route-table-id $id"
+      #  #exit 1
+      #fi
+    done
+
+    # --- DELETE VPC ---
+    messagePrint "  - Delete VPC:" "$vpc"
+    aws --region $AWS_LOCATION ec2 delete-vpc --vpc-id $vpc > /dev/null 2>&1
+    if [ $? -ne 0 ]; then
+      echo "ERROR: failled to delete VPC: $vpc"
+      echo "aws --region $AWS_LOCATION ec2 delete-vpc --vpc-id $vpc"
+      exit 1
+    fi
+
+    let i=i+1
+  done
+
+  # --- CLEANUP ---
+  rm -f $TMPVCP
+
+  # --- DELETE ADDRESSES ---
+  SECGRP=/tmp/$$_aws_routing_table.json
+  aws --region $AWS_LOCATION ec2 describe-addresses > $SECGRP
+  tot=$(grep -c "PublicIp" $SECGRP); i=0; let tot=tot-1
+  while [ $i -le $tot ]; do
+    pid=$(jq -r ".Addresses[$i].PublicIp" 2>/dev/null $SECGRP)
+    aid=$(jq -r ".Addresses[$i].AllocationId" 2>/dev/null $SECGRP)
+
+    cnt=$(jq -r ".Addresses[$i].Tags[].Value" 2>/dev/null $SECGRP | egrep -c "^${ENV_NAME}")
+    if [ $cnt -gt 0 ]; then
+      messagePrint " - Release PublicIP:" "$pid"
+      aws --region $AWS_LOCATION ec2 release-address --allocation-id $aid > /dev/null 2>&1; re1=$?
+      aws --region $AWS_LOCATION ec2 release-address --public-ip $pid > /dev/null 2>&1; re2=$?
+      if [ $re1 -ne 0 -a $re2 -ne 0 ]; then
+#=> Delete NatGateway first (awspks-nat) 1660 llllllll
+        echo "ERROR: 1failed to release IP: $pid"
+        echo "aws --region $AWS_LOCATION ec2 release-address --allocation-id $aid"
+        echo "aws --region $AWS_LOCATION ec2 release-address --public-ip $pid"
+        exit 1
+      fi
+
+      sleep 20
+    fi
+
+    let i=i+1
+  done
+
+  # --- CLEANUP ---
+  rm -f $TMPAWS
+
+  SECGRP=/tmp/$$_aws_routing_table.json
+  aws --region $AWS_LOCATION ec2 describe-route-tables > $SECGRP
+  tot=$(grep -c "RouteTableId" $SECGRP); i=0; let tot=tot-1
+  while [ $i -le $tot ]; do
+    gid=$(jq -r ".RouteTables[$i].RouteTableId" 2>/dev/null $SECGRP)
+
+    cnt=$(jq -r ".RouteTables[$i].Tags[].Value" 2>/dev/null $SECGRP | egrep -c "^${ENV_NAME}")
+    if [ $cnt -gt 0 ]; then
+      messagePrint " - Delete Routing Table:" "$gid"
+      aws --region $AWS_LOCATION ec2 delete-route-table --group-id $gid > /dev/null 2>&1
+      if [ $? -ne 0 ]; then
+        echo "ERROR: failled to delete Routing Table: $gid"
+        echo "aws --region $AWS_LOCATION ec2 delete-route-table --route-table-id $gid"
+        exit 1
+      fi
+    fi
+    let i=i+1
+  done
+
+  # --- CLEANUP ---
+  rm -f $SECGRP
+
+  SECGRP=/tmp/$$_aws_nat_gateways.json
+  aws --region $AWS_LOCATION ec2 describe-nat-gateways > $SECGRP
+  tot=$(grep -c "GroupName" $SECGRP); i=0; let tot=tot-1
+  while [ $i -le $tot ]; do
+    gid=$(jq -r ".NatGateways[$i].NatGatewayId" 2>/dev/null $SECGRP)
+
+    cnt=$(jq -r ".NatGateways[$i].Tags[].Value" 2>/dev/null $SECGRP | egrep -c "^${ENV_NAME}")
+    if [ $cnt -gt 0 ]; then
+      messagePrint " - 2Delete NAT Gateway:" "$gid"
+      aws --region $AWS_LOCATION ec2 delete-nat-gateway --group-id $gid > /dev/null 2>&1
+      if [ $? -ne 0 ]; then
+        aws --region $AWS_LOCATION ec2 delete-nat-gateway --nat-gateway-id $gid > /dev/null 2>&1
+        if [ $? -ne 0 ]; then
+          echo "ERROR: failled to delete NAT Gateway: $gid"
+          echo "aws --region $AWS_LOCATION ec2 delete-nat-gateway --group-id $gid"
+          exit 1
+        fi
+      fi
+    fi
+    let i=i+1
+  done
+
+  # --- CLEANUP ---
+  rm -f $SECGRP
+
+  SECGRP=/tmp/$$_aws_security_groups.json
+  aws --region $AWS_LOCATION ec2 describe-security-groups > $SECGRP
+  tot=$(grep -c "GroupName" $SECGRP); i=0; let tot=tot-1
+  while [ $i -le $tot ]; do
+    gnm=$(jq -r ".SecurityGroups[$i].GroupName" 2>/dev/null $SECGRP)
+    gid=$(jq -r ".SecurityGroups[$i].GroupId" 2>/dev/null $SECGRP)
+#gugu
+
+    cnt=$(jq -r ".SecurityGroups[$i].Tags[].Value" 2>/dev/null $SECGRP | egrep -c "^${ENV_NAME}")
+    if [ $cnt -gt 0 ]; then
+      messagePrint " - Delete Sevcurity Group:" "$gnm"
+      aws --region $AWS_LOCATION ec2 delete-security-group --group-id $gid > /dev/null 2>&1
+      if [ $? -ne 0 ]; then
+        aws --region $AWS_LOCATION ec2 delete-security-group --group-name $gnm > /dev/null 2>&1
+        if [ $? -ne 0 ]; then
+          echo "ERROR: failled to delete security group"
+          echo "aws --region $AWS_LOCATION ec2 delete-security-group --group-id $gid"
+          echo "aws --region $AWS_LOCATION ec2 delete-security-group --group-name $gnm"
+          exit 1
+        fi
+      fi
+    fi
+    let i=i+1
+  done
+
+  # --- CLEANUP ---
+  rm -f $SECGRP
+
+  SECGRP=/tmp/$$_aws_subnets.json
+  aws --region $AWS_LOCATION ec2 describe-subnets > $SECGRP
+  tot=$(grep -c "SubnetId" $SECGRP); i=0; let tot=tot-1
+  while [ $i -le $tot ]; do
+    sid=$(jq -r ".Subnets[$i].SubnetId" 2>/dev/null $SECGRP)
+
+    cnt=$(jq -r ".Subnets[$i].Tags[].Value" 2>/dev/null $SECGRP | egrep -c "^${ENV_NAME}")
+    if [ $cnt -gt 0 ]; then
+      messagePrint " - Delete Subnet:" "$sid"
+      aws --region $AWS_LOCATION ec2 delete-subnet --subnet-id $sid > /dev/null 2>&1
+      if [ $? -ne 0 ]; then
+        echo "ERROR: failled to delete security group"
+        echo "aws --region $AWS_LOCATION ec2 delete-subnet --subnet-id $sid"
+        exit 1
+      fi
+    fi
+    let i=i+1
+  done
+
+  # --- CLEANUP ---
+  rm -f $SECGRP
+
+  # --- DELETE ADDRESSES ---
+  SECGRP=/tmp/$$_aws_routing_table.json
+  aws --region $AWS_LOCATION ec2 describe-addresses > $SECGRP
+  tot=$(grep -c "PublicIp" $SECGRP); i=0; let tot=tot-1
+  while [ $i -le $tot ]; do
+    pid=$(jq -r ".Addresses[$i].PublicIp" 2>/dev/null $SECGRP)
+    aid=$(jq -r ".Addresses[$i].AllocationId" 2>/dev/null $SECGRP)
+
+    cnt=$(jq -r ".Addresses[$i].Tags[].Value" 2>/dev/null $SECGRP | egrep -c "^${ENV_NAME}")
+    if [ $cnt -gt 0 ]; then
+      messagePrint " - Release PublicIP:" "$pid"
+      aws --region $AWS_LOCATION ec2 release-address --allocation-id $aid > /dev/null 2>&1; re1=$?
+      aws --region $AWS_LOCATION ec2 release-address --public-ip $pid > /dev/null 2>&1; re2=$?
+      if [ $re1 -ne 0 -a $re2 -ne 0 ]; then
+#=> Delete NatGateway first (awspks-nat)
+        echo "ERROR: 2failed to release IP: $pid"
+        echo "aws --region $AWS_LOCATION ec2 release-address --allocation-id $aid"
+        echo "aws --region $AWS_LOCATION ec2 release-address --public-ip $pid"
+        exit 1
+      fi
+
+      sleep 20
+    fi
+
+    let i=i+1
+  done
+
+  # --- CLEANUP ---
+  rm -f $TMPAWS
+
+  # --- IAM DELETE POLICIES ---
+  TMPAWS=/tmp/$$_aws.json
+  aws --region $AWS_LOCATION iam list-policies > $TMPAWS
+  tot=$(grep -c "PolicyName" $TMPAWS); i=0; let tot=tot-1
+  while [ $i -le $tot ]; do
+    arn=$(jq -r ".Policies[$i].Arn" 2>/dev/null $TMPAWS)
+    nam=$(jq -r ".Policies[$i].PolicyName" 2>/dev/null $TMPAWS)
+
+    cnt=$(echo $nam | egrep -c "^${ENV_NAME}_")
+    if [ $cnt -gt 0 ]; then
+      messagePrint " - Delete IAM Policy:" "$nam"
+      rol=$(aws iam list-entities-for-policy --policy-arn $arn | jq -r '.PolicyRoles[].RoleName')
+      if [ "$rol" != "" ]; then
+        aws --region $AWS_LOCATION iam detach-role-policy --role-name $rol --policy-arn $arn > /dev/null 2>&1
+      fi
+
+      aws --region $AWS_LOCATION iam delete-policy --policy-arn $arn > /dev/null 2>&1
+      if [ $? -ne 0 ]; then
+        echo "ERROR: failled to delete IAM Policy: $nam"
+        echo "aws --region $AWS_LOCATION iam delete-policy --policy-arn $arn"
+        exit 1
+      fi
+    fi
+    let i=i+1
+  done
+
+  # --- CLEANUP ---
+  rm -f $SECGRP
+
+  for alias in $(aws --region $AWS_LOCATION kms list-aliases | jq -r '.Aliases[].AliasName'); do
+    cnt=$(echo $alias | egrep -c "alias/${ENV_NAME}")
+    if [ $cnt -gt 0 ]; then
+      messagePrint " - Delete KMS Alias:" "$alias"
+      aws --region $AWS_LOCATION kms delete-alias --alias-name $alias
+    fi
+  done
+
+  # --- DELETE S3 BUCKETS ---
+  for bucket in $(aws s3api --region=$AWS_LOCATION list-buckets | jq -r '.Buckets[].Name' | \
+                egrep "^${ENV_NAME}-"); do
+    messagePrint " - Delete S3 Bucket:" "$bucket"
+    aws s3api --region=$AWS_LOCATION delete-bucket --bucket $bucket > /dev/null 2>&1
+    #if [ $? -ne 0 ]; then
+    #  echo "ERROR: failled to delete S3 Bucket: $nam"
+    #  echo "aws s3api --region $AWS_LOCATION delete-bucket --bucket $bucket"
+    #  exit 1
+    #fi
+  done
+
+  # --- DELETE EBS VOLUMES
+  TMPAWS=/tmp/$$_vol_aws.json
+  aws --region $AWS_LOCATION ec2 describe-volumes > $TMPAWS
+  i=0; tot=$(jq -r ".Volumes[$i].VolumeId" 2>/dev/null $TMPAWS | egrep -c "^vol-")
+
+  while [ $i -lt $tot ]; do
+    stt=$(jq -r ".Volumes[$i].State" 2>/dev/null $TMPAWS)
+    vid=$(jq -r ".Volumes[$i].VolumeId" 2>/dev/null $TMPAWS)
+    cnt=$(jq -r ".Volumes[$i].Tags[].Value" $TMPAWS 2>/dev/null| egrep -c "p-bosh|bosh-init")
+
+    if [ $cnt -gt 0 ]; then
+      if [ "$stt" == "available" ]; then
+        messagePrint " - Delete Volume:" "$vid"
+        aws --region $AWS_LOCATION ec2 delete-volume --volume-id $vid > /dev/null 2>&1
+        if [ $? -ne 0 ]; then
+          echo "ERROR: failled to delete volume: $vid"
+          echo "aws --region $AWS_LOCATION ec2 delete-volume --volume-id $vid"
+          exit 1
+        fi
+      else
+        messagePrint " - Detaching Volume:" "$vid"
+        #aws ec2 --region $AWS_LOCATION detach-volume --volume-id $vid > /dev/null 2>&1
+        #aws ec2 --region $AWS_LOCATION ec2 delete-volume --volume-id $vid > /dev/null 2>&1
+      fi
+    fi
+
+    let i=i+1
+  done
+  rm -f $SECGRP
+}
 
