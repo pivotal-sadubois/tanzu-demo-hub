@@ -1310,7 +1310,7 @@ createCluster() {
     cp ${HOME}/.tkg/config.yaml $TKG_TEMPLATE
 
     AZURE_SSH_PUBLIC_KEY_B64=$(cat ~/.tanzu-demo-hub/KeyPair-Azure.pub | base64 -w 10000)
-    AZURE_TENANT_ID=$(az ad app list --display-name "TanzuDemoHub" | jq -r '.[].appId'))
+    AZURE_TENANT_ID=$(az ad app list --display-name "TanzuDemoHub" | jq -r '.[].appId')
     AZURE_CLIENT_SECRET="tanzu-demo-hub"
 
     echo "AZURE_SSH_PUBLIC_KEY_B64: $AZURE_SSH_PUBLIC_KEY_B64"                        >> $TKG_TEMPLATE
