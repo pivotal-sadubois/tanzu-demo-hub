@@ -455,15 +455,16 @@ checkCloudAccess() {
     else
       if [ -f ~/.minikube/profiles/$TDH_MINIKUBE_PROFILE/config.json ]; then 
         cpu=$(cat ~/.minikube/profiles/$TDH_MINIKUBE_PROFILE/config.json | jq -r '.CPUs')
-        dsk=$(cat ~/.minikube/profiles/$TDH_MINIKUBE_PROFILE/config.json | jq -r '.Disk')
+        dsk=$(cat ~/.minikube/profiles/$TDH_MINIKUBE_PROFILE/config.json | jq -r '.DiskSize')
         mem=$(cat ~/.minikube/profiles/$TDH_MINIKUBE_PROFILE/config.json | jq -r '.Memory')
         drv=$(cat ~/.minikube/profiles/$TDH_MINIKUBE_PROFILE/config.json | jq -r '.Driver')
       else
         echo "ERROR: Minukube is not running, start it first"
-        echo "       => minikube -p $TDH_MINIKUBE_PROFILE start --driver=hyperkit --cpus $TDH_MINIKUBE_CONFIG_CPU --memory $TDH_MINIKUBE_CONFIG_MEMORY --disk-size $TDH_MINIKUBE_CONFIG_DISK --nodes=$TDH_MINIKUBE_NODES"; exit
+        #echo "       => minikube -p $TDH_MINIKUBE_PROFILE start --driver=hyperkit --cpus $TDH_MINIKUBE_CONFIG_CPU --memory $TDH_MINIKUBE_CONFIG_MEMORY --disk-size $TDH_MINIKUBE_CONFIG_DISK --nodes=$TDH_MINIKUBE_NODES"; exit
+        echo "       => minikube -p $TDH_MINIKUBE_PROFILE start --driver=hyperkit --cpus $TDH_MINIKUBE_CONFIG_CPU --memory $TDH_MINIKUBE_CONFIG_MEMORY --disk-size $TDH_MINIKUBE_CONFIG_DISK"; exit
       fi
 
-      stt=$(minikube status -p $TDH_MINIKUBE_PROFILE| grep "^host:" | awk '{ print $NF }')
+      stt=$(minikube status -p $TDH_MINIKUBE_PROFILE| grep "^host:" | awk '{ print $NF }' | head -1)
       messageTitle "MiniKube Status and Configuration"
       messagePrint " - MiniKube Profile"                "$TDH_MINIKUBE_PROFILE"
       messagePrint " - MiniKube Version"                "$(minikube version | head -1 | awk '{ print $NF }')"
@@ -472,6 +473,10 @@ checkCloudAccess() {
       messagePrint " - Minikube Memory"                "$mem"
       messagePrint " - Minikube CPU's"                 "$cpu"
       messagePrint " - Minikube Driver"                "$drv"
+      messageTitle " - Minikube Nodes"              
+      echo "   ------------------------------------------------------------------------"
+      minikube -p $TDH_MINIKUBE_PROFILE node list | sed 's/^/   /g'
+      echo "   ------------------------------------------------------------------------"
 
       if [ "$stt" == "Stopped" -o "$stt" == "" ]; then 
         echo "ERROR: Minukube is not running, start it first"
@@ -2021,28 +2026,41 @@ echo tkgm
 }
 
 VerifyK8SDemoPlatform() {
-  minikube profile $TDH_MINIKUBE_PROFILE > /dev/null 2>&1
-  stt=$(minikube status -p $TDH_MINIKUBE_PROFILE -o json | jq -r '.Host')
-  if [ "$stt" != "Running" ]; then
-    echo "ERROR: minikube is not running, please start it by:"
-    echo "       => minikube start -p $TDH_MINIKUBE_PROFILE"; exit
-  fi
+  if [ "${TDH_INFRASTRUCTURE}" == "minikube" ]; then 
+    messageTitle "MiniKube Verify Addons"
 
-  ctx=$(kubectl config current-context)
-  if [ "$ctx" != "$TDH_MINIKUBE_PROFILE" ]; then
-    echo "ERROR: Kubernetes context is currently set to $crx. Please set it by:"
-    echo "       => kubectl config use-context $TDH_MINIKUBE_PROFILE"; exit
-  fi
-
-  # --- CHECK FOR ADDONS ---
-  #for val in metallb default-storageclass; do
-  for val in default-storageclass metrics-server; do
-    stt=$(minikube addons list -o json | jq -r ".\"$val\".Status")
-    if [ "$stt" != "enabled" ]; then
-      echo "ERROR: Please enable minikube addon: $val"
-      echo "       => minikube addons enable $val -p $TDH_MINIKUBE_PROFILE"; exit
+    minikube profile $TDH_MINIKUBE_PROFILE > /dev/null 2>&1
+    minikube status -p $TDH_MINIKUBE_PROFILE -o json > /dev/null 2>&1
+    if [ "$?" -ne 0 ]; then
+      echo "ERROR: minikube is not running, please start it by:"
+      echo "       => minikube start -p $TDH_MINIKUBE_PROFILE"; exit
     fi
-  done
+
+    ctx=$(kubectl config current-context)
+    if [ "$ctx" != "$TDH_MINIKUBE_PROFILE" ]; then
+      echo "ERROR: Kubernetes context is currently set to $crx. Please set it by:"
+      echo "       => kubectl config use-context $TDH_MINIKUBE_PROFILE"; exit
+    fi
+
+    # --- CHECK FOR ADDONS ---
+    for tmp in default-storageclass:default-storageclass metrics-server:metrics-server metallb-system:metallb; do
+      val=$(echo $tmp | awk -F: '{ print $1 }') 
+      key=$(echo $tmp | awk -F: '{ print $2 }') 
+      stt=$(minikube addons list -o json | jq -r ".\"$key\".Status")
+      
+      if [ "$stt" != "enabled" ]; then
+        messagePrint " - Minikube Addon: $val" "$stt, enabling now"
+        minikube addons enable $key -p $TDH_MINIKUBE_PROFILE > /dev/null 2>&1
+        if [ $? -ne 0 ]; then 
+           echo "ERROR: enabling Minikube Addob: $val"
+           echo "       => minikube addons enable $key -p $TDH_MINIKUBE_PROFILE "
+           exit
+        fi
+      else
+        messagePrint " - Minikube Addon: $val" "$stt"
+      fi
+    done
+  fi
 }
 
 
@@ -2160,11 +2178,12 @@ uodateConfigMap() {
   [ "$VALUE" == "" ] && VALUE="<empty>"
   [ "$VALUE" == "True" ] && VALUE=true
   [ "$VALUE" == "False" ] && VALUE=false
+  
+  kubectl get cm tanzu-demo-hub > /dev/null 2>&1
+  [ $? -ne 0 ] && kubectl create cm tanzu-demo-hub > /dev/null 2>&1
 
   kubectl get cm tanzu-demo-hub -o json | jq -r '.data' | egrep ": " | sed -e 's/^ *"//g' -e 's/: /=/g' -e 's/"=/=/g' -e 's/\\\"//g' -e 's/,$//g' -e 's/"//g' | \
-          egrep -v "^$KEY:" > /tmp/$CONFIG_MAP
-  #kubectl get cm $CONFIG_MAP -o yaml 2>/dev/null | sed -e "s/\'\"//g" -e "s/\"\'//g" | \
-  #        yy e '.data' - | grep ":" | egrep -v "^$KEY:" | sed 's/: /=/g' > /tmp/$CONFIG_MAP
+          egrep -v "^$KEY=" | sort -u > /tmp/$CONFIG_MAP
   echo "$KEY=$VALUE" >> /tmp/$CONFIG_MAP
 
   kubectl create configmap $CONFIG_MAP --from-env-file=/tmp/$CONFIG_MAP --dry-run=client -o yaml | kubectl apply -f - > /dev/null 2>&1
@@ -2775,9 +2794,9 @@ installBuildService() {
     stt=$(kapp inspect -a tanzu-build-service 2>/dev/null | tail -1)
     if [ "$stt" != "Succeeded" ]; then
       messageTitle "Installing Tanzu Build Service"
-      messagePrint "- Install Build Service (kapp)" "tanzu-build-service"
+      messagePrint "- Install Build Service (kapp)" "`date`"
       echo "-----------------------------------------------------------------------------------------------------------"
-      echo " WARNING: This process may take ut to 2h for the deployment, Please run kapp manually to get more info"
+      echo " WARNING: This process may take up to 2h for the deployment, Please run kapp manually to get more info"
       echo "          => kapp inspect -a tanzu-build-service --column Namespace,name,reconcile_state | grep -v ok"
       echo "-----------------------------------------------------------------------------------------------------------"
         ytt -f /tmp/build-service/values.yaml \
@@ -2794,6 +2813,7 @@ installBuildService() {
         cnt=$(kapp inspect -a tanzu-build-service --json | jq -r '.Tables[].Rows[].reconcile_state' | grep -vc "ok")
         sleep 360
       done
+      messagePrint "- Install Build Service completed" "`date`"
     else
       messageTitle "Verify Tanzu Build Service"
       messagePrint "- Veriify Build Service (kapp)" "tanzu-build-service"
@@ -3076,7 +3096,6 @@ createClusterIssuer() {
     messagePrint " - LetsEnscript DNSZone"             "*.apps-contour.${TDH_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}"
     messagePrint " - LetsEnscript DNSZone"             "*.apps-nginx.${TDH_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}"
 
-echo "TDH_TLS_ISSUER_NAME:$TDH_TLS_ISSUER_NAME"
     echo "apiVersion: cert-manager.io/v1alpha2"                                    >  $TDH_TLS_ISSUER_NAME
     echo "kind: ClusterIssuer"                                                     >> $TDH_TLS_ISSUER_NAME
     echo "metadata:"                                                               >> $TDH_TLS_ISSUER_NAME
