@@ -36,7 +36,8 @@ curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.9.0/kind-linux-amd64 2>/dev/null
 chmod +x ./kind
 mv kind /usr/local/bin
 
-echo "PWD:$PWD"
+# --- INSTALL KUNEADM ---
+sudo snap install kubeadm --classic
 
 if [ "$TDHENV" == "vSphere" ]; then 
   if [ ! -f /usr/bin/ovftool ]; then 
