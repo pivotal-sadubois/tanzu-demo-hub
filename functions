@@ -1325,8 +1325,10 @@ createCluster() {
     echo "AZURE_SUBSCRIPTION_ID: $AZURE_SUBSCRIPTION_ID"                              >> $TKG_TEMPLATE
 
     MPDE=azure
+echo "tkg get mc --name $TDH_TKGMC_NAME -o json | jq -r '.[].status'
 
     stt=$(tkg get mc --name $TDH_TKGMC_NAME -o json | jq -r '.[].status')
+echo "STT:$stt"
     if [ "${stt}" != "Success" ]; then
       echo "----------------------------------------------------------------------------------------------------------------"
       echo "tkg init -q -i $MPDE -p dev --ceip-participation true --cni $TDH_TKGMC_CNI -v 0 \\"
