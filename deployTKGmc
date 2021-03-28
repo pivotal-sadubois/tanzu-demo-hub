@@ -346,7 +346,6 @@ createJumpHost() {
         messagePrint " - Verify VPC: $vpc" "10.0.0.0/16"
       fi
 
-exit
       i=1
       for zone in $(aws ec2 --region=$AWS_REGION describe-availability-zones | jq -r '.AvailabilityZones[].ZoneName'); do
         sid=$(aws ec2 --region=$AWS_REGION describe-subnets --filters Name=tag:type,Values="pcfjump" \
@@ -407,7 +406,7 @@ exit
       rtb=$(aws ec2 --region=$AWS_REGION describe-route-tables --filters Name=tag:type,Values="pcfjump" | \
         jq -r ".RouteTables[].RouteTableId")
       if [ "${rtb}" == "" ]; then
-        rtb=$(aws ec2 --region=$AWS_REGION create-route-table --vpc-id $vpc| jq -r '.RouteTable.RouteTableId')
+        rtb=$(aws ec2 --region=$AWS_REGION create-route-table --vpc-id $vpc 2>/dev/null | jq -r '.RouteTable.RouteTableId')
         messagePrint " - Creating Routing Table" "$igw"
         if [ "${sid}" == "" ]; then
           echo "ERROR: Creating of Routing Table failed"
@@ -490,7 +489,7 @@ exit
       messagePrint " - Create Instance" "$JUMP_HOST"
       aws ec2 --region=$AWS_REGION run-instances --image-id $aim --security-group-ids $gid \
             --block-device-mapping DeviceName=/dev/sda1,Ebs={VolumeSize=30} \
-            --instance-type $typ --key-name ${JUMP_HOST} --count 1 --subnet-id $sid --associate-public-ip-address \
+            --instance-type $typ --key-name ${SSH_KEY_NAME} --count 1 --subnet-id $sid --associate-public-ip-address \
             --tag-specifications "ResourceType=instance,Tags=[{Key=Name,Value=$JUMP_HOST},{Key=type,Value=pcfjump}]" > /dev/null 2>&1
       if [ $? -ne 0 ]; then
         echo "ERROR: Creating of Instance failed"
