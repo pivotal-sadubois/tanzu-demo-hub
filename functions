@@ -646,8 +646,7 @@ checkCloudAccess() {
   fi
 
   if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "Azure" ]; then
-    if [ "${AZURE_SUBSCRIPTION_ID}" == "" -o "${AZURE_TENANT_ID}" == "" -o \
-         "${AZURE_CLIENT_ID}" == "" -o "${AZURE_CLIENT_SECRET}" == "" -o "${AZURE_LOCATION}" == "" ]; then
+    if [ "${AZURE_SUBSCRIPTION_ID}" == "" -o "${AZURE_TENANT_ID}" == "" -o "${AZURE_LOCATION}" == "" ]; then
 
       missing_variables=1
       echo ""
@@ -662,15 +661,15 @@ checkCloudAccess() {
         echo "  AZURE_TENANT_ID                 (required) has the format <xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx>"
       fi
 
-      if [ "${AZURE_CLIENT_ID}" == "" ]; then
-        echo "  AZURE_CLIENT_ID                 (required) has the format <xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx>"
-        echo "                                  => az ad sp create-for-rbac --name \"TanzuDemoHub\" ## appId"
-      fi
+      #if [ "${AZURE_CLIENT_ID}" == "" ]; then
+      #  echo "  AZURE_CLIENT_ID                 (required) has the format <xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx>"
+      #  echo "                                  => az ad sp create-for-rbac --name \"TanzuDemoHub\" ## appId"
+      #fi
 
-      if [ "${AZURE_CLIENT_SECRET}" == "" ]; then
-        echo "  AZURE_CLIENT_SECRET             (required) has the format <xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx>"
-        echo "                                  => az ad sp create-for-rbac --name \"TanzuDemoHub\" ## password"
-      fi
+      #if [ "${AZURE_CLIENT_SECRET}" == "" ]; then
+      #  echo "  AZURE_CLIENT_SECRET             (required) has the format <xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx>"
+      #  echo "                                  => az ad sp create-for-rbac --name \"TanzuDemoHub\" ## password"
+      #fi
 
       if [ "${AZURE_LOCATION}" == "" ]; then
         echo "  AZURE_LOCATION                    (required) Choose the Azure Region where your installation should run"
@@ -681,8 +680,8 @@ checkCloudAccess() {
       messageTitle "Azure Access Credentials"
       messagePrint " - Azure SubscriptionId"         $(maskPassword "$AZURE_SUBSCRIPTION_ID")
       messagePrint " - Azure TennantId"              $(maskPassword "$AZURE_TENANT_ID")
-      messagePrint " - Azure ClientId"               $(maskPassword "$AZURE_CLIENT_ID")
-      messagePrint " - Azure Client Secret"          $(maskPassword "$AZURE_CLIENT_SECRET")
+      #messagePrint " - Azure ClientId"               $(maskPassword "$AZURE_CLIENT_ID")
+      #messagePrint " - Azure Client Secret"          $(maskPassword "$AZURE_CLIENT_SECRET")
       messagePrint " - Azure Region"                 "$AZURE_LOCATION"
     fi
   fi
@@ -1311,6 +1310,8 @@ createCluster() {
     cp ${HOME}/.tkg/config.yaml $TKG_TEMPLATE
 
     AZURE_SSH_PUBLIC_KEY_B64=$(cat ~/.tanzu-demo-hub/KeyPair-Azure.pub | base64 -w 10000)
+    AZURE_TENANT_ID=$(appid=$(az ad app list --display-name "TanzuDemoHub" | jq -r '.[].appId'))
+    AZURE_CLIENT_SECRET=$appid="tanzu-demo-hub"
 
     echo "AZURE_SSH_PUBLIC_KEY_B64: $AZURE_SSH_PUBLIC_KEY_B64"                        >> $TKG_TEMPLATE
     echo "AZURE_NODE_MACHINE_TYPE: $TDH_TKGMC_MACHINE_TYPE"                           >> $TKG_TEMPLATE
@@ -1328,6 +1329,7 @@ echo "AZURE_SUBSCRIPTION_ID:$AZURE_SUBSCRIPTION_ID"
 echo "AZURE_TENANT_ID:$AZURE_TENANT_ID"
 echo "AZURE_CLIENT_ID:$AZURE_CLIENT_ID"
 echo "AZURE_CLIENT_SECRET:$AZURE_CLIENT_SECRET"
+exit
 
     MPDE=azure
 
