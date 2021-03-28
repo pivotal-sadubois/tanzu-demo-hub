@@ -1324,13 +1324,6 @@ createCluster() {
     echo "AZURE_LOCATION: $AZURE_LOCATION"                                            >> $TKG_TEMPLATE
     echo "AZURE_SUBSCRIPTION_ID: $AZURE_SUBSCRIPTION_ID"                              >> $TKG_TEMPLATE
 
-echo "AZURE_LOCATION:$AZURE_LOCATION"
-echo "AZURE_SUBSCRIPTION_ID:$AZURE_SUBSCRIPTION_ID"
-echo "AZURE_TENANT_ID:$AZURE_TENANT_ID"
-echo "AZURE_CLIENT_ID:$AZURE_CLIENT_ID"
-echo "AZURE_CLIENT_SECRET:$AZURE_CLIENT_SECRET"
-exit
-
     MPDE=azure
 
     stt=$(tkg get mc --name $TDH_TKGMC_NAME -o json | jq -r '.[].status')
