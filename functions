@@ -1028,7 +1028,7 @@ createENVfile() {
 }
 
 configureJumpHost() {
-  messagePrint "1 Configure Jump Server" "$SSH_HOST"
+  messagePrint "Configure Jump Server" "$SSH_HOST"
 echo "$SSH_COMMAND -n id "
 
   # --- WAIT UNTIL SSH DEAMON IS READY NO JUMPHOST ----
@@ -3739,6 +3739,7 @@ cleanAWSenv() {
     for id in $(aws --region $AWS_LOCATION ec2 describe-internet-gateways --filter "Name=attachment.vpc-id,Values=$vpc" | \
                 jq -r ".InternetGateways[].InternetGatewayId" 2>/dev/null); do
 
+      sleep 10
       messagePrint "  - Detach Internet Gateway:" "$id"
       aws --region $AWS_LOCATION ec2 detach-internet-gateway --internet-gateway-id $id --vpc-id $vpc > /dev/null 2>&1
       if [ $? -ne 0 ]; then
@@ -3747,6 +3748,7 @@ cleanAWSenv() {
         exit 1
       fi
 
+      sleep 10
       messagePrint "  - Delete Internet Gateway:" "$id"
       aws --region $AWS_LOCATION ec2 delete-internet-gateway --internet-gateway-id $id > /dev/null 2>&1
       if [ $? -ne 0 ]; then
@@ -3816,11 +3818,9 @@ cleanAWSenv() {
     # --- CLEANUP ---
     rm -f $SECGRP
 
-echo gaga1
     # --- DELETE ROUTING TABLES ---
     for id in $(aws --region $AWS_LOCATION ec2 describe-route-tables --filter "Name=vpc-id,Values=$vpc" | \
                 jq -r ".RouteTables[].RouteTableId" 2>/dev/null); do
-echo "ID:$id"
 
       messagePrint "  - Delete Routing Table:" "$id"
       aws --region $AWS_LOCATION ec2 delete-route-table --route-table-id $id> /dev/null 2>&1
