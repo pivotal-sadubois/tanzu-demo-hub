@@ -5,10 +5,9 @@ TDHENV=$2; cd /tmp
 
 # INSTALL TANZU
 TKG_ARCHIVE=$(ls -1 $TDHPATH/software/tanzu-cli-bundle-linux* | tail -1)
-tar xfz $TKG_ARCHIVE
+tar xf $TKG_ARCHIVE
 
-ls -la ./tkg
-if [ ! -d ./tkg ]; then
+if [ ! -d ./cli ]; then
   echo "ERROR: failed to unpack $TKG_ARCHIVE"
   echo "       tar xfz $TKG_ARCHIVE"
   exit
@@ -16,7 +15,7 @@ fi
 
 (cd cli; sudo install core/v1.3.0/tanzu-core-linux_amd64 /usr/local/bin/tanzu)
 tanzu plugin clean
-(cd cli; tanzu plugin install --local cli all)
+tanzu plugin install --local cli all
 
 
 ## INSTALL TKG UTILITY
