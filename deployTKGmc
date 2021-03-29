@@ -310,9 +310,15 @@ createJumpHost() {
 #gaga
 
   if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "AWS" ]; then
+    JUMP_HOST="jump-${TDH_TKGMC_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}"
     ins=$(aws ec2 --region=$AWS_REGION describe-instances --filters "Name=instance-state-name,Values=pending,running,stopped" \
          Name=tag:Name,Values="$JUMP_HOST" | jq -r ".Reservations[].Instances[].InstanceId" | head -1)
     if [ "${ins}" == "" ]; then
+      messagePrint "Cleanup old AWS Config" "$TDH_TKGMC_ENVNAME"
+      ENV_NAME="$TDH_TKGMC_ENVNAME"
+      AWS_LOCATION=$AWS_REGION
+      cleanAWSenv
+
       messagePrint "Creating AWS Jump-Server" "$SSH_KEY_NAME"
 
       # --- CREATE NEW KEY IF PEM FILE IS MISSING ---
@@ -333,11 +339,13 @@ createJumpHost() {
           echo "                  --query 'KeyMaterial' --output text > ~/.ssh/${JUMP_HOST}.pem"; exit 1
         fi
       else
-        messagePrint " - Verify Key Pair" "${SSH_KEY_NAME}"
+        #messagePrint " - Verify Key Pair" "${SSH_KEY_NAME}"
+        messagePrint " - Verify Key Pair" "${JUMP_HOST}"
       fi
 
       # --- CREATE VPC ---
       vpc=$(aws ec2 --region=$AWS_REGION describe-vpcs --filters Name=tag:type,Values="pcfjump" | jq -r '.Vpcs[].VpcId')
+
       if [ "${vpc}" == "" ]; then
         vpc=$(aws ec2 --region=$AWS_REGION create-vpc --cidr-block 10.0.0.0/16 | jq -r '.Vpc.VpcId')
         aws ec2 --region=$AWS_REGION create-tags --resources $vpc --tags Key=type,Value=pcfjump
@@ -487,16 +495,29 @@ createJumpHost() {
       typ=t2.medium
 
       messagePrint " - Create Instance" "$JUMP_HOST"
-      aws ec2 --region=$AWS_REGION run-instances --image-id $aim --security-group-ids $gid \
+
+      vpc=$(aws ec2 --region=$AWS_REGION describe-vpcs --filters Name=tag:type,Values="pcfjump" | jq -r '.Vpcs[].VpcId')
+      sgname=$(aws ec2 describe-security-groups --filter Name=vpc-id,Values=$vpc  \
+            Name=group-name,Values=pcfjump-sg --query 'SecurityGroups[*].[GroupId]' --output text)
+
+#echo "aws ec2 --region=$AWS_REGION run-instances --image-id $aim \
+#            --block-device-mapping DeviceName=/dev/sda1,Ebs={VolumeSize=30} \
+#            --instance-type $typ --key-name ${JUMP_HOST} --subnet-id $sid --security-group-ids $sgname \
+#            --tag-specifications 'ResourceType=instance,Tags=[{Key=Name,Value=$JUMP_HOST},{Key=type,Value=pcfjump}]'"
+      aws ec2 --region=$AWS_REGION run-instances --image-id $aim \
             --block-device-mapping DeviceName=/dev/sda1,Ebs={VolumeSize=30} \
-            --instance-type $typ --key-name ${SSH_KEY_NAME} --count 1 --subnet-id $sid --associate-public-ip-address \
+            --instance-type $typ --key-name ${JUMP_HOST} --subnet-id $sid --security-group-ids $sgname \
             --tag-specifications "ResourceType=instance,Tags=[{Key=Name,Value=$JUMP_HOST},{Key=type,Value=pcfjump}]" > /dev/null 2>&1
       if [ $? -ne 0 ]; then
-        echo "ERROR: Creating of Instance failed"
-        echo "       => aws ec2 --region=$AWS_REGION run-instances --image-id $aim --security-groups pcfjump-sg \\"
+        echo "ERROR: Creating of Instance failed 1"
+        echo "       => aws ec2 --region=$AWS_REGION run-instances --image-id $aim \\"
         echo "                  --block-device-mapping DeviceName=/dev/sda1,Ebs={VolumeSize=30} \\"
-        echo "                  --instance-type $typ --key-name ${JUMP_HOST} --subnet-id $sid \\"
-        echo "                  --tag-specifications 'ResourceType=instance,Tags=[{Key=type,Value=pcfjump}]'"
+        echo "                  --instance-type $typ --key-name ${SSH_KEY_NAME} --subnet-id $sid \\"
+        echo "                  --tag-specifications 'ResourceType=instance,Tags=[{Key=Name,Value=$JUMP_HOST},{Key=type,Value=pcfjump}]'"
+        #echo "       => aws ec2 --region=$AWS_REGION run-instances --image-id $aim --security-groups pcfjump-sg \\"
+        #echo "                  --block-device-mapping DeviceName=/dev/sda1,Ebs={VolumeSize=30} \\"
+        #echo "                  --instance-type $typ --key-name ${SSH_KEY_NAME} --subnet-id $sid \\"
+        #echo "                  --tag-specifications 'ResourceType=instance,Tags=[{Key=type,Value=pcfjump}]'"
         exit 1
       else
         sleep 20
@@ -536,7 +557,7 @@ createJumpHost() {
          Name=tag:Name,Values="$JUMP_HOST" | jq -r ".Reservations[].Instances[].InstanceId" | head -1)
       pip=$(aws ec2 --region=$AWS_REGION describe-instances --instance-ids $ins | \
          jq -r ".Reservations[].Instances[].PublicIpAddress")
-      aip=$(route53getIPaddress $PCF_DEPLOYMENT_ENV_NAME $AWS_HOSTED_DNS_DOMAIN)
+      aip=$(route53getIPaddress $TDH_TKGMC_ENVNAME $AWS_HOSTED_DNS_DOMAIN)
 
       # --- UPDATE DNS DOMAIN ---
       if [ "${pip}" != "${aip}" ]; then
@@ -636,6 +657,7 @@ createJumpHost() {
     fi
 
     messagePrint " - Wait for SSH to be ready" ""
+echo "$SSH_COMMAND -n id > /dev/null"
     # --- WAIT UNTIL SSH DEAMON IS READY NO JUMPHOST ----
     ret=1
     while [ $ret -ne 0 ]; do
@@ -908,6 +930,18 @@ exit
   $SSH_COMMAND -n "cd tanzu-demo-hub && ./deployTKG -d $DEPLOY_TKG_TEMPLATE -c tkg-tanzu-demo-hub.cfg -n tdh-1"
 
 else
+#  # --- ACCEPT LICENSE AGREEMENT ---
+#  if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "Azure" ]; then
+#echo gaga1
+#echo "az vm image terms accept --publisher vmware-inc --offer tkg-capi --plan k8s-1dot19dot1-ubuntu-1804 --subscription $AZURE_SUBSCRIPTION_ID"
+#    az vm image terms accept --publisher vmware-inc --offer tkg-capi --plan k8s-1dot19dot1-ubuntu-1804 --subscription $AZURE_SUBSCRIPTION_ID
+#echo gaga2
+#echo "az vm image terms accept --publisher vmware-inc --offer tkg-capi --plan k8s-1dot19dot3-ubuntu-1804 --subscription $AZURE_SUBSCRIPTION_ID"
+#    az vm image terms accept --publisher vmware-inc --offer tkg-capi --plan k8s-1dot19dot3-ubuntu-1804 --subscription $AZURE_SUBSCRIPTION_ID
+#echo gaga3
+#
+##  fi
+
   # --- CREATE MANAGEMENT CLUSTER ---
   $SSH_COMMAND -n "[ -f $SSH_HOME/tanzu-demo-hub/scripts/InstallTKGmc.sh ] && tanzu-demo-hub/scripts/InstallTKGmc.sh $DEPLOY_TKG_TEMPLATE"
 
