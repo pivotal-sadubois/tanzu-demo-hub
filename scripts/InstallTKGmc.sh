@@ -29,6 +29,8 @@ export TDH_DEPLOYMENT_ENV_NAME=$TDH_TKGMC_INFRASTRUCTURE
 export TKG_CONFIG=${TDHPATH}/config/$TDH_TKGMC_CONFIG
 
 # --- ACCEPT LICENSE AGREEMENT ---
+echo gaga0
+echo "TDH_DEPLOYMENT_ENV_NAME:$TDH_DEPLOYMENT_ENV_NAME"
 if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "Azure" ]; then
 echo gaga1
 echo "az vm image terms accept --publisher vmware-inc --offer tkg-capi --plan k8s-1dot19dot1-ubuntu-1804 --subscription $AZURE_SUBSCRIPTION_ID"
@@ -37,6 +39,8 @@ echo gaga2
 echo "az vm image terms accept --publisher vmware-inc --offer tkg-capi --plan k8s-1dot19dot3-ubuntu-1804 --subscription $AZURE_SUBSCRIPTION_ID"
   az vm image terms accept --publisher vmware-inc --offer tkg-capi --plan k8s-1dot19dot3-ubuntu-1804 --subscription $AZURE_SUBSCRIPTION_ID
 echo gaga3
+  az vm image terms accept --publisher vmware-inc --offer tkg-capi --plan k8s-1dot20dot4-ubuntu-2004 --subscription $AZURE_SUBSCRIPTION_ID
+
 fi
 
 sshEnvironment > /dev/null 2>&1

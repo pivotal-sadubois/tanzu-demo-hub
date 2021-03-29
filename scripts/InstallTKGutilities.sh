@@ -3,16 +3,32 @@
 TDHPATH=$1; cd /tmp
 TDHENV=$2; cd /tmp
 
-# INSTALL TKG UTILITY
-TKG_ARCHIVE=$(ls -1 $TDHPATH/software/tkg-linux* | tail -1) 
+# INSTALL TANZU
+TKG_ARCHIVE=$(ls -1 $TDHPATH/software/tanzu-cli-bundle-linux* | tail -1)
 tar xfz $TKG_ARCHIVE
 
 ls -la ./tkg
-if [ ! -d ./tkg ]; then 
+if [ ! -d ./tkg ]; then
   echo "ERROR: failed to unpack $TKG_ARCHIVE"
   echo "       tar xfz $TKG_ARCHIVE"
   exit
 fi
+
+(cd cli; sudo install core/v1.3.0/tanzu-core-linux_amd64 /usr/local/bin/tanzu)
+tanzu plugin clean
+(cd cli; tanzu plugin install --local cli all)
+
+
+## INSTALL TKG UTILITY
+#TKG_ARCHIVE=$(ls -1 $TDHPATH/software/tkg-linux* | tail -1) 
+#tar xfz $TKG_ARCHIVE
+#
+#ls -la ./tkg
+#if [ ! -d ./tkg ]; then 
+#  echo "ERROR: failed to unpack $TKG_ARCHIVE"
+#  echo "       tar xfz $TKG_ARCHIVE"
+#  exit
+#fi
 
 mv tkg/imgpkg-linux-amd64-* /usr/local/bin/imgpkg && chmod +x /usr/local/bin/imgpkg
 mv tkg/kapp-linux-amd64-*   /usr/local/bin/kapp   && chmod +x /usr/local/bin/kapp
