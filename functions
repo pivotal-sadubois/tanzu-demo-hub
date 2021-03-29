@@ -1,10 +1,12 @@
 #!/bin/bash
 # ############################################################################################
 # File: ........: functions
-# Language .....: bash
+# Language .....: bash 
 # Author .......: Sacha Dubois, VMware
 # Description ..: Tanzu Demo Hub - Cluster Installation
 # ############################################################################################
+
+alias cat='/usr/local/bin/bat -p'
 
 waitCmd() {
   read
@@ -13,6 +15,11 @@ waitCmd() {
 prtHead() {
   if [ "${tocindex}" == "" ]; then tocindex=1; else let tocindex=tocindex+1; fi
   printf "%2d.) %s\n" $tocindex "$1"
+}
+
+prtRead() {
+  if [ "${tocindex}" == "" ]; then tocindex=1; else let tocindex=tocindex+1; fi
+  printf "%2s   %s" "" "$1"; read x
 }
 
 prtText() {
@@ -38,9 +45,23 @@ fakeCmd() {
   normal=$(tput sgr0)
 
   echo -e "     => ${bold}$1${normal}\c"; read x
-  echo "     -----------------------------------------------------------------------------------------------------------"
-  cat /tmp/log | sed -e '/^$/d' -e 's/^/     /g'
-  echo "     -----------------------------------------------------------------------------------------------------------"
+  echo "     -------------------------------------------------------------------------------------------------------------------------------------------------------"
+  cat /tmp/log | sed -e 's/^/     /g'
+  echo "     -------------------------------------------------------------------------------------------------------------------------------------------------------"
+  echo ""
+}
+
+execCat() {
+  echo -e "     => cat $1\c"; read x
+  echo "     -------------------------------------------------------------------------------------------------------------------------------------------------------"
+
+  if [ -f /usr/local/bin/bat ]; then
+    /usr/local/bin/bat -p --color always $1 | sed 's/^/     /g'
+  else
+    cat $1
+  fi
+
+  echo "     -------------------------------------------------------------------------------------------------------------------------------------------------------"
   echo ""
 }
 
@@ -49,10 +70,10 @@ execCmd() {
   normal=$(tput sgr0)
 
   echo -e "     => ${bold}$1${normal}\c"; read x
-  echo "     -----------------------------------------------------------------------------------------------------------"
-  eval "$1" 2>&1 | sed -e '/^$/d' -e 's/^/     /g'
+  echo "     -------------------------------------------------------------------------------------------------------------------------------------------------------"
+  eval "$1" 2>&1 | sed -e 's/^/     /g'
   #$1 | sed -e '/^$/d' -e 's/^/     /g'
-  echo "     -----------------------------------------------------------------------------------------------------------"
+  echo "     -------------------------------------------------------------------------------------------------------------------------------------------------------"
   echo ""
   if [ $? -ne 0 ]; then exit 1; fi
 }
@@ -168,6 +189,7 @@ sshEnvironment() {
   fi
 
   if [ "${TDH_DEPLOYMENT_CLOUD}" == "AWS" ]; then
+echo gaga1
     SSH_HOST=$(aws ec2 --region=$AWS_REGION describe-instances \
                      --filters Name=tag:sigs.k8s.io/cluster-api-provider-aws/role,Values="bastion" | \
              jq -r '.Reservations[].Instances[].PublicDnsName')
@@ -180,6 +202,8 @@ sshEnvironment() {
     SSH_COMMAND="ssh -q $SSH_OPTIONS -i $SSH_KEY_FILE ${SSH_USER}@${SSH_HOST}"
     SCP_COMMAND="scp -r $SCP_OPTIONS -i $SSH_KEY_FILE"
     SSH_DISPLAY="ssh -i $SSH_KEY_FILE ${SSH_USER}@${SSH_HOST}"
+echo "SSH_DISPLAY:$SSH_DISPLAY"
+echo gaga2
   fi
 
   if [ "${TDH_DEPLOYMENT_CLOUD}" == "GCP" ]; then
@@ -422,23 +446,28 @@ checkCloudAccess() {
 
   if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "minikube" ]; then
     TDH_MINIKUBE_PROFILE="tdh-minikube-${TMC_USER}"
-    if [ "${TDH_MINIKUBE_PROFILE}" == "" ]; then
+    if [ "${TDH_MINIKUBE_PROFILE}" == "" -o "${TMC_USER}" == "" ]; then
       missing_variables=1
       echo ""
       echo "  4MISSING ENVIRONMENT-VARIABES    DESCRIPTION        "
       echo "  --------------------------------------------------------------------------------------------------------------"
+
+      if [ "${TMC_USER}" == "" ]; then
+        echo "  TMC_USER                        (required) The name of the TMC UserID"
+      fi
     else
       if [ -f ~/.minikube/profiles/$TDH_MINIKUBE_PROFILE/config.json ]; then 
         cpu=$(cat ~/.minikube/profiles/$TDH_MINIKUBE_PROFILE/config.json | jq -r '.CPUs')
-        dsk=$(cat ~/.minikube/profiles/$TDH_MINIKUBE_PROFILE/config.json | jq -r '.Disk')
+        dsk=$(cat ~/.minikube/profiles/$TDH_MINIKUBE_PROFILE/config.json | jq -r '.DiskSize')
         mem=$(cat ~/.minikube/profiles/$TDH_MINIKUBE_PROFILE/config.json | jq -r '.Memory')
         drv=$(cat ~/.minikube/profiles/$TDH_MINIKUBE_PROFILE/config.json | jq -r '.Driver')
       else
         echo "ERROR: Minukube is not running, start it first"
-        echo "       => minikube -p $TDH_MINIKUBE_PROFILE start --driver=hyperkit --cpus $TDH_MINIKUBE_CONFIG_CPU --memory $TDH_MINIKUBE_CONFIG_MEMORY --disk-size $TDH_MINIKUBE_CONFIG_DISK --nodes=$TDH_MINIKUBE_NODES"; exit
+        #echo "       => minikube -p $TDH_MINIKUBE_PROFILE start --driver=hyperkit --cpus $TDH_MINIKUBE_CONFIG_CPU --memory $TDH_MINIKUBE_CONFIG_MEMORY --disk-size $TDH_MINIKUBE_CONFIG_DISK --nodes=$TDH_MINIKUBE_NODES"; exit
+        echo "       => minikube -p $TDH_MINIKUBE_PROFILE start --driver=hyperkit --cpus $TDH_MINIKUBE_CONFIG_CPU --memory $TDH_MINIKUBE_CONFIG_MEMORY --disk-size $TDH_MINIKUBE_CONFIG_DISK"; exit
       fi
 
-      stt=$(minikube status -p $TDH_MINIKUBE_PROFILE| grep "^host:" | awk '{ print $NF }')
+      stt=$(minikube status -p $TDH_MINIKUBE_PROFILE| grep "^host:" | awk '{ print $NF }' | head -1)
       messageTitle "MiniKube Status and Configuration"
       messagePrint " - MiniKube Profile"                "$TDH_MINIKUBE_PROFILE"
       messagePrint " - MiniKube Version"                "$(minikube version | head -1 | awk '{ print $NF }')"
@@ -447,6 +476,10 @@ checkCloudAccess() {
       messagePrint " - Minikube Memory"                "$mem"
       messagePrint " - Minikube CPU's"                 "$cpu"
       messagePrint " - Minikube Driver"                "$drv"
+      messageTitle " - Minikube Nodes"              
+      echo "   ------------------------------------------------------------------------"
+      minikube -p $TDH_MINIKUBE_PROFILE node list | sed 's/^/   /g'
+      echo "   ------------------------------------------------------------------------"
 
       if [ "$stt" == "Stopped" -o "$stt" == "" ]; then 
         echo "ERROR: Minukube is not running, start it first"
@@ -455,17 +488,17 @@ checkCloudAccess() {
       fi
 
       messagePrint " - MiniKube ServerIP"               "$(minikube ip -p $TDH_MINIKUBE_PROFILE)"
-    fi
 
-    cnt=$(tmc cluster list --name $TDH_MINIKUBE_PROFILE 2> /dev/null | egrep -c " $TDH_MINIKUBE_PROFILE ")
-    if [ $cnt -eq 0 ]; then 
-      messageTitle "Attach Minikube Cluster to TMC"
-      messagePrint " - TMC Cluster Name"                "$TDH_MINIKUBE_PROFILE"
-      messagePrint " - TMC Clustergroup"                "tanzu-demo-hub"
-      echo "  --------------------------------------------------------------------------------------------------------------"
-      tmc cluster attach -n $TDH_MINIKUBE_PROFILE -g tanzu-demo-hub -p minikube
-      kubectl apply -f k8s-attach-manifest.yaml
-      echo "  --------------------------------------------------------------------------------------------------------------"
+      cnt=$(tmc cluster list --name $TDH_MINIKUBE_PROFILE 2> /dev/null | egrep -c " $TDH_MINIKUBE_PROFILE ")
+      if [ $cnt -eq 0 ]; then 
+        messageTitle "Attach Minikube Cluster to TMC"
+        messagePrint " - TMC Cluster Name"                "$TDH_MINIKUBE_PROFILE"
+        messagePrint " - TMC Clustergroup"                "tanzu-demo-hub"
+        echo "  --------------------------------------------------------------------------------------------------------------"
+        tmc cluster attach -n $TDH_MINIKUBE_PROFILE -g tanzu-demo-hub -p minikube
+        kubectl apply -f k8s-attach-manifest.yaml
+        echo "  --------------------------------------------------------------------------------------------------------------"
+      fi
     fi
   fi
 
@@ -621,8 +654,7 @@ checkCloudAccess() {
   fi
 
   if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "Azure" ]; then
-    if [ "${AZURE_SUBSCRIPTION_ID}" == "" -o "${AZURE_TENANT_ID}" == "" -o \
-         "${AZURE_CLIENT_ID}" == "" -o "${AZURE_CLIENT_SECRET}" == "" -o "${AZURE_LOCATION}" == "" ]; then
+    if [ "${AZURE_SUBSCRIPTION_ID}" == "" -o "${AZURE_TENANT_ID}" == "" -o "${AZURE_LOCATION}" == "" ]; then
 
       missing_variables=1
       echo ""
@@ -637,15 +669,15 @@ checkCloudAccess() {
         echo "  AZURE_TENANT_ID                 (required) has the format <xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx>"
       fi
 
-      if [ "${AZURE_CLIENT_ID}" == "" ]; then
-        echo "  AZURE_CLIENT_ID                 (required) has the format <xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx>"
-        echo "                                  => az ad sp create-for-rbac --name \"TanzuDemoHub\" ## appId"
-      fi
+      #if [ "${AZURE_CLIENT_ID}" == "" ]; then
+      #  echo "  AZURE_CLIENT_ID                 (required) has the format <xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx>"
+      #  echo "                                  => az ad sp create-for-rbac --name \"TanzuDemoHub\" ## appId"
+      #fi
 
-      if [ "${AZURE_CLIENT_SECRET}" == "" ]; then
-        echo "  AZURE_CLIENT_SECRET             (required) has the format <xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx>"
-        echo "                                  => az ad sp create-for-rbac --name \"TanzuDemoHub\" ## password"
-      fi
+      #if [ "${AZURE_CLIENT_SECRET}" == "" ]; then
+      #  echo "  AZURE_CLIENT_SECRET             (required) has the format <xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx>"
+      #  echo "                                  => az ad sp create-for-rbac --name \"TanzuDemoHub\" ## password"
+      #fi
 
       if [ "${AZURE_LOCATION}" == "" ]; then
         echo "  AZURE_LOCATION                    (required) Choose the Azure Region where your installation should run"
@@ -656,8 +688,8 @@ checkCloudAccess() {
       messageTitle "Azure Access Credentials"
       messagePrint " - Azure SubscriptionId"         $(maskPassword "$AZURE_SUBSCRIPTION_ID")
       messagePrint " - Azure TennantId"              $(maskPassword "$AZURE_TENANT_ID")
-      messagePrint " - Azure ClientId"               $(maskPassword "$AZURE_CLIENT_ID")
-      messagePrint " - Azure Client Secret"          $(maskPassword "$AZURE_CLIENT_SECRET")
+      #messagePrint " - Azure ClientId"               $(maskPassword "$AZURE_CLIENT_ID")
+      #messagePrint " - Azure Client Secret"          $(maskPassword "$AZURE_CLIENT_SECRET")
       messagePrint " - Azure Region"                 "$AZURE_LOCATION"
     fi
   fi
@@ -996,7 +1028,8 @@ createENVfile() {
 }
 
 configureJumpHost() {
-  messagePrint "Configure Jump Server" "$SSH_HOST"
+  messagePrint "1 Configure Jump Server" "$SSH_HOST"
+echo "$SSH_COMMAND -n id "
 
   # --- WAIT UNTIL SSH DEAMON IS READY NO JUMPHOST ----
   ret=1
@@ -1037,7 +1070,15 @@ configureJumpHost() {
   stt=$($SSH_COMMAND -n "[ -d /home/ubuntu/tanzu-demo-hub/software ] && echo true")
   if [ "${stt}" == "" ]; then
     # --- COPY THE AWS DIRECTORY ---
-    $SCP_COMMAND -r ${TDHPATH}/software ${SSH_USER}@${SSH_HOST}:${SSH_HOME}/tanzu-demo-hub/ > /dev/null 2>&1
+    $SSH_COMMAND -n "[ ! -d $SSH_HOME/tanzu-demo-hub/software ] && mkdir -p $SSH_HOME/tanzu-demo-hub/software"
+    if [ "$TDH_TKGMC_INFRASTRUCTURE" == "Azure" ]; then
+      $SCP_COMMAND -r ${TDHPATH}/software/tkg-* ${SSH_USER}@${SSH_HOST}:${SSH_HOME}/tanzu-demo-hub/software > /dev/null 2>&1
+    fi
+
+    if [ "$TDH_TKGMC_INFRASTRUCTURE" == "vSphere" ]; then
+      $SCP_COMMAND -r ${TDHPATH}/software/tkg-* ${SSH_USER}@${SSH_HOST}:${SSH_HOME}/tanzu-demo-hub/software > /dev/null 2>&1
+      $SCP_COMMAND -r ${TDHPATH}/software/pho* ${SSH_USER}@${SSH_HOST}:${SSH_HOME}/tanzu-demo-hub/ > /dev/null 2>&1
+    fi
   fi
 
   # --- INSTALL TKG UTILITES ---
@@ -1169,23 +1210,18 @@ route53deleteHostedZone() {
 }
 
 checkKeyPairs_old() {
-echo hallo1
   SSH_KEY_NAME=vmware-cloud-tmc
   SSH_KEY_FILE=~/.tanzu-demo-hub/KeyPair-${SSH_KEY_NAME}-${AWS_REGION}.pem
 
-echo hallo2
   #"KeyFingerprint": "a8:c4:01:2b:12:7e:0d:8f:56:8c:38:80:cf:8b:6d:53:13:9c:28:cd",
   #aws ec2 --region=eu-central-1 create-key-pair --dry-run --key-name sacha
   #/tmp/key.pem
-echo hallo3
 
   if [ ! -d ~/.tanzu-demo-hub ] ; then mkdir ~/.tanzu-demo-hub; fi
-echo hallo4
 
   # --- VERIFY KEY-PAIR ---
   key=$(aws ec2 --region=$AWS_REGION describe-key-pairs | \
         jq -r --arg key "$SSH_KEY_NAME" '.KeyPairs[] | select(.KeyName == $key).KeyFingerprint')
-echo hallo5
 
   # --- CREATE ONE IF IT DOES NOT EXIST ---
   if [ "${key}" == "" ]; then
@@ -1193,7 +1229,6 @@ echo hallo5
        jq -r '.KeyMaterial' > $SSH_KEY_FILE
     chmod 600 $SSH_KEY_FILE
   fi
-echo hallo6
 
   if [ -f "${SSH_KEY_FILE}" ]; then
     kfp=$(openssl pkcs8 -in $SSH_KEY_FILE -inform PEM -outform DER -topk8 -nocrypt | openssl sha1 -c)
@@ -1204,7 +1239,6 @@ echo hallo6
       exit
     fi
   fi
-echo hallo7
 }
 
 maskPassword() {
@@ -1278,6 +1312,8 @@ createCluster() {
     cp ${HOME}/.tkg/config.yaml $TKG_TEMPLATE
 
     AZURE_SSH_PUBLIC_KEY_B64=$(cat ~/.tanzu-demo-hub/KeyPair-Azure.pub | base64 -w 10000)
+    AZURE_CLIENT_ID=$(az ad app list --display-name "TanzuDemoHub" | jq -r '.[].appId')
+    AZURE_CLIENT_SECRET="tanzu-demo-hub"
 
     echo "AZURE_SSH_PUBLIC_KEY_B64: $AZURE_SSH_PUBLIC_KEY_B64"                        >> $TKG_TEMPLATE
     echo "AZURE_NODE_MACHINE_TYPE: $TDH_TKGMC_MACHINE_TYPE"                           >> $TKG_TEMPLATE
@@ -1289,6 +1325,8 @@ createCluster() {
     echo "CLUSTER_CIDR: $TDH_TKGMC_CLUSTER_CIDR"                                      >> $TKG_TEMPLATE
     echo "AZURE_LOCATION: $AZURE_LOCATION"                                            >> $TKG_TEMPLATE
     echo "AZURE_SUBSCRIPTION_ID: $AZURE_SUBSCRIPTION_ID"                              >> $TKG_TEMPLATE
+
+    MPDE=azure
 
     stt=$(tkg get mc --name $TDH_TKGMC_NAME -o json | jq -r '.[].status')
     if [ "${stt}" != "Success" ]; then
@@ -1931,7 +1969,6 @@ VerifyDemoEnvironment() {
       messagePrint " - Minikube Memory"            "$mem"
       messagePrint " - Minikube CPU's"             "$cpu"
       messagePrint " - Minikube Driver"            "$drv"
-#gaga
     else
       export TDH_PLATFORM=tkgm
       export WORKLOAD_CLUSTER=tkg-tanzu-demo-hub.cfg
@@ -1981,28 +2018,41 @@ echo tkgm
 }
 
 VerifyK8SDemoPlatform() {
-  minikube profile $TDH_MINIKUBE_PROFILE > /dev/null 2>&1
-  stt=$(minikube status -p $TDH_MINIKUBE_PROFILE -o json | jq -r '.Host')
-  if [ "$stt" != "Running" ]; then
-    echo "ERROR: minikube is not running, please start it by:"
-    echo "       => minikube start -p $TDH_MINIKUBE_PROFILE"; exit
-  fi
+  if [ "${TDH_INFRASTRUCTURE}" == "minikube" ]; then 
+    messageTitle "MiniKube Verify Addons"
 
-  ctx=$(kubectl config current-context)
-  if [ "$ctx" != "$TDH_MINIKUBE_PROFILE" ]; then
-    echo "ERROR: Kubernetes context is currently set to $crx. Please set it by:"
-    echo "       => kubectl config use-context $TDH_MINIKUBE_PROFILE"; exit
-  fi
-
-  # --- CHECK FOR ADDONS ---
-  #for val in metallb default-storageclass; do
-  for val in default-storageclass metrics-server; do
-    stt=$(minikube addons list -o json | jq -r ".\"$val\".Status")
-    if [ "$stt" != "enabled" ]; then
-      echo "ERROR: Please enable minikube addon: $val"
-      echo "       => minikube addons enable $val -p $TDH_MINIKUBE_PROFILE"; exit
+    minikube profile $TDH_MINIKUBE_PROFILE > /dev/null 2>&1
+    minikube status -p $TDH_MINIKUBE_PROFILE -o json > /dev/null 2>&1
+    if [ "$?" -ne 0 ]; then
+      echo "ERROR: minikube is not running, please start it by:"
+      echo "       => minikube start -p $TDH_MINIKUBE_PROFILE"; exit
     fi
-  done
+
+    ctx=$(kubectl config current-context)
+    if [ "$ctx" != "$TDH_MINIKUBE_PROFILE" ]; then
+      echo "ERROR: Kubernetes context is currently set to $crx. Please set it by:"
+      echo "       => kubectl config use-context $TDH_MINIKUBE_PROFILE"; exit
+    fi
+
+    # --- CHECK FOR ADDONS ---
+    for tmp in default-storageclass:default-storageclass metrics-server:metrics-server metallb-system:metallb; do
+      val=$(echo $tmp | awk -F: '{ print $1 }') 
+      key=$(echo $tmp | awk -F: '{ print $2 }') 
+      stt=$(minikube addons list -o json | jq -r ".\"$key\".Status")
+      
+      if [ "$stt" != "enabled" ]; then
+        messagePrint " - Minikube Addon: $val" "$stt, enabling now"
+        minikube addons enable $key -p $TDH_MINIKUBE_PROFILE > /dev/null 2>&1
+        if [ $? -ne 0 ]; then 
+           echo "ERROR: enabling Minikube Addob: $val"
+           echo "       => minikube addons enable $key -p $TDH_MINIKUBE_PROFILE "
+           exit
+        fi
+      else
+        messagePrint " - Minikube Addon: $val" "$stt"
+      fi
+    done
+  fi
 }
 
 
@@ -2011,6 +2061,11 @@ VerifyServiceDependancies() {
   if [ "$TDH_DEPENDANCY_CERT_MANAGER" == "true" ]; then 
     INGRESS_NAMESPACE=cert-manager
     HELM_CHART=jetstack/cert-manager
+
+    helm repo add bitnami https://charts.bitnami.com/bitnami > /dev/null 2>&1
+    if [ $? -ne 0 ]; then
+      echo "ERROR: failed to add helm registry https://charts.bitnami.com/bitnami"; exit
+    fi
 
     messagePrint "- Install Cert Manager" "bitnami/nginx-ingress-controller"
     kubectl get namespace $INGRESS_NAMESPACE > /dev/null 2>&1
@@ -2030,6 +2085,11 @@ VerifyServiceDependancies() {
   if [ "$TDH_DEPENDANCY_NGINX" == "true" ]; then 
     INGRESS_NAMESPACE=ingress-nginx
     HELM_CHART=bitnami/nginx-ingress-controller
+
+    helm repo add bitnami https://charts.bitnami.com/bitnami > /dev/null 2>&1
+    if [ $? -ne 0 ]; then
+      echo "ERROR: failed to add helm registry https://charts.bitnami.com/bitnami"; exit
+    fi
 
     messagePrint "- Install Ingress Controller" "$HELM_CHART"
     kubectl get namespace $INGRESS_NAMESPACE > /dev/null 2>&1
@@ -2071,6 +2131,11 @@ VerifyServiceDependancies() {
       kubectl create ns $INGRESS_NAMESPACE > /dev/null 2>&1
     fi
 
+    helm repo add bitnami https://charts.bitnami.com/bitnami > /dev/null 2>&1
+    if [ $? -ne 0 ]; then
+      echo "ERROR: failed to add helm registry https://charts.bitnami.com/bitnami"; exit
+    fi
+
     stt=$(helm list -n $INGRESS_NAMESPACE -o json | jq -r --arg key "contour-3" '.[] | select(.chart | contains($key)).status')
     if [ "$stt" != "deployed" ]; then
       messageTitle "Install Contour Ingress Controller" "$HELM_CHART"
@@ -2102,18 +2167,22 @@ uodateConfigMap() {
   KEY="$2"
   VALUE="$3"
 
+  [ "$VALUE" == "" ] && VALUE="<empty>"
   [ "$VALUE" == "True" ] && VALUE=true
   [ "$VALUE" == "False" ] && VALUE=false
+  
+  kubectl get cm tanzu-demo-hub > /dev/null 2>&1
+  [ $? -ne 0 ] && kubectl create cm tanzu-demo-hub > /dev/null 2>&1
 
-  kubectl get cm $CONFIG_MAP -o yaml 2>/dev/null | sed -e "s/\'\"//g" -e "s/\"\'//g" | \
-          yq e '.data' - | grep ":" | egrep -v "^$KEY:" | sed 's/: /=/g' > /tmp/$CONFIG_MAP
+  kubectl get cm tanzu-demo-hub -o json | jq -r '.data' | egrep ": " | sed -e 's/^ *"//g' -e 's/: /=/g' -e 's/"=/=/g' -e 's/\\\"//g' -e 's/,$//g' -e 's/"//g' | \
+          egrep -v "^$KEY=" | sort -u > /tmp/$CONFIG_MAP
   echo "$KEY=$VALUE" >> /tmp/$CONFIG_MAP
 
   kubectl create configmap $CONFIG_MAP --from-env-file=/tmp/$CONFIG_MAP --dry-run=client -o yaml | kubectl apply -f - > /dev/null 2>&1
   if [ $? -ne 0 ]; then
     echo "ERROR: updating config map $CONFIG_MAP"
-    echo "       => kubectl create configmap $CONFIG_MAP --from-literal=$KEY=$VALUE --from-literal=XXX=12 --dry-run=client -o yaml | \\"
-    echo "          kubectl apply -f -"; exit
+    echo "       => kubectl create configmap $CONFIG_MAP --from-env-file=/tmp/$CONFIG_MAP --dry-run=client -o yaml | kubectl apply -f -"
+    exit
   fi  
 }
 
@@ -2121,8 +2190,7 @@ getConfigMap() {
   CONFIG_MAP=$1
   KEY=$2
 
-  kubectl get configmap tanzu-demo-hub -o yaml | sed -e "s/\'\"//g" -e "s/\"\'//g" | yq e ".data.$KEY" - 
-  #kubectl get configmap $CONFIG_MAP -o json | jq -r ".data.$KEY" | sed -e "s/\'\"//g" -e "s/\"\'//g"
+  kubectl get configmap tanzu-demo-hub -o json | jq -r ".data.$KEY" | sed 's/"//g'
 }
 
 createConfigMap() {
@@ -2146,11 +2214,22 @@ verifyRequiredServices() {
   fi
 }
 
+checkTKGdownloads() {
+  kpl=$(ls -1 software | egrep -c "^kp-linux|photon")
+  ptl=$(ls -1 software | egrep -c "^photon")
+  tkg=$(ls -1 software | egrep -c "^tkg-linux")
+  if [ $tkg -eq 0 ]; then 
+    echo "ERROR: Please download TKG Utilies from https://www.vmware.com/go/get-tkg"
+    echo "       => $TANZU_DEMO_HUB/software/tkg-linux-amd64-vx.x.x-vmware.x.tar.gz"
+    exit
+  fi
+}
+
 checkCLIcommands() {
   cat="$1"
   if [ "$cat" == "TKG" ]; then
     if [ ! -x /usr/local/bin/tkg ]; then
-      echo "ERROR: /usr/local/bin/tkg not installed, please download package from https://my.vmware.com"
+      echo "ERROR: /usr/local/bin/tkg not installed, please download package from https://www.vmware.com/go/get-tkg"
       echo "       => search for VMware Tanzu Kubernetes Grid CLI for Mac"
       exit
     fi
@@ -2163,7 +2242,7 @@ checkCLIcommands() {
   fi
 
   if [ "$cat" == "TOOLS" ]; then
-    CLI_COMMANDS="/usr/local/bin/jq:brew:jq /usr/local/bin/yq:brew:yq /usr/local/bin/wget:brew:wget"
+    CLI_COMMANDS="/usr/local/bin/jq:brew:jq /usr/local/bin/wget:brew:wget /usr/local/bin/mc:brew:minio/stable/mc /usr/local/bin/helm:brew:helm"
 
     for arg in $CLI_COMMANDS; do
       cmd=$(echo $arg | awk -F: '{ print $1 }') 
@@ -2358,6 +2437,274 @@ verifyVMwareRegistry() {
 a=1
 }
 
+installSpringCloudGateway() {
+  NAMESPACE=spring-cloud-gateway
+
+  if [ "$TDH_SERVICE_SPRING_CLOUD_GATEWAY" != "true" ]; then
+    uodateConfigMap tanzu-demo-hub TDH_SERVICE_SPRING_CLOUD_GATEWAY        "false"
+    return
+  fi
+
+  # --- DOWNLOAD BUILD_SERVICE BINARIES ---
+  downloadFromPivnet spring-cloud-gateway-for-kubernetes $TDH_SERVICE_SPRING_CLOUD_GATEWAY_VERSION \
+      "$TDH_SERVICE_SPRING_CLOUD_GATEWAY_VERSION" "Spring Cloud Gateway for Kubernetes Installer"
+
+  TBS_FILE="/tmp/spring-cloud-gateway-k8s-$TDH_SERVICE_SPRING_CLOUD_GATEWAY_VERSION.tgz"
+  [ -d /tmp/spring-cloud-gateway ] && rm -rf /tmp/spring-cloud-gateway
+  mkdir -p /tmp/spring-cloud-gateway
+  tar xfz $TBS_FILE -C /tmp/spring-cloud-gateway
+
+  messagePrint "Verify VMware Registry Access" "$TDH_REGISTRY_VMWARE_NAME"
+  docker login $TDH_REGISTRY_VMWARE_NAME -u $TDH_REGISTRY_VMWARE_USER -p $TDH_REGISTRY_VMWARE_PASS > /dev/null 2>&1
+  if [ $? -ne 0 ]; then
+    echo "ERROR: Docker login does not work"
+    echo "       => docker login $TDH_REGISTRY_VMWARE_NAME -u $TDH_REGISTRY_VMWARE_USER -p $TDH_REGISTRY_VMWARE_PASS"; exit
+  fi
+
+  #########################################################################################################################
+  ################################# TANZU BUILD SERVICE (TBS) - ON HARBOR REGISTRY ########################################
+  #########################################################################################################################
+
+  if [ "$TDH_SERVICE_REGISTRY_HARBOR" == "true" ]; then
+    DNS_HARBOR=$(getConfigMap tanzu-demo-hub TDH_HARBOR_REGISTRY_DNS_HARBOR)
+    TDH_HARBOR_REGISTRY_DNS_HARBOR=$(getConfigMap tanzu-demo-hub TDH_HARBOR_REGISTRY_DNS_HARBOR)
+    TDH_HARBOR_REGISTRY_ADMIN_PASSWORD=$(getConfigMap tanzu-demo-hub TDH_HARBOR_REGISTRY_ADMIN_PASSWORD)
+    messagePrint "Verify Harbor Registry Access" "$TDH_HARBOR_REGISTRY_DNS_HARBOR"
+    docker login $TDH_HARBOR_REGISTRY_DNS_HARBOR -u admin -p $TDH_HARBOR_REGISTRY_ADMIN_PASSWORD > /dev/null 2>&1
+    if [ $? -ne 0 ]; then
+      echo "ERROR: Docker login does not work 1"
+      echo "       => docker login $TDH_HARBOR_REGISTRY_DNS_HARBOR -u admin -p $TDH_HARBOR_REGISTRY_ADMIN_PASSWORD"; exit
+    fi
+
+    kubectl get ns $NAMESPACE > /dev/null 2>&1
+    if [ $? -ne 0 ]; then
+      # --- INSTALL CONTOUR INGRESS ---
+      messageTitle "Installing Spring Cloud Gateway"
+
+      messagePrint "- Relocate the images" "$TDH_REGISTRY_VMWARE_NAME/library/build-service"
+      cd /tmp/spring-cloud-gateway/spring-cloud-gateway-k8s-$TDH_SERVICE_SPRING_CLOUD_GATEWAY_VERSION
+      scripts/relocate-images.sh $DNS_HARBOR/library/spring-cloud-gateway > /dev/null 2>&1
+      if [ $? -ne 0 ]; then
+        echo "ERROR: Image Relocation failed"
+        echo "       => cd /tmp/spring-cloud-gateway/spring-cloud-gateway-k8s-$TDH_SERVICE_SPRING_CLOUD_GATEWAY_VERSION"
+        echo "       => scripts/relocate-images.sh $DNS_HARBOR/library/spring-cloud-gateway" 
+      fi
+
+      messagePrint "- Deploy Spring Cloud Gateway" "$NAMESPACE"
+      echo "-----------------------------------------------------------------------------------------------------------"
+      cd /tmp/spring-cloud-gateway/spring-cloud-gateway-k8s-$TDH_SERVICE_SPRING_CLOUD_GATEWAY_VERSION
+      ./scripts/install-spring-cloud-gateway.sh
+      echo "-----------------------------------------------------------------------------------------------------------"
+      if [ $? -ne 0 ]; then
+        echo "ERROR: Image Relocation failed"
+        echo "       => cd /tmp/spring-cloud-gateway/spring-cloud-gateway-k8s-$TDH_SERVICE_SPRING_CLOUD_GATEWAY_VERSION"
+        echo "       => ./scripts/install-spring-cloud-gateway.sh"
+      fi
+    else
+      messageTitle "Verify Spring Cloud Gateway"
+    fi
+  fi
+} 
+#hhhhhhhhhhhhhhhh
+
+installMinio() {
+  if [ "$TDH_SERVICE_MINIO" != "true" ]; then
+    uodateConfigMap tanzu-demo-hub TDH_SERVICE_MINIO        "false"
+    helm uninstall minio > /dev/null 2>&1
+    return
+  fi
+
+  TDH_DOMAIN=$(getConfigMap tanzu-demo-hub TDH_DOMAIN)
+  TDH_ENVNAME=$(getConfigMap tanzu-demo-hub TDH_ENVNAME)
+  DOMAIN=$(getConfigMap tanzu-demo-hub TDH_INGRESS_CONTOUR_LB_DOMAIN)
+
+  cnt=$(helm list -q | egrep -c "^tdh-minio")
+  if [ $cnt -eq 0 ]; then
+    messageTitle "Installing Minio"
+    HELM_VALUES=/tmp/helm_values.yaml
+    echo ""                                                                                                                     >  $HELM_VALUES
+    echo "ingress:"                                                                                                             >> $HELM_VALUES
+    echo "  enabled: true"                                                                                                      >> $HELM_VALUES
+    echo "  certManager: false"                                                                                                 >> $HELM_VALUES
+    echo "  annotations:"                                                                                                       >> $HELM_VALUES
+    echo "    kubernetes.io/ingress.class: contour"                                                                             >> $HELM_VALUES
+    echo "    ingress.kubernetes.io/force-ssl-redirect: \"true\""                                                               >> $HELM_VALUES
+    echo "  path: /"                                                                                                            >> $HELM_VALUES
+    echo "  hostname: minio.$DOMAIN"                                                                                            >> $HELM_VALUES
+    echo "  tls: true"                                                                                                          >> $HELM_VALUES
+    echo "  servicePort: minio"                                                                                                 >> $HELM_VALUES
+    echo "  extraTls:"                                                                                                          >> $HELM_VALUES
+    echo "  - hosts:"                                                                                                           >> $HELM_VALUES
+    echo "      - minio.$DOMAIN"                                                                                                >> $HELM_VALUES
+    echo "    secretName: tanzu-demo-hub-tls"                                                                                   >> $HELM_VALUES
+    echo "  extraHosts:"                                                                                                        >> $HELM_VALUES
+    echo "    - name: tdh-postgres-backup.minio.$DOMAIN"                                                                        >> $HELM_VALUES
+    echo "      path: /"                                                                                                        >> $HELM_VALUES
+
+    messagePrint " - Deploy the Postgres operator" "postgres-operator"
+    helm install tdh-minio bitnami/minio -f ${HELM_VALUES} > /dev/null 2>&1
+    if [ $? -ne 0 ]; then
+      echo "ERROR: Failed to deploy Minio Helm Chart"
+      echo "       => helm install tdh-minio bitnami/minio -f ${HELM_VALUES}"
+      exit
+    fi
+  fi
+
+  ver=$(helm ls -o json | jq -r --arg chart "postgres-operator" '.[] | select(.name == $chart).app_version')
+  crt=$(helm ls -o json | jq -r --arg chart "postgres-operator" '.[] | select(.name == $chart).chart')
+  stt=$(helm ls -o json | jq -r --arg chart "postgres-operator" '.[] | select(.name == $chart).status')
+  dat=$(helm ls -o json | jq -r --arg chart "postgres-operator" '.[] | select(.name == $chart).updated')
+  ACCESS_KEY=$(kubectl get secret --namespace default tdh-minio -o jsonpath="{.data.access-key}" | base64 --decode)
+  SECRET_KEY=$(kubectl get secret --namespace default tdh-minio -o jsonpath="{.data.secret-key}" | base64 --decode)
+
+  messageTitle "Verify Minio S3"
+  messagePrint " - Helm Chart"                     "$crt"
+  messagePrint " - Helm Chart Name"                "minio"
+  messagePrint " - Helm Chart Version"             "$ver"
+  messagePrint " - Helm Chart Status"              "$stt"
+  messagePrint " - Helm Chart Installed/Updated"   "$dat"
+  messagePrint " - Minio Internal Name"            "tdh-minio.default.svc.cluster.local"
+  messagePrint " - Minio Management Portal"        "https://minio.$DOMAIN"
+  messagePrint " - Minio Access Key"               "$ACCESS_KEY"
+  messagePrint " - Minio Secret Key"               "$SECRET_KEY"
+  echo "-----------------------------------------------------------------------------------------------------------"
+  echo " Test Minio S3 Access: (https://docs.min.io/docs/minio-client-complete-guide)"
+  echo " => brew install minio/stable/mc"
+  echo " => mc alias set minio https://minio.$DOMAIN $ACCESS_KEY $SECRET_KEY"
+  echo " => mc ls minio"
+  echo "-----------------------------------------------------------------------------------------------------------"
+  
+  # --- WAIT FOR HARBOR TO COME ONLINE ---
+  ret=1; cnt=0
+  while [ $ret -ne 0 -a $cnt -le 5 ]; do
+    mc alias set minio https://minio.$DOMAIN $ACCESS_KEY $SECRET_KEY > /dev/null 2>&1; ret=$?
+    sleep 60
+    let cnt=cnt+1
+  done
+
+  if [ $ret -ne 0 ]; then
+    echo "ERROR: Unable to configure Minio Client (mc)"
+    echo "       => mc alias set minio https://minio.$DOMAIN $ACCESS_KEY $SECRET_KEY"
+    exit
+  fi
+
+  #mc mb minio/tdh-postgres-backup > /dev/null 2>&1
+
+  # --- STORE SETTINGS IN CONFIGMAP ---
+  uodateConfigMap tanzu-demo-hub TDH_SERVICE_MINIO                "true"
+  uodateConfigMap tanzu-demo-hub TDH_SERVICE_MINIO_INTERNAL_NAME  "tdh-minio.default.svc.cluster.local:9000"
+  uodateConfigMap tanzu-demo-hub TDH_SERVICE_MINIO_ACCESS_KEY     "$ACCESS_KEY"
+  uodateConfigMap tanzu-demo-hub TDH_SERVICE_MINIO_SECRET_KEY     "$SECRET_KEY"
+}
+
+installTanzuDataPostgres() {
+  NAMESPACE=postgres-operator
+
+  if [ "$TDH_SERVICE_TANZU_DATA_POSTGRES" != "true" ]; then
+    uodateConfigMap tanzu-demo-hub TDH_SERVICE_TANZU_DATA_POSTGRES        "false"
+    kubectl delete -n $NAMESPACE > /dev/null 2>&1
+    helm uninstall tdh-pgadmin > /dev/null 2>&1
+    helm uninstall postgres-operator > /dev/null 2>&1
+    return
+  fi
+
+  # --- DOWNLOAD BUILD_SERVICE BINARIES ---
+  downloadFromPivnet tanzu-sql-postgres $TDH_SERVICE_TANZU_DATA_POSTGRES_VERSION "$TDH_SERVICE_TANZU_DATA_POSTGRES_VERSION" "Postgres for VMware Tanzu v$TDH_SERVICE_TANZU_DATA_POSTGRES_VERSION"
+
+  TBS_FILE="/tmp/postgres-for-kubernetes-v$TDH_SERVICE_TANZU_DATA_POSTGRES_VERSION.tar.gz"
+  [ -d /tmp/postgres-for-kubernetes ] && rm -rf /tmp/postgres-for-kubernetes
+  mkdir -p /tmp/postgres-for-kubernetes
+  tar xfz $TBS_FILE -C /tmp/postgres-for-kubernetes
+
+  if [ "$TDH_SERVICE_REGISTRY_HARBOR" == "true" ]; then
+    DNS_HARBOR=$(getConfigMap tanzu-demo-hub TDH_HARBOR_REGISTRY_DNS_HARBOR)
+    TDH_HARBOR_REGISTRY_DNS_HARBOR=$(getConfigMap tanzu-demo-hub TDH_HARBOR_REGISTRY_DNS_HARBOR)
+    TDH_HARBOR_REGISTRY_ADMIN_PASSWORD=$(getConfigMap tanzu-demo-hub TDH_HARBOR_REGISTRY_ADMIN_PASSWORD)
+    messagePrint "Verify Harbor Registry Access" "$TDH_HARBOR_REGISTRY_DNS_HARBOR"
+    docker login $TDH_HARBOR_REGISTRY_DNS_HARBOR -u admin -p $TDH_HARBOR_REGISTRY_ADMIN_PASSWORD > /dev/null 2>&1
+    if [ $? -ne 0 ]; then
+      echo "ERROR: Docker login does not work 1"
+      echo "       => docker login $TDH_HARBOR_REGISTRY_DNS_HARBOR -u admin -p $TDH_HARBOR_REGISTRY_ADMIN_PASSWORD"; exit
+    fi
+
+    cnt=$(helm list -q | egrep -c "^postgres-operator") 
+    if [ $cnt -eq 0 ]; then
+      messageTitle "Installing Postgres Operator"
+
+      # --- CREATE NAMESPACE ---
+      #kubectl create namespace $NAMESPACE > /dev/null 2>&1
+
+      # --- INSTALL CONTOUR INGRESS ---
+      POSTGRES_INSTALL_PATH="/tmp/postgres-for-kubernetes/postgres-for-kubernetes-v$TDH_SERVICE_TANZU_DATA_POSTGRES_VERSION"
+      REGISTRY="harbor.apps-contour.local.pcfsdu.com/library"
+
+      docker load -i ${POSTGRES_INSTALL_PATH}/images/postgres-instance  > /dev/null 2>&1
+      docker load -i ${POSTGRES_INSTALL_PATH}/images/postgres-operator  > /dev/null 2>&1
+
+      messagePrint " - Reocate Images (postgres-instance) to Harbor" "$REGISTRY/postgres-instance"
+      INSTANCE_IMAGE_NAME="${REGISTRY}/postgres-instance:$(cat $POSTGRES_INSTALL_PATH/images/postgres-instance-tag)"
+      docker tag $(cat $POSTGRES_INSTALL_PATH/images/postgres-instance-id) ${INSTANCE_IMAGE_NAME}  > /dev/null 2>&1
+      docker push ${INSTANCE_IMAGE_NAME}  > /dev/null 2>&1
+
+      messagePrint " - Reocate Images (postgres-operator) to Harbor" "$REGISTRY/postgres-operator"
+      OPERATOR_IMAGE_NAME="${REGISTRY}/postgres-operator:$(cat $POSTGRES_INSTALL_PATH/images/postgres-operator-tag)"
+      docker tag $(cat $POSTGRES_INSTALL_PATH/images/postgres-operator-id) ${OPERATOR_IMAGE_NAME}  > /dev/null 2>&1
+      docker push ${OPERATOR_IMAGE_NAME}  > /dev/null 2>&1
+
+      # --- CLEANUP DOCKER IMAGES ---
+      #for n in $(docker images | egrep "postgres-(operator|instance) " | awk '{ print $3 }'); do
+      #  docker image rm $n -f > /dev/null 2>&1
+      #done
+
+      messagePrint "Customize Postgres Helm Chart Values" "/tmp/values-overrides.yaml"
+      sed -e "s+operatorImageRepository: postgres-operator+operatorImageRepository: $REGISTRY/postgres-operator+g" \
+          -e "s+postgresImageRepository: postgres-instance+postgresImageRepository: $REGISTRY/postgres-instance+g" \
+          ${POSTGRES_INSTALL_PATH}/operator/values.yaml > /tmp/values-overrides.yaml
+      if [ "${DEBUG}" == "1" ]; then
+        echo "-----------------------------------------------------------------------------------------------------------"
+        cat /tmp/values-overrides.yaml
+        echo "-----------------------------------------------------------------------------------------------------------"
+      fi
+
+      messagePrint " - Deploy the Postgres operator" "postgres-operator"
+      #helm install postgres-operator -n $NAMESPACE -f /tmp/values-overrides.yaml ${POSTGRES_INSTALL_PATH}/operator/ > /dev/null 2>&1
+      helm install postgres-operator -f /tmp/values-overrides.yaml ${POSTGRES_INSTALL_PATH}/operator/ > /dev/null 2>&1
+      if [ $? -ne 0 ]; then
+        echo "ERROR: Failed to deploy Postgres Helm Chart"
+        echo "       => helm install postgres-operator -n $NAMESPACE -f /tmp/values-overrides.yaml ${POSTGRES_INSTALL_PATH}/operator/"
+        exit
+      fi
+    fi
+
+    ver=$(helm ls -o json | jq -r --arg chart "postgres-operator" '.[] | select(.name == $chart).app_version')
+    crt=$(helm ls -o json | jq -r --arg chart "postgres-operator" '.[] | select(.name == $chart).chart')
+    stt=$(helm ls -o json | jq -r --arg chart "postgres-operator" '.[] | select(.name == $chart).status')
+    dat=$(helm ls -o json | jq -r --arg chart "postgres-operator" '.[] | select(.name == $chart).updated')
+    
+    messageTitle "Verify Postgres Operator"  
+    messagePrint " - Helm Chart"                     "$crt"
+    messagePrint " - Helm Chart Name"                "postgres-operator"
+    messagePrint " - Helm Chart Version"             "$ver"
+    messagePrint " - Helm Chart Status"              "$stt"
+    messagePrint " - Helm Chart Installed/Updated"   "$dat"
+
+    ver=$(helm ls -o json | jq -r --arg chart "tdh-pgadmin" '.[] | select(.name == $chart).app_version')
+    crt=$(helm ls -o json | jq -r --arg chart "tdh-pgadmin" '.[] | select(.name == $chart).chart')
+    stt=$(helm ls -o json | jq -r --arg chart "tdh-pgadmin" '.[] | select(.name == $chart).status')
+    dat=$(helm ls -o json | jq -r --arg chart "tdh-pgadmin" '.[] | select(.name == $chart).updated')
+
+    messageTitle "Verify pgAdmin" 
+    messagePrint " - Helm Chart"                     "$crt"
+    messagePrint " - Helm Chart Name"                "tdh-pgadmin"
+    messagePrint " - Helm Chart Version"             "$ver"
+    messagePrint " - Helm Chart Status"              "$stt"
+    messagePrint " - Helm Chart Installed/Updated"   "$dat"
+  fi
+
+  uodateConfigMap tanzu-demo-hub TDH_SERVICE_TANZU_DATA_POSTGRES          "true"
+  uodateConfigMap tanzu-demo-hub TDH_SERVICE_TANZU_DATA_POSTGRES_VERSION  $TDH_SERVICE_TANZU_DATA_POSTGRES_VERSION
+} 
+
 installBuildService() {
   if [ "$TDH_SERVICE_BUILD_SERVICE" != "true" ]; then
     uodateConfigMap tanzu-demo-hub TDH_SERVICE_BUILD_SERVICE        "false"
@@ -2445,9 +2792,9 @@ installBuildService() {
     stt=$(kapp inspect -a tanzu-build-service 2>/dev/null | tail -1)
     if [ "$stt" != "Succeeded" ]; then
       messageTitle "Installing Tanzu Build Service"
-      messagePrint "- Install Build Service (kapp)" "tanzu-build-service"
+      messagePrint "- Install Build Service (kapp)" "`date`"
       echo "-----------------------------------------------------------------------------------------------------------"
-      echo " WARNING: This process may take ut to 2h for the deployment, Please run kapp manually to get more info"
+      echo " WARNING: This process may take up to 2h for the deployment, Please run kapp manually to get more info"
       echo "          => kapp inspect -a tanzu-build-service --column Namespace,name,reconcile_state | grep -v ok"
       echo "-----------------------------------------------------------------------------------------------------------"
         ytt -f /tmp/build-service/values.yaml \
@@ -2464,6 +2811,7 @@ installBuildService() {
         cnt=$(kapp inspect -a tanzu-build-service --json | jq -r '.Tables[].Rows[].reconcile_state' | grep -vc "ok")
         sleep 360
       done
+      messagePrint "- Install Build Service completed" "`date`"
     else
       messageTitle "Verify Tanzu Build Service"
       messagePrint "- Veriify Build Service (kapp)" "tanzu-build-service"
@@ -2485,15 +2833,13 @@ installBuildService() {
     downloadFromPivnet tbs-dependencies $TDH_SERVICE_BUILD_SERVICE_DEPENDANCIES $TDH_SERVICE_BUILD_SERVICE_DEPENDANCIES "descriptor-$TDH_SERVICE_BUILD_SERVICE_DEPENDANCIES.yaml"
 
     messagePrint "- Import Dependency Descriptors"
-    kp import -f /tmp/descriptor-$TDH_SERVICE_BUILD_SERVICE_DEPENDANCIES.yaml 
+    kp import -f /tmp/descriptor-$TDH_SERVICE_BUILD_SERVICE_DEPENDANCIES.yaml > /dev/null 2>&1
   else
     messagePrint "- Verify Dependency Descriptors"
     echo "-----------------------------------------------------------------------------------------------------------"
     kp clusterbuilder list | sed '$d'
     echo "-----------------------------------------------------------------------------------------------------------"
   fi
-
-#https://github.com/pivotal-sadubois/spring-petclinic.git
 
   uodateConfigMap tanzu-demo-hub TDH_SERVICE_BUILD_SERVICE          "true"
   uodateConfigMap tanzu-demo-hub TDH_SERVICE_BUILD_SERVICE_VERSION  $TDH_SERVICE_BUILD_SERVICE_VERSION
@@ -2516,7 +2862,7 @@ downloadFromPivnet() {
   for pid in $(pivnetAPI $PCF_PIVNET_TOKEN GET products/$PRODUCT_SLUG/releases 2> /dev/null | \
              jq -r ".releases[] | select(.version | scan(\"^$SLUG_VER\")).id"); do
     fid=$(pivnetAPI $PCF_PIVNET_TOKEN GET products/$PRODUCT_SLUG/releases/$pid 2>/dev/null | \
-          jq -r ".product_files[] | select(.name | scan(\"^$PROD_STR\")) | select(.file_version | scan(\"$PROD_VER\")).id")
+          jq -r ".product_files[] | select(.name | scan(\"^$PROD_STR\")) | select(.file_type == \"Software\") | select(.file_version | scan(\"$PROD_VER\")).id")
 
     if [ "${fid}" != "" ]; then
       # --- ACCEPT EULA ---
@@ -2538,14 +2884,14 @@ downloadFromPivnet() {
        awk -F'/' '{ print $NF }')
 
   if [ ! -f /tmp/$file ]; then
-    messageTitle "Download (äPRODUCT_SLUG) from PIVNET"
+    messageTitle "Download ($PRODUCT_SLUG) from PIVNET"
     messagePrint " - Product Name:" "$PRODUCT_SLUG"
     messagePrint " - Product Slug:" "$SLUG_VER"
     messagePrint " - Product FileID:" "$fid"
     messagePrint " - Download Location:" "/tmp/$file"
     pivnetAPIdownload $PCF_PIVNET_TOKEN $PRODUCT_SLUG $pid $fid $file
   else
-    messageTitle "Verify PIVNET Download (äPRODUCT_SLUG)"
+    messageTitle "Verify PIVNET Download ($PRODUCT_SLUG)"
     messagePrint " - Product Name:" "$PRODUCT_SLUG"
     messagePrint " - Product Slug:" "$SLUG_VER"
     messagePrint " - Product FileID:" "$fid"
@@ -2748,7 +3094,6 @@ createClusterIssuer() {
     messagePrint " - LetsEnscript DNSZone"             "*.apps-contour.${TDH_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}"
     messagePrint " - LetsEnscript DNSZone"             "*.apps-nginx.${TDH_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}"
 
-echo "TDH_TLS_ISSUER_NAME:$TDH_TLS_ISSUER_NAME"
     echo "apiVersion: cert-manager.io/v1alpha2"                                    >  $TDH_TLS_ISSUER_NAME
     echo "kind: ClusterIssuer"                                                     >> $TDH_TLS_ISSUER_NAME
     echo "metadata:"                                                               >> $TDH_TLS_ISSUER_NAME
@@ -2966,7 +3311,6 @@ InstallCertManager() {
 }
 
 InstallHarborRegistry() {
-#gaga
   if [ "$TDH_SERVICE_BUILD_SERVICE" != "true" ]; then
     uodateConfigMap tanzu-demo-hub TDH_SERVICE_BUILD_SERVICE        "false"
     return
@@ -3110,4 +3454,638 @@ tdh_verifyTKGcluster() {
   fi
 }
 
+cleanAWSenv() {
+  # --- DELETE HOSTED ZONE ---
+  domain="$ENV_NAME.$AWS_HOSTED_DNS_DOMAIN"
+  ZONE_ID=$(aws route53 list-hosted-zones-by-name --dns-name ${domain} | \
+            jq -r ".HostedZones[] | select(.Name | scan(\"^$domain.\")).Id")
+
+  if [ "${ZONE_ID}" != "" ]; then
+    messagePrint " - Deleting DNS Hosted Zone:" "$ZONE_ID"
+    route53deleteHostedZone $ZONE_ID
+  fi
+
+  # --- DELETE INSTANCES ---
+  SECGRP=/tmp/$$_aws_routing_table.json
+  aws --region $AWS_LOCATION ec2 describe-instances > $SECGRP
+  tot=$(grep -c "InstanceId" $SECGRP); i=0; let tot=tot-1
+  while [ $i -le $tot ]; do
+    gid=$(jq -r ".Reservations[$i].Instances[].InstanceId" 2>/dev/null $SECGRP)
+
+    cnt=$(jq -r ".Reservations[$i].Instances[].Tags[].Value" 2>/dev/null $SECGRP | egrep -c "^${ENV_NAME}|p-bosh")
+    if [ $cnt -gt 0 ]; then
+      cnt=$(jq -r ".Reservations[$i].Instances[].State.Name" 2>/dev/null $SECGRP | egrep -c "terminated")
+      if [ $cnt -eq 0 ]; then
+        messagePrint " - Terminate Instance:" "$gid"
+        aws --region $AWS_LOCATION ec2 terminate-instances --instance-ids $gid > /dev/null 2>&1
+        if [ $? -ne 0 ]; then
+          echo "ERROR: failled to Terminage Instance: $gid"
+          echo "aws --region $AWS_LOCATION ec2 terminate-instances  --instance-ids $gid"
+          exit 1
+        fi
+
+        sleep 30
+      fi
+    fi
+
+    let i=i+1
+  done
+
+  # --- CLEANUP ---
+  rm -f $SECGRP
+
+  # --- IAM DELETE ROLES ---
+  TMPAWS=/tmp/$$_aws.json
+  aws --region $AWS_LOCATION iam list-instance-profiles > $TMPAWS
+  tot=$(grep -c "InstanceProfileId" $TMPAWS); i=0; let tot=tot-1
+  while [ $i -le $tot ]; do
+    arn=$(jq -r ".InstanceProfiles[$i].InstanceProfileId" 2>/dev/null $TMPAWS)
+    nam=$(jq -r ".InstanceProfiles[$i].InstanceProfileName" 2>/dev/null $TMPAWS)
+
+    cnt=$(echo $nam | egrep -c "^${ENV_NAME}_")
+    if [ $cnt -gt 0 ]; then
+      messagePrint " - Delete IAM Instance Profile:" "$nam"
+      for rol in $(jq -r ".InstanceProfiles[$i].Roles[].RoleName" 2>/dev/null $TMPAWS); do
+        aws --region $AWS_LOCATION iam remove-role-from-instance-profile \
+           --instance-profile-name $nam --role-name $rol
+      done
+
+      aws --region $AWS_LOCATION iam delete-instance-profile --instance-profile-name $nam > /dev/null 2>&1
+      if [ $? -ne 0 ]; then
+        echo "ERROR: failled to delete IAM Instance Profile: $nam"
+        echo "aws --region $AWS_LOCATION iam delete-instance-profile --instance-profile-name $nam"
+        exit 1
+      fi
+    fi
+    let i=i+1
+  done
+
+  # --- DELETE KMS ALIASES ---
+  aws --region eu-central-1 kms list-aliases --query "Aliases[?contains(to_string(AliasName),'$ENV_NAME')]" > $TMPAWS
+  tot=$(grep -c "PolicyName" $TMPAWS); i=0
+  while [ $i -lt $tot ]; do
+    tid=$(jq -r ".[$i].TargetKeyId" 2>/dev/null $TMPAWS)
+    arn=$(jq -r ".[$i].AliasArn" 2>/dev/null $TMPAWS)
+    nam=$(jq -r ".[$i].AliasName" 2>/dev/null $TMPAWS)
+
+    messagePrint " - Delete KMS Alias:" "$nam"
+  done
+
+  # --- IAM DELETE ROLES ---
+  TMPAWS=/tmp/$$_aws.json
+  aws --region $AWS_LOCATION iam list-roles --query "Roles[?starts_with(to_string(RoleName), '$ENV_NAME')]" > $TMPAWS
+
+  tot=$(grep -c "RoleName" $TMPAWS); i=0
+  while [ $i -lt $tot ]; do
+    rid=$(jq -r ".[$i].RoleId" 2>/dev/null $TMPAWS)
+    arn=$(jq -r ".[$i].Arn" 2>/dev/null $TMPAWS)
+    nam=$(jq -r ".[$i].RoleName" 2>/dev/null $TMPAWS)
+
+    messagePrint " - Delete IAM Role:" "$nam"
+
+    for tmp in $(aws --region $AWS_LOCATION  iam list-policies | jq -r '.Policies[].Arn' | grep $ENV_NAME); do
+      usr=$(aws --region $AWS_LOCATION iam list-entities-for-policy --policy-arn $tmp | jq -r '.PolicyUsers[].UserName')
+      grp=$(aws --region $AWS_LOCATION iam list-entities-for-policy --policy-arn $tmp | jq -r '.PolicyGroups[].GroupName')
+      rol=$(aws --region $AWS_LOCATION iam list-entities-for-policy --policy-arn $tmp | jq -r '.PolicyRoles[].RoleName')
+      if [ "${usr}" != "" ]; then
+        aws --region $AWS_LOCATION iam detach-user-policy --policy-arn $tmp --user-name $usr
+      fi
+
+      if [ "${rol}" != "" ]; then
+        aws --region $AWS_LOCATION iam detach-role-policy --policy-arn $tmp --role-name $rol
+      fi
+
+      if [ "${grp}" != "" ]; then
+        aws --region $AWS_LOCATION iam detach-user-policy --policy-arn $tmp --group-name $usr
+      fi
+
+      aws iam delete-policy --policy-arn $tmp
+    done
+
+    for pol in $(aws --region $AWS_LOCATION iam list-attached-role-policies --role-name $nam | \
+        jq -r ".AttachedPolicies[].PolicyArn"); do
+
+      aws --region $AWS_LOCATION iam detach-role-policy --role-name $nam --policy-arn $pol
+      aws --region $AWS_LOCATION iam delete-role-policy --role-name $nam --policy-name $pol
+    done
+
+    # --- DELETE ROLE POLICY ---
+    for pol in $(aws --region $AWS_LOCATION iam list-role-policies --role-name $nam | \
+                 jq -r '.PolicyNames[]'); do
+
+      aws --region $AWS_LOCATION iam delete-role-policy --role-name $nam --policy-name $pol
+    done
+
+    aws --region $AWS_LOCATION iam delete-role --role-name $nam > /dev/null 2>&1
+    if [ $? -ne 0 ]; then
+      echo "ERROR: failled to delete IAM Role: $nam"
+      echo "       aws --region $AWS_LOCATION iam delete-role --role-name $nam"
+      exit 1
+    fi
+    let i=i+1
+  done
+
+  # --- CLEANUP ---
+  rm -f $TMPAWS
+
+  # --- IAM DELETE USERS ---
+  for arn in $(aws --region $AWS_LOCATION iam list-users | jq -r '.Users[].UserName' 2>/dev/null); do
+    cnt=$(echo $arn | egrep -c "^${ENV_NAME}_")
+    if [ $cnt -gt 0 ]; then
+      messagePrint " - Cleaning up iam User:" "$arn"
+
+      # --- DETACH POLICY ---
+      for pol in $(aws --region $AWS_LOCATION iam list-attached-user-policies --user-name $arn | \
+          jq -r ".AttachedPolicies[].PolicyArn"); do
+
+        aws --region $AWS_LOCATION iam detach-user-policy --user-name $arn --policy-arn $pol
+      done
+
+      # --- DELETE POLICY ---
+      for pol in $(aws --region $AWS_LOCATION iam list-attached-user-policies --user-name $arn | \
+          jq -r ".AttachedPolicies[].PolicyName"); do
+
+        aws --region $AWS_LOCATION iam delete-user-policy --user-name $arn --policy-name $pol
+      done
+
+      # --- DELETE ACCESS-KEYS ---
+      for key in $(aws --region $AWS_LOCATION iam list-access-keys --user-name $arn | \
+          jq -r ".AccessKeyMetadata[].AccessKeyId"); do
+
+        aws --region $AWS_LOCATION iam delete-access-key --access-key-id $key --user-name $arn
+      done
+
+      aws --region $AWS_LOCATION iam delete-user --user-name $arn
+      if [ $? -ne 0 ]; then
+        echo "ERROR: failled to delete User"
+        echo "aws --region $AWS_LOCATION iam delete-user --user-name $arn"
+        exit 1
+      fi
+    fi
+  done
+
+  # --- DELETE LOAD BALANCERS ---
+  TMPAWS=/tmp/$$_aws.json
+  for nam in $(aws --region $AWS_LOCATION elb describe-load-balancers | jq -r '.LoadBalancerDescriptions[].LoadBalancerName' 2>/dev/null); do
+    aws --region $AWS_LOCATION elb describe-load-balancers --load-balancer-names $nam >/dev/null 2>&1
+    if [ $? -eq 0 ]; then
+      for tag in $(aws --region $AWS_LOCATION elb describe-tags --load-balancer-name $nam 2>/dev/null | \
+        jq -r '.TagDescriptions[].Tags[].Value'); do
+
+        # --- DELETE LOAD-BALANCERS WITH TAG ENV_NAME ---
+        enm=$(aws --region $AWS_LOCATION elb describe-tags --load-balancer-name $nam | \
+            jq -r '.TagDescriptions[].Tags[].Value' | grep -c "${ENV_NAME}")
+
+        # --- CLEANUOP NGINX-INGRESS-LOADBALANCER ---
+        cnt=$(echo $tag | egrep -c "nginx-ingress-controller")
+        if [ ${cnt} -gt 0 -o ${enm} -gt 0 ]; then
+          messagePrint " - Cleaning up elp Load-Balancers:" "$nam"
+          aws --region $AWS_LOCATION elb delete-load-balancer --load-balancer-name $nam >/dev/null 2>&1
+          if [ $? -ne 0 ]; then
+            echo "ERROR: failled to delete load-balancer: $nam"
+            echo "aws --region $AWS_LOCATION elb delete-load-balancer --load-balancer-name $nam"
+            exit 1
+          fi
+        fi
+      done
+    fi
+  done
+
+  rm -f $TMPAWS
+
+  # --- DELETE LOAD BALANCERS ---
+  for arn in $(aws --region $AWS_LOCATION elbv2 describe-load-balancers | jq -r '.LoadBalancers[].LoadBalancerArn' 2>/dev/null); do
+    nam=$(aws --region $AWS_LOCATION elbv2 describe-load-balancers --load-balancer-arns $arn | \
+        jq -r '.LoadBalancers[].LoadBalancerName')
+
+    cnt=$(echo $nam | egrep -c "^${ENV_NAME}-")
+    if [ $cnt -gt 0 ]; then
+      aws --region $AWS_LOCATION elbv2 delete-load-balancer --load-balancer-arn $arn
+      messagePrint " - Cleaning up elpv2 LoadBalancers:" "$nam"
+    fi
+  done
+
+  # --- DELETE TARGET GROUPS ---
+  SECGRP=/tmp/$$_aws_tgp.json
+  aws --region $AWS_LOCATION elbv2 describe-target-groups > $SECGRP
+  tot=$(grep -c "TargetGroupArn" $SECGRP); i=0; let tot=tot-1
+  while [ $i -le $tot ]; do
+    sid=$(jq -r ".TargetGroups[$i].TargetGroupArn" 2>/dev/null $SECGRP)
+    snm=$(jq -r ".TargetGroups[$i].TargetGroupName" 2>/dev/null $SECGRP)
+
+    cnt=$(echo "$snm" | egrep -c "^${ENV_NAME}-")
+    if [ $cnt -gt 0 ]; then
+      messagePrint " - Delete Target Group:" "$snm"
+      aws --region $AWS_LOCATION elbv2 delete-target-group --target-group-arn $sid > /dev/null 2>&1
+      if [ $? -ne 0 ]; then
+        echo "ERROR: failled to delete Target group"
+        echo "aws --region $AWS_LOCATION elbv2 delete-target-group --target-group-arn $sid"
+        exit 1
+      fi
+    fi
+    let i=i+1
+  done
+
+  # --- CLEANUP ---
+  rm -f $SECGRP
+
+  for key in $(aws --region $AWS_LOCATION ec2 describe-key-pairs | jq -r '.KeyPairs[].KeyName' 2>/dev/null); do
+    cnt=$(echo $key | egrep -c "^${ENV_NAME}-")
+    if [ $cnt -gt 0 ]; then
+      messagePrint " - Delete KeyPair:" "$key"
+      aws --region $AWS_LOCATION ec2 delete-key-pair --key-name $key >/dev/null 2>&1
+      if [ $? -ne 0 ]; then
+        aws --region $AWS_LOCATION ec2 delete-key-pair --key-name $key
+        exit 1
+      fi
+    fi
+  done
+
+  # --- DELETE VPC's ---
+  TMPVCP=/tmp/$$_aws_vpc.json
+  aws --region $AWS_LOCATION ec2 describe-vpcs > $TMPVCP
+  tot=$(grep -c "VpcId" $TMPVCP); i=0; let tot=tot-1
+  while [ $i -le $tot ]; do
+    vpc=$(jq -r ".Vpcs[$i].VpcId" 2>/dev/null $TMPVCP)
+    cnt=$(jq -r ".Vpcs[$i].Tags[].Value" 2>/dev/null $TMPVCP | egrep -c "^${ENV_NAME}|pcfjump")
+    if [ $cnt -eq 0 ]; then let i=i+1; continue; fi
+    messagePrint " VPC Ressources:" "$vpc"
+
+    # --- DELETE NAT GATEWAY ---
+    for id in $(aws --region $AWS_LOCATION ec2 describe-nat-gateways --filter "Name=vpc-id,Values=$vpc" | \
+                jq -r ".NatGateways[].NatGatewayId" 2>/dev/null $TMPVAL); do
+
+      messagePrint "  - 1Delete NAT Gateway:" "$id"
+      aws --region $AWS_LOCATION ec2 delete-nat-gateway --nat-gateway-id $id > /dev/null 2>&1
+      if [ $? -ne 0 ]; then
+        echo "ERROR: failled to NAT Gateway: $id"
+        echo "aws --region $AWS_LOCATION ec2 delete-nat-gateway --nat-gateway-id $id"
+        #exit 1
+      fi
+    done
+
+    sleep 10
+
+    # --- CLEANUP ---
+    rm -f $TMPAWS
+
+    # --- DELETE LOAD BALANCERS ---
+    for nam in $(aws --region $AWS_LOCATION elb describe-load-balancers | \
+         jq -r '.LoadBalancerDescriptions[].LoadBalancerName' 2>/dev/null); do
+      tvpc=$(aws --region $AWS_LOCATION elb describe-load-balancers --load-balancer-name $nam | \
+          jq -r '.LoadBalancerDescriptions[].VPCId')
+      if [ "$tvpc" == "${vpc}" ]; then
+        aws --region $AWS_LOCATION elb delete-load-balancer --load-balancer-name $nam
+        messagePrint "  - Cleaning up elp LoadBalancers:" "$nam"
+        sleep 30
+      fi
+    done
+
+    # --- DELETE INTERNET GATEWAYS ---
+    for id in $(aws --region $AWS_LOCATION ec2 describe-internet-gateways --filter "Name=attachment.vpc-id,Values=$vpc" | \
+                jq -r ".InternetGateways[].InternetGatewayId" 2>/dev/null); do
+
+      messagePrint "  - Detach Internet Gateway:" "$id"
+      aws --region $AWS_LOCATION ec2 detach-internet-gateway --internet-gateway-id $id --vpc-id $vpc > /dev/null 2>&1
+      if [ $? -ne 0 ]; then
+        echo "ERROR: failled to detach internet gateway: $id"
+        echo "aws --region $AWS_LOCATION ec2 detach-internet-gateway --internet-gateway-id $id --vpc-id $vpc"
+        exit 1
+      fi
+
+      messagePrint "  - Delete Internet Gateway:" "$id"
+      aws --region $AWS_LOCATION ec2 delete-internet-gateway --internet-gateway-id $id > /dev/null 2>&1
+      if [ $? -ne 0 ]; then
+        echo "ERROR: failled to delete internet gateway: $id"
+        echo "aws --region $AWS_LOCATION ec2 delete-internet-gateway --internet-gateway-id $id"
+        exit 1
+      fi
+    done
+
+    # --- DELETE SUBNETS ---
+    for id in $(aws --region $AWS_LOCATION ec2 describe-subnets --filter "Name=vpc-id,Values=$vpc" | \
+                jq -r ".Subnets[].SubnetId" 2>/dev/null); do
+
+      messagePrint "  - Delete Subnet:" "$id"
+      aws --region $AWS_LOCATION ec2 delete-subnet --subnet-id $id > /dev/null 2>&1
+      if [ $? -ne 0 ]; then
+        echo "ERROR: failled to deleting subnet: $id"
+        echo "aws --region $AWS_LOCATION ec2 delete-subnet --subnet-id $id"
+        exit 1
+      fi
+    done
+
+    SECGRP=/tmp/$$_aws_security_groups.json
+    aws --region $AWS_LOCATION ec2 describe-security-groups --filter "Name=vpc-id,Values=$vpc" > $SECGRP
+    tot=$(grep -c "GroupName" $SECGRP); i=0; let tot=tot-1
+    while [ $i -le $tot ]; do
+      gnm=$(jq -r ".SecurityGroups[$i].GroupName" 2>/dev/null $SECGRP)
+      gid=$(jq -r ".SecurityGroups[$i].GroupId" 2>/dev/null $SECGRP)
+
+      cnt=$(jq -r ".SecurityGroups[$i].Tags[].Value" 2>/dev/null $SECGRP | egrep -c "^${ENV_NAME}")
+      if [ $cnt -gt 0 ]; then
+        messagePrint "  - Delete Security Group:" "$gnm"
+        aws --region $AWS_LOCATION ec2 delete-security-group --group-id $gid > /dev/null 2>&1
+        if [ $? -ne 0 ]; then
+          aws --region $AWS_LOCATION ec2 delete-security-group --group-name $gnm > /dev/null 2>&1
+          if [ $? -ne 0 ]; then
+            echo "ERROR: failled to delete security group"
+            echo "aws --region $AWS_LOCATION ec2 delete-security-group --group-id $gid"
+            echo "aws --region $AWS_LOCATION ec2 delete-security-group --group-name $gnm"
+            exit 1
+          fi
+        fi
+      fi
+      let i=i+1
+    done
+
+   # --- DELETE ALL SCURITY GROUPS ATTACHED TO THIS VPC ---
+    for gid in $(aws --region $AWS_LOCATION ec2 describe-security-groups | \
+         jq -r '.SecurityGroups[].GroupId' 2>/dev/null); do
+      sgnm=$(aws --region $AWS_LOCATION ec2 describe-security-groups --group-ids  $gid | \
+          jq -r '.SecurityGroups[].GroupName')
+      tvpc=$(aws --region $AWS_LOCATION ec2 describe-security-groups --group-ids  $gid | \
+          jq -r '.SecurityGroups[].VpcId')
+      if [ "$tvpc" == "${vpc}" -a "${sgnm}" != "default" ]; then
+        messagePrint "  - Cleaning up SecurityGroup:" "$gid"
+        aws --region $AWS_LOCATION ec2 delete-security-group --group-id $gid > /dev/null 2>&1
+        if [ $? -ne 0 ]; then
+          echo "ERROR: failled to delete security group"
+          echo "aws --region $AWS_LOCATION ec2 delete-security-group --group-id $gid"
+          exit 1
+        fi
+      fi
+
+      sleep 30
+    done
+
+    # --- CLEANUP ---
+    rm -f $SECGRP
+
+echo gaga1
+    # --- DELETE ROUTING TABLES ---
+    for id in $(aws --region $AWS_LOCATION ec2 describe-route-tables --filter "Name=vpc-id,Values=$vpc" | \
+                jq -r ".RouteTables[].RouteTableId" 2>/dev/null); do
+echo "ID:$id"
+
+      messagePrint "  - Delete Routing Table:" "$id"
+      aws --region $AWS_LOCATION ec2 delete-route-table --route-table-id $id> /dev/null 2>&1
+      #if [ $? -ne 0 ]; then
+      #  echo "ERROR: failled to delete routing table: $id"
+      #  echo "aws --region $AWS_LOCATION ec2 delete-route-table --route-table-id $id"
+      #  #exit 1
+      #fi
+    done
+
+    # --- DELETE VPC ---
+    messagePrint "  - Delete VPC:" "$vpc"
+    aws --region $AWS_LOCATION ec2 delete-vpc --vpc-id $vpc > /dev/null 2>&1
+    if [ $? -ne 0 ]; then
+      echo "ERROR: failled to delete VPC: $vpc"
+      echo "aws --region $AWS_LOCATION ec2 delete-vpc --vpc-id $vpc"
+      exit 1
+    fi
+
+    let i=i+1
+  done
+
+  # --- CLEANUP ---
+  rm -f $TMPVCP
+
+  # --- DELETE ADDRESSES ---
+  SECGRP=/tmp/$$_aws_routing_table.json
+  aws --region $AWS_LOCATION ec2 describe-addresses > $SECGRP
+  tot=$(grep -c "PublicIp" $SECGRP); i=0; let tot=tot-1
+  while [ $i -le $tot ]; do
+    pid=$(jq -r ".Addresses[$i].PublicIp" 2>/dev/null $SECGRP)
+    aid=$(jq -r ".Addresses[$i].AllocationId" 2>/dev/null $SECGRP)
+
+    cnt=$(jq -r ".Addresses[$i].Tags[].Value" 2>/dev/null $SECGRP | egrep -c "^${ENV_NAME}")
+    if [ $cnt -gt 0 ]; then
+      messagePrint " - Release PublicIP:" "$pid"
+      aws --region $AWS_LOCATION ec2 release-address --allocation-id $aid > /dev/null 2>&1; re1=$?
+      aws --region $AWS_LOCATION ec2 release-address --public-ip $pid > /dev/null 2>&1; re2=$?
+      if [ $re1 -ne 0 -a $re2 -ne 0 ]; then
+#=> Delete NatGateway first (awspks-nat) 1660 llllllll
+        echo "ERROR: 1failed to release IP: $pid"
+        echo "aws --region $AWS_LOCATION ec2 release-address --allocation-id $aid"
+        echo "aws --region $AWS_LOCATION ec2 release-address --public-ip $pid"
+        exit 1
+      fi
+
+      sleep 20
+    fi
+
+    let i=i+1
+  done
+
+  # --- CLEANUP ---
+  rm -f $TMPAWS
+
+  SECGRP=/tmp/$$_aws_routing_table.json
+  aws --region $AWS_LOCATION ec2 describe-route-tables > $SECGRP
+  tot=$(grep -c "RouteTableId" $SECGRP); i=0; let tot=tot-1
+  while [ $i -le $tot ]; do
+    gid=$(jq -r ".RouteTables[$i].RouteTableId" 2>/dev/null $SECGRP)
+
+    cnt=$(jq -r ".RouteTables[$i].Tags[].Value" 2>/dev/null $SECGRP | egrep -c "^${ENV_NAME}")
+    if [ $cnt -gt 0 ]; then
+      messagePrint " - Delete Routing Table:" "$gid"
+      aws --region $AWS_LOCATION ec2 delete-route-table --group-id $gid > /dev/null 2>&1
+      if [ $? -ne 0 ]; then
+        echo "ERROR: failled to delete Routing Table: $gid"
+        echo "aws --region $AWS_LOCATION ec2 delete-route-table --route-table-id $gid"
+        exit 1
+      fi
+    fi
+    let i=i+1
+  done
+
+  # --- CLEANUP ---
+  rm -f $SECGRP
+
+  SECGRP=/tmp/$$_aws_nat_gateways.json
+  aws --region $AWS_LOCATION ec2 describe-nat-gateways > $SECGRP
+  tot=$(grep -c "GroupName" $SECGRP); i=0; let tot=tot-1
+  while [ $i -le $tot ]; do
+    gid=$(jq -r ".NatGateways[$i].NatGatewayId" 2>/dev/null $SECGRP)
+
+    cnt=$(jq -r ".NatGateways[$i].Tags[].Value" 2>/dev/null $SECGRP | egrep -c "^${ENV_NAME}")
+    if [ $cnt -gt 0 ]; then
+      messagePrint " - 2Delete NAT Gateway:" "$gid"
+      aws --region $AWS_LOCATION ec2 delete-nat-gateway --group-id $gid > /dev/null 2>&1
+      if [ $? -ne 0 ]; then
+        aws --region $AWS_LOCATION ec2 delete-nat-gateway --nat-gateway-id $gid > /dev/null 2>&1
+        if [ $? -ne 0 ]; then
+          echo "ERROR: failled to delete NAT Gateway: $gid"
+          echo "aws --region $AWS_LOCATION ec2 delete-nat-gateway --group-id $gid"
+          exit 1
+        fi
+      fi
+    fi
+    let i=i+1
+  done
+
+  # --- CLEANUP ---
+  rm -f $SECGRP
+
+  SECGRP=/tmp/$$_aws_security_groups.json
+  aws --region $AWS_LOCATION ec2 describe-security-groups > $SECGRP
+  tot=$(grep -c "GroupName" $SECGRP); i=0; let tot=tot-1
+  while [ $i -le $tot ]; do
+    gnm=$(jq -r ".SecurityGroups[$i].GroupName" 2>/dev/null $SECGRP)
+    gid=$(jq -r ".SecurityGroups[$i].GroupId" 2>/dev/null $SECGRP)
+#gugu
+
+    cnt=$(jq -r ".SecurityGroups[$i].Tags[].Value" 2>/dev/null $SECGRP | egrep -c "^${ENV_NAME}")
+    if [ $cnt -gt 0 ]; then
+      messagePrint " - Delete Sevcurity Group:" "$gnm"
+      aws --region $AWS_LOCATION ec2 delete-security-group --group-id $gid > /dev/null 2>&1
+      if [ $? -ne 0 ]; then
+        aws --region $AWS_LOCATION ec2 delete-security-group --group-name $gnm > /dev/null 2>&1
+        if [ $? -ne 0 ]; then
+          echo "ERROR: failled to delete security group"
+          echo "aws --region $AWS_LOCATION ec2 delete-security-group --group-id $gid"
+          echo "aws --region $AWS_LOCATION ec2 delete-security-group --group-name $gnm"
+          exit 1
+        fi
+      fi
+    fi
+    let i=i+1
+  done
+
+  # --- CLEANUP ---
+  rm -f $SECGRP
+
+  SECGRP=/tmp/$$_aws_subnets.json
+  aws --region $AWS_LOCATION ec2 describe-subnets > $SECGRP
+  tot=$(grep -c "SubnetId" $SECGRP); i=0; let tot=tot-1
+  while [ $i -le $tot ]; do
+    sid=$(jq -r ".Subnets[$i].SubnetId" 2>/dev/null $SECGRP)
+
+    cnt=$(jq -r ".Subnets[$i].Tags[].Value" 2>/dev/null $SECGRP | egrep -c "^${ENV_NAME}")
+    if [ $cnt -gt 0 ]; then
+      messagePrint " - Delete Subnet:" "$sid"
+      aws --region $AWS_LOCATION ec2 delete-subnet --subnet-id $sid > /dev/null 2>&1
+      if [ $? -ne 0 ]; then
+        echo "ERROR: failled to delete security group"
+        echo "aws --region $AWS_LOCATION ec2 delete-subnet --subnet-id $sid"
+        exit 1
+      fi
+    fi
+    let i=i+1
+  done
+
+  # --- CLEANUP ---
+  rm -f $SECGRP
+
+  # --- DELETE ADDRESSES ---
+  SECGRP=/tmp/$$_aws_routing_table.json
+  aws --region $AWS_LOCATION ec2 describe-addresses > $SECGRP
+  tot=$(grep -c "PublicIp" $SECGRP); i=0; let tot=tot-1
+  while [ $i -le $tot ]; do
+    pid=$(jq -r ".Addresses[$i].PublicIp" 2>/dev/null $SECGRP)
+    aid=$(jq -r ".Addresses[$i].AllocationId" 2>/dev/null $SECGRP)
+
+    cnt=$(jq -r ".Addresses[$i].Tags[].Value" 2>/dev/null $SECGRP | egrep -c "^${ENV_NAME}")
+    if [ $cnt -gt 0 ]; then
+      messagePrint " - Release PublicIP:" "$pid"
+      aws --region $AWS_LOCATION ec2 release-address --allocation-id $aid > /dev/null 2>&1; re1=$?
+      aws --region $AWS_LOCATION ec2 release-address --public-ip $pid > /dev/null 2>&1; re2=$?
+      if [ $re1 -ne 0 -a $re2 -ne 0 ]; then
+#=> Delete NatGateway first (awspks-nat)
+        echo "ERROR: 2failed to release IP: $pid"
+        echo "aws --region $AWS_LOCATION ec2 release-address --allocation-id $aid"
+        echo "aws --region $AWS_LOCATION ec2 release-address --public-ip $pid"
+        exit 1
+      fi
+
+      sleep 20
+    fi
+
+    let i=i+1
+  done
+
+  # --- CLEANUP ---
+  rm -f $TMPAWS
+
+  # --- IAM DELETE POLICIES ---
+  TMPAWS=/tmp/$$_aws.json
+  aws --region $AWS_LOCATION iam list-policies > $TMPAWS
+  tot=$(grep -c "PolicyName" $TMPAWS); i=0; let tot=tot-1
+  while [ $i -le $tot ]; do
+    arn=$(jq -r ".Policies[$i].Arn" 2>/dev/null $TMPAWS)
+    nam=$(jq -r ".Policies[$i].PolicyName" 2>/dev/null $TMPAWS)
+
+    cnt=$(echo $nam | egrep -c "^${ENV_NAME}_")
+    if [ $cnt -gt 0 ]; then
+      messagePrint " - Delete IAM Policy:" "$nam"
+      rol=$(aws iam list-entities-for-policy --policy-arn $arn | jq -r '.PolicyRoles[].RoleName')
+      if [ "$rol" != "" ]; then
+        aws --region $AWS_LOCATION iam detach-role-policy --role-name $rol --policy-arn $arn > /dev/null 2>&1
+      fi
+
+      aws --region $AWS_LOCATION iam delete-policy --policy-arn $arn > /dev/null 2>&1
+      if [ $? -ne 0 ]; then
+        echo "ERROR: failled to delete IAM Policy: $nam"
+        echo "aws --region $AWS_LOCATION iam delete-policy --policy-arn $arn"
+        exit 1
+      fi
+    fi
+    let i=i+1
+  done
+
+  # --- CLEANUP ---
+  rm -f $SECGRP
+
+  for alias in $(aws --region $AWS_LOCATION kms list-aliases | jq -r '.Aliases[].AliasName'); do
+    cnt=$(echo $alias | egrep -c "alias/${ENV_NAME}")
+    if [ $cnt -gt 0 ]; then
+      messagePrint " - Delete KMS Alias:" "$alias"
+      aws --region $AWS_LOCATION kms delete-alias --alias-name $alias
+    fi
+  done
+
+  # --- DELETE S3 BUCKETS ---
+  for bucket in $(aws s3api --region=$AWS_LOCATION list-buckets | jq -r '.Buckets[].Name' | \
+                egrep "^${ENV_NAME}-"); do
+    messagePrint " - Delete S3 Bucket:" "$bucket"
+    aws s3api --region=$AWS_LOCATION delete-bucket --bucket $bucket > /dev/null 2>&1
+    #if [ $? -ne 0 ]; then
+    #  echo "ERROR: failled to delete S3 Bucket: $nam"
+    #  echo "aws s3api --region $AWS_LOCATION delete-bucket --bucket $bucket"
+    #  exit 1
+    #fi
+  done
+
+  # --- DELETE EBS VOLUMES
+  TMPAWS=/tmp/$$_vol_aws.json
+  aws --region $AWS_LOCATION ec2 describe-volumes > $TMPAWS
+  i=0; tot=$(jq -r ".Volumes[$i].VolumeId" 2>/dev/null $TMPAWS | egrep -c "^vol-")
+
+  while [ $i -lt $tot ]; do
+    stt=$(jq -r ".Volumes[$i].State" 2>/dev/null $TMPAWS)
+    vid=$(jq -r ".Volumes[$i].VolumeId" 2>/dev/null $TMPAWS)
+    cnt=$(jq -r ".Volumes[$i].Tags[].Value" $TMPAWS 2>/dev/null| egrep -c "p-bosh|bosh-init")
+
+    if [ $cnt -gt 0 ]; then
+      if [ "$stt" == "available" ]; then
+        messagePrint " - Delete Volume:" "$vid"
+        aws --region $AWS_LOCATION ec2 delete-volume --volume-id $vid > /dev/null 2>&1
+        if [ $? -ne 0 ]; then
+          echo "ERROR: failled to delete volume: $vid"
+          echo "aws --region $AWS_LOCATION ec2 delete-volume --volume-id $vid"
+          exit 1
+        fi
+      else
+        messagePrint " - Detaching Volume:" "$vid"
+        #aws ec2 --region $AWS_LOCATION detach-volume --volume-id $vid > /dev/null 2>&1
+        #aws ec2 --region $AWS_LOCATION ec2 delete-volume --volume-id $vid > /dev/null 2>&1
+      fi
+    fi
+
+    let i=i+1
+  done
+  rm -f $SECGRP
+}
 

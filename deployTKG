@@ -426,8 +426,6 @@ if [ "${TDH_TKGWC_INGRESS_HARBOR}" == "true" ]; then
   fi
 
   messagePrint "- Create Harbor service configuration" ""
-  sudo snap install yq > /dev/null 2>&1
-
   DNS_HARBOR="harbor.apps-${TDH_TKGWC_NAME}.${TDH_TKGMC_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}"
   DNS_NOTARY="notary.apps-${TDH_TKGWC_NAME}.${TDH_TKGMC_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}"
   HARBOR_VALUES=/tmp/harbor-data-values.yaml
@@ -594,8 +592,6 @@ if [ "${TDH_TKGWC_INGRESS_HARBOR}" == "true1" ]; then
   fi
 
   messagePrint "- Create Harbor service configuration" "registry/harbor/harbor-data-values.yaml"
-  sudo snap install yq > /dev/null 2>&1
-
   DNS_HARBOR="harbor.apps-${TDH_TKGWC_NAME}.${TDH_TKGMC_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}"
   DNS_NOTARY="notary.apps-${TDH_TKGWC_NAME}.${TDH_TKGMC_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}"
   HARBOR_VALUES=/tmp/harbor-data-values.yaml

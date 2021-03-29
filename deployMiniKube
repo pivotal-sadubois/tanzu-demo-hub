@@ -69,11 +69,6 @@ if [ -f ~/.tanzu-demo-hub.cfg ]; then
   . ~/.tanzu-demo-hub.cfg
 fi
 
-helm repo add bitnami https://charts.bitnami.com/bitnami > /dev/null 2>&1
-if [ $? -ne 0 ]; then  
-  echo "ERROR: failed to add helm registry https://charts.bitnami.com/bitnami"; exit
-fi
-
 InstallContour_delete_me() {
   if [ "$TDH_SERVICE_INGRESS_CONTOUR" != "true" ]; then
     uodateConfigMap tanzu-demo-hub TDH_INGRESS_CONTOUR_ENABLED        "false"
@@ -184,7 +179,7 @@ InstallCertManager_delete_me() {
 }
 
 InstallMetallb() {
-  adr=$(kubectl get configmap config -n metallb-system -o json | jq -r '.data.config' | yq e '.address-pools[].addresses[]' -)
+  adr=$(kubectl get configmap config -n metallb-system -o json | jq -r '.data.config' | egrep "[0-9]-[0-9]" | awk '{ print $2 }') 
   stt=$(minikube addons -p $TDH_MINIKUBE_PROFILE list -o json | jq -r '."metallb".Status')
   if [ "$stt" != "enabled" -o "$adr" == "-" -o "$adr" == "" ]; then
     minikube_ip=$(minikube ip) 
@@ -576,6 +571,26 @@ createClusterIssuer
 InstallHarborRegistry
 getRootCA tanzu-demo-hub-tls
 installBuildService
+installTanzuDataPostgres
+installSpringCloudGateway
+installMinio
+
+
+echo "-----------------------------------------------------------------------------------------------------------"
+echo "Tanzu Kubernetes Grid Cluster ($TDH_MINIKUBE_PROFILE) build completed"
+echo "-----------------------------------------------------------------------------------------------------------"
+echo "1.) Set KUBECONFIG and set the cluster context"
+echo "    => export KUBECONFIG=/tmp/${TMC_CLUSTER_NAME}.kubeconfig:~/.kube/config"
+echo "    => minikube -p $TDH_MINIKUBE_PROFILE update-context"
+echo "    => kubectl config use-context $TDH_MINIKUBE_PROFILE"
+echo "    => kubectl config get-contexts"
+echo "2.) Relaxing Pod Security in cluster ($TMC_CLUSTER_NAME)"
+echo "    # Allow Privileged Pods for the Cluster"
+echo "    => kubectl create clusterrolebinding tanzu-demo-hub-privileged-cluster-role-binding \\"
+echo "        --clusterrole=vmware-system-tmc-psp-privileged --group=system:authenticated"
+echo "    # Allow Privileged Pods for a Namespace (my-namespace)"
+echo "    => kubectl create rolebinding tanzu-demo-hub-privileged-my-namespace-role-binding \\"
+echo "        --clusterrole=vmware-system-tmc-psp-privileged --group=system:authenticated -n my-namespace"
 
 
 

@@ -1,0 +1,942 @@
+#!/bin/bash
+# ############################################################################################
+# File: ........: deployTKGmc
+# Language .....: bash
+# Author .......: Sacha Dubois, VMware
+# Description ..: Tanzu Demo Hub - Deploy TKG Management Cluster
+# ############################################################################################
+
+export TANZU_DEMO_HUB=$(cd "$(pwd)/$(dirname $0)"; pwd)
+export TDHPATH=$(cd "$(pwd)/$(dirname $0)"; pwd)
+#export TDH_DEPLOYMENT_ENV_NAME="awstkg"
+#export DEPLOY_PCF_DEPLOYMENT=aws_tkg_default.cfg
+
+. $TANZU_DEMO_HUB/functions
+
+usage() {
+  echo "USAGE: $0 [oprions] <deployment>"
+  echo "                   --clean/-c   # Clean previous installation and stop the jump server"
+  echo "                   --debug/-d   # Enable debugging"
+}
+
+listTemplates() {
+  echo "TKG CLUSTER TEMPLATES"
+  echo "-----------------------------------------------------------------------------------------------------------"
+  tmc cluster template list
+  echo "-----------------------------------------------------------------------------------------------------------"
+}
+
+listDeployments() {
+  printf "%-30s %-5s %-15s %-20s %-5s %s\n" "CONFIURATION" "CLOUD" "REGION" "MGMT-CLUSTER" "PLAN" "CONFIGURATION"
+  echo "-----------------------------------------------------------------------------------------------------------"
+
+  for deployment in $(ls -1 ${TDHPATH}/deployments/tkgmc*.cfg); do
+    PCF_TILE_PKS_VERSION=""
+    PCF_TILE_PAS_VERSION=""
+
+    . $deployment
+
+    dep=$(basename $deployment)
+
+    if [ "$PCF_TILE_PKS_VERSION" != "" ]; then
+      TILE="PKS $PCF_TILE_PKS_VERSION"
+    else
+      TILE="PAS $PCF_TILE_PAS_VERSION"
+    fi
+
+    printf "%-30s %-5s %-15s %-20s %-5s %s\n" $dep $TDH_TKGMC_INFRASTRUCTURE $TDH_TKGMC_REGION $TDH_TKGMC_NAME \
+           $TDH_TKGMC_PLAN "$TDH_TKGMC_CONFIG"
+  done
+
+  echo "-----------------------------------------------------------------------------------------------------------"
+}
+
+createCluster_old() {
+  SSH_KEY_NAME=vmware-cloud-tmc
+  SSH_KEY_FILE=~/.tanzu-demo-hub/KeyPair-${SSH_KEY_NAME}-${AWS_REGION}.pem
+
+  #tmc cluster create -c sadubois-aws -g sadubois --name sadubois-demo -r eu-central-1 -s vmware-cloud-tmc 
+  #tmc cluster create -t aws-ha -c my-credential -s my-ssh-key" #template
+
+  #stt=$(tmc cluster list --group $TMC_CLUSTER_GROUP --name $TMC_CLUSTER_NAME --output json | \
+  stt=$(tmc cluster list --name $TMC_CLUSTER_NAME --output json | \
+        jq -r '.clusters[].status.status.state.state')
+  if [ "${stt}" == "DELETING" ]; then 
+    echo "ERROR: Cluster $TMC_CLUSTER_NAME is currently beeing deleted, please wait and try again later"
+    echo "       => tmc cluster list --name $TMC_CLUSTER_NAME"
+    echo ""; exit 1
+  fi
+
+  messageTitle "Creating Cluster"
+  messagePrint " - Cluster Name"             "$TMC_CLUSTER_NAME"
+  messagePrint " - Cluster Group"            "$TMC_CLUSTER_GROUP"
+  messagePrint " - Cluster Template"         "$DEPLOY_TKG_TEMPLATE"
+  messagePrint " - AWS Credentials"          "$TMC_ACCOUNT_NAME_AWS"
+  messagePrint " - AWS Region"               "$AWS_REGION"
+
+  if [ "${stt}" == "" ]; then 
+    echo "-----------------------------------------------------------------------------------------------------------"
+    tmc cluster create -c $TMC_ACCOUNT_NAME_AWS -g $TMC_CLUSTER_GROUP --name $TMC_CLUSTER_NAME \
+        -s $SSH_KEY_NAME --management-cluster-name $TDH_MANAGEMENT_CLUSTER -r $AWS_REGION \
+        --provisioner-name $TMC_ACCOUNT_NAME_AWS
+    echo "-----------------------------------------------------------------------------------------------------------"
+  fi
+
+  while [ 1 ]; do
+    #stt=$(tmc cluster list --group $TMC_CLUSTER_GROUP --name $TMC_CLUSTER_NAME --output json | \
+    stt=$(tmc cluster list --name $TMC_CLUSTER_NAME --output json | \
+         jq -r '.clusters[].status.phase')
+    if [ "${stt}" != "CREATING" ]; then break; fi
+ 
+    sleep 60
+  done
+
+  messagePrint " - Cluster Status"           "$stt"
+
+  #tmc cluster create -c sadubois-aws -g sadubois --name sadubois-demo -s vmware-cloud-tmc -t default
+  #tmc cluster list --group sadubois --name sadubois-demo --output json
+  #tmc cluster list --name sadubois-demo --output json | jq -r '.clusters[].status.status'
+}
+
+listClusters() {
+  #cat /tmp/2 | jq -r '.spec | select(.provisionedcluster.accountName == "smidgley-aws").provisionedcluster.accountName'
+  cnt=$(tmc cluster list --group sadubois --output json | jq -r '."totalCount"') 
+  cnt=$(tmc cluster list --output json | jq -r '."totalCount"') 
+  if [ $cnt -gt 0 ]; then
+    TMPFILE=/tmp/tdh_listCluster.tmp; rm -f $TMPFILE
+
+    echo "NAME                 KUBERNETES           PROVIDER   CREDENTIALS          REGION          STATE"
+    echo "-----------------------------------------------------------------------------------------------------------"
+
+    tmc cluster list --group $TMC_CLUSTER_GROUP --output json > $TMPFILE
+    tmc cluster list --output json > $TMPFILE
+    for cln in $(jq -r '.clusters[] | select(.status.type == "PROVISIONED").fullName.name' $TMPFILE | head -5); do
+      ver=$(jq -r --arg cluster "$cln" '.clusters[] | select(.fullName.name == $cluster)' $TMPFILE | \
+            jq -r '.spec.provisionedcluster.version')
+      acc=$(jq -r --arg cluster "$cln" '.clusters[] | select(.fullName.name == $cluster)' $TMPFILE | \
+            jq -r '.spec.provisionedcluster.accountName')
+      cpv=$(jq -r --arg cluster "$cln" '.clusters[] | select(.fullName.name == $cluster)' $TMPFILE | \
+            jq -r '.status.agent.metadata.cloudProvider')
+      reg=$(jq -r --arg cluster "$cln" '.clusters[] | select(.fullName.name == $cluster)' $TMPFILE | \
+            jq -r '.status.agent.metadata.region')
+      stt=$(jq -r --arg cluster "$cln" '.clusters[] | select(.fullName.name == $cluster)' $TMPFILE | \
+            jq -r '.status.status.state.state')
+
+      printf "%-20s %-20s %-10s %-20s %-15s %-10s\n" $cln $ver $cpv $acc $reg $stt
+
+    done
+
+
+#    tmc cluster list --output json | jq -r '.clusters[1] | [.fullName.name,.spec.provisionedcluster.version]'
+
+#  tmc cluster list --group $TMC_CLUSTER_GROUP
+  echo "-----------------------------------------------------------------------------------------------------------"
+
+    # --- CLEANUP ---
+    rm -f $TMPFILE
+  fi
+}
+
+echo ""
+echo "Tanzu Demo Hub - Deploy TKG Management Cluster"
+echo "by Sacha Dubois, VMware Inc,"
+echo "-----------------------------------------------------------------------------------------------------------"
+
+while [ "$1" != "" ]; do
+  case $1 in
+    -c)      DEPLOY_TKG_CLEAN=1;;
+    --clean) DEPLOY_TKG_CLEAN=1;;
+    -d)      DEPLOY_TKG_DEBUG=1;;
+    --debug) DEPLOY_TKG_DEBUG=1;;
+    *)       DEPLOY_TKG_TEMPLATE=$1;;
+  esac
+  shift
+done
+
+if [ "${DEPLOY_TKG_TEMPLATE}" == "" ]; then
+  listDeployments
+  usage; exit 0
+fi
+
+
+# --- VERIFY DEPLOYMENT ---
+if [ ! -f ${TDHPATH}/deployments/${DEPLOY_TKG_TEMPLATE} ]; then
+  echo "ERROR: Deployment file $DEPLOY_TKG_TEMPLATE can not be found in ${TDHPATH}/deployments"
+  exit 1
+else
+  . ${TDHPATH}/deployments/${DEPLOY_TKG_TEMPLATE}
+fi
+
+# --- CHECK ENVIRONMENT VARIABLES ---
+if [ -f ~/.tanzu-demo-hub.cfg ]; then
+  . ~/.tanzu-demo-hub.cfg
+fi
+
+export TDH_DEPLOYMENT_ENV_NAME=$TDH_TKGMC_INFRASTRUCTURE
+export TKG_CONFIG=~/.tanzu-demo-hub/$TDH_TKGMC_CONFIG
+
+checkKeyPairs() {
+  if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "Azure" ]; then
+    if [ ! -f ~/.tanzu-demo-hub/KeyPair-Azure.pem ]; then 
+      # GENERATE INGRES FILES
+      rm -f ~/.tanzu-demo-hub/KeyPair-Azure.pem ~/.tanzu-demo-hub/KeyPair-Azure.pub
+      ssh-keygen -t rsa -b 4096 -f ~/.tanzu-demo-hub/KeyPair-Azure -P "" > /dev/null 2>&1
+      mv ~/.tanzu-demo-hub/KeyPair-Azure ~/.tanzu-demo-hub/KeyPair-Azure.pem
+#    else
+      # COMPATE KEYS
+      #LOCALSSH=$(cat ~/.tanzu-demo-hub/KeyPair-Azure.pub | base64 | tr -d ‘\r\n’)
+      #CONFIGSSH=$(egrep "^AZURE_SSH_PUBLIC_KEY_B64:" ${TDHPATH}/config/${TDH_TKGMC_CONFIG} | awk '{ print $2 }')
+
+      #if [ "${LOCALSSH} != ${CONFIGSSH}" ]; then
+      #  gsed -i "s/^\(AZURE_SSH_PUBLIC_KEY_B64:\) .*$/\1 $LOCALSSH/g" ${TDHPATH}/config/${TDH_TKGMC_CONFIG}
+      #fi
+    fi
+  fi
+
+  if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "AWS" ]; then
+    SSH_KEY_NAME=vmware-cloud-tmc
+    SSH_KEY_FILE=~/.tanzu-demo-hub/KeyPair-${SSH_KEY_NAME}-${AWS_REGION}.pem
+
+    #"KeyFingerprint": "a8:c4:01:2b:12:7e:0d:8f:56:8c:38:80:cf:8b:6d:53:13:9c:28:cd",
+    #aws ec2 --region=eu-central-1 create-key-pair --dry-run --key-name sacha
+    #/tmp/key.pem
+
+    if [ ! -d ~/.tanzu-demo-hub ] ; then mkdir ~/.tanzu-demo-hub; fi
+  
+    # --- VERIFY KEY-PAIR ---
+    key=$(aws ec2 --region=$AWS_REGION describe-key-pairs | \
+          jq -r --arg key "$SSH_KEY_NAME" '.KeyPairs[] | select(.KeyName == $key).KeyFingerprint')
+  
+    # --- CREATE ONE IF IT DOES NOT EXIST ---
+    if [ "${key}" == "" ]; then 
+      aws ec2 --region=$AWS_REGION create-key-pair --key-name vmware-cloud-tmc | \
+         jq -r '.KeyMaterial' > $SSH_KEY_FILE
+      chmod 600 $SSH_KEY_FILE
+    fi
+
+    if [ -f "${SSH_KEY_FILE}" ]; then
+      kfp=$(openssl pkcs8 -in $SSH_KEY_FILE -inform PEM -outform DER -topk8 -nocrypt | openssl sha1 -c)
+    
+      if [ "${key}" != "${kfp}" ]; then
+        echo "ERROR: Fingerprint of AWS SSH Key-pair ($SSH_KEY_NAME) and the local PEM file: "
+        echo "       $SSH_KEY_FILE are not the same"
+        exit
+      fi
+    fi
+  fi
+}
+
+configureLetsEnscript() {
+  ##############################################################################################
+  ################################ GENERATING TLS CERTIFICATES #################################
+  ##############################################################################################
+
+  CERTS_GENERATE_NEW=false
+  domain="${TDH_TKGMC_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}"
+
+  if [ -d $TDHPATH/certificates/$domain -a -f $TDHPATH/certificates/$domain/privkey.pem ]; then
+    messageTitle "Install Certificate for domain ($domain)"
+    $SSH_COMMAND -n "mkdir -p $SSH_HOME//tanzu-demo-hub/certificates"
+    $SCP_COMMAND $TDHPATH/certificates/$domain/* ${SSH_USER}@${SSH_HOST}:~/tanzu-demo-hub/certificates > /dev/null 2>&1
+  fi
+
+  CERTS_INSTALLED=$($SSH_COMMAND -n "[ -f ~/tanzu-demo-hub/certificates/privkey.pem ] && echo true || echo false")
+
+  if [ "${CERTS_INSTALLED}" == "true" ]; then
+    messageTitle "Validate Certificates for domain ($domain)"
+    $SCP_COMMAND $TDHPATH/certificates/$domain/* ${SSH_USER}@${SSH_HOST}:~/tanzu-demo-hub/certificates > /dev/null 2>&1
+
+    CERTS_ENDDATE=$($SSH_COMMAND -n "openssl x509 -noout -in ~/tanzu-demo-hub/certificates/cert.pem -enddate | awk -F'=' '{ print \$2 }'")
+    CERTS_EXPIRED=$($SSH_COMMAND -n "openssl x509 -noout -in ~/tanzu-demo-hub/certificates/cert.pem -checkend 3600 > /dev/null 2>&1; echo \$?")
+
+    if [ $CERTS_EXPIRED -eq 0 ]; then
+      messagePrint " - Certificate Expiratation Data:" "$CERTS_ENDDATE"
+    else
+      messagePrint " - Certificate Expiratation Data:" "$CERTS_ENDDATE [>>> *EXPIRED* <<<]"
+      CERTS_GENERATE_NEW=true
+    fi
+  else
+    CERTS_GENERATE_NEW=true
+  fi
+
+  if [ "${CERTS_GENERATE_NEW}" == "true" ]; then
+    messageTitle "Generate Certificates for domain ($domain)"
+    route53createHostedZone $domain
+
+    echo "-------------------------------------- GENERATE LET'S-ENCRYPT CERTIFICATES -------------------------------------"
+    typ=$(echo $domain | egrep -c "aztkg|awstkg|gcptkg|vstkg")
+    if [ $typ -ne 0 ]; then
+      messageTitle "Generate Certificate for PKS Domains ($domain)"
+      $SSH_COMMAND -n "sudo /usr/local/bin/certbot certonly --dns-route53 -d '*.$domain' -d '*.apps-tdh-1.$domain' -d '*.nginx-tdh-1.$domain' \
+                -d '*.nginx-tdh-1.$domain' -d '*.apps-tdh-2.$domain' -d '*.apps-tdh-3.$domain' -m sadubois@pivotal.io --agree-tos -n --expand"
+      if [ $? -ne 0 ]; then
+        echo "ERROR: failed to generate certificate. There are probably to many cert requests happends and a limit reached"
+        echo "       Try it again after some hours or search *.$domain in https://crt.sh/"
+          exit 1
+      fi
+    else
+      messageTitle "Generate Certificate for PAS Domains ($domain)"
+      $SSH_COMMAND -n "sudo /usr/local/bin/certbot certonly --dns-route53 -d '*.$domain' -d '*.apps.$domain' -d '*.sys.$domain' \
+                   -m sadubois@pivotal.io --agree-tos -n --expand"
+
+      if [ $? -ne 0 ]; then
+        echo "ERROR: failed to generate certificate. There are probably to many cert requests happends and a limit reached"
+        echo "       Try it again after some hours or search *.$domain in https://crt.sh/"
+        exit 1
+      fi
+    fi
+
+    # --- GET A COPY OF THE CERTIFICATES BACK ---
+    [ ! -d ./certificates/$domain ] && mkdir -p ./certificates/$domain
+
+    $SSH_COMMAND -n "[ -d /etc/letsencrypt/live ] && sudo chmod -R a+r /etc/letsencrypt/live /etc/letsencrypt/archive"
+    $SSH_COMMAND -n "[ -d /etc/letsencrypt/live ] && sudo chmod 777 /etc/letsencrypt/live /etc/letsencrypt/live/$domain"
+    $SSH_COMMAND -n "[ -d /etc/letsencrypt/archive ] && sudo chmod 777 /etc/letsencrypt/archive /etc/letsencrypt/archive/$domain"
+    $SSH_COMMAND -n "[ ! -d $SSH_HOME/tanzu-demo-hub/certificates/$domain ] && mkdir -p $SSH_HOME/tanzu-demo-hub/certificates"
+    $SSH_COMMAND -n "[ -d /etc/letsencrypt/live/$domain ] && cp /etc/letsencrypt/live/$domain/* ~/tanzu-demo-hub/certificates"
+
+    messageTitle " Copy new certificates from jump to local ./certificates/$domain"
+    while [ ! -f ./certificates/$domain/fullchain.pem ]; do
+      $SCP_COMMAND ${SSH_USER}@${SSH_HOST}:$SSH_HOME/tanzu-demo-hub/certificates/* $TDHPATH/certificates/$domain/ > /dev/null 2>&1
+
+      sleep 10
+    done
+
+    echo "----------------------------------------------------------------------------------------------------------------"
+  fi
+}
+
+createJumpHost() {
+#gaga
+
+  if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "AWS" ]; then
+    ins=$(aws ec2 --region=$AWS_REGION describe-instances --filters "Name=instance-state-name,Values=pending,running,stopped" \
+         Name=tag:Name,Values="$JUMP_HOST" | jq -r ".Reservations[].Instances[].InstanceId" | head -1)
+    if [ "${ins}" == "" ]; then
+      messagePrint "Creating AWS Jump-Server" "$SSH_KEY_NAME"
+
+      # --- CREATE NEW KEY IF PEM FILE IS MISSING ---
+      #if [ ! -s ~/.ssh/${JUMP_HOST}.pem ]; then
+      #  messagePrint " - Missing pem file, deleting Key Pair" "${JUMP_HOST}"
+      #  aws ec2 --region=$AWS_REGION delete-key-pair --key-name ${JUMP_HOST}
+      #fi
+
+      aws ec2 --region=$AWS_REGION describe-key-pairs --key-names ${JUMP_HOST} > /dev/null 2>&1
+      if [ $? -ne 0 ]; then
+        messagePrint " - Creating Key Pair" "${JUMP_HOST}"
+        aws ec2 --region=$AWS_REGION create-key-pair --key-name ${JUMP_HOST} \
+              --query 'KeyMaterial' --output text > ~/.ssh/${JUMP_HOST}.pem 2>/dev/null
+        chmod 600 ~/.ssh/${JUMP_HOST}.pem
+        if [ $? -ne 0 ]; then
+          echo "ERROR: Creating Key Pairs failed"
+          echo "       => aws ec2 --region=$AWS_REGION create-key-pair --key-name ${JUMP_HOST}  \\"
+          echo "                  --query 'KeyMaterial' --output text > ~/.ssh/${JUMP_HOST}.pem"; exit 1
+        fi
+      else
+        messagePrint " - Verify Key Pair" "${SSH_KEY_NAME}"
+      fi
+
+      # --- CREATE VPC ---
+      vpc=$(aws ec2 --region=$AWS_REGION describe-vpcs --filters Name=tag:type,Values="pcfjump" | jq -r '.Vpcs[].VpcId')
+      if [ "${vpc}" == "" ]; then
+        vpc=$(aws ec2 --region=$AWS_REGION create-vpc --cidr-block 10.0.0.0/16 | jq -r '.Vpc.VpcId')
+        aws ec2 --region=$AWS_REGION create-tags --resources $vpc --tags Key=type,Value=pcfjump
+        messagePrint " - Creating VPC: $vpc" "10.0.0.0/16"
+      else
+        messagePrint " - Verify VPC: $vpc" "10.0.0.0/16"
+      fi
+
+      i=1
+      for zone in $(aws ec2 --region=$AWS_REGION describe-availability-zones | jq -r '.AvailabilityZones[].ZoneName'); do
+        sid=$(aws ec2 --region=$AWS_REGION describe-subnets --filters Name=tag:type,Values="pcfjump" \
+            Name=availability-zone,Values=$zone | jq -r '.Subnets[].SubnetId')
+        if [ "${sid}" == "" ]; then
+          sid=$(aws ec2 --region=$AWS_REGION create-subnet --vpc-id $vpc --availability-zone $zone \
+                        --cidr-block 10.0.$i.0/24 2>/dev/null | jq -r '.Subnet.SubnetId')
+          messagePrint " - Creating Subnet: $sid" "10.0.$i.0/16"
+          if [ "${sid}" == "" ]; then
+            echo "ERROR: Creating of default subnet in zone $zone failed"
+            echo "       => aws ec2 --region=$AWS_REGION create-subnet --vpc-id $vpc \\"
+            echo "                  --cidr-block 10.0.$i.0/24 --availability-zone $zone"; exit 1
+          fi
+        
+          aws ec2 --region=$AWS_REGION create-tags --resources $sid --tags Key=type,Value=pcfjump > /dev/null 2>&1
+          if [ $? -ne 0 ]; then
+            echo "ERROR: Creating of Tags failed"
+            echo "       => aws ec2 --region=$AWS_REGION create-tags --resources $sid --tags Key=type,Value=pcfjump"; exit 1
+          fi
+        else
+          messagePrint " - Verify Subnet: $sid" "10.0.$i.0/16"
+        fi
+      
+        let i=i+1
+      done
+
+      igw=$(aws ec2 --region=$AWS_REGION describe-internet-gateways --filters Name=tag:type,Values="pcfjump" | \
+        jq -r ".InternetGateways[].InternetGatewayId")
+      if [ "${igw}" == "" ]; then
+        igw=$(aws ec2 --region=$AWS_REGION create-internet-gateway | jq -r '.InternetGateway.InternetGatewayId')
+        messagePrint " - Creating Internet Gateway" "$igw"
+        if [ "${sid}" == "" ]; then
+          echo "ERROR: Creating of Internet Gateway failed"
+          echo "       => aws ec2 --region=$AWS_REGION create-internet-gateway"; exit 1
+        fi
+
+        aws ec2 --region=$AWS_REGION create-tags --resources $igw --tags Key=type,Value=pcfjump > /dev/null 2>&1
+        if [ $? -ne 0 ]; then
+          echo "ERROR: Creating of Tags failed"
+          echo "       => aws ec2 --region=$AWS_REGION create-tags --resources $sid --tags Key=type,Value=pcfjump"; exit 1
+        fi
+      else
+        messagePrint " - Verify Internet Gateway" "$igw"
+      fi
+
+      att=$(aws ec2 --region=$AWS_REGION describe-internet-gateways --filters Name=tag:type,Values="pcfjump" | \
+        jq -r ".InternetGateways[].Attachments[].VpcId")
+      if [ "${att}" == "" ]; then
+        aws ec2 --region=$AWS_REGION attach-internet-gateway --vpc-id $vpc --internet-gateway-id $igw > /dev/null 2>&1
+        messagePrint " - Attaching Internet Gateway" "$vpc"
+        if [ $? -ne 0 ]; then
+          echo "ERROR: Attaching Internet Gateway to VPC: $vpc failed"
+          echo "       => aws ec2 --region=$AWS_REGION attach-internet-gateway --vpc-id $vpc --internet-gateway-id $igw "; exit 1
+        fi
+      fi
+
+      # --- CREATE ROUTING TABLE ---
+      rtb=$(aws ec2 --region=$AWS_REGION describe-route-tables --filters Name=tag:type,Values="pcfjump" | \
+        jq -r ".RouteTables[].RouteTableId")
+      if [ "${rtb}" == "" ]; then
+        rtb=$(aws ec2 --region=$AWS_REGION create-route-table --vpc-id $vpc 2>/dev/null | jq -r '.RouteTable.RouteTableId')
+        messagePrint " - Creating Routing Table" "$igw"
+        if [ "${sid}" == "" ]; then
+          echo "ERROR: Creating of Routing Table failed"
+          echo "       => aws ec2 --region=$AWS_REGION create-route-table"; exit 1
+        fi
+
+        aws ec2 --region=$AWS_REGION create-tags --resources $rtb --tags Key=type,Value=pcfjump > /dev/null 2>&1
+        if [ $? -ne 0 ]; then
+          echo "ERROR: Creating of Tags failed"
+          echo "       => aws ec2 --region=$AWS_REGION create-tags --resources $rtb --tags Key=type,Value=pcfjump"; exit 1
+          exit 1
+        fi
+
+        aws ec2 --region=$AWS_REGION create-route --route-table-id $rtb --destination-cidr-block 0.0.0.0/0 --gateway-id $igw
+        if [ $? -ne 0 ]; then
+          echo "ERROR: Creating route failed"
+          echo "       => aws ec2 --region=$AWS_REGION create-route --route-table-id $rtb --destination-cidr-block 0.0.0.0/0 \\"
+          echo "                  --gateway-id $igw"
+          exit 1
+        fi
+      else
+        messagePrint " - Verify Internet Gateway" "$igw"
+      fi
+
+      for zone in $(aws ec2 --region=$AWS_REGION describe-availability-zones | jq -r '.AvailabilityZones[].ZoneName'); do
+        sid=$(aws ec2 --region=$AWS_REGION describe-subnets --filters Name=tag:type,Values="pcfjump" \
+            Name=availability-zone,Values=$zone | jq -r '.Subnets[].SubnetId')
+
+        messagePrint " - Associate Routing Table $rtb" "Subnet $sid"
+        aws ec2 --region=$AWS_REGION associate-route-table  --subnet-id $sid --route-table-id $rtb > /dev/null 2>&1
+        if [ $? -ne 0 ]; then
+          echo "ERROR: Associate Routing Table failed"
+          echo "       => aws ec2 --region=$AWS_REGION associate-route-table  --subnet-id $sid --route-table-id $rtb"
+          echo "-----------------------------------------------------------------------------------------------------------"
+          aws ec2 --region=$AWS_REGION associate-route-table  --subnet-id $sid --route-table-id $rtb
+          echo "-----------------------------------------------------------------------------------------------------------"
+        fi
+
+        aws ec2 --region=$AWS_REGION modify-subnet-attribute --subnet-id $sid --map-public-ip-on-launch > /dev/null 2>&1
+        if [ $? -ne 0 ]; then
+          echo "ERROR: Modify Routing Table attribut failed"
+          echo "       => aws ec2 --region=$AWS_REGION modify-subnet-attribute --subnet-id $sid --map-public-ip-on-launch"
+          echo "-----------------------------------------------------------------------------------------------------------"
+          aws ec2 --region=$AWS_REGION modify-subnet-attribute --subnet-id $sid --map-public-ip-on-launch
+          echo "-----------------------------------------------------------------------------------------------------------"
+        fi
+      done
+
+      # --- CREATE SECURITY GROUP ---
+      gid=$(aws ec2 --region=$AWS_REGION  describe-security-groups \
+                  --filters Name=vpc-id,Values=$vpc Name=group-name,Values=pcfjump-sg | jq -r ".SecurityGroups[].GroupId")
+      if [ "${gid}" == "" -o "${gid}" == "null" ]; then
+        gid=$(aws ec2 --region=$AWS_REGION create-security-group --group-name pcfjump-sg --vpc-id $vpc \
+                --description "PCF Jump Server" 2>/dev/null | jq -r ".GroupId")
+        messagePrint " - Creating Security Group (pcfjump-sg)" "$gid"
+        if [ "${gid}" == "" ]; then
+          echo "ERROR: Creating security Group failed"
+          echo "       => aws ec2 --region=$AWS_REGION create-security-group --group-name pcfjump-sg \\"
+          echo "                  --vpc-id $vpc --description \"PCF Jump Server\""; exit 1
+        fi
+  
+        messagePrint " - Creating Security Group Ingress for ssh" "Port: tcp/22 Cidr: 0.0.0.0/0"
+        aws ec2 --region=$AWS_REGION authorize-security-group-ingress --group-id $gid \
+                --protocol tcp --port 22 --cidr 0.0.0.0/0 > /dev/null 2>&1
+        if [ $? -ne 0 ]; then
+          echo "ERROR: Creating security Group ingress failed"
+          echo "       => aws ec2 --region=$AWS_REGION authorize-security-group-ingress --group-id $gid \\"
+          echo "                  --protocol tcp --port 22 --cidr 0.0.0.0/0"; exit 1
+        fi
+      else
+        messagePrint " - Verify Security Group (pcfjump-sg)" "$gid"
+      fi
+
+      aim=ami-0015c36f           # Amazon Linux  t2.nano
+      aim=ami-0085d4f8878cddc81  # Ubuntu Server t2.medium
+      aim=ami-0085d4f8878cddc81  # Ubuntu Server t2.micro
+      aim=ami-0085d4f8878cddc81  # Ubuntu Server t2.medium
+      typ=t2.medium
+
+      messagePrint " - Create Instance" "$JUMP_HOST"
+      aws ec2 --region=$AWS_REGION run-instances --image-id $aim --security-group-ids $gid \
+            --block-device-mapping DeviceName=/dev/sda1,Ebs={VolumeSize=30} \
+            --instance-type $typ --key-name ${SSH_KEY_NAME} --count 1 --subnet-id $sid --associate-public-ip-address \
+            --tag-specifications "ResourceType=instance,Tags=[{Key=Name,Value=$JUMP_HOST},{Key=type,Value=pcfjump}]" > /dev/null 2>&1
+      if [ $? -ne 0 ]; then
+        echo "ERROR: Creating of Instance failed"
+        echo "       => aws ec2 --region=$AWS_REGION run-instances --image-id $aim --security-groups pcfjump-sg \\"
+        echo "                  --block-device-mapping DeviceName=/dev/sda1,Ebs={VolumeSize=30} \\"
+        echo "                  --instance-type $typ --key-name ${JUMP_HOST} --subnet-id $sid \\"
+        echo "                  --tag-specifications 'ResourceType=instance,Tags=[{Key=type,Value=pcfjump}]'"
+        exit 1
+      else
+        sleep 20
+      fi
+
+      ins=$(aws ec2 --region=$AWS_REGION describe-instances --filters "Name=instance-state-name,Values=pending,running,stopped" \
+         Name=tag:Name,Values="$JUMP_HOST" | jq -r ".Reservations[].Instances[].InstanceId" | head -1)
+      stt=$(aws ec2 --region=$AWS_REGION describe-instances --instance-ids $ins | \
+         jq -r ".Reservations[].Instances[].State.Name")
+      dns=$(aws ec2 --region=$AWS_REGION describe-instances --instance-ids $ins | \
+         jq -r ".Reservations[].Instances[].PublicDnsName")
+      pip=$(aws ec2 --region=$AWS_REGION describe-instances --instance-ids $ins | \
+         jq -r ".Reservations[].Instances[].PublicIpAddress")
+
+      ZONE_ID=$(aws route53 list-hosted-zones-by-name --dns-name ${AWS_HOSTED_DNS_DOMAIN} | jq -r '.HostedZones[0].Id')
+      ZONE_ID_STR=$(echo "${ZONE_ID}" | awk -F'/' '{ print $NF }')
+      messagePrint " - DNS Zone (${AWS_HOSTED_DNS_DOMAIN}:" "zone managed by route53"
+      messagePrint " - Updating Zone Record for ($JUMP_HOST)" "$pip"
+
+      # --- UPDATE DNS DOMAIN ---
+      route53setDNSrecord "$pip" "$JUMP_HOST" "$AWS_HOSTED_DNS_DOMAIN"
+    else
+      messagePrint "Verify AWS Jump-Server" "$JUMP_HOST"
+      stt=$(aws ec2 --region=$AWS_REGION describe-instances --instance-ids $ins | \
+        jq -r ".Reservations[].Instances[].State.Name")
+
+      messagePrint " - Verify Instance: $ins" "$stt"
+      if [ "${stt}" == "stopped" ]; then
+        messagePrint " - Starting Instance: $ins" "this can take several minutes"
+        aws ec2 --region=$AWS_REGION start-instances --instance-ids $ins > /dev/null 2>&1
+  
+        messagePrint " - Wait for SSH Daemon on jump-host to come online" "< 5min"
+        sleep 30
+      fi
+
+      ins=$(aws ec2 --region=$AWS_REGION describe-instances --filters "Name=instance-state-name,Values=pending,running,stopped" \
+         Name=tag:Name,Values="$JUMP_HOST" | jq -r ".Reservations[].Instances[].InstanceId" | head -1)
+      pip=$(aws ec2 --region=$AWS_REGION describe-instances --instance-ids $ins | \
+         jq -r ".Reservations[].Instances[].PublicIpAddress")
+      aip=$(route53getIPaddress $PCF_DEPLOYMENT_ENV_NAME $AWS_HOSTED_DNS_DOMAIN)
+
+      # --- UPDATE DNS DOMAIN ---
+      if [ "${pip}" != "${aip}" ]; then
+        # --- UPDATE DNS DOMAIN ---
+        messagePrint " - DNS Zone (${AWS_HOSTED_DNS_DOMAIN}:" "zone managed by route53"
+        messagePrint " - Updating Zone Record for ($JUMP_HOST)" "$pip"
+        route53setDNSrecord "$pip" "$JUMP_HOST" "$AWS_HOSTED_DNS_DOMAIN"
+      fi
+    fi
+
+    sed -in "/$JUMP_HOST/d" ~/.ssh/known_hosts
+    SSH_USER=ubuntu
+    SSH_HOME=/home/ubuntu
+    SSH_HOST=$JUMP_HOST
+    SSH_OPTIONS="-o StrictHostKeyChecking=no -o RequestTTY=yes -o ServerAliveInterval=30"
+    SCP_OPTIONS="-o StrictHostKeyChecking=no"
+    SSH_COMMAND="ssh -q $SSH_OPTIONS -i ~/.ssh/${JUMP_HOST}.pem ${SSH_USER}@${SSH_HOST}"
+        SCP_COMMAND="scp -r $SCP_OPTIONS -i ~/.ssh/${JUMP_HOST}.pem"
+
+  fi
+
+  if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "vSphere" ]; then
+    JUMP_HOST="${TDH_TKGMC_VCENTER_JUMPHOST}"
+    SSH_USER=ubuntu
+    SSH_OPTIONS="-o StrictHostKeyChecking=no -o RequestTTY=yes -o ServerAliveInterval=240"
+    SSH_PRIVATE_KEY=$VSPHERE_SSH_PRIVATE_KEY_FILE
+    SSH_COMMAND="ssh -q $SSH_OPTIONS -i ${SSH_PRIVATE_KEY} ${SSH_USER}@${JUMP_HOST}"
+    SSH_USER=ubuntu
+
+    # --- TEST IF JUMP HOST IS ALREADY DEPLOYED
+    $SSH_COMMAND -n "hostname > /dev/null 2>&1"; ret=$?
+    if [ "$ret" != 0 ]; then   
+      # --- PACKER CREATE JUMP TEMPLATE ---
+      messagePrint "Crreate vSphere Jump-Server with (packer)" "$JUMP_HOST"
+      messagePrint " - Using Ubuntu Packer Config" "${TDHPATH}/packer/ubuntu.json"
+      messagePrint " - Generating Packer Config" "/tmp/jump.json"
+
+      cat ${TDHPATH}/packer/jump_variables.json | sed -e "s/XXX_VSPHERE_SERVER_XXX/$VSPHERE_SERVER/g" \
+         -e "s/XXX_VSPHERE_PASSWORD_XXX/$VSPHERE_PASSWORD/g"  -e "s/XXX_VSPHERE_DATACENTER_XXX/$VSPHERE_DATACENTER/g" \
+         -e "s/XXX_VSPHERE_ADMIN_XXX/$VSPHERE_ADMIN/g"  -e "s/XXX_VSPHERE_DATACENTER_XXX/$VSPHERE_DATACENTER/g" \
+         -e "s/XXX_VSPHERE_DATASTORE_XXX/$VSPHERE_DATASTORE/g" -e "s/XXX_VSPHERE_CLUSTER_XXX/$VSPHERE_CLUSTER/g"\
+         -e "s/XXX_VSPHERE_WAN_NETWORK_XXX/$VSPHERE_WAN_NETWORK/g" \
+         -e "s/XXX_VSPHERE_MANAGEMENT_NETWORK_XXX/$VSPHERE_MANAGEMENT_NETWORK/g" > /tmp/jump.json
+
+      messagePrint " - Generating Preseed Config" "/tmp/preseed.cfg"
+      VSPHERE_SSH_PUBLIC_KEY=$(cat $VSPHERE_SSH_PUBLIC_KEY_FILE)
+      echo "    in-target /bin/sh -c \"echo '$VSPHERE_SSH_PUBLIC_KEY' >> /home/ubuntu/.ssh/authorized_keys\"; " > /tmp/snipset.txt
+      cat ${TDHPATH}/packer/jump_preseed.cfg | sed -e '/XXX_SSHKEY_XXX/r /tmp/snipset.txt' -e '/XXX_SSHKEY_XXX/d' > /tmp/preseed.cfg
+
+      if [ -x /usr/local/bin/packer ]; then
+        echo "--------------------------------------------------------------------------------------------------------------"
+        echo "=> packer build -var-file=/tmp/jump.json ${TDHPATH}/packer/ubuntu.json"
+        echo "--------------------------------------------------------------------------------------------------------------"
+        packer build -var-file=/tmp/jump.json ${TDHPATH}/packer/ubuntu.json | sed '/^$/d'
+        echo "--------------------------------------------------------------------------------------------------------------"
+      else
+        echo "ERROR: HashiCorp Packer has not been installed, download it from https://www.packer.io/downloads" 
+        echo "       and install it in /usr/local/bin/packer"; exit 0
+      fi
+
+      messagePrint "Deploy vSphere Jump-Server with (terraforms)" "$JUMP_HOST"
+      messagePrint " - Creating Variable file" "/tmp/terraform.tfvars"
+      echo "vsphere_user = \"administrator@corelab.com\""          >  /tmp/terraform.tfvars
+      echo "vsphere_password = \"$VSPHERE_PASSWORD\""              >> /tmp/terraform.tfvars
+      echo "vsphere_server = \"$VSPHERE_SERVER\""                  >> /tmp/terraform.tfvars
+      echo "vsphere_datacenter = \"$VSPHERE_DATACENTER\""          >> /tmp/terraform.tfvars
+      echo "vsphere_datastore = \"$VSPHERE_DATASTORE\""            >> /tmp/terraform.tfvars
+      echo "vsphere_compute_cluster = \"$VSPHERE_CLUSTER\""        >> /tmp/terraform.tfvars
+      echo "#vsphere_resource_pool = \"cluster/Resources\""        >> /tmp/terraform.tfvars
+      echo "vsphere_network = \"$VSPHERE_MANAGEMENT_NETWORK\""     >> /tmp/terraform.tfvars
+      echo "vsphere_virtual_machine_template = \"jump_template\""  >> /tmp/terraform.tfvars
+      echo "vsphere_virtual_machine_name = \"jump\""               >> /tmp/terraform.tfvars
+      echo "root_password = \"root\""                              >> /tmp/terraform.tfvars
+
+      if [ -x /usr/local/bin/terraform ]; then
+        echo "--------------------------------------------------------------------------------------------------------------"
+        echo "=> terraform -chdir=${TDHPATH}/terraform init"
+        echo "--------------------------------------------------------------------------------------------------------------"
+        terraform -chdir=${TDHPATH}/terraform init
+  
+        echo "--------------------------------------------------------------------------------------------------------------"
+        echo "=> terraform -chdir=${TDHPATH}/terraform plan -var-file=/tmp/terraform.tfvars -out jump -state=/tmp/terraform.state"
+        echo "--------------------------------------------------------------------------------------------------------------"
+        terraform -chdir=${TDHPATH}/terraform plan -var-file=/tmp/terraform.tfvars -out jump -state=/tmp/terraform.state
+  
+        echo "--------------------------------------------------------------------------------------------------------------"
+        echo "=> terraform -chdir=${TDHPATH}/terraform apply -state=/tmp/terraform.tfstate \"jump\""
+        terraform -chdir=${TDHPATH}/terraform apply -state=/tmp/terraform.tfstate "jump"
+  
+       #terraform -chdir=/Users/sdu/icloud/Development/tanzu-demo-hub/terraform destroy -state=/tmp/terraform.tfstate -var-file=/tmp/terraform.tfvars -auto-approve
+      else
+        echo "ERROR: HashiCorp terraform has not been installed, download it from https://www.terraform.io"
+        echo "       and install it in /usr/local/bin/terraform"; exit 0
+      fi
+    else
+      messagePrint "Verify vSphere Jump-Server" "$JUMP_HOST"
+    fi
+
+    messagePrint " - Wait for SSH to be ready" ""
+    # --- WAIT UNTIL SSH DEAMON IS READY NO JUMPHOST ----
+    ret=1
+    while [ $ret -ne 0 ]; do
+      $SSH_COMMAND -n id > /dev/null 2>&1; ret=$?
+      [ $ret -ne 0 ] && sleep 10
+    done
+  fi
+
+#gaga
+  if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "Azure" ]; then
+    JUMP_HOST="jump-${TDH_TKGMC_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}"
+
+    # --- VERIFY / CREATE APPLICATION ID AND SERVICE PRINCIPLE ---
+    appid=$(az ad app list --display-name "TanzuDemoHub" | jq -r '.[].appId')
+    if [ "$appid" == "" ]; then 
+      messageTitle "Register Azure Application (TanzuDemoHub)"
+      messagePrint " - Register Azure ApplicationID" "TanzuDemoHub"
+      az ad app create --display-name TanzuDemoHub --key-type Password --password tanzu-demo-hub > /dev/null 2>&1
+      if [ $? -ne 0 ]; then 
+        echo "ERROR: failed to register app (TanzuDemoHub)"
+        echo "       => az ad app create --display-name TanzuDemoHub --key-type Password --password tanzu-demo-hub"
+        exit
+      fi
+     
+      messagePrint " - Create ServicePrincipal for Application" "TanzuDemoHub"
+      appid=$(az ad app list --display-name "TanzuDemoHub" | jq -r '.[].appId')
+      az ad sp create --id $appid > /dev/null 2>&1
+      if [ $? -ne 0 ]; then 
+        echo "ERROR: failed to create ServicePrinicipal for app (TanzuDemoHub)"
+        echo "       => az ad sp create --id $appid"
+        exit
+      fi
+
+      messagePrint " - Create RoleBinding for Application (TanzuDemoHub)" "Owner"
+      objid=$(az ad sp list --all --display-name TanzuDemoHub | jq -r '.[].objectId')
+      az role assignment create --subscription $AZURE_SUBSCRIPTION_ID --role owner \
+          --assignee-principal-type ServicePrincipal --assignee-object-id $objid > /dev/null 2>&1
+      if [ $? -ne 0 ]; then
+        echo "ERROR: failed to create RoleBinding for app (TanzuDemoHub)"
+        echo "       => az role assignment create --subscription $AZURE_SUBSCRIPTION_ID --role owner \\"
+        echo "          --assignee-principal-type ServicePrincipal --assignee-object-id $objid"
+        exit
+      fi
+    fi
+
+    appid=$(az ad app list --display-name "TanzuDemoHub" | jq -r '.[].appId')
+    objid=$(az ad sp list --all --display-name TanzuDemoHub | jq -r '.[].objectId')
+    messageTitle "Verify Azure Application (TanzuDemoHub)"
+    messagePrint " - Application ID" "$appid"
+    messagePrint " - Application Display Name" "TanzuDemoHub"
+    messagePrint " - ServicePrincipal" "$objid"
+    messagePrint " - Role Binding" "Owner"
+
+    messagePrint "Verifing Azure Jump-Server" "$JUMP_HOST"
+    stt=$(az group exists --name Admin)
+    if [ "$stt" == "false" ]; then
+      messagePrint " - Creating Azure Ressource Group" "Admin"
+      az group create --name Admin --location $AZURE_LOCATION > /dev/null 2>&1
+      if [ $? -ne 0 ]; then
+        echo "ERROR: Creating Ressource Group Admin"
+        echo "       => az group create --name Admin --location $AZURE_LOCATION"
+        exit 1
+      fi
+    fi
+  
+    vm_stt=$(az vm list -d --query "[?contains(name, '$JUMP_HOST')]" | jq -r '.[].powerState')
+    if [ "${vm_stt}" == "" ]; then
+      # --- VM DOES NOT EXIST, CREATING ---
+      nam=$(az network vnet list -g Admin --query "[?contains(name, 'admin-vnet')]" | jq -r '.[].name')
+      if [ "$nam" != "admin-vnet" ]; then
+        messagePrint " - Creating Vnet" "admin-vnet"
+
+        az network vnet create \
+            --resource-group Admin \
+            --name admin-vnet \
+            --address-prefix 192.168.0.0/16 \
+            --subnet-name AdminSubnet \
+            --subnet-prefix 192.168.1.0/24 > /dev/null 2>&1
+        if [ $? -ne 0 ]; then
+          echo "ERROR: Creating Vnet admin-vnet"
+          exit 1
+        fi
+      else
+        messagePrint " - Verify Vnet" "admin-vnet"
+      fi
+
+      nam=$(az network public-ip list -g Admin --query "[?contains(name, 'AdminPublicIP_$TDH_TKGMC_ENVNAME')]" | jq -r '.[].name')
+      if [ "$nam" != "AdminPublicIP_$TDH_TKGMC_ENVNAME" ]; then
+        messagePrint " - Creating PublicIP" "AdminPublicIP_$TDH_TKGMC_ENVNAME"
+
+        az network public-ip create \
+            --resource-group Admin \
+            --name AdminPublicIP_$TDH_TKGMC_ENVNAME  > /dev/null 2>&1
+        if [ $? -ne 0 ]; then
+          echo "ERROR: Creating PublicIP AdminPublicIP_$TDH_TKGMC_ENVNAME"
+          exit 1
+        fi
+      else
+        pip=$(az network public-ip list -g Admin --query "[?contains(name, 'AdminPublicIP_$TDH_TKGMC_ENVNAME')]" | jq -r '.[].ipAddress')
+
+        messagePrint " - Verify PublicIP (AdminPublicIP_$TDH_TKGMC_ENVNAME)" "$pip"
+      fi
+
+      nam=$(az network nsg list --query "[?contains(name, 'AdminSG')]" | jq -r '.[].name')
+      if [ "$nam" != "AdminSG" ]; then
+        messagePrint " - Creating Security Group" "AdminSG"
+
+        az network nsg create \
+            --resource-group Admin \
+            --name AdminSG > /dev/null 2>&1
+        if [ $? -ne 0 ]; then
+          echo "ERROR: Creating Security Group AdminSG"
+          exit 1
+        fi
+      else
+        messagePrint " - Verify Security Group" "AdminSG"
+      fi
+
+      nam=$(az network nsg rule list -g Admin --nsg-name AdminSG --query "[?contains(name, 'AdminSG-RuleSSH')]" | \
+            jq -r '.[].name')
+      if [ "$nam" != "AdminSG-RuleSSH" ]; then
+        messagePrint " - Creating Security Group Rule" "AdminSG-RuleSSH"
+
+        az network nsg rule create \
+            --resource-group Admin \
+            --nsg-name AdminSG \
+            --name AdminSG-RuleSSH \
+            --protocol tcp \
+            --priority 1000 \
+            --destination-port-range 22 \
+            --access allow > /dev/null 2>&1
+        if [ $? -ne 0 ]; then
+          echo "ERROR: Creating Security Group Rule AdminSG-RuleSSH"
+          exit 1
+        fi
+      else
+        messagePrint " - Verify Security Group Rule" "AdminSG-RuleSSH"
+      fi
+
+      nam=$(az network nic list -g Admin --query "[?contains(name, 'AdminNic_$TDH_TKGMC_ENVNAME')]" | \
+            jq -r '.[].name')
+      if [ "$nam" != "AdminNic_$TDH_TKGMC_ENVNAME" ]; then
+        messagePrint " - Creating Nic" "AdminNic_$TDH_TKGMC_ENVNAME"
+
+        az network nic create \
+            --resource-group Admin \
+            --name AdminNic_$TDH_TKGMC_ENVNAME \
+            --vnet-name admin-vnet \
+            --subnet AdminSubnet \
+            --public-ip-address AdminPublicIP_$TDH_TKGMC_ENVNAME \
+            --network-security-group AdminSG > /dev/null 2>&1
+        if [ $? -ne 0 ]; then
+          echo "ERROR: Creating NIC AdminNic_$TDH_TKGMC_ENVNAME"
+          echo "       => az network nic create --resource-group Admin --name AdminNic_$TDH_TKGMC_ENVNAME \\"
+          echo "            --vnet-name admin-vnet --subnet AdminSubnet --public-ip-address AdminPublicIP_$TDH_TKGMC_ENVNAME "
+          exit 1
+        fi
+      else
+        messagePrint " - Verify NIC" "AdminNic_$TDH_TKGMC_ENVNAME"
+      fi
+
+      #nam=$(az vm list --query "[?contains(name, '$JUMP_HOST')]" | jq -r '.[].name')
+      #if [ "$nam" != "$JUMP_HOST" ]; then
+      messagePrint " - Creating VM" "$JUMP_HOST"
+
+      az vm create \
+          --resource-group Admin \
+          --name $JUMP_HOST \
+          --location $AZURE_LOCATION \
+          --nics AdminNic_$TDH_TKGMC_ENVNAME \
+          --image UbuntuLTS \
+          --admin-username ubuntu \
+          --ssh-key-values ~/.tanzu-demo-hub/KeyPair-Azure.pub > /dev/null 2>&1
+          #--generate-ssh-keys > /dev/null 2>&1
+      if [ $? -ne 0 ]; then
+        echo "ERROR: Creating VM"
+        echo "       => az vm create --resource-group Admin --name $JUMP_HOST --location $AZURE_LOCATION \\"
+        echo "          --nics AdminNic_$TDH_TKGMC_ENVNAME --image UbuntuLTS --admin-username ubuntu --generate-ssh-keys"
+        exit 1
+      fi
+    else
+      #stt=$(az vm list -d --query "[?contains(name, '$JUMP_HOST')]" | jq -r '.[].powerState')
+      if [ "${vm_stt}" != "VM running" ]; then
+        messagePrint " - Starting VM" "$JUMP_HOST"
+        az vm start --resource-group Admin --name $JUMP_HOST
+      fi
+    fi
+
+    pip=""
+    while [ "$pip" == "" -o "$pip" == "null" ]; do
+      pip=$(az network public-ip list -g Admin --query "[?contains(name, 'AdminPublicIP_$TDH_TKGMC_ENVNAME')]" | \
+            jq -r '.[].ipAddress')
+      sleep 10
+    done
+
+    aip=$(route53getIPaddress $TDH_TKGMC_ENVNAME $AWS_HOSTED_DNS_DOMAIN)
+
+    # --- UPDATE DNS DOMAIN ---
+    if [ "${pip}" != "${aip}" ]; then
+      messagePrint " - DNS Zone (${AWS_HOSTED_DNS_DOMAIN})" "zone managed by route53"
+      messagePrint " - Updating Zone Record for ($JUMP_HOST)" "$pip"
+      route53setDNSrecord "$pip" "$JUMP_HOST" "$AWS_HOSTED_DNS_DOMAIN"
+
+      sed -in "/$JUMP_HOST/d" ~/.ssh/known_hosts
+      messagePrint " - Wait for SSH Daemon on jump-host to come online" "< 5min"
+    fi
+  fi
+}
+
+# --- VERYFY ACCESS TO CLOUD ---
+checkCloudCLI
+checkCloudAccess
+checkKeyPairs
+checkTKGdownloads
+
+# --- CREATE TKG CLUSTER AND JUMP SERVER
+createJumpHost
+sshEnvironment
+configureJumpHost
+#configureLetsEnscript
+
+# --- UPLOAD OVA IMAGES TO VCENTER ---
+if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "vSphere" ]; then
+  $SSH_COMMAND -n "[ -f $SSH_HOME/tanzu-demo-hub/scripts/uploadOVAimages.sh ] && tanzu-demo-hub/scripts/uploadOVAimages.sh $DEPLOY_TKG_TEMPLATE"
+
+  docker ps > /dev/null 2>&1
+  if [ $? -ne 0 ]; then 
+    echo "ERROR: Docker Daemon not running"; exit
+  fi
+
+  #$TDHPATH/scripts/InstallTKGmc.sh $DEPLOY_TKG_TEMPLATE
+  scripts/InstallTKGmc.sh $DEPLOY_TKG_TEMPLATE
+
+  echo "-----------------------------------------------------------------------------------------------------------"
+  tkg get mc --config ${HOME}/.tanzu-demo-hub/$TDH_TKGMC_CONFIG
+  echo "-----------------------------------------------------------------------------------------------------------"
+  echo "1.) Login to Jump Server: $JUMP_HOST"
+  echo "    => $SSH_COMMAND"
+  echo "2.) Check Management Cluster Status"
+  echo "    => export TKG_CONFIG=\${HOME}/.tanzu-demo-hub/$TDH_TKGMC_CONFIG"
+  echo "    => tkg set mc $TDH_TKGMC_NAME                # Set active mc cluster"
+  echo "    => tkg get mc"
+  printf "    => %-50s %s\n" "kubectl config set-context $TDH_TKGMC_NAME" "# Set k8s Context to mc Cluster"
+  printf "    => %-50s %s\n" "kubectl get nodes"        "# Set k8s Context to the TKG Management Cluster"
+  printf "    => %-50s %s\n" "kubectl get namespaces"   "# Set k8s Namespaces of the TKG Management Cluster"
+  echo "3.) Ceeate TKG Workload Cluster"
+  echo "    => export TKG_CONFIG=\${HOME}/.tanzu-demo-hub/$TDH_TKGMC_CONFIG"
+  echo "    => export KUBECONFIG=\${HOME}/.tanzu-demo-hub/${TDH_TKGMC_NAME}.kubeconfig"
+  echo "    => tkg create cluster tkg01 --plan=dev --vsphere-controlplane-endpoint-ip 10.1.1.31"
+  echo "    => tkg create cluster tkg01 --plan=dev --kubernetes-version=v1.18.8  # available 1.19.1 1.18.8 1.17.11"
+  echo "    => tkg create cluster tkg01 --plan=prod --worker-machine-count 3 --controlplane-machine-count 3"
+  echo "-----------------------------------------------------------------------------------------------------------"
+
+  messageTitle "Creating Workload Cluster (tdh-1)"
+  $SSH_COMMAND -n "cd tanzu-demo-hub && ./deployTKG -d $DEPLOY_TKG_TEMPLATE -c tkg-tanzu-demo-hub.cfg -n tdh-1 -ip 10.1.1.31"
+
+  $SCP_COMMAND ${SSH_USER}@${SSH_HOST}:/home/ubuntu/.tanzu-demo-hub/tkg-mc-vsphere-dev.kubeconfig \
+          ${HOME}/.tanzu-demo-hub/tkg-mc-vsphere-dev.kubeconfig
+
+  #tkg get credentials tdh-1
+
+#  messageTitle "Creating Worload Cluster (tdh-1)"
+#  ./deployTKG -d $DEPLOY_TKG_TEMPLATE -c tkg-tanzu-demo-hub.cfg -n tdh-1 -ip 10.1.1.31
+
+exit
+  echo "./deployTKG -d $DEPLOY_TKG_TEMPLATE -c tkg-tanzu-demo-hub.cfg -n tdh-1 --vsphere-controlplane-endpoint-ip 10.1.1.31"
+  ./deployTKG -d $DEPLOY_TKG_TEMPLATE -c tkg-tanzu-demo-hub.cfg -n tdh-1 --vsphere-controlplane-endpoint-ip 10.1.1.31
+
+exit
+  $SSH_COMMAND -n "cd tanzu-demo-hub && ./deployTKG -d $DEPLOY_TKG_TEMPLATE -c tkg-tanzu-demo-hub.cfg -n tdh-1"
+
+else
+  # --- CREATE MANAGEMENT CLUSTER ---
+  $SSH_COMMAND -n "[ -f $SSH_HOME/tanzu-demo-hub/scripts/InstallTKGmc.sh ] && tanzu-demo-hub/scripts/InstallTKGmc.sh $DEPLOY_TKG_TEMPLATE"
+
+  echo "-----------------------------------------------------------------------------------------------------------"
+  $SSH_COMMAND -n "tkg get mc --config ${SSH_HOME}/.tanzu-demo-hub/$TDH_TKGMC_CONFIG"
+  echo "-----------------------------------------------------------------------------------------------------------"
+  echo "1.) Login to Jump Server: $JUMP_HOST"
+  echo "    => $SSH_COMMAND"
+  echo "2.) Check Management Cluster Status"
+  echo "    => export TKG_CONFIG=${SSH_HOME}/.tanzu-demo-hub/$TDH_TKGMC_CONFIG"
+  echo "    => tkg set mc $TDH_TKGMC_NAME                # Set active mc cluster"
+  echo "    => tkg get mc"
+  printf "    => %-50s %s\n" "kubectl config set-context $TDH_TKGMC_NAME" "# Set k8s Context to mc Cluster"
+  printf "    => %-50s %s\n" "kubectl get nodes" "# Set k8s Context to the TKG Management Cluster"
+  printf "    => %-50s %s\n" "kubectl get namespaces" "# Set k8s Namespaces of the TKG Management Cluster"
+  echo "3.) Ceeate TKG Workload Cluster"
+  echo "    => export TKG_CONFIG=${SSH_HOME}/.tanzu-demo-hub/$TDH_TKGMC_CONFIG"
+  echo "    => tkg create cluster tkg01 --plan=dev --kubernetes-version=v1.18.8  # available 1.19.1 1.18.8 1.17.11"
+  echo "    => tkg create cluster tkg01 --plan=prod --worker-machine-count 3 --controlplane-machine-count 3"
+  echo ""
+  echo "-----------------------------------------------------------------------------------------------------------"
+
+  exit
+  messageTitle "Creating Workload Cluster (tdh-1)"
+  echo "./deployTKG -d $DEPLOY_TKG_TEMPLATE -c tkg-tanzu-demo-hub.cfg -n tdh-1"
+  echo "$SSH_COMMAND -n \"cd tanzu-demo-hub && ./deployTKG -d $DEPLOY_TKG_TEMPLATE -c tkg-tanzu-demo-hub.cfg -n tdh-1\""
+  $SSH_COMMAND -n "cd tanzu-demo-hub && ./deployTKG -d $DEPLOY_TKG_TEMPLATE -c tkg-tanzu-demo-hub.cfg -n tdh-1"
+fi
+
+
+exit
+
