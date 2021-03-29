@@ -2574,9 +2574,15 @@ installMinio() {
   echo " => mc ls minio"
   echo "-----------------------------------------------------------------------------------------------------------"
   
-  sleep 30
-  mc alias set minio https://minio.$DOMAIN $ACCESS_KEY $SECRET_KEY > /dev/null 2>&1
-  if [ $? -ne 0 ]; then 
+  # --- WAIT FOR HARBOR TO COME ONLINE ---
+  ret=1; cnt=0
+  while [ $ret -ne 0 -a $cnt -le 5 ]; do
+    mc alias set minio https://minio.$DOMAIN $ACCESS_KEY $SECRET_KEY > /dev/null 2>&1; ret=$?
+    sleep 60
+    let cnt=cnt+1
+  done
+
+  if [ $ret -ne 0 ]; then
     echo "ERROR: Unable to configure Minio Client (mc)"
     echo "       => mc alias set minio https://minio.$DOMAIN $ACCESS_KEY $SECRET_KEY"
     exit
