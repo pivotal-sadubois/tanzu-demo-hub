@@ -17,6 +17,11 @@ fi
 tanzu plugin clean
 tanzu plugin install --local cli all
 
+gunzip cli/*.gz
+mv cli/imgpkg-linux-amd64-* /usr/local/bin/imgpkg && chmod +x /usr/local/bin/imgpkg
+mv cli/kapp-linux-amd64-*   /usr/local/bin/kapp   && chmod +x /usr/local/bin/kapp
+mv cli/kbld-linux-amd64-*   /usr/local/bin/kbld   && chmod +x /usr/local/bin/kbld
+mv cli/ytt-linux-amd64-*    /usr/local/bin/ytt    && chmod +x /usr/local/bin/ytt
 
 ## INSTALL TKG UTILITY
 #TKG_ARCHIVE=$(ls -1 $TDHPATH/software/tkg-linux* | tail -1) 
