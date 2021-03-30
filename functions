@@ -1296,8 +1296,8 @@ EOF
 
 createCluster() {
   unset TKG_CONFIG
-  TKG_TEMPLATE=${HOME}/.tanzu-demo-hub/${TDH_TKGMC_CONFIG}
-  TKG_KUBECONFIG=${HOME}/.tanzu-demo-hub/${TDH_TKGMC_NAME}.kubeconfig
+  TKG_TEMPLATE=${HOME}/.tanzu-demo-hub/${TDH_TKGMC_CONFIG}; rm -f $TKG_TEMPLATE
+  TKG_KUBECONFIG=${HOME}/.tanzu-demo-hub/${TDH_TKGMC_NAME}.kubeconfig; rm -f $TKG_KUBECONFIG
   if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "Azure" ]; then
     MDOE=azure
     messageTitle "Creating TKG Managment Cluster"
@@ -1311,7 +1311,8 @@ createCluster() {
 
     [ -f ${HOME}/.tkg/config.yaml ] && rm -f ${HOME}/.tkg/config.yaml
     tkg get mc > /dev/null 2>&1
-    cp ${HOME}/.tkg/config.yaml $TKG_TEMPLATE
+    tanzu management-cluster get > /dev/null 2>&1
+    cp ${HOME}/.tanzu/config.yaml $TKG_TEMPLATE
 
     AZURE_SSH_PUBLIC_KEY_B64=$(cat ~/.tanzu-demo-hub/KeyPair-Azure.pub | base64 -w 10000)
     AZURE_CLIENT_ID=$(az ad app list --display-name "TanzuDemoHub" | jq -r '.[].appId')
