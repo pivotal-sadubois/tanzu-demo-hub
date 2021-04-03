@@ -10,7 +10,9 @@ if [ ! -f /usr/local/bin/tanzu ]; then
 echo "VMWPASS:$VMWPASS"
 
   vmwfile=$(vmw-cli ls vmware_tanzu_kubernetes_grid 2>/dev/null | egrep "^tanzu-cli-bundle-darwin" | tail -1 | awk '{ print $1 }')
-  (cd /tmp/; vmw-cli cp $vmwfile > /dev/null 2>&1)
+echo "vmwfile:$vmwfile"
+  #(cd /tmp/; vmw-cli cp $vmwfile > /dev/null 2>&1)
+  (cd /tmp/; vmw-cli cp $vmwfile)
   cd /tmp; tar xf $vmwfile
   sudo install core/v*/tanzu-core-linux_amd64 /usr/local/bin/tanzu
 
