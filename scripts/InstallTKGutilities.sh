@@ -3,16 +3,6 @@
 TDHPATH=$1; cd /tmp
 TDHENV=$2; cd /tmp
 
-# INSTALL TANZU
-if [ ! -f /usr/local/bin/vmw-cli ]; then
-  sudo apt install npm -y > /dev/null 2>&1
-  npm install vmw-cli --global > /dev/null 2>&1
-
-  export VMWUSER="$TDH_MYVMWARE_USER"
-  export VMWPASS="$TDH_MYVMWARE_PASS"
-  vmw-cli ls vmware_tanzu_kubernetes_grid > /dev/null 2>&1
-fi
-
 if [ ! -f /usr/local/bin/tanzu ]; then
   vmwfile=$(vmw-cli ls vmware_tanzu_kubernetes_grid 2>/dev/null | egrep "^tanzu-cli-bundle-darwin" | tail -1 | awk '{ print $1 }')
   (cd /tmp/; vmw-cli cp $vmwfile > /dev/null 2>&1)
@@ -58,6 +48,19 @@ sudo apt install docker.io -y > /dev/null 2>&1
 sudo systemctl start docker > /dev/null 2>&1
 sudo systemctl enable docker > /dev/null 2>&1
 sudo usermod -aG docker ubuntu
+
+# INSTALL TANZU
+if [ ! -f /usr/local/bin/vmw-cli ]; then
+  #sudo apt install npm -y > /dev/null 2>&1
+  #npm install vmw-cli --global > /dev/null 2>&1
+  docker run apnex/vmw-cli shell > vmw-cli 
+  chmod 755 vmw-cli
+  sudo mv vmw-cli /usr/local/bin
+
+  export VMWUSER="$TDH_MYVMWARE_USER"
+  export VMWPASS="$TDH_MYVMWARE_PASS"
+  vmw-cli ls vmware_tanzu_kubernetes_grid > /dev/null 2>&1
+fi
 
 # INSTALL KIND
 curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.9.0/kind-linux-amd64 2>/dev/null
