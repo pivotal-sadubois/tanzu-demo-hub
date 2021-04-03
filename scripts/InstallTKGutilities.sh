@@ -4,6 +4,11 @@ TDHPATH=$1; cd /tmp
 TDHENV=$2; cd /tmp
 
 if [ ! -f /usr/local/bin/tanzu ]; then
+  . ~/.tanzu-demo-hub.cfg
+  export VMWUSER="$TDH_MYVMWARE_USER"
+  export VMWPASS="$TDH_MYVMWARE_PASS"
+echo "VMWPASS:$VMWPASS"
+
   vmwfile=$(vmw-cli ls vmware_tanzu_kubernetes_grid 2>/dev/null | egrep "^tanzu-cli-bundle-darwin" | tail -1 | awk '{ print $1 }')
   (cd /tmp/; vmw-cli cp $vmwfile > /dev/null 2>&1)
   cd /tmp; tar xf $vmwfile
