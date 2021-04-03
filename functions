@@ -1122,10 +1122,10 @@ echo "$SSH_COMMAND -n id "
   stt=$($SSH_COMMAND -n "[ -f /tkg_software_installed ] && echo true")
   if [ "${stt}" == "" ]; then
     messagePrint " - Install TKG Utilities"   "tkg, ytt, kapp, kbld, kubectl, kind"
-    $SSH_COMMAND -n "[ -d $SSH_HOME/tanzu-demo-hub ] && chmod a+x ${TDHHOME}/scripts/InstallTKGutilities.sh && \
-        sudo ${TDHHOME}/scripts/InstallTKGutilities.sh \"$SSH_HOME/tanzu-demo-hub\" > /dev/null 2>&1"
     #$SSH_COMMAND -n "[ -d $SSH_HOME/tanzu-demo-hub ] && chmod a+x ${TDHHOME}/scripts/InstallTKGutilities.sh && \
-    #    sudo ${TDHHOME}/scripts/InstallTKGutilities.sh \"$SSH_HOME/tanzu-demo-hub\"" 
+    #    sudo ${TDHHOME}/scripts/InstallTKGutilities.sh \"$SSH_HOME/tanzu-demo-hub\" > /dev/null 2>&1"
+    $SSH_COMMAND -n "[ -d $SSH_HOME/tanzu-demo-hub ] && chmod a+x ${TDHHOME}/scripts/InstallTKGutilities.sh && \
+        sudo ${TDHHOME}/scripts/InstallTKGutilities.sh \"$SSH_HOME/tanzu-demo-hub\"" 
 
     # --- WAIT UNTIL SSH DEAMON IS READY NO JUMPHOST ----
     ret=1
