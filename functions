@@ -350,6 +350,7 @@ checkKubernetesServices() {
   service=$1
   missing_variables=0
 
+echo "vavava1"
   if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "minikube" ]; then
     if [ "${service}" == "registry_docker" ]; then
       if [ "${TDH_REGISTRY_DOCKER_NAME}" == "" -o "${TDH_REGISTRY_DOCKER_USER}" == "" -o "${TDH_REGISTRY_DOCKER_PASS}" == "" ]; then
@@ -432,7 +433,7 @@ checkKubernetesServices() {
 
   if [ ${missing_variables} -eq 1 ]; then
     echo "  --------------------------------------------------------------------------------------------------------------"
-    echo "  IMPORTANT: Please set the missing environment variables either in your shell or in the pcfconfig"
+    echo "  IMPORTANT: Please set the missing environment variables either in your shell or in the tanzu-demo-hub"
     echo "             configuration file ~/.tanzu-demo-hub.cfg and set all variables with the 'export' notation"
     echo "             ie. => export AZURE_PKS_TLS_CERTIFICATE=/home/demouser/certs/cert.pem"
     echo "  --------------------------------------------------------------------------------------------------------------"
@@ -696,9 +697,43 @@ checkCloudAccess() {
 
   if [ ${missing_variables} -eq 1 ]; then
     echo "  --------------------------------------------------------------------------------------------------------------"
-    echo "  IMPORTANT: Please set the missing environment variables either in your shell or in the pcfconfig"
+    echo "  IMPORTANT: Please set the missing environment variables either in your shell or in the tanzu-demo-hub"
     echo "             configuration file ~/.tanzu-demo-hub.cfg and set all variables with the 'export' notation"
     echo "             ie. => export AZURE_PKS_TLS_CERTIFICATE=/home/demouser/certs/cert.pem"
+    echo "  --------------------------------------------------------------------------------------------------------------"
+    exit 1
+  fi
+}
+
+checkTDHenvironment() {
+  missing_variables=0
+
+  if [ "${TDH_MYVMWARE_USER}" == "" -o "${TDH_MYVMWARE_PASS}" == "" ]; then
+    missing_variables=1
+    echo ""
+    echo "  4MISSING ENVIRONMENT-VARIABES    DESCRIPTION        "
+    echo "  --------------------------------------------------------------------------------------------------------------"
+
+    if [ "${TDH_MYVMWARE_USER}" == "" ]; then
+      echo "  TDH_MYVMWARE_USER                (required) myVMware (http://my.vmware.com/group/vmware/home) User"
+    fi
+
+    if [ "${TDH_MYVMWARE_PASS}" == "" ]; then
+      echo "  TDH_MYVMWARE_PASS                (required) myVMware (http://my.vmware.com/group/vmware/home) Password"
+    fi
+  else
+    messageTitle "mvVMware (http://my.vmware.com) Access for Software Download"
+    messagePrint " - myVMare User:"            "$TDH_MYVMWARE_USER"
+    messagePrint " - myVMare Password:"        $(maskPassword "$TDH_MYVMWARE_PASS")
+  fi
+
+  if [ ${missing_variables} -eq 1 ]; then
+    echo "  --------------------------------------------------------------------------------------------------------------"
+    echo "  IMPORTANT: Please set the missing environment variables either in your shell or in the tanzu-demo-hub"
+    echo "             configuration file ~/.tanzu-demo-hube.cfg and set all variables with the 'export' notation"
+    echo "             export TDH_MYVMWARE_USER=xxxxxxx"
+    echo "             export TDH_MYVMWARE_PASS='xxxxxxxxxxxx'"
+    echo "  IMPORTAND: Place the password in Single Quotes (') especialy if you use special characgters"
     echo "  --------------------------------------------------------------------------------------------------------------"
     exit 1
   fi
@@ -742,9 +777,9 @@ checkTMCAccess() {
 
   if [ ${missing_variables} -eq 1 ]; then
     echo "  --------------------------------------------------------------------------------------------------------------"
-    echo "  IMPORTANT: Please set the missing environment variables either in your shell or in the pcfconfig"
-    echo "             configuration file ~/.pcfconfig and set all variables with the 'export' notation"
-    echo "             ie. => export AZURE_PKS_TLS_CERTIFICATE=/home/demouser/certs/cert.pem"
+    echo "  IMPORTANT: Please set the missing environment variables either in your shell or in the tanzu-demo-hub"
+    echo "             configuration file ~/.tanzu-demo-hube.cfg and set all variables with the 'export' notation"
+    echo "             ie. => export TMC_MANAGEMENT_CLUSTER=xxxxxxxx"
     echo "  --------------------------------------------------------------------------------------------------------------"
     exit 1
   fi
@@ -822,8 +857,8 @@ checkTDHAccess() {
 
   if [ ${missing_variables} -eq 1 ]; then
     echo "  --------------------------------------------------------------------------------------------------------------"
-    echo "  IMPORTANT: Please set the missing environment variables either in your shell or in the pcfconfig"
-    echo "             configuration file ~/.pcfconfig and set all variables with the 'export' notation"
+    echo "  IMPORTANT: Please set the missing environment variables either in your shell or in the tanzu-demo-hub"
+    echo "             configuration file ~/.tanzu-demo-hub.cfg and set all variables with the 'export' notation"
     echo "             ie. => export AZURE_PKS_TLS_CERTIFICATE=/home/demouser/certs/cert.pem"
     echo "  --------------------------------------------------------------------------------------------------------------"
     exit 1
@@ -1125,7 +1160,7 @@ route53createHostedZone() {
   fi
 
   aws route53 create-hosted-zone --name $zone --caller-reference "$(date)" \
-       --hosted-zone-config Comment="Managed by pcfconfig" > /dev/null 2>&1
+       --hosted-zone-config Comment="Managed by tanzu-demo-hub" > /dev/null 2>&1
   if [ $? -ne 0 ]; then
       echo "ERROR: failed to create AWS Route53 zone $ZONE_ID"
       echo "       => aws route53 create-hosted-zone --name $zone --caller-reference \"$(date)\" \\"
@@ -1328,8 +1363,6 @@ createCluster() {
     echo "CLUSTER_CIDR: $TDH_TKGMC_CLUSTER_CIDR"                                      >> $TKG_TEMPLATE
     echo "AZURE_LOCATION: $AZURE_LOCATION"                                            >> $TKG_TEMPLATE
     echo "AZURE_SUBSCRIPTION_ID: $AZURE_SUBSCRIPTION_ID"                              >> $TKG_TEMPLATE
-
-echo "TKG_TEMPLATE:$TKG_TEMPLATE"
 
     MPDE=azure
 
@@ -1622,7 +1655,7 @@ verifyTLScertificate() {
 
     if [ "${TLS_ROOT_CA}" == "" ]; then
       echo "ERROR: ROOT_CA for $ROOT_CA_NAME could not be found, please download the file manually"
-      echo "       and set the variable in the ~/.pcfconfig"
+      echo "       and set the variable in the ~/.tanzu-demo-hub.cfg"
       echo "       => export ${CLOUD}_${MODE}_TLS_ROOT_CA=<ca.crt>"
       exit 1
     fi
@@ -2220,11 +2253,14 @@ verifyRequiredServices() {
 }
 
 checkTKGdownloads() {
+
+
   kpl=$(ls -1 software | egrep -c "^kp-linux|photon")
   ptl=$(ls -1 software | egrep -c "^photon")
   tkg=$(ls -1 software | egrep -c "^tanzu-cli-bundle-linux")
   if [ $tkg -eq 0 ]; then 
     echo "ERROR: Please download TKG Utilies from https://www.vmware.com/go/get-tkg"
+    echo "       => $TANZU_DEMO_HUB/software/tkg-linux-amd64-vx.x.x-vmware.x.tar.gz"
     echo "       => $TANZU_DEMO_HUB/software/tkg-linux-amd64-vx.x.x-vmware.x.tar.gz"
     exit
   fi
@@ -2247,8 +2283,9 @@ checkCLIcommands() {
   fi
 
   if [ "$cat" == "TOOLS" ]; then
-    CLI_COMMANDS="/usr/local/bin/jq:brew:jq /usr/local/bin/wget:brew:wget /usr/local/bin/mc:brew:minio/stable/mc /usr/local/bin/helm:brew:helm"
+    CLI_COMMANDS="/usr/local/bin/jq:brew:jq /usr/local/bin/wget:brew:wget /usr/local/bin/mc:brew:minio/stable/mc /usr/local/bin/helm:brew:helm /usr/local/bin/npm:brew:npm"
 
+    # --- INSTALL BREW INSTALLABLE TOOLS ---
     for arg in $CLI_COMMANDS; do
       cmd=$(echo $arg | awk -F: '{ print $1 }') 
       sys=$(echo $arg | awk -F: '{ print $2 }') 
@@ -2261,8 +2298,81 @@ checkCLIcommands() {
           exit
         fi
       fi
-  
     done
+  fi
+
+  if [ "$cat" == "TANZU" ]; then
+    if [ ! -f /usr/local/bin/vmw-cli ]; then 
+      npm install vmw-cli --global > /dev/null 2>&1
+      if [ $? -ne 0 ]; then 
+        echo "ERROR: failed to install vmw-cli, please try manually"
+        echo "       => npm install vmw-cli --global"
+        exit
+      fi
+    fi
+
+    export VMWUSER="$TDH_MYVMWARE_USER"
+    export VMWPASS="$TDH_MYVMWARE_PASS"
+    cnt=$(vmw-cli ls vmware_tanzu_kubernetes_grid 2>&1 | grep -c "ERROR")
+    if [ $cnt -ne 0 ]; then
+      echo "ERROR: failed to login to vmw-cli, please make sure that the environment variables"
+      echo "       TDH_MYVMWARE_USER and TDH_MYVMWARE_PASS are set correctly. Please try manually"
+      echo "       -----------------------------------------------------------------------------------------------------------"
+      echo "       => . ~/.tanzu-demo-hub.cfg"
+      echo "       => export VMWUSER=\$TDH_MYVMWARE_USER"
+      echo "       => export VMWPASS=\$TDH_MYVMWARE_PASS"
+      echo "       => vmw-cli ls vmware_tanzu_kubernetes_grid"
+      echo "       -----------------------------------------------------------------------------------------------------------"
+      exit
+    fi
+
+    messageTitle "Verify Software Downloads from http://my.vmware.com"
+
+    if [ ! -f /usr/local/bin/tanzu ]; then 
+      arch=$(uname)
+      if [ "$arch" == "Darwin" ]; then 
+        vmwfile=$(vmw-cli ls vmware_tanzu_kubernetes_grid 2>/dev/null | egrep "^tanzu-cli-bundle-darwin" | tail -1 | awk '{ print $1 }') 
+        if [ ! -f /tmp/$vmwfile ]; then 
+          messagePrint " - Download Tanzu CLI:"                        "$vmwfile"
+          (cd /tmp/; vmw-cli cp $vmwfile > /dev/null 2>&1)
+          if [ ! -f /tmp/$vmwfile ]; then 
+            echo "ERROR: failed to download $vmwfile from http://my.vmware.com, please try manually"
+            echo "       -----------------------------------------------------------------------------------------------------------"
+            echo "       => . ~/.tanzu-demo-hub.cfg"
+            echo "       => export VMWUSER=\$TDH_MYVMWARE_USER"
+            echo "       => export VMWPASS=\$TDH_MYVMWARE_PASS"
+            echo "       => vmw-cli ls vmware_tanzu_kubernetes_grid"
+            echo "       => vmw-cli cp $vmwfile"
+            echo "       -----------------------------------------------------------------------------------------------------------"
+            exit
+          fi
+        else
+          echo "INFO: The tanzu CLI utility has been downloaded to /tmp/$vmwfile, please folow the instructions described here to install them:"
+          echo "      https://docs.vmware.com/en/VMware-Tanzu-Kubernetes-Grid/1.3/vmware-tanzu-kubernetes-grid-13/GUID-install-cli.html"
+          exit
+        fi
+      fi
+    else
+      ver=$(tanzu version | egrep "^version:" | awk '{ print $2 }')
+      messagePrint " - Tanzu CLI"                        "$ver"
+
+      # --- VERIFY PLUGINS ---
+      plg=$(tanzu plugin list | grep -v "alpha" | grep -c "not installed")
+      if [ $plg -ne 0 ]; then 
+        messagePrint " - Tanzu CLI Plugins"                        "not installed"
+        echo "----------------------------------------------------------------------------------------------------------------------------------------------"
+        tanzu plugin list
+        echo "----------------------------------------------------------------------------------------------------------------------------------------------"
+        echo "INFO: The tanzu CLI plugins are not installed please folow the instructions described here to install them:"
+        echo "      https://docs.vmware.com/en/VMware-Tanzu-Kubernetes-Grid/1.3/vmware-tanzu-kubernetes-grid-13/GUID-install-cli.html"
+        exit
+      else
+        messagePrint " - Tanzu CLI Plugins"                        "installed"
+        echo "----------------------------------------------------------------------------------------------------------------------------------------------"
+        tanzu plugin list
+        echo "----------------------------------------------------------------------------------------------------------------------------------------------"
+      fi
+    fi
   fi
 }
 
@@ -2333,8 +2443,8 @@ checkTMCAccess() {
 
   if [ ${missing_variables} -eq 1 ]; then
     echo "  --------------------------------------------------------------------------------------------------------------"
-    echo "  IMPORTANT: Please set the missing environment variables either in your shell or in the pcfconfig"
-    echo "             configuration file ~/.pcfconfig and set all variables with the 'export' notation"
+    echo "  IMPORTANT: Please set the missing environment variables either in your shell or in the tanzu-demo-hub"
+    echo "             configuration file ~/.tanzu-demo-hub.cfg and set all variables with the 'export' notation"
     echo "             ie. => export AZURE_PKS_TLS_CERTIFICATE=/home/demouser/certs/cert.pem"
     echo "  --------------------------------------------------------------------------------------------------------------"
     exit 1
