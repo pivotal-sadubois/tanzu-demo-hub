@@ -9,6 +9,7 @@
 export TANZU_DEMO_HUB=$(cd "$(pwd)/$(dirname $0)"; pwd)
 export TDHPATH=$(cd "$(pwd)/$(dirname $0)"; pwd)
 export DEBUG=1
+export START_COMMAND="$*"
 
 export K8S_CLEAN_DEPLOYMENT=false
 
@@ -103,11 +104,11 @@ InstallContour_delete_me() {
   dat=$(helm -n $NAMESPACE ls -o json | jq -r '.[].updated')
 
   messageTitle "Verify Ingress Contour"
-  messagePrint " - Ingress Contour Namespace:"         "$NAMESPACE"
-  messagePrint " - Ingress Contour Helm Chart:"        "$crt"
-  messagePrint " - Ingress Contour Version:"           "$ver"
-  messagePrint " - Ingress Contour Status:"            "$stt"
-  messagePrint " - Ingress Contour Installed/Updated:" "$dat"
+  messagePrint " ▪ Ingress Contour Namespace:"         "$NAMESPACE"
+  messagePrint " ▪ Ingress Contour Helm Chart:"        "$crt"
+  messagePrint " ▪ Ingress Contour Version:"           "$ver"
+  messagePrint " ▪ Ingress Contour Status:"            "$stt"
+  messagePrint " ▪ Ingress Contour Installed/Updated:" "$dat"
 
   # --- VERIFY DNS DOMAIN ---
   verifyHostedZone ${TDH_ENVNAME}.$AWS_HOSTED_DNS_DOMAIN
@@ -163,11 +164,11 @@ InstallCertManager_delete_me() {
   dat=$(helm -n cert-manager ls -o json | jq -r '.[].updated')
 
   messageTitle "Verify Cert Manager"
-  messagePrint " - Cert Manager Namespace:"         "$NAMESPACE"
-  messagePrint " - Cert Manager Helm Chart:"        "$crt"
-  messagePrint " - Cert Manager Version:"           "$ver"
-  messagePrint " - Cert Manager Status:"            "$stt"
-  messagePrint " - Cert Manager Installed/Updated:" "$dat"
+  messagePrint " ▪ Cert Manager Namespace:"         "$NAMESPACE"
+  messagePrint " ▪ Cert Manager Helm Chart:"        "$crt"
+  messagePrint " ▪ Cert Manager Version:"           "$ver"
+  messagePrint " ▪ Cert Manager Status:"            "$stt"
+  messagePrint " ▪ Cert Manager Installed/Updated:" "$dat"
     
   # --- STORE SETTINGS IN CONFIGMAP ---
   uodateConfigMap tanzu-demo-hub TDH_CERTMANAGER_ENABLED        "true"
@@ -179,23 +180,33 @@ InstallCertManager_delete_me() {
 }
 
 InstallMetallb() {
-  adr=$(kubectl get configmap config -n metallb-system -o json | jq -r '.data.config' | egrep "[0-9]-[0-9]" | awk '{ print $2 }') 
+  adr=$(kubectl get configmap config -n metallb-system -o json 2> /dev/null | jq -r '.data.config' | egrep "[0-9]-[0-9]" | awk '{ print $2 }') 
   stt=$(minikube addons -p $TDH_MINIKUBE_PROFILE list -o json | jq -r '."metallb".Status')
   if [ "$stt" != "enabled" -o "$adr" == "-" -o "$adr" == "" ]; then
     minikube_ip=$(minikube ip) 
-    echo "Pleawe enable minikube addon metallb and configure the the ip Pool. The minikube host"
-    echo "ip is ($minikube_ip), choose the IP Range in the same net."
-    echo "  => minikube addons -p $TDH_MINIKUBE_PROFILE enable metallb"
-    echo "  => minikube addons configure metallb -p $TDH_MINIKUBE_PROFILE"
-    echo "  => minikube -p $TDH_MINIKUBE_PROFILE stop"
-    echo "  => minikube -p $TDH_MINIKUBE_PROFILE start"
-    echo "  => kubectl describe configmap config -n metallb-system"
+    sip=$(echo 192.168.64.16 | awk -F'.' '{ printf("%d.%d.%d.100\n",$1,$2,$3) }')
+    eip=$(echo 192.168.64.16 | awk -F'.' '{ printf("%d.%d.%d.120\n",$1,$2,$3) }')
+    
+    echo "   ----------------------------------------------------------------------------------------------------------------"
+    echo "   WARNING: Please configure the minikube addon 'metallb' with an ip Pool. The minikube host"
+    echo "            ip is ($minikube_ip), choose the IP Range in the same net. ie: "
+    echo ""
+    echo "            => minikube addons configure metallb -p tdh-minikube-sadubois"
+    echo "               -- Enter Load Balancer Start IP: $sip"
+    echo "               -- Enter Load Balancer End IP: $eip"
+    #echo "            => minikube -p $TDH_MINIKUBE_PROFILE stop"
+    #echo "            => minikube -p $TDH_MINIKUBE_PROFILE start"
+    echo "  ----------------------------------------------------------------------------------------------------------------"
+    echo "  Please restart $0 when completed, thanks"
+
+    #echo "  => minikube addons configure metallb -p $TDH_MINIKUBE_PROFILE"
+    #echo "  => kubectl describe configmap config -n metallb-system"
     exit
   else
     adr=$(kubectl get configmap config -n metallb-system -o json | jq -r '.data.config' | yq e '.address-pools[].addresses[]' -)
     messageTitle "Verify MetalLB Loadbalancer"
-    messagePrint " - Metallb LoadBalancer Status"         "active"
-    messagePrint " - Metallb LoadBalancer IP-Pool"        "$adr"
+    messagePrint " ▪ Metallb LoadBalancer Status"         "active"
+    messagePrint " ▪ Metallb LoadBalancer IP-Pool"        "$adr"
 
     # --- STORE CONFIG IN CONFIGMAP ---
     uodateConfigMap tanzu-demo-hub TDH_METALLB_ENABLED "true"
@@ -226,13 +237,17 @@ createClusterIssuer_delete_me() {
     AWS_HOSTED_ZONE_ID=$(aws route53 list-hosted-zones \
                         --query "HostedZones[?starts_with(to_string(Name), '${TDH_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}.')]" | \
                         jq -r '.[].Id' | awk -F '/' '{ print $NF }')
+    HARBOR_HOSTNAME="harbor.apps-contour.$TDH_ENVNAME.$AWS_HOSTED_DNS_DOMAIN"
+    NOTARY_HOSTNAME="notary.apps-contour.$TDH_ENVNAME.$AWS_HOSTED_DNS_DOMAIN"
+echo "HARBOR_HOSTNAME:$HARBOR_HOSTNAME"
+echo "NOTARY_HOSTNAME:$NOTARY_HOSTNAME"
 
     messageTitle "Create LetsEnscript ClusterIssuer"
-    messagePrint " - LetsEnscript Issuer Name"         "$TDH_TLS_ISSUER_NAME"
-    messagePrint " - LetsEnscript Solver"              "route53"
-    messagePrint " - LetsEnscript Solver ZoneID"       "$AWS_HOSTED_ZONE_ID"
-    messagePrint " - LetsEnscript DNSZone"             "*.apps-contour.${TDH_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}"
-    messagePrint " - LetsEnscript DNSZone"             "*.apps-nginx.${TDH_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}"
+    messagePrint " ▪ LetsEnscript Issuer Name"         "$TDH_TLS_ISSUER_NAME"
+    messagePrint " ▪ LetsEnscript Solver"              "route53"
+    messagePrint " ▪ LetsEnscript Solver ZoneID"       "$AWS_HOSTED_ZONE_ID"
+    messagePrint " ▪ LetsEnscript DNSZone"             "*.apps-contour.${TDH_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}"
+    messagePrint " ▪ LetsEnscript DNSZone"             "*.apps-nginx.${TDH_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}"
 
     echo "apiVersion: cert-manager.io/v1alpha2"                                    >  $TDH_TLS_ISSUER_NAME
     echo "kind: ClusterIssuer"                                                     >> $TDH_TLS_ISSUER_NAME
@@ -289,8 +304,8 @@ createClusterIssuer_delete_me() {
       sleep 5
     done
 
-    messagePrint " - LetsEnscript Request Reason"      "$issuer_reason"
-    messagePrint " - LetsEnscript Request Status"      "$issuer_status"
+    messagePrint " ▪ LetsEnscript Request Reason"      "$issuer_reason"
+    messagePrint " ▪ LetsEnscript Request Status"      "$issuer_status"
   else
     issuer_reason=$(kubectl get clusterissuer letsencrypt-staging -n kube-system -o json 2>/dev/null | \
                   jq -r '.status.conditions[].reason')
@@ -300,13 +315,13 @@ createClusterIssuer_delete_me() {
                   jq -r '.status.conditions[].lastTransitionTime')
 
     messageTitle "Verify LetsEnscript ClusterIssuer"
-    messagePrint " - LetsEnscript Issuer Name"         "$TDH_TLS_ISSUER_NAME"
-    messagePrint " - LetsEnscript DNSZone"             "$HARBOR_HOSTNAME"
-    messagePrint " - LetsEnscript DNSZone"             "$NOTARY_HOSTNAME"
-    messagePrint " - LetsEnscript DNSZone"             "$SACHA_HOSTNAME"
-    messagePrint " - LetsEnscript Request Requested"   "$issuer_date"
-    messagePrint " - LetsEnscript Request Reason"      "$issuer_reason"
-    messagePrint " - LetsEnscript Request Status"      "$issuer_status"
+    messagePrint " ▪ LetsEnscript Issuer Name"         "$TDH_TLS_ISSUER_NAME"
+    messagePrint " ▪ LetsEnscript DNSZone"             "$HARBOR_HOSTNAME"
+    messagePrint " ▪ LetsEnscript DNSZone"             "$NOTARY_HOSTNAME"
+    messagePrint " ▪ LetsEnscript DNSZone"             "$SACHA_HOSTNAME"
+    messagePrint " ▪ LetsEnscript Request Requested"   "$issuer_date"
+    messagePrint " ▪ LetsEnscript Request Reason"      "$issuer_reason"
+    messagePrint " ▪ LetsEnscript Request Status"      "$issuer_status"
   fi
 
   # --- CREATE CERTIFICATE ---
@@ -354,13 +369,13 @@ createClusterIssuer_delete_me() {
       tim=$(kubectl get certificate $TDH_TLS_CERT -o json 2>/dev/null | jq -r '.status.conditions[].lastTransitionTime')
       msg=$(kubectl get certificate $TDH_TLS_CERT -o json 2>/dev/null | jq -r '.status.conditions[].message')
       tim=$(kubectl get certificate $TDH_TLS_CERT -o json 2>/dev/null | jq -r '.status.conditions[].lastTransitionTime')
-      messagePrint " - LetsEnscript Certificate Name"         "$TDH_TLS_CERT"
-      messagePrint " - LetsEnscript Certificate Issued"       "$tim"
-      messagePrint " - LetsEnscript Certificate Message"      "$msg"
-      messagePrint " - LetsEnscript Certificate Status"       "$stt"
-      messagePrint " - LetsEnscript Certificate Secret"       "${TDH_TLS_SECRET}"
+      messagePrint " ▪ LetsEnscript Certificate Name"         "$TDH_TLS_CERT"
+      messagePrint " ▪ LetsEnscript Certificate Issued"       "$tim"
+      messagePrint " ▪ LetsEnscript Certificate Message"      "$msg"
+      messagePrint " ▪ LetsEnscript Certificate Status"       "$stt"
+      messagePrint " ▪ LetsEnscript Certificate Secret"       "${TDH_TLS_SECRET}"
     else
-      messagePrint " - LetsEnscript Certificate Status"       "$stt"
+      messagePrint " ▪ LetsEnscript Certificate Status"       "$stt"
       echo "------------------------------------------------------------------------------------------------------------------------"
       kubectl describe certificate $TDH_TLS_CERT
       echo "------------------------------------------------------------------------------------------------------------------------"
@@ -386,8 +401,8 @@ createClusterIssuer_delete_me() {
   fi
 
   messageTitle "Verify LetsEnscript Certificate"
-  messagePrint " - LetsEnscript Certificate Name"       "$TDH_TLS_CERT"
-  messagePrint " - LetsEnscript Certificate Secret"     "$TDH_TLS_SECRET"
+  messagePrint " ▪ LetsEnscript Certificate Name"       "$TDH_TLS_CERT"
+  messagePrint " ▪ LetsEnscript Certificate Secret"     "$TDH_TLS_SECRET"
 
   # --- STORE SETTINGS IN CONFIGMAP ---
   uodateConfigMap tanzu-demo-hub TDH_CERTIFICATE_NAME   "$TDH_TLS_CERT"
@@ -413,10 +428,10 @@ InstallHarborRegistry_delete_me() {
     # --- VERIFY SERVICE CONFIGURATION ---
     checkKubernetesServices harbor
 
-    messagePrint " - Harbor Registry/Notary Server"        "harbor.apps-contour.$TDH_ENVNAME.$AWS_HOSTED_DNS_DOMAIN"
+    messagePrint " ▪ Harbor Registry/Notary Server"        "harbor.apps-contour.$TDH_ENVNAME.$AWS_HOSTED_DNS_DOMAIN"
     messagePrint "  "                                      "notary.apps-contour.$TDH_ENVNAME.$AWS_HOSTED_DNS_DOMAIN"
-    messagePrint " - Harbor Admin Password"                $(maskPassword "$TDH_HARBOR_ADMIN_PASSWORD")
-    messagePrint " - Harbor TLS Staging Cert"              "$TDH_HARBOR_STAGING_TLS_CERT"
+    messagePrint " ▪ Harbor Admin Password"                $(maskPassword "$TDH_HARBOR_ADMIN_PASSWORD")
+    messagePrint " ▪ Harbor TLS Staging Cert"              "$TDH_HARBOR_STAGING_TLS_CERT"
 
     # --- INSTALL CONTOUR INGRESS ---
     kubectl create ns $NAMESPACE > /dev/null 2>&1
@@ -476,7 +491,7 @@ InstallHarborRegistry_delete_me() {
     done
 
     # --- WAIT FOR HARBOR TO COME ONLINE ---
-    messagePrint " - Verify Harbor Reistry Access" "$HARBOR_HOSTNAME"
+    messagePrint " ▪ Verify Harbor Reistry Access" "$HARBOR_HOSTNAME"
     cnt=0
     while [ $cnt -eq 0 ]; do
       docker login $HARBOR_HOSTNAME -u admin -p $TDH_HARBOR_ADMIN_PASSWORD > /dev/null 2>&1
@@ -492,11 +507,11 @@ InstallHarborRegistry_delete_me() {
   dat=$(helm -n $NAMESPACE ls -o json | jq -r '.[].updated')
 
   messageTitle "Verify Harbor Reistry"
-  messagePrint " - Harbor Reistry Namespace:"         "$NAMESPACE"
-  messagePrint " - Harbor Reistry Helm Chart:"        "$crt"
-  messagePrint " - Harbor Reistry Version:"           "$ver"
-  messagePrint " - Harbor Reistry Status:"            "$stt"
-  messagePrint " - Harbor Reistry Installed/Updated:" "$dat"
+  messagePrint " ▪ Harbor Reistry Namespace:"         "$NAMESPACE"
+  messagePrint " ▪ Harbor Reistry Helm Chart:"        "$crt"
+  messagePrint " ▪ Harbor Reistry Version:"           "$ver"
+  messagePrint " ▪ Harbor Reistry Status:"            "$stt"
+  messagePrint " ▪ Harbor Reistry Installed/Updated:" "$dat"
 
   # --- STORE SETTINGS IN CONFIGMAP ---
   uodateConfigMap tanzu-demo-hub TDH_HARBOR_REGISTRY_ENABLED        "true"
@@ -556,6 +571,10 @@ fi
 checkCLIcommands TOOLS
 checkCLIcommands TKG
 checkCloudAccess
+
+# --- MINIKUBE SETUP ----
+VerifyK8SDemoPlatform
+InstallMetallb
 checkTDHAccess
 
 uodateConfigMap tanzu-demo-hub TDH_DOMAIN               $AWS_HOSTED_DNS_DOMAIN 
@@ -563,8 +582,7 @@ uodateConfigMap tanzu-demo-hub TDH_ENVNAME              $TDH_ENVNAME
 uodateConfigMap tanzu-demo-hub TDH_DEPLOYMENT_TYPE      "minikube" 
 uodateConfigMap tanzu-demo-hub TDH_MANAGED_BY_TMC       "false" 
 
-VerifyK8SDemoPlatform
-InstallMetallb
+# --- INSTALL K8 SERVICES ---
 InstallCertManager
 InstallContour
 createClusterIssuer

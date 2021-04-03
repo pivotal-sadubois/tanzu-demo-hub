@@ -670,6 +670,14 @@ echo "$SSH_COMMAND -n id > /dev/null"
   if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "Azure" ]; then
     JUMP_HOST="jump-${TDH_TKGMC_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}"
 
+    # --- VERIFY AZURE ACCESS ---
+    az ad app list > /dev/null 2>&1
+    if [ $? -ne 0 ]; then 
+      echo "ERROR: Failed to list Microsoft Azure Applications, please try manually"
+      echo "       => az ad app list"
+      exit
+    fi
+
     # --- VERIFY / CREATE APPLICATION ID AND SERVICE PRINCIPLE ---
     appid=$(az ad app list --display-name "TanzuDemoHub" | jq -r '.[].appId')
     if [ "$appid" == "" ]; then 
@@ -868,10 +876,16 @@ echo "$SSH_COMMAND -n id > /dev/null"
 }
 
 # --- VERYFY ACCESS TO CLOUD ---
+checkTDHenvironment    
+
 checkCloudCLI
+checkCLIcommands TOOLS
+checkCLIcommands TKG
+checkCLIcommands TANZU
+
 checkCloudAccess
 checkKeyPairs
-checkTKGdownloads
+#checkTKGdownloads
 
 # --- CREATE TKG CLUSTER AND JUMP SERVER
 createJumpHost
@@ -930,6 +944,19 @@ exit
   $SSH_COMMAND -n "cd tanzu-demo-hub && ./deployTKG -d $DEPLOY_TKG_TEMPLATE -c tkg-tanzu-demo-hub.cfg -n tdh-1"
 
 else
+  # --- ACCEPT LICENSE AGREEMENT ---
+  if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "Azure" ]; then
+    for img in $(az vm image list --publisher vmware-inc --offer tkg-capi --all | jq -r '.[].sku' | sort | uniq); do
+      az vm image terms accept --publisher vmware-inc --offer tkg-capi --plan $img --subscription $AZURE_SUBSCRIPTION_ID > /dev/null 2>&1
+      if [ $? -ne 0 ]; then 
+        echo "ERROR: failed to accept image terms, please try manually"
+        echo "       => az vm image terms accept --publisher vmware-inc --offer tkg-capi --plan $img --subscription $AZURE_SUBSCRIPTION_ID"
+      fi
+    done
+  fi
+
+exit
+
   # --- CREATE MANAGEMENT CLUSTER ---
   $SSH_COMMAND -n "[ -f $SSH_HOME/tanzu-demo-hub/scripts/InstallTKGmc.sh ] && tanzu-demo-hub/scripts/InstallTKGmc.sh $DEPLOY_TKG_TEMPLATE"
 
