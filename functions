@@ -730,7 +730,7 @@ checkTDHenvironment() {
   if [ ${missing_variables} -eq 1 ]; then
     echo "  --------------------------------------------------------------------------------------------------------------"
     echo "  IMPORTANT: Please set the missing environment variables either in your shell or in the tanzu-demo-hub"
-    echo "             configuration file ~/.tanzu-demo-hube.cfg and set all variables with the 'export' notation"
+    echo "             configuration file ~/.tanzu-demo-hub.cfg and set all variables with the 'export' notation"
     echo "             export TDH_MYVMWARE_USER=xxxxxxx"
     echo "             export TDH_MYVMWARE_PASS='xxxxxxxxxxxx'"
     echo "  IMPORTAND: Place the password in Single Quotes (') especialy if you use special characgters"
@@ -778,7 +778,7 @@ checkTMCAccess() {
   if [ ${missing_variables} -eq 1 ]; then
     echo "  --------------------------------------------------------------------------------------------------------------"
     echo "  IMPORTANT: Please set the missing environment variables either in your shell or in the tanzu-demo-hub"
-    echo "             configuration file ~/.tanzu-demo-hube.cfg and set all variables with the 'export' notation"
+    echo "             configuration file ~/.tanzu-demo-hub.cfg and set all variables with the 'export' notation"
     echo "             ie. => export TMC_MANAGEMENT_CLUSTER=xxxxxxxx"
     echo "  --------------------------------------------------------------------------------------------------------------"
     exit 1
