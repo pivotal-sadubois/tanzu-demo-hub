@@ -4,18 +4,25 @@ TDHPATH=$1; cd /tmp
 TDHENV=$2; cd /tmp
 
 # INSTALL TANZU
-TKG_ARCHIVE=$(ls -1 $TDHPATH/software/tanzu-cli-bundle-linux* | tail -1)
-tar xf $TKG_ARCHIVE
+if [ ! -f /usr/local/bin/vmw-cli ]; then
+  npm install vmw-cli --global > /dev/null 2>&1
 
-if [ ! -d ./cli ]; then
-  echo "ERROR: failed to unpack $TKG_ARCHIVE"
-  echo "       tar xfz $TKG_ARCHIVE"
-  exit
+  export VMWUSER="$TDH_MYVMWARE_USER"
+  export VMWPASS="$TDH_MYVMWARE_PASS"
+  vmw-cli ls vmware_tanzu_kubernetes_grid > /dev/null 2>&1
 fi
 
-(cd cli; sudo install core/v1.3.0/tanzu-core-linux_amd64 /usr/local/bin/tanzu)
-tanzu plugin clean
-tanzu plugin install --local cli all
+if [ ! -f /usr/local/bin/tanzu ]; then
+  vmwfile=$(vmw-cli ls vmware_tanzu_kubernetes_grid 2>/dev/null | egrep "^tanzu-cli-bundle-darwin" | tail -1 | awk '{ print $1 }')
+  (cd /tmp/; vmw-cli cp $vmwfile > /dev/null 2>&1)
+  cd /tmp; tar xf $vmwfile
+  sudo install core/v*/tanzu-core-linux_amd64 /usr/local/bin/tanzu
+
+  (cd cli; sudo install core/v1.3.0/tanzu-core-linux_amd64 /usr/local/bin/tanzu)
+  cd /tmp
+  tanzu plugin clean
+  tanzu plugin install --local cli all
+fi
 
 gunzip cli/*.gz
 mv cli/imgpkg-linux-amd64-* /usr/local/bin/imgpkg && chmod +x /usr/local/bin/imgpkg
