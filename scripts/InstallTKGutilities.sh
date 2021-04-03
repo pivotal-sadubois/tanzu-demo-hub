@@ -5,6 +5,7 @@ TDHENV=$2; cd /tmp
 
 # INSTALL TANZU
 if [ ! -f /usr/local/bin/vmw-cli ]; then
+  sudo apt install npm -y > /dev/null 2>&1
   npm install vmw-cli --global > /dev/null 2>&1
 
   export VMWUSER="$TDH_MYVMWARE_USER"
