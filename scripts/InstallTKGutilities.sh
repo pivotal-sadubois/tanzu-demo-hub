@@ -3,41 +3,6 @@
 TDHPATH=$1; cd /tmp
 TDHENV=$2; cd /tmp
 
-if [ ! -f /usr/local/bin/tanzu ]; then
-  . ~/.tanzu-demo-hub.cfg
-  export VMWUSER="$TDH_MYVMWARE_USER"
-  export VMWPASS="$TDH_MYVMWARE_PASS"
-echo "VMWPASS:$VMWPASS"
-echo "VMWUSER:$VMWUSER"
-
-  vmw-cli ls vmware_tanzu_kubernetes_grid
-  cnt=0
-  vmwfile=$(vmw-cli ls vmware_tanzu_kubernetes_grid 2>/dev/null | egrep "^tanzu-cli-bundle-linux" | tail -1 | awk '{ print $1 }')
-  while [ "$vmwfile" == "" -a $cnt -lt 5 ]; do
-    vmwfile=$(vmw-cli ls vmware_tanzu_kubernetes_grid 2>/dev/null | egrep "^tanzu-cli-bundle-linux" | tail -1 | awk '{ print $1 }')
-echo "$cnt $vmwfile"
-    let cnt=cnt+1
-    sleep 10
-  done
-
-echo "vmwfile:$vmwfile"
-  (cd /tmp/; vmw-cli cp $vmwfile > /dev/null 2>&1)
-  cd /tmp; tar xf $vmwfile
-
-  if [ -d /tmp/cli ]; then 
-    (cd cli; sudo install core/v*/tanzu-core-linux_amd64 /usr/local/bin/tanzu)
-    cd /tmp
-    tanzu plugin clean
-    tanzu plugin install --local cli all
-  
-    gunzip cli/*.gz
-    mv cli/imgpkg-linux-amd64-* /usr/local/bin/imgpkg && chmod +x /usr/local/bin/imgpkg
-    mv cli/kapp-linux-amd64-*   /usr/local/bin/kapp   && chmod +x /usr/local/bin/kapp
-    mv cli/kbld-linux-amd64-*   /usr/local/bin/kbld   && chmod +x /usr/local/bin/kbld
-    mv cli/ytt-linux-amd64-*    /usr/local/bin/ytt    && chmod +x /usr/local/bin/ytt
-  fi
-fi
-
 ## INSTALL TKG UTILITY
 #TKG_ARCHIVE=$(ls -1 $TDHPATH/software/tkg-linux* | tail -1) 
 #tar xfz $TKG_ARCHIVE
@@ -78,6 +43,40 @@ if [ ! -f /usr/local/bin/vmw-cli ]; then
   export VMWPASS="$TDH_MYVMWARE_PASS"
   vmw-cli ls vmware_tanzu_kubernetes_grid > /dev/null 2>&1
 fi
+
+if [ ! -f /usr/local/bin/tanzu ]; then
+  . ~/.tanzu-demo-hub.cfg
+  export VMWUSER="$TDH_MYVMWARE_USER"
+  export VMWPASS="$TDH_MYVMWARE_PASS"
+  vmw-cli ls vmware_tanzu_kubernetes_grid > /dev/null 2>&1
+
+  cnt=0
+  vmwfile=$(vmw-cli ls vmware_tanzu_kubernetes_grid 2>/dev/null | egrep "^tanzu-cli-bundle-linux" | tail -1 | awk '{ print $1 }')
+  while [ "$vmwfile" == "" -a $cnt -lt 5 ]; do
+    vmwfile=$(vmw-cli ls vmware_tanzu_kubernetes_grid 2>/dev/null | egrep "^tanzu-cli-bundle-linux" | tail -1 | awk '{ print $1 }')
+echo "$cnt $vmwfile"
+    let cnt=cnt+1
+    sleep 10
+  done
+
+echo "vmwfile:$vmwfile"
+  (cd /tmp/; vmw-cli cp $vmwfile > /dev/null 2>&1)
+  cd /tmp; tar xf $vmwfile
+
+  if [ -d /tmp/cli ]; then
+    (cd cli; sudo install core/v*/tanzu-core-linux_amd64 /usr/local/bin/tanzu)
+    cd /tmp
+    tanzu plugin clean
+    tanzu plugin install --local cli all
+
+    gunzip cli/*.gz
+    mv cli/imgpkg-linux-amd64-* /usr/local/bin/imgpkg && chmod +x /usr/local/bin/imgpkg
+    mv cli/kapp-linux-amd64-*   /usr/local/bin/kapp   && chmod +x /usr/local/bin/kapp
+    mv cli/kbld-linux-amd64-*   /usr/local/bin/kbld   && chmod +x /usr/local/bin/kbld
+    mv cli/ytt-linux-amd64-*    /usr/local/bin/ytt    && chmod +x /usr/local/bin/ytt
+  fi
+fi
+
 
 # INSTALL KIND
 curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.9.0/kind-linux-amd64 2>/dev/null
