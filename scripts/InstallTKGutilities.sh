@@ -36,12 +36,8 @@ if [ ! -f /usr/local/bin/vmw-cli ]; then
   #sudo apt install npm -y > /dev/null 2>&1
   #npm install vmw-cli --global > /dev/null 2>&1
   docker run apnex/vmw-cli shell > vmw-cli 
-  chmod 755 vmw-cli
   sudo mv vmw-cli /usr/local/bin
-
-  export VMWUSER="$TDH_MYVMWARE_USER"
-  export VMWPASS="$TDH_MYVMWARE_PASS"
-  vmw-cli ls vmware_tanzu_kubernetes_grid > /dev/null 2>&1
+  sudo chmod 755 /usr/local/bin/vmw-cli
 fi
 
 if [ ! -f /usr/local/bin/tanzu ]; then
