@@ -104,5 +104,5 @@ if [ "$TDHENV" == "vSphere" ]; then
 fi
 
 touch  /tkg_software_installed
-
+sudo apt upgrade -y
 sudo reboot
