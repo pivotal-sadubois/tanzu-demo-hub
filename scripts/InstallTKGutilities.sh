@@ -8,8 +8,16 @@ if [ ! -f /usr/local/bin/tanzu ]; then
   export VMWUSER="$TDH_MYVMWARE_USER"
   export VMWPASS="$TDH_MYVMWARE_PASS"
 echo "VMWPASS:$VMWPASS"
+echo "VMWUSER:$VMWUSER"
 
-  vmwfile=$(vmw-cli ls vmware_tanzu_kubernetes_grid 2>/dev/null | egrep "^tanzu-cli-bundle-linux" | tail -1 | awk '{ print $1 }')
+  cnt=0
+  while [ "$vmwfile" != "" -a $cnt -lt 5 ]; do
+    vmwfile=$(vmw-cli ls vmware_tanzu_kubernetes_grid 2>/dev/null | egrep "^tanzu-cli-bundle-linux" | tail -1 | awk '{ print $1 }')
+echo "$cnt $vmwfile"
+    let cnt=cnt+1
+    sleep 10
+  done
+
 echo "vmwfile:$vmwfile"
   (cd /tmp/; vmw-cli cp $vmwfile > /dev/null 2>&1)
   cd /tmp; tar xf $vmwfile
@@ -18,13 +26,13 @@ echo "vmwfile:$vmwfile"
   cd /tmp
   tanzu plugin clean
   tanzu plugin install --local cli all
-fi
 
-gunzip cli/*.gz
-mv cli/imgpkg-linux-amd64-* /usr/local/bin/imgpkg && chmod +x /usr/local/bin/imgpkg
-mv cli/kapp-linux-amd64-*   /usr/local/bin/kapp   && chmod +x /usr/local/bin/kapp
-mv cli/kbld-linux-amd64-*   /usr/local/bin/kbld   && chmod +x /usr/local/bin/kbld
-mv cli/ytt-linux-amd64-*    /usr/local/bin/ytt    && chmod +x /usr/local/bin/ytt
+  gunzip cli/*.gz
+  mv cli/imgpkg-linux-amd64-* /usr/local/bin/imgpkg && chmod +x /usr/local/bin/imgpkg
+  mv cli/kapp-linux-amd64-*   /usr/local/bin/kapp   && chmod +x /usr/local/bin/kapp
+  mv cli/kbld-linux-amd64-*   /usr/local/bin/kbld   && chmod +x /usr/local/bin/kbld
+  mv cli/ytt-linux-amd64-*    /usr/local/bin/ytt    && chmod +x /usr/local/bin/ytt
+fi
 
 ## INSTALL TKG UTILITY
 #TKG_ARCHIVE=$(ls -1 $TDHPATH/software/tkg-linux* | tail -1) 
@@ -37,11 +45,11 @@ mv cli/ytt-linux-amd64-*    /usr/local/bin/ytt    && chmod +x /usr/local/bin/ytt
 #  exit
 #fi
 
-mv tkg/imgpkg-linux-amd64-* /usr/local/bin/imgpkg && chmod +x /usr/local/bin/imgpkg
-mv tkg/kapp-linux-amd64-*   /usr/local/bin/kapp   && chmod +x /usr/local/bin/kapp
-mv tkg/kbld-linux-amd64-*   /usr/local/bin/kbld   && chmod +x /usr/local/bin/kbld
-mv tkg/tkg-linux-amd64-*    /usr/local/bin/tkg    && chmod +x /usr/local/bin/tkg
-mv tkg/ytt-linux-amd64-*    /usr/local/bin/ytt    && chmod +x /usr/local/bin/ytt
+#mv tkg/imgpkg-linux-amd64-* /usr/local/bin/imgpkg && chmod +x /usr/local/bin/imgpkg
+#mv tkg/kapp-linux-amd64-*   /usr/local/bin/kapp   && chmod +x /usr/local/bin/kapp
+#mv tkg/kbld-linux-amd64-*   /usr/local/bin/kbld   && chmod +x /usr/local/bin/kbld
+#mv tkg/tkg-linux-amd64-*    /usr/local/bin/tkg    && chmod +x /usr/local/bin/tkg
+#mv tkg/ytt-linux-amd64-*    /usr/local/bin/ytt    && chmod +x /usr/local/bin/ytt
 
 ## INSTALL TKG EXTENSIONS
 #mkdir -p $TDHPATH/extensions && cd $TDHPATH/extensions
