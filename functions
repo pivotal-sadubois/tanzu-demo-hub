@@ -1122,10 +1122,10 @@ echo "$SSH_COMMAND -n id "
   stt=$($SSH_COMMAND -n "[ -f /tkg_software_installed ] && echo true")
   if [ "${stt}" == "" ]; then
     messagePrint " - Install TKG Utilities"   "tkg, ytt, kapp, kbld, kubectl, kind"
-    #$SSH_COMMAND -n "[ -d $SSH_HOME/tanzu-demo-hub ] && chmod a+x ${TDHHOME}/scripts/InstallTKGutilities.sh && \
-    #    sudo ${TDHHOME}/scripts/InstallTKGutilities.sh \"$SSH_HOME/tanzu-demo-hub\" > /dev/null 2>&1"
     $SSH_COMMAND -n "[ -d $SSH_HOME/tanzu-demo-hub ] && chmod a+x ${TDHHOME}/scripts/InstallTKGutilities.sh && \
-        sudo ${TDHHOME}/scripts/InstallTKGutilities.sh \"$SSH_HOME/tanzu-demo-hub\"" 
+        sudo ${TDHHOME}/scripts/InstallTKGutilities.sh \"$SSH_HOME/tanzu-demo-hub\" > /dev/null 2>&1"
+    #$SSH_COMMAND -n "[ -d $SSH_HOME/tanzu-demo-hub ] && chmod a+x ${TDHHOME}/scripts/InstallTKGutilities.sh && \
+    #    sudo ${TDHHOME}/scripts/InstallTKGutilities.sh \"$SSH_HOME/tanzu-demo-hub\"" 
 
     # --- WAIT UNTIL SSH DEAMON IS READY NO JUMPHOST ----
     ret=1
@@ -1348,24 +1348,48 @@ createCluster() {
     tkg get mc > /dev/null 2>&1
     tanzu management-cluster get > /dev/null 2>&1
     tanzu management-cluster create > /dev/null 2>&1
-    cp ${HOME}/.tanzu/config.yaml $TKG_TEMPLATE
+    #cp ${HOME}/.tanzu/config.yaml $TKG_TEMPLATE
 
     AZURE_SSH_PUBLIC_KEY_B64=$(cat ~/.tanzu-demo-hub/KeyPair-Azure.pub | base64 -w 10000)
     AZURE_CLIENT_ID=$(az ad app list --display-name "TanzuDemoHub" | jq -r '.[].appId')
     AZURE_CLIENT_SECRET="tanzu-demo-hub"
 
-    echo "AZURE_SSH_PUBLIC_KEY_B64: $AZURE_SSH_PUBLIC_KEY_B64"                        >> $TKG_TEMPLATE
-    echo "AZURE_NODE_MACHINE_TYPE: $TDH_TKGMC_MACHINE_TYPE"                           >> $TKG_TEMPLATE
-    echo "AZURE_TENANT_ID: $AZURE_TENANT_ID"                                          >> $TKG_TEMPLATE
     echo "AZURE_CLIENT_ID: $AZURE_CLIENT_ID"                                          >> $TKG_TEMPLATE
     echo "AZURE_CLIENT_SECRET: $AZURE_CLIENT_SECRET"                                  >> $TKG_TEMPLATE
     echo "AZURE_CONTROL_PLANE_MACHINE_TYPE: $TDH_TKGMC_CONTROL_PLANE_MACHINE_TYPE"    >> $TKG_TEMPLATE
-    echo "SERVICE_CIDR: $TDH_TKGMC_SERVICE_CIDR"                                      >> $TKG_TEMPLATE
-    echo "CLUSTER_CIDR: $TDH_TKGMC_CLUSTER_CIDR"                                      >> $TKG_TEMPLATE
+    echo "AZURE_CONTROL_PLANE_SUBNET_CIDR: 10.0.0.0/16"                               >> $TKG_TEMPLATE
+    echo "AZURE_CONTROL_PLANE_SUBNET_NAME: control-plane-vnet"                        >> $TKG_TEMPLATE
     echo "AZURE_LOCATION: $AZURE_LOCATION"                                            >> $TKG_TEMPLATE
+    echo "AZURE_NODE_MACHINE_TYPE: $TDH_TKGMC_MACHINE_TYPE"                           >> $TKG_TEMPLATE
+    echo "AZURE_NODE_SUBNET_CIDR: 10.1.0.0/16"                                        >> $TKG_TEMPLATE
+    echo "AZURE_NODE_SUBNET_NAME: worker-node-vnet"                                   >> $TKG_TEMPLATE
+    echo "AZURE_RESOURCE_GROUP: ${TDH_TKGMC_NAME}"                                    >> $TKG_TEMPLATE
+    echo "AZURE_SSH_PUBLIC_KEY_B64: $AZURE_SSH_PUBLIC_KEY_B64"                        >> $TKG_TEMPLATE
     echo "AZURE_SUBSCRIPTION_ID: $AZURE_SUBSCRIPTION_ID"                              >> $TKG_TEMPLATE
+    echo "AZURE_TENANT_ID: $AZURE_TENANT_ID"                                          >> $TKG_TEMPLATE
+    echo ""                                                                           >> $TKG_TEMPLATE
+    echo "AZURE_VNET_CIDR: 10.0.0.0/8"                                                >> $TKG_TEMPLATE
+    echo "AZURE_VNET_NAME: ${TDH_TKGMC_NAME}-vnet"                                    >> $TKG_TEMPLATE
+    echo "AZURE_VNET_RESOURCE_GROUP: $AZURE_TENANT_ID"                                >> $TKG_TEMPLATE
+    echo "CLUSTER_CIDR: $TDH_TKGMC_CLUSTER_CIDR"                                      >> $TKG_TEMPLATE
+    echo "CLUSTER_PLAN: $TDH_TKGMC_PLAN"                                              >> $TKG_TEMPLATE
+    echo "ENABLE_CEIP_PARTICIPATION: \"false\""                                       >> $TKG_TEMPLATE
+    echo "ENABLE_MHC: \"true\""                                                       >> $TKG_TEMPLATE
+    echo "SERVICE_CIDR: $TDH_TKGMC_SERVICE_CIDR"                                      >> $TKG_TEMPLATE
+    echo ""                                                                           >> $TKG_TEMPLATE
+    echo "IDENTITY_MANAGEMENT_TYPE: none"                                             >> $TKG_TEMPLATE
+    echo "INFRASTRUCTURE_PROVIDER: azure"                                             >> $TKG_TEMPLATE
+    echo "LDAP_GROUP_SEARCH_NAME_ATTRIBUTE: cn"                                       >> $TKG_TEMPLATE
+    echo "LDAP_GROUP_SEARCH_USER_ATTRIBUTE: DN"                                       >> $TKG_TEMPLATE
+    echo "LDAP_USER_SEARCH_USERNAME: userPrincipalName"                               >> $TKG_TEMPLATE
+    echo "SERVICE_CIDR: 100.64.0.0/13"                                                >> $TKG_TEMPLATE
+    echo "TKG_HTTP_PROXY_ENABLED: \"false\""                                          >> $TKG_TEMPLATE
 
     MPDE=azure
+
+#gaga
+echo "TKG_TEMPLATE:$TKG_TEMPLATE"
+exit
 
     stt=$(tkg get mc --name $TDH_TKGMC_NAME -o json | jq -r '.[].status')
     if [ "${stt}" != "Success" ]; then

@@ -946,11 +946,20 @@ exit
 else
   # --- ACCEPT LICENSE AGREEMENT ---
   if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "Azure" ]; then
-    for img in $(az vm image list --publisher vmware-inc --offer tkg-capi --all | jq -r '.[].sku' | sort | uniq); do
-      az vm image terms accept --publisher vmware-inc --offer tkg-capi --plan $img --subscription $AZURE_SUBSCRIPTION_ID > /dev/null 2>&1
-      if [ $? -ne 0 ]; then 
-        echo "ERROR: failed to accept image terms, please try manually"
-        echo "       => az vm image terms accept --publisher vmware-inc --offer tkg-capi --plan $img --subscription $AZURE_SUBSCRIPTION_ID"
+    messageTitle "Accepting Image Terms for Provider (vmware-inc) / Offer: (tkg-capi)"
+
+    for img in $(az vm image list --publisher vmware-inc --offer tkg-capi --all | jq -r '.[].urn' | sort | uniq); do
+      stt=$(az vm image terms show --urn $img | jq -r '.accepted')
+      nam=$(az vm image terms show --urn $img | jq -r '.plan')
+
+      if [ "$stt" != "true" ]; then 
+        messagePrint " - Accepting Image Terms for image ($nam)" "$img"
+        az vm image terms accept --urn $img > /dev/null 2>&1
+        if [ $? -ne 0 ]; then 
+          echo "ERROR: failed to accept image terms, please try manually"
+          echo "       => az vm image terms accept --urn $img"
+          exit
+        fi
       fi
     done
   fi
