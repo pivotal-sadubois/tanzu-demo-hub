@@ -10,8 +10,10 @@ if [ ! -f /usr/local/bin/tanzu ]; then
 echo "VMWPASS:$VMWPASS"
 echo "VMWUSER:$VMWUSER"
 
+  vmw-cli ls vmware_tanzu_kubernetes_grid
   cnt=0
-  while [ "$vmwfile" != "" -a $cnt -lt 5 ]; do
+  vmwfile=$(vmw-cli ls vmware_tanzu_kubernetes_grid 2>/dev/null | egrep "^tanzu-cli-bundle-linux" | tail -1 | awk '{ print $1 }')
+  while [ "$vmwfile" == "" -a $cnt -lt 5 ]; do
     vmwfile=$(vmw-cli ls vmware_tanzu_kubernetes_grid 2>/dev/null | egrep "^tanzu-cli-bundle-linux" | tail -1 | awk '{ print $1 }')
 echo "$cnt $vmwfile"
     let cnt=cnt+1
