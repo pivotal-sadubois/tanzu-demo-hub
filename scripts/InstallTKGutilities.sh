@@ -24,16 +24,18 @@ echo "vmwfile:$vmwfile"
   (cd /tmp/; vmw-cli cp $vmwfile > /dev/null 2>&1)
   cd /tmp; tar xf $vmwfile
 
-  (cd cli; sudo install core/v*/tanzu-core-linux_amd64 /usr/local/bin/tanzu)
-  cd /tmp
-  tanzu plugin clean
-  tanzu plugin install --local cli all
-
-  gunzip cli/*.gz
-  mv cli/imgpkg-linux-amd64-* /usr/local/bin/imgpkg && chmod +x /usr/local/bin/imgpkg
-  mv cli/kapp-linux-amd64-*   /usr/local/bin/kapp   && chmod +x /usr/local/bin/kapp
-  mv cli/kbld-linux-amd64-*   /usr/local/bin/kbld   && chmod +x /usr/local/bin/kbld
-  mv cli/ytt-linux-amd64-*    /usr/local/bin/ytt    && chmod +x /usr/local/bin/ytt
+  if [ -d /tmp/cli ]; then 
+    (cd cli; sudo install core/v*/tanzu-core-linux_amd64 /usr/local/bin/tanzu)
+    cd /tmp
+    tanzu plugin clean
+    tanzu plugin install --local cli all
+  
+    gunzip cli/*.gz
+    mv cli/imgpkg-linux-amd64-* /usr/local/bin/imgpkg && chmod +x /usr/local/bin/imgpkg
+    mv cli/kapp-linux-amd64-*   /usr/local/bin/kapp   && chmod +x /usr/local/bin/kapp
+    mv cli/kbld-linux-amd64-*   /usr/local/bin/kbld   && chmod +x /usr/local/bin/kbld
+    mv cli/ytt-linux-amd64-*    /usr/local/bin/ytt    && chmod +x /usr/local/bin/ytt
+  fi
 fi
 
 ## INSTALL TKG UTILITY
