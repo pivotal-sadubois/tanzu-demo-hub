@@ -1353,8 +1353,15 @@ echo hallo2
 echo hallo3
     #cp ${HOME}/.tanzu/config.yaml $TKG_TEMPLATE
 
+    az ad app list --display-name "TanzuDemoHub" > /dev/null 2>&1
+    if [ $? -ne 0 ]; then 
+      echo "ERROR: failed to list apps"
+      echo "       => az ad app list --display-name \"TanzuDemoHub\""
+      exit
+    fi
     AZURE_SSH_PUBLIC_KEY_B64=$(cat ~/.tanzu-demo-hub/KeyPair-Azure.pub | base64 -w 10000)
     AZURE_CLIENT_ID=$(az ad app list --display-name "TanzuDemoHub" | jq -r '.[].appId')
+echo "AZURE_CLIENT_ID:$AZURE_CLIENT_ID"
     AZURE_CLIENT_SECRET="tanzu-demo-hub"
 echo hallo4
 
