@@ -40,8 +40,9 @@ if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "Azure" ]; then
 fi
 echo ggaga5
 
-sshEnvironment > /dev/null 2>&1
+#sshEnvironment > /dev/null 2>&1
 echo ggaga6
+hostname
 createCluster 
 
 
