@@ -1344,15 +1344,19 @@ createCluster() {
     messagePrint " - Service CIDR"                "$TDH_TKGMC_SERVICE_CIDR"
     messagePrint " - Health Check Enabled"        "$TDH_TKGMC_MACHINE_HEALTH_CHECK_ENABLED"
 
+echo hallo1
     [ -f ${HOME}/.tkg/config.yaml ] && rm -f ${HOME}/.tkg/config.yaml
     tkg get mc > /dev/null 2>&1
+echo hallo2
     tanzu management-cluster get > /dev/null 2>&1
     tanzu management-cluster create > /dev/null 2>&1
+echo hallo3
     #cp ${HOME}/.tanzu/config.yaml $TKG_TEMPLATE
 
     AZURE_SSH_PUBLIC_KEY_B64=$(cat ~/.tanzu-demo-hub/KeyPair-Azure.pub | base64 -w 10000)
     AZURE_CLIENT_ID=$(az ad app list --display-name "TanzuDemoHub" | jq -r '.[].appId')
     AZURE_CLIENT_SECRET="tanzu-demo-hub"
+echo hallo4
 
     echo "AZURE_CLIENT_ID: $AZURE_CLIENT_ID"                                          >> $TKG_TEMPLATE
     echo "AZURE_CLIENT_SECRET: $AZURE_CLIENT_SECRET"                                  >> $TKG_TEMPLATE
