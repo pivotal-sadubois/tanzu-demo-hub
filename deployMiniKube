@@ -191,7 +191,7 @@ InstallMetallb() {
     echo "   WARNING: Please configure the minikube addon 'metallb' with an ip Pool. The minikube host"
     echo "            ip is ($minikube_ip), choose the IP Range in the same net. ie: "
     echo ""
-    echo "            => minikube addons configure metallb -p tdh-minikube-sadubois"
+    echo "            => minikube addons configure metallb -p $TDH_MINIKUBE_PROFILE"
     echo "               -- Enter Load Balancer Start IP: $sip"
     echo "               -- Enter Load Balancer End IP: $eip"
     #echo "            => minikube -p $TDH_MINIKUBE_PROFILE stop"
