@@ -1401,17 +1401,20 @@ echo hallo4
 
 #gaga
 echo "TKG_TEMPLATE:$TKG_TEMPLATE"
-exit
 
-    stt=$(tkg get mc --name $TDH_TKGMC_NAME -o json | jq -r '.[].status')
-    if [ "${stt}" != "Success" ]; then
-      echo "----------------------------------------------------------------------------------------------------------------"
-      echo "tkg init -q -i $MPDE -p dev --ceip-participation true --cni $TDH_TKGMC_CNI -v 0 \\"
-      echo "         --name $TDH_TKGMC_NAME --config $TKG_TEMPLATE --kubeconfig=$TKG_KUBECONFIG"
-      echo "----------------------------------------------------------------------------------------------------------------"
-      time tkg init -i $MPDE -p dev --ceip-participation true --cni $TDH_TKGMC_CNI -v 0 --name $TDH_TKGMC_NAME --config $TKG_TEMPLATE --kubeconfig=$TKG_KUBECONFIG
-      echo "----------------------------------------------------------------------------------------------------------------"
-    fi
+    echo "----------------------------------------------------------------------------------------------------------------"
+    time time tanzu management-cluster create --file $TKG_TEMPLATE -v 0
+    echo "----------------------------------------------------------------------------------------------------------------"
+
+#    stt=$(tkg get mc --name $TDH_TKGMC_NAME -o json | jq -r '.[].status')
+#    if [ "${stt}" != "Success" ]; then
+#      echo "----------------------------------------------------------------------------------------------------------------"
+#      echo "tkg init -q -i $MPDE -p dev --ceip-participation true --cni $TDH_TKGMC_CNI -v 0 \\"
+#      echo "         --name $TDH_TKGMC_NAME --config $TKG_TEMPLATE --kubeconfig=$TKG_KUBECONFIG"
+#      echo "----------------------------------------------------------------------------------------------------------------"
+#      time tkg init -i $MPDE -p dev --ceip-participation true --cni $TDH_TKGMC_CNI -v 0 --name $TDH_TKGMC_NAME --config $TKG_TEMPLATE --kubeconfig=$TKG_KUBECONFIG
+#      echo "----------------------------------------------------------------------------------------------------------------"
+#    fi
   fi
 
   if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "vSphere" ]; then
