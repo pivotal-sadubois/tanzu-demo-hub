@@ -447,14 +447,29 @@ checkCloudAccess() {
 
   if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "minikube" ]; then
     TDH_MINIKUBE_PROFILE="tdh-minikube-${TMC_USER}"
-    if [ "${TDH_MINIKUBE_PROFILE}" == "" -o "${TMC_USER}" == "" ]; then
+    if [ "${TDH_MINIKUBE_PROFILE}" == "" -o "${TMC_USER}" == "" -o "${AWS_ACCESS_KEY}" == "" -o "${AWS_SECRET_KEY}" == "" -o "${AWS_REGION}" == "" ]; then
       missing_variables=1
       echo ""
       echo "  4MISSING ENVIRONMENT-VARIABES    DESCRIPTION        "
       echo "  --------------------------------------------------------------------------------------------------------------"
 
+#oooooooooo
       if [ "${TMC_USER}" == "" ]; then
         echo "  TMC_USER                        (required) The name of the TMC UserID"
+      fi
+
+      if [ "${AWS_ACCESS_KEY}" == "" ]; then
+        echo "  AWS_ACCESS_KEY                  (required) AWS Acess Key for Route53 Access"
+      fi
+
+      if [ "${AWS_SECRET_KEY}" == "" ]; then
+        echo "  AWS_SECRET_KEY                  (required) AWS Secret Key for Route53 Access"
+      fi
+
+      if [ "${AWS_REGION}" == "" ]; then
+        echo "  AWS_REGION                    (required) Choose the AWS Region where your installation should run"
+        echo "                                  => aws ec2 --region=eu-west-3 describe-regions --output text | awk '{ print $NF }'"
+        echo "                                     eu-north-1, eu-west-3, eu-central-1 etc."
       fi
     else
       if [ -f ~/.minikube/profiles/$TDH_MINIKUBE_PROFILE/config.json ]; then 
@@ -3250,6 +3265,9 @@ createClusterIssuer() {
     messagePrint " - LetsEnscript Solver ZoneID"       "$AWS_HOSTED_ZONE_ID"
     messagePrint " - LetsEnscript DNSZone"             "*.apps-contour.${TDH_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}"
     messagePrint " - LetsEnscript DNSZone"             "*.apps-nginx.${TDH_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}"
+
+    export AWS_CERT_ACCESS_KEY=$AWS_ACCESS_KEY
+    export AWS_CERT_SECRET_KEY=$AWS_SECRET_KEY
 
     echo "apiVersion: cert-manager.io/v1alpha2"                                    >  $TDH_TLS_ISSUER_NAME
     echo "kind: ClusterIssuer"                                                     >> $TDH_TLS_ISSUER_NAME
