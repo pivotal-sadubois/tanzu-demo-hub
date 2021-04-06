@@ -1409,7 +1409,8 @@ createCluster() {
 
     MPDE=azure
 
-    cnt=$(kubectl config get-clusters | egrep -c "^$TDH_TKGMC_NAME")
+    #cnt=$(kubectl config get-clusters | egrep -c "^$TDH_TKGMC_NAME")
+    cnt=$(tanzu management-cluster get 2>/dev/null | egrep -c " $TDH_TKGMC_NAME ")
     if [ ${cnt} -eq 0 ]; then
       echo "----------------------------------------------------------------------------------------------------------------"
       time tanzu management-cluster create --file $TKG_TEMPLATE -v 0 --log-file=/tmp/$TDH_TKGMC_NAME.log; ret=$?
