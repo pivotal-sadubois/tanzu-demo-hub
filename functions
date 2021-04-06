@@ -1414,24 +1414,25 @@ echo hallo4
 
     MPDE=azure
 
-#gaga
-echo "TKG_TEMPLATE:$TKG_TEMPLATE"
-echo "tanzu management-cluster create --file $TKG_TEMPLATE -v 0"
+    cnt=$(kubectl config get-clusters | egrep -c "^$TDH_TKGMC_NAME")
+    if [ ${cnt} -eq 0 ]; then
+      echo "----------------------------------------------------------------------------------------------------------------"
+      time tanzu management-cluster create --file $TKG_TEMPLATE -v 0 --log-file=/tmp/$TDH_TKGMC_NAME.log; ret=$?
+      echo "----------------------------------------------------------------------------------------------------------------"
+      if [ ${ret} -ne 0 ]; then
+        echo "ERROR: failed to create TKG Management Cluster"
+        exit
+      fi
+    else
+      kubectl config set-cluster $TDH_TKGMC_NAME
+      context=$(kubectl config view -o json | jq -r '.contexts[].name')
+      tanzu management-cluster kubeconfig get --admin --export-file=/tmp/kubeconfig_$TDH_TKGMC_NAME.yaml > /dev/null 2>&1
 
-    echo "----------------------------------------------------------------------------------------------------------------"
-    time tanzu management-cluster create --file $TKG_TEMPLATE -v 0 --log-file=/tmp/$TDH_TKGMC_NAME.log
-    echo "----------------------------------------------------------------------------------------------------------------"
-echo xxxxxxxx
-
-#    stt=$(tkg get mc --name $TDH_TKGMC_NAME -o json | jq -r '.[].status')
-#    if [ "${stt}" != "Success" ]; then
-#      echo "----------------------------------------------------------------------------------------------------------------"
-#      echo "tkg init -q -i $MPDE -p dev --ceip-participation true --cni $TDH_TKGMC_CNI -v 0 \\"
-#      echo "         --name $TDH_TKGMC_NAME --config $TKG_TEMPLATE --kubeconfig=$TKG_KUBECONFIG"
-#      echo "----------------------------------------------------------------------------------------------------------------"
-#      time tkg init -i $MPDE -p dev --ceip-participation true --cni $TDH_TKGMC_CNI -v 0 --name $TDH_TKGMC_NAME --config $TKG_TEMPLATE --kubeconfig=$TKG_KUBECONFIG
-#      echo "----------------------------------------------------------------------------------------------------------------"
-#    fi
+      messageTitle "Verify TKG Managment Cluster"
+      messagePrint " - Cluster Name"        "$TDH_TKGMC_NAME"
+      messagePrint " - Cluster Context"     "$context"
+      messagePrint " - Cluster Kubeconfig"  "/tmp/kubeconfig.yaml"
+    fi
   fi
 
   if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "vSphere" ]; then
