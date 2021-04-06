@@ -1401,10 +1401,12 @@ echo hallo4
 
 #gaga
 echo "TKG_TEMPLATE:$TKG_TEMPLATE"
+echo "tanzu management-cluster create --file $TKG_TEMPLATE -v 0"
 
     echo "----------------------------------------------------------------------------------------------------------------"
-    time time tanzu management-cluster create --file $TKG_TEMPLATE -v 0
+    time tanzu management-cluster create --file $TKG_TEMPLATE -v 0 --log-file=/tmp/$TDH_TKGMC_NAME.log
     echo "----------------------------------------------------------------------------------------------------------------"
+echo xxxxxxxx
 
 #    stt=$(tkg get mc --name $TDH_TKGMC_NAME -o json | jq -r '.[].status')
 #    if [ "${stt}" != "Success" ]; then
