@@ -1365,6 +1365,7 @@ echo "AZURE_CLIENT_ID:$AZURE_CLIENT_ID"
     AZURE_CLIENT_SECRET="tanzu-demo-hub"
 echo hallo4
 
+    echo "CLUSTER_NAME: $TDH_TKGMC_NAME"                                              >> $TKG_TEMPLATE
     echo "AZURE_CLIENT_ID: $AZURE_CLIENT_ID"                                          >> $TKG_TEMPLATE
     echo "AZURE_CLIENT_SECRET: $AZURE_CLIENT_SECRET"                                  >> $TKG_TEMPLATE
     echo "AZURE_CONTROL_PLANE_MACHINE_TYPE: $TDH_TKGMC_CONTROL_PLANE_MACHINE_TYPE"    >> $TKG_TEMPLATE
@@ -1381,7 +1382,7 @@ echo hallo4
     echo ""                                                                           >> $TKG_TEMPLATE
     echo "AZURE_VNET_CIDR: 10.0.0.0/8"                                                >> $TKG_TEMPLATE
     echo "AZURE_VNET_NAME: ${TDH_TKGMC_NAME}-vnet"                                    >> $TKG_TEMPLATE
-    echo "AZURE_VNET_RESOURCE_GROUP: $AZURE_TENANT_ID"                                >> $TKG_TEMPLATE
+    echo "AZURE_VNET_RESOURCE_GROUP: $TDH_TKGMC_NAME"                                 >> $TKG_TEMPLATE
     echo "CLUSTER_CIDR: $TDH_TKGMC_CLUSTER_CIDR"                                      >> $TKG_TEMPLATE
     echo "CLUSTER_PLAN: $TDH_TKGMC_PLAN"                                              >> $TKG_TEMPLATE
     echo "ENABLE_CEIP_PARTICIPATION: \"false\""                                       >> $TKG_TEMPLATE
