@@ -83,7 +83,9 @@ InstallContour_delete_me() {
     # --- INSTALL CONTOUR INGRESS ---
     messageTitle "Install Ingress Contour"
     kubectl create ns $NAMESPACE > /dev/null 2>&1
-    helm install ingress bitnami/contour -n $NAMESPACE --version 3.3.1 > /dev/null 2>&1
+    helm repo add bitnami https://charts.bitnami.com/bitnami > /dev/null 2>&1
+    #helm install ingress bitnami/contour -n $NAMESPACE --version 3.3.1 > /dev/null 2>&1
+    helm install ingress bitnami/contour -n $NAMESPACE  > /dev/null 2>&1
     if [ $? -ne 0 ]; then
       echo "ERROR: failed to install bitnami/contour"
       echo "       => helm install ingress bitnami/contour -n $NAMESPACE --version 3.3.1"
@@ -476,6 +478,7 @@ InstallHarborRegistry_delete_me() {
     echo "      accessMode: ReadWriteOnce"                                                                                      >> $HARBOR_VALUES
     echo "      size: 20Gi"                                                                                                     >> $HARBOR_VALUES
 
+    helm repo add bitnami https://charts.bitnami.com/bitnami > /dev/null 2>&1
     helm install harbor bitnami/harbor -f $HARBOR_VALUES --version 9.2.2 -n $NAMESPACE > /dev/null 2>&1
     if [ $? -ne 0 ]; then
       echo "ERROR: failed to install bitnami/harbor"
