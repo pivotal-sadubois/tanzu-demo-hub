@@ -1412,11 +1412,16 @@ createCluster() {
     cnt=$(tanzu management-cluster get 2>/dev/null | egrep -c " $TDH_TKGMC_NAME ")
     if [ ${cnt} -eq 0 ]; then
       # --- CLEANUP OLD CONFIG ---
+echo "export KUBECONFIG=~/.kube-tkg/config"
       export KUBECONFIG=~/.kube-tkg/config
 
+echo "kubectl config unset clusters.${TDH_TKGMC_NAME}.log"
+echo "kubectl config unset kubectl config unset contexts.${TDH_TKGMC_NAME}-admin@${TDH_TKGMC_NAME}"
+echi "kubectl config unset users.${TDH_TKGMC_NAME}-admin"
+
       kubectl config unset clusters.${TDH_TKGMC_NAME}.log > /dev/null 2>&1
-      kubectl config unset kubectl config unset contexts.${TDH_TKGMC_NAME}-admin@${TDH_TKGMC_NAME}
-      kubectl config unset users.${TDH_TKGMC_NAME}-admin
+      kubectl config unset kubectl config unset contexts.${TDH_TKGMC_NAME}-admin@${TDH_TKGMC_NAME} > /dev/null 2>&1
+      kubectl config unset users.${TDH_TKGMC_NAME}-admin > /dev/null 2>&1
 
       echo "----------------------------------------------------------------------------------------------------------------"
       time tanzu management-cluster create --file $TKG_TEMPLATE -v 0 --log-file=/tmp/$TDH_TKGMC_NAME.log; ret=$?
