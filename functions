@@ -1434,11 +1434,11 @@ echo "time tanzu management-cluster create --file $TKG_TEMPLATE -v 0 --log-file=
         echo "ERROR: failed to create TKG Management Cluster"
         exit
       fi
-    else
+
       kubectl config set-cluster $TDH_TKGMC_NAME > /dev/null 2>&1
       context=$(kubectl config view -o json | jq -r '.contexts[].name')
       tanzu management-cluster kubeconfig get --admin --export-file=/tmp/kubeconfig_$TDH_TKGMC_NAME.yaml > /dev/null 2>&1
-
+    else
       messageTitle "Verify TKG Managment Cluster"
       messagePrint " - Cluster Name"        "$TDH_TKGMC_NAME"
       messagePrint " - Cluster Context"     "$context"
