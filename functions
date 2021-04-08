@@ -350,7 +350,6 @@ checkKubernetesServices() {
   service=$1
   missing_variables=0
 
-echo "vavava1"
   if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "minikube" ]; then
     if [ "${service}" == "registry_docker" ]; then
       if [ "${TDH_REGISTRY_DOCKER_NAME}" == "" -o "${TDH_REGISTRY_DOCKER_USER}" == "" -o "${TDH_REGISTRY_DOCKER_PASS}" == "" ]; then
@@ -446,16 +445,15 @@ checkCloudAccess() {
   missing_variables=0
 
   if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "minikube" ]; then
-    TDH_MINIKUBE_PROFILE="tdh-minikube-${TMC_USER}"
-    if [ "${TDH_MINIKUBE_PROFILE}" == "" -o "${TMC_USER}" == "" -o "${AWS_ACCESS_KEY}" == "" -o "${AWS_SECRET_KEY}" == "" -o "${AWS_REGION}" == "" ]; then
+    if [ "${TDH_USER}" == "" -o "${AWS_ACCESS_KEY}" == "" -o "${AWS_SECRET_KEY}" == "" -o "${AWS_REGION}" == "" ]; then
       missing_variables=1
       echo ""
       echo "  4MISSING ENVIRONMENT-VARIABES    DESCRIPTION        "
       echo "  --------------------------------------------------------------------------------------------------------------"
 
-#oooooooooo
-      if [ "${TMC_USER}" == "" ]; then
-        echo "  TMC_USER                        (required) The name of the TMC UserID"
+      if [ "${TDH_USER}" == "" ]; then
+        echo "  TDH_USER                        (required) Tanzu Demo Hub User to tag TKG Clusters with your Name"
+        echo "                                   => (usually you VMware User Name without @vmware.com)"
       fi
 
       if [ "${AWS_ACCESS_KEY}" == "" ]; then
@@ -472,6 +470,8 @@ checkCloudAccess() {
         echo "                                     eu-north-1, eu-west-3, eu-central-1 etc."
       fi
     else
+      TDH_MINIKUBE_PROFILE="tdh-minikube-${TDH_USER}"
+
       if [ -f ~/.minikube/profiles/$TDH_MINIKUBE_PROFILE/config.json ]; then 
         cpu=$(cat ~/.minikube/profiles/$TDH_MINIKUBE_PROFILE/config.json | jq -r '.CPUs')
         dsk=$(cat ~/.minikube/profiles/$TDH_MINIKUBE_PROFILE/config.json | jq -r '.DiskSize')
@@ -803,7 +803,9 @@ checkTMCAccess() {
 checkTDHAccess() {
   missing_variables=0
 
-  if [ "${PCF_PIVNET_TOKEN}" == "" -o "${AWS_HOSTED_DNS_DOMAIN}" == "" ]; then
+  if [ "${PCF_PIVNET_TOKEN}" == "" -o "${AWS_HOSTED_DNS_DOMAIN}" == "" -o "${AWS_ACCESS_KEY}" == "" -o "${AWS_SECRET_KEY}" == "" \
+    -o "${TDH_USER}" == "" -o "${AWS_REGION}" == "" ]; then
+
     missing_variables=1
     echo ""
     echo "  2MISSING ENVIRONMENT-VARIABES    DESCRIPTION        "
@@ -824,18 +826,25 @@ checkTDHAccess() {
       echo "                                  valid DNS Zone. => https://console.aws.amazon.com/route53"
     fi
 
+    if [ "${AWS_REGION}" == "" ]; then
+      echo "  AWS_REGION                      (required) Choose the AWS Region where your installation should run"
+      echo "                                    => aws ec2 --region=eu-west-3 describe-regions --output text | awk '{ print $NF }'"
+      echo "                                       eu-north-1, eu-west-3, eu-central-1 etc."
+    fi
+
     if [ "${AWS_HOSTED_DNS_DOMAIN}" == "" ]; then
       echo "  AWS_HOSTED_DNS_DOMAIN           (required) A DNS Domain managed by AWS Route 53 ie. yourdomain.com with a"
       echo "                                  valid DNS Zone. => https://console.aws.amazon.com/route53"
     fi
 
-    #if [ "${AWS_HOSTED_ZONE_ID}" == "" ]; then
-    #  echo "  AWS_HOSTED_ZONE_ID              (required) An AWS Route 53 Token is required to add/update DNS records"
-    #  echo "                                  => https://console.aws.amazon.com/route53 -> hosted Zones -> Zone ID"
-    #fi
+    if [ "${TDH_USER}" == "" ]; then
+      echo "  TDH_USER                        (required) Tanzu Demo Hub User to tag TKG Clusters with your Name"
+      echo "                                   => (usually you VMware User Name without @vmware.com)"
+    fi
   else
     messageTitle "Supporting services access (Pivotal Network, AWS Route53)"
     messagePrint " - Pivotal Network Token"            "$PCF_PIVNET_TOKEN"
+    messagePrint " - Tanzu Demo Hube User"             "$TDH_USER"
     messagePrint " - AWS Route53 Hosted DNS Domain"    "$AWS_HOSTED_DNS_DOMAIN"
     messagePrint " - AWS Route53 Hosted DNS SubDomain" "$TDH_ENVNAME"
 
@@ -2451,7 +2460,7 @@ checkTMCAccess() {
   if [ "${TDH_DEPLOYMENT_CLOUD}" == "AWS" ]; then
     TMC_ACCOUNT_NAME=$TMC_ACCOUNT_NAME_AWS
 
-    if [ "${TMC_MANAGEMENT_CLUSTER}" == "" -o "${TMC_PROVISONER_NAME}" == "" -o "${TMC_ACCOUNT_NAME_AWS}" == "" -o "${TMC_CLUSTER_GROUP}" == "" -o "${TMC_USER}" == "" -o "${TMC_KUBERNETES_VERSION}" == "" ]; then
+    if [ "${TMC_MANAGEMENT_CLUSTER}" == "" -o "${TMC_PROVISONER_NAME}" == "" -o "${TMC_ACCOUNT_NAME_AWS}" == "" -o "${TMC_CLUSTER_GROUP}" == "" -o "${TMC_KUBERNETES_VERSION}" == "" ]; then
       missing_variables=1
       echo ""
       echo "  2MISSING ENVIRONMENT-VARIABES    DESCRIPTION        "
@@ -2459,10 +2468,6 @@ checkTMCAccess() {
 
       if [ "${TMC_KUBERNETES_VERSION}" == "" ]; then
         echo "  TMC_KUBERNETES_VERSION          (required) The Kubernetes version for the cluster e.g. 1.19.1-3-amazon2"
-      fi
-
-      if [ "${TMC_USER}" == "" ]; then
-        echo "  TMC_USER                        (required) The name of the TMC UserID"
       fi
 
       if [ "${TMC_CLUSTER_GROUP}" == "" ]; then
@@ -2484,12 +2489,12 @@ checkTMCAccess() {
       if [ "${TMC_SSH_KEY_NAME_AWS}" == "" ]; then
         echo "  TMC_SSH_KEY_NAME_AWS            (required) AWS SSH Key name for Region"
       fi
-      TMC_CLUSTER_NAME="tdh-aws-${TMC_USER}"
+      TMC_CLUSTER_NAME="tdh-aws-${TDH_USER}"
     else
-      TMC_CLUSTER_NAME="tdh-aws-${TMC_USER}"
+      TMC_CLUSTER_NAME="tdh-aws-${TDH_USER}"
 
       messageTitle "Tanzu Mission Control (TMC) - Config" 
-      messagePrint " - TMC User"                        "$TMC_USER"
+      messagePrint " - TMC User"                        "$TDH_USER"
       messagePrint " - TMC Cluster Group"               "$TMC_CLUSTER_GROUP"
       messagePrint " - TMC Cluster Name"                "$TMC_CLUSTER_NAME"
       messagePrint " - TMC Context Name"                "$TMC_CONTEXT_NAME"
@@ -2550,12 +2555,29 @@ tmcCreateCluster() {
     messagePrint " - Account Name"           "$TMC_ACCOUNT_NAME"
     messagePrint " - Kubernetes Version"     "$TMC_KUBERNETES_VERSION"
 
+echo "tmc cluster create -m $TMC_MANAGEMENT_CLUSTER -p $TMC_PROVISONER_NAME --ssh-key-name $TMC_SSH_KEY_NAME_AWS \
+                       -c $TMC_ACCOUNT_NAME -r $AWS_REGION -n $TMC_CLUSTER_NAME -q $TMC_TKGWC_WORKERNODES \
+                       -g $TMC_CLUSTER_GROUP \
+                       -t $TMC_TKGWC_TEMPLATE \
+                       --version $TMC_KUBERNETES_VERSION \
+                       --availability-zone ${AWS_REGION}"
+
+
     tmc cluster create -m $TMC_MANAGEMENT_CLUSTER -p $TMC_PROVISONER_NAME --ssh-key-name $TMC_SSH_KEY_NAME_AWS \
                        -c $TMC_ACCOUNT_NAME -r $AWS_REGION -n $TMC_CLUSTER_NAME -q $TMC_TKGWC_WORKERNODES \
                        -g $TMC_CLUSTER_GROUP \
                        -t $TMC_TKGWC_TEMPLATE \
                        --version $TMC_KUBERNETES_VERSION \
-                       --availability-zone ${AWS_REGION}a
+                       --availability-zone ${AWS_REGION}
+    if [ $? -ne 0 ]; then 
+      echo "ERROR: failed to build Cluster"
+      echo "       => tmc cluster create -m $TMC_MANAGEMENT_CLUSTER -p $TMC_PROVISONER_NAME \\"
+      echo "          --ssh-key-name $TMC_SSH_KEY_NAME_AWS -c $TMC_ACCOUNT_NAME \\"
+      echo "          -r $AWS_REGION -n $TMC_CLUSTER_NAME -q $TMC_TKGWC_WORKERNODES \\"
+      echo "          -g $TMC_CLUSTER_GROUP -t $TMC_TKGWC_TEMPLATE \\"
+      echo "          --version $TMC_KUBERNETES_VERSION --availability-zone ${AWS_REGION}"
+      exit
+    fi
 
     messagePrint " - Cluster Status"         "creating ...."
     stt=""
