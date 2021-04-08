@@ -2555,20 +2555,12 @@ tmcCreateCluster() {
     messagePrint " - Account Name"           "$TMC_ACCOUNT_NAME"
     messagePrint " - Kubernetes Version"     "$TMC_KUBERNETES_VERSION"
 
-echo "tmc cluster create -m $TMC_MANAGEMENT_CLUSTER -p $TMC_PROVISONER_NAME --ssh-key-name $TMC_SSH_KEY_NAME_AWS \
-                       -c $TMC_ACCOUNT_NAME -r $AWS_REGION -n $TMC_CLUSTER_NAME -q $TMC_TKGWC_WORKERNODES \
-                       -g $TMC_CLUSTER_GROUP \
-                       -t $TMC_TKGWC_TEMPLATE \
-                       --version $TMC_KUBERNETES_VERSION \
-                       --availability-zone ${AWS_REGION}"
-
-
     tmc cluster create -m $TMC_MANAGEMENT_CLUSTER -p $TMC_PROVISONER_NAME --ssh-key-name $TMC_SSH_KEY_NAME_AWS \
                        -c $TMC_ACCOUNT_NAME -r $AWS_REGION -n $TMC_CLUSTER_NAME -q $TMC_TKGWC_WORKERNODES \
                        -g $TMC_CLUSTER_GROUP \
                        -t $TMC_TKGWC_TEMPLATE \
                        --version $TMC_KUBERNETES_VERSION \
-                       --availability-zone ${AWS_REGION}
+                       --availability-zone ${AWS_REGION}a
     if [ $? -ne 0 ]; then 
       echo "ERROR: failed to build Cluster"
       echo "       => tmc cluster create -m $TMC_MANAGEMENT_CLUSTER -p $TMC_PROVISONER_NAME \\"
@@ -2818,9 +2810,11 @@ installTanzuDataPostgres() {
   downloadFromPivnet tanzu-sql-postgres $TDH_SERVICE_TANZU_DATA_POSTGRES_VERSION "$TDH_SERVICE_TANZU_DATA_POSTGRES_VERSION" "Postgres for VMware Tanzu v$TDH_SERVICE_TANZU_DATA_POSTGRES_VERSION"
 
   TBS_FILE="/tmp/postgres-for-kubernetes-v$TDH_SERVICE_TANZU_DATA_POSTGRES_VERSION.tar.gz"
+  TBS_TAR_FILE="/tmp/postgres-for-kubernetes-v$TDH_SERVICE_TANZU_DATA_POSTGRES_VERSION.tar"
   [ -d /tmp/postgres-for-kubernetes ] && rm -rf /tmp/postgres-for-kubernetes
   mkdir -p /tmp/postgres-for-kubernetes
-  tar xfz $TBS_FILE -C /tmp/postgres-for-kubernetes
+  gunzip $TBS_FILE
+  tar xfz $TBS_TAR_FILE -C /tmp/postgres-for-kubernetes
 
   if [ "$TDH_SERVICE_REGISTRY_HARBOR" == "true" ]; then
     DNS_HARBOR=$(getConfigMap tanzu-demo-hub TDH_HARBOR_REGISTRY_DNS_HARBOR)
