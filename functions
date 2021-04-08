@@ -758,7 +758,7 @@ checkTMCAccess() {
   missing_variables=0
 
   if [ "${TDH_DEPLOYMENT_CLOUD}" == "AWS" ]; then
-    if [ "${TMC_MANAGEMENT_CLUSTER}" == "" -o "${TMC_PROVISONER_NAME}" == "" ]; then
+    if [ "${TMC_MANAGEMENT_CLUSTER}" == "" -o "${TMC_PROVISIONER_NAME}" == "" ]; then
       missing_variables=1
       echo ""
       echo "  2MISSING ENVIRONMENT-VARIABES    DESCRIPTION        "
@@ -768,8 +768,8 @@ checkTMCAccess() {
         echo "  TMC_MANAGEMENT_CLUSTER          (required) A Management Cluster deployed on AWS"
       fi
   
-      if [ "${TMC_PROVISONER_NAME}" == "" ]; then
-        echo "  TMC_PROVISONER_NAME             (required) The TMC Provisionert Name for AWS"
+      if [ "${TMC_PROVISIONER_NAME}" == "" ]; then
+        echo "  TMC_PROVISIONER_NAME            (required) The TMC Provisionert Name for AWS"
       fi
 
       if [ "${AWS_HOSTED_DNS_DOMAIN}" == "" ]; then
@@ -2460,7 +2460,7 @@ checkTMCAccess() {
   if [ "${TDH_DEPLOYMENT_CLOUD}" == "AWS" ]; then
     TMC_ACCOUNT_NAME=$TMC_ACCOUNT_NAME_AWS
 
-    if [ "${TMC_MANAGEMENT_CLUSTER}" == "" -o "${TMC_PROVISONER_NAME}" == "" -o "${TMC_ACCOUNT_NAME_AWS}" == "" -o "${TMC_CLUSTER_GROUP}" == "" -o "${TMC_KUBERNETES_VERSION}" == "" ]; then
+    if [ "${TMC_MANAGEMENT_CLUSTER}" == "" -o "${TMC_PROVISIONER_NAME}" == "" -o "${TMC_ACCOUNT_NAME_AWS}" == "" -o "${TMC_CLUSTER_GROUP}" == "" -o "${TMC_KUBERNETES_VERSION}" == "" ]; then
       missing_variables=1
       echo ""
       echo "  2MISSING ENVIRONMENT-VARIABES    DESCRIPTION        "
@@ -2482,8 +2482,8 @@ checkTMCAccess() {
         echo "  TMC_MANAGEMENT_CLUSTER          (required) The name of the TKGm Management Cluster"
       fi
 
-      if [ "${TMC_PROVISONER_NAME}" == "" ]; then
-        echo "  TMC_PROVISONER_NAME             (required) The TMC Provisioner name"
+      if [ "${TMC_PROVISIONER_NAME}" == "" ]; then
+        echo "  TMC_PROVISIONER_NAME            (required) The TMC Provisioner name"
       fi
 
       if [ "${TMC_SSH_KEY_NAME_AWS}" == "" ]; then
@@ -2500,7 +2500,7 @@ checkTMCAccess() {
       messagePrint " - TMC Context Name"                "$TMC_CONTEXT_NAME"
       messagePrint " - TMC AWS Account Name"            "$TMC_ACCOUNT_NAME_AWS"
       messagePrint " - TMC Management Cluster"          "$TMC_MANAGEMENT_CLUSTER"
-      messagePrint " - TMC Provisioner Name"            "$TMC_PROVISONER_NAME"
+      messagePrint " - TMC Provisioner Name"            "$TMC_PROVISIONER_NAME"
 
       # --- CHECK IF AWS CLI IS CONFIGURED ---
       if [ ! -d ~/.aws -o -d ~/.aws/credentials ]; then
@@ -2541,6 +2541,9 @@ tmcCreateCluster() {
   # steve: missing provisioner, returned sacha's cluster
   stt=$(tmc cluster list -m $TMC_MANAGEMENT_CLUSTER -p $TMC_PROVISIONER_NAME --name $TMC_CLUSTER_NAME -o json 2>/dev/null | jq -r '.clusters[].status.phase' 2>/dev/null) 
 
+echo "tmc cluster list -m $TMC_MANAGEMENT_CLUSTER -p $TMC_PROVISIONER_NAME --name $TMC_CLUSTER_NAME -o json"
+echo "STT:$stt"
+
   if [ "$stt" == "DELETING" ]; then                                         
      echo "ERROR: Cluster is currently on deleting, please try again later"; exit 1
   fi
@@ -2550,12 +2553,12 @@ tmcCreateCluster() {
     messagePrint " - TMC Cluster Name"       "$TMC_CLUSTER_NAME"
     messagePrint " - TMC Cluster Group"      "$TMC_CLUSTER_GROUP"
     messagePrint " - TMC Template"           "$TMC_TKGWC_TEMPLATE"
-    messagePrint " - Provisioner Name"       "$TMC_PROVISONER_NAME"
+    messagePrint " - Provisioner Name"       "$TMC_PROVISIONER_NAME"
     messagePrint " - TKG Management Cluster" "$TMC_MANAGEMENT_CLUSTER"
     messagePrint " - Account Name"           "$TMC_ACCOUNT_NAME"
     messagePrint " - Kubernetes Version"     "$TMC_KUBERNETES_VERSION"
 
-    tmc cluster create -m $TMC_MANAGEMENT_CLUSTER -p $TMC_PROVISONER_NAME --ssh-key-name $TMC_SSH_KEY_NAME_AWS \
+    tmc cluster create -m $TMC_MANAGEMENT_CLUSTER -p $TMC_PROVISIONER_NAME --ssh-key-name $TMC_SSH_KEY_NAME_AWS \
                        -c $TMC_ACCOUNT_NAME -r $AWS_REGION -n $TMC_CLUSTER_NAME -q $TMC_TKGWC_WORKERNODES \
                        -g $TMC_CLUSTER_GROUP \
                        -t $TMC_TKGWC_TEMPLATE \
@@ -2563,7 +2566,7 @@ tmcCreateCluster() {
                        --availability-zone ${AWS_REGION}a
     if [ $? -ne 0 ]; then 
       echo "ERROR: failed to build Cluster"
-      echo "       => tmc cluster create -m $TMC_MANAGEMENT_CLUSTER -p $TMC_PROVISONER_NAME \\"
+      echo "       => tmc cluster create -m $TMC_MANAGEMENT_CLUSTER -p $TMC_PROVISIONER_NAME \\"
       echo "          --ssh-key-name $TMC_SSH_KEY_NAME_AWS -c $TMC_ACCOUNT_NAME \\"
       echo "          -r $AWS_REGION -n $TMC_CLUSTER_NAME -q $TMC_TKGWC_WORKERNODES \\"
       echo "          -g $TMC_CLUSTER_GROUP -t $TMC_TKGWC_TEMPLATE \\"
@@ -2585,11 +2588,11 @@ tmcCreateCluster() {
   messagePrint " - Cluster Name"           "$TMC_CLUSTER_NAME"
   messagePrint " - TKG Management Cluster" "$TMC_MANAGEMENT_CLUSTER"
   messagePrint " - Cluster Status"         "$stt"
-  messagePrint " - Provisioner Name"       "$TMC_PROVISONER_NAME"
+  messagePrint " - Provisioner Name"       "$TMC_PROVISIONER_NAME"
   messagePrint " - Account Name"           "$TMC_ACCOUNT_NAME"
   echo "----------------------------------------------------------------------------------------"
   echo " TO-DELETE-THE-CLUSTER"
-  echo " => tmc cluster delete -m $TMC_MANAGEMENT_CLUSTER -p $TMC_PROVISONER_NAME $TMC_CLUSTER_NAME"
+  echo " => tmc cluster delete -m $TMC_MANAGEMENT_CLUSTER -p $TMC_PROVISIONER_NAME $TMC_CLUSTER_NAME"
   echo "----------------------------------------------------------------------------------------"
 }
 
@@ -2605,18 +2608,18 @@ getTDHClusterCredentials() {
 
   ret=1; cnt=0
   while [ $ret -ne 0 -a $cnt -lt 10 ]; do
-    tmc cluster auth kubeconfig get $TMC_CLUSTER_NAME -p $TMC_PROVISONER_NAME -m $TMC_MANAGEMENT_CLUSTER > /dev/null 2>&1; ret=$?
+    tmc cluster auth kubeconfig get $TMC_CLUSTER_NAME -p $TMC_PROVISIONER_NAME -m $TMC_MANAGEMENT_CLUSTER > /dev/null 2>&1; ret=$?
     sleep 60
     let cnt=cnt+1
   done
 
   if [ $ret -ne 0 ]; then 
     echo "ERROR: Failled to retrieve cluster credentials, aborting"
-    echo "       => tmc cluster auth kubeconfig get $TMC_CLUSTER_NAME -p $TMC_PROVISONER_NAME -m $TMC_MANAGEMENT_CLUSTER"
+    echo "       => tmc cluster auth kubeconfig get $TMC_CLUSTER_NAME -p $TMC_PROVISIONER_NAME -m $TMC_MANAGEMENT_CLUSTER"
     exit
   fi
 
-  tmc cluster auth kubeconfig get $TMC_CLUSTER_NAME -p $TMC_PROVISONER_NAME -m $TMC_MANAGEMENT_CLUSTER > /tmp/${TMC_CLUSTER_NAME}.kubeconfig
+  tmc cluster auth kubeconfig get $TMC_CLUSTER_NAME -p $TMC_PROVISIONER_NAME -m $TMC_MANAGEMENT_CLUSTER > /tmp/${TMC_CLUSTER_NAME}.kubeconfig
   export KUBECONFIG=/tmp/${TMC_CLUSTER_NAME}.kubeconfig
   chmod 600 /tmp/${TMC_CLUSTER_NAME}.kubeconfig
 
