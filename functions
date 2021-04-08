@@ -2541,9 +2541,6 @@ tmcCreateCluster() {
   # steve: missing provisioner, returned sacha's cluster
   stt=$(tmc cluster list -m $TMC_MANAGEMENT_CLUSTER -p $TMC_PROVISIONER_NAME --name $TMC_CLUSTER_NAME -o json 2>/dev/null | jq -r '.clusters[].status.phase' 2>/dev/null) 
 
-echo "tmc cluster list -m $TMC_MANAGEMENT_CLUSTER -p $TMC_PROVISIONER_NAME --name $TMC_CLUSTER_NAME -o json"
-echo "STT:$stt"
-
   if [ "$stt" == "DELETING" ]; then                                         
      echo "ERROR: Cluster is currently on deleting, please try again later"; exit 1
   fi
@@ -3381,6 +3378,10 @@ createClusterIssuer() {
   kubectl get secret $TDH_TLS_SECRET > /dev/null 2>&1; stt_sec=$?
   kubectl get certificate $TDH_TLS_CERT > /dev/null 2>&1; stt_crt=$?
   if [ "${stt_rdy}" == "Frue" -o $stt_sec -ne 0 -o $stt_crt -ne 0 ]; then
+    # --- CLEANUP OLD STUFF ---
+    kubectl delete secret $TDH_TLS_SECRET > /dev/null 2>&1
+    kubectl delete certificate $TDH_TLS_CERT > /dev/null 2>&1
+
     messageTitle "Create LetsEnscript Certificate"
     CERTIFICATE_CONFIG=/tmp/certificate.yaml
     echo "apiVersion: cert-manager.io/v1"                       >  $CERTIFICATE_CONFIG
@@ -3413,6 +3414,7 @@ createClusterIssuer() {
       stt=$(kubectl get certificate $TDH_TLS_CERT -o json 2>/dev/null | \
             jq -r '.status.conditions[] | select(.type == "Ready").status')
       if [ "$stt" == "True" ]; then cnt=1; fi
+echo "waiting for certificate to be generated $stt/$cnt ...."
       sleep 5
     done
 
