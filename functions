@@ -751,6 +751,14 @@ checkTDHenvironment() {
   fi
 }
 
+checkTOAccess() {
+  missing_variables=0
+
+  if [ "${TDH_TANZU_OBSERVABILITY_REGISTRATION}" == "true" ]; then
+echo gaga
+  fi
+}
+
 checkTMCAccess() {
   missing_variables=0
 
@@ -2486,9 +2494,9 @@ checkTMCAccess() {
       if [ "${TMC_SSH_KEY_NAME_AWS}" == "" ]; then
         echo "  TMC_SSH_KEY_NAME_AWS            (required) AWS SSH Key name for Region"
       fi
-      TMC_CLUSTER_NAME="tdh-aws-${TDH_USER}"
+      TMC_CLUSTER_NAME="tdh-${TDH_USER}-aws"
     else
-      TMC_CLUSTER_NAME="tdh-aws-${TDH_USER}"
+      TMC_CLUSTER_NAME="tdh-${TDH_USER}-aws"
 
       messageTitle "Tanzu Mission Control (TMC) - Config" 
       messagePrint " - TMC User"                        "$TDH_USER"
@@ -2508,8 +2516,9 @@ checkTMCAccess() {
     fi
 
 
-   tmc clustergroup create -n tanzu-demo-hub -d "Tanzu Demo Hub by Sacha Dubois" > /dev/null 2>&1
-
+    if [ "$TDH_TANZU_MISSION_CONTROL_REGISTRATION" == "true" ]; then 
+     tmc clustergroup create -n tanzu-demo-hub -d "Tanzu Demo Hub by Sacha Dubois" > /dev/null 2>&1
+    fi
   fi
 
   if [ ${missing_variables} -eq 1 ]; then
@@ -3298,7 +3307,7 @@ createClusterIssuer() {
     messagePrint " - LetsEnscript DNSZone"             "*.apps-contour.${TDH_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}"
     messagePrint " - LetsEnscript DNSZone"             "*.apps-nginx.${TDH_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}"
 
-    if [ "${AWS_CERT_ACCESS_KEY}" == "" -o "${AWS_CERT_SECRET_KEY}" == "" ]; 
+    if [ "${AWS_CERT_ACCESS_KEY}" == "" -o "${AWS_CERT_SECRET_KEY}" == "" ]; then
       messagePrint " - LetsEnscript using AWS Route53 AccessKey" "AWS_ACCESS_KEY"
       messagePrint " - LetsEnscript using AWS Route53 SecretKey" "AWS_ACCESS_KEY"
       export AWS_CERT_ACCESS_KEY=$AWS_ACCESS_KEY
