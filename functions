@@ -3296,8 +3296,6 @@ createClusterIssuer() {
 
     export AWS_CERT_ACCESS_KEY=$AWS_ACCESS_KEY
     export AWS_CERT_SECRET_KEY=$AWS_SECRET_KEY
-echo "AWS_CERT_ACCESS_KEY:$AWS_CERT_ACCESS_KEY"
-echo "AWS_CERT_SECRET_KEY:$AWS_CERT_SECRET_KEY"
 
     echo "apiVersion: cert-manager.io/v1alpha2"                                    >  $TDH_TLS_ISSUER_NAME
     echo "kind: ClusterIssuer"                                                     >> $TDH_TLS_ISSUER_NAME
