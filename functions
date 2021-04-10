@@ -189,7 +189,6 @@ sshEnvironment() {
   fi
 
   if [ "${TDH_DEPLOYMENT_CLOUD}" == "AWS" ]; then
-echo gaga1
     SSH_HOST=$(aws ec2 --region=$AWS_REGION describe-instances \
                      --filters Name=tag:sigs.k8s.io/cluster-api-provider-aws/role,Values="bastion" | \
              jq -r '.Reservations[].Instances[].PublicDnsName')
@@ -202,8 +201,6 @@ echo gaga1
     SSH_COMMAND="ssh -q $SSH_OPTIONS -i $SSH_KEY_FILE ${SSH_USER}@${SSH_HOST}"
     SCP_COMMAND="scp -r $SCP_OPTIONS -i $SSH_KEY_FILE"
     SSH_DISPLAY="ssh -i $SSH_KEY_FILE ${SSH_USER}@${SSH_HOST}"
-echo "SSH_DISPLAY:$SSH_DISPLAY"
-echo gaga2
   fi
 
   if [ "${TDH_DEPLOYMENT_CLOUD}" == "GCP" ]; then
@@ -434,7 +431,7 @@ checkKubernetesServices() {
     echo "  --------------------------------------------------------------------------------------------------------------"
     echo "  IMPORTANT: Please set the missing environment variables either in your shell or in the tanzu-demo-hub"
     echo "             configuration file ~/.tanzu-demo-hub.cfg and set all variables with the 'export' notation"
-    echo "             ie. => export AZURE_PKS_TLS_CERTIFICATE=/home/demouser/certs/cert.pem"
+    echo "             ie. => export <environment_variable>=\"<value>\""
     echo "  --------------------------------------------------------------------------------------------------------------"
     exit 1
   fi
@@ -714,7 +711,7 @@ checkCloudAccess() {
     echo "  --------------------------------------------------------------------------------------------------------------"
     echo "  IMPORTANT: Please set the missing environment variables either in your shell or in the tanzu-demo-hub"
     echo "             configuration file ~/.tanzu-demo-hub.cfg and set all variables with the 'export' notation"
-    echo "             ie. => export AZURE_PKS_TLS_CERTIFICATE=/home/demouser/certs/cert.pem"
+    echo "             ie. => export <environment_variable>=\"<value>\""
     echo "  --------------------------------------------------------------------------------------------------------------"
     exit 1
   fi
@@ -883,7 +880,7 @@ checkTDHAccess() {
     echo "  --------------------------------------------------------------------------------------------------------------"
     echo "  IMPORTANT: Please set the missing environment variables either in your shell or in the tanzu-demo-hub"
     echo "             configuration file ~/.tanzu-demo-hub.cfg and set all variables with the 'export' notation"
-    echo "             ie. => export AZURE_PKS_TLS_CERTIFICATE=/home/demouser/certs/cert.pem"
+    echo "             ie. => export <environment_variable>=\"<value>\""
     echo "  --------------------------------------------------------------------------------------------------------------"
     exit 1
   fi
@@ -2519,7 +2516,7 @@ checkTMCAccess() {
     echo "  --------------------------------------------------------------------------------------------------------------"
     echo "  IMPORTANT: Please set the missing environment variables either in your shell or in the tanzu-demo-hub"
     echo "             configuration file ~/.tanzu-demo-hub.cfg and set all variables with the 'export' notation"
-    echo "             ie. => export AZURE_PKS_TLS_CERTIFICATE=/home/demouser/certs/cert.pem"
+    echo "             ie. => export <environment_variable>=\"<value>\""
     echo "  --------------------------------------------------------------------------------------------------------------"
     exit 1
   fi
@@ -3279,6 +3276,13 @@ createClusterIssuer() {
     LETSENSCRIPT_SERVER="https://acme-v02.api.letsencrypt.org/directory"
   fi
 
+  # --- NOT CERTIFICATE CLEANUP ALL AND START OVER ---
+  stt=$(kubectl get certificate $TDH_TLS_CERT -o json 2>/dev/null | jq -r '.status.conditions[] | select(.type == "Ready").status')
+  if [ "${stt}" == "" -o "${stt}" == "False" ]; then
+    messageTitle "Cleaning up Let's Enscript objects"
+    kubectl delete clusterissuer,order,challenge,certificate --all > /dev/null 2>&1
+  fi
+
   kubectl get clusterissuer $TDH_TLS_ISSUER_NAME -n kube-system > /dev/null 2>&1
   if [ $? -ne 0 ]; then
     AWS_HOSTED_ZONE=$(aws route53 list-hosted-zones-by-name --dns-name ${TDH_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN} | \
@@ -3294,8 +3298,15 @@ createClusterIssuer() {
     messagePrint " - LetsEnscript DNSZone"             "*.apps-contour.${TDH_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}"
     messagePrint " - LetsEnscript DNSZone"             "*.apps-nginx.${TDH_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}"
 
-    export AWS_CERT_ACCESS_KEY=$AWS_ACCESS_KEY
-    export AWS_CERT_SECRET_KEY=$AWS_SECRET_KEY
+    if [ "${AWS_CERT_ACCESS_KEY}" == "" -o "${AWS_CERT_SECRET_KEY}" == "" ]; 
+      messagePrint " - LetsEnscript using AWS Route53 AccessKey" "AWS_ACCESS_KEY"
+      messagePrint " - LetsEnscript using AWS Route53 SecretKey" "AWS_ACCESS_KEY"
+      export AWS_CERT_ACCESS_KEY=$AWS_ACCESS_KEY
+      export AWS_CERT_SECRET_KEY=$AWS_SECRET_KEY
+    else
+      messagePrint " - LetsEnscript using AWS Route53 AccessKey" "AWS_CERT_ACCESS_KEY"
+      messagePrint " - LetsEnscript using AWS Route53 SecretKey" "AWS_CERT_SECRET_KEY"
+    fi
 
     echo "apiVersion: cert-manager.io/v1alpha2"                                    >  $TDH_TLS_ISSUER_NAME
     echo "kind: ClusterIssuer"                                                     >> $TDH_TLS_ISSUER_NAME
@@ -3346,7 +3357,7 @@ createClusterIssuer() {
     # --- RECREATE ISSUER ---
     kubectl -n $NAMESPACE delete --all clusterissuer,certificate,order,challenge > /dev/null 2>&1
     sleep 60
-    kubectl -n $NAMESPACE apply -f $TDH_TLS_ISSUER_NAME
+    kubectl -n $NAMESPACE apply -f $TDH_TLS_ISSUER_NAME > /dev/null 2>&1
     if [ $? -ne 0 ]; then
       echo "ERROR: failed to deploy letsenscript issuer"
       echo "       => kubectl -n $NAMESPACE apply -f $TDH_TLS_ISSUER_NAME"
@@ -3377,9 +3388,8 @@ createClusterIssuer() {
 
     messageTitle "Verify LetsEnscript ClusterIssuer"
     messagePrint " - LetsEnscript Issuer Name"         "$TDH_TLS_ISSUER_NAME"
-    messagePrint " - LetsEnscript DNSZone"             "$HARBOR_HOSTNAME"
-    messagePrint " - LetsEnscript DNSZone"             "$NOTARY_HOSTNAME"
-    messagePrint " - LetsEnscript DNSZone"             "$SACHA_HOSTNAME"
+    messagePrint " - LetsEnscript DNSZone"             "*.apps-contour.${TDH_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}"
+    messagePrint " - LetsEnscript DNSZone"             "*.apps-nginx.${TDH_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}"
     messagePrint " - LetsEnscript Request Requested"   "$issuer_date"
     messagePrint " - LetsEnscript Request Reason"      "$issuer_reason"
     messagePrint " - LetsEnscript Request Status"      "$issuer_status"
@@ -3413,6 +3423,7 @@ createClusterIssuer() {
     echo "  - '*.apps-contour.${TDH_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}'"     >> $CERTIFICATE_CONFIG
     echo "  - '*.apps-nginx.${TDH_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}'"       >> $CERTIFICATE_CONFIG
 
+    messageTitle " - This may take a couple of minutes ...."
     kubectl create -f $CERTIFICATE_CONFIG > /dev/null 2>&1
     if [ $? -ne 0 ]; then
       echo "ERROR: failed to deploy letsenscript certificate"
@@ -3422,14 +3433,28 @@ createClusterIssuer() {
 
     sleep 30
 
-    cnt=0
-    while [ $cnt -eq 0 ]; do
-      stt=$(kubectl get certificate $TDH_TLS_CERT -o json 2>/dev/null | \
-            jq -r '.status.conditions[] | select(.type == "Ready").status')
-      if [ "$stt" == "True" ]; then cnt=1; fi
-echo "waiting for certificate to be generated $stt/$cnt ...."
+    challenge_prz="false"
+    while [ "$challenge_prz" == "false" ]; do
+      challenge_obj=$(kubectl get challenge 2>/dev/null | grep -v "NAME" | awk '{ print $1 }' | head -1)
+      challenge_prz=$(kubectl get challenge $challenge_obj -o json 2>/dev/null | jq -r '.status.processing')
+
       sleep 5
     done
+
+    sleep 5
+
+    stt=$(kubectl get certificate $TDH_TLS_CERT -o json 2>/dev/null | \
+            jq -r '.status.conditions[] | select(.type == "Ready").status')
+    if [ "$stt" != "True" ]; then 
+      challenge_pst=$(kubectl get challenge $challenge_obj -o json | jq -r '.status.presented')
+      if [ "$challenge_pst" == "false" ]; then
+         echo "------------------------------------------------------------------------------------------------------------------------"
+         echo "ERROR: Let's Enscript failed to verify the AWS Route53 challenge"
+         kubectl get challenge $challenge_obj -o json | jq -r '.status.reason'
+         echo "------------------------------------------------------------------------------------------------------------------------"
+         exit
+      fi
+    fi
 
     if [ "$stt" == "True" ]; then
       tim=$(kubectl get certificate $TDH_TLS_CERT -o json 2>/dev/null | jq -r '.status.conditions[].lastTransitionTime')
