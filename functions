@@ -3329,8 +3329,21 @@ echo "AWS_CERT_SECRET_KEY:$AWS_CERT_SECRET_KEY"
     # --- CREATE/RECREATE AWS ROUTE53 SECRET ---
     kubectl -n cert-manager delete secret route53-credentials-secret > /dev/null 2>&1
     kubectl -n default delete secret route53-credentials-secret > /dev/null 2>&1
+
+    echo "$AWS_CERT_SECRET_KEY" > /tmp/aws-credentials
     kubectl -n cert-manager create secret generic route53-credentials-secret \
-            --from-literal=aws-credentials="$AWS_CERT_SECRET_KEY" > /dev/null 2>&1
+            --from-file=aws-credentials=/tmp/aws-credentials > /dev/null 2>&1
+
+    # --- VERIFY CERTIFICATE ---
+    kubectl -n cert-manager get secret route53-credentials-secret -o json | jq -r '.data."aws-credentials"' | base64 -d > /tmp/aws-credentials_secret
+    diff /tmp/aws-credentials /tmp/aws-credentials_secret > /dev/null 2>&1
+    if [ $? -ne 0 ]; then 
+      echo "ERROR: AWS Credentials in the secret: route53-credentials-secret to not match"
+      echo "       => diff /tmp/aws-credentials /tmp/aws-credentials_secret"
+      exit 
+    else
+      rm -f /tmp/aws-credentials /tmp/aws-credentials_secret
+    fi
 
     # --- RECREATE ISSUER ---
     kubectl -n $NAMESPACE delete --all clusterissuer,certificate,order,challenge > /dev/null 2>&1
