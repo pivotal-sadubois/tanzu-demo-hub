@@ -112,7 +112,6 @@ pivnetAPIdownload() {
   # --- LOGIN INTO PIVNET ---
   wget -O /tmp/$FILE_NAME --header="Authorization: Bearer $token" \
   https://network.pivotal.io/api/v2/products/$PRODUCT_SLUG/releases/$PRODUCT_ID/product_files/$PRODUCT_FILE/download > /dev/null 2>&1
-echo "FILE_NAME:$FILE_NAME"
 
   if [ ! -f /tmp/$FILE_NAME ]; then
     echo "ERROR: Error downloading file from PIVNET /tmp/$FILE_NAME"
@@ -346,8 +345,42 @@ checkCloudCLI() {
 checkKubernetesServices() {
   service=$1
   missing_variables=0
+#hallo
 
-  if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "minikube" ]; then
+
+  if [ 1 -eq 1 ]; then
+    if [ "${service}" == "tanzu_data_protection" ]; then
+      if [ "${TDH_TANZU_DATA_PROTECTION_ARN}" == "" ]; then
+        missing_variables=1
+        echo ""
+        echo "  4MISSING ENVIRONMENT-VARIABES    DESCRIPTION        "
+        echo "  --------------------------------------------------------------------------------------------------------------"
+
+        if [ "${TDH_TANZU_DATA_PROTECTION_ARN}" == "" ]; then
+          echo "  TDH_TANZU_DATA_PROTECTION_ARN    (required) AWS CloudFormation ARN for Tanzu Data Protection"
+        fi
+      fi
+    fi
+
+    if [ "${service}" == "tanzu_observability" ]; then
+      if [ "${TDH_TANZU_OBSERVABILITY_API_TOKEN}" == "" -o "${TDH_TANZU_OBSERVABILITY_URL}" == "" ]; then
+        missing_variables=1
+        echo ""
+        echo "  4MISSING ENVIRONMENT-VARIABES      DESCRIPTION        "
+        echo "  --------------------------------------------------------------------------------------------------------------"
+
+        if [ "${TDH_TANZU_OBSERVABILITY_API_TOKEN}" == "" ]; then
+          echo "  TDH_TANZU_OBSERVABILITY_API_TOKEN  (required) Tanzu Observability API Token"
+          echo "                                      => Tanzu Mission Control -> MyAccount -> API Token -> Generate"
+        fi
+
+        if [ "${TDH_TANZU_DATA_PROTECTION_ARN}" == "" ]; then
+          echo "  TDH_TANZU_OBSERVABILITY_URL        (required) Tanzu Observability Portal URL"
+          echo "                                      => ie. https://vmware.wavefront.com"
+        fi
+      fi
+    fi
+
     if [ "${service}" == "registry_docker" ]; then
       if [ "${TDH_REGISTRY_DOCKER_NAME}" == "" -o "${TDH_REGISTRY_DOCKER_USER}" == "" -o "${TDH_REGISTRY_DOCKER_PASS}" == "" ]; then
         missing_variables=1
@@ -751,12 +784,115 @@ checkTDHenvironment() {
   fi
 }
 
-checkTOAccess() {
-  missing_variables=0
+checkTMCintegration() {
+  TMC_INTEGRATION=$1
 
-  if [ "${TDH_TANZU_OBSERVABILITY_REGISTRATION}" == "true" ]; then
+#hallo
+
+echo "checkTMCintegration: gaga1 $TMC_INTEGRATION"
+
+  if [ "${TMC_INTEGRATION}" == "TO" ]; then
+echo "checkTMCintegration: gaga2"
+    if [ "${TDH_SERVICE_TANZU_OBSERVABILITY}" == "true" ]; then
+      NAMESPACE=wavefront
+      kubectl get ns $NAMESPACE > /dev/null 2>&1
+      if [ $? -ne 0 ]; then
+        messageTitle "Configure Tanzu Observability Integration into TMC"
+
+        # --- VERIFY SERVICE CONFIGURATION ---
+        checkKubernetesServices tanzu_observability
+
+        # --- INSTALL WAVEFRONT HELM CHART ---
+        kubectl create ns $NAMESPACE > /dev/null 2>&1
+        helm uninstall wavefront -n $NAMESPACE > /dev/null 2>&1
+
+        [ "${TMC_CLUSTER_NAME}" != "" ] && TDH_CLUSTER_NAME=$TMC_CLUSTER_NAME
+
+        helm install wavefront wavefront/wavefront \
+            --set wavefront.url=$TDH_TANZU_OBSERVABILITY_URL \
+            --set wavefront.token=$TDH_TANZU_OBSERVABILITY_API_TOKEN \
+            --set clusterName=$TDH_CLUSTER_NAME --namespace wavefront > /dev/null 2>&1
+        if [ $? -ne 0 ]; then
+          echo "ERROR: failed to install wavefront Helm Chart"
+          echo "       => helm install wavefront wavefront/wavefront \\"
+          echo "           --set wavefront.url=$TDH_TANZU_OBSERVABILITY_URL \\"
+          echo "           --set wavefront.token=$TDH_TANZU_OBSERVABILITY_API_TOKEN \\"
+          echo "           --set clusterName=$TDH_CLUSTER_NAME --namespace wavefront"
+          exit
+        fi
+      fi
+
+      cnt=$(tmc cluster integration list --cluster-name $TDH_CLUSTER_NAME -m $TMC_MANAGEMENT_CLUSTER \
+            -p $TMC_PROVISIONER_NAME --name tanzu-observability-saas | egrep -c "tanzu-observability-saas") 
+      if [ $cnt -eq 0 ]; then 
+        TANZU_OBSERVABILITY=/tmp/tanzu_observability.yaml; rm -f $TANZU_OBSERVABILITY
+        echo ""                                                                      >  $TANZU_OBSERVABILITY
+        echo "{"                                                                     >> $TANZU_OBSERVABILITY
+        echo "    \"full_name\": {"                                                  >> $TANZU_OBSERVABILITY
+        echo "        \"provisionerName\": \"$TMC_PROVISONER_NAME\","                >> $TANZU_OBSERVABILITY
+        echo "        \"managementClusterName\": \"$TMC_MANAGEMENT_CLUSTER\","       >> $TANZU_OBSERVABILITY
+        echo "        \"clusterName\": \"$TDH_CLUSTER_NAME\","                       >> $TANZU_OBSERVABILITY
+        echo "        \"name\": \"tanzu-observability-saas\""                        >> $TANZU_OBSERVABILITY
+        echo "    },"                                                                >> $TANZU_OBSERVABILITY
+        echo "    \"spec\": {"                                                       >> $TANZU_OBSERVABILITY
+        echo "        \"configurations\": {"                                         >> $TANZU_OBSERVABILITY
+        echo "            \"url\": \"$TDH_TANZU_OBSERVABILITY_URL\""                 >> $TANZU_OBSERVABILITY
+        echo "        },"                                                            >> $TANZU_OBSERVABILITY
+        echo "        \"secrets\": {"                                                >> $TANZU_OBSERVABILITY
+        echo "            \"token\": \"$TDH_TANZU_OBSERVABILITY_API_TOKEN\""         >> $TANZU_OBSERVABILITY
+        echo "        }"                                                             >> $TANZU_OBSERVABILITY
+        echo "    }"                                                                 >> $TANZU_OBSERVABILITY
+        echo "}"                                                                     >> $TANZU_OBSERVABILITY
+
+        tmc cluster integration create -f $TANZU_OBSERVABILITY
+        if [ $? -ne 0 ]; then 
+          echo "ERROR: failed to add integration"
+          echo "       => tmc cluster integration create -f $TANZU_OBSERVABILITY"
+          exit
+        else
+          rm -f $TANZU_OBSERVABILITY
+        fi
+      fi
+
 echo gaga
+#tmc cluster integration create -f /tmp/1.json
+#tmc cluster dataprotection create -c tdh-sadubois-aws -m aws-hosted -p sadubois-aws
+#tmc cluster integration list --cluster-name tdh-sadubois-aws -m aws-hosted -p sadubois-aws
+#i No integrations to list 
+#tmc cluster integration list --cluster-name tdh-sadubois-aws -m aws-hosted -p sadubois-aws --name tanzu-observability-saas
+#i No integrations to list 
+#tmc cluster integration list --cluster-name shared-enterprise -m aws-hosted -p aguedes-aws  --name tanzu-observability-saas
+#  NAME                      CLUSTERNAME        MANAGEMENTCLUSTER  PROVISIONER  
+#  tanzu-observability-saas  shared-enterprise  aws-hosted         aguedes-aws  
+
+
+
+      uodateConfigMap tanzu-demo-hub TDH_SERVICE_TANZU_OBSERVABILITY        "true"
+    else
+      uodateConfigMap tanzu-demo-hub TDH_SERVICE_TANZU_OBSERVABILITY        "false"
+    fi
   fi
+
+  if [ "${TMC_INTEGRATION}" == "TDP" ]; then
+echo "checkTMCintegration: gaga2"
+    if [ "${TDH_SERVICE_TANZU_DATA_PROTECTION}" == "true" ]; then
+      messageTitle "Configure Tanzu Observability Integration into TMC"
+
+      # --- VERIFY SERVICE CONFIGURATION ---
+      checkKubernetesServices tanzu_data_protection
+
+echo gaga
+#tmc cluster integration create -f /tmp/1.json
+#tmc cluster dataprotection create -c tdh-sadubois-aws -m aws-hosted -p sadubois-aws
+
+      uodateConfigMap tanzu-demo-hub TDH_SERVICE_TANZU_OBSERVABILITY        "true"
+    else
+      uodateConfigMap tanzu-demo-hub TDH_SERVICE_TANZU_OBSERVABILITY        "false"
+    fi
+  fi
+
+
+echo "checkTMCintegration: gaga10"
 }
 
 checkTMCAccess() {
@@ -1107,8 +1243,10 @@ echo "$SSH_COMMAND -n id "
 
   messagePrint " - Verify SSH Access" "success"
 
+echo hihi1
   $SSH_COMMAND -n "[ ! -d /home/ubuntu/tanzu-demo-hub ] && git clone $GITTDH > /dev/null 2>&1"
   $SSH_COMMAND -n "[ -d /home/ubuntu/tanzu-demo-hub ] && cd $SSH_HOME/tanzu-demo-hub; git pull > /dev/null 2>&1"
+echo hihi2
 
   # --- HOSTNAME ---
 #  if [ "${TDH_DEPLOYMENT_CLOUD}" == "Azure" -o "${TDH_DEPLOYMENT_CLOUD}" == "AWS" ]; then
@@ -2516,7 +2654,7 @@ checkTMCAccess() {
     fi
 
 
-    if [ "$TDH_TANZU_MISSION_CONTROL_REGISTRATION" == "true" ]; then 
+    if [ "$TDH_SERVICE_TANZU_MISSION_CONTROL" == "true" ]; then 
      tmc clustergroup create -n tanzu-demo-hub -d "Tanzu Demo Hub by Sacha Dubois" > /dev/null 2>&1
     fi
   fi
@@ -3442,15 +3580,16 @@ createClusterIssuer() {
 
     sleep 30
 
-    challenge_prz="false"
-    while [ "$challenge_prz" == "false" ]; do
-      challenge_obj=$(kubectl get challenge 2>/dev/null | grep -v "NAME" | awk '{ print $1 }' | head -1)
-      challenge_prz=$(kubectl get challenge $challenge_obj -o json 2>/dev/null | jq -r '.status.processing')
-
-      sleep 5
+    cnt=0
+    stt=$(kubectl get certificate $TDH_TLS_CERT -o json 2>/dev/null | \
+            jq -r '.status.conditions[] | select(.type == "Ready").status')
+    while [ $cnt -lt 5 -a "$stt" != "True" ]; do
+      stt=$(kubectl get certificate $TDH_TLS_CERT -o json 2>/dev/null | \
+            jq -r '.status.conditions[] | select(.type == "Ready").status')
+      if [ "$stt" == "True" ]; then cnt=1; fi
+      sleep 30
+      let cnt=cnt+1
     done
-
-    sleep 5
 
     stt=$(kubectl get certificate $TDH_TLS_CERT -o json 2>/dev/null | \
             jq -r '.status.conditions[] | select(.type == "Ready").status')
@@ -3566,6 +3705,7 @@ InstallCertManager() {
 }
 
 InstallHarborRegistry() {
+#hallo
   if [ "$TDH_SERVICE_BUILD_SERVICE" != "true" ]; then
     uodateConfigMap tanzu-demo-hub TDH_SERVICE_BUILD_SERVICE        "false"
     return

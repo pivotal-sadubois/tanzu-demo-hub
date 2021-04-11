@@ -875,6 +875,26 @@ echo "$SSH_COMMAND -n id > /dev/null"
   fi
 }
 
+# --- VERYFY TMC ACCESS (Minikube) ---
+#checkCLIcommands TOOLS
+#checkCLIcommands TKG
+#tmcCheckLogin
+#checkTDHAccess
+#checkTMCAccess
+#checkTMCcontext
+#tmcCreateCluster
+#getTDHClusterCredentials
+
+# checkCloudAccess
+# => Minikube => ALL
+#    TDH_USER
+#    AWS_ACCESS_KEY
+#    AWS_SECRET_KEY
+#    AWS_REGION
+# checkTDHAccess
+# checkTMCAccess (if enabled by TDH_MISSION_CONTROL_ENABLED)
+
+
 # --- VERYFY ACCESS TO CLOUD ---
 checkTDHenvironment    
 
@@ -882,16 +902,22 @@ checkCloudCLI
 checkCLIcommands TOOLS
 checkCLIcommands TKG
 checkCLIcommands TANZU
+checkCLIcommands TMC
 
+checkTDHAccess
 checkCloudAccess
+#checkTMCAccess
 checkKeyPairs
 #checkTKGdownloads
+tmcCheckLogin
 
 # --- CREATE TKG CLUSTER AND JUMP SERVER
 createJumpHost
 sshEnvironment
 configureJumpHost
 #configureLetsEnscript
+
+TDH_TKGMC_NAME=${TDH_TKGMC_NAME}-${TMC_USER)
 
 # --- UPLOAD OVA IMAGES TO VCENTER ---
 if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "vSphere" ]; then
@@ -948,25 +974,74 @@ else
   if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "Azure" ]; then
     messageTitle "Accepting Image Terms for Provider (vmware-inc) / Offer: (tkg-capi)"
 
-    for img in $(az vm image list --publisher vmware-inc --offer tkg-capi --all | jq -r '.[].urn' | sort | uniq); do
-      stt=$(az vm image terms show --urn $img | jq -r '.accepted')
-      nam=$(az vm image terms show --urn $img | jq -r '.plan')
-
-      if [ "$stt" != "true" ]; then 
-        messagePrint " - Accepting Image Terms for image ($nam)" "$img"
-        az vm image terms accept --urn $img > /dev/null 2>&1
-        if [ $? -ne 0 ]; then 
-          echo "ERROR: failed to accept image terms, please try manually"
-          echo "       => az vm image terms accept --urn $img"
-          exit
-        fi
-      fi
-    done
+#    for img in $(az vm image list --publisher vmware-inc --offer tkg-capi --all | jq -r '.[].urn' | sort | uniq); do
+#      stt=$(az vm image terms show --urn $img | jq -r '.accepted')
+#      nam=$(az vm image terms show --urn $img | jq -r '.plan')
+#echo "IMG:$img"
+#
+#      if [ "$stt" != "true" ]; then 
+#        messagePrint " - Accepting Image Terms for image ($nam)" "$img"
+#        az vm image terms accept --urn $img > /dev/null 2>&1
+#        if [ $? -ne 0 ]; then 
+#          echo "ERROR: failed to accept image terms, please try manually"
+#          echo "       => az vm image terms accept --urn $img"
+#          exit
+#        fi
+#      fi
+#    done
   fi
 
   # --- CREATE MANAGEMENT CLUSTER ---
+  [ ! -d ~/.tanzu-demo-hub/config ] && mkdir -p ~/.tanzu-demo-hub/config
   $SSH_COMMAND -n "[ -f $SSH_HOME/tanzu-demo-hub/scripts/InstallTKGmc.sh ] && tanzu-demo-hub/scripts/InstallTKGmc.sh $DEPLOY_TKG_TEMPLATE"
 
+  cnt=$(tanzu management-cluster get 2>/dev/null | grep -c " $TDH_TKGMC_NAME ")
+  if [ $cnt -eq 0 ]; then
+    $SCP_COMMAND ${SSH_USER}@${SSH_HOST}:/tmp/kubeconfig_$TDH_TKGMC_NAME.yaml ~/.tanzu-demo-hub/config > /dev/null 2>&1
+
+    tanzu login --kubeconfig ~/.tanzu-demo-hub/config/kubeconfig_$TDH_TKGMC_NAME.yaml  --name $TDH_TKGMC_NAME --server $TDH_TKGMC_NAME \
+       --context ${TDH_TKGMC_NAME}-admin@$TDH_TKGMC_NAME > /dev/null 2>&1
+    if [ $? -ne 0 ]; then
+      echo "ERROR: failed to login to TKG Management Cluster: $TDH_TKGMC_NAME.yaml"
+      exit
+    fi
+  fi
+
+  tanzu management-cluster kubeconfig get --admin > /dev/null 2>&1
+  kubectl config set-cluster $TDH_TKGMC_NAME > /dev/null 2>&1
+  kubectl config use-context ${TDH_TKGMC_NAME}-admin@$TDH_TKGMC_NAME > /dev/null 2>&1
+
+  # --- VERIFY TMC REGISTRATION
+  tmc managementcluster get $TDH_TKGMC_NAME > /dev/null 2>&1
+  if [ $? -ne 0 ]; then
+    messagePrint " - TMC Register Cluster"             "$TDH_TKGMC_NAME"
+    tmc managementcluster register $TDH_TKGMC_NAME -c tanzu-demo-hub > /dev/null 2>&1
+    if [ $? -ne 0 ]; then
+      echo "ERROR: failed to register TKG Management Cluster: $TDH_TKGMC_NAME to TMC"
+      echo "       => tmc managementcluster register $TDH_TKGMC_NAME -c tanzu-demo-hub"
+      exit
+    fi
+  fi
+
+  DEPLOYMENT_FILE=tkgmc-${TDH_TKGMC_NAME}.cfg
+  echo "TDH_TKGMC_INFRASTRUCTURE=Azure"
+  echo "TDH_TKGMC_REGION=westeurope"
+  echo "TDH_TKGMC_NAME=$TDH_TKGMC_NAME"
+  echo "TDH_TKGMC_CONFIG=tkgmc-dev-azure-westeurope.yaml"
+  echo "TDH_TKGMC_PLAN=dev"
+  echo "TDH_TKGMC_CEIP_PARTICIPATION=true"
+  echo "TDH_TKGMC_CNI=antrea"
+  echo "TDH_TKGMC_LOGLEVEL=1"
+  echo "TDH_TKGMC_SERVICE_CIDR=100.64.0.0/13"
+  echo "TDH_TKGMC_CLUSTER_CIDR=100.96.0.0/11"
+  echo "TDH_TKGMC_MACHINE_HEALTH_CHECK_ENABLED=true"
+  echo "TDH_TKGMC_MACHINE_TYPE=Standard_D2s_v3"
+  echo "TDH_TKGMC_CONTROL_PLANE_MACHINE_TYPE=Standard_D2s_v3"
+
+echo "DEPLOYMENT_FILE:$DEPLOYMENT_FILE"
+
+
+exit
   echo "-----------------------------------------------------------------------------------------------------------"
   $SSH_COMMAND -n "tkg get mc --config ${SSH_HOME}/.tanzu-demo-hub/$TDH_TKGMC_CONFIG"
   echo "-----------------------------------------------------------------------------------------------------------"
