@@ -1229,7 +1229,6 @@ createENVfile() {
 
 configureJumpHost() {
   messagePrint "Configure Jump Server" "$SSH_HOST"
-echo "$SSH_COMMAND -n id "
 
   # --- WAIT UNTIL SSH DEAMON IS READY NO JUMPHOST ----
   ret=1
@@ -1243,10 +1242,8 @@ echo "$SSH_COMMAND -n id "
 
   messagePrint " - Verify SSH Access" "success"
 
-echo hihi1
   $SSH_COMMAND -n "[ ! -d /home/ubuntu/tanzu-demo-hub ] && git clone $GITTDH > /dev/null 2>&1"
   $SSH_COMMAND -n "[ -d /home/ubuntu/tanzu-demo-hub ] && cd $SSH_HOME/tanzu-demo-hub; git pull > /dev/null 2>&1"
-echo hihi2
 
   # --- HOSTNAME ---
 #  if [ "${TDH_DEPLOYMENT_CLOUD}" == "Azure" -o "${TDH_DEPLOYMENT_CLOUD}" == "AWS" ]; then
@@ -1498,6 +1495,7 @@ EOF
 
 createCluster() {
   unset TKG_CONFIG
+  TDH_TKGMC_NAME=${TDH_TKGMC_NAME}-${TDH_USER}
   TKG_TEMPLATE=${HOME}/.tanzu-demo-hub/${TDH_TKGMC_CONFIG}; rm -f $TKG_TEMPLATE
   TKG_KUBECONFIG=${HOME}/.tanzu-demo-hub/${TDH_TKGMC_NAME}.kubeconfig; rm -f $TKG_KUBECONFIG
   if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "Azure" ]; then
@@ -1561,6 +1559,7 @@ createCluster() {
 
     MPDE=azure
 
+echo "hhhh TDH_TKGMC_NAME:$TDH_TKGMC_NAME"
     cnt=$(tanzu management-cluster get 2>/dev/null | egrep -c " $TDH_TKGMC_NAME ")
     if [ ${cnt} -eq 0 ]; then
       # --- CLEANUP OLD CONFIG ---
