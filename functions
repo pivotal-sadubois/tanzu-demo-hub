@@ -1627,8 +1627,15 @@ echo "hhhh TDH_TKGMC_NAME:$TDH_TKGMC_NAME"
     echo "3.) Create Workload Cluster"                                                              >> /tmp/motd
     echo "    => tanzu cluster create"                                                              >> /tmp/motd
 
-    echo "export KUBECONFIG=~/.tanzu-demo-hub/config/kubeconfig_$TDH_TKGMC_NAME.yaml" >> ~/.bashrc
+ls -la /tmp/motd
+
+    cnt=$(egrep -c "export KUBECONFIG" ~/.bashrc) 
+    if [ $cnt -eq 0 ]; then 
+      echo "export KUBECONFIG=~/.tanzu-demo-hub/config/kubeconfig_$TDH_TKGMC_NAME.yaml" >> ~/.bashrc
+    fi
+echo kkkkkkkkkkkkkkk
     sudo mv /tmp/motd /etc/notd
+echo kkkkkkkkkkkkkkk
   fi
 
   if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "vSphere" ]; then
