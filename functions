@@ -1572,13 +1572,21 @@ echo "hhhh TDH_TKGMC_NAME:$TDH_TKGMC_NAME"
       # --- CLEAN OLD MANAGEMENT CLUSTER CONFIG ---
       rm -f ~/.tanzu/config.yaml
 
+      messagePrint " - Management Cluster Creating"        "This may take up to 15min ..."
+
       echo "----------------------------------------------------------------------------------------------------------------"
-      time tanzu management-cluster create --file $TKG_TEMPLATE -v 0 --log-file=/tmp/$TDH_TKGMC_NAME.log; ret=$?
+      time tanzu management-cluster create --file $TKG_TEMPLATE -v 0 --log-file=/tmp/$TDH_TKGMC_NAME.log > /dev/null 2>&1; ret=$?
       echo "----------------------------------------------------------------------------------------------------------------"
       if [ ${ret} -ne 0 ]; then
         echo "ERROR: failed to create TKG Management Cluster"
+        echo "       => tanzu management-cluster create --file $TKG_TEMPLATE -v 0 --log-file=/tmp/$TDH_TKGMC_NAME.log"
+        echo "----------------------------------------------------------------------------------------------------------------"
+        cat /tmp/$TDH_TKGMC_NAME.log
+        echo "----------------------------------------------------------------------------------------------------------------"
         exit
       fi
+
+      messagePrint " - Management Cluster Creating Completed"    "/tmp/$TDH_TKGMC_NAME.log"
 
       tanzu management-cluster kubeconfig get --admin > /dev/null 2>&1
       kubectl config set-cluster $TDH_TKGMC_NAME > /dev/null 2>&1
@@ -1595,6 +1603,32 @@ echo "hhhh TDH_TKGMC_NAME:$TDH_TKGMC_NAME"
     messagePrint " - Cluster Name"        "$TDH_TKGMC_NAME"
     messagePrint " - Cluster Context"     "$context"
     messagePrint " - Cluster Kubeconfig"  "~/.tanzu-demo-hub/config/kubeconfig_$TDH_TKGMC_NAME.yaml"
+
+    echo ""                                                                                         >  /tmp/motd
+    echo "     _____                       ____                         _   _       _"              >> /tmp/motd
+    echo "    |_   _|_ _ _ __  _____   _  |  _ \  ___ _ __ ___   ___   | | | |_   _| |__"           >> /tmp/motd
+    echo "      | |/ _  |  _ \|_  / | | | | | | |/ _ \  _   _ \ / _ \  | |_| | | | |  _ \"          >> /tmp/motd
+    echo "      | | (_| | | | |/ /| |_| | | |_| |  __/ | | | | | (_) | |  _  | |_| | |_) |"         >> /tmp/motd
+    echo "      |_|\__,_|_| |_/___|\__,_| |____/ \___|_| |_| |_|\___/  |_| |_|\__,_|_.__/"          >> /tmp/motd
+    echo ""                                                                                         >> /tmp/motd
+    echo "    ----------------------------------------------------------------------------"         >> /tmp/motd
+    echo "                   Demonstration for VMware Tanzu Product Portfolio"                      >> /tmp/motd
+    echo "                            by Sacha Dubois, VMware Inc"                                  >> /tmp/motd
+    echo "    ----------------------------------------------------------------------------"         >> /tmp/motd
+    echo ""                                                                                         >> /tmp/motd
+    echo "1.) Verify Envrionment"                                                                   >> /tmp/motd
+    echo "    => export KUBECONFIG=~/.tanzu-demo-hub/config/kubeconfig_$TDH_TKGMC_NAME.yaml"        >> /tmp/motd
+    echo "    => kubectl config get-clusters"                                                       >> /tmp/motd
+    echo "    => kubectl config get-contexts"                                                       >> /tmp/motd
+    echo ""                                                                                         >> /tmp/motd
+    echo "2.) Verify Tanzu Management Cluster Status                                                >> /tmp/motd
+    echo "    => tanzu management-cluster get"                                                      >> /tmp/motd
+    echo ""                                                                                         >> /tmp/motd
+    echo "3.) Create Workload Cluster"                                                              >> /tmp/motd
+    echo "    => tanzu cluster create"                                                              >> /tmp/motd
+
+    echo "export KUBECONFIG=~/.tanzu-demo-hub/config/kubeconfig_$TDH_TKGMC_NAME.yaml" >> ~/.bashrc
+    sudo mv /tmp/motd /etc/notd
   fi
 
   if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "vSphere" ]; then
