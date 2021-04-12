@@ -1592,13 +1592,16 @@ echo "CNT:$cnt"
       tanzu management-cluster kubeconfig get --admin > /dev/null 2>&1
       kubectl config set-cluster $TDH_TKGMC_NAME > /dev/null 2>&1
       kubectl config use-context ${TDH_TKGMC_NAME}-admin@$TDH_TKGMC_NAME > /dev/null 2>&1
-      context=$(kubectl config view -o json | jq -r '.contexts[].name')
+      context=$(kubectl config view -o json | jq -r '.contexts[].name' 2>/dev/null)
       tanzu management-cluster kubeconfig get --admin --export-file=/tmp/kubeconfig_$TDH_TKGMC_NAME.yaml > /dev/null 2>&1
       cp /tmp/kubeconfig_$TDH_TKGMC_NAME.yaml ~/.tanzu-demo-hub/config
     fi
 
     kubectl config set-cluster $TDH_TKGMC_NAME > /dev/null 2>&1
     kubectl config use-context ${TDH_TKGMC_NAME}-admin@$TDH_TKGMC_NAME > /dev/null 2>&1
+
+kubectl config get-clusters
+kubectl config get-contexts
 echo hhhh4
     context=$(kubectl config view -o json | jq -r '.contexts[].name')
 kubectl config view -o json
@@ -1632,13 +1635,13 @@ echo hhhh5
     echo "    => tanzu cluster create"                                                              >> /tmp/motd
 
     cnt=$(egrep -c "export KUBECONFIG" ~/.bashrc) 
-    if [ $cnt -eq 0 ]; then 
-      echo "export KUBECONFIG=~/.tanzu-demo-hub/config/kubeconfig_$TDH_TKGMC_NAME.yaml" >> ~/.bashrc
-    fi
+    [ $cnt -eq 0 ] && sed -i '/export KUBECONFIG=.*$/d' ~/.bashrc
+    echo "export KUBECONFIG=~/.tanzu-demo-hub/config/kubeconfig_$TDH_TKGMC_NAME.yaml" >> ~/.bashrc
+
 echo kkkkkkkkkkkkkkk
 cp /tmp/motd /tmp/motd1
-echo "sudo mv /tmp/motd /etc/notd"
-    sudo cat /tmp/motd > /etc/notd
+echo "sudo cp /tmp/motd /etc/notd"
+    sudo cp /tmp/motd /etc/notd
 ls -la /etc/notd
 echo kkkkkkkkkkkkkkk
   fi
