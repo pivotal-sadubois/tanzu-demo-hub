@@ -1561,6 +1561,7 @@ createCluster() {
 
 echo "hhhh TDH_TKGMC_NAME:$TDH_TKGMC_NAME"
     cnt=$(tanzu management-cluster get 2>/dev/null | egrep -c " $TDH_TKGMC_NAME ")
+echo "CNT:$cnt"
     if [ ${cnt} -eq 0 ]; then
       # --- CLEANUP OLD CONFIG ---
       export KUBECONFIG=~/.kube-tkg/config
@@ -1598,7 +1599,9 @@ echo "hhhh TDH_TKGMC_NAME:$TDH_TKGMC_NAME"
 
     kubectl config set-cluster $TDH_TKGMC_NAME > /dev/null 2>&1
     kubectl config use-context ${TDH_TKGMC_NAME}-admin@$TDH_TKGMC_NAME > /dev/null 2>&1
+echo hhhh4
     context=$(kubectl config view -o json | jq -r '.contexts[].name')
+echo hhhh5
     messageTitle "Verify TKG Managment Cluster"
     messagePrint " - Cluster Name"        "$TDH_TKGMC_NAME"
     messagePrint " - Cluster Context"     "$context"
@@ -1634,7 +1637,10 @@ ls -la /tmp/motd
       echo "export KUBECONFIG=~/.tanzu-demo-hub/config/kubeconfig_$TDH_TKGMC_NAME.yaml" >> ~/.bashrc
     fi
 echo kkkkkkkkkkkkkkk
+cp /tmp/motd /tmp/motd1
+echo "sudo mv /tmp/motd /etc/notd"
     sudo mv /tmp/motd /etc/notd
+ls -la /etc/notd
 echo kkkkkkkkkkkkkkk
   fi
 
