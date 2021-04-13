@@ -905,6 +905,8 @@ checkTMCintegration() {
         messagePrint " - AWS CloudFormation ARN"                                   "$TDH_TANZU_DATA_PROTECTION_ARN" 
       fi
 
+      sleep 60
+
       # --- CONFIGURE FULL BACKUP ---
       cnt=$(tmc cluster dataprotection backup list --cluster-name $TDH_CLUSTER_NAME -p $TMC_PROVISONER_NAME -m $TMC_MANAGEMENT_CLUSTER  --name "full-backup" | egrep -c " full-backup ")
       if [ $cnt -eq 0 ]; then 
