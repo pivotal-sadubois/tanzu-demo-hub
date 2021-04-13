@@ -917,7 +917,7 @@ sshEnvironment
 configureJumpHost
 #configureLetsEnscript
 
-TDH_TKGMC_NAME=${TDH_TKGMC_NAME}-${TMC_USER)
+export TDH_TKGMC_NAME=${TDH_TKGMC_NAME}-${TDH_USER}
 
 # --- UPLOAD OVA IMAGES TO VCENTER ---
 if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "vSphere" ]; then
@@ -1003,6 +1003,9 @@ else
        --context ${TDH_TKGMC_NAME}-admin@$TDH_TKGMC_NAME > /dev/null 2>&1
     if [ $? -ne 0 ]; then
       echo "ERROR: failed to login to TKG Management Cluster: $TDH_TKGMC_NAME.yaml"
+      echo "       => tanzu login --kubeconfig ~/.tanzu-demo-hub/config/kubeconfig_$TDH_TKGMC_NAME.yaml  \\"
+      echo "            -name $TDH_TKGMC_NAME --server $TDH_TKGMC_NAME \\"
+      echo "            -name $TDH_TKGMC_NAME --server $TDH_TKGMC_NAME"
       exit
     fi
   fi
@@ -1023,41 +1026,43 @@ else
     fi
   fi
 
-  DEPLOYMENT_FILE=tkgmc-${TDH_TKGMC_NAME}.cfg
-  echo "TDH_TKGMC_INFRASTRUCTURE=Azure"
-  echo "TDH_TKGMC_REGION=westeurope"
-  echo "TDH_TKGMC_NAME=$TDH_TKGMC_NAME"
-  echo "TDH_TKGMC_CONFIG=tkgmc-dev-azure-westeurope.yaml"
-  echo "TDH_TKGMC_PLAN=dev"
-  echo "TDH_TKGMC_CEIP_PARTICIPATION=true"
-  echo "TDH_TKGMC_CNI=antrea"
-  echo "TDH_TKGMC_LOGLEVEL=1"
-  echo "TDH_TKGMC_SERVICE_CIDR=100.64.0.0/13"
-  echo "TDH_TKGMC_CLUSTER_CIDR=100.96.0.0/11"
-  echo "TDH_TKGMC_MACHINE_HEALTH_CHECK_ENABLED=true"
-  echo "TDH_TKGMC_MACHINE_TYPE=Standard_D2s_v3"
-  echo "TDH_TKGMC_CONTROL_PLANE_MACHINE_TYPE=Standard_D2s_v3"
+  messageTitle "Generating TDH Deployment File (tkgmc-${TDH_TKGMC_NAME}.cfg)"
+  messagePrint " - Deployment File"        "$DEPLOYMENT_FILE"
+  messagePrint " - Management Cluster"     "$TDH_TKGMC_NAME"
+  messagePrint " - Infrastructurew"        "$TDH_TKGMC_INFRASTRUCTURE"
+  messagePrint " - Location/Region"        "$TDH_TKGMC_REGION"
 
-echo "DEPLOYMENT_FILE:$DEPLOYMENT_FILE"
+  DEPLOYMENT_FILE=${TDHPATH}/deployments/tkgmc-${TDH_TKGMC_NAME}.cfg
 
+  echo "TDH_TKGMC_INFRASTRUCTURE=Azure"                                 >  $DEPLOYMENT_FILE
+  echo "TDH_TKGMC_REGION=westeurope"                                    >> $DEPLOYMENT_FILE
+  echo "TDH_TKGMC_NAME=$TDH_TKGMC_NAME"                                 >> $DEPLOYMENT_FILE
+  echo "TDH_TKGMC_CONFIG=tkgmc-dev-azure-westeurope.yaml"               >> $DEPLOYMENT_FILE
+  echo "TDH_TKGMC_PLAN=dev"                                             >> $DEPLOYMENT_FILE
+  echo "TDH_TKGMC_CEIP_PARTICIPATION=true"                              >> $DEPLOYMENT_FILE
+  echo "TDH_TKGMC_CNI=antrea"                                           >> $DEPLOYMENT_FILE
+  echo "TDH_TKGMC_LOGLEVEL=1"                                           >> $DEPLOYMENT_FILE
+  echo "TDH_TKGMC_SERVICE_CIDR=100.64.0.0/13"                           >> $DEPLOYMENT_FILE
+  echo "TDH_TKGMC_CLUSTER_CIDR=100.96.0.0/11"                           >> $DEPLOYMENT_FILE
+  echo "TDH_TKGMC_MACHINE_HEALTH_CHECK_ENABLED=true"                    >> $DEPLOYMENT_FILE
+  echo "TDH_TKGMC_MACHINE_TYPE=Standard_D2s_v3"                         >> $DEPLOYMENT_FILE
+  echo "TDH_TKGMC_CONTROL_PLANE_MACHINE_TYPE=Standard_D2s_v3"           >> $DEPLOYMENT_FILE
 
-exit
   echo "-----------------------------------------------------------------------------------------------------------"
-  $SSH_COMMAND -n "tkg get mc --config ${SSH_HOME}/.tanzu-demo-hub/$TDH_TKGMC_CONFIG"
+  $SSH_COMMAND -n "tanzu management-cluster get"
   echo "-----------------------------------------------------------------------------------------------------------"
   echo "1.) Login to Jump Server: $JUMP_HOST"
   echo "    => $SSH_COMMAND"
-  echo "2.) Check Management Cluster Status"
-  echo "    => export TKG_CONFIG=${SSH_HOME}/.tanzu-demo-hub/$TDH_TKGMC_CONFIG"
-  echo "    => tkg set mc $TDH_TKGMC_NAME                # Set active mc cluster"
-  echo "    => tkg get mc"
-  printf "    => %-50s %s\n" "kubectl config set-context $TDH_TKGMC_NAME" "# Set k8s Context to mc Cluster"
-  printf "    => %-50s %s\n" "kubectl get nodes" "# Set k8s Context to the TKG Management Cluster"
-  printf "    => %-50s %s\n" "kubectl get namespaces" "# Set k8s Namespaces of the TKG Management Cluster"
+  echo "2.) Check Management Cluster Status (On local workstation or on the jump server)"
+  echo "    => tanzu management-cluster get"
+  printf "    => %-50s %s\n" "kubectl config set-cluster $TDH_TKGMC_NAME" "# Set k8s Context to mc Cluster"
+  printf "    => %-50s %s\n" "kubectl config set-context ${TDH_TKGMC_NAME}-admin@${TDH_TKGMC_NAME}" "# Set k8s Context to mc Cluster"
+  printf "    => %-50s %s\n" "kubectl get cluster --all-namespaces" "# Set k8s Context to the TKG Management Cluster"
+  printf "    => %-50s %s\n" "kubectl get kubeadmcontrolplane --all-namespaces" "# To verify the first control plane is up"
   echo "3.) Ceeate TKG Workload Cluster"
-  echo "    => export TKG_CONFIG=${SSH_HOME}/.tanzu-demo-hub/$TDH_TKGMC_CONFIG"
-  echo "    => tkg create cluster tkg01 --plan=dev --kubernetes-version=v1.18.8  # available 1.19.1 1.18.8 1.17.11"
-  echo "    => tkg create cluster tkg01 --plan=prod --worker-machine-count 3 --controlplane-machine-count 3"
+  echo "    => deployTKG"
+  echo "4.) Delete the Management Cluster"
+  echo "    => tanzu management-cluster delete tkg-mc-azure-dev-sadubois -y"
   echo ""
   echo "-----------------------------------------------------------------------------------------------------------"
 

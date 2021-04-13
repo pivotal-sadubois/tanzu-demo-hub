@@ -350,14 +350,24 @@ checkKubernetesServices() {
 
   if [ 1 -eq 1 ]; then
     if [ "${service}" == "tanzu_data_protection" ]; then
-      if [ "${TDH_TANZU_DATA_PROTECTION_ARN}" == "" ]; then
+      if [ "${TDH_TANZU_DATA_PROTECTION_ARN}" == "" -o "TDH_TANZU_DATA_PROTECTION_BACKUP_LOCATION" == "" ]; then
         missing_variables=1
         echo ""
         echo "  4MISSING ENVIRONMENT-VARIABES    DESCRIPTION        "
         echo "  --------------------------------------------------------------------------------------------------------------"
 
-        if [ "${TDH_TANZU_DATA_PROTECTION_ARN}" == "" ]; then
-          echo "  TDH_TANZU_DATA_PROTECTION_ARN    (required) AWS CloudFormation ARN for Tanzu Data Protection"
+        if [ "${TDH_TANZU_DATA_PROTECTION_ARN}" == "" -o "TDH_TANZU_DATA_PROTECTION_BACKUP_LOCATION" == "" ]; then
+          echo "  TDH_TANZU_DATA_PROTECTION_ARN                (required) AWS CloudFormation ARN for Tanzu Data Protection"
+          echo "  TDH_TANZU_DATA_PROTECTION_BACKUP_LOCATION    (required) AWS Backup location"
+          echo "                                               Create AWS data protection provider credentials"
+          echo ""
+          echo "                                               1.) TMC -> Administrations -> Accounts"
+          echo "                                               2.) Create Account Credentials -> AWS data protection credentils"
+          echo "                                                   the Credential Name ie. 'sadubois-aws-dp' should be used as backup location"
+          echo "                                                   export TDH_TANZU_DATA_PROTECTION_BACKUP_LOCATION=<credential-name>"
+          echo "                                               3.) Follow the instructions to make an AWS ClouFormation deployment and note the"
+          echo "                                                   ARN generated. Set the ARN with export TDH_TANZU_DATA_PROTECTION_ARN=<arn>"
+          echo ""
         fi
       fi
     fi
@@ -787,17 +797,16 @@ checkTDHenvironment() {
 checkTMCintegration() {
   TMC_INTEGRATION=$1
 
+  TDH_CLUSTER_NAME=$(getConfigMap tanzu-demo-hub TDH_CLUSTER_NAME)
 #hallo
 
-echo "checkTMCintegration: gaga1 $TMC_INTEGRATION"
-
   if [ "${TMC_INTEGRATION}" == "TO" ]; then
-echo "checkTMCintegration: gaga2"
     if [ "${TDH_SERVICE_TANZU_OBSERVABILITY}" == "true" ]; then
+      messageTitle "Tanzu Observability Integration into TMC"
+
       NAMESPACE=wavefront
       kubectl get ns $NAMESPACE > /dev/null 2>&1
       if [ $? -ne 0 ]; then
-        messageTitle "Configure Tanzu Observability Integration into TMC"
 
         # --- VERIFY SERVICE CONFIGURATION ---
         checkKubernetesServices tanzu_observability
@@ -805,8 +814,6 @@ echo "checkTMCintegration: gaga2"
         # --- INSTALL WAVEFRONT HELM CHART ---
         kubectl create ns $NAMESPACE > /dev/null 2>&1
         helm uninstall wavefront -n $NAMESPACE > /dev/null 2>&1
-
-        [ "${TMC_CLUSTER_NAME}" != "" ] && TDH_CLUSTER_NAME=$TMC_CLUSTER_NAME
 
         helm install wavefront wavefront/wavefront \
             --set wavefront.url=$TDH_TANZU_OBSERVABILITY_URL \
@@ -819,7 +826,11 @@ echo "checkTMCintegration: gaga2"
           echo "           --set wavefront.token=$TDH_TANZU_OBSERVABILITY_API_TOKEN \\"
           echo "           --set clusterName=$TDH_CLUSTER_NAME --namespace wavefront"
           exit
+        else
+          messagePrint " - Install Wavefront Helm Chart"  "installed"      
         fi
+      else
+        messagePrint " - Verify Wavefront Helm Chart"  "installed"      
       fi
 
       cnt=$(tmc cluster integration list --cluster-name $TDH_CLUSTER_NAME -m $TMC_MANAGEMENT_CLUSTER \
@@ -844,28 +855,18 @@ echo "checkTMCintegration: gaga2"
         echo "    }"                                                                 >> $TANZU_OBSERVABILITY
         echo "}"                                                                     >> $TANZU_OBSERVABILITY
 
-        tmc cluster integration create -f $TANZU_OBSERVABILITY
+        tmc cluster integration create -f $TANZU_OBSERVABILITY > /dev/null 2>&1
         if [ $? -ne 0 ]; then 
           echo "ERROR: failed to add integration"
           echo "       => tmc cluster integration create -f $TANZU_OBSERVABILITY"
           exit
         else
+          messagePrint " -  Setup Cluster Integration for ($TDH_CLUSTER_NAME)"  "configured"      
           rm -f $TANZU_OBSERVABILITY
         fi
+      else
+        messagePrint " - Verify Cluster Integration for ($TDH_CLUSTER_NAME)"  "configured"      
       fi
-
-echo gaga
-#tmc cluster integration create -f /tmp/1.json
-#tmc cluster dataprotection create -c tdh-sadubois-aws -m aws-hosted -p sadubois-aws
-#tmc cluster integration list --cluster-name tdh-sadubois-aws -m aws-hosted -p sadubois-aws
-#i No integrations to list 
-#tmc cluster integration list --cluster-name tdh-sadubois-aws -m aws-hosted -p sadubois-aws --name tanzu-observability-saas
-#i No integrations to list 
-#tmc cluster integration list --cluster-name shared-enterprise -m aws-hosted -p aguedes-aws  --name tanzu-observability-saas
-#  NAME                      CLUSTERNAME        MANAGEMENTCLUSTER  PROVISIONER  
-#  tanzu-observability-saas  shared-enterprise  aws-hosted         aguedes-aws  
-
-
 
       uodateConfigMap tanzu-demo-hub TDH_SERVICE_TANZU_OBSERVABILITY        "true"
     else
@@ -874,25 +875,97 @@ echo gaga
   fi
 
   if [ "${TMC_INTEGRATION}" == "TDP" ]; then
-echo "checkTMCintegration: gaga2"
     if [ "${TDH_SERVICE_TANZU_DATA_PROTECTION}" == "true" ]; then
-      messageTitle "Configure Tanzu Observability Integration into TMC"
+      messageTitle "Data Protection Integration into TMC"
+      cnt=$(tmc cluster dataprotection backuplocation list --cluster-name $TDH_CLUSTER_NAME 2>/dev/null | grep -c " $TDH_CLUSTER_NAME ")
+      if [ $cnt -eq 0 ]; then
+        # --- VERIFY SERVICE CONFIGURATION ---
+        checkKubernetesServices tanzu_data_protection
 
-      # --- VERIFY SERVICE CONFIGURATION ---
-      checkKubernetesServices tanzu_data_protection
+        # --- VERIFY BACKUP LOCATION ---
+        cnt=$(tmc cluster dataprotection backuplocation list --cluster-name $TDH_CLUSTER_NAME | grep -c " $TDH_CLUSTER_NAME ") 
+        if [ $cnt -eq 0 ]; then
+          tmc cluster dataprotection create -c $TDH_CLUSTER_NAME -m $TMC_MANAGEMENT_CLUSTER -p $TMC_PROVISONER_NAME \
+              --backup-location-names $TDH_TANZU_DATA_PROTECTION_BACKUP_LOCATION > /dev/null 2>&1
+          if [ $? -ne 0 ]; then
+            echo "ERROR: failed to enable dataprotection for cluster $TDH_CLUSTER_NAME"
+            echo "       => tmc cluster dataprotection create -c $TDH_CLUSTER_NAME -m $TMC_MANAGEMENT_CLUSTER \\"
+            echo "            -p $TMC_PROVISONER_NAME --backup-location-names $TDH_TANZU_DATA_PROTECTION_BACKUP_LOCATION"
+            exit
+          fi
+        fi
 
-echo gaga
-#tmc cluster integration create -f /tmp/1.json
-#tmc cluster dataprotection create -c tdh-sadubois-aws -m aws-hosted -p sadubois-aws
+        messagePrint " - Enable DataProtection for Cluster ($TDH_CLUSTER_NAME)"    "enabled"      
+        uodateConfigMap tanzu-demo-hub TDH_TANZU_DATA_PROTECTION_ARN               "$TDH_TANZU_DATA_PROTECTION_ARN"
+        uodateConfigMap tanzu-demo-hub TDH_TANZU_DATA_PROTECTION_BACKUP_LOCATION   "$TDH_TANZU_DATA_PROTECTION_BACKUP_LOCATION"
+        uodateConfigMap tanzu-demo-hub TDH_SERVICE_TANZU_DATA_PROTECTION           "true"
+      else
+        messagePrint " - Verify DataProtection for Cluster ($TDH_CLUSTER_NAME)"    "enabled"
+        messagePrint " - Backuo Lockation"                                         "$TDH_TANZU_DATA_PROTECTION_BACKUP_LOCATION" 
+        messagePrint " - AWS CloudFormation ARN"                                   "$TDH_TANZU_DATA_PROTECTION_ARN" 
+      fi
 
-      uodateConfigMap tanzu-demo-hub TDH_SERVICE_TANZU_OBSERVABILITY        "true"
-    else
-      uodateConfigMap tanzu-demo-hub TDH_SERVICE_TANZU_OBSERVABILITY        "false"
+      # --- CONFIGURE FULL BACKUP ---
+      cnt=$(tmc cluster dataprotection backup list --cluster-name $TDH_CLUSTER_NAME -p $TMC_PROVISONER_NAME -m $TMC_MANAGEMENT_CLUSTER  --name "full-backup" | egrep -c " full-backup ")
+      if [ $cnt -eq 0 ]; then 
+        messagePrint " - Configure Full Backup (full-backup) configuration"            "enabled"
+        tmc cluster dataprotection backup create -c $TDH_CLUSTER_NAME -p $TMC_PROVISONER_NAME -m $TMC_MANAGEMENT_CLUSTER \
+          --name "full-backup" --backup-location-name $TDH_TANZU_DATA_PROTECTION_BACKUP_LOCATION > /dev/null 2>&1
+        if [ $? -ne 0 ]; then
+          echo "ERROR: failed to configure a full-backup"
+          echo "       => tmc cluster dataprotection backup create -c $TDH_CLUSTER_NAME -p $TMC_PROVISONER_NAME \\"
+          echo "            -m $TMC_MANAGEMENT_CLUSTER --name \"full-backup\" --backup-location-name $TDH_TANZU_DATA_PROTECTION_BACKUP_LOCATION"
+          exit
+        fi
+      else
+        messagePrint " - Verify Full Backup (full-backup) configuration"            "enabled"
+      fi
+
+      uodateConfigMap tanzu-demo-hub TDH_SERVICE_TANZU_DATA_PROTECTION             "false"
     fi
   fi
 
+  if [ "${TMC_INTEGRATION}" == "TCI" ]; then
+    messageTitle "Cluster Inspections"
 
-echo "checkTMCintegration: gaga10"
+    scanCluster   LITE
+    scanCluster   CIS
+    scanCluster   CONFORMANCE
+  fi
+}
+
+scanCluster() {
+  TYPE=$1
+
+  [ "$TYPE" == "LITE" ] && NAME=lite
+  [ "$TYPE" == "CIS" ]  && NAME=cis
+  [ "$TYPE" == "CONFORMANCE" ] && NAME=conformance
+
+  # --- VERIFY ACRIVE SCANNS ---
+  cnt=$(tmc cluster inspection scan list --cluster-name $TDH_CLUSTER_NAME -p $TMC_PROVISONER_NAME -m $TMC_MANAGEMENT_CLUSTER -o json | \
+     jq -r '.scans[].status.phase' | grep -v "COMPLETE" | wc -l | sed 's/  *//g')
+  while [ $cnt -ne 0 ]; do
+    cnt=$(tmc cluster inspection scan list --cluster-name $TDH_CLUSTER_NAME -p $TMC_PROVISONER_NAME -m $TMC_MANAGEMENT_CLUSTER -o json | \
+      jq -r '.scans[].status.phase' | grep -v "COMPLETE" | wc -l | sed 's/  *//g')
+    sleep 10
+  done
+
+  stt=$(tmc cluster inspection scan list --cluster-name $TDH_CLUSTER_NAME -p $TMC_PROVISONER_NAME -m $TMC_MANAGEMENT_CLUSTER -o json | \
+    jq -r --arg key $NAME '.scans[].status.report.info | select(.scanType == $key).result' | tail -1)
+  if [ "$stt" == "" ]; then 
+    messagePrint " - Scan Cluster ($TDH_CLUSTER_NAME) with $TYPE"       "scanning"
+    tmc cluster inspection scan create -c $TDH_CLUSTER_NAME -p $TMC_PROVISONER_NAME -m $TMC_MANAGEMENT_CLUSTER --inspection-type $TYPE > /dev/null 2>&1
+    if [ $? -ne 0 ]; then 
+      echo "ERROR: failed to scan cluster $TDH_CLUSTER_NAME"
+      echo "       => tmc cluster inspection scan create -c $TDH_CLUSTER_NAME -p $TMC_PROVISONER_NAME \\"
+      echo "             -m $TMC_MANAGEMENT_CLUSTER --inspection-type $TYPE"
+      exit
+    fi
+  else
+    dat=$(tmc cluster inspection scan list --cluster-name $TDH_CLUSTER_NAME -p $TMC_PROVISONER_NAME -m $TMC_MANAGEMENT_CLUSTER -o json | \
+      jq -r --arg key $NAME '.scans[].status.report.info | select(.scanType == $key).runDatetime' | sort -n | tail -1)
+    messagePrint " - Cluster Scan ($TDH_CLUSTER_NAME) with $TYPE completed"       "$dat"
+  fi
 }
 
 checkTMCAccess() {
@@ -1559,9 +1632,7 @@ createCluster() {
 
     MPDE=azure
 
-echo "hhhh TDH_TKGMC_NAME:$TDH_TKGMC_NAME"
     cnt=$(tanzu management-cluster get 2>/dev/null | egrep -c " $TDH_TKGMC_NAME ")
-echo "CNT:$cnt"
     if [ ${cnt} -eq 0 ]; then
       # --- CLEANUP OLD CONFIG ---
       export KUBECONFIG=~/.kube-tkg/config
@@ -1628,6 +1699,7 @@ echo "CNT:$cnt"
     echo ""                                                                                         >> /tmp/motd
     echo "3.) Create Workload Cluster"                                                              >> /tmp/motd
     echo "    => tanzu cluster create"                                                              >> /tmp/motd
+    echo ""                                                                                         >> /tmp/motd
 
     cnt=$(egrep -c "export KUBECONFIG" ~/.bashrc) 
     [ $cnt -eq 0 ] && sed -i '/export KUBECONFIG=.*$/d' ~/.bashrc
