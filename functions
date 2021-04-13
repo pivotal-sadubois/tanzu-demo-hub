@@ -3129,31 +3129,32 @@ installTanzuDataPostgres() {
         exit
       fi
     fi
-
-    ver=$(helm ls -o json | jq -r --arg chart "postgres-operator" '.[] | select(.name == $chart).app_version')
-    crt=$(helm ls -o json | jq -r --arg chart "postgres-operator" '.[] | select(.name == $chart).chart')
-    stt=$(helm ls -o json | jq -r --arg chart "postgres-operator" '.[] | select(.name == $chart).status')
-    dat=$(helm ls -o json | jq -r --arg chart "postgres-operator" '.[] | select(.name == $chart).updated')
-    
-    messageTitle "Verify Postgres Operator"  
-    messagePrint " - Helm Chart"                     "$crt"
-    messagePrint " - Helm Chart Name"                "postgres-operator"
-    messagePrint " - Helm Chart Version"             "$ver"
-    messagePrint " - Helm Chart Status"              "$stt"
-    messagePrint " - Helm Chart Installed/Updated"   "$dat"
-
-    ver=$(helm ls -o json | jq -r --arg chart "tdh-pgadmin" '.[] | select(.name == $chart).app_version')
-    crt=$(helm ls -o json | jq -r --arg chart "tdh-pgadmin" '.[] | select(.name == $chart).chart')
-    stt=$(helm ls -o json | jq -r --arg chart "tdh-pgadmin" '.[] | select(.name == $chart).status')
-    dat=$(helm ls -o json | jq -r --arg chart "tdh-pgadmin" '.[] | select(.name == $chart).updated')
-
-    messageTitle "Verify pgAdmin" 
-    messagePrint " - Helm Chart"                     "$crt"
-    messagePrint " - Helm Chart Name"                "tdh-pgadmin"
-    messagePrint " - Helm Chart Version"             "$ver"
-    messagePrint " - Helm Chart Status"              "$stt"
-    messagePrint " - Helm Chart Installed/Updated"   "$dat"
   fi
+
+  ver=$(helm ls -o json | jq -r --arg chart "postgres-operator" '.[] | select(.name == $chart).app_version')
+  crt=$(helm ls -o json | jq -r --arg chart "postgres-operator" '.[] | select(.name == $chart).chart')
+  stt=$(helm ls -o json | jq -r --arg chart "postgres-operator" '.[] | select(.name == $chart).status')
+  dat=$(helm ls -o json | jq -r --arg chart "postgres-operator" '.[] | select(.name == $chart).updated')
+    
+  messageTitle "Verify Postgres Operator"  
+  messagePrint " - Helm Chart"                     "$crt"
+  messagePrint " - Helm Chart Name"                "postgres-operator"
+  messagePrint " - Helm Chart Version"             "$ver"
+  messagePrint " - Helm Chart Status"              "$stt"
+  messagePrint " - Helm Chart Installed/Updated"   "$dat"
+
+  ver=$(helm ls -o json | jq -r --arg chart "tdh-pgadmin" '.[] | select(.name == $chart).app_version')
+  crt=$(helm ls -o json | jq -r --arg chart "tdh-pgadmin" '.[] | select(.name == $chart).chart')
+  stt=$(helm ls -o json | jq -r --arg chart "tdh-pgadmin" '.[] | select(.name == $chart).status')
+  dat=$(helm ls -o json | jq -r --arg chart "tdh-pgadmin" '.[] | select(.name == $chart).updated')
+
+  messageTitle "Verify pgAdmin" 
+  messagePrint " - Helm Chart"                     "$crt"
+  messagePrint " - Helm Chart Name"                "tdh-pgadmin"
+  messagePrint " - Helm Chart Version"             "$ver"
+  messagePrint " - Helm Chart Status"              "$stt"
+  messagePrint " - Helm Chart Installed/Updated"   "$dat"
+  
 
   uodateConfigMap tanzu-demo-hub TDH_SERVICE_TANZU_DATA_POSTGRES          "true"
   uodateConfigMap tanzu-demo-hub TDH_SERVICE_TANZU_DATA_POSTGRES_VERSION  $TDH_SERVICE_TANZU_DATA_POSTGRES_VERSION
