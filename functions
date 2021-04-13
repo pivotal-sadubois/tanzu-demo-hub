@@ -1569,7 +1569,8 @@ EOF
 createCluster() {
   unset TKG_CONFIG
   TDH_TKGMC_NAME=${TDH_TKGMC_NAME}-${TDH_USER}
-  TKG_TEMPLATE=${HOME}/.tanzu-demo-hub/${TDH_TKGMC_CONFIG}; rm -f $TKG_TEMPLATE
+  [ ! -d ${HOME}/.tanzu-demo-hub/config ] && mkdir -p ${HOME}/.tanzu-demo-hub/config
+  TKG_TEMPLATE=${HOME}/.tanzu-demo-hub/config/${TDH_TKGMC_CONFIG}.cfg; rm -f $TKG_TEMPLATE
   TKG_KUBECONFIG=${HOME}/.tanzu-demo-hub/${TDH_TKGMC_NAME}.kubeconfig; rm -f $TKG_KUBECONFIG
   if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "Azure" ]; then
     MDOE=azure
@@ -1646,9 +1647,7 @@ createCluster() {
 
       messagePrint " - Management Cluster Creating"        "This may take up to 15min ..."
 
-      echo "----------------------------------------------------------------------------------------------------------------"
-      time tanzu management-cluster create --file $TKG_TEMPLATE -v 0 --log-file=/tmp/$TDH_TKGMC_NAME.log > /dev/null 2>&1; ret=$?
-      echo "----------------------------------------------------------------------------------------------------------------"
+      tanzu management-cluster create --file $TKG_TEMPLATE -v 0 --log-file=/tmp/$TDH_TKGMC_NAME.log > /dev/null 2>&1; ret=$?
       if [ ${ret} -ne 0 ]; then
         echo "ERROR: failed to create TKG Management Cluster"
         echo "       => tanzu management-cluster create --file $TKG_TEMPLATE -v 0 --log-file=/tmp/$TDH_TKGMC_NAME.log"
