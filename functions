@@ -3065,6 +3065,7 @@ installTanzuDataPostgres() {
   TBS_FILE="/tmp/postgres-for-kubernetes-v$TDH_SERVICE_TANZU_DATA_POSTGRES_VERSION.tar.gz"
   TBS_TAR_FILE="/tmp/postgres-for-kubernetes-v$TDH_SERVICE_TANZU_DATA_POSTGRES_VERSION.tar"
   [ -d /tmp/postgres-for-kubernetes ] && rm -rf /tmp/postgres-for-kubernetes
+  [ -f $TBS_TAR_FILE ] && rm -f $TBS_TAR_FILE
   mkdir -p /tmp/postgres-for-kubernetes
   gunzip $TBS_FILE
   tar xfz $TBS_TAR_FILE -C /tmp/postgres-for-kubernetes
