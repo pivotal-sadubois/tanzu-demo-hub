@@ -3292,7 +3292,7 @@ installBuildService() {
     messagePrint "- Import Dependency Descriptors"
     kp import -f /tmp/descriptor-$TDH_SERVICE_BUILD_SERVICE_DEPENDANCIES.yaml > /dev/null 2>&1
   else
-    messagePrint "- Verify Dependency Descriptors"
+    messageTitle "- Verify Dependency Descriptors"
     echo "-----------------------------------------------------------------------------------------------------------"
     kp clusterbuilder list | sed '$d'
     echo "-----------------------------------------------------------------------------------------------------------"
