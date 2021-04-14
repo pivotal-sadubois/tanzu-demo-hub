@@ -1573,7 +1573,8 @@ createCluster() {
   TDH_TKGMC_NAME=${TDH_TKGMC_NAME}-${TDH_USER}
   [ ! -d ${HOME}/.tanzu-demo-hub/config ] && mkdir -p ${HOME}/.tanzu-demo-hub/config
   TKG_TEMPLATE=${HOME}/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.cfg; rm -f $TKG_TEMPLATE
-  TKG_KUBECONFIG=${HOME}/.tanzu-demo-hub/${TDH_TKGMC_NAME}.kubeconfig; rm -f $TKG_KUBECONFIG
+  TKG_KUBECONFIG=${HOME}/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.kubeconfig; rm -f $TKG_KUBECONFIG
+
   if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "Azure" ]; then
     MDOE=azure
     messageTitle "Creating TKG Managment Cluster"
@@ -1666,6 +1667,7 @@ createCluster() {
       kubectl config use-context ${TDH_TKGMC_NAME}-admin@$TDH_TKGMC_NAME > /dev/null 2>&1
       context=$(kubectl config view -o json | jq -r '.contexts[].name' 2>/dev/null)
       tanzu management-cluster kubeconfig get --admin --export-file=${TKG_KUBECONFIG} > /dev/null 2>&1
+echo "tanzu management-cluster kubeconfig get --admin --export-file=${TKG_KUBECONFIG}"
     fi
 
     kubectl config set-cluster $TDH_TKGMC_NAME > /dev/null 2>&1
@@ -1675,7 +1677,8 @@ createCluster() {
     messageTitle "Verify TKG Managment Cluster"
     messagePrint " - Cluster Name"        "$TDH_TKGMC_NAME"
     messagePrint " - Cluster Context"     "$context"
-    messagePrint " - Cluster Kubeconfig"  "~/.tanzu-demo-hub/config/kubeconfig_$TDH_TKGMC_NAME.yaml"
+    messagePrint " - Cluster Config"      "~/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.cfg"
+    messagePrint " - Cluster Kubeconfig"  "~/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.kubeconfig"
 
     echo ""                                                                                         >  /tmp/motd
     echo '     _____                       ____                         _   _       _'              >> /tmp/motd
