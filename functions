@@ -4625,7 +4625,7 @@ cleanKubeconfig() {
   done
 
   # --- CLEANUP CONTEXTS WITHOUT CLUSTERS ---
-  for ctx in $(kubectl config view -o json | jq -r '.contexts[].name'); do
+  for ctx in $(kubectl config view -o json | jq -r '.contexts[].name' 2>/dev/null); do
     cls=$(kubectl config view -o json | jq -r --arg key $ctx '.contexts[] | select(.name == $key).context.cluster')
     usr=$(kubectl config view -o json | jq -r --arg key $ctx '.contexts[] | select(.name == $key).context.user')
 
@@ -4638,5 +4638,24 @@ cleanKubeconfig() {
 
   done
 }
+
+
+cleanManagementCluster() {
+  messageTitle "Cleaning up Management Cluster config"
+
+  for n in $(tanzu config server list | grep " tkg-mc" | awk '{ print §1 }'); do
+    cnt=$(kubectl config get-clusters | grep -c " $n ")
+    if [ $cnt -eq 0 ]; then 
+      tanzu config server delete $n -y
+    fi
+  done
+}
+
+
+
+
+
+
+
 
 
