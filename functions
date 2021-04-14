@@ -1667,7 +1667,6 @@ createCluster() {
       kubectl config use-context ${TDH_TKGMC_NAME}-admin@$TDH_TKGMC_NAME > /dev/null 2>&1
       context=$(kubectl config view -o json | jq -r '.contexts[].name' 2>/dev/null)
       tanzu management-cluster kubeconfig get --admin --export-file=${TKG_KUBECONFIG} > /dev/null 2>&1
-echo "tanzu management-cluster kubeconfig get --admin --export-file=${TKG_KUBECONFIG}"
     fi
 
     kubectl config set-cluster $TDH_TKGMC_NAME > /dev/null 2>&1
@@ -4643,9 +4642,10 @@ cleanKubeconfig() {
 cleanManagementCluster() {
   messageTitle "Cleaning up Management Cluster config"
 
-  for n in $(tanzu config server list | grep " tkg-mc" | awk '{ print §1 }'); do
-    cnt=$(kubectl config get-clusters | grep -c " $n ")
+  for n in $(tanzu config server list | grep " tkg-mc" | awk '{ print $1 }'); do
+    cnt=$(kubectl config get-clusters | grep -c "$n")
     if [ $cnt -eq 0 ]; then 
+      messagePrint " - Cleaning up config of Cluster" "$n"
       tanzu config server delete $n -y
     fi
   done
