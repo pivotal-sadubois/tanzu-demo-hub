@@ -27,24 +27,15 @@ listTemplates() {
 }
 
 listDeployments() {
-  printf "%-30s %-5s %-15s %-20s %-5s %s\n" "CONFIURATION" "CLOUD" "REGION" "MGMT-CLUSTER" "PLAN" "CONFIGURATION"
+  printf "%-30s %-7s %-15s %-20s %-5s %s\n" "CONFIURATION" "CLOUD" "DOMAIN" "MGMT-CLUSTER" "PLAN" "CONFIGURATION"
   echo "-----------------------------------------------------------------------------------------------------------"
 
   for deployment in $(ls -1 ${TDHPATH}/deployments/tkgmc*.cfg); do
-    PCF_TILE_PKS_VERSION=""
-    PCF_TILE_PAS_VERSION=""
-
     . $deployment
 
     dep=$(basename $deployment)
 
-    if [ "$PCF_TILE_PKS_VERSION" != "" ]; then
-      TILE="PKS $PCF_TILE_PKS_VERSION"
-    else
-      TILE="PAS $PCF_TILE_PAS_VERSION"
-    fi
-
-    printf "%-30s %-5s %-15s %-20s %-5s %s\n" $dep $TDH_TKGMC_INFRASTRUCTURE $TDH_TKGMC_REGION $TDH_TKGMC_NAME \
+    printf "%-30s %-7s %-15s %-20s %-5s %s\n" $dep $TDH_TKGMC_INFRASTRUCTURE ${TDH_TKGMC_ENVNAME} $TDH_TKGMC_NAME \
            $TDH_TKGMC_PLAN "$TDH_TKGMC_CONFIG"
   done
 
@@ -904,6 +895,9 @@ checkCLIcommands TKG
 checkCLIcommands TANZU
 checkCLIcommands TMC
 
+# --- CLEANUP KUNECONFIG ---
+cleanKubeconfig
+
 checkTDHAccess
 checkCloudAccess
 #checkTMCAccess
@@ -995,15 +989,19 @@ else
   [ ! -d ~/.tanzu-demo-hub/config ] && mkdir -p ~/.tanzu-demo-hub/config
   $SSH_COMMAND -n "[ -f $SSH_HOME/tanzu-demo-hub/scripts/InstallTKGmc.sh ] && tanzu-demo-hub/scripts/InstallTKGmc.sh $DEPLOY_TKG_TEMPLATE"
 
+echo "$SCP_COMMAND ${SSH_USER}@${SSH_HOST}:${SSH_HOME}/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.cfg ~/.tanzu-demo-hub/config"
+#    $SCP_COMMAND ${SSH_USER}@${SSH_HOST}:$SSH_HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.cfg ~/.tanzu-demo-hub/config > /dev/null 2>&1
+#    $SCP_COMMAND ${SSH_USER}@${SSH_HOST}:$SSH_HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.kubeconfig ~/.tanzu-demo-hub/config > /dev/null 2>&1
   cnt=$(tanzu management-cluster get 2>/dev/null | grep -c " $TDH_TKGMC_NAME ")
   if [ $cnt -eq 0 ]; then
-    $SCP_COMMAND ${SSH_USER}@${SSH_HOST}:/tmp/kubeconfig_$TDH_TKGMC_NAME.yaml ~/.tanzu-demo-hub/config > /dev/null 2>&1
+    $SCP_COMMAND ${SSH_USER}@${SSH_HOST}:$SSH_HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.kubeconfig ~/.tanzu-demo-hub/config > /dev/null 2>&1
+    $SCP_COMMAND ${SSH_USER}@${SSH_HOST}:$SSH_HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.cfg ~/.tanzu-demo-hub/config > /dev/null 2>&1
 
-    tanzu login --kubeconfig ~/.tanzu-demo-hub/config/kubeconfig_$TDH_TKGMC_NAME.yaml  --name $TDH_TKGMC_NAME --server $TDH_TKGMC_NAME \
+    tanzu login --kubeconfig ~/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.kubeconfig  --name $TDH_TKGMC_NAME --server $TDH_TKGMC_NAME \
        --context ${TDH_TKGMC_NAME}-admin@$TDH_TKGMC_NAME > /dev/null 2>&1
     if [ $? -ne 0 ]; then
-      echo "ERROR: failed to login to TKG Management Cluster: $TDH_TKGMC_NAME.yaml"
-      echo "       => tanzu login --kubeconfig ~/.tanzu-demo-hub/config/kubeconfig_$TDH_TKGMC_NAME.yaml  \\"
+      echo "ERROR: failed to login to TKG Management Cluster: ${TDH_TKGMC_NAME}.kubeconfig"
+      echo "       => tanzu login --kubeconfig ~/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.kubeconfig  \\"
       echo "            -name $TDH_TKGMC_NAME --server $TDH_TKGMC_NAME \\"
       echo "            -name $TDH_TKGMC_NAME --server $TDH_TKGMC_NAME"
       exit
@@ -1026,30 +1024,29 @@ else
     fi
   fi
 
-  messageTitle "Generating TDH Deployment File (tkgmc-${TDH_TKGMC_NAME}.cfg)"
-  messagePrint " - Deployment File"        "$DEPLOYMENT_FILE"
+  messageTitle "Create the TKG Management Cluster deployment File"
+  messagePrint " - Deployment File"        "deployments/tkgmc-${TDH_TKGMC_NAME}.cfg"
   messagePrint " - Management Cluster"     "$TDH_TKGMC_NAME"
-  messagePrint " - Infrastructurew"        "$TDH_TKGMC_INFRASTRUCTURE"
-  messagePrint " - Location/Region"        "$TDH_TKGMC_REGION"
+  messagePrint " - Cloud Infrastructure"   "$TDH_DEPLOYMENT_ENV_NAME"
 
   DEPLOYMENT_FILE=${TDHPATH}/deployments/tkgmc-${TDH_TKGMC_NAME}.cfg
 
   echo "TDH_TKGMC_INFRASTRUCTURE=Azure"                                 >  $DEPLOYMENT_FILE
-  echo "TDH_TKGMC_REGION=westeurope"                                    >> $DEPLOYMENT_FILE
   echo "TDH_TKGMC_NAME=$TDH_TKGMC_NAME"                                 >> $DEPLOYMENT_FILE
-  echo "TDH_TKGMC_CONFIG=tkgmc-dev-azure-westeurope.yaml"               >> $DEPLOYMENT_FILE
+  echo "TDH_TKGMC_CONFIG=${TDH_TKGMC_NAME}.cfg"                         >> $DEPLOYMENT_FILE
+  echo "TDH_TKGMC_KUBECONFIG=${TDH_TKGMC_NAME}.kubeconfig"              >> $DEPLOYMENT_FILE
   echo "TDH_TKGMC_PLAN=dev"                                             >> $DEPLOYMENT_FILE
-  echo "TDH_TKGMC_CEIP_PARTICIPATION=true"                              >> $DEPLOYMENT_FILE
-  echo "TDH_TKGMC_CNI=antrea"                                           >> $DEPLOYMENT_FILE
-  echo "TDH_TKGMC_LOGLEVEL=1"                                           >> $DEPLOYMENT_FILE
-  echo "TDH_TKGMC_SERVICE_CIDR=100.64.0.0/13"                           >> $DEPLOYMENT_FILE
-  echo "TDH_TKGMC_CLUSTER_CIDR=100.96.0.0/11"                           >> $DEPLOYMENT_FILE
-  echo "TDH_TKGMC_MACHINE_HEALTH_CHECK_ENABLED=true"                    >> $DEPLOYMENT_FILE
-  echo "TDH_TKGMC_MACHINE_TYPE=Standard_D2s_v3"                         >> $DEPLOYMENT_FILE
-  echo "TDH_TKGMC_CONTROL_PLANE_MACHINE_TYPE=Standard_D2s_v3"           >> $DEPLOYMENT_FILE
+  #echo "TDH_TKGMC_CEIP_PARTICIPATION=true"                              >> $DEPLOYMENT_FILE
+  #echo "TDH_TKGMC_CNI=antrea"                                           >> $DEPLOYMENT_FILE
+  #echo "TDH_TKGMC_LOGLEVEL=1"                                           >> $DEPLOYMENT_FILE
+  #echo "TDH_TKGMC_SERVICE_CIDR=100.64.0.0/13"                           >> $DEPLOYMENT_FILE
+  #echo "TDH_TKGMC_CLUSTER_CIDR=100.96.0.0/11"                           >> $DEPLOYMENT_FILE
+  #echo "TDH_TKGMC_MACHINE_HEALTH_CHECK_ENABLED=true"                    >> $DEPLOYMENT_FILE
+  #echo "TDH_TKGMC_MACHINE_TYPE=Standard_D2s_v3"                         >> $DEPLOYMENT_FILE
+  #echo "TDH_TKGMC_CONTROL_PLANE_MACHINE_TYPE=Standard_D2s_v3"           >> $DEPLOYMENT_FILE
 
   echo "-----------------------------------------------------------------------------------------------------------"
-  $SSH_COMMAND -n "tanzu management-cluster get"
+  $SSH_COMMAND -n "tanzu management-cluster get 2>/dev/null | sed -n '/^  NAME /,/^NAME/p' | egrep -v \"^NAME\" "
   echo "-----------------------------------------------------------------------------------------------------------"
   echo "1.) Login to Jump Server: $JUMP_HOST"
   echo "    => $SSH_COMMAND"
@@ -1058,7 +1055,8 @@ else
   printf "    => %-50s %s\n" "kubectl config set-cluster $TDH_TKGMC_NAME" "# Set k8s Context to mc Cluster"
   printf "    => %-50s %s\n" "kubectl config set-context ${TDH_TKGMC_NAME}-admin@${TDH_TKGMC_NAME}" "# Set k8s Context to mc Cluster"
   printf "    => %-50s %s\n" "kubectl get cluster --all-namespaces" "# Set k8s Context to the TKG Management Cluster"
-  printf "    => %-50s %s\n" "kubectl get kubeadmcontrolplane --all-namespaces" "# To verify the first control plane is up"
+  printf "    => %-50s %s\n" "kubectl get kubeadmcontrolplane,machine,machinedeployment --all-namespaces" "# To verify the first control plane is up"
+  printf "    => %-50s %s\n" "tanzu management-cluster get" "# Show Tanzu Management Cluster"
   echo "3.) Ceeate TKG Workload Cluster"
   echo "    => deployTKG"
   echo "4.) Delete the Management Cluster"

@@ -1572,7 +1572,7 @@ createCluster() {
   unset TKG_CONFIG
   TDH_TKGMC_NAME=${TDH_TKGMC_NAME}-${TDH_USER}
   [ ! -d ${HOME}/.tanzu-demo-hub/config ] && mkdir -p ${HOME}/.tanzu-demo-hub/config
-  TKG_TEMPLATE=${HOME}/.tanzu-demo-hub/config/${TDH_TKGMC_CONFIG}.cfg; rm -f $TKG_TEMPLATE
+  TKG_TEMPLATE=${HOME}/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.cfg; rm -f $TKG_TEMPLATE
   TKG_KUBECONFIG=${HOME}/.tanzu-demo-hub/${TDH_TKGMC_NAME}.kubeconfig; rm -f $TKG_KUBECONFIG
   if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "Azure" ]; then
     MDOE=azure
@@ -1665,8 +1665,7 @@ createCluster() {
       kubectl config set-cluster $TDH_TKGMC_NAME > /dev/null 2>&1
       kubectl config use-context ${TDH_TKGMC_NAME}-admin@$TDH_TKGMC_NAME > /dev/null 2>&1
       context=$(kubectl config view -o json | jq -r '.contexts[].name' 2>/dev/null)
-      tanzu management-cluster kubeconfig get --admin --export-file=/tmp/kubeconfig_$TDH_TKGMC_NAME.yaml > /dev/null 2>&1
-      cp /tmp/kubeconfig_$TDH_TKGMC_NAME.yaml ~/.tanzu-demo-hub/config
+      tanzu management-cluster kubeconfig get --admin --export-file=${TKG_KUBECONFIG} > /dev/null 2>&1
     fi
 
     kubectl config set-cluster $TDH_TKGMC_NAME > /dev/null 2>&1
@@ -3145,18 +3144,17 @@ installTanzuDataPostgres() {
   messagePrint " - Helm Chart Status"              "$stt"
   messagePrint " - Helm Chart Installed/Updated"   "$dat"
 
-  ver=$(helm ls -o json | jq -r --arg chart "tdh-pgadmin" '.[] | select(.name == $chart).app_version')
-  crt=$(helm ls -o json | jq -r --arg chart "tdh-pgadmin" '.[] | select(.name == $chart).chart')
-  stt=$(helm ls -o json | jq -r --arg chart "tdh-pgadmin" '.[] | select(.name == $chart).status')
-  dat=$(helm ls -o json | jq -r --arg chart "tdh-pgadmin" '.[] | select(.name == $chart).updated')
+  #ver=$(helm ls -o json | jq -r --arg chart "tdh-pgadmin" '.[] | select(.name == $chart).app_version')
+  #crt=$(helm ls -o json | jq -r --arg chart "tdh-pgadmin" '.[] | select(.name == $chart).chart')
+  #stt=$(helm ls -o json | jq -r --arg chart "tdh-pgadmin" '.[] | select(.name == $chart).status')
+  #dat=$(helm ls -o json | jq -r --arg chart "tdh-pgadmin" '.[] | select(.name == $chart).updated')
 
-  messageTitle "Verify pgAdmin" 
-  messagePrint " - Helm Chart"                     "$crt"
-  messagePrint " - Helm Chart Name"                "tdh-pgadmin"
-  messagePrint " - Helm Chart Version"             "$ver"
-  messagePrint " - Helm Chart Status"              "$stt"
-  messagePrint " - Helm Chart Installed/Updated"   "$dat"
-  
+  #messageTitle "Verify pgAdmin" 
+  #messagePrint " - Helm Chart"                     "$crt"
+  #messagePrint " - Helm Chart Name"                "tdh-pgadmin"
+  #messagePrint " - Helm Chart Version"             "$ver"
+  #messagePrint " - Helm Chart Status"              "$stt"
+  #messagePrint " - Helm Chart Installed/Updated"   "$dat"
 
   uodateConfigMap tanzu-demo-hub TDH_SERVICE_TANZU_DATA_POSTGRES          "true"
   uodateConfigMap tanzu-demo-hub TDH_SERVICE_TANZU_DATA_POSTGRES_VERSION  $TDH_SERVICE_TANZU_DATA_POSTGRES_VERSION
@@ -4596,4 +4594,46 @@ cleanAWSenv() {
   done
   rm -f $SECGRP
 }
+
+cleanKubeconfig() {
+  messageTitle "Cleaning Up kubectl config"
+
+  for cluster in $(kubectl config get-clusters | sed '1d' | egrep "^tdh|^tkg-mc"); do
+    ctx=$(kubectl config view -o json | jq -r --arg key $cluster '.contexts[] | select(.context.cluster == $key).name')
+    usr=$(kubectl config view -o json | jq -r --arg key $cluster '.contexts[] | select(.context.cluster == $key).context.user')
+    cnt=$(echo $cluster | grep -c minikube)
+    if [ $cnt -gt 0 ]; then 
+      if [ ! -d ~/.minikube/profiles/${cluster} ]; then
+        messagePrint " - Cleaning up k8s cluster ($cluster)" "Context: $ctx, User: $usr"
+        kubectl config unset clusters.${cluster} > /dev/null 2>&1
+        kubectl config unset contexts.${cluster} > /dev/null 2>&1
+        kubectl config unset users.${cluster} > /dev/null 2>&1
+      fi
+    else
+      kubectl config use-context $ctx > /dev/null
+      kubectl get ns > /dev/null 2>&1
+      if [ $? -gt 0 ]; then
+        messagePrint " - Cleaning up k8s cluster ($cluster)" "Context: $ctx, User: $usr"
+        kubectl config unset clusters.${cluster} > /dev/null 2>&1
+        kubectl config unset contexts.${cluster} > /dev/null 2>&1
+        kubectl config unset users.${cluster} > /dev/null 2>&1
+      fi
+    fi
+  done
+
+  # --- CLEANUP CONTEXTS WITHOUT CLUSTERS ---
+  for ctx in $(kubectl config view -o json | jq -r '.contexts[].name'); do
+    cls=$(kubectl config view -o json | jq -r --arg key $ctx '.contexts[] | select(.name == $key).context.cluster')
+    usr=$(kubectl config view -o json | jq -r --arg key $ctx '.contexts[] | select(.name == $key).context.user')
+
+    ret=$(kubectl config view -o json | jq -r --arg key $cls '.clusters[] | select(.name == $key).name')
+    if [ "$ret" == "" ]; then 
+      messagePrint " - Cleaning up unused k8s Context" "$ctx, User: $usr"
+      kubectl config unset contexts.${ctx} > /dev/null 2>&1
+      kubectl config unset users.${usr} > /dev/null 2>&1
+    fi
+
+  done
+}
+
 
