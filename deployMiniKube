@@ -571,9 +571,13 @@ if [ "$K8S_CLEAN_DEPLOYMENT" == "true" ]; then
   exit
 fi
 
+# --- VERIFY TOOLS AND ACCESS ---
 checkCLIcommands TOOLS
 checkCLIcommands TKG
 checkCloudAccess
+
+# --- CLEANUP KUNECONFIG ---
+cleanKubeconfig
 
 # --- MINIKUBE SETUP ----
 VerifyK8SDemoPlatform
@@ -596,6 +600,14 @@ installTanzuDataPostgres
 installSpringCloudGateway
 installMinio
 
+if [ "$TDH_TANZU_MISSION_CONTROL_REGISTRATION" == "true" ]; then 
+  tmc cluster reattach --name $TDH_MINIKUBE_PROFILE --kubeconfig /Users/sdu/.kube/config -p attached -m attached > /dev/null 2>&1
+  if [ $? -ne 0 ]; then 
+    echo "ERROR: TMC failed to attach cluster"
+    echo "       => tmc cluster reattach --name $TDH_MINIKUBE_PROFILE --kubeconfig /Users/sdu/.kube/config -p attached -m attached "
+    exit
+  fi 
+fi
 
 echo "-----------------------------------------------------------------------------------------------------------"
 echo "Tanzu Kubernetes Grid Cluster ($TDH_MINIKUBE_PROFILE) build completed"
