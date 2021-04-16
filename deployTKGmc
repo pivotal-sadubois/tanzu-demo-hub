@@ -788,6 +788,15 @@ echo "$SSH_COMMAND -n id > /dev/null"
             --priority 1000 \
             --destination-port-range 22 \
             --access allow > /dev/null 2>&1
+
+        az network nsg rule create \
+            --resource-group Admin \
+            --nsg-name AdminSG \
+            --name AdminSG-RuleSSH \
+            --protocol tcp \
+            --priority 1001 \
+            --destination-port-range 636 \
+            --access allow > /dev/null 2>&1
         if [ $? -ne 0 ]; then
           echo "ERROR: Creating Security Group Rule AdminSG-RuleSSH"
           exit 1
@@ -866,16 +875,6 @@ echo "$SSH_COMMAND -n id > /dev/null"
   fi
 }
 
-# --- VERYFY TMC ACCESS (Minikube) ---
-#checkCLIcommands TOOLS
-#checkCLIcommands TKG
-#tmcCheckLogin
-#checkTDHAccess
-#checkTMCAccess
-#checkTMCcontext
-#tmcCreateCluster
-#getTDHClusterCredentials
-
 # checkCloudAccess
 # => Minikube => ALL
 #    TDH_USER
@@ -909,7 +908,10 @@ tmcCheckLogin
 createJumpHost
 sshEnvironment
 configureJumpHost
-#configureLetsEnscript
+configureLetsEnscript
+
+echo $SSH_COMMAND
+exit
 
 export TDH_TKGMC_NAME=${TDH_TKGMC_NAME}-${TDH_USER}
 
@@ -989,9 +991,7 @@ else
   [ ! -d ~/.tanzu-demo-hub/config ] && mkdir -p ~/.tanzu-demo-hub/config
   $SSH_COMMAND -n "[ -f $SSH_HOME/tanzu-demo-hub/scripts/InstallTKGmc.sh ] && tanzu-demo-hub/scripts/InstallTKGmc.sh $DEPLOY_TKG_TEMPLATE"
 
-echo "$SCP_COMMAND ${SSH_USER}@${SSH_HOST}:${SSH_HOME}/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.cfg ~/.tanzu-demo-hub/config"
-#    $SCP_COMMAND ${SSH_USER}@${SSH_HOST}:$SSH_HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.cfg ~/.tanzu-demo-hub/config > /dev/null 2>&1
-#    $SCP_COMMAND ${SSH_USER}@${SSH_HOST}:$SSH_HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.kubeconfig ~/.tanzu-demo-hub/config > /dev/null 2>&1
+  cleanManagementCluster
   cnt=$(tanzu management-cluster get 2>/dev/null | grep -c " $TDH_TKGMC_NAME ")
   if [ $cnt -eq 0 ]; then
     $SCP_COMMAND ${SSH_USER}@${SSH_HOST}:$SSH_HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.kubeconfig ~/.tanzu-demo-hub/config > /dev/null 2>&1
@@ -1002,8 +1002,8 @@ echo "$SCP_COMMAND ${SSH_USER}@${SSH_HOST}:${SSH_HOME}/.tanzu-demo-hub/config/${
     if [ $? -ne 0 ]; then
       echo "ERROR: failed to login to TKG Management Cluster: ${TDH_TKGMC_NAME}.kubeconfig"
       echo "       => tanzu login --kubeconfig ~/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.kubeconfig  \\"
-      echo "            -name $TDH_TKGMC_NAME --server $TDH_TKGMC_NAME \\"
-      echo "            -name $TDH_TKGMC_NAME --server $TDH_TKGMC_NAME"
+      echo "            --name $TDH_TKGMC_NAME --server $TDH_TKGMC_NAME \\"
+      echo "            --context ${TDH_TKGMC_NAME}-admin@$TDH_TKGMC_NAME"
       exit
     fi
   fi
@@ -1029,13 +1029,16 @@ echo "$SCP_COMMAND ${SSH_USER}@${SSH_HOST}:${SSH_HOME}/.tanzu-demo-hub/config/${
   messagePrint " - Management Cluster"     "$TDH_TKGMC_NAME"
   messagePrint " - Cloud Infrastructure"   "$TDH_DEPLOYMENT_ENV_NAME"
 
-  DEPLOYMENT_FILE=${TDHPATH}/deployments/tkgmc-${TDH_TKGMC_NAME}.cfg
+  DEPLOYMENT_FILE=${TDHPATH}/deployments/${TDH_TKGMC_NAME}.cfg
 
-  echo "TDH_TKGMC_INFRASTRUCTURE=Azure"                                 >  $DEPLOYMENT_FILE
-  echo "TDH_TKGMC_NAME=$TDH_TKGMC_NAME"                                 >> $DEPLOYMENT_FILE
-  echo "TDH_TKGMC_CONFIG=${TDH_TKGMC_NAME}.cfg"                         >> $DEPLOYMENT_FILE
-  echo "TDH_TKGMC_KUBECONFIG=${TDH_TKGMC_NAME}.kubeconfig"              >> $DEPLOYMENT_FILE
-  echo "TDH_TKGMC_PLAN=dev"                                             >> $DEPLOYMENT_FILE
+  echo "TDH_TKGMC_INFRASTRUCTURE=Azure"                                  >  $DEPLOYMENT_FILE
+  echo "TDH_TKGMC_NAME=$TDH_TKGMC_NAME"                                  >> $DEPLOYMENT_FILE
+  echo "TDH_TKGMC_CONFIG=${TDH_TKGMC_NAME}.cfg"                          >> $DEPLOYMENT_FILE
+  echo "TDH_TKGMC_WC_CONFIG_DEV=${TDH_TKGMC_NAME}-wc-dev.yaml"           >> $DEPLOYMENT_FILE
+  echo "TDH_TKGMC_WC_CONFIG_PROD=${TDH_TKGMC_NAME}-wc-prod.yaml"         >> $DEPLOYMENT_FILE
+  echo "TDH_TKGMC_KUBECONFIG=${TDH_TKGMC_NAME}.kubeconfig"               >> $DEPLOYMENT_FILE
+
+  #echo "TDH_TKGMC_PLAN=dev"                                             >> $DEPLOYMENT_FILE
   #echo "TDH_TKGMC_CEIP_PARTICIPATION=true"                              >> $DEPLOYMENT_FILE
   #echo "TDH_TKGMC_CNI=antrea"                                           >> $DEPLOYMENT_FILE
   #echo "TDH_TKGMC_LOGLEVEL=1"                                           >> $DEPLOYMENT_FILE
@@ -1045,32 +1048,53 @@ echo "$SCP_COMMAND ${SSH_USER}@${SSH_HOST}:${SSH_HOME}/.tanzu-demo-hub/config/${
   #echo "TDH_TKGMC_MACHINE_TYPE=Standard_D2s_v3"                         >> $DEPLOYMENT_FILE
   #echo "TDH_TKGMC_CONTROL_PLANE_MACHINE_TYPE=Standard_D2s_v3"           >> $DEPLOYMENT_FILE
 
+  messageTitle "Create config file for TKG Workload Clusters"
+  messagePrint " - Deployment File (dev)"      "~/.tanzu/tkg/clusterconfigs/${TDH_TKGMC_NAME}-wc-dev.yaml"
+  messagePrint " - Deployment File (prod)"     "~/.tanzu/tkg/clusterconfigs/${TDH_TKGMC_NAME}-wc-prod.yaml"
+
+  TKG_WC_CONFIG_DEV="$HOME/.tanzu/tkg/clusterconfigs/${TDH_TKGMC_NAME}-wc-dev.yaml"
+  TKG_WC_CONFIG_PRD="$HOME/.tanzu/tkg/clusterconfigs/${TDH_TKGMC_NAME}-wc-prod.yaml"
+  TKG_MC_CONFIG="$HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.cfg"
+
+  if [ "$TDH_DEPLOYMENT_ENV_NAME" == "Azure" ]; then 
+    echo "CLUSTER_PLAN: dev" > $TKG_WC_CONFIG_DEV
+    var="AZURE_TENANT_ID:|AZURE_CLIENT_ID:|AZURE_CLIENT_SECRET:|AZURE_SSH_PUBLIC_KEY_B64:|AZURE_CONTROL_PLANE_MACHINE_TYPE:|AZURE_LOCATION:|AZURE_NODE_MACHINE_TYPE:|AZURE_SUBSCRIPTION_ID:"
+    egrep "$var" $TKG_MC_CONFIG >> $TKG_WC_CONFIG_DEV
+
+    echo "CLUSTER_PLAN: prod" > $TKG_WC_CONFIG_PRD
+    egrep "$var" $TKG_MC_CONFIG >> $TKG_WC_CONFIG_PRD
+  fi
+
+  [ "${TDH_DEPLOYMENT_ENV_NAME}" == "vSphere" ] && CLOUD="vsphere"
+  [ "${TDH_DEPLOYMENT_ENV_NAME}" == "Azure" ] && CLOUD="azure"
+  [ "${TDH_DEPLOYMENT_ENV_NAME}" == "AWS" ] && CLOUD="aws"
+  
   echo "-----------------------------------------------------------------------------------------------------------"
-  $SSH_COMMAND -n "tanzu management-cluster get 2>/dev/null | sed -n '/^  NAME /,/^NAME/p' | egrep -v \"^NAME\" "
+  #$SSH_COMMAND -n "tanzu management-cluster get 2>/dev/null | sed -n '/^  NAME /,/^NAME/p' | egrep -v \"^NAME\" "
+  tanzu config server list 
   echo "-----------------------------------------------------------------------------------------------------------"
-  echo "1.) Login to Jump Server: $JUMP_HOST"
-  echo "    => $SSH_COMMAND"
-  echo "2.) Check Management Cluster Status (On local workstation or on the jump server)"
+  echo "1.) Check Management Cluster Status (On local workstation or on the jump server)"
   echo "    => tanzu management-cluster get"
-  printf "    => %-50s %s\n" "kubectl config set-cluster $TDH_TKGMC_NAME" "# Set k8s Context to mc Cluster"
-  printf "    => %-50s %s\n" "kubectl config set-context ${TDH_TKGMC_NAME}-admin@${TDH_TKGMC_NAME}" "# Set k8s Context to mc Cluster"
-  printf "    => %-50s %s\n" "kubectl get cluster --all-namespaces" "# Set k8s Context to the TKG Management Cluster"
-  printf "    => %-50s %s\n" "kubectl get kubeadmcontrolplane,machine,machinedeployment --all-namespaces" "# To verify the first control plane is up"
-  printf "    => %-50s %s\n" "tanzu management-cluster get" "# Show Tanzu Management Cluster"
-  echo "3.) Ceeate TKG Workload Cluster"
-  echo "    => deployTKG"
-  echo "4.) Delete the Management Cluster"
+  printf "    => %-80s %s\n" "kubectl config set-cluster $TDH_TKGMC_NAME" "# Set k8s Context to mc Cluster"
+  printf "    => %-80s %s\n" "kubectl config set-context ${TDH_TKGMC_NAME}-admin@${TDH_TKGMC_NAME}" "# Set k8s Context to mc Cluster"
+  printf "    => %-80s %s\n" "kubectl get cluster --all-namespaces" "# Set k8s Context to the TKG Management Cluster"
+  printf "    => %-80s %s\n" "kubectl get kubeadmcontrolplane,machine,machinedeployment --all-namespaces" "# To verify the first control plane is up"
+  printf "    => %-80s %s\n" "tanzu management-cluster get" "# Show Tanzu Management Cluster"
+  echo "2.) Ceeate TKG Workload Cluster"
+  echo "    => tanzu cluster create <cluster-name> -f ~/.tanzu/tkg/clusterconfigs/${TDH_TKGMC_NAME}-wc-dev.yaml"
+  echo "    => tanzu cluster create <cluster-name> -f ~/.tanzu/tkg/clusterconfigs/${TDH_TKGMC_NAME}-wc-prod.yaml"
+  echo "    => tanzu cluster kubeconfig get <cluster-name> --admin"
+  echo "    => tanzu cluster list --include-management-cluster"
+  echo "2.) Ceeate Tanzu Demo Hub (TDH) Workload Cluster with services (TBS, Harbor, Ingres etc.)"
+  echo "    => ./deployTKG -m $TDH_TKGMC_NAME -d tkg-tanzu-demo-hub.cfg -n tdh-$TDH_USER-$CLOUD "
+  echo "    => ./deployTKG -m $TDH_TKGMC_NAME -d tkg-tanzu-demo-hub.cfg -n tdh-$TDH_USER-$CLOUD -k \"v1.17.16---vmware.2-tkg.1\""
+  echo "3.) Delete the Management Cluster"
   echo "    => tanzu management-cluster delete tkg-mc-azure-dev-sadubois -y"
+  echo "4.) Login to Jump Server: $JUMP_HOST (only if required)"
+  echo "    => $SSH_COMMAND"
   echo ""
   echo "-----------------------------------------------------------------------------------------------------------"
-
-  exit
-  messageTitle "Creating Workload Cluster (tdh-1)"
-  echo "./deployTKG -d $DEPLOY_TKG_TEMPLATE -c tkg-tanzu-demo-hub.cfg -n tdh-1"
-  echo "$SSH_COMMAND -n \"cd tanzu-demo-hub && ./deployTKG -d $DEPLOY_TKG_TEMPLATE -c tkg-tanzu-demo-hub.cfg -n tdh-1\""
-  $SSH_COMMAND -n "cd tanzu-demo-hub && ./deployTKG -d $DEPLOY_TKG_TEMPLATE -c tkg-tanzu-demo-hub.cfg -n tdh-1"
 fi
-
 
 exit
 
