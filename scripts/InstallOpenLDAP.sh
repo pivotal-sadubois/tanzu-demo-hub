@@ -1,5 +1,11 @@
 #!/bin/bash
 
+export LC_ALL=en_US.UTF-8
+#export LC_ALL="$LOC"
+
+[ -d /usr/share/X11/locale/en_US.UTF-8 ] && export LC_ALL=en_US.UTF-8
+
+
 DOMAIN=$1
 
 echo "slapd slapd/password1 password admin"                                 >  /root/debconf-slapd.conf
