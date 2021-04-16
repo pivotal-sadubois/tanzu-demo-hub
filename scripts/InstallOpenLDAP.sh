@@ -8,6 +8,7 @@ export LC_ALL=en_US.UTF-8
 
 DOMAIN=$1
 
+sudo dpkg --configure -a
 echo "slapd slapd/password1 password admin"                                 >  /root/debconf-slapd.conf
 echo "slapd slapd/internal/adminpw password admin"                          >> /root/debconf-slapd.conf
 echo "slapd slapd/internal/generated_adminpw password admin"                >> /root/debconf-slapd.conf
@@ -49,7 +50,7 @@ chown -R openldap /etc/ssl/private
 ldapmodify -Y EXTERNAL -H ldapi:/// -f /root/add_ssl.ldif 
 systemctl restart slapd
 
-ldapwhoami -H ldap://jump-aztkg.aztkg.pcfsdu.com -x -ZZ
+#ldapwhoami -H ldap://jump-aztkg.aztkg.pcfsdu.com -x -ZZ
 
 exit
 
