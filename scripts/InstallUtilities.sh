@@ -24,19 +24,30 @@ if [ ! -x /usr/bin/az ]; then
 fi
 
 if [ ! -x /usr/bin/certbot ]; then 
-  sudo apt install software-properties-common -y
-  sudo apt-add-repository ppa:certbot/certbot -y
-  sudo apt update -y
-  sudo apt install certbot -y
-  #sudo apt-get install python-pip -y
-  #pip install certbot_dns_route53 
-  #pip install cryptography --upgrade
-  #sudo apt install python3-pip -y
+  sudo snap install core; sudo snap refresh core
+  sudo snap install --classic certbot
+  sudo ln -s /snap/bin/certbot /usr/bin/certbot
+  sudo snap install certbot-dns-route53
+  sudo snap set certbot trust-plugin-with-root=ok
 
-  sudo apt-get install python3-pip -y
-  sudo pip3 install certbot --upgrade
-  sudo pip3 install certbot-dns-route53
-  #pip install --upgrade pip
+
+#  sudo apt purge -y python2.7-minimal
+#  sudo ln -s /usr/bin/python3 /usr/bin/python
+#  sudo apt install -y python3-pip
+#
+#  sudo apt install software-properties-common -y
+#  sudo apt-add-repository ppa:certbot/certbot -y
+#  sudo apt update -y
+#  sudo apt install certbot -y
+#  #sudo apt-get install python-pip -y
+#  #pip install certbot_dns_route53 
+#  #pip install cryptography --upgrade
+#  #sudo apt install python3-pip -y
+#
+#  sudo apt-get install python3-pip -y
+#  sudo pip3 install certbot --upgrade
+#  sudo pip3 install certbot-dns-route53
+#  #pip install --upgrade pip
 fi
 
 if [ ! -x /usr/bin/zipinfo ]; then
