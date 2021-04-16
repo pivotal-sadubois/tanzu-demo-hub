@@ -28,9 +28,9 @@ if [ ! -x /usr/bin/certbot ]; then
   sudo apt-add-repository ppa:certbot/certbot -y
   sudo apt update -y
   sudo apt install certbot -y
-  sudo apt-get install python-pip -y
-  pip install certbot_dns_route53 
-  pip install cryptography --upgrade
+  #sudo apt-get install python-pip -y
+  #pip install certbot_dns_route53 
+  #pip install cryptography --upgrade
   #sudo apt install python3-pip -y
 
   sudo apt-get install python3-pip -y
