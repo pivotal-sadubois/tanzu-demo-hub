@@ -1062,7 +1062,7 @@ checkTDHAccess() {
     messagePrint " - Pivotal Network Token"            "$PCF_PIVNET_TOKEN"
     messagePrint " - Tanzu Demo Hube User"             "$TDH_USER"
     messagePrint " - AWS Route53 Hosted DNS Domain"    "$AWS_HOSTED_DNS_DOMAIN"
-    messagePrint " - AWS Route53 Hosted DNS SubDomain" "$TDH_ENVNAME"
+    messagePrint " - AWS Route53 Hosted DNS SubDomain" "$TDH_TKGMC_ENVNAME"
 
     # --- VERIFY PIVNET ACCESS ---
     pivnetAPI $PCF_PIVNET_TOKEN
