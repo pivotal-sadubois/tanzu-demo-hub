@@ -1317,6 +1317,7 @@ configureLDAP() {
         sudo ${TDHHOME}/scripts/InstallOpenLDAP.sh \"${TDH_TKGMC_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}\" > /dev/null 2>&1"
     fi
     messagePrint " - Install LDAP Management"   "phpLDAPadmin"
+    sleep 300
   fi
   
   messagePrint "Verify LDAP Server" "$SSH_HOST"
