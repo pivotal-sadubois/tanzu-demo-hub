@@ -8,15 +8,26 @@ export LC_ALL=en_US.UTF-8
 
 [ -d /usr/share/X11/locale/en_US.UTF-8 ] && export LC_ALL=en_US.UTF-8
 
+installPackage() {
+  PKG=$1
+
+  echo "=> Install Package ($PKG)"
+  dpkg -l $PKG > /dev/null 2>&1
+  if [ $? -ne 0 ]; then
+     apt install $PKG -y > /dev/null 2>&1
+    if [ $? -ne 0 ]; then
+      echo "ERROR: failed to install package $PKG"
+      echo "       => apt install $PKG -y"
+      exit
+    fi
+  fi
+}
+
 sudo 2>/dev/null  mkdir -p /usr/local /usr/local/bin
 
 echo "Install Software on Jumphost"
 echo "=> Pivnet Token: $PIVNET_TOKEN"
-sudo apt-get install curl -y
-
-# APT-CLEANUP
-#sudo rm -f /etc/apt/sources.list.d/google-cloud-sdk.list
-#sudo apt-get update > /dev/null 2>&1
+installPackage curl
 
 if [ ! -x /usr/bin/az ]; then 
   echo "=> Install AZ CLI"
@@ -24,19 +35,19 @@ if [ ! -x /usr/bin/az ]; then
 fi
 
 if [ ! -x /usr/bin/certbot ]; then 
-  sudo snap install core; sudo snap refresh core
-  sudo snap install --classic certbot
+  snap install core; sudo snap refresh core
+  snap install --classic certbot
   sudo ln -s /snap/bin/certbot /usr/bin/certbot
 fi
 
 echo "=> Install Certbot Plugin certbot-dns-route53"
-sudo snap install certbot-dns-route53
-sudo snap set certbot trust-plugin-with-root=ok
+snap install certbot-dns-route53
+snap set certbot trust-plugin-with-root=ok
 certbot plugins
 
 if [ ! -x /usr/bin/zipinfo ]; then
   echo "=> Install ZIP"
-  apt-get install zip -y  > /dev/null 2>&1
+  installPackage zip
 fi
 
 if [ ! -x /usr/bin/aws ]; then 
@@ -44,36 +55,19 @@ if [ ! -x /usr/bin/aws ]; then
 
   curl "https://s3.amazonaws.com/aws-cli/awscli-bundle.zip" -o "awscli-bundle.zip" 2>/dev/null
   unzip -q awscli-bundle.zip 
-  sudo ./awscli-bundle/install -i /usr/local/aws -b /usr/bin/aws
-
-  #apt-get install awscli -y > /dev/null 2>&1
-  #sudo apt install python3-pip -y
-  #pip3 install --upgrade awscli
-  #sudo -H pip3 install --upgrade awscli
+  ./awscli-bundle/install -i /usr/local/aws -b /usr/bin/aws
 fi
 
 if [ ! -x /usr/bin/kubectl ]; then 
   echo "=> Install Kubectl"
   curl -LO "https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl" > /dev/null 2>&1
   chmod +x ./kubectl
-  sudo mv ./kubectl /usr/local/bin/kubectl
-
-  #curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add -
-  #echo "deb https://apt.kubernetes.io/ kubernetes-xenial main" | sudo tee -a /etc/apt/sources.list.d/kubernetes.list
-  #apt-get install kubectl -y --allow-unauthenticated > /dev/null 2>&1
+  mv ./kubectl /usr/local/bin/kubectl
 fi
 
 if [ ! -x /usr/bin/jq ]; then 
   echo "=> Install JQ"
-  apt-get install jq -y  > /dev/null 2>&1
-fi
-
-if [ ! -x /usr/bin/terraform ]; then 
-  echo "=> Install Terraform"
-  #wget -q https://releases.hashicorp.com/terraform/0.11.14/terraform_0.11.14_linux_amd64.zip
-  #unzip -qn terraform_0.11.14_linux_amd64.zip
-  #mv terraform /usr/local/bin/
-  #sudo apt-get install terraform -y
+  installPackage jq
 fi
 
 if [ ! -x /usr/local/bin/pivnet ]; then 
@@ -83,20 +77,16 @@ fi
 
 if [ ! -x /snap/bin/helm ]; then 
   echo "=> Installing Helm Utility"
-  sudo apt install snapd -y  
+  installPackage snapd
 
-  sudo snap install helm --classic >/dev/null 2>&1
+  snap install helm --classic >/dev/null 2>&1
   [ ! -s /usr/bin/helm ] && sudo ln -s /snap/bin/helm /usr/bin/helm
 fi
 
 if [ ! -x /snap/bin/yq ]; then
-  sudo wget https://github.com/mikefarah/yq/releases/download/3.4.1/yq_linux_amd64 -O /usr/bin/yq > /dev/null 2>&1
-  sudo chmod +x /usr/bin/yq
+  wget https://github.com/mikefarah/yq/releases/download/3.4.1/yq_linux_amd64 -O /usr/bin/yq > /dev/null 2>&1
+   chmod +x /usr/bin/yq
 fi
-
-#if [ ! -x /usr/bin/docker ]; then
-#  sudo apt-get install docker.io -y  > /dev/null 2>&1
-#fi
 
 touch  /jump_software_installed
 
