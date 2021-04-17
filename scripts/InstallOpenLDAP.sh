@@ -40,7 +40,6 @@ installPackage() {
   echo "=> Install Package ($PKG)"
   dpkg -s $PKG > /dev/null 2>&1 
   if [ $? -ne 0 ]; then
-echo gaga1
     apt install $PKG -y > /dev/null 2>&1
     if [ $? -ne 0 ]; then 
       echo "ERROR: failed to install package $PKG"
@@ -75,7 +74,6 @@ cat /root/debconf-slapd.conf | debconf-set-selections
 installPackage slapd
 installPackage phpldapadmin
 
-
 cp /home/ubuntu/tanzu-demo-hub/certificates/*.pem /etc/ssl/private
 chmod 600 /etc/ssl/private/privkey.pem
 
@@ -97,12 +95,13 @@ ldapmodify -Y EXTERNAL -H ldapi:/// -f /root/add_ssl.ldif
 systemctl restart slapd
 
 
-apt autoremove -y
+# --- PACKAGE CLEANUP ---
+apt autoremove -y > /dev/null 2>&1
 
 # --- INSTALL phpldapadmin ---
-echo "?php"                                                                        >  /etc/phpldapadmin/config.php
-echo "\$config->custom->appearance['timezone'] = 'Europe/Zurich';"                  >> /etc/phpldapadmin/config.php
-echo "\$config->custom->appearance['friendly_attrs'] = array("                      >> /etc/phpldapadmin/config.php
+echo "<?php"                                                                       >  /etc/phpldapadmin/config.php
+echo "\$config->custom->appearance['timezone'] = 'Europe/Zurich';"                 >> /etc/phpldapadmin/config.php
+echo "\$config->custom->appearance['friendly_attrs'] = array("                     >> /etc/phpldapadmin/config.php
 echo "        'facsimileTelephoneNumber' => 'Fax',"                                >> /etc/phpldapadmin/config.php
 echo "        'gid'                      => 'Group',"                              >> /etc/phpldapadmin/config.php
 echo "        'mail'                     => 'Email',"                              >> /etc/phpldapadmin/config.php
@@ -111,13 +110,14 @@ echo "        'uid'                      => 'User Name',"                       
 echo "        'userPassword'             => 'Password'"                            >> /etc/phpldapadmin/config.php
 echo ");"                                                                          >> /etc/phpldapadmin/config.php
 echo ""                                                                            >> /etc/phpldapadmin/config.php
-echo "\$servers = new Datastore();"                                                 >> /etc/phpldapadmin/config.php
-echo "\$servers->newServer('ldap_pla');"                                            >> /etc/phpldapadmin/config.php
-echo "\$servers->setValue('server','name','TanzuDemoHub LDAP Server');"           >> /etc/phpldapadmin/config.php
+echo "\$servers = new Datastore();"                                                >> /etc/phpldapadmin/config.php
+echo "\$servers->newServer('ldap_pla');"                                           >> /etc/phpldapadmin/config.php
+echo "\$servers->setValue('server','name','TanzuDemoHub LDAP Server');"            >> /etc/phpldapadmin/config.php
 echo "\$servers->setValue('server','host','$JUMP_HOST_IP');"                       >> /etc/phpldapadmin/config.php
-echo "\$servers->setValue('server','base',array('$LDAP_DOMAIN'));"     >> /etc/phpldapadmin/config.php
-echo "\$servers->setValue('login','auth_type','session');"                          >> /etc/phpldapadmin/config.php
-echo "\$config->custom->appearance['hide_template_warning'] = true;"                >> /etc/phpldapadmin/config.php
+echo "\$servers->setValue('server','base',array('$LDAP_DOMAIN'));"                 >> /etc/phpldapadmin/config.php
+echo "\$servers->setValue('login','auth_type','session');"                         >> /etc/phpldapadmin/config.php
+echo "\$servers->setValue('login','bind_id','cn=Manager,dc=example,dc=com');"      >> /etc/phpldapadmin/config.php
+echo "\$config->custom->appearance['hide_template_warning'] = true;"               >> /etc/phpldapadmin/config.php
 echo "?>"                                                                          >> /etc/phpldapadmin/config.php
 
 
