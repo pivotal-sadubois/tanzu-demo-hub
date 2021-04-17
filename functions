@@ -1330,7 +1330,7 @@ configureLDAP() {
     exit
   fi
 
-  messagePrint " - Verify LDAP Management (phpLDAPadmin)"   "http://jump.${TDH_TKGMC_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}/phpldapadmin""
+  messagePrint " - Verify LDAP Management (phpLDAPadmin)"   "http://jump.${TDH_TKGMC_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}/phpldapadmin"
 } 
 
 configureJumpHost() {
