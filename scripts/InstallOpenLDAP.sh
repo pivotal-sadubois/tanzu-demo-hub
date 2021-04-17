@@ -50,7 +50,7 @@ echo gaga1
   fi
 }
 
-dpkg --configure -a
+#dpkg --configure -a
 installPackage ldap-utils
 echo "slapd slapd/password1 password admin"                                 >  /root/debconf-slapd.conf
 echo "slapd slapd/internal/adminpw password tanzudemohub"                   >> /root/debconf-slapd.conf
