@@ -8,7 +8,7 @@ export LC_ALL=en_US.UTF-8
 
 DOMAIN=$1
 LDAP_DOMAIN=$(echo $DOMAIN | awk -F'.' '{ for (i = 1; i <= 3; i++) { printf(",dc=%s",$i) }}END { printf "\n"}' | sed 's/^,//g')
-JUMP_HOST_IP=$(getent hosts jump.$DOMAIN | awk '{ print $1 })
+JUMP_HOST_IP=$(getent hosts jump.$DOMAIN | awk '{ print $1 }')
 echo "LDAP_DOMAIN:$LDAP_DOMAIN"
 echo "JUMP_HOST_IP:$JUMP_HOST_IP"
 
