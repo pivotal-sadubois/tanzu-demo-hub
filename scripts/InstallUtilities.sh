@@ -20,7 +20,6 @@ installSnap() {
       snap install certbot-dns-route53 > /dev/null 2>&1; ret=$?
       sleep 30
       let cnt=cnt+1
-echo     "=> sleep 30; snap install certbot-dns-route53"
     done
 
     if [ $ret -ne 0 ]; then

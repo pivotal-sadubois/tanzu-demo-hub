@@ -113,7 +113,7 @@ echo ");"                                                                       
 echo ""                                                                            >> /etc/phpldapadmin/config.php
 echo "\$servers = new Datastore();"                                                 >> /etc/phpldapadmin/config.php
 echo "\$servers->newServer('ldap_pla');"                                            >> /etc/phpldapadmin/config.php
-echo "\$servers->setValue('server','name','Tanzu-Demo-Hub LDAP Server');"           >> /etc/phpldapadmin/config.php
+echo "\$servers->setValue('server','name','TanzuDemoHub LDAP Server');"           >> /etc/phpldapadmin/config.php
 echo "\$servers->setValue('server','host','$JUMP_HOST_IP');"                       >> /etc/phpldapadmin/config.php
 echo "\$servers->setValue('server','base',array('$LDAP_DOMAIN'));"     >> /etc/phpldapadmin/config.php
 echo "\$servers->setValue('login','auth_type','session');"                          >> /etc/phpldapadmin/config.php
