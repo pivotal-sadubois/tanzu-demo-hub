@@ -12,6 +12,19 @@ JUMP_HOST_IP=$(getent hosts jump.$DOMAIN | awk '{ print $1 }')
 echo "LDAP_DOMAIN:$LDAP_DOMAIN"
 echo "JUMP_HOST_IP:$JUMP_HOST_IP"
 
+installPackage() {
+  PKG=$1
+
+  echo "=> Install Package ($PKG)"
+  dpkg -l $PKG > /dev/null 2>&1 
+  [ $? -ne 0 ] && apt-get install $PKG -y -qq > /dev/null 2>&1
+  if [ $? -ne 0 ]; then 
+    echo "ERROR: failed to install package $PKG"
+    echo "       => apt-get install $PKG -y -qq"
+    exit
+  fi
+}
+
 echo gaga1
 dpkg --configure -a
 echo gaga2
@@ -34,7 +47,11 @@ echo "slapd slapd/password_mismatch note"                                   >> /
 
 export DEBIAN_FRONTEND=noninteractive
 cat /root/debconf-slapd.conf | debconf-set-selections
-apt install ldap-utils slapd -y
+
+installPackage ldap-utils
+installPackage slapd
+installPackage phpldapadmin
+
 echo gaga3
 
 cp /home/ubuntu/tanzu-demo-hub/certificates/*.pem /etc/ssl/private
@@ -59,12 +76,11 @@ systemctl restart slapd
 
 
 echo gaga4
-# --- INSTALL phpldapadmin ---
 apt autoremove -y
 echo gaga5
-apt install phpldapadmin -y 
 echo gaga6
 
+# --- INSTALL phpldapadmin ---
 echo "?php"                                                                        >  /etc/phpldapadmin/config.php
 echo "\$config->custom->appearance['timezone'] = 'Europe/Zurich';"                  >> /etc/phpldapadmin/config.php
 echo "\$config->custom->appearance['friendly_attrs'] = array("                      >> /etc/phpldapadmin/config.php
