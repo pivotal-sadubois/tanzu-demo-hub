@@ -1329,6 +1329,8 @@ configureLDAP() {
     echo "       => ldapwhoami -H ldap://jump.${TDH_TKGMC_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN} -x -ZZ"
     exit
   fi
+
+  messagePrint " - Verify LDAP Management (phpLDAPadmin)"   "http://jump.${TDH_TKGMC_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}/phpldapadmin""
 } 
 
 configureJumpHost() {
