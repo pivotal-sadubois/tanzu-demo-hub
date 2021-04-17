@@ -17,10 +17,10 @@ installPackage() {
 
   echo "=> Install Package ($PKG)"
   dpkg -l $PKG > /dev/null 2>&1 
-  [ $? -ne 0 ] && apt-get install $PKG -y -qq > /dev/null 2>&1
+  [ $? -ne 0 ] && apt install $PKG -y > /dev/null 2>&1
   if [ $? -ne 0 ]; then 
     echo "ERROR: failed to install package $PKG"
-    echo "       => apt-get install $PKG -y -qq"
+    echo "       => apt install $PKG -y"
     exit
   fi
 }
