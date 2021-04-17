@@ -220,9 +220,9 @@ sshEnvironment() {
     SSH_DISPLAY="ssh ${SSH_USER}@${SSH_HOST}"
   fi
 
-  echo "--------------------------------- JUMP SERVER ACCESS ------------------------------------------------------"
+  echo "------------------------------------------------------------- JUMP SERVER ACCESS ----------------------------------------------------------------------"
   echo "$SSH_DISPLAY"
-  echo "-----------------------------------------------------------------------------------------------------------"
+  echo "-------------------------------------------------------------------------------------------------------------------------------------------------------"
 }
 
 checkCloudCLI() {
@@ -354,7 +354,7 @@ checkKubernetesServices() {
         missing_variables=1
         echo ""
         echo "  4MISSING ENVIRONMENT-VARIABES    DESCRIPTION        "
-        echo "  --------------------------------------------------------------------------------------------------------------"
+        echo "  -------------------------------------------------------------------------------------------------------------------------------------------------------"
 
         if [ "${TDH_TANZU_DATA_PROTECTION_ARN}" == "" -o "TDH_TANZU_DATA_PROTECTION_BACKUP_LOCATION" == "" ]; then
           echo "  TDH_TANZU_DATA_PROTECTION_ARN                (required) AWS CloudFormation ARN for Tanzu Data Protection"
@@ -377,7 +377,7 @@ checkKubernetesServices() {
         missing_variables=1
         echo ""
         echo "  4MISSING ENVIRONMENT-VARIABES      DESCRIPTION        "
-        echo "  --------------------------------------------------------------------------------------------------------------"
+        echo "  -------------------------------------------------------------------------------------------------------------------------------------------------------"
 
         if [ "${TDH_TANZU_OBSERVABILITY_API_TOKEN}" == "" ]; then
           echo "  TDH_TANZU_OBSERVABILITY_API_TOKEN  (required) Tanzu Observability API Token"
@@ -396,7 +396,7 @@ checkKubernetesServices() {
         missing_variables=1
         echo ""
         echo "  4MISSING ENVIRONMENT-VARIABES    DESCRIPTION        "
-        echo "  --------------------------------------------------------------------------------------------------------------"
+        echo "  -------------------------------------------------------------------------------------------------------------------------------------------------------"
 
         if [ "${TDH_REGISTRY_DOCKER_NAME}" == "" ]; then
           echo "  TDH_REGISTRY_DOCKER_NAME         (required) Docker Registry (hub.docker.com)"
@@ -417,7 +417,7 @@ checkKubernetesServices() {
         missing_variables=1
         echo ""
         echo "  4MISSING ENVIRONMENT-VARIABES    DESCRIPTION        "
-        echo "  --------------------------------------------------------------------------------------------------------------"
+        echo "  -------------------------------------------------------------------------------------------------------------------------------------------------------"
 
         if [ "${TDH_GITHUB_USER}" == "" ]; then
           echo "  TDH_GITHUB_USER                  (required) Github User"
@@ -434,7 +434,7 @@ checkKubernetesServices() {
         missing_variables=1
         echo ""
         echo "  4MISSING ENVIRONMENT-VARIABES    DESCRIPTION        "
-        echo "  --------------------------------------------------------------------------------------------------------------"
+        echo "  -------------------------------------------------------------------------------------------------------------------------------------------------------"
 
         if [ "${TDH_REGISTRY_VMWARE_NAME}" == "" ]; then
           echo "  TDH_REGISTRY_VMWARE_NAME         (required) VMware Registry (registry.pivotal.io)"
@@ -456,7 +456,7 @@ checkKubernetesServices() {
           missing_variables=1
           echo ""
           echo "  4MISSING ENVIRONMENT-VARIABES    DESCRIPTION        "
-          echo "  --------------------------------------------------------------------------------------------------------------"
+          echo "  -------------------------------------------------------------------------------------------------------------------------------------------------------"
 
           if [ "${TDH_HARBOR_ADMIN_PASSWORD}" == "" ]; then
             echo "  TDH_HARBOR_ADMIN_PASSWORD        (required) Harbor Admin Password"
@@ -471,11 +471,11 @@ checkKubernetesServices() {
   fi
 
   if [ ${missing_variables} -eq 1 ]; then
-    echo "  --------------------------------------------------------------------------------------------------------------"
+    echo "  -------------------------------------------------------------------------------------------------------------------------------------------------------"
     echo "  IMPORTANT: Please set the missing environment variables either in your shell or in the tanzu-demo-hub"
     echo "             configuration file ~/.tanzu-demo-hub.cfg and set all variables with the 'export' notation"
     echo "             ie. => export <environment_variable>=\"<value>\""
-    echo "  --------------------------------------------------------------------------------------------------------------"
+    echo "  -------------------------------------------------------------------------------------------------------------------------------------------------------"
     exit 1
   fi
 }
@@ -489,7 +489,7 @@ checkCloudAccess() {
       missing_variables=1
       echo ""
       echo "  4MISSING ENVIRONMENT-VARIABES    DESCRIPTION        "
-      echo "  --------------------------------------------------------------------------------------------------------------"
+      echo "  -------------------------------------------------------------------------------------------------------------------------------------------------------"
 
       if [ "${TDH_USER}" == "" ]; then
         echo "  TDH_USER                        (required) Tanzu Demo Hub User to tag TKG Clusters with your Name"
@@ -550,10 +550,10 @@ checkCloudAccess() {
         messageTitle "Attach Minikube Cluster to TMC"
         messagePrint " - TMC Cluster Name"                "$TDH_MINIKUBE_PROFILE"
         messagePrint " - TMC Clustergroup"                "tanzu-demo-hub"
-        echo "  --------------------------------------------------------------------------------------------------------------"
+        echo "  -------------------------------------------------------------------------------------------------------------------------------------------------------"
         tmc cluster attach -n $TDH_MINIKUBE_PROFILE -g tanzu-demo-hub -p minikube
         kubectl apply -f k8s-attach-manifest.yaml
-        echo "  --------------------------------------------------------------------------------------------------------------"
+        echo "  -------------------------------------------------------------------------------------------------------------------------------------------------------"
       fi
     fi
   fi
@@ -567,7 +567,7 @@ checkCloudAccess() {
       missing_variables=1
       echo ""
       echo "  4MISSING ENVIRONMENT-VARIABES    DESCRIPTION        "
-      echo "  --------------------------------------------------------------------------------------------------------------"
+      echo "  -------------------------------------------------------------------------------------------------------------------------------------------------------"
 
       if [ "${VSPHERE_SERVER}" == "" ]; then
         echo "  VSPHERE_SERVER                   (required) vSphere Server Name"
@@ -655,7 +655,7 @@ checkCloudAccess() {
       missing_variables=1
       echo ""
       echo "  4MISSING ENVIRONMENT-VARIABES    DESCRIPTION        "
-      echo "  --------------------------------------------------------------------------------------------------------------"
+      echo "  -------------------------------------------------------------------------------------------------------------------------------------------------------"
 
       #if [ "${GCP_SERVICE_ACCOUNT}" == "" ]; then
       #  echo "  GCP_SERVICE_ACCOUNT           (required) GCP Service Account"
@@ -686,7 +686,7 @@ checkCloudAccess() {
       missing_variables=1
       echo ""
       echo "  5MISSING ENVIRONMENT-VARIABES    DESCRIPTION        "
-      echo "  --------------------------------------------------------------------------------------------------------------"
+      echo "  -------------------------------------------------------------------------------------------------------------------------------------------------------"
 
       if [ "${AWS_ACCESS_KEY}" == "" ]; then
         echo "  AWS_ACCESS_KEY                  (required) AWS Acess Key"
@@ -715,7 +715,7 @@ checkCloudAccess() {
       missing_variables=1
       echo ""
       echo "  1MISSING ENVIRONMENT-VARIABES    DESCRIPTION        "
-      echo "  --------------------------------------------------------------------------------------------------------------"
+      echo "  -------------------------------------------------------------------------------------------------------------------------------------------------------"
 
       if [ "${AZURE_SUBSCRIPTION_ID}" == "" ]; then
         echo "  AZURE_SUBSCRIPTION_ID           (required) has the format <xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx>"
@@ -751,11 +751,11 @@ checkCloudAccess() {
   fi
 
   if [ ${missing_variables} -eq 1 ]; then
-    echo "  --------------------------------------------------------------------------------------------------------------"
+    echo "  -------------------------------------------------------------------------------------------------------------------------------------------------------"
     echo "  IMPORTANT: Please set the missing environment variables either in your shell or in the tanzu-demo-hub"
     echo "             configuration file ~/.tanzu-demo-hub.cfg and set all variables with the 'export' notation"
     echo "             ie. => export <environment_variable>=\"<value>\""
-    echo "  --------------------------------------------------------------------------------------------------------------"
+    echo "  -------------------------------------------------------------------------------------------------------------------------------------------------------"
     exit 1
   fi
 }
@@ -767,7 +767,7 @@ checkTDHenvironment() {
     missing_variables=1
     echo ""
     echo "  4MISSING ENVIRONMENT-VARIABES    DESCRIPTION        "
-    echo "  --------------------------------------------------------------------------------------------------------------"
+    echo "  -------------------------------------------------------------------------------------------------------------------------------------------------------"
 
     if [ "${TDH_MYVMWARE_USER}" == "" ]; then
       echo "  TDH_MYVMWARE_USER                (required) myVMware (http://my.vmware.com/group/vmware/home) User"
@@ -783,13 +783,13 @@ checkTDHenvironment() {
   fi
 
   if [ ${missing_variables} -eq 1 ]; then
-    echo "  --------------------------------------------------------------------------------------------------------------"
+    echo "  -------------------------------------------------------------------------------------------------------------------------------------------------------"
     echo "  IMPORTANT: Please set the missing environment variables either in your shell or in the tanzu-demo-hub"
     echo "             configuration file ~/.tanzu-demo-hub.cfg and set all variables with the 'export' notation"
     echo "             export TDH_MYVMWARE_USER=xxxxxxx"
     echo "             export TDH_MYVMWARE_PASS='xxxxxxxxxxxx'"
     echo "  IMPORTAND: Place the password in Single Quotes (') especialy if you use special characgters"
-    echo "  --------------------------------------------------------------------------------------------------------------"
+    echo "  -------------------------------------------------------------------------------------------------------------------------------------------------------"
     exit 1
   fi
 }
@@ -978,7 +978,7 @@ checkTMCAccess() {
       missing_variables=1
       echo ""
       echo "  2MISSING ENVIRONMENT-VARIABES    DESCRIPTION        "
-      echo "  --------------------------------------------------------------------------------------------------------------"
+      echo "  -------------------------------------------------------------------------------------------------------------------------------------------------------"
   
       if [ "${TMC_MANAGEMENT_CLUSTER}" == "" ]; then
         echo "  TMC_MANAGEMENT_CLUSTER          (required) A Management Cluster deployed on AWS"
@@ -1007,11 +1007,11 @@ checkTMCAccess() {
   fi
 
   if [ ${missing_variables} -eq 1 ]; then
-    echo "  --------------------------------------------------------------------------------------------------------------"
+    echo "  -------------------------------------------------------------------------------------------------------------------------------------------------------"
     echo "  IMPORTANT: Please set the missing environment variables either in your shell or in the tanzu-demo-hub"
     echo "             configuration file ~/.tanzu-demo-hub.cfg and set all variables with the 'export' notation"
     echo "             ie. => export TMC_MANAGEMENT_CLUSTER=xxxxxxxx"
-    echo "  --------------------------------------------------------------------------------------------------------------"
+    echo "  -------------------------------------------------------------------------------------------------------------------------------------------------------"
     exit 1
   fi
 }
@@ -1025,7 +1025,7 @@ checkTDHAccess() {
     missing_variables=1
     echo ""
     echo "  2MISSING ENVIRONMENT-VARIABES    DESCRIPTION        "
-    echo "  --------------------------------------------------------------------------------------------------------------"
+    echo "  -------------------------------------------------------------------------------------------------------------------------------------------------------"
 
     if [ "${PCF_PIVNET_TOKEN}" == "" ]; then
       echo "  PCF_PIVNET_TOKEN                (required) PIVNET Access Token to download software. Get a UAA API TOKEN from"
@@ -1096,11 +1096,11 @@ checkTDHAccess() {
   fi
 
   if [ ${missing_variables} -eq 1 ]; then
-    echo "  --------------------------------------------------------------------------------------------------------------"
+    echo "  -------------------------------------------------------------------------------------------------------------------------------------------------------"
     echo "  IMPORTANT: Please set the missing environment variables either in your shell or in the tanzu-demo-hub"
     echo "             configuration file ~/.tanzu-demo-hub.cfg and set all variables with the 'export' notation"
     echo "             ie. => export <environment_variable>=\"<value>\""
-    echo "  --------------------------------------------------------------------------------------------------------------"
+    echo "  -------------------------------------------------------------------------------------------------------------------------------------------------------"
     exit 1
   fi
 
@@ -1126,7 +1126,7 @@ pivnetAPI() {
 }
 
 write_line() {
-  messageTitle "----------------------------------------------------------------------------------------------------------------"
+  messageTitle "-------------------------------------------------------------------------------------------------------------------------------------------------------"
 }
 
 createENVfile() {
@@ -1303,25 +1303,28 @@ createENVfile() {
 }
 
 configureLDAP() {
-  messagePrint "Configure LDAP Server" "$SSH_HOST"
-
-  messagePrint " - Install LDAP Server"       "OpenLDAP"
-  messagePrint " - Install LDAP Management"   "phpLDAPadmin"
-  if [ $DEBUG -gt 0 ]; then
-    echo "-----------------------------------------------------------------------------------------------------------"
-    $SSH_COMMAND -n "[ -d $SSH_HOME/tanzu-demo-hub ] && chmod a+x ${TDHHOME}/scripts/InstallOpenLDAP.sh && \
-        sudo ${TDHHOME}/scripts/InstallOpenLDAP.sh \"${TDH_TKGMC_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}\""
-    echo "-----------------------------------------------------------------------------------------------------------"
-  else
-    $SSH_COMMAND -n "[ -d $SSH_HOME/tanzu-demo-hub ] && chmod a+x ${TDHHOME}/scripts/InstallOpenLDAP.sh && \
-      sudo ${TDHHOME}/scripts/InstallOpenLDAP.sh \"${TDH_TKGMC_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}\" > /dev/null 2>&1"
+  ldapwhoami -H ldap://jump.${TDH_TKGMC_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN} -x -ZZ >/dev/null 2>&1
+  if [ $? -ne 0 ]; then 
+    messageTitle "Configure LDAP Server"        
+    messagePrint " - Install LDAP Server"       "jump.${TDH_TKGMC_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}"
+    if [ $DEBUG -gt 0 ]; then
+      echo "-------------------------------------------------------------------------------------------------------------------------------------------------------"
+      $SSH_COMMAND -n "[ -d $SSH_HOME/tanzu-demo-hub ] && chmod a+x ${TDHHOME}/scripts/InstallOpenLDAP.sh && \
+          sudo ${TDHHOME}/scripts/InstallOpenLDAP.sh \"${TDH_TKGMC_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}\""
+      echo "-------------------------------------------------------------------------------------------------------------------------------------------------------"
+    else
+      $SSH_COMMAND -n "[ -d $SSH_HOME/tanzu-demo-hub ] && chmod a+x ${TDHHOME}/scripts/InstallOpenLDAP.sh && \
+        sudo ${TDHHOME}/scripts/InstallOpenLDAP.sh \"${TDH_TKGMC_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}\" > /dev/null 2>&1"
+    fi
+    messagePrint " - Install LDAP Management"   "phpLDAPadmin"
   fi
-
+  
+  messagePrint "Verify LDAP Server" "$SSH_HOST"
   ret=$(ldapwhoami -H ldap://jump.${TDH_TKGMC_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN} -x -ZZ)
   if [ "$ret" == "anonymous" ]; then 
-    messagePrint " - Verify LDAP Access"   "succeeded"
+    messagePrint " - LDAP CLI Access (ldapwhoami)"   "succeeded"
   else
-    echo "ERROR: LDAP Access failed with '$ret'"
+    echo "ERROR: LDAP Access (ldapwhoami) failed with '$ret'"
     echo "       => ldapwhoami -H ldap://jump.${TDH_TKGMC_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN} -x -ZZ"
     exit
   fi
@@ -1356,10 +1359,10 @@ configureJumpHost() {
   if [ "${stt}" == "" ]; then
     messagePrint " - Install CLI Utilities"   "aws,az,gcp,bosh,pivnet,cf,om,jq"
     if [ $DEBUG -gt 0 ]; then
-      echo "-----------------------------------------------------------------------------------------------------------"
+      echo "-------------------------------------------------------------------------------------------------------------------------------------------------------"
       $SSH_COMMAND -n "[ -d $SSH_HOME/tanzu-demo-hub ] && chmod a+x ${TDHHOME}/scripts/InstallUtilities.sh && \
           sudo ${TDHHOME}/scripts/InstallUtilities.sh $PCF_PIVNET_TOKEN"
-      echo "-----------------------------------------------------------------------------------------------------------"
+      echo "-------------------------------------------------------------------------------------------------------------------------------------------------------"
     else
       $SSH_COMMAND -n "[ -d $SSH_HOME/tanzu-demo-hub ] && chmod a+x ${TDHHOME}/scripts/InstallUtilities.sh && \
           sudo ${TDHHOME}/scripts/InstallUtilities.sh $PCF_PIVNET_TOKEN > /dev/null 2>&1"
@@ -1394,10 +1397,10 @@ configureJumpHost() {
   if [ "${stt}" == "" ]; then
     messagePrint " - Install TKG Utilities"   "tkg, ytt, kapp, kbld, kubectl, kind"
     if [ $DEBUG -gt 0 ]; then
-      echo "-----------------------------------------------------------------------------------------------------------"
+      echo "-------------------------------------------------------------------------------------------------------------------------------------------------------"
       $SSH_COMMAND -n "[ -d $SSH_HOME/tanzu-demo-hub ] && chmod a+x ${TDHHOME}/scripts/InstallTKGutilities.sh && \
           sudo ${TDHHOME}/scripts/InstallTKGutilities.sh \"$SSH_HOME/tanzu-demo-hub\""
-      echo "-----------------------------------------------------------------------------------------------------------"
+      echo "-------------------------------------------------------------------------------------------------------------------------------------------------------"
     else
       $SSH_COMMAND -n "[ -d $SSH_HOME/tanzu-demo-hub ] && chmod a+x ${TDHHOME}/scripts/InstallTKGutilities.sh && \
           sudo ${TDHHOME}/scripts/InstallTKGutilities.sh \"$SSH_HOME/tanzu-demo-hub\" > /dev/null 2>&1"
@@ -1409,6 +1412,8 @@ configureJumpHost() {
       $SSH_COMMAND -n id > /dev/null 2>&1; ret=$?
       [ $ret -ne 0 ] && sleep 10
     done
+
+    sleep 30
   fi
 }
 
@@ -1691,9 +1696,9 @@ createCluster() {
       if [ ${ret} -ne 0 ]; then
         echo "ERROR: failed to create TKG Management Cluster"
         echo "       => tanzu management-cluster create --file $TKG_TEMPLATE -v 0 --log-file=/tmp/$TDH_TKGMC_NAME.log"
-        echo "----------------------------------------------------------------------------------------------------------------"
+        echo "-------------------------------------------------------------------------------------------------------------------------------------------------------"
         cat /tmp/$TDH_TKGMC_NAME.log
-        echo "----------------------------------------------------------------------------------------------------------------"
+        echo "-------------------------------------------------------------------------------------------------------------------------------------------------------"
         exit
       fi
 
@@ -1829,14 +1834,14 @@ createCluster() {
 
       [ -f $HOME/.kube/config ] && mv $HOME/.kube/config $HOME/.kube/config.old
 
-      echo "----------------------------------------------------------------------------------------------------------------"
+      echo "-------------------------------------------------------------------------------------------------------------------------------------------------------"
       echo "tkg init -q -i $MODE -p dev --vsphere-controlplane-endpoint-ip $VSPHERE_CONTROLPLANE_IP \\"
       echo "         --ceip-participation true --cni $TDH_TKGMC_CNI -v 0 \\"
       echo "         --name $TDH_TKGMC_NAME --config $TKG_TEMPLATE --kubeconfig $TKG_KUBECONFIG"
-      echo "----------------------------------------------------------------------------------------------------------------"
+      echo "-------------------------------------------------------------------------------------------------------------------------------------------------------"
       time tkg init -i $MODE -p dev --vsphere-controlplane-endpoint-ip $VSPHERE_CONTROLPLANE_IP --ceip-participation true \
            --cni $TDH_TKGMC_CNI -v 0 --name $TDH_TKGMC_NAME --config $TKG_TEMPLATE --kubeconfig $TKG_KUBECONFIG
-      echo "----------------------------------------------------------------------------------------------------------------"
+      echo "-------------------------------------------------------------------------------------------------------------------------------------------------------"
 
       cp $HOME/.kube/config $HOME/.tanzu-demo-hub/${TDH_TKGMC_NAME}.kubeconfig
       [ -f $HOME/.kube/config.old ] && mv $HOME/.kube/config.old $HOME/.kube/config
@@ -2054,7 +2059,7 @@ exit
 
     echo ""
     echo "  3MISSING ENVIRONMENT-VARIABES    DESCRIPTION        "
-    echo "  --------------------------------------------------------------------------------------------------------------"
+    echo "  -------------------------------------------------------------------------------------------------------------------------------------------------------"
     echo "  To allow TLS encrypted httpd traffic a Certificate and key needs to be created for your DNS Domain. Free"
     echo "  certificates can be optained through https://letsencrypt.org."
     echo ""
@@ -2321,7 +2326,7 @@ setDNSrecord() {
 
 listDeployments() {
   printf "%-32s %-8s  %-15s %-20s %-5s %s\n" "DEPLOYMENT" "PLATFORM" "PROFILE" "MGMT-CLUSTER" "PLAN" "CONFIGURATION"
-  echo "----------------------------------------------------------------------------------------------------------------"
+  echo "-------------------------------------------------------------------------------------------------------------------------------------------------------"
   for deployment in $(ls -1 ${TDHPATH}/deployments/minikube*.cfg) ; do
     mcr=$(egrep "^TDH_MINIKUBE_PROFILE=" $deployment | awk -F= '{ print $NF }') 
 
@@ -2333,7 +2338,7 @@ listDeployments() {
 
   echo 
   printf "%-32s %-8s  %-15s %-20s %-5s %s\n" "DEPLOYMENT" "CLOUD" "REGION" "MGMT-CLUSTER" "PLAN" "CONFIGURATION"
-  echo "----------------------------------------------------------------------------------------------------------------"
+  echo "-------------------------------------------------------------------------------------------------------------------------------------------------------"
   for deployment in $(ls -1 ${TDHPATH}/deployments/tkgmc*.cfg) ; do
 
     mci=$(egrep "^TDH_TKGMC_INFRASTRUCTURE=" $deployment | awk -F= '{ print $NF }') 
@@ -2349,7 +2354,7 @@ listDeployments() {
 
   done
 
-  echo "----------------------------------------------------------------------------------------------------------------"
+  echo "-------------------------------------------------------------------------------------------------------------------------------------------------------"
 }
 
 
@@ -2557,9 +2562,9 @@ VerifyServiceDependancies() {
 }
 
 verifyKubernetesContext() {
-  echo "----------------------------------------------------------------------------------------------------------------"
+  echo "-------------------------------------------------------------------------------------------------------------------------------------------------------"
   kubectl config get-contexts
-  echo "----------------------------------------------------------------------------------------------------------------"
+  echo "-------------------------------------------------------------------------------------------------------------------------------------------------------"
 
   ret=""
   while [ "$ret" != "y" -a "$ret" != "n" ]; do
@@ -2687,12 +2692,12 @@ checkCLIcommands() {
     if [ $cnt -ne 0 ]; then
       echo "ERROR: failed to login to vmw-cli, please make sure that the environment variables"
       echo "       TDH_MYVMWARE_USER and TDH_MYVMWARE_PASS are set correctly. Please try manually"
-      echo "       -----------------------------------------------------------------------------------------------------------"
+      echo "       -------------------------------------------------------------------------------------------------------------------------------------------------------"
       echo "       => . ~/.tanzu-demo-hub.cfg"
       echo "       => export VMWUSER=\$TDH_MYVMWARE_USER"
       echo "       => export VMWPASS=\$TDH_MYVMWARE_PASS"
       echo "       => vmw-cli ls vmware_tanzu_kubernetes_grid"
-      echo "       -----------------------------------------------------------------------------------------------------------"
+      echo "       -------------------------------------------------------------------------------------------------------------------------------------------------------"
       exit
     fi
 
@@ -2707,13 +2712,13 @@ checkCLIcommands() {
           (cd /tmp/; vmw-cli cp $vmwfile > /dev/null 2>&1)
           if [ ! -f /tmp/$vmwfile ]; then 
             echo "ERROR: failed to download $vmwfile from http://my.vmware.com, please try manually"
-            echo "       -----------------------------------------------------------------------------------------------------------"
+            echo "       -------------------------------------------------------------------------------------------------------------------------------------------------------"
             echo "       => . ~/.tanzu-demo-hub.cfg"
             echo "       => export VMWUSER=\$TDH_MYVMWARE_USER"
             echo "       => export VMWPASS=\$TDH_MYVMWARE_PASS"
             echo "       => vmw-cli ls vmware_tanzu_kubernetes_grid"
             echo "       => vmw-cli cp $vmwfile"
-            echo "       -----------------------------------------------------------------------------------------------------------"
+            echo "       -------------------------------------------------------------------------------------------------------------------------------------------------------"
             exit
           fi
         else
