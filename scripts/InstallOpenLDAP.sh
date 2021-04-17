@@ -91,6 +91,9 @@ echo "olcTLSCertificateKeyFile: /etc/ssl/private/privkey.pem"                >> 
 setfacl -m "u:openldap:r" /etc/ssl/private/{fullchain,cert,privkey}.pem
 chown -R openldap /etc/ssl/private
 
+sed -i "s/^#BASE.*/BASE	$LDAP_DOMAIN/g" /etc/ldap/ldap.conf
+sed -i "s/^#URI.*/URI	ldap://jump.$DOMAIN/g" /etc/ldap/ldap.conf
+
 ldapmodify -Y EXTERNAL -H ldapi:/// -f /root/add_ssl.ldif 
 systemctl restart slapd
 
@@ -116,7 +119,7 @@ echo "\$servers->setValue('server','name','TanzuDemoHub LDAP Server');"         
 echo "\$servers->setValue('server','host','$JUMP_HOST_IP');"                       >> /etc/phpldapadmin/config.php
 echo "\$servers->setValue('server','base',array('$LDAP_DOMAIN'));"                 >> /etc/phpldapadmin/config.php
 echo "\$servers->setValue('login','auth_type','session');"                         >> /etc/phpldapadmin/config.php
-echo "\$servers->setValue('login','bind_id','cn=Manager,dc=example,dc=com');"      >> /etc/phpldapadmin/config.php
+echo "\$servers->setValue('login','bind_id','$LDAP_DOMAIN');"                      >> /etc/phpldapadmin/config.php
 echo "\$config->custom->appearance['hide_template_warning'] = true;"               >> /etc/phpldapadmin/config.php
 echo "?>"                                                                          >> /etc/phpldapadmin/config.php
 
