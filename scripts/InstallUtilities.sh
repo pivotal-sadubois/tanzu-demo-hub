@@ -64,9 +64,8 @@ if [ ! -x /usr/bin/certbot ]; then
 fi
  
 echo "=> Install Certbot Plugin certbot-dns-route53"
-installSnap certbot-dns-route53
-
 snap set certbot trust-plugin-with-root=ok
+installSnap certbot-dns-route53
 certbot plugins
 
 if [ ! -x /usr/bin/zipinfo ]; then
