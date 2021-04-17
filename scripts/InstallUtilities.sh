@@ -8,6 +8,29 @@ export LC_ALL=en_US.UTF-8
 
 [ -d /usr/share/X11/locale/en_US.UTF-8 ] && export LC_ALL=en_US.UTF-8
 
+installSnap() {
+  PKG=$1
+
+  echo "=> Install Package ($PKG)"
+  snap list $PKG > /dev/null 2>&1
+  if [ $? -ne 0 ]; then
+    cnt=0
+    snap install $PKG  > /dev/null 2>&1; ret=$?
+    while [ $ret -ne 0 -a $cnt -lt 3 ]; do
+      snap install certbot-dns-route53 > /dev/null 2>&1; ret=$?
+      sleep 30
+      let cnt=cnt+1
+echo     "=> sleep 30; snap install certbot-dns-route53"
+    done
+
+    if [ $ret -ne 0 ]; then
+      echo "ERROR: failed to install package $PKG"
+      echo "       => snap install $PKG"
+      exit
+    fi 
+  fi  
+}     
+
 installPackage() {
   PKG=$1
 
@@ -39,9 +62,12 @@ if [ ! -x /usr/bin/certbot ]; then
   snap install --classic certbot
   sudo ln -s /snap/bin/certbot /usr/bin/certbot
 fi
-
+ 
 echo "=> Install Certbot Plugin certbot-dns-route53"
-snap install certbot-dns-route53
+installSnap certbot-dns-route53
+
+exit
+
 snap set certbot trust-plugin-with-root=ok
 certbot plugins
 
