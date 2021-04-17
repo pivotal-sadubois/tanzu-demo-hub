@@ -12,7 +12,9 @@ JUMP_HOST_IP=$(getent hosts jump.$DOMAIN | awk '{ print $1 }')
 echo "LDAP_DOMAIN:$LDAP_DOMAIN"
 echo "JUMP_HOST_IP:$JUMP_HOST_IP"
 
-sudo dpkg --configure -a
+echo gaga1
+dpkg --configure -a
+echo gaga2
 echo "slapd slapd/password1 password admin"                                 >  /root/debconf-slapd.conf
 echo "slapd slapd/internal/adminpw password tanzudemohub"                   >> /root/debconf-slapd.conf
 echo "slapd slapd/internal/generated_adminpw password admin"                >> /root/debconf-slapd.conf
@@ -33,6 +35,7 @@ echo "slapd slapd/password_mismatch note"                                   >> /
 export DEBIAN_FRONTEND=noninteractive
 cat /root/debconf-slapd.conf | debconf-set-selections
 apt install ldap-utils slapd -y
+echo gaga3
 
 cp /home/ubuntu/tanzu-demo-hub/certificates/*.pem /etc/ssl/private
 chmod 600 /etc/ssl/private/privkey.pem
@@ -55,8 +58,12 @@ ldapmodify -Y EXTERNAL -H ldapi:/// -f /root/add_ssl.ldif
 systemctl restart slapd
 
 
+echo gaga4
 # --- INSTALL phpldapadmin ---
+apt autoremove -y
+echo gaga5
 apt install phpldapadmin -y 
+echo gaga6
 
 echo "?php"                                                                        >  /etc/phpldapadmin/config.php
 echo "\$config->custom->appearance['timezone'] = 'Europe/Zurich';"                  >> /etc/phpldapadmin/config.php
