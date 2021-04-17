@@ -11,7 +11,7 @@ export LC_ALL=en_US.UTF-8
 sudo 2>/dev/null  mkdir -p /usr/local /usr/local/bin
 
 echo "Install Software on Jumphost"
-echo "- Pivnet Token: $PIVNET_TOKEN"
+echo "=> Pivnet Token: $PIVNET_TOKEN"
 sudo apt-get install curl -y
 
 # APT-CLEANUP
@@ -19,7 +19,7 @@ sudo apt-get install curl -y
 #sudo apt-get update > /dev/null 2>&1
 
 if [ ! -x /usr/bin/az ]; then 
-  echo "- Install AZ CLI"
+  echo "=> Install AZ CLI"
   curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash > /dev/null 2>&1
 fi
 
@@ -29,16 +29,18 @@ if [ ! -x /usr/bin/certbot ]; then
   sudo ln -s /snap/bin/certbot /usr/bin/certbot
 fi
 
+echo "=> Install Certbot Plugin certbot-dns-route53"
 sudo snap install certbot-dns-route53
 sudo snap set certbot trust-plugin-with-root=ok
+certbot plugins
 
 if [ ! -x /usr/bin/zipinfo ]; then
-  echo "- Install ZIP"
+  echo "=> Install ZIP"
   apt-get install zip -y  > /dev/null 2>&1
 fi
 
 if [ ! -x /usr/bin/aws ]; then 
-  echo "- Install AWS CLI"
+  echo "=> Install AWS CLI"
 
   curl "https://s3.amazonaws.com/aws-cli/awscli-bundle.zip" -o "awscli-bundle.zip" 2>/dev/null
   unzip -q awscli-bundle.zip 
@@ -51,7 +53,7 @@ if [ ! -x /usr/bin/aws ]; then
 fi
 
 if [ ! -x /usr/bin/kubectl ]; then 
-  echo "- Install Kubectl"
+  echo "=> Install Kubectl"
   curl -LO "https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl" > /dev/null 2>&1
   chmod +x ./kubectl
   sudo mv ./kubectl /usr/local/bin/kubectl
@@ -62,12 +64,12 @@ if [ ! -x /usr/bin/kubectl ]; then
 fi
 
 if [ ! -x /usr/bin/jq ]; then 
-  echo "- Install JQ"
+  echo "=> Install JQ"
   apt-get install jq -y  > /dev/null 2>&1
 fi
 
 if [ ! -x /usr/bin/terraform ]; then 
-  echo "- Install Terraform"
+  echo "=> Install Terraform"
   #wget -q https://releases.hashicorp.com/terraform/0.11.14/terraform_0.11.14_linux_amd64.zip
   #unzip -qn terraform_0.11.14_linux_amd64.zip
   #mv terraform /usr/local/bin/
@@ -75,12 +77,12 @@ if [ ! -x /usr/bin/terraform ]; then
 fi
 
 if [ ! -x /usr/local/bin/pivnet ]; then 
-  echo "- Installing Pivnet"
+  echo "=> Installing Pivnet"
   wget -q -O pivnet github.com/pivotal-cf/pivnet-cli/releases/download/v0.0.55/pivnet-linux-amd64-0.0.55 && chmod a+x pivnet && sudo mv pivnet /usr/local/bin
 fi
 
 if [ ! -x /snap/bin/helm ]; then 
-  echo "- Installing Helm Utility"
+  echo "=> Installing Helm Utility"
   sudo apt install snapd -y  
 
   sudo snap install helm --classic >/dev/null 2>&1

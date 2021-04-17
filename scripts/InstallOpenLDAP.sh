@@ -27,9 +27,7 @@ installPackage() {
   fi
 }
 
-echo gaga1
 dpkg --configure -a
-echo gaga2
 echo "slapd slapd/password1 password admin"                                 >  /root/debconf-slapd.conf
 echo "slapd slapd/internal/adminpw password tanzudemohub"                   >> /root/debconf-slapd.conf
 echo "slapd slapd/internal/generated_adminpw password admin"                >> /root/debconf-slapd.conf
@@ -54,7 +52,6 @@ installPackage ldap-utils
 installPackage slapd
 installPackage phpldapadmin
 
-echo gaga3
 
 cp /home/ubuntu/tanzu-demo-hub/certificates/*.pem /etc/ssl/private
 chmod 600 /etc/ssl/private/privkey.pem
@@ -77,10 +74,7 @@ ldapmodify -Y EXTERNAL -H ldapi:/// -f /root/add_ssl.ldif
 systemctl restart slapd
 
 
-echo gaga4
 apt autoremove -y
-echo gaga5
-echo gaga6
 
 # --- INSTALL phpldapadmin ---
 echo "?php"                                                                        >  /etc/phpldapadmin/config.php
