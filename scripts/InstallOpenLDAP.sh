@@ -7,6 +7,8 @@ export LC_ALL=en_US.UTF-8
 
 
 DOMAIN=$1
+LDAP_DOMAIN=$(echo $DOMAIN | awk -F'.' '{ for (i = 1; i <= 3; i++) { printf(",dc=%s",$i) }}END { printf "\n"}' | sed 's/^,//g')
+J£UMP_IP=$(getent hosts jump.$DOMAIN | awk '{ print $1 })
 
 sudo dpkg --configure -a
 echo "slapd slapd/password1 password admin"                                 >  /root/debconf-slapd.conf
@@ -50,14 +52,13 @@ chown -R openldap /etc/ssl/private
 ldapmodify -Y EXTERNAL -H ldapi:/// -f /root/add_ssl.ldif 
 systemctl restart slapd
 
-#ldapwhoami -H ldap://jump-aztkg.aztkg.pcfsdu.com -x -ZZ
 
 # --- INSTALL phpldapadmin ---
 apt install phpldapadmin -y 
 
 echo "?php"                                                                        >  /etc/phpldapadmin/config.php
-echo "$config->custom->appearance['timezone'] = 'Europe/Zurich';"                  >> /etc/phpldapadmin/config.php
-echo "$config->custom->appearance['friendly_attrs'] = array("                      >> /etc/phpldapadmin/config.php
+echo "\$config->custom->appearance['timezone'] = 'Europe/Zurich';"                  >> /etc/phpldapadmin/config.php
+echo "\$config->custom->appearance['friendly_attrs'] = array("                      >> /etc/phpldapadmin/config.php
 echo "        'facsimileTelephoneNumber' => 'Fax',"                                >> /etc/phpldapadmin/config.php
 echo "        'gid'                      => 'Group',"                              >> /etc/phpldapadmin/config.php
 echo "        'mail'                     => 'Email',"                              >> /etc/phpldapadmin/config.php
@@ -66,13 +67,13 @@ echo "        'uid'                      => 'User Name',"                       
 echo "        'userPassword'             => 'Password'"                            >> /etc/phpldapadmin/config.php
 echo ");"                                                                          >> /etc/phpldapadmin/config.php
 echo ""                                                                            >> /etc/phpldapadmin/config.php
-echo "$servers = new Datastore();"                                                 >> /etc/phpldapadmin/config.php
-echo "$servers->newServer('ldap_pla');"                                            >> /etc/phpldapadmin/config.php
-echo "$servers->setValue('server','name','Tanzu-Demo-Hub LDAP Server');"           >> /etc/phpldapadmin/config.php
-echo "$servers->setValue('server','host','40.113.105.103');"                       >> /etc/phpldapadmin/config.php
-echo "$servers->setValue('server','base',array('dc=aztkg,dc=pcfsdu,dc=com'));"     >> /etc/phpldapadmin/config.php
-echo "$servers->setValue('login','auth_type','session');"                          >> /etc/phpldapadmin/config.php
-echo "$config->custom->appearance['hide_template_warning'] = true;"                >> /etc/phpldapadmin/config.php
+echo "\$servers = new Datastore();"                                                 >> /etc/phpldapadmin/config.php
+echo "\$servers->newServer('ldap_pla');"                                            >> /etc/phpldapadmin/config.php
+echo "\$servers->setValue('server','name','Tanzu-Demo-Hub LDAP Server');"           >> /etc/phpldapadmin/config.php
+echo "\$servers->setValue('server','host','40.113.105.103');"                       >> /etc/phpldapadmin/config.php
+echo "\$servers->setValue('server','base',array('$LDAP_DOMAIN'));"     >> /etc/phpldapadmin/config.php
+echo "\$servers->setValue('login','auth_type','session');"                          >> /etc/phpldapadmin/config.php
+echo "\$config->custom->appearance['hide_template_warning'] = true;"                >> /etc/phpldapadmin/config.php
 echo "?>"                                                                          >> /etc/phpldapadmin/config.php
 
 
