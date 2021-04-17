@@ -10,9 +10,9 @@ DOMAIN=$1
 
 sudo dpkg --configure -a
 echo "slapd slapd/password1 password admin"                                 >  /root/debconf-slapd.conf
-echo "slapd slapd/internal/adminpw password admin"                          >> /root/debconf-slapd.conf
+echo "slapd slapd/internal/adminpw password tanzudemohub"                   >> /root/debconf-slapd.conf
 echo "slapd slapd/internal/generated_adminpw password admin"                >> /root/debconf-slapd.conf
-echo "slapd slapd/password2 password admin"                                 >> /root/debconf-slapd.conf
+echo "slapd slapd/password2 password tanzudemohub"                          >> /root/debconf-slapd.conf
 echo "slapd slapd/unsafe_selfwrite_acl note"                                >> /root/debconf-slapd.conf
 echo "slapd slapd/purge_database boolean false"                             >> /root/debconf-slapd.conf
 echo "slapd slapd/domain string $DOMAIN"                                    >> /root/debconf-slapd.conf
@@ -51,6 +51,18 @@ ldapmodify -Y EXTERNAL -H ldapi:/// -f /root/add_ssl.ldif
 systemctl restart slapd
 
 #ldapwhoami -H ldap://jump-aztkg.aztkg.pcfsdu.com -x -ZZ
+
+# --- INSTALL phpldapadmin ---
+sudo apt install phpldapadmin -y 
+
+echo "\$config->custom->appearance['timezone'] = 'Europe/Zurich';" >> /etc/phpldapadmin/config.php
+echo "\$servers->setValue('server','name','Tanzu-Demo-Hub LDAP Server');" >> /etc/phpldapadmin/config.php
+echo "\$servers->setValue('server','host','40.113.105.103');" >> /etc/phpldapadmin/config.php
+echo "\$config->custom->appearance['hide_template_warning'] = true;" >> /etc/phpldapadmin/config.php
+
+
+
+
 
 exit
 
