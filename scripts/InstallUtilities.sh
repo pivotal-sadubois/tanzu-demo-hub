@@ -66,8 +66,6 @@ fi
 echo "=> Install Certbot Plugin certbot-dns-route53"
 installSnap certbot-dns-route53
 
-exit
-
 snap set certbot trust-plugin-with-root=ok
 certbot plugins
 

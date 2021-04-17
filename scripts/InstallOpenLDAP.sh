@@ -12,12 +12,35 @@ JUMP_HOST_IP=$(getent hosts jump.$DOMAIN | awk '{ print $1 }')
 echo "LDAP_DOMAIN:$LDAP_DOMAIN"
 echo "JUMP_HOST_IP:$JUMP_HOST_IP"
 
+installSnap() {
+  PKG=$1
+
+  echo "=> Install Package ($PKG)"
+  snap list $PKG > /dev/null 2>&1
+  if [ $? -ne 0 ]; then
+    cnt=0
+    snap install $PKG  > /dev/null 2>&1; ret=$?
+    while [ $ret -ne 0 -a $cnt -lt 3 ]; do
+      snap install certbot-dns-route53 > /dev/null 2>&1; ret=$?
+      sleep 30
+      let cnt=cnt+1
+    done
+
+    if [ $ret -ne 0 ]; then
+      echo "ERROR: failed to install package $PKG"
+      echo "       => snap install $PKG"
+      exit
+    fi
+  fi
+}
+
 installPackage() {
   PKG=$1
 
   echo "=> Install Package ($PKG)"
   dpkg -s $PKG > /dev/null 2>&1 
   if [ $? -ne 0 ]; then
+echo gaga1
     apt install $PKG -y > /dev/null 2>&1
     if [ $? -ne 0 ]; then 
       echo "ERROR: failed to install package $PKG"
