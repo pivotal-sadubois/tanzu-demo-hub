@@ -15,7 +15,7 @@ export LC_ALL=en_US.UTF-8
 [ -d /usr/share/X11/locale/en_US.UTF-8 ] && export LC_ALL=en_US.UTF-8
 
 if [ -f $HOME/tanzu-demo-hub/functions ]; then
-  $HOME/tanzu-demo-hub/functions
+  . $HOME/tanzu-demo-hub/functions
 else
   echo "ERROR: TDH Functions ($HOME/tanzu-demo-hub/functions) not found"
   exit 1
