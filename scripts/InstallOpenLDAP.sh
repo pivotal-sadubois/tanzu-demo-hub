@@ -14,8 +14,6 @@ export LC_ALL=en_US.UTF-8
 DOMAIN=$1
 LDAP_DOMAIN=$(echo $DOMAIN | awk -F'.' '{ for (i = 1; i <= 3; i++) { printf(",dc=%s",$i) }}END { printf "\n"}' | sed 's/^,//g')
 JUMP_HOST_IP=$(getent hosts jump.$DOMAIN | awk '{ print $1 }')
-echo "LDAP_DOMAIN:$LDAP_DOMAIN"
-echo "JUMP_HOST_IP:$JUMP_HOST_IP"
 
 installSnap() {
   PKG=$1
@@ -100,9 +98,8 @@ chown -R openldap /etc/ssl/private
 sed -i "s/^#BASE.*/BASE	$LDAP_DOMAIN/g" /etc/ldap/ldap.conf
 sed -i "s+^#URI.*+URI	ldap://jump.$DOMAIN+g" /etc/ldap/ldap.conf
 
-ldapmodify -Y EXTERNAL -H ldapi:/// -f /root/add_ssl.ldif 
+ldapmodify -Y EXTERNAL -H ldapi:/// -f /root/add_ssl.ldif | sed '/^$/d'
 systemctl restart slapd
-
 
 # --- PACKAGE CLEANUP ---
 apt autoremove -y > /dev/null 2>&1
