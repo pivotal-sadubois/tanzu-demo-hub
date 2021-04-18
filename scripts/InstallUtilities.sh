@@ -61,7 +61,16 @@ installPackage snapd
 installPackage curl
 
 if [ ! -x /usr/bin/az ]; then 
+  # Download and install the Microsoft signing key
+  curl -qsL https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor 2>/dev/null | tee /etc/apt/trusted.gpg.d/microsoft.gpg > /dev/null
+
+  # Add the Azure CLI software repository (skip this step on ARM64 Linux distributions)
+  AZ_REPO=$(lsb_release -cs)
+  echo "deb [arch=amd64] https://packages.microsoft.com/repos/azure-cli/ $AZ_REPO main" | tee /etc/apt/sources.list.d/azure-cli.list > /dev/null
+  apt-get update > /dev/null
+
   installPackage azure-cli
+
   #echo "=> Install AZ CLI"
   #curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash > /dev/null 2>&1
 fi
