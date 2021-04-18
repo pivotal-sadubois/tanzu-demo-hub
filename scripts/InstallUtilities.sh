@@ -33,7 +33,7 @@ installSnap() {
     if [ $ret -ne 0 ]; then
       echo "ERROR: failed to install package $PKG"
       echo "       => snap install $PKG $PKG"
-      exit
+      exit 1
     fi
   fi
 }
@@ -49,7 +49,7 @@ installPackage() {
     if [ $? -ne 0 ]; then
       echo "ERROR: failed to install package $PKG"
       echo "       => apt install $PKG -y"
-      exit
+      exit 1
     fi
   fi
 }
@@ -141,4 +141,5 @@ if [ ! -x /snap/bin/yq ]; then
 fi
 
 touch  /jump_software_installed
+exit 0
 
