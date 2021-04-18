@@ -73,33 +73,42 @@ fi
  
 echo "=> Install Certbot Plugin certbot-dns-route53"
 snap set certbot trust-plugin-with-root=ok
-installSnap certbot-dns-route53
+installPackage zipinstallSnap certbot-dns-route53
 certbot plugins
 
-if [ ! -x /usr/bin/zipinfo ]; then
-  echo "=> Install ZIP"
-  installPackage zip
-fi
+# --- INSTALL PACKAGTES ---
+installPackage zip
+installPackage awscli
+installSnap kubectl --classic
+installPackage jq
 
-if [ ! -x /usr/bin/aws ]; then 
-  echo "=> Install AWS CLI"
+#if [ ! -x /usr/bin/zipinfo ]; then
+#  echo "=> Install ZIP"
+#  installPackage zip
+#fi
 
-  curl "https://s3.amazonaws.com/aws-cli/awscli-bundle.zip" -o "awscli-bundle.zip" 2>/dev/null
-  unzip -q awscli-bundle.zip 
-  ./awscli-bundle/install -i /usr/local/aws -b /usr/bin/aws
-fi
+#if [ ! -x /usr/bin/aws ]; then 
+#  installPackage awscli
+#    
+#  #echo "=> Install AWS CLI"
+#  #curl "https://s3.amazonaws.com/aws-cli/awscli-bundle.zip" -o "awscli-bundle.zip" 2>/dev/null
+#  #unzip -q awscli-bundle.zip 
+#  #./awscli-bundle/install -i /usr/local/aws -b /usr/bin/aws
+#fi
 
-if [ ! -x /usr/bin/kubectl ]; then 
-  echo "=> Install Kubectl"
-  curl -LO "https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl" > /dev/null 2>&1
-  chmod +x ./kubectl
-  mv ./kubectl /usr/local/bin/kubectl
-fi
+#if [ ! -x /usr/bin/kubectl ]; then 
+#  installSnap kubectl --classic
+#
+#  #echo "=> Install Kubectl"
+#  #curl -LO "https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl" > /dev/null 2>&1
+#  #chmod +x ./kubectl
+#  #mv ./kubectl /usr/local/bin/kubectl
+#fi
 
-if [ ! -x /usr/bin/jq ]; then 
-  echo "=> Install JQ"
-  installPackage jq
-fi
+#if [ ! -x /usr/bin/jq ]; then 
+#  echo "=> Install JQ"
+#  installPackage jq
+#fi
 
 if [ ! -x /usr/local/bin/pivnet ]; then 
   echo "=> Installing Pivnet"
@@ -109,14 +118,12 @@ fi
 if [ ! -x /snap/bin/helm ]; then 
   echo "=> Installing Helm Utility"
   installPackage snapd
-
-  snap install helm --classic >/dev/null 2>&1
+  installPackage helm --classic
   [ ! -s /usr/bin/helm ] && sudo ln -s /snap/bin/helm /usr/bin/helm
 fi
 
 if [ ! -x /snap/bin/yq ]; then
-  wget https://github.com/mikefarah/yq/releases/download/3.4.1/yq_linux_amd64 -O /usr/bin/yq > /dev/null 2>&1
-   chmod +x /usr/bin/yq
+  wget -q https://github.com/mikefarah/yq/releases/download/3.4.1/yq_linux_amd64 -O /usr/bin/yq && chmod +x /usr/bin/yq
 fi
 
 touch  /jump_software_installed
