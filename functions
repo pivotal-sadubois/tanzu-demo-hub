@@ -1305,14 +1305,13 @@ createENVfile() {
 configureLDAP() {
   ldapwhoami -H ldap://jump.${TDH_TKGMC_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN} -x -ZZ >/dev/null 2>&1
   if [ $? -ne 0 ]; then 
-    messageTitle "Configure LDAP Server"        
-    messagePrint " - Install LDAP Server"       "jump.${TDH_TKGMC_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}"
-    messagePrint " - Install LDAP Management"   "phpLDAPadmin"
+    messageTitle "Install LDAP Server and (phpLDAPadmin) on Jump Host (jump.${TDH_TKGMC_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN})"
     $SSH_COMMAND -n "[ -d $SSH_HOME/tanzu-demo-hub ] && chmod a+x ${TDHHOME}/scripts/InstallOpenLDAP.sh && \
         sudo ${TDHHOME}/scripts/InstallOpenLDAP.sh \"${TDH_TKGMC_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}\" $DEBUG"; ret=$?
 
     if [ ${ret} -ne 0 ]; then
       echo "ERROR: Failed to install CLI Utilities (InstallUtilities.sh)"
+      echo "       => $SSH_COMMAND"
       exit
     fi
     sleep 300
@@ -1358,12 +1357,13 @@ configureJumpHost() {
   stt=$($SSH_COMMAND -n "[ -f /tmp/tanzu-demo-hub.pid ] && pgrep -F /tmp/tanzu-demo-hub.pid")
   stt=$($SSH_COMMAND -n "[ -f /jump_software_installed ] && echo true")
   if [ "${stt}" == "" ]; then
-    messagePrint " - Install CLI Utilities"   "aws,az,gcp,bosh,pivnet,cf,om,jq"
+    messageTitle "Install CLI Utilities (aws,az,gcp,bosh,pivnet,cf,om,jq) on Jump Host (jump.${TDH_TKGMC_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN})"
     $SSH_COMMAND -n "[ -d $SSH_HOME/tanzu-demo-hub ] && chmod a+x ${TDHHOME}/scripts/InstallUtilities.sh && \
         sudo ${TDHHOME}/scripts/InstallUtilities.sh $PCF_PIVNET_TOKEN $DEBUG"; ret=$?
 
     if [ ${ret} -ne 0 ]; then
-      echo "ERROR: Failed to install CLI Utilities (InstallUtilities.sh)"
+      echo "ERROR: Failed to install CLI Utilities (InstallUtilities.sh) on Jump Host"
+      echo "       => $SSH_COMMAND"
       exit
     fi
 
@@ -1394,12 +1394,13 @@ configureJumpHost() {
   # --- INSTALL TKG UTILITES ---
   stt=$($SSH_COMMAND -n "[ -f /tkg_software_installed ] && echo true")
   if [ "${stt}" == "" ]; then
-    messagePrint " - Install TKG Utilities"   "tkg, ytt, kapp, kbld, kubectl, kind"
+    messageTitle "Install TKG Utilities (tkg, ytt, kapp, kbld, kubectl, kind) on Jump Host (jump.${TDH_TKGMC_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN})"
     $SSH_COMMAND -n "[ -d $SSH_HOME/tanzu-demo-hub ] && chmod a+x ${TDHHOME}/scripts/InstallTKGutilities.sh && \
         sudo ${TDHHOME}/scripts/InstallTKGutilities.sh \"$SSH_HOME/tanzu-demo-hub\" \"$TDH_TKGMC_INFRASTRUCTURE\" $DEBUG"; ret=$?
 
     if [ ${ret} -ne 0 ]; then
-      echo "ERROR: Failed to install TKG Utilities (InstallTKGutilities.sh)"
+      echo "ERROR: Failed to install TKG Utilities (InstallTKGutilities.sh) on Jump Host"
+      echo "       => $SSH_COMMAND"
       exit
     else
       messagePrint " - Rebooting Jump Server"   "wait for services comming up ..."
