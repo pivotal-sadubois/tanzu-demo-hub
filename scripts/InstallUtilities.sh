@@ -74,7 +74,11 @@ fi
 echo "=> Install Certbot Plugin certbot-dns-route53"
 snap set certbot trust-plugin-with-root=ok
 installPackage zipinstallSnap certbot-dns-route53
-certbot plugins
+echo "   ---------------------------------------------------------------------------------------------------------------"
+certbot plugins 2>/dev/null | \
+   awk 'BEGIN{h="Certbot Plugins:"}{ if($1 == "*"){ a=$2 }; if ($1 == "Description:"){ printf("  %-17s %-12s %s\n",h,a,$0);h="" }}' | \
+   sed 's/Description://g'
+echo "   ---------------------------------------------------------------------------------------------------------------"
 
 # --- INSTALL PACKAGTES ---
 installPackage zip
