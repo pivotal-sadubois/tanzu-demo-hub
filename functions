@@ -145,9 +145,9 @@ messagePrint() {
   if [ "${PCF_DEPLOYMENT_DEBUG}" == "true" -o "${DEBUG}" == "1" ]; then
     if [ "$HST" == "localhost" ]; then 
       #echo -e "\e[90m[${_dat}-$HST] ${_msg} ${_str}: ${_stt}\e[0m"
-      echo -e "[${_dat}-$HST] \e[90m${_msg} ${_str}: ${_stt}\e[0m"
+      echo -e "[${_dat}-$HST] ${_msg} ${_str}: ${_stt}"
     else
-      echo -e "\e[33m[${_dat}-$HST]\e[0m \e[90m${_msg} ${_str}: ${_stt}\e[0m"
+      echo -e "\e[33m[${_dat}-$HST]\e[0m \e[37m${_msg} ${_str}: ${_stt}\e[0m"
     fi
     #echo "[${_dat}-$HST] ${_msg} ${_str}: ${_stt}"
   else
@@ -1414,7 +1414,7 @@ configureJumpHost() {
       exit
     else
       messagePrint " - Rebooting Jump Server"   "wait for services comming up ..."
-      $SSH_COMMAND -n "reboot" > /dev/null 2>&1
+      $SSH_COMMAND -n "sudo reboot" > /dev/null 2>&1
     fi
 
     # --- WAIT UNTIL SSH DEAMON IS READY NO JUMPHOST ----
