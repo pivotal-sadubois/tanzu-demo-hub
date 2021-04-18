@@ -1704,7 +1704,13 @@ createCluster() {
 
       messagePrint " - Management Cluster Creating"        "This may take up to 15min ..."
 
-      tanzu management-cluster create --file $TKG_TEMPLATE -v 0 --log-file=/tmp/$TDH_TKGMC_NAME.log > /dev/null 2>&1; ret=$?
+      if [ $DEBUG -gt 0 ]; then
+        echo "-------------------------------------------------------------------------------------------------------------------------------------------------------"
+        tanzu management-cluster create --file $TKG_TEMPLATE -v 0 --log-file=/tmp/$TDH_TKGMC_NAME.log; ret=$?
+        echo "-------------------------------------------------------------------------------------------------------------------------------------------------------"
+      else
+        tanzu management-cluster create --file $TKG_TEMPLATE -v 0 --log-file=/tmp/$TDH_TKGMC_NAME.log > /dev/null 2>&1; ret=$?
+      fi
       if [ ${ret} -ne 0 ]; then
         echo "ERROR: failed to create TKG Management Cluster"
         echo "       => tanzu management-cluster create --file $TKG_TEMPLATE -v 0 --log-file=/tmp/$TDH_TKGMC_NAME.log"
