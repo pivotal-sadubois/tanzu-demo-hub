@@ -26,6 +26,16 @@ mkdir -p /usr/local /usr/local/bin
 installPackage snapd
 installPackage curl
 
+if [ -f /usr/bin/docker ]; then 
+  apt-get remove docker docker-engine docker.io containerd runc -y > /dev/null 2>&1
+  #installPackage docker.io
+  installSnap docker
+  systemctl start docker > /dev/null 2>&1
+  systemctl enable docker > /dev/null 2>&1
+  usermod -aG docker ubuntu
+  ln -s /snap/bin/docker /usr/bin/docker
+fi
+
 if [ ! -x /usr/bin/az ]; then 
   # Download and install the Microsoft signing key
   curl -qsL https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor 2>/dev/null | tee /etc/apt/trusted.gpg.d/microsoft.gpg > /dev/null
