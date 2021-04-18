@@ -143,7 +143,7 @@ messagePrint() {
   [ $(uname) == "Linux" ] && HST="jump-host" || HST="localhost"
 
   if [ "${PCF_DEPLOYMENT_DEBUG}" == "true" -o "${DEBUG}" == "1" ]; then
-    if [ "$HST" == "localhost"; then 
+    if [ "$HST" == "localhost" ]; then 
       echo -e "[${_dat}-$HST] ${_msg} ${_str}: ${_stt}"
     else
       echo -e "\e[33m[${_dat}-$HST]\e[0m ${_msg} ${_str}: ${_stt}"
