@@ -132,7 +132,7 @@ fi
 
 if [ ! -x /snap/bin/helm ]; then 
   echo "=> Installing Helm Utility"
-  installPackage helm --classic
+  installSnap helm --classic
   [ ! -s /usr/bin/helm ] && sudo ln -s /snap/bin/helm /usr/bin/helm
 fi
 
