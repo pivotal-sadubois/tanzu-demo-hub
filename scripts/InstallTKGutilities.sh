@@ -47,6 +47,14 @@ if [ ! -f /usr/local/bin/tanzu ]; then
     sleep 10
   done
 
+  if [ -f $vmwfile ]; then 
+    echo "ERROR: failed to download $vmwfile"
+    echo "       => export VMWUSER=\"$TDH_MYVMWARE_USER\""
+    echo "       => export VMWPASS=\"$TDH_MYVMWARE_PASS\""
+    echo "       => mw-cli ls vmware_tanzu_kubernetes_grid"
+    exit
+  fi
+
   (cd /tmp/; vmw-cli cp $vmwfile > /dev/null 2>&1)
   cd /tmp; tar xf $vmwfile
 
