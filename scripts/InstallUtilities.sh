@@ -71,6 +71,7 @@ if [ ! -x /usr/bin/az ]; then
 
   installPackage azure-cli
 
+exit 1
   #echo "=> Install AZ CLI"
   #curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash > /dev/null 2>&1
 fi
