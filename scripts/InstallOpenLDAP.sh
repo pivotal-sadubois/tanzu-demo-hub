@@ -98,7 +98,7 @@ setfacl -m "u:openldap:r" /etc/ssl/private/{fullchain,cert,privkey}.pem
 chown -R openldap /etc/ssl/private
 
 sed -i "s/^#BASE.*/BASE	$LDAP_DOMAIN/g" /etc/ldap/ldap.conf
-sed -i "s/^#URI.*/URI	ldap://jump.$DOMAIN/g" /etc/ldap/ldap.conf
+sed -i "s+^#URI.*+URI	ldap://jump.$DOMAIN+g" /etc/ldap/ldap.conf
 
 ldapmodify -Y EXTERNAL -H ldapi:/// -f /root/add_ssl.ldif 
 systemctl restart slapd
