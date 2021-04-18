@@ -57,7 +57,7 @@ if [ ! -f /usr/local/bin/tanzu ]; then
   else 
     cnt=0
     while [ ! -f "$vmwfile" -a $cnt -lt 10 ]; do
-      vmw-cli ls vmware_tanzu_kubernetes_grid 2>/dev/null
+      vmw-cli ls vmware_tanzu_kubernetes_grid > /dev/null 2>&1
       vmw-cli cp $vmwfile > /dev/null 2>&1
 
       let cnt=cnt+1
@@ -69,7 +69,7 @@ if [ ! -f /usr/local/bin/tanzu ]; then
       echo "       => export VMWUSER=\"$TDH_MYVMWARE_USER\""
       echo "       => export VMWPASS=\"$TDH_MYVMWARE_PASS\""
       echo "       => vmw-cli ls vmware_tanzu_kubernetes_grid"
-      echo "       => (cd /tmp/; vmw-cli cp $vmwfile)" 
+      echo "       => vmw-cli cp $vmwfile" 
       exit 1
     else
       mv $vmwfile /tmp
