@@ -20,7 +20,8 @@ fi
 
 apt-get remove docker docker-engine docker.io containerd runc -y > /dev/null 2>&1
 
-installPackage docker.io
+#installPackage docker.io
+installSnap docker
 systemctl start docker > /dev/null 2>&1
 systemctl enable docker > /dev/null 2>&1
 usermod -aG docker ubuntu
