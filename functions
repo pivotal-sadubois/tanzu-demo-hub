@@ -1404,9 +1404,12 @@ configureJumpHost() {
       exit
     else
       messagePrint " - Rebooting Jump Server"   "wait for services comming up ..."
+echo "$SSH_COMMAND -n \"reboot"\"
       $SSH_COMMAND -n "reboot" > /dev/null 2>&1
     fi
 
+exit
+#gaga
     # --- WAIT UNTIL SSH DEAMON IS READY NO JUMPHOST ----
     ret=1
     while [ $ret -ne 0 ]; do
@@ -1715,7 +1718,8 @@ createCluster() {
         echo "-------------------------------------------------------------------------------------------------------------------------------------------------------"
         cat /tmp/$TDH_TKGMC_NAME.log
         echo "-------------------------------------------------------------------------------------------------------------------------------------------------------"
-        exit
+
+        exit 1
       fi
 
       messagePrint " - Management Cluster Creating Completed"    "/tmp/$TDH_TKGMC_NAME.log"
