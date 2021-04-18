@@ -10,6 +10,7 @@ export TANZU_DEMO_HUB=$(cd "$(pwd)/$(dirname $0)/.."; pwd)
 export TDHPATH=$(cd "$(pwd)/$(dirname $0)/.."; pwd)
 export DEPLOY_TKG_TEMPLATE=$1
 export DEBUG=$2
+echo "InstallTKGmc.sh DEBUG:$DEBUG"
 
 . $TANZU_DEMO_HUB/functions
 
