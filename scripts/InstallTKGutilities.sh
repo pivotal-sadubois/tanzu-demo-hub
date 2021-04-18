@@ -48,19 +48,34 @@ if [ ! -f /usr/local/bin/tanzu ]; then
     sleep 10
   done
 
-echo "vmwfile:$vmwfile"
   if [ "$vmwfile" == "" ]; then 
     echo "ERROR: failed to download $vmwfile"
     echo "       => export VMWUSER=\"$TDH_MYVMWARE_USER\""
     echo "       => export VMWPASS=\"$TDH_MYVMWARE_PASS\""
-    echo "       => mw-cli ls vmware_tanzu_kubernetes_grid"
+    echo "       => vmw-cli ls vmware_tanzu_kubernetes_grid"
     exit 1
+  else 
+    cnt=0
+    while [ ! -f "$vmwfile" -a $cnt -lt 10 ]; do
+      vmw-cli ls vmware_tanzu_kubernetes_grid 2>/dev/null
+      vmw-cli cp $vmwfile > /dev/null 2>&1
+
+      let cnt=cnt+1
+      sleep 30
+    done
+
+    if [ ! -f $vmwfile ]; then 
+      echo "ERROR: failed to download $vmwfile"
+      echo "       => export VMWUSER=\"$TDH_MYVMWARE_USER\""
+      echo "       => export VMWPASS=\"$TDH_MYVMWARE_PASS\""
+      echo "       => vmw-cli ls vmware_tanzu_kubernetes_grid"
+      echo "       => (cd /tmp/; vmw-cli cp $vmwfile)" 
+      exit 1
+    else
+      mv $vmwfile /tmp
+      cd /tmp; tar xf $vmwfile
+    fi
   fi
-
-echo "(cd /tmp/; vmw-cli cp $vmwfile > /dev/null 2>&1)"
-
-  (cd /tmp/; vmw-cli cp $vmwfile > /dev/null 2>&1)
-  cd /tmp; tar xf $vmwfile
 
   if [ -d /tmp/cli ]; then
     (cd cli; sudo install core/v*/tanzu-core-linux_amd64 /usr/local/bin/tanzu)
