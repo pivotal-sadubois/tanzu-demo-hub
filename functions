@@ -1376,7 +1376,19 @@ configureJumpHost() {
       echo "ERROR: Failed to install CLI Utilities (InstallUtilities.sh) on Jump Host"
       echo "       => $SSH_COMMAND"
       exit
+    else
+      messagePrint " - Rebooting Jump Server"   "wait for services comming up ..."
+      $SSH_COMMAND -n "sudo reboot" > /dev/null 2>&1
     fi
+
+    # --- WAIT UNTIL SSH DEAMON IS READY NO JUMPHOST ----
+    ret=1
+    while [ $ret -ne 0 ]; do
+      $SSH_COMMAND -n id > /dev/null 2>&1; ret=$?
+      [ $ret -ne 0 ] && sleep 10
+    done
+
+    sleep 20
 
     # --- COPY THE AWS DIRECTORY ---
     $SCP_COMMAND -r ~/.aws ${SSH_USER}@${SSH_HOST}:$SSH_HOME > /dev/null 2>&1
@@ -1413,19 +1425,19 @@ configureJumpHost() {
       echo "ERROR: Failed to install TKG Utilities (InstallTKGutilities.sh) on Jump Host"
       echo "       => $SSH_COMMAND"
       exit
-    else
-      messagePrint " - Rebooting Jump Server"   "wait for services comming up ..."
-      $SSH_COMMAND -n "sudo reboot" > /dev/null 2>&1
+    #else
+    #  messagePrint " - Rebooting Jump Server"   "wait for services comming up ..."
+    #  $SSH_COMMAND -n "sudo reboot" > /dev/null 2>&1
     fi
 
     # --- WAIT UNTIL SSH DEAMON IS READY NO JUMPHOST ----
-    ret=1
-    while [ $ret -ne 0 ]; do
-      $SSH_COMMAND -n id > /dev/null 2>&1; ret=$?
-      [ $ret -ne 0 ] && sleep 10
-    done
-
-    sleep 30
+    #ret=1
+    #while [ $ret -ne 0 ]; do
+    #  $SSH_COMMAND -n id > /dev/null 2>&1; ret=$?
+    #  [ $ret -ne 0 ] && sleep 10
+    #done
+    #
+    #sleep 30
   fi
 }
 
