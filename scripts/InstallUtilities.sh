@@ -57,12 +57,13 @@ installPackage() {
 sudo 2>/dev/null  mkdir -p /usr/local /usr/local/bin
 
 echo "Install Software on Jumphost"
-echo "=> Pivnet Token: $PIVNET_TOKEN"
+installPackage snapd
 installPackage curl
 
 if [ ! -x /usr/bin/az ]; then 
-  echo "=> Install AZ CLI"
-  curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash > /dev/null 2>&1
+  installPackage azure-cli
+  #echo "=> Install AZ CLI"
+  #curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash > /dev/null 2>&1
 fi
 
 if [ ! -x /usr/bin/certbot ]; then 
@@ -73,7 +74,8 @@ fi
  
 echo "=> Install Certbot Plugin certbot-dns-route53"
 snap set certbot trust-plugin-with-root=ok
-installPackage zipinstallSnap certbot-dns-route53
+installPackage zip
+installSnap certbot-dns-route53
 echo "   ---------------------------------------------------------------------------------------------------------------"
 certbot plugins 2>/dev/null | \
    awk 'BEGIN{h="Certbot Plugins:"}{ if($1 == "*"){ a=$2 }; if ($1 == "Description:"){ printf("  %-17s %-12s %s\n",h,a,$0);h="" }}' | \
@@ -121,7 +123,6 @@ fi
 
 if [ ! -x /snap/bin/helm ]; then 
   echo "=> Installing Helm Utility"
-  installPackage snapd
   installPackage helm --classic
   [ ! -s /usr/bin/helm ] && sudo ln -s /snap/bin/helm /usr/bin/helm
 fi
