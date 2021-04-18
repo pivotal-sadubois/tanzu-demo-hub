@@ -4748,7 +4748,7 @@ installPackage() {
       exit 1
     fi
   else
-    ver=$(dpkg -s $PKG | grep "Version" | sed 's/^Version: //g') 
+    ver=$(dpkg -s $PKG | grep "Version" | grep -v "Config-Version" | sed 's/^Version: //g') 
     messagePrint " - Verify Package ($PKG)" "$ver"
   fi
 }
