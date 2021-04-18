@@ -130,7 +130,10 @@ if [ "$TDHENV" == "vSphere" ]; then
   chmod +x /usr/local/bin/govc
 fi
 
+echo "=> Upgrading Packages"
+apt upgrade -y > /dev/null 2>&1
+
 echo "=> Rebooting Jump Host"
 touch /tkg_software_installed
-apt upgrade -y
-reboot
+
+exit 0

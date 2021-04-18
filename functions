@@ -1422,6 +1422,9 @@ configureJumpHost() {
     if [ ${ret} -ne 0 ]; then
       echo "ERROR: Failed to install TKG Utilities (InstallTKGutilities.sh)"
       exit
+    else
+      messagePrint " - Rebooting Jump Server"   "wait for services comming up ..."
+      $SSH_COMMAND -n "reboot" > /dev/null 2>&1
     fi
 
     # --- WAIT UNTIL SSH DEAMON IS READY NO JUMPHOST ----
