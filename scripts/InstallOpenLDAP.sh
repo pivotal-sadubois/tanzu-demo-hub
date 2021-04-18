@@ -7,58 +7,26 @@
 # ############################################################################################
 
 export LC_ALL=en_US.UTF-8
-#export LC_ALL="$LOC"
-
-[ -d /usr/share/X11/locale/en_US.UTF-8 ] && export LC_ALL=en_US.UTF-8
-
-DOMAIN=$1
+export DOMAIN=$1
+export DEBUG=$2
 LDAP_DOMAIN=$(echo $DOMAIN | awk -F'.' '{ for (i = 1; i <= 3; i++) { printf(",dc=%s",$i) }}END { printf "\n"}' | sed 's/^,//g')
 JUMP_HOST_IP=$(getent hosts jump.$DOMAIN | awk '{ print $1 }')
 
-installSnap() {
-  PKG=$1
-  OPT=$2
-  
-  echo "=> Install Package ($PKG)"
-  snap list $PKG > /dev/null 2>&1
-  if [ $? -ne 0 ]; then
-    cnt=0
-    snap install $PKG $OPT > /dev/null 2>&1; ret=$?
-    while [ $ret -ne 0 -a $cnt -lt 3 ]; do
-      snap install $PKG $OPT> /dev/null 2>&1; ret=$?
-      sleep 30
-      let cnt=cnt+1
-    done
-    
-    if [ $ret -ne 0 ]; then
-      echo "ERROR: failed to install package $PKG"
-      echo "       => snap install $PKG $PKG"
-      exit 1
-    fi
-  fi
-}
+[ -d /usr/share/X11/locale/en_US.UTF-8 ] && export LC_ALL=en_US.UTF-8
 
-installPackage() {
-  PKG=$1
-
-  echo "=> Install Package ($PKG)"
-  dpkg -s $PKG > /dev/null 2>&1 
-  if [ $? -ne 0 ]; then
-    apt install $PKG -y > /dev/null 2>&1
-    if [ $? -ne 0 ]; then 
-      echo "ERROR: failed to install package $PKG"
-      echo "       => apt install $PKG -y"
-      exit 1
-    fi
-  fi
-}
+if [ -f $HOME/tanzu-demo-hub/functions ]; then
+  $HOME/tanzu-demo-hub/functions
+else
+  echo "ERROR: TDH Functions ($HOME/tanzu-demo-hub/functions) not found"
+  exit 1
+fi
 
 #dpkg --configure -a
 installPackage ldap-utils
 echo "slapd slapd/password1 password admin"                                 >  /root/debconf-slapd.conf
-echo "slapd slapd/internal/adminpw password admin"                   >> /root/debconf-slapd.conf
+echo "slapd slapd/internal/adminpw password admin"                          >> /root/debconf-slapd.conf
 echo "slapd slapd/internal/generated_adminpw password admin"                >> /root/debconf-slapd.conf
-echo "slapd slapd/password2 password admin"                          >> /root/debconf-slapd.conf
+echo "slapd slapd/password2 password admin"                                 >> /root/debconf-slapd.conf
 echo "slapd slapd/unsafe_selfwrite_acl note"                                >> /root/debconf-slapd.conf
 echo "slapd slapd/purge_database boolean false"                             >> /root/debconf-slapd.conf
 echo "slapd slapd/domain string $DOMAIN"                                    >> /root/debconf-slapd.conf

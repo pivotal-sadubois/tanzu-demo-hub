@@ -6,51 +6,17 @@
 # Description ..: Tanzu Demo Hub - Installation Tanzu TKG utilities on Jump Host
 # ############################################################################################
 
-TDHPATH=$1; cd /tmp
-TDHENV=$2; cd /tmp
+export TDHPATH=$1
+export DHENV=$2
+export DEBUG=$3
+export LC_ALL=en_US.UTF-8
 
-echo "=> Install TKG Extensions"
-#mkdir -p $TDHPATH/extensions && cd $TDHPATH/extensions
-#tar xfz $TDHPATH/software/tkg-extensions-manifests-v1.2.0-vmware.1.tar-2.gz
-#sudo chown -R ubuntu:ubuntu $TDHPATH/extensions
-
-installSnap() {
-  PKG=$1
-  OPT=$2
-
-  echo "=> Install Package ($PKG)"
-  snap list $PKG > /dev/null 2>&1
-  if [ $? -ne 0 ]; then
-    cnt=0
-    snap install $PKG $OPT > /dev/null 2>&1; ret=$?
-    while [ $ret -ne 0 -a $cnt -lt 3 ]; do
-      snap install $PKG $OPT> /dev/null 2>&1; ret=$?
-      sleep 30
-      let cnt=cnt+1
-    done
-
-    if [ $ret -ne 0 ]; then
-      echo "ERROR: failed to install package $PKG"
-      echo "       => snap install $PKG $PKG"
-      exit 1
-    fi
-  fi
-}
-
-installPackage() {
-  PKG=$1
-
-  echo "=> Install Package ($PKG)"
-  dpkg -s $PKG > /dev/null 2>&1
-  if [ $? -ne 0 ]; then
-    apt install $PKG -y > /dev/null 2>&1
-    if [ $? -ne 0 ]; then
-      echo "ERROR: failed to install package $PKG"
-      echo "       => apt install $PKG -y"
-      exit 1
-    fi
-  fi
-}
+if [ -f $HOME/tanzu-demo-hub/functions ]; then
+  $HOME/tanzu-demo-hub/functions 
+else
+  echo "ERROR: TDH Functions ($HOME/tanzu-demo-hub/functions) not found"
+  exit 1
+fi
 
 apt-get remove docker docker-engine docker.io containerd runc -y > /dev/null 2>&1
 
@@ -60,14 +26,14 @@ systemctl enable docker > /dev/null 2>&1
 usermod -aG docker ubuntu
 
 if [ ! -f /usr/local/bin/vmw-cli ]; then
-  echo "=> Install (vmw-cli)"
+  messagePrint " - Install Package (vmw-cli)" "installing"
   docker run apnex/vmw-cli shell > vmw-cli 2>/dev/null
   mv vmw-cli /usr/local/bin
   chmod 755 /usr/local/bin/vmw-cli
 fi
 
 if [ ! -f /usr/local/bin/tanzu ]; then
-  echo "=> Install Tanzu CLI"
+  messagePrint " - Install Tanzu CLI" "installing"
   . ~/.tanzu-demo-hub.cfg
   export VMWUSER="$TDH_MYVMWARE_USER"
   export VMWPASS="$TDH_MYVMWARE_PASS"
@@ -100,7 +66,7 @@ fi
 
 
 # INSTALL KIND
-echo "=> Install Kind Cluster"
+messagePrint " - Install Kind Cluster" "installing"
 curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.9.0/kind-linux-amd64 2>/dev/null
 chmod +x ./kind
 mv kind /usr/local/bin
@@ -110,7 +76,7 @@ installSnap kubeadm --classic
 
 if [ "$TDHENV" == "vSphere" ]; then 
   if [ ! -f /usr/bin/ovftool ]; then 
-    echo "=> Install ovftool"
+    messagePrint " - Install ovftool" "installing"
     if [ -f $TDHPATH/software/VMware-ovftool-4.4.1-16812187-lin.x86_64.bundle ]; then 
       echo -e "\n\n\nyes" | sudo nohup $TDHPATH/software/VMware-ovftool-4.4.1-16812187-lin.x86_64.bundle
     else
@@ -130,10 +96,9 @@ if [ "$TDHENV" == "vSphere" ]; then
   chmod +x /usr/local/bin/govc
 fi
 
-echo "=> Upgrading Packages"
+messagePrint " - Upgrading Packages" "apt upgrade -y"
 apt upgrade -y > /dev/null 2>&1
 
-echo "=> Rebooting Jump Host"
 touch /tkg_software_installed
 
 exit 0

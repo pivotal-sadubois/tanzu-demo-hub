@@ -9,54 +9,20 @@
 #https://docs.python-guide.org/dev/virtualenvs/
 
 export PIVNET_TOKEN=$1
-#LOC=$(locale 2>/dev/null | grep LC_CTYPE | sed 's/"//g' | awk -F= '{ print $2 }') 
+export DEBUG=$2
 export LC_ALL=en_US.UTF-8
-#export LC_ALL="$LOC"
 
 [ -d /usr/share/X11/locale/en_US.UTF-8 ] && export LC_ALL=en_US.UTF-8
 
-installSnap() {
-  PKG=$1
-  OPT=$2
-  
-  echo "=> Install Package ($PKG)"
-  snap list $PKG > /dev/null 2>&1
-  if [ $? -ne 0 ]; then
-    cnt=0
-    snap install $PKG $OPT > /dev/null 2>&1; ret=$?
-    while [ $ret -ne 0 -a $cnt -lt 3 ]; do
-      snap install $PKG $OPT> /dev/null 2>&1; ret=$?
-      sleep 30
-      let cnt=cnt+1
-    done
-    
-    if [ $ret -ne 0 ]; then
-      echo "ERROR: failed to install package $PKG"
-      echo "       => snap install $PKG $PKG"
-      exit 1
-    fi
-  fi
-}
+if [ -f $HOME/tanzu-demo-hub/functions ]; then
+  $HOME/tanzu-demo-hub/functions
+else
+  echo "ERROR: TDH Functions ($HOME/tanzu-demo-hub/functions) not found"
+  exit 1
+fi
 
+mkdir -p /usr/local /usr/local/bin
 
-installPackage() {
-  PKG=$1
-
-  echo "=> Install Package ($PKG)"
-  dpkg -s $PKG > /dev/null 2>&1
-  if [ $? -ne 0 ]; then
-    apt install $PKG -y > /dev/null 2>&1
-    if [ $? -ne 0 ]; then
-      echo "ERROR: failed to install package $PKG"
-      echo "       => apt install $PKG -y"
-      exit 1
-    fi
-  fi
-}
-
-sudo 2>/dev/null  mkdir -p /usr/local /usr/local/bin
-
-echo "Install Software on Jumphost"
 installPackage snapd
 installPackage curl
 
@@ -70,18 +36,15 @@ if [ ! -x /usr/bin/az ]; then
   apt-get update > /dev/null
 
   installPackage azure-cli
-
-  #echo "=> Install AZ CLI"
-  #curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash > /dev/null 2>&1
 fi
 
 if [ ! -x /usr/bin/certbot ]; then 
   snap install core; sudo snap refresh core
   snap install --classic certbot
-  sudo ln -s /snap/bin/certbot /usr/bin/certbot
+  ln -s /snap/bin/certbot /usr/bin/certbot
 fi
  
-echo "=> Install Certbot Plugin certbot-dns-route53"
+messagePrint " - Install Certbot Plugin" "certbot-dns-route53"
 snap set certbot trust-plugin-with-root=ok
 installPackage zip
 installSnap certbot-dns-route53
@@ -131,14 +94,13 @@ if [ ! -x /usr/local/bin/pivnet ]; then
 fi
 
 if [ ! -x /snap/bin/helm ]; then 
-  echo "=> Installing Helm Utility"
   installSnap helm --classic
   [ ! -s /usr/bin/helm ] && sudo ln -s /snap/bin/helm /usr/bin/helm
 fi
 
-if [ ! -x /snap/bin/yq ]; then
-  wget -q https://github.com/mikefarah/yq/releases/download/3.4.1/yq_linux_amd64 -O /usr/bin/yq && chmod +x /usr/bin/yq
-fi
+#if [ ! -x /snap/bin/yq ]; then
+#  wget -q https://github.com/mikefarah/yq/releases/download/3.4.1/yq_linux_amd64 -O /usr/bin/yq && chmod +x /usr/bin/yq
+#fi
 
 touch  /jump_software_installed
 exit 0
