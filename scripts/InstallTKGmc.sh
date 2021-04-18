@@ -36,8 +36,6 @@ if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "Azure" ]; then
   az vm image terms accept --publisher vmware-inc --offer tkg-capi --plan k8s-1dot20dot4-ubuntu-2004 --subscription $AZURE_SUBSCRIPTION_ID > /dev/null 2>&1
 fi
 
-echo "InstallTKGmc.sh: DEBUG:$DEBUG"
-
 #sshEnvironment > /dev/null 2>&1
 createCluster 
 
