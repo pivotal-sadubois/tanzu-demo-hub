@@ -30,10 +30,9 @@ if [ -f /usr/bin/docker ]; then
   apt-get remove docker docker-engine docker.io containerd runc -y > /dev/null 2>&1
   #installPackage docker.io
   installSnap docker
-  systemctl start docker > /dev/null 2>&1
-  systemctl enable docker > /dev/null 2>&1
-  usermod -aG docker ubuntu
   ln -s /snap/bin/docker /usr/bin/docker
+  groupadd docker
+  usermod -aG docker ubuntu
 fi
 
 if [ ! -x /usr/bin/az ]; then 
