@@ -1,6 +1,6 @@
 #!/bin/bash
 # ############################################################################################
-# File: ........: InstallOpenLDAP.sh
+# File: ........: InstallTKGutilities.sh
 # Language .....: bash
 # Author .......: Sacha Dubois, VMware
 # Description ..: Tanzu Demo Hub - Installation Tanzu TKG utilities on Jump Host

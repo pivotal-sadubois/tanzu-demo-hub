@@ -74,7 +74,6 @@ if [ ! -x /usr/bin/az ]; then
   #echo "=> Install AZ CLI"
   #curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash > /dev/null 2>&1
 fi
-exit 1
 
 if [ ! -x /usr/bin/certbot ]; then 
   snap install core; sudo snap refresh core
