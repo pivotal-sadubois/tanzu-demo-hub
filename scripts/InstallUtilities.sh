@@ -1,6 +1,6 @@
 #!/bin/bash
 # ############################################################################################
-# File: ........: InstallUtilities.sh
+# File: ........: InstallUtilities.sh 
 # Language .....: bash
 # Author .......: Sacha Dubois, VMware
 # Description ..: Tanzu Demo Hub - Installation utilities on Jump Host
@@ -26,7 +26,7 @@ mkdir -p /usr/local /usr/local/bin
 installPackage snapd
 installPackage curl
 
-if [ -f /usr/bin/docker ]; then 
+if [ ! -f /usr/bin/docker ]; then 
   apt-get remove docker docker-engine docker.io containerd runc -y > /dev/null 2>&1
   #installPackage docker.io
   installSnap docker
