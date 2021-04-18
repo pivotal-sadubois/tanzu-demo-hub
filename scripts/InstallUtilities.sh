@@ -1,4 +1,11 @@
 #!/bin/bash
+# ############################################################################################
+# File: ........: InstallUtilities.sh
+# Language .....: bash
+# Author .......: Sacha Dubois, VMware
+# Description ..: Tanzu Demo Hub - Installation utilities on Jump Host
+# ############################################################################################
+
 #https://docs.python-guide.org/dev/virtualenvs/
 
 export PIVNET_TOKEN=$1
@@ -10,25 +17,27 @@ export LC_ALL=en_US.UTF-8
 
 installSnap() {
   PKG=$1
-
+  OPT=$2
+  
   echo "=> Install Package ($PKG)"
   snap list $PKG > /dev/null 2>&1
   if [ $? -ne 0 ]; then
     cnt=0
-    snap install $PKG  > /dev/null 2>&1; ret=$?
+    snap install $PKG $OPT > /dev/null 2>&1; ret=$?
     while [ $ret -ne 0 -a $cnt -lt 3 ]; do
-      snap install certbot-dns-route53 > /dev/null 2>&1; ret=$?
+      snap install $PKG $OPT> /dev/null 2>&1; ret=$?
       sleep 30
       let cnt=cnt+1
     done
-
+    
     if [ $ret -ne 0 ]; then
       echo "ERROR: failed to install package $PKG"
-      echo "       => snap install $PKG"
+      echo "       => snap install $PKG $PKG"
       exit
-    fi 
-  fi  
-}     
+    fi
+  fi
+}
+
 
 installPackage() {
   PKG=$1

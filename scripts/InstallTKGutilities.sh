@@ -1,4 +1,10 @@
 #!/bin/bash
+# ############################################################################################
+# File: ........: InstallOpenLDAP.sh
+# Language .....: bash
+# Author .......: Sacha Dubois, VMware
+# Description ..: Tanzu Demo Hub - Installation Tanzu TKG utilities on Jump Host
+# ############################################################################################
 
 TDHPATH=$1; cd /tmp
 TDHENV=$2; cd /tmp
@@ -8,19 +14,56 @@ echo "=> Install TKG Extensions"
 #tar xfz $TDHPATH/software/tkg-extensions-manifests-v1.2.0-vmware.1.tar-2.gz
 #sudo chown -R ubuntu:ubuntu $TDHPATH/extensions
 
-sudo apt-get remove docker docker-engine docker.io containerd runc -y > /dev/null 2>&1
-sudo apt install docker.io -y > /dev/null 2>&1
-sudo systemctl start docker > /dev/null 2>&1
-sudo systemctl enable docker > /dev/null 2>&1
-sudo usermod -aG docker ubuntu
+installSnap() {
+  PKG=$1
+  OPT=$2
+
+  echo "=> Install Package ($PKG)"
+  snap list $PKG > /dev/null 2>&1
+  if [ $? -ne 0 ]; then
+    cnt=0
+    snap install $PKG $OPT > /dev/null 2>&1; ret=$?
+    while [ $ret -ne 0 -a $cnt -lt 3 ]; do
+      snap install $PKG $OPT> /dev/null 2>&1; ret=$?
+      sleep 30
+      let cnt=cnt+1
+    done
+
+    if [ $ret -ne 0 ]; then
+      echo "ERROR: failed to install package $PKG"
+      echo "       => snap install $PKG $PKG"
+      exit
+    fi
+  fi
+}
+
+installPackage() {
+  PKG=$1
+
+  echo "=> Install Package ($PKG)"
+  dpkg -s $PKG > /dev/null 2>&1
+  if [ $? -ne 0 ]; then
+    apt install $PKG -y > /dev/null 2>&1
+    if [ $? -ne 0 ]; then
+      echo "ERROR: failed to install package $PKG"
+      echo "       => apt install $PKG -y"
+      exit
+    fi
+  fi
+}
+
+apt-get remove docker docker-engine docker.io containerd runc -y > /dev/null 2>&1
+
+installPackage docker.io
+systemctl start docker > /dev/null 2>&1
+systemctl enable docker > /dev/null 2>&1
+usermod -aG docker ubuntu
 
 if [ ! -f /usr/local/bin/vmw-cli ]; then
   echo "=> Install (vmw-cli)"
-  #sudo apt install npm -y > /dev/null 2>&1
-  #npm install vmw-cli --global > /dev/null 2>&1
-  docker run apnex/vmw-cli shell > vmw-cli 
-  sudo mv vmw-cli /usr/local/bin
-  sudo chmod 755 /usr/local/bin/vmw-cli
+  docker run apnex/vmw-cli shell > vmw-cli 2>/dev/null
+  mv vmw-cli /usr/local/bin
+  chmod 755 /usr/local/bin/vmw-cli
 fi
 
 if [ ! -f /usr/local/bin/tanzu ]; then
@@ -63,8 +106,7 @@ chmod +x ./kind
 mv kind /usr/local/bin
 
 # --- INSTALL KUNEADM ---
-echo "=> Install Kubeadm"
-sudo snap install kubeadm --classic
+installSnap kubeadm --classic
 
 if [ "$TDHENV" == "vSphere" ]; then 
   if [ ! -f /usr/bin/ovftool ]; then 
@@ -78,16 +120,17 @@ if [ "$TDHENV" == "vSphere" ]; then
     fi
   fi
   
+  installPackage golang-go
+  installPackage gccgo-go
   echo "=> Install GOVC"
-  sudo apt install golang-go -y > /dev/null 2>&1
-  sudo apt install gccgo-go -y > /dev/null 2>&1
   #curl -L https://github.com/vmware/govmomi/releases/download/v0.24.0/govc_linux_amd64.gz --output govc_linux_amd64.gz > /dev/null 2>&1
   wget https://github.com/vmware/govmomi/releases/download/v0.24.0/govc_linux_amd64.gz 2>/dev/null 1>&2
   gunzip govc_linux_amd64.gz
-  sudo mv govc_linux_amd64 /usr/local/bin/govc
+  mv govc_linux_amd64 /usr/local/bin/govc
   chmod +x /usr/local/bin/govc
 fi
 
-touch  /tkg_software_installed
-sudo apt upgrade -y
-sudo reboot
+echo "=> Rebooting Jump Host"
+touch /tkg_software_installed
+apt upgrade -y
+reboot

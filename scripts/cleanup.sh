@@ -10,7 +10,6 @@ export TANZU_DEMO_HUB=$(cd "$(pwd)/$(dirname $0)/.."; pwd)
 export TDHPATH=$(cd "$(pwd)/$(dirname $0)/.."; pwd)
 export DEPLOY_TKG_TEMPLATE=tkgmc-dev-vsphere-macbook.cfg
 
-
 . $TANZU_DEMO_HUB/functions
 
 # --- VERIFY DEPLOYMENT ---

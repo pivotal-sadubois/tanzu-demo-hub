@@ -1,10 +1,15 @@
 #!/bin/bash
+# ############################################################################################
+# File: ........: InstallOpenLDAP.sh
+# Language .....: bash
+# Author .......: Sacha Dubois, VMware
+# Description ..: Tanzu Demo Hub - Installation OpenLDAP on Jump Host
+# ############################################################################################
 
 export LC_ALL=en_US.UTF-8
 #export LC_ALL="$LOC"
 
 [ -d /usr/share/X11/locale/en_US.UTF-8 ] && export LC_ALL=en_US.UTF-8
-
 
 DOMAIN=$1
 LDAP_DOMAIN=$(echo $DOMAIN | awk -F'.' '{ for (i = 1; i <= 3; i++) { printf(",dc=%s",$i) }}END { printf "\n"}' | sed 's/^,//g')
@@ -14,21 +19,22 @@ echo "JUMP_HOST_IP:$JUMP_HOST_IP"
 
 installSnap() {
   PKG=$1
-
+  OPT=$2
+  
   echo "=> Install Package ($PKG)"
   snap list $PKG > /dev/null 2>&1
   if [ $? -ne 0 ]; then
     cnt=0
-    snap install $PKG  > /dev/null 2>&1; ret=$?
+    snap install $PKG $OPT > /dev/null 2>&1; ret=$?
     while [ $ret -ne 0 -a $cnt -lt 3 ]; do
-      snap install certbot-dns-route53 > /dev/null 2>&1; ret=$?
+      snap install $PKG $OPT> /dev/null 2>&1; ret=$?
       sleep 30
       let cnt=cnt+1
     done
-
+    
     if [ $ret -ne 0 ]; then
       echo "ERROR: failed to install package $PKG"
-      echo "       => snap install $PKG"
+      echo "       => snap install $PKG $PKG"
       exit
     fi
   fi
