@@ -91,8 +91,10 @@ messageTitle() {
   _msg="$*"
   _dat=$(date "+%Y%m%d-%H:%M:%S")
 
+  [ $(uname) == "Linux" ] && HST="jump-host" || HST="localhost"
+
   if [ "${PCF_DEPLOYMENT_DEBUG}" == "true" -o "${DEBUG}" == "1" ]; then
-    echo "[${_dat}] ${_msg}"
+    echo "[${_dat}-$HST] ${_msg}"
   else
     echo "${_msg}"
   fi
@@ -138,8 +140,10 @@ messagePrint() {
   # --- INIZIALIZE VALUES IF EMPTY --- ---
   [ "$DEBUG" == "" ] && DEBUG=0
 
+  [ $(uname) == "Linux" ] && HST="jump-host" || HST="localhost"
+
   if [ "${PCF_DEPLOYMENT_DEBUG}" == "true" -o "${DEBUG}" == "1" ]; then
-    echo "[${_dat}] ${_msg} ${_str}: ${_stt}"
+    echo "[${_dat}-$HST] ${_msg} ${_str}: ${_stt}"
   else
     echo "${_msg} ${_str}: ${_stt}"
   fi
@@ -3558,7 +3562,7 @@ InstallContour() {
   stt=$(helm -n $NAMESPACE ls -o json | jq -r '.[].status')
   dat=$(helm -n $NAMESPACE ls -o json | jq -r '.[].updated')
 
-messageTitle "Verify Ingress Contour"
+  messageTitle "Verify Ingress Contour"
   messagePrint " - Ingress Contour Namespace:"         "$NAMESPACE"
   messagePrint " - Ingress Contour Helm Chart:"        "$crt"
   messagePrint " - Ingress Contour Version:"           "$ver"
