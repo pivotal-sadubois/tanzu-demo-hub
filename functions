@@ -144,9 +144,9 @@ messagePrint() {
 
   if [ "${PCF_DEPLOYMENT_DEBUG}" == "true" -o "${DEBUG}" == "1" ]; then
     if [ "$HST" == "localhost" ]; then 
-      echo -e "[${_dat}-$HST] ${_msg} ${_str}: ${_stt}"
+      echo -e "\e[90m[${_dat}-$HST] ${_msg} ${_str}: ${_stt}\e[0m"
     else
-      echo -e "\e[33m[${_dat}-$HST]\e[0m ${_msg} ${_str}: ${_stt}"
+      echo -e "\e[33m[${_dat}-$HST]\e[0m \e[90m${_msg} ${_str}: ${_stt}\e[0m"
     fi
     #echo "[${_dat}-$HST] ${_msg} ${_str}: ${_stt}"
   else
