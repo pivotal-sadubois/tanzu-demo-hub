@@ -52,7 +52,7 @@ if [ ! -f /usr/local/bin/tanzu ]; then
     echo "       => export VMWUSER=\"$TDH_MYVMWARE_USER\""
     echo "       => export VMWPASS=\"$TDH_MYVMWARE_PASS\""
     echo "       => mw-cli ls vmware_tanzu_kubernetes_grid"
-    exit
+    exit 1
   fi
 
   (cd /tmp/; vmw-cli cp $vmwfile > /dev/null 2>&1)
