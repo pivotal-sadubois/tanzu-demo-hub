@@ -1307,16 +1307,21 @@ configureLDAP() {
   if [ $? -ne 0 ]; then 
     messageTitle "Configure LDAP Server"        
     messagePrint " - Install LDAP Server"       "jump.${TDH_TKGMC_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}"
+    messagePrint " - Install LDAP Management"   "phpLDAPadmin"
     if [ $DEBUG -gt 0 ]; then
       echo "-------------------------------------------------------------------------------------------------------------------------------------------------------"
       $SSH_COMMAND -n "[ -d $SSH_HOME/tanzu-demo-hub ] && chmod a+x ${TDHHOME}/scripts/InstallOpenLDAP.sh && \
-          sudo ${TDHHOME}/scripts/InstallOpenLDAP.sh \"${TDH_TKGMC_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}\""
+          sudo ${TDHHOME}/scripts/InstallOpenLDAP.sh \"${TDH_TKGMC_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}\""; ret=$?
       echo "-------------------------------------------------------------------------------------------------------------------------------------------------------"
     else
       $SSH_COMMAND -n "[ -d $SSH_HOME/tanzu-demo-hub ] && chmod a+x ${TDHHOME}/scripts/InstallOpenLDAP.sh && \
-        sudo ${TDHHOME}/scripts/InstallOpenLDAP.sh \"${TDH_TKGMC_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}\" > /dev/null 2>&1"
+        sudo ${TDHHOME}/scripts/InstallOpenLDAP.sh \"${TDH_TKGMC_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}\" > /dev/null 2>&1"; ret=$?
     fi
-    messagePrint " - Install LDAP Management"   "phpLDAPadmin"
+
+    if [ ${ret} -ne 0 ]; then
+      echo "ERROR: Failed to install CLI Utilities (InstallUtilities.sh)"
+      exit
+    fi
     sleep 300
   fi
   
@@ -1364,11 +1369,16 @@ configureJumpHost() {
     if [ $DEBUG -gt 0 ]; then
       echo "-------------------------------------------------------------------------------------------------------------------------------------------------------"
       $SSH_COMMAND -n "[ -d $SSH_HOME/tanzu-demo-hub ] && chmod a+x ${TDHHOME}/scripts/InstallUtilities.sh && \
-          sudo ${TDHHOME}/scripts/InstallUtilities.sh $PCF_PIVNET_TOKEN"
+          sudo ${TDHHOME}/scripts/InstallUtilities.sh $PCF_PIVNET_TOKEN"; ret=$?
       echo "-------------------------------------------------------------------------------------------------------------------------------------------------------"
     else
       $SSH_COMMAND -n "[ -d $SSH_HOME/tanzu-demo-hub ] && chmod a+x ${TDHHOME}/scripts/InstallUtilities.sh && \
-          sudo ${TDHHOME}/scripts/InstallUtilities.sh $PCF_PIVNET_TOKEN > /dev/null 2>&1"
+          sudo ${TDHHOME}/scripts/InstallUtilities.sh $PCF_PIVNET_TOKEN > /dev/null 2>&1"; ret=$?
+    fi
+
+    if [ ${ret} -ne 0 ]; then
+      echo "ERROR: Failed to install CLI Utilities (InstallUtilities.sh)"
+      exit
     fi
 
     # --- COPY THE AWS DIRECTORY ---
@@ -1402,11 +1412,16 @@ configureJumpHost() {
     if [ $DEBUG -gt 0 ]; then
       echo "-------------------------------------------------------------------------------------------------------------------------------------------------------"
       $SSH_COMMAND -n "[ -d $SSH_HOME/tanzu-demo-hub ] && chmod a+x ${TDHHOME}/scripts/InstallTKGutilities.sh && \
-          sudo ${TDHHOME}/scripts/InstallTKGutilities.sh \"$SSH_HOME/tanzu-demo-hub\""
+          sudo ${TDHHOME}/scripts/InstallTKGutilities.sh \"$SSH_HOME/tanzu-demo-hub\""; ret=$?
       echo "-------------------------------------------------------------------------------------------------------------------------------------------------------"
     else
       $SSH_COMMAND -n "[ -d $SSH_HOME/tanzu-demo-hub ] && chmod a+x ${TDHHOME}/scripts/InstallTKGutilities.sh && \
-          sudo ${TDHHOME}/scripts/InstallTKGutilities.sh \"$SSH_HOME/tanzu-demo-hub\" > /dev/null 2>&1"
+          sudo ${TDHHOME}/scripts/InstallTKGutilities.sh \"$SSH_HOME/tanzu-demo-hub\" > /dev/null 2>&1"; ret=$?
+    fi
+
+    if [ ${ret} -ne 0 ]; then
+      echo "ERROR: Failed to install TKG Utilities (InstallTKGutilities.sh)"
+      exit
     fi
 
     # --- WAIT UNTIL SSH DEAMON IS READY NO JUMPHOST ----
