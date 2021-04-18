@@ -18,14 +18,6 @@ else
   exit 1
 fi
 
-apt-get remove docker docker-engine docker.io containerd runc -y > /dev/null 2>&1
-
-#installPackage docker.io
-installSnap docker
-systemctl start docker > /dev/null 2>&1
-systemctl enable docker > /dev/null 2>&1
-usermod -aG docker ubuntu
-
 if [ ! -f /usr/local/bin/vmw-cli ]; then
   messagePrint " - Install Package (vmw-cli)" "installing"
   docker run apnex/vmw-cli shell > vmw-cli 2>/dev/null
