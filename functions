@@ -143,7 +143,8 @@ messagePrint() {
   [ $(uname) == "Linux" ] && HST="jump-host" || HST="localhost"
 
   if [ "${PCF_DEPLOYMENT_DEBUG}" == "true" -o "${DEBUG}" == "1" ]; then
-    echo "[${_dat}-$HST] ${_msg} ${_str}: ${_stt}"
+    echo -e \033[31m"[${_dat}-$HST]\033[31m ${_msg} ${_str}: ${_stt}"
+    #echo "[${_dat}-$HST] ${_msg} ${_str}: ${_stt}"
   else
     echo "${_msg} ${_str}: ${_stt}"
   fi
@@ -1624,6 +1625,8 @@ createCluster() {
   [ ! -d ${HOME}/.tanzu-demo-hub/config ] && mkdir -p ${HOME}/.tanzu-demo-hub/config
   TKG_TEMPLATE=${HOME}/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.cfg; rm -f $TKG_TEMPLATE
   TKG_KUBECONFIG=${HOME}/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.kubeconfig; rm -f $TKG_KUBECONFIG
+
+echo "createCluster: DEBUG:$DEBUG"
 
   if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "Azure" ]; then
     MDOE=azure
