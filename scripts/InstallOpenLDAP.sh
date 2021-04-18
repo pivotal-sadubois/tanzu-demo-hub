@@ -33,7 +33,7 @@ installSnap() {
     if [ $ret -ne 0 ]; then
       echo "ERROR: failed to install package $PKG"
       echo "       => snap install $PKG $PKG"
-      exit
+      exit 1
     fi
   fi
 }
@@ -48,7 +48,7 @@ installPackage() {
     if [ $? -ne 0 ]; then 
       echo "ERROR: failed to install package $PKG"
       echo "       => apt install $PKG -y"
-      exit
+      exit 1
     fi
   fi
 }
@@ -126,6 +126,5 @@ echo "\$servers->setValue('login','bind_id','$LDAP_DOMAIN');"                   
 echo "\$config->custom->appearance['hide_template_warning'] = true;"               >> /etc/phpldapadmin/config.php
 echo "?>"                                                                          >> /etc/phpldapadmin/config.php
 
-
-exit
+exit 0
 
