@@ -144,14 +144,15 @@ messagePrint() {
 
   if [ "${PCF_DEPLOYMENT_DEBUG}" == "true" -o "${DEBUG}" == "1" ]; then
     if [ "$HST" == "localhost" ]; then 
-      #echo -e "\e[90m[${_dat}-$HST] ${_msg} ${_str}: ${_stt}\e[0m"
-      echo -e "[${_dat}-$HST] ${_msg} ${_str}: ${_stt}"
+      printf "\e[37m[${_dat}-$HST] ${_msg} ${_str}: ${_stt}\e[0m\n"
+      #echo -e "[${_dat}-$HST] ${_msg} ${_str}: ${_stt}"
     else
       echo -e "\e[33m[${_dat}-$HST]\e[0m \e[37m${_msg} ${_str}: ${_stt}\e[0m"
     fi
     #echo "[${_dat}-$HST] ${_msg} ${_str}: ${_stt}"
   else
-    echo "${_msg} ${_str}: ${_stt}"
+    printf "\e[37m${_msg} ${_str}: ${_stt}\e[0m\n"
+    #echo "${_msg} ${_str}: ${_stt}"
   fi
 }
 
