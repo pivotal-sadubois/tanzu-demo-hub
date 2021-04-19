@@ -1716,14 +1716,14 @@ createCluster() {
 
     # --- LDAP IDENTITY PROVIDOR ---
     # https://docs.vmware.com/en/VMware-Tanzu-Kubernetes-Grid/1.3/vmware-tanzu-kubernetes-grid-13/GUID-mgmt-clusters-create-config-file.html#identity-mgmt
-    echo "IDENTITY_MANAGEMENT_TYPE: ldap"                                             >> $TKG_TEMPLATE
-    echo "LDAP_HOST: jump.${TDH_TKGMC_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}"              >> $TKG_TEMPLATE
-    echo "INFRASTRUCTURE_PROVIDER: azure"                                             >> $TKG_TEMPLATE
-    echo "LDAP_GROUP_SEARCH_NAME_ATTRIBUTE: cn"                                       >> $TKG_TEMPLATE
-    echo "LDAP_GROUP_SEARCH_USER_ATTRIBUTE: DN"                                       >> $TKG_TEMPLATE
-    echo "LDAP_USER_SEARCH_USERNAME: userPrincipalName"                               >> $TKG_TEMPLATE
-    echo "SERVICE_CIDR: 100.64.0.0/13"                                                >> $TKG_TEMPLATE
-    echo "TKG_HTTP_PROXY_ENABLED: \"false\""                                          >> $TKG_TEMPLATE
+    #echo "IDENTITY_MANAGEMENT_TYPE: ldap"                                             >> $TKG_TEMPLATE
+    #echo "LDAP_HOST: jump.${TDH_TKGMC_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}"              >> $TKG_TEMPLATE
+    #echo "INFRASTRUCTURE_PROVIDER: azure"                                             >> $TKG_TEMPLATE
+    #echo "LDAP_GROUP_SEARCH_NAME_ATTRIBUTE: cn"                                       >> $TKG_TEMPLATE
+    #echo "LDAP_GROUP_SEARCH_USER_ATTRIBUTE: DN"                                       >> $TKG_TEMPLATE
+    #echo "LDAP_USER_SEARCH_USERNAME: userPrincipalName"                               >> $TKG_TEMPLATE
+    #echo "SERVICE_CIDR: 100.64.0.0/13"                                                >> $TKG_TEMPLATE
+    #echo "TKG_HTTP_PROXY_ENABLED: \"false\""                                          >> $TKG_TEMPLATE
 
     MPDE=azure
 
