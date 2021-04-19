@@ -94,9 +94,14 @@ messageTitle() {
   [ $(uname) == "Linux" ] && HST="jump-host" || HST="localhost"
 
   if [ "${PCF_DEPLOYMENT_DEBUG}" == "true" -o "${DEBUG}" == "1" ]; then
-    echo -e "[${_dat}-$HST] ${_msg}"
+    if [ "$HST" == "localhost" ]; then
+      printf "\e[37m[${_dat}-$HST] ${_msg}\e[0m\n"
+    else
+      echo -e "[${_dat}-$HST] ${_msg}"
+    fi
   else
-    echo -e "\e[1mBold${_msg}"
+    printf "\e[1mBold${_msg}\e[0m\n"
+    #echo -e "\e[1mBold${_msg}"
   fi
 }
 
