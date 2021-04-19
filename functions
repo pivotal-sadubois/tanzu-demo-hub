@@ -3334,7 +3334,7 @@ installBuildService() {
     messageTitle "Verify Harbor Registry Access"
     messagePrint " - Registry URL"                "$TDH_HARBOR_REGISTRY_DNS_HARBOR"
     messagePrint " - Registry User"               "admin"
-    messagePrint " - Registry Password"           "$(maskPassword \"$TDH_HARBOR_REGISTRY_ADMIN_PASSWORD)\""
+    messagePrint " - Registry Password"           "$(maskPassword \"$TDH_HARBOR_REGISTRY_ADMIN_PASSWORD\")"
 
     docker login $TDH_HARBOR_REGISTRY_DNS_HARBOR -u admin -p $TDH_HARBOR_REGISTRY_ADMIN_PASSWORD > /dev/null 2>&1
     if [ $? -ne 0 ]; then
