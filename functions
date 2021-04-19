@@ -1748,6 +1748,8 @@ wc -l $TKG_TEMPLATE
 
       messagePrint " - Management Cluster Creating"        "This may take up to 15min ..."
 
+ls -la $TKG_TEMPLATE
+cp /tmp/$TKG_TEMPLATE /tmp/xxxxx
       if [ $DEBUG -gt 0 ]; then
         echo "-------------------------------------------------------------------------------------------------------------------------------------------------------"
         tanzu management-cluster create --file $TKG_TEMPLATE -v 0 --log-file=/tmp/$TDH_TKGMC_NAME.log; ret=$?
