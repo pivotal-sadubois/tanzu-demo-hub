@@ -111,6 +111,11 @@ fi
 #  wget -q https://github.com/mikefarah/yq/releases/download/3.4.1/yq_linux_amd64 -O /usr/bin/yq && chmod +x /usr/bin/yq
 #fi
 
+#if [ ! -f /etc/ntp.conf ]; then
+  installPackage ntp
+  systemctl restart ntp
+fi
+
 touch  /jump_software_installed
 exit 0
 
