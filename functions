@@ -100,7 +100,8 @@ messageTitle() {
       echo -e "[${_dat}-$HST] ${_msg}"
     fi
   else
-    printf "\e[1m${_msg}\e[0m\n"
+    printf "\e[37m[${_msg}\e[0m\n"
+    #printf "\e[1m${_msg}\e[0m\n"
     #echo -e "\e[1mBold${_msg}"
   fi
 }
