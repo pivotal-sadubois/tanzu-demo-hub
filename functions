@@ -1397,12 +1397,13 @@ configureJumpHost() {
 
     sleep 20
 
-    # --- COPY THE AWS DIRECTORY ---
-    $SCP_COMMAND -r ~/.aws ${SSH_USER}@${SSH_HOST}:$SSH_HOME > /dev/null 2>&1
-    $SCP_COMMAND -r ~/.azure ${SSH_USER}@${SSH_HOST}:$SSH_HOME > /dev/null 2>&1
-    $SCP_COMMAND -r ~/.tanzu-demo-hub ${SSH_USER}@${SSH_HOST}:$SSH_HOME > /dev/null 2>&1
-    $SCP_COMMAND -r ~/.tanzu-demo-hub.cfg ${SSH_USER}@${SSH_HOST}:$SSH_HOME > /dev/null 2>&1
   fi
+
+  # --- COPY THE AWS DIRECTORY ---
+  $SCP_COMMAND -r ~/.aws ${SSH_USER}@${SSH_HOST}:$SSH_HOME > /dev/null 2>&1
+  $SCP_COMMAND -r ~/.azure ${SSH_USER}@${SSH_HOST}:$SSH_HOME > /dev/null 2>&1
+  $SCP_COMMAND -r ~/.tanzu-demo-hub ${SSH_USER}@${SSH_HOST}:$SSH_HOME > /dev/null 2>&1
+  $SCP_COMMAND -r ~/.tanzu-demo-hub.cfg ${SSH_USER}@${SSH_HOST}:$SSH_HOME > /dev/null 2>&1
 
   # --- COPY SOFTWARE ---
   stt=$($SSH_COMMAND -n "[ -d /home/ubuntu/tanzu-demo-hub/software ] && echo true")
@@ -1728,10 +1729,6 @@ createCluster() {
     #echo "SERVICE_CIDR: 100.64.0.0/13"                                                >> $TKG_TEMPLATE
     #echo "TKG_HTTP_PROXY_ENABLED: \"false\""                                          >> $TKG_TEMPLATE
 
-echo "TKG_TEMPLATE:$TKG_TEMPLATE"
-ls -la $TKG_TEMPLATE
-wc -l $TKG_TEMPLATE
-
     MPDE=azure
 
     cnt=$(tanzu management-cluster get 2>/dev/null | egrep -c " $TDH_TKGMC_NAME ")
@@ -1748,8 +1745,6 @@ wc -l $TKG_TEMPLATE
 
       messagePrint " - Management Cluster Creating"        "This may take up to 15min ..."
 
-ls -la $TKG_TEMPLATE
-cp /tmp/$TKG_TEMPLATE /tmp/xxxxx
       if [ $DEBUG -gt 0 ]; then
         echo "-------------------------------------------------------------------------------------------------------------------------------------------------------"
         tanzu management-cluster create --file $TKG_TEMPLATE -v 0 --log-file=/tmp/$TDH_TKGMC_NAME.log; ret=$?
