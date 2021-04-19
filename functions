@@ -1709,13 +1709,13 @@ createCluster() {
     #echo "TKG_HTTP_PROXY_ENABLED: \"false\""                                          >> $TKG_TEMPLATE
 
     # --- OIDC IDENTITY PROVIDOR WITH (OKTA) ---
-    echo "IDENTITY_MANAGEMENT_TYPE: oidc"                                             >> $TKG_TEMPLATE
-    echo "OIDC_IDENTITY_PROVIDER_CLIENT_ID: $TDH_OKTA_SECRET_ID"                      >> $TKG_TEMPLATE
-    echo "OIDC_IDENTITY_PROVIDER_CLIENT_SECRET: $TDH_OKTA_CLIENT_SECRET"              >> $TKG_TEMPLATE
-    echo "OIDC_IDENTITY_PROVIDER_ISSUER_URL: $TDH_OKTA_URL"                           >> $TKG_TEMPLATE
-    echo "OIDC_IDENTITY_PROVIDER_SCOPES: $TDH_OKTA_SCOPES"                            >> $TKG_TEMPLATE
-    echo "OIDC_IDENTITY_PROVIDER_GROUPS_CLAIM:: $TDH_OKTA_GROUP_CLAIM"                >> $TKG_TEMPLATE
-    echo "OIDC_IDENTITY_PROVIDER_USERNAME_CLAIM: $TDH_OKTA_USERNAME_CLAIM"            >> $TKG_TEMPLATE
+    echo "IDENTITY_MANAGEMENT_TYPE: oidc"                                              >> $TKG_TEMPLATE
+    echo "OIDC_IDENTITY_PROVIDER_CLIENT_ID: \"$TDH_OKTA_SECRET_ID\""                   >> $TKG_TEMPLATE
+    echo "OIDC_IDENTITY_PROVIDER_CLIENT_SECRET: \"$TDH_OKTA_CLIENT_SECRET\""           >> $TKG_TEMPLATE
+    echo "OIDC_IDENTITY_PROVIDER_ISSUER_URL: \"$TDH_OKTA_URL\""                        >> $TKG_TEMPLATE
+    echo "OIDC_IDENTITY_PROVIDER_SCOPES: \"$TDH_OKTA_SCOPES\""                         >> $TKG_TEMPLATE
+    echo "OIDC_IDENTITY_PROVIDER_GROUPS_CLAIM:: \"$TDH_OKTA_GROUP_CLAIM\""             >> $TKG_TEMPLATE
+    echo "OIDC_IDENTITY_PROVIDER_USERNAME_CLAIM: \"$TDH_OKTA_USERNAME_CLAIM\""         >> $TKG_TEMPLATE
 
     # --- LDAP IDENTITY PROVIDOR ---
     # https://docs.vmware.com/en/VMware-Tanzu-Kubernetes-Grid/1.3/vmware-tanzu-kubernetes-grid-13/GUID-mgmt-clusters-create-config-file.html#identity-mgmt
