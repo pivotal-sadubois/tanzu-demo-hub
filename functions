@@ -503,7 +503,7 @@ checkCloudAccess() {
   missing_variables=0
 
   if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "minikube" ]; then
-    if [ "${TDH_USER}" == "" -o "${AWS_ACCESS_KEY}" == "" -o "${AWS_SECRET_KEY}" == "" -o "${AWS_REGION}" == "" ]; then
+    if [ "${TDH_USER}" == "" -o "${AWS_ACCESS_KEY}" == "" -o "${AWS_SECRET_KEY}" == "" -o "${AWS_REGION}" == "" -o "${AWS_PRIMARY_AZ}" == "" ]; then
       missing_variables=1
       echo ""
       echo "  4MISSING ENVIRONMENT-VARIABES    DESCRIPTION        "
@@ -526,6 +526,12 @@ checkCloudAccess() {
         echo "  AWS_REGION                    (required) Choose the AWS Region where your installation should run"
         echo "                                  => aws ec2 --region=eu-west-3 describe-regions --output text | awk '{ print $NF }'"
         echo "                                     eu-north-1, eu-west-3, eu-central-1 etc."
+      fi
+
+      if [ "${AWS_PRIMARY_AZ}" == "" ]; then
+        echo "  AWS_PRIMARY_AZ                (required) Choose the Primary Availability Zone of a AWS Region"
+        echo "                                  => aws ec2 --region=eu-west-3 describe-availability-zones --output text"
+        echo "                                     eu-north-1a, eu-north-1b, eu-north-1c"
       fi
     else
       TDH_MINIKUBE_PROFILE="tdh-minikube-${TDH_USER}"
@@ -698,7 +704,7 @@ checkCloudAccess() {
   fi
 
   if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "AWS" ]; then
-    if [ "${AWS_ACCESS_KEY}" == "" -o "${AWS_SECRET_KEY}" == "" -o \
+    if [ "${AWS_ACCESS_KEY}" == "" -o "${AWS_SECRET_KEY}" == "" -o "${AWS_PRIMARY_AZ}" == "" -o \
          "${AWS_REGION}" == "" ]; then
 
       missing_variables=1
@@ -718,6 +724,12 @@ checkCloudAccess() {
         echo "  AWS_REGION                    (required) Choose the AWS Region where your installation should run"
         echo "                                  => aws ec2 --region=eu-west-3 describe-regions --output text | awk '{ print $NF }'"
         echo "                                     eu-north-1, eu-west-3, eu-central-1 etc."
+      fi
+
+      if [ "${AWS_PRIMARY_AZ}" == "" ]; then
+        echo "  AWS_PRIMARY_AZ                (required) Choose the Primary Availability Zone of a AWS Region"
+        echo "                                  => aws ec2 --region=eu-west-3 describe-availability-zones --output text"
+        echo "                                     eu-north-1a, eu-north-1b, eu-north-1c"
       fi
     else
       messageTitle "Azure Access Credentials"
@@ -1700,8 +1712,9 @@ createCluster() {
     echo "ENABLE_MHC: \"true\""                                                       >> $TKG_TEMPLATE
     echo "SERVICE_CIDR: $TDH_TKGMC_SERVICE_CIDR"                                      >> $TKG_TEMPLATE
     echo ""                                                                           >> $TKG_TEMPLATE
+    echo "INFRASTRUCTURE_PROVIDER: azure"                                             >> $TKG_TEMPLATE
+
     #echo "IDENTITY_MANAGEMENT_TYPE: none"                                             >> $TKG_TEMPLATE
-    #echo "INFRASTRUCTURE_PROVIDER: azure"                                             >> $TKG_TEMPLATE
     #echo "LDAP_GROUP_SEARCH_NAME_ATTRIBUTE: cn"                                       >> $TKG_TEMPLATE
     #echo "LDAP_GROUP_SEARCH_USER_ATTRIBUTE: DN"                                       >> $TKG_TEMPLATE
     #echo "LDAP_USER_SEARCH_USERNAME: userPrincipalName"                               >> $TKG_TEMPLATE
