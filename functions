@@ -1662,6 +1662,98 @@ createCluster() {
   TKG_TEMPLATE=${HOME}/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.cfg; rm -f $TKG_TEMPLATE
   TKG_KUBECONFIG=${HOME}/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.kubeconfig; rm -f $TKG_KUBECONFIG
 
+  if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "AWS" ]; then
+    MDOE=azure
+    messageTitle "Creating TKG Managment Cluster"
+    messagePrint " - Cluster Name"                "$TDH_TKGMC_NAME"
+    messagePrint " - Configuration File"          "$TKG_TEMPLATE"
+    messagePrint " - Control Plane Machine Type"  "$TDH_TKGMC_CONTROL_PLANE_MACHINE_TYPE"
+    messagePrint " - Worker Node Machine Type"    "$TDH_TKGMC_MACHINE_TYPE"
+    messagePrint " - Cluster CIDR"                "$TDH_TKGMC_CLUSTER_CIDR"
+    messagePrint " - Service CIDR"                "$TDH_TKGMC_SERVICE_CIDR"
+    messagePrint " - Health Check Enabled"        "$TDH_TKGMC_MACHINE_HEALTH_CHECK_ENABLED"
+
+    [ -f ${HOME}/.tkg/config.yaml ] && rm -f ${HOME}/.tkg/config.yaml
+    tkg get mc > /dev/null 2>&1
+    tanzu management-cluster get > /dev/null 2>&1
+    tanzu management-cluster create > /dev/null 2>&1
+    #cp ${HOME}/.tanzu/config.yaml $TKG_TEMPLATE
+
+    az ad app list --display-name "TanzuDemoHub" > /dev/null 2>&1
+    if [ $? -ne 0 ]; then
+      echo "ERROR: failed to list apps"
+      echo "       => az ad app list --display-name \"TanzuDemoHub\""
+      exit
+    fi
+
+    AZURE_SSH_PUBLIC_KEY_B64=$(cat ~/.tanzu-demo-hub/KeyPair-Azure.pub | base64 -w 10000)
+    AZURE_CLIENT_ID=$(az ad app list --display-name "TanzuDemoHub" | jq -r '.[].appId')
+    AZURE_CLIENT_SECRET="tanzu-demo-hub"
+
+>> $TKG_TEMPLATE
+
+
+    echo "AWS_ACCESS_KEY_ID: <encoded:QUtJQVdSWDZLS1NHSEdaUUJBSEQ=>"                  >  $TKG_TEMPLATE
+    echo "AWS_AMI_ID: ami-066dad3403314512a"                                          >> $TKG_TEMPLATE
+    echo "AWS_B64ENCODED_CREDENTIALS: W2RlZmF1bHRdCmF3c19hY2Nlc3Nfa2V5X2lkID0gQUtJQVdSWDZLS1NHSEdaUUJBSEQKYXdzX3NlY3JldF9hY2Nlc3Nfa2V5ID0geUgvZjBKaFB3RVY0dDhRYWRKZUdVTFJJSFJ4c25LYlVQMEc5Y0VCZApyZWdpb24gPSBldS1jZW50cmFsLTEKCg=="                                          >> $TKG_TEMPLATE
+    echo "AWS_NODE_AZ: eu-central-1a"                                          >> $TKG_TEMPLATE
+    echo "AWS_NODE_AZ_1: \"\""                                          >> $TKG_TEMPLATE
+    echo "AWS_NODE_AZ_2: \"\""                                          >> $TKG_TEMPLATE
+    echo "AWS_PRIVATE_NODE_CIDR: 10.0.16.0/20"                                          >> $TKG_TEMPLATE
+    echo "AWS_PRIVATE_NODE_CIDR_1: \"\""                                          >> $TKG_TEMPLATE
+    echo "AWS_PRIVATE_NODE_CIDR_2: \"\""                                          >> $TKG_TEMPLATE
+    echo "AWS_PRIVATE_SUBNET_ID: \"\""                                          >> $TKG_TEMPLATE
+    echo "AWS_PRIVATE_SUBNET_ID_1: \"\""                                          >> $TKG_TEMPLATE
+    echo "AWS_PRIVATE_SUBNET_ID_2: \"\""                                          >> $TKG_TEMPLATE
+    echo "AWS_PUBLIC_NODE_CIDR: 10.0.0.0/20"                                          >> $TKG_TEMPLATE
+    echo "AWS_PUBLIC_NODE_CIDR_1: \"\""                                          >> $TKG_TEMPLATE
+    echo "AWS_PUBLIC_NODE_CIDR_2: \"\""                                          >> $TKG_TEMPLATE
+    echo "AWS_PUBLIC_SUBNET_ID: \"\""                                          >> $TKG_TEMPLATE
+    echo "AWS_PUBLIC_SUBNET_ID_1: \"\""                                          >> $TKG_TEMPLATE
+    echo "AWS_PUBLIC_SUBNET_ID_2: \"\""                                          >> $TKG_TEMPLATE
+    echo "AWS_REGION: eu-central-1"                                          >> $TKG_TEMPLATE
+    echo "AWS_SECRET_ACCESS_KEY: <encoded:eUgvZjBKaFB3RVY0dDhRYWRKZUdVTFJJSFJ4c25LYlVQMEc5Y0VCZA==>"                                          >> $TKG_TEMPLATE
+    echo "AWS_SSH_KEY_NAME: tanzu-demo-hub"                                          >> $TKG_TEMPLATE
+    echo "AWS_VPC_CIDR: 10.0.0.0/16"                                          >> $TKG_TEMPLATE
+    echo "AWS_VPC_ID: \"\""                                          >> $TKG_TEMPLATE
+    echo "BASTION_HOST_ENABLED: \"true\""                                          >> $TKG_TEMPLATE
+    echo "CLUSTER_CIDR: 100.96.0.0/11"                                          >> $TKG_TEMPLATE
+    echo "CLUSTER_NAME: tkgmc-aws-dev-sadubois"                                          >> $TKG_TEMPLATE
+    echo "CLUSTER_PLAN: dev"                                          >> $TKG_TEMPLATE
+    echo "CONTROL_PLANE_MACHINE_TYPE: c4.2xlarge"                                          >> $TKG_TEMPLATE
+    echo "ENABLE_CEIP_PARTICIPATION: \"false\""                                          >> $TKG_TEMPLATE
+    echo "ENABLE_MHC: \"true\""                                          >> $TKG_TEMPLATE
+    echo "IDENTITY_MANAGEMENT_TYPE: oidc"                                          >> $TKG_TEMPLATE
+    echo "INFRASTRUCTURE_PROVIDER: aws"                                          >> $TKG_TEMPLATE
+    echo "LDAP_BIND_DN: \"\""                                          >> $TKG_TEMPLATE
+    echo "LDAP_BIND_PASSWORD: \"\""                                          >> $TKG_TEMPLATE
+    echo "LDAP_GROUP_SEARCH_BASE_DN: \"\""                                          >> $TKG_TEMPLATE
+    echo "LDAP_GROUP_SEARCH_FILTER: \"\""                                          >> $TKG_TEMPLATE
+    echo "LDAP_GROUP_SEARCH_GROUP_ATTRIBUTE: \"\""                                          >> $TKG_TEMPLATE
+    echo "LDAP_GROUP_SEARCH_NAME_ATTRIBUTE: cn"                                          >> $TKG_TEMPLATE
+    echo "LDAP_GROUP_SEARCH_USER_ATTRIBUTE: DN"                                          >> $TKG_TEMPLATE
+    echo "LDAP_HOST: \"\""                                          >> $TKG_TEMPLATE
+    echo "LDAP_ROOT_CA_DATA_B64: \"\""                                          >> $TKG_TEMPLATE
+    echo "LDAP_USER_SEARCH_BASE_DN: \"\""                                          >> $TKG_TEMPLATE
+    echo "LDAP_USER_SEARCH_FILTER: \"\""                                          >> $TKG_TEMPLATE
+    echo "LDAP_USER_SEARCH_NAME_ATTRIBUTE: \"\""                                          >> $TKG_TEMPLATE
+    echo "LDAP_USER_SEARCH_USERNAME: userPrincipalName"                                          >> $TKG_TEMPLATE
+    echo "NODE_MACHINE_TYPE: c4.2xlarge"                                          >> $TKG_TEMPLATE
+    echo "OIDC_IDENTITY_PROVIDER_CLIENT_ID: \"=0oalw23ymlHT9IDAf5d6\""              >> $TKG_TEMPLATE
+    echo "OIDC_IDENTITY_PROVIDER_CLIENT_SECRET: \"<encoded:UmNTYTFmUnA2eU5OZTZCbGM3cHlrV2UtYlNjcUc0cVB2RGtsYmVfQQ==>\""              >> $TKG_TEMPLATE
+    echo "OIDC_IDENTITY_PROVIDER_GROUPS_CLAIM: groups"                             >> $TKG_TEMPLATE
+    echo "OIDC_IDENTITY_PROVIDER_ISSUER_URL: \"https://vmware-tdh.okta.com\""                             >> $TKG_TEMPLATE
+    echo "OIDC_IDENTITY_PROVIDER_NAME: \"\""                             >> $TKG_TEMPLATE
+    echo "OIDC_IDENTITY_PROVIDER_SCOPES: openid,groups,email"                             >> $TKG_TEMPLATE
+    echo "OIDC_IDENTITY_PROVIDER_USERNAME_CLAIM: code"                             >> $TKG_TEMPLATE
+    echo "SERVICE_CIDR: 100.64.0.0/13"                             >> $TKG_TEMPLATE
+    echo "TKG_HTTP_PROXY_ENABLED: \"false\""                             >> $TKG_TEMPLATE
+
+echo "TKG_TEMPLATE:$TKG_TEMPLATE"
+echo "tanzu management-cluster create --file /Users/sdu/.tanzu/tkg/clusterconfigs/pmwmm3sb2v.yaml -v 6"
+exit
+  fi
+
   if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "Azure" ]; then
     MDOE=azure
     messageTitle "Creating TKG Managment Cluster"
