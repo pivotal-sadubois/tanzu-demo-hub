@@ -732,10 +732,11 @@ checkCloudAccess() {
         echo "                                     eu-north-1a, eu-north-1b, eu-north-1c"
       fi
     else
-      messageTitle "Azure Access Credentials"
-      messagePrint " - AWS AccwssKey"                $(maskPassword "$AWS_ACCESS_KEY")
-      messagePrint " - AWS SecretKey"                $(maskPassword "$AWS_SECRET_KEY")
-      messagePrint " - AWS Region"                   "$AWS_REGION"
+      messageTitle "AWS Access Credentials"
+      messagePrint " - AWS AccwssKey"                    $(maskPassword "$AWS_ACCESS_KEY")
+      messagePrint " - AWS SecretKey"                    $(maskPassword "$AWS_SECRET_KEY")
+      messagePrint " - AWS Region"                       "$AWS_REGION"
+      messagePrint " - AWS Primary Availability Zone"    "$AWS_PRIMARY_AZ"
     fi
   fi
 
@@ -4792,7 +4793,7 @@ installSnap() {
 
     if [ $ret -ne 0 ]; then
       echo "ERROR: failed to install package $PKG"
-      echo "       => snap install $PKG $PKG"
+      echo "       => snap install $PKG"
       exit 1
     fi
   else
