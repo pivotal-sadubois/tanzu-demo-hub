@@ -205,13 +205,8 @@ sshEnvironment() {
     SSH_DISPLAY="ssh $SSH_OPTIONS -i ${SSH_PRIVATE_KEY} ${SSH_USER}@${SSH_HOST}"
   fi
 
-echo "ggggggggggggggg1"
   if [ "${TDH_DEPLOYMENT_CLOUD}" == "AWS" -o "${TDH_TKGMC_INFRASTRUCTURE}" == "AWS" ]; then
-echo "ggggggggggggggg2"
-    SSH_HOST=$(aws ec2 --region=$AWS_REGION describe-instances \
-                     --filters Name=tag:sigs.k8s.io/cluster-api-provider-aws/role,Values="bastion" | \
-             jq -r '.Reservations[].Instances[].PublicDnsName')
-
+    SSH_HOST=$JUMP_HOST
     SSH_USER=ubuntu
     SSH_HOME=/home/ubuntu
     SSH_OPTIONS="-o StrictHostKeyChecking=no -o RequestTTY=yes -o ServerAliveInterval=30"
@@ -220,7 +215,6 @@ echo "ggggggggggggggg2"
     SSH_COMMAND="ssh -q $SSH_OPTIONS -i $SSH_KEY_FILE ${SSH_USER}@${SSH_HOST}"
     SCP_COMMAND="scp -r $SCP_OPTIONS -i $SSH_KEY_FILE"
     SSH_DISPLAY="ssh -i $SSH_KEY_FILE ${SSH_USER}@${SSH_HOST}"
-echo "ggggggggggggggg2 $SSH_DISPLAY"
   fi
 
   if [ "${TDH_DEPLOYMENT_CLOUD}" == "GCP" ]; then
