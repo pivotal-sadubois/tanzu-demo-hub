@@ -206,7 +206,7 @@ sshEnvironment() {
   fi
 
 echo "ggggggggggggggg1"
-  if [ "${TDH_DEPLOYMENT_CLOUD}" == "AWS" ]; then
+  if [ "${TDH_DEPLOYMENT_CLOUD}" == "AWS" -o "${TDH_TKGMC_INFRASTRUCTURE}" == "AWS" ]; then
 echo "ggggggggggggggg2"
     SSH_HOST=$(aws ec2 --region=$AWS_REGION describe-instances \
                      --filters Name=tag:sigs.k8s.io/cluster-api-provider-aws/role,Values="bastion" | \
