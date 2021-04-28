@@ -808,7 +808,7 @@ checkTDHenvironment() {
       echo "  TDH_MYVMWARE_PASS                (required) myVMware (http://my.vmware.com/group/vmware/home) Password"
     fi
   else
-    messageTitle "mvVMware (http://my.vmware.com) Access for Software Download"
+    messageTitle "myVMware (http://my.vmware.com) Access for Software Download"
     messagePrint " - myVMare User:"            "$TDH_MYVMWARE_USER"
     messagePrint " - myVMare Password:"        $(maskPassword "$TDH_MYVMWARE_PASS")
   fi
@@ -1690,68 +1690,66 @@ createCluster() {
     AZURE_CLIENT_ID=$(az ad app list --display-name "TanzuDemoHub" | jq -r '.[].appId')
     AZURE_CLIENT_SECRET="tanzu-demo-hub"
 
-    echo "AWS_REGION: $AWS_REGION"                                          >  $TKG_TEMPLATE
-    echo "AWS_NODE_AZ: \"$AWS_PRIMARY_AZ\""                                          >> $TKG_TEMPLATE
+    echo "INFRASTRUCTURE_PROVIDER: aws"                                                >  $TKG_TEMPLATE
+    echo "AWS_REGION: $AWS_REGION"                                                     >> $TKG_TEMPLATE
+    echo "AWS_NODE_AZ: \"$AWS_PRIMARY_AZ\""                                            >> $TKG_TEMPLATE
     echo "AWS_ACCESS_KEY_ID: $AWS_SECRET_KEY"                                          >> $TKG_TEMPLATE
-    echo "AWS_SECRET_ACCESS_KEY: $AWS_SECRET_KEY"                                          >> $TKG_TEMPLATE
+    echo "AWS_SECRET_ACCESS_KEY: $AWS_SECRET_KEY"                                      >> $TKG_TEMPLATE
     echo "AWS_SSH_KEY_NAME: vmware-cloud-tmc"                                          >> $TKG_TEMPLATE
-    echo "BASTION_HOST_ENABLED: true"                                          >> $TKG_TEMPLATE
-    echo "AWS_AMI_ID: ami-066dad3403314512a"                                          >> $TKG_TEMPLATE
+    echo "BASTION_HOST_ENABLED: true"                                                  >> $TKG_TEMPLATE
+    echo "AWS_AMI_ID: ami-066dad3403314512a"                                           >> $TKG_TEMPLATE
+    echo "CLUSTER_PLAN: dev"                                                           >> $TKG_TEMPLATE
+    echo "CLUSTER_NAME: tkgmc-aws-dev-sadubois"                                        >> $TKG_TEMPLATE
+    echo "#CONTROL_PLANE_MACHINE_TYPE: c4.2xlarge"                                     >> $TKG_TEMPLATE
+    echo "#NODE_MACHINE_TYPE: c4.2xlarge"                                              >> $TKG_TEMPLATE
 
-    echo "#AWS_ACCESS_KEY_ID:"                  >>  $TKG_TEMPLATE
-    echo "#AWS_B64ENCODED_CREDENTIALS: "                                          >> $TKG_TEMPLATE
-    echo "#AWS_NODE_AZ: eu-central-1a"                                          >> $TKG_TEMPLATE
-    echo "#AWS_NODE_AZ_1: \"\""                                          >> $TKG_TEMPLATE
-    echo "#AWS_NODE_AZ_2: \"\""                                          >> $TKG_TEMPLATE
-    echo "#AWS_PRIVATE_NODE_CIDR: 10.0.16.0/20"                                          >> $TKG_TEMPLATE
-    echo "#AWS_PRIVATE_NODE_CIDR_1: \"\""                                          >> $TKG_TEMPLATE
-    echo "#AWS_PRIVATE_NODE_CIDR_2: \"\""                                          >> $TKG_TEMPLATE
-    echo "#AWS_PRIVATE_SUBNET_ID: \"\""                                          >> $TKG_TEMPLATE
-    echo "#AWS_PRIVATE_SUBNET_ID_1: \"\""                                          >> $TKG_TEMPLATE
-    echo "#AWS_PRIVATE_SUBNET_ID_2: \"\""                                          >> $TKG_TEMPLATE
+    echo "#AWS_ACCESS_KEY_ID:"                                                         >>  $TKG_TEMPLATE
+    echo "#AWS_B64ENCODED_CREDENTIALS: "                                               >> $TKG_TEMPLATE
+    echo "#AWS_NODE_AZ: eu-central-1a"                                                 >> $TKG_TEMPLATE
+    echo "#AWS_NODE_AZ_1: \"\""                                                        >> $TKG_TEMPLATE
+    echo "#AWS_NODE_AZ_2: \"\""                                                        >> $TKG_TEMPLATE
+    echo "#AWS_PRIVATE_NODE_CIDR: 10.0.16.0/20"                                        >> $TKG_TEMPLATE
+    echo "#AWS_PRIVATE_NODE_CIDR_1: \"\""                                              >> $TKG_TEMPLATE
+    echo "#AWS_PRIVATE_NODE_CIDR_2: \"\""                                              >> $TKG_TEMPLATE
+    echo "#AWS_PRIVATE_SUBNET_ID: \"\""                                                >> $TKG_TEMPLATE
+    echo "#AWS_PRIVATE_SUBNET_ID_1: \"\""                                              >> $TKG_TEMPLATE
+    echo "#AWS_PRIVATE_SUBNET_ID_2: \"\""                                              >> $TKG_TEMPLATE
     echo "#AWS_PUBLIC_NODE_CIDR: 10.0.0.0/20"                                          >> $TKG_TEMPLATE
-    echo "#AWS_PUBLIC_NODE_CIDR_1: \"\""                                          >> $TKG_TEMPLATE
-    echo "#AWS_PUBLIC_NODE_CIDR_2: \"\""                                          >> $TKG_TEMPLATE
-    echo "#AWS_PUBLIC_SUBNET_ID: \"\""                                          >> $TKG_TEMPLATE
-    echo "#AWS_PUBLIC_SUBNET_ID_1: \"\""                                          >> $TKG_TEMPLATE
-    echo "#AWS_PUBLIC_SUBNET_ID_2: \"\""                                          >> $TKG_TEMPLATE
-    echo "#AWS_REGION: eu-central-1"                                          >> $TKG_TEMPLATE
-    echo "#AWS_SECRET_ACCESS_KEY: "                                          >> $TKG_TEMPLATE
-    echo "#AWS_SSH_KEY_NAME: tanzu-demo-hub"                                          >> $TKG_TEMPLATE
-    echo "#AWS_VPC_CIDR: 10.0.0.0/16"                                          >> $TKG_TEMPLATE
-    echo "#AWS_VPC_ID: \"\""                                          >> $TKG_TEMPLATE
-    echo "#BASTION_HOST_ENABLED: \"true\""                                          >> $TKG_TEMPLATE
-    echo "#CLUSTER_CIDR: 100.96.0.0/11"                                          >> $TKG_TEMPLATE
-    echo "#CLUSTER_NAME: tkgmc-aws-dev-sadubois"                                          >> $TKG_TEMPLATE
-    echo "#CLUSTER_PLAN: dev"                                          >> $TKG_TEMPLATE
-    echo "#CONTROL_PLANE_MACHINE_TYPE: c4.2xlarge"                                          >> $TKG_TEMPLATE
-    echo "#ENABLE_CEIP_PARTICIPATION: \"false\""                                          >> $TKG_TEMPLATE
-    echo "#ENABLE_MHC: \"true\""                                          >> $TKG_TEMPLATE
-    echo "#IDENTITY_MANAGEMENT_TYPE: oidc"                                          >> $TKG_TEMPLATE
-    echo "#INFRASTRUCTURE_PROVIDER: aws"                                          >> $TKG_TEMPLATE
-    echo "#LDAP_BIND_DN: \"\""                                          >> $TKG_TEMPLATE
-    echo "#LDAP_BIND_PASSWORD: \"\""                                          >> $TKG_TEMPLATE
-    echo "#LDAP_GROUP_SEARCH_BASE_DN: \"\""                                          >> $TKG_TEMPLATE
-    echo "#LDAP_GROUP_SEARCH_FILTER: \"\""                                          >> $TKG_TEMPLATE
-    echo "#LDAP_GROUP_SEARCH_GROUP_ATTRIBUTE: \"\""                                          >> $TKG_TEMPLATE
-    echo "#LDAP_GROUP_SEARCH_NAME_ATTRIBUTE: cn"                                          >> $TKG_TEMPLATE
-    echo "#LDAP_GROUP_SEARCH_USER_ATTRIBUTE: DN"                                          >> $TKG_TEMPLATE
-    echo "#LDAP_HOST: \"\""                                          >> $TKG_TEMPLATE
-    echo "#LDAP_ROOT_CA_DATA_B64: \"\""                                          >> $TKG_TEMPLATE
-    echo "#LDAP_USER_SEARCH_BASE_DN: \"\""                                          >> $TKG_TEMPLATE
-    echo "#LDAP_USER_SEARCH_FILTER: \"\""                                          >> $TKG_TEMPLATE
-    echo "#LDAP_USER_SEARCH_NAME_ATTRIBUTE: \"\""                                          >> $TKG_TEMPLATE
-    echo "#LDAP_USER_SEARCH_USERNAME: userPrincipalName"                                          >> $TKG_TEMPLATE
-    echo "#NODE_MACHINE_TYPE: c4.2xlarge"                                          >> $TKG_TEMPLATE
-    echo "#OIDC_IDENTITY_PROVIDER_CLIENT_ID: \"\""              >> $TKG_TEMPLATE
-    echo "#OIDC_IDENTITY_PROVIDER_CLIENT_SECRET: \"\""              >> $TKG_TEMPLATE
-    echo "#OIDC_IDENTITY_PROVIDER_GROUPS_CLAIM: groups"                             >> $TKG_TEMPLATE
-    echo "#OIDC_IDENTITY_PROVIDER_ISSUER_URL: \"https://vmware-tdh.okta.com\""                             >> $TKG_TEMPLATE
-    echo "#OIDC_IDENTITY_PROVIDER_NAME: \"\""                             >> $TKG_TEMPLATE
-    echo "#OIDC_IDENTITY_PROVIDER_SCOPES: openid,groups,email"                             >> $TKG_TEMPLATE
-    echo "#OIDC_IDENTITY_PROVIDER_USERNAME_CLAIM: code"                             >> $TKG_TEMPLATE
-    echo "#SERVICE_CIDR: 100.64.0.0/13"                             >> $TKG_TEMPLATE
-    echo "#TKG_HTTP_PROXY_ENABLED: \"false\""                             >> $TKG_TEMPLATE
+    echo "#AWS_PUBLIC_NODE_CIDR_1: \"\""                                               >> $TKG_TEMPLATE
+    echo "#AWS_PUBLIC_NODE_CIDR_2: \"\""                                               >> $TKG_TEMPLATE
+    echo "#AWS_PUBLIC_SUBNET_ID: \"\""                                                 >> $TKG_TEMPLATE
+    echo "#AWS_PUBLIC_SUBNET_ID_1: \"\""                                               >> $TKG_TEMPLATE
+    echo "#AWS_PUBLIC_SUBNET_ID_2: \"\""                                               >> $TKG_TEMPLATE
+    echo "#AWS_VPC_CIDR: 10.0.0.0/16"                                                  >> $TKG_TEMPLATE
+    echo "#AWS_VPC_ID: \"\""                                                           >> $TKG_TEMPLATE
+    echo "#BASTION_HOST_ENABLED: \"true\""                                             >> $TKG_TEMPLATE
+    echo "#CLUSTER_CIDR: 100.96.0.0/11"                                                >> $TKG_TEMPLATE
+    echo "#ENABLE_CEIP_PARTICIPATION: \"false\""                                       >> $TKG_TEMPLATE
+    echo "#ENABLE_MHC: \"true\""                                                       >> $TKG_TEMPLATE
+    echo "#IDENTITY_MANAGEMENT_TYPE: oidc"                                             >> $TKG_TEMPLATE
+    echo "#INFRASTRUCTURE_PROVIDER: aws"                                               >> $TKG_TEMPLATE
+    echo "#LDAP_BIND_DN: \"\""                                                         >> $TKG_TEMPLATE
+    echo "#LDAP_BIND_PASSWORD: \"\""                                                   >> $TKG_TEMPLATE
+    echo "#LDAP_GROUP_SEARCH_BASE_DN: \"\""                                            >> $TKG_TEMPLATE
+    echo "#LDAP_GROUP_SEARCH_FILTER: \"\""                                             >> $TKG_TEMPLATE
+    echo "#LDAP_GROUP_SEARCH_GROUP_ATTRIBUTE: \"\""                                    >> $TKG_TEMPLATE
+    echo "#LDAP_GROUP_SEARCH_NAME_ATTRIBUTE: cn"                                       >> $TKG_TEMPLATE
+    echo "#LDAP_GROUP_SEARCH_USER_ATTRIBUTE: DN"                                       >> $TKG_TEMPLATE
+    echo "#LDAP_HOST: \"\""                                                            >> $TKG_TEMPLATE
+    echo "#LDAP_ROOT_CA_DATA_B64: \"\""                                                >> $TKG_TEMPLATE
+    echo "#LDAP_USER_SEARCH_BASE_DN: \"\""                                             >> $TKG_TEMPLATE
+    echo "#LDAP_USER_SEARCH_FILTER: \"\""                                              >> $TKG_TEMPLATE
+    echo "#LDAP_USER_SEARCH_NAME_ATTRIBUTE: \"\""                                      >> $TKG_TEMPLATE
+    echo "#LDAP_USER_SEARCH_USERNAME: userPrincipalName"                               >> $TKG_TEMPLATE
+
+    # --- OIDC IDENTITY PROVIDOR WITH (OKTA) ---
+    echo "IDENTITY_MANAGEMENT_TYPE: oidc"                                              >> $TKG_TEMPLATE
+    echo "OIDC_IDENTITY_PROVIDER_CLIENT_ID: \"$TDH_OKTA_SECRET_ID\""                   >> $TKG_TEMPLATE
+    echo "OIDC_IDENTITY_PROVIDER_CLIENT_SECRET: \"$TDH_OKTA_CLIENT_SECRET\""           >> $TKG_TEMPLATE
+    echo "OIDC_IDENTITY_PROVIDER_ISSUER_URL: \"$TDH_OKTA_URL\""                        >> $TKG_TEMPLATE
+    echo "OIDC_IDENTITY_PROVIDER_SCOPES: \"$TDH_OKTA_SCOPES\""                         >> $TKG_TEMPLATE
+    echo "OIDC_IDENTITY_PROVIDER_GROUPS_CLAIM:: \"$TDH_OKTA_GROUP_CLAIM\""             >> $TKG_TEMPLATE
+    echo "OIDC_IDENTITY_PROVIDER_USERNAME_CLAIM: \"$TDH_OKTA_USERNAME_CLAIM\""         >> $TKG_TEMPLATE
 
 echo "TKG_TEMPLATE:$TKG_TEMPLATE"
 echo "tanzu management-cluster create --file /Users/sdu/.tanzu/tkg/clusterconfigs/pmwmm3sb2v.yaml -v 6"
