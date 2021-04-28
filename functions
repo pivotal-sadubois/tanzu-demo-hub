@@ -1695,7 +1695,7 @@ createCluster() {
     echo "INFRASTRUCTURE_PROVIDER: aws"                                                >  $TKG_TEMPLATE
     echo "AWS_REGION: $AWS_REGION"                                                     >> $TKG_TEMPLATE
     echo "AWS_NODE_AZ: \"$AWS_PRIMARY_AZ\""                                            >> $TKG_TEMPLATE
-    echo "AWS_ACCESS_KEY_ID: $AWS_SECRET_KEY"                                          >> $TKG_TEMPLATE
+    echo "AWS_ACCESS_KEY_ID: $AWS_ACCESS_KEY"                                          >> $TKG_TEMPLATE
     echo "AWS_SECRET_ACCESS_KEY: $AWS_SECRET_KEY"                                      >> $TKG_TEMPLATE
     echo "AWS_SSH_KEY_NAME: vmware-cloud-tmc"                                          >> $TKG_TEMPLATE
     echo "BASTION_HOST_ENABLED: true"                                                  >> $TKG_TEMPLATE
@@ -1840,7 +1840,7 @@ exit 1
     #echo "SERVICE_CIDR: 100.64.0.0/13"                                                >> $TKG_TEMPLATE
     #echo "TKG_HTTP_PROXY_ENABLED: \"false\""                                          >> $TKG_TEMPLATE
 
-    MPDE=azure
+    #MPDE=azure
 
     cnt=$(tanzu management-cluster get 2>/dev/null | egrep -c " $TDH_TKGMC_NAME ")
     if [ ${cnt} -eq 0 ]; then
