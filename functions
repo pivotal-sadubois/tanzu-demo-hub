@@ -133,7 +133,7 @@ pivnetAPIdownload() {
 
 
 messageLine() {
-  echo "-------------------------------------------------------------------------------------------------------------------------------------------------------"
+  echo "----------------------------------------------------------------------------------------------------------------------------------------------"
 } 
 
 messagePrint() {
@@ -240,9 +240,9 @@ sshEnvironment() {
   fi
 
   messagePrint " - SSH Command" "$JUMP_HOST"
-  echo "   ------------------------------------------------------------- JUMP SERVER ACCESS ----------------------------------------------------------------------"
-  echo "   $SSH_DISPLAY"
-  echo "   -------------------------------------------------------------------------------------------------------------------------------------------------------"
+  messageLine
+  echo "$SSH_DISPLAY"
+  messageLine
 }
 
 checkCloudCLI() {
@@ -1754,8 +1754,9 @@ createCluster() {
     echo "OIDC_IDENTITY_PROVIDER_USERNAME_CLAIM: \"$TDH_OKTA_USERNAME_CLAIM\""         >> $TKG_TEMPLATE
 
 echo "TKG_TEMPLATE:$TKG_TEMPLATE"
+echo "tanzu management-cluster create --file $TKG_TEMPLATE -v 6"
 echo "tanzu management-cluster create --file /Users/sdu/.tanzu/tkg/clusterconfigs/pmwmm3sb2v.yaml -v 6"
-exit
+exit 1
   fi
 
   if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "Azure" ]; then
