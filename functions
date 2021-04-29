@@ -1744,14 +1744,34 @@ createCluster() {
     echo "#LDAP_USER_SEARCH_NAME_ATTRIBUTE: \"\""                                      >> $TKG_TEMPLATE
     echo "#LDAP_USER_SEARCH_USERNAME: userPrincipalName"                               >> $TKG_TEMPLATE
 
+    # --- LDAP IDENTITY PROVIDOR AVAILABLE ON THE JUMP SERVER ---
+    # https://docs.vmware.com/en/VMware-Tanzu-Kubernetes-Grid/1.3/vmware-tanzu-kubernetes-grid-13/GUID-mgmt-clusters-create-config-file.html#identity-mgmt
+    if [ "$TDH_TKGMC_IDENTITY_MANAGEMENT_TYPE" == "ldap" ]; then 
+      echo "IDENTITY_MANAGEMENT_TYPE: ldap"                                             >> $TKG_TEMPLATE
+      echo "LDAP_GROUP_SEARCH_BASE_DN: dc={TDH_TKGMC_ENVNAME},dc=pcfsdu,dc=com"         >> $TKG_TEMPLATE
+      echo "LDAP_HOST: jump.${TDH_TKGMC_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}"              >> $TKG_TEMPLATE
+      echo "INFRASTRUCTURE_PROVIDER: azure"                                             >> $TKG_TEMPLATE
+      echo "LDAP_GROUP_SEARCH_NAME_ATTRIBUTE: cn"                                       >> $TKG_TEMPLATE
+      echo "LDAP_GROUP_SEARCH_USER_ATTRIBUTE: DN"                                       >> $TKG_TEMPLATE
+      echo "LDAP_USER_SEARCH_USERNAME: userPrincipalName"                               >> $TKG_TEMPLATE
+      echo "SERVICE_CIDR: 100.64.0.0/13"                                                >> $TKG_TEMPLATE
+      echo "TKG_HTTP_PROXY_ENABLED: \"false\""                                          >> $TKG_TEMPLATE
+    fi
+
     # --- OIDC IDENTITY PROVIDOR WITH (OKTA) ---
-    echo "IDENTITY_MANAGEMENT_TYPE: oidc"                                              >> $TKG_TEMPLATE
-    echo "OIDC_IDENTITY_PROVIDER_CLIENT_ID: \"$TDH_OKTA_SECRET_ID\""                   >> $TKG_TEMPLATE
-    echo "OIDC_IDENTITY_PROVIDER_CLIENT_SECRET: \"$TDH_OKTA_CLIENT_SECRET\""           >> $TKG_TEMPLATE
-    echo "OIDC_IDENTITY_PROVIDER_ISSUER_URL: \"$TDH_OKTA_URL\""                        >> $TKG_TEMPLATE
-    echo "OIDC_IDENTITY_PROVIDER_SCOPES: \"$TDH_OKTA_SCOPES\""                         >> $TKG_TEMPLATE
-    echo "OIDC_IDENTITY_PROVIDER_GROUPS_CLAIM:: \"$TDH_OKTA_GROUP_CLAIM\""             >> $TKG_TEMPLATE
-    echo "OIDC_IDENTITY_PROVIDER_USERNAME_CLAIM: \"$TDH_OKTA_USERNAME_CLAIM\""         >> $TKG_TEMPLATE
+    if [ "$TDH_TKGMC_IDENTITY_MANAGEMENT_TYPE"== "oidc" ]; then 
+      echo "IDENTITY_MANAGEMENT_TYPE: oidc"                                              >> $TKG_TEMPLATE
+      echo "OIDC_IDENTITY_PROVIDER_CLIENT_ID: \"$TDH_OKTA_SECRET_ID\""                   >> $TKG_TEMPLATE
+      echo "OIDC_IDENTITY_PROVIDER_CLIENT_SECRET: \"$TDH_OKTA_CLIENT_SECRET\""           >> $TKG_TEMPLATE
+      echo "OIDC_IDENTITY_PROVIDER_ISSUER_URL: \"$TDH_OKTA_URL\""                        >> $TKG_TEMPLATE
+      echo "OIDC_IDENTITY_PROVIDER_SCOPES: \"$TDH_OKTA_SCOPES\""                         >> $TKG_TEMPLATE
+      echo "OIDC_IDENTITY_PROVIDER_GROUPS_CLAIM:: \"$TDH_OKTA_GROUP_CLAIM\""             >> $TKG_TEMPLATE
+      echo "OIDC_IDENTITY_PROVIDER_USERNAME_CLAIM: \"$TDH_OKTA_USERNAME_CLAIM\""         >> $TKG_TEMPLATE
+    fi
+
+    if [ "$TDH_TKGMC_IDENTITY_MANAGEMENT_TYPE"== "none" ]; then 
+      echo "IDENTITY_MANAGEMENT_TYPE: none"                                              >> $TKG_TEMPLATE
+    fi
 
 #gaga
     cnt=$(tanzu management-cluster get 2>/dev/null | egrep -c " $TDH_TKGMC_NAME ")
@@ -1850,33 +1870,34 @@ createCluster() {
     echo ""                                                                           >> $TKG_TEMPLATE
     echo "INFRASTRUCTURE_PROVIDER: azure"                                             >> $TKG_TEMPLATE
 
-    #echo "IDENTITY_MANAGEMENT_TYPE: none"                                             >> $TKG_TEMPLATE
-    #echo "LDAP_GROUP_SEARCH_NAME_ATTRIBUTE: cn"                                       >> $TKG_TEMPLATE
-    #echo "LDAP_GROUP_SEARCH_USER_ATTRIBUTE: DN"                                       >> $TKG_TEMPLATE
-    #echo "LDAP_USER_SEARCH_USERNAME: userPrincipalName"                               >> $TKG_TEMPLATE
-    #echo "SERVICE_CIDR: 100.64.0.0/13"                                                >> $TKG_TEMPLATE
-    #echo "TKG_HTTP_PROXY_ENABLED: \"false\""                                          >> $TKG_TEMPLATE
+    # --- LDAP IDENTITY PROVIDOR AVAILABLE ON THE JUMP SERVER ---
+    # https://docs.vmware.com/en/VMware-Tanzu-Kubernetes-Grid/1.3/vmware-tanzu-kubernetes-grid-13/GUID-mgmt-clusters-create-config-file.html#identity-mgmt
+    if [ "$TDH_TKGMC_IDENTITY_MANAGEMENT_TYPE" == "ldap" ]; then
+      echo "IDENTITY_MANAGEMENT_TYPE: ldap"                                             >> $TKG_TEMPLATE
+      echo "LDAP_GROUP_SEARCH_BASE_DN: dc={TDH_TKGMC_ENVNAME},dc=pcfsdu,dc=com"         >> $TKG_TEMPLATE
+      echo "LDAP_HOST: jump.${TDH_TKGMC_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}"              >> $TKG_TEMPLATE
+      echo "INFRASTRUCTURE_PROVIDER: azure"                                             >> $TKG_TEMPLATE
+      echo "LDAP_GROUP_SEARCH_NAME_ATTRIBUTE: cn"                                       >> $TKG_TEMPLATE
+      echo "LDAP_GROUP_SEARCH_USER_ATTRIBUTE: DN"                                       >> $TKG_TEMPLATE
+      echo "LDAP_USER_SEARCH_USERNAME: userPrincipalName"                               >> $TKG_TEMPLATE
+      echo "SERVICE_CIDR: 100.64.0.0/13"                                                >> $TKG_TEMPLATE
+      echo "TKG_HTTP_PROXY_ENABLED: \"false\""                                          >> $TKG_TEMPLATE
+    fi
 
     # --- OIDC IDENTITY PROVIDOR WITH (OKTA) ---
-    echo "IDENTITY_MANAGEMENT_TYPE: oidc"                                              >> $TKG_TEMPLATE
-    echo "OIDC_IDENTITY_PROVIDER_CLIENT_ID: \"$TDH_OKTA_SECRET_ID\""                   >> $TKG_TEMPLATE
-    echo "OIDC_IDENTITY_PROVIDER_CLIENT_SECRET: \"$TDH_OKTA_CLIENT_SECRET\""           >> $TKG_TEMPLATE
-    echo "OIDC_IDENTITY_PROVIDER_ISSUER_URL: \"$TDH_OKTA_URL\""                        >> $TKG_TEMPLATE
-    echo "OIDC_IDENTITY_PROVIDER_SCOPES: \"$TDH_OKTA_SCOPES\""                         >> $TKG_TEMPLATE
-    echo "OIDC_IDENTITY_PROVIDER_GROUPS_CLAIM:: \"$TDH_OKTA_GROUP_CLAIM\""             >> $TKG_TEMPLATE
-    echo "OIDC_IDENTITY_PROVIDER_USERNAME_CLAIM: \"$TDH_OKTA_USERNAME_CLAIM\""         >> $TKG_TEMPLATE
+    if [ "$TDH_TKGMC_IDENTITY_MANAGEMENT_TYPE"== "oidc" ]; then
+      echo "IDENTITY_MANAGEMENT_TYPE: oidc"                                              >> $TKG_TEMPLATE
+      echo "OIDC_IDENTITY_PROVIDER_CLIENT_ID: \"$TDH_OKTA_SECRET_ID\""                   >> $TKG_TEMPLATE
+      echo "OIDC_IDENTITY_PROVIDER_CLIENT_SECRET: \"$TDH_OKTA_CLIENT_SECRET\""           >> $TKG_TEMPLATE
+      echo "OIDC_IDENTITY_PROVIDER_ISSUER_URL: \"$TDH_OKTA_URL\""                        >> $TKG_TEMPLATE
+      echo "OIDC_IDENTITY_PROVIDER_SCOPES: \"$TDH_OKTA_SCOPES\""                         >> $TKG_TEMPLATE
+      echo "OIDC_IDENTITY_PROVIDER_GROUPS_CLAIM:: \"$TDH_OKTA_GROUP_CLAIM\""             >> $TKG_TEMPLATE
+      echo "OIDC_IDENTITY_PROVIDER_USERNAME_CLAIM: \"$TDH_OKTA_USERNAME_CLAIM\""         >> $TKG_TEMPLATE
+    fi
 
-    # --- LDAP IDENTITY PROVIDOR ---
-    # https://docs.vmware.com/en/VMware-Tanzu-Kubernetes-Grid/1.3/vmware-tanzu-kubernetes-grid-13/GUID-mgmt-clusters-create-config-file.html#identity-mgmt
-    #echo "IDENTITY_MANAGEMENT_TYPE: ldap"                                             >> $TKG_TEMPLATE
-    #echo "LDAP_GROUP_SEARCH_BASE_DN: dc={TDH_TKGMC_ENVNAME},dc=pcfsdu,dc=com"         >> $TKG_TEMPLATE
-    #echo "LDAP_HOST: jump.${TDH_TKGMC_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}"              >> $TKG_TEMPLATE
-    #echo "INFRASTRUCTURE_PROVIDER: azure"                                             >> $TKG_TEMPLATE
-    #echo "LDAP_GROUP_SEARCH_NAME_ATTRIBUTE: cn"                                       >> $TKG_TEMPLATE
-    #echo "LDAP_GROUP_SEARCH_USER_ATTRIBUTE: DN"                                       >> $TKG_TEMPLATE
-    #echo "LDAP_USER_SEARCH_USERNAME: userPrincipalName"                               >> $TKG_TEMPLATE
-    #echo "SERVICE_CIDR: 100.64.0.0/13"                                                >> $TKG_TEMPLATE
-    #echo "TKG_HTTP_PROXY_ENABLED: \"false\""                                          >> $TKG_TEMPLATE
+    if [ "$TDH_TKGMC_IDENTITY_MANAGEMENT_TYPE"== "none" ]; then
+      echo "IDENTITY_MANAGEMENT_TYPE: none"                                              >> $TKG_TEMPLATE
+    fi
 
     #MPDE=azure
 
