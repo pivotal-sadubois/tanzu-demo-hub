@@ -1759,7 +1759,7 @@ createCluster() {
     fi
 
     # --- OIDC IDENTITY PROVIDOR WITH (OKTA) ---
-    if [ "$TDH_TKGMC_IDENTITY_MANAGEMENT_TYPE"== "oidc" ]; then 
+    if [ "$TDH_TKGMC_IDENTITY_MANAGEMENT_TYPE" == "oidc" ]; then 
       echo "IDENTITY_MANAGEMENT_TYPE: oidc"                                              >> $TKG_TEMPLATE
       echo "OIDC_IDENTITY_PROVIDER_CLIENT_ID: \"$TDH_OKTA_SECRET_ID\""                   >> $TKG_TEMPLATE
       echo "OIDC_IDENTITY_PROVIDER_CLIENT_SECRET: \"$TDH_OKTA_CLIENT_SECRET\""           >> $TKG_TEMPLATE
@@ -1769,7 +1769,7 @@ createCluster() {
       echo "OIDC_IDENTITY_PROVIDER_USERNAME_CLAIM: \"$TDH_OKTA_USERNAME_CLAIM\""         >> $TKG_TEMPLATE
     fi
 
-    if [ "$TDH_TKGMC_IDENTITY_MANAGEMENT_TYPE"== "none" ]; then 
+    if [ "$TDH_TKGMC_IDENTITY_MANAGEMENT_TYPE" == "none" ]; then 
       echo "IDENTITY_MANAGEMENT_TYPE: none"                                              >> $TKG_TEMPLATE
     fi
 
@@ -1885,7 +1885,7 @@ createCluster() {
     fi
 
     # --- OIDC IDENTITY PROVIDOR WITH (OKTA) ---
-    if [ "$TDH_TKGMC_IDENTITY_MANAGEMENT_TYPE"== "oidc" ]; then
+    if [ "$TDH_TKGMC_IDENTITY_MANAGEMENT_TYPE" == "oidc" ]; then
       echo "IDENTITY_MANAGEMENT_TYPE: oidc"                                              >> $TKG_TEMPLATE
       echo "OIDC_IDENTITY_PROVIDER_CLIENT_ID: \"$TDH_OKTA_SECRET_ID\""                   >> $TKG_TEMPLATE
       echo "OIDC_IDENTITY_PROVIDER_CLIENT_SECRET: \"$TDH_OKTA_CLIENT_SECRET\""           >> $TKG_TEMPLATE
@@ -1895,7 +1895,7 @@ createCluster() {
       echo "OIDC_IDENTITY_PROVIDER_USERNAME_CLAIM: \"$TDH_OKTA_USERNAME_CLAIM\""         >> $TKG_TEMPLATE
     fi
 
-    if [ "$TDH_TKGMC_IDENTITY_MANAGEMENT_TYPE"== "none" ]; then
+    if [ "$TDH_TKGMC_IDENTITY_MANAGEMENT_TYPE" == "none" ]; then
       echo "IDENTITY_MANAGEMENT_TYPE: none"                                              >> $TKG_TEMPLATE
     fi
 
