@@ -133,6 +133,11 @@ kubectl -n $NAMESPACE exec -it $PRIMARY_INSTANCE -- bash -c 'pgbackrest backup -
 echo "-------------------------------------------------------------------------------------------------------------------------------------------------------"
 echo ""
 
+prtHead "Use Minio CLI to verify the Backup"
+prtText "=> mc alias set minio https://minio.${DOMAIN} $TDH_SERVICE_MINIO_ACCESS_KEY $TDH_SERVICE_MINIO_SECRET_KEY"
+prtText "=> mc ls minio"
+prtText ""
+
 prtHead "Open WebBrowser and verify the Backup"
 prtText "=> https://minio.${DOMAIN}"
 prtText "   ACCESS_KEY: $TDH_SERVICE_MINIO_ACCESS_KEY"
