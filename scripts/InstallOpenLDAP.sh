@@ -66,7 +66,9 @@ chown -R openldap /etc/ssl/private
 sed -i "s/^#BASE.*/BASE	$LDAP_DOMAIN/g" /etc/ldap/ldap.conf
 sed -i "s+^#URI.*+URI	ldap://jump.$DOMAIN+g" /etc/ldap/ldap.conf
 
+echo "----------------------------------------------------------------------------------------------------------------------------------------------"
 ldapmodify -Y EXTERNAL -H ldapi:/// -f /root/add_ssl.ldif | sed '/^$/d'
+echo "----------------------------------------------------------------------------------------------------------------------------------------------"
 systemctl restart slapd
 
 # --- PACKAGE CLEANUP ---
