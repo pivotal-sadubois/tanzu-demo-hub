@@ -1753,10 +1753,48 @@ createCluster() {
     echo "OIDC_IDENTITY_PROVIDER_GROUPS_CLAIM:: \"$TDH_OKTA_GROUP_CLAIM\""             >> $TKG_TEMPLATE
     echo "OIDC_IDENTITY_PROVIDER_USERNAME_CLAIM: \"$TDH_OKTA_USERNAME_CLAIM\""         >> $TKG_TEMPLATE
 
-echo "TKG_TEMPLATE:$TKG_TEMPLATE"
-echo "tanzu management-cluster create --file $TKG_TEMPLATE -v 6"
-echo "tanzu management-cluster create --file /Users/sdu/.tanzu/tkg/clusterconfigs/pmwmm3sb2v.yaml -v 6"
-exit 1
+#gaga
+    cnt=$(tanzu management-cluster get 2>/dev/null | egrep -c " $TDH_TKGMC_NAME ")
+    if [ ${cnt} -eq 0 ]; then
+      # --- CLEANUP OLD CONFIG ---
+      export KUBECONFIG=~/.kube-tkg/config
+
+      kubectl config unset clusters.${TDH_TKGMC_NAME}.log > /dev/null 2>&1
+      kubectl config unset contexts.${TDH_TKGMC_NAME}-admin@${TDH_TKGMC_NAME} > /dev/null 2>&1
+      kubectl config unset users.${TDH_TKGMC_NAME}-admin > /dev/null 2>&1
+
+      # --- CLEAN OLD MANAGEMENT CLUSTER CONFIG ---
+      rm -f ~/.tanzu/config.yaml /tmp/$TDH_TKGMC_NAME.log
+
+      messagePrint " - Management Cluster Creating"        "This may take up to 15min ..."
+
+      if [ $DEBUG -gt 0 ]; then
+        echo "-------------------------------------------------------------------------------------------------------------------------------------------------------"
+        tanzu management-cluster create --file $TKG_TEMPLATE -v 0 --log-file=/tmp/$TDH_TKGMC_NAME.log; ret=$?
+        echo "-------------------------------------------------------------------------------------------------------------------------------------------------------"
+      else
+        tanzu management-cluster create --file $TKG_TEMPLATE -v 0 --log-file=/tmp/$TDH_TKGMC_NAME.log > /dev/null 2>&1; ret=$?
+      fi
+
+      if [ ${ret} -ne 0 ]; then
+        echo "ERROR: failed to create TKG Management Cluster"
+        echo "       => tanzu management-cluster create --file $TKG_TEMPLATE -v 0 --log-file=/tmp/$TDH_TKGMC_NAME.log"
+        echo "-------------------------------------------------------------------------------------------------------------------------------------------------------"
+        cat /tmp/$TDH_TKGMC_NAME.log
+        echo "-------------------------------------------------------------------------------------------------------------------------------------------------------"
+
+        exit 1
+      fi
+
+      messagePrint " - Management Cluster Creating Completed"    "/tmp/$TDH_TKGMC_NAME.log"
+
+      tanzu management-cluster kubeconfig get --admin > /dev/null 2>&1
+      kubectl config set-cluster $TDH_TKGMC_NAME > /dev/null 2>&1
+      kubectl config use-context ${TDH_TKGMC_NAME}-admin@$TDH_TKGMC_NAME > /dev/null 2>&1
+      context=$(kubectl config view -o json | jq -r '.contexts[].name' 2>/dev/null)
+      tanzu management-cluster kubeconfig get --admin --export-file=${TKG_KUBECONFIG} > /dev/null 2>&1
+    fi
+
   fi
 
   if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "Azure" ]; then
@@ -1842,6 +1880,7 @@ exit 1
 
     #MPDE=azure
 
+#gaga2
     cnt=$(tanzu management-cluster get 2>/dev/null | egrep -c " $TDH_TKGMC_NAME ")
     if [ ${cnt} -eq 0 ]; then
       # --- CLEANUP OLD CONFIG ---
