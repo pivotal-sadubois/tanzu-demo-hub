@@ -1668,7 +1668,7 @@ createCluster() {
     MDOE=azure
     messageTitle "Creating TKG Managment Cluster"
     messagePrint " - Cluster Name"                "$TDH_TKGMC_NAME"
-    messagePrint " - Configuration File"          "$TKG_TEMPLATE"
+    messagePrint " - Configuration File"          "\${HOME}/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.yaml"
     messagePrint " - Control Plane Machine Type"  "$TDH_TKGMC_CONTROL_PLANE_MACHINE_TYPE"
     messagePrint " - Worker Node Machine Type"    "$TDH_TKGMC_MACHINE_TYPE"
     messagePrint " - Cluster CIDR"                "$TDH_TKGMC_CLUSTER_CIDR"
