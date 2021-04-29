@@ -52,7 +52,7 @@ listDeployments() {
   echo "-----------------------------------------------------------------------------------------------------------"
 }
 
-createCluster() {
+createCluster_deleteme() {
   SSH_KEY_NAME=vmware-cloud-tmc
   SSH_KEY_FILE=~/.tanzu-demo-hub/KeyPair-${SSH_KEY_NAME}-${AWS_REGION}.pem
 
@@ -250,6 +250,9 @@ checkTMCcontext
 tmcCreateCluster
 getTDHClusterCredentials
 
+kubectl create clusterrolebinding tanzu-demo-hub-privileged-cluster-role-binding \
+        --clusterrole=vmware-system-tmc-psp-privileged --group=system:authenticated > /dev/null 2>&1
+
 uodateConfigMap tanzu-demo-hub TDH_DOMAIN               $AWS_HOSTED_DNS_DOMAIN
 uodateConfigMap tanzu-demo-hub TDH_ENVNAME              $TDH_ENVNAME
 uodateConfigMap tanzu-demo-hub TDH_DEPLOYMENT_TYPE      "minikube"
@@ -260,16 +263,18 @@ uodateConfigMap tanzu-demo-hub TDH_MANAGEMENT_CLUSTER             "$TMC_MANAGEME
 uodateConfigMap tanzu-demo-hub TDH_PROVISONER_NAME                "$TMC_PROVISONER_NAME"
 uodateConfigMap tanzu-demo-hub TDH_MISSION_CONTROL_ACCOUNT_NAME   "$TMC_ACCOUNT_NAME"
 
- kubectl create clusterrolebinding tanzu-demo-hub-privileged-cluster-role-binding \
-        --clusterrole=vmware-system-tmc-psp-privileged --group=system:authenticated
-
 InstallCertManager
 InstallContour
 createClusterIssuer
 InstallHarborRegistry
 getRootCA tanzu-demo-hub-tls
 installBuildService
+installTanzuDataPostgres
+installSpringCloudGateway
 
+checkTMCintegration      TO    ## Tanzu Observability (Wavefront)
+checkTMCintegration      TDP   ## Tanzu Data Protection
+checkTMCintegration      TCI   ## Tanzu Cluster Inspection
 
 echo "-----------------------------------------------------------------------------------------------------------"
 echo "Tanzu Kubernetes Grid Cluster ($TMC_CLUSTER_NAME) build completed"
@@ -301,19 +306,3 @@ exit
 
 echo "$SSH_COMMAND"
 
-
-############
-#tmc login --name vmware-cloud-tmc
-#i $TMC_API_TOKEN is set 
-#? Select default log level info
-#? Management Cluster Name aws-hosted
-#? Provisioner Name 
-#√ Successfully created context vmware-cloud-tmc, to manage your contexts run `tmc system context -h`
-
-tmc system context 
-sdubois-a01:tanzu-demo-hub sdubois$ tmc system context list
-  NAME                                  ORG ID                                ENDPOINT                                
-  Tanzu End to End                      2f31c29c-e042-4ee4-8dbb-3e38b1f1eae5  tanzuendtoend.tmc.cloud.vmware.com:443  
-  fea0ee4b-bbf6-4444-b1d6-e493597d46a4  fea0ee4b-bbf6-4444-b1d6-e493597d46a4  tanzuemea.tmc.cloud.vmware.com:443      
-  sdubois@vmware.com                    2f31c29c-e042-4ee4-8dbb-3e38b1f1eae5  tanzuendtoend.tmc.cloud.vmware.com:443  
-  vmware-cloud-tmc                      fea0ee4b-bbf6-4444-b1d6-e493597d46a4  tanzuemea.tmc.cloud.vmware.com:443      

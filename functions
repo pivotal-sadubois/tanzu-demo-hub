@@ -1,6 +1,6 @@
 #!/bin/bash
 # ############################################################################################
-# File: ........: functions
+# File: ........: functions 
 # Language .....: bash 
 # Author .......: Sacha Dubois, VMware
 # Description ..: Tanzu Demo Hub - Cluster Installation
@@ -71,7 +71,7 @@ execCmd() {
 
   echo -e "     => ${bold}$1${normal}\c"; read x
   echo "     -------------------------------------------------------------------------------------------------------------------------------------------------------"
-  eval "$1" 2>&1 | sed -e 's/^/     /g'
+  eval "$1" 2>&1 | gsed -e 's/^/     /g' 
   #$1 | sed -e '/^$/d' -e 's/^/     /g'
   echo "     -------------------------------------------------------------------------------------------------------------------------------------------------------"
   echo ""
@@ -91,10 +91,19 @@ messageTitle() {
   _msg="$*"
   _dat=$(date "+%Y%m%d-%H:%M:%S")
 
+  [ $(uname) == "Linux" ] && HST="jump-host" || HST="localhost"
+
   if [ "${PCF_DEPLOYMENT_DEBUG}" == "true" -o "${DEBUG}" == "1" ]; then
-    echo "[${_dat}] ${_msg}"
+    if [ "$HST" == "localhost" ]; then
+      #printf "\e[37m[${_dat}-$HST] ${_msg}\e[0m\n"
+      printf "\e[1m[${_dat}-$HST] ${_msg}\e[0m\n"
+    else
+      echo -e "[${_dat}-$HST] ${_msg}"
+    fi
   else
-    echo "${_msg}"
+    #printf "\e[37m[${_msg}\e[0m\n"
+    printf "\e[1m${_msg}\e[0m\n"
+    #echo -e "\e[1mBold${_msg}"
   fi
 }
 
@@ -112,7 +121,6 @@ pivnetAPIdownload() {
   # --- LOGIN INTO PIVNET ---
   wget -O /tmp/$FILE_NAME --header="Authorization: Bearer $token" \
   https://network.pivotal.io/api/v2/products/$PRODUCT_SLUG/releases/$PRODUCT_ID/product_files/$PRODUCT_FILE/download > /dev/null 2>&1
-echo "FILE_NAME:$FILE_NAME"
 
   if [ ! -f /tmp/$FILE_NAME ]; then
     echo "ERROR: Error downloading file from PIVNET /tmp/$FILE_NAME"
@@ -123,6 +131,10 @@ echo "FILE_NAME:$FILE_NAME"
   return 0
 }
 
+
+messageLine() {
+  echo "----------------------------------------------------------------------------------------------------------------------------------------------"
+} 
 
 messagePrint() {
   _msg="$1"
@@ -139,10 +151,19 @@ messagePrint() {
   # --- INIZIALIZE VALUES IF EMPTY --- ---
   [ "$DEBUG" == "" ] && DEBUG=0
 
+  [ $(uname) == "Linux" ] && HST="jump-host" || HST="localhost"
+
   if [ "${PCF_DEPLOYMENT_DEBUG}" == "true" -o "${DEBUG}" == "1" ]; then
-    echo "[${_dat}] ${_msg} ${_str}: ${_stt}"
+    if [ "$HST" == "localhost" ]; then 
+      printf "\e[37m[${_dat}-$HST] ${_msg} ${_str}: ${_stt}\e[0m\n"
+      #echo -e "[${_dat}-$HST] ${_msg} ${_str}: ${_stt}"
+    else
+      echo -e "\e[33m[${_dat}-$HST]\e[0m \e[37m${_msg} ${_str}: ${_stt}\e[0m"
+    fi
+    #echo "[${_dat}-$HST] ${_msg} ${_str}: ${_stt}"
   else
-    echo "${_msg} ${_str}: ${_stt}"
+    printf "\e[37m${_msg} ${_str}: ${_stt}\e[0m\n"
+    #echo "${_msg} ${_str}: ${_stt}"
   fi
 }
 
@@ -188,12 +209,8 @@ sshEnvironment() {
     SSH_DISPLAY="ssh $SSH_OPTIONS -i ${SSH_PRIVATE_KEY} ${SSH_USER}@${SSH_HOST}"
   fi
 
-  if [ "${TDH_DEPLOYMENT_CLOUD}" == "AWS" ]; then
-echo gaga1
-    SSH_HOST=$(aws ec2 --region=$AWS_REGION describe-instances \
-                     --filters Name=tag:sigs.k8s.io/cluster-api-provider-aws/role,Values="bastion" | \
-             jq -r '.Reservations[].Instances[].PublicDnsName')
-
+  if [ "${TDH_DEPLOYMENT_CLOUD}" == "AWS" -o "${TDH_TKGMC_INFRASTRUCTURE}" == "AWS" ]; then
+    SSH_HOST=$JUMP_HOST
     SSH_USER=ubuntu
     SSH_HOME=/home/ubuntu
     SSH_OPTIONS="-o StrictHostKeyChecking=no -o RequestTTY=yes -o ServerAliveInterval=30"
@@ -202,8 +219,6 @@ echo gaga1
     SSH_COMMAND="ssh -q $SSH_OPTIONS -i $SSH_KEY_FILE ${SSH_USER}@${SSH_HOST}"
     SCP_COMMAND="scp -r $SCP_OPTIONS -i $SSH_KEY_FILE"
     SSH_DISPLAY="ssh -i $SSH_KEY_FILE ${SSH_USER}@${SSH_HOST}"
-echo "SSH_DISPLAY:$SSH_DISPLAY"
-echo gaga2
   fi
 
   if [ "${TDH_DEPLOYMENT_CLOUD}" == "GCP" ]; then
@@ -224,9 +239,10 @@ echo gaga2
     SSH_DISPLAY="ssh ${SSH_USER}@${SSH_HOST}"
   fi
 
-  echo "--------------------------------- JUMP SERVER ACCESS ------------------------------------------------------"
+  messagePrint " - SSH Command" "$JUMP_HOST"
+  messageLine
   echo "$SSH_DISPLAY"
-  echo "-----------------------------------------------------------------------------------------------------------"
+  messageLine
 }
 
 checkCloudCLI() {
@@ -349,14 +365,58 @@ checkCloudCLI() {
 checkKubernetesServices() {
   service=$1
   missing_variables=0
+#hallo
 
-  if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "minikube" ]; then
+
+  if [ 1 -eq 1 ]; then
+    if [ "${service}" == "tanzu_data_protection" ]; then
+      if [ "${TDH_TANZU_DATA_PROTECTION_ARN}" == "" -o "TDH_TANZU_DATA_PROTECTION_BACKUP_LOCATION" == "" ]; then
+        missing_variables=1
+        echo ""
+        echo "  4MISSING ENVIRONMENT-VARIABES    DESCRIPTION        "
+        echo "  -------------------------------------------------------------------------------------------------------------------------------------------------------"
+
+        if [ "${TDH_TANZU_DATA_PROTECTION_ARN}" == "" -o "TDH_TANZU_DATA_PROTECTION_BACKUP_LOCATION" == "" ]; then
+          echo "  TDH_TANZU_DATA_PROTECTION_ARN                (required) AWS CloudFormation ARN for Tanzu Data Protection"
+          echo "  TDH_TANZU_DATA_PROTECTION_BACKUP_LOCATION    (required) AWS Backup location"
+          echo "                                               Create AWS data protection provider credentials"
+          echo ""
+          echo "                                               1.) TMC -> Administrations -> Accounts"
+          echo "                                               2.) Create Account Credentials -> AWS data protection credentils"
+          echo "                                                   the Credential Name ie. 'sadubois-aws-dp' should be used as backup location"
+          echo "                                                   export TDH_TANZU_DATA_PROTECTION_BACKUP_LOCATION=<credential-name>"
+          echo "                                               3.) Follow the instructions to make an AWS ClouFormation deployment and note the"
+          echo "                                                   ARN generated. Set the ARN with export TDH_TANZU_DATA_PROTECTION_ARN=<arn>"
+          echo ""
+        fi
+      fi
+    fi
+
+    if [ "${service}" == "tanzu_observability" ]; then
+      if [ "${TDH_TANZU_OBSERVABILITY_API_TOKEN}" == "" -o "${TDH_TANZU_OBSERVABILITY_URL}" == "" ]; then
+        missing_variables=1
+        echo ""
+        echo "  4MISSING ENVIRONMENT-VARIABES      DESCRIPTION        "
+        echo "  -------------------------------------------------------------------------------------------------------------------------------------------------------"
+
+        if [ "${TDH_TANZU_OBSERVABILITY_API_TOKEN}" == "" ]; then
+          echo "  TDH_TANZU_OBSERVABILITY_API_TOKEN  (required) Tanzu Observability API Token"
+          echo "                                      => Tanzu Mission Control -> MyAccount -> API Token -> Generate"
+        fi
+
+        if [ "${TDH_TANZU_DATA_PROTECTION_ARN}" == "" ]; then
+          echo "  TDH_TANZU_OBSERVABILITY_URL        (required) Tanzu Observability Portal URL"
+          echo "                                      => ie. https://vmware.wavefront.com"
+        fi
+      fi
+    fi
+
     if [ "${service}" == "registry_docker" ]; then
       if [ "${TDH_REGISTRY_DOCKER_NAME}" == "" -o "${TDH_REGISTRY_DOCKER_USER}" == "" -o "${TDH_REGISTRY_DOCKER_PASS}" == "" ]; then
         missing_variables=1
         echo ""
         echo "  4MISSING ENVIRONMENT-VARIABES    DESCRIPTION        "
-        echo "  --------------------------------------------------------------------------------------------------------------"
+        echo "  -------------------------------------------------------------------------------------------------------------------------------------------------------"
 
         if [ "${TDH_REGISTRY_DOCKER_NAME}" == "" ]; then
           echo "  TDH_REGISTRY_DOCKER_NAME         (required) Docker Registry (hub.docker.com)"
@@ -377,7 +437,7 @@ checkKubernetesServices() {
         missing_variables=1
         echo ""
         echo "  4MISSING ENVIRONMENT-VARIABES    DESCRIPTION        "
-        echo "  --------------------------------------------------------------------------------------------------------------"
+        echo "  -------------------------------------------------------------------------------------------------------------------------------------------------------"
 
         if [ "${TDH_GITHUB_USER}" == "" ]; then
           echo "  TDH_GITHUB_USER                  (required) Github User"
@@ -394,7 +454,7 @@ checkKubernetesServices() {
         missing_variables=1
         echo ""
         echo "  4MISSING ENVIRONMENT-VARIABES    DESCRIPTION        "
-        echo "  --------------------------------------------------------------------------------------------------------------"
+        echo "  -------------------------------------------------------------------------------------------------------------------------------------------------------"
 
         if [ "${TDH_REGISTRY_VMWARE_NAME}" == "" ]; then
           echo "  TDH_REGISTRY_VMWARE_NAME         (required) VMware Registry (registry.pivotal.io)"
@@ -416,7 +476,7 @@ checkKubernetesServices() {
           missing_variables=1
           echo ""
           echo "  4MISSING ENVIRONMENT-VARIABES    DESCRIPTION        "
-          echo "  --------------------------------------------------------------------------------------------------------------"
+          echo "  -------------------------------------------------------------------------------------------------------------------------------------------------------"
 
           if [ "${TDH_HARBOR_ADMIN_PASSWORD}" == "" ]; then
             echo "  TDH_HARBOR_ADMIN_PASSWORD        (required) Harbor Admin Password"
@@ -431,11 +491,11 @@ checkKubernetesServices() {
   fi
 
   if [ ${missing_variables} -eq 1 ]; then
-    echo "  --------------------------------------------------------------------------------------------------------------"
-    echo "  IMPORTANT: Please set the missing environment variables either in your shell or in the pcfconfig"
+    echo "  -------------------------------------------------------------------------------------------------------------------------------------------------------"
+    echo "  IMPORTANT: Please set the missing environment variables either in your shell or in the tanzu-demo-hub"
     echo "             configuration file ~/.tanzu-demo-hub.cfg and set all variables with the 'export' notation"
-    echo "             ie. => export AZURE_PKS_TLS_CERTIFICATE=/home/demouser/certs/cert.pem"
-    echo "  --------------------------------------------------------------------------------------------------------------"
+    echo "             ie. => export <environment_variable>=\"<value>\""
+    echo "  -------------------------------------------------------------------------------------------------------------------------------------------------------"
     exit 1
   fi
 }
@@ -445,17 +505,39 @@ checkCloudAccess() {
   missing_variables=0
 
   if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "minikube" ]; then
-    TDH_MINIKUBE_PROFILE="tdh-minikube-${TMC_USER}"
-    if [ "${TDH_MINIKUBE_PROFILE}" == "" -o "${TMC_USER}" == "" ]; then
+    if [ "${TDH_USER}" == "" -o "${AWS_ACCESS_KEY}" == "" -o "${AWS_SECRET_KEY}" == "" -o "${AWS_REGION}" == "" -o "${AWS_PRIMARY_AZ}" == "" ]; then
       missing_variables=1
       echo ""
       echo "  4MISSING ENVIRONMENT-VARIABES    DESCRIPTION        "
-      echo "  --------------------------------------------------------------------------------------------------------------"
+      echo "  -------------------------------------------------------------------------------------------------------------------------------------------------------"
 
-      if [ "${TMC_USER}" == "" ]; then
-        echo "  TMC_USER                        (required) The name of the TMC UserID"
+      if [ "${TDH_USER}" == "" ]; then
+        echo "  TDH_USER                        (required) Tanzu Demo Hub User to tag TKG Clusters with your Name"
+        echo "                                   => (usually you VMware User Name without @vmware.com)"
+      fi
+
+      if [ "${AWS_ACCESS_KEY}" == "" ]; then
+        echo "  AWS_ACCESS_KEY                  (required) AWS Acess Key for Route53 Access"
+      fi
+
+      if [ "${AWS_SECRET_KEY}" == "" ]; then
+        echo "  AWS_SECRET_KEY                  (required) AWS Secret Key for Route53 Access"
+      fi
+
+      if [ "${AWS_REGION}" == "" ]; then
+        echo "  AWS_REGION                    (required) Choose the AWS Region where your installation should run"
+        echo "                                  => aws ec2 --region=eu-west-3 describe-regions --output text | awk '{ print $NF }'"
+        echo "                                     eu-north-1, eu-west-3, eu-central-1 etc."
+      fi
+
+      if [ "${AWS_PRIMARY_AZ}" == "" ]; then
+        echo "  AWS_PRIMARY_AZ                (required) Choose the Primary Availability Zone of a AWS Region"
+        echo "                                  => aws ec2 --region=eu-west-3 describe-availability-zones --output text"
+        echo "                                     eu-north-1a, eu-north-1b, eu-north-1c"
       fi
     else
+      TDH_MINIKUBE_PROFILE="tdh-minikube-${TDH_USER}"
+
       if [ -f ~/.minikube/profiles/$TDH_MINIKUBE_PROFILE/config.json ]; then 
         cpu=$(cat ~/.minikube/profiles/$TDH_MINIKUBE_PROFILE/config.json | jq -r '.CPUs')
         dsk=$(cat ~/.minikube/profiles/$TDH_MINIKUBE_PROFILE/config.json | jq -r '.DiskSize')
@@ -494,10 +576,10 @@ checkCloudAccess() {
         messageTitle "Attach Minikube Cluster to TMC"
         messagePrint " - TMC Cluster Name"                "$TDH_MINIKUBE_PROFILE"
         messagePrint " - TMC Clustergroup"                "tanzu-demo-hub"
-        echo "  --------------------------------------------------------------------------------------------------------------"
+        echo "  -------------------------------------------------------------------------------------------------------------------------------------------------------"
         tmc cluster attach -n $TDH_MINIKUBE_PROFILE -g tanzu-demo-hub -p minikube
         kubectl apply -f k8s-attach-manifest.yaml
-        echo "  --------------------------------------------------------------------------------------------------------------"
+        echo "  -------------------------------------------------------------------------------------------------------------------------------------------------------"
       fi
     fi
   fi
@@ -511,7 +593,7 @@ checkCloudAccess() {
       missing_variables=1
       echo ""
       echo "  4MISSING ENVIRONMENT-VARIABES    DESCRIPTION        "
-      echo "  --------------------------------------------------------------------------------------------------------------"
+      echo "  -------------------------------------------------------------------------------------------------------------------------------------------------------"
 
       if [ "${VSPHERE_SERVER}" == "" ]; then
         echo "  VSPHERE_SERVER                   (required) vSphere Server Name"
@@ -599,7 +681,7 @@ checkCloudAccess() {
       missing_variables=1
       echo ""
       echo "  4MISSING ENVIRONMENT-VARIABES    DESCRIPTION        "
-      echo "  --------------------------------------------------------------------------------------------------------------"
+      echo "  -------------------------------------------------------------------------------------------------------------------------------------------------------"
 
       #if [ "${GCP_SERVICE_ACCOUNT}" == "" ]; then
       #  echo "  GCP_SERVICE_ACCOUNT           (required) GCP Service Account"
@@ -624,13 +706,13 @@ checkCloudAccess() {
   fi
 
   if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "AWS" ]; then
-    if [ "${AWS_ACCESS_KEY}" == "" -o "${AWS_SECRET_KEY}" == "" -o \
+    if [ "${AWS_ACCESS_KEY}" == "" -o "${AWS_SECRET_KEY}" == "" -o "${AWS_PRIMARY_AZ}" == "" -o \
          "${AWS_REGION}" == "" ]; then
 
       missing_variables=1
       echo ""
       echo "  5MISSING ENVIRONMENT-VARIABES    DESCRIPTION        "
-      echo "  --------------------------------------------------------------------------------------------------------------"
+      echo "  -------------------------------------------------------------------------------------------------------------------------------------------------------"
 
       if [ "${AWS_ACCESS_KEY}" == "" ]; then
         echo "  AWS_ACCESS_KEY                  (required) AWS Acess Key"
@@ -645,11 +727,18 @@ checkCloudAccess() {
         echo "                                  => aws ec2 --region=eu-west-3 describe-regions --output text | awk '{ print $NF }'"
         echo "                                     eu-north-1, eu-west-3, eu-central-1 etc."
       fi
+
+      if [ "${AWS_PRIMARY_AZ}" == "" ]; then
+        echo "  AWS_PRIMARY_AZ                (required) Choose the Primary Availability Zone of a AWS Region"
+        echo "                                  => aws ec2 --region=eu-west-3 describe-availability-zones --output text"
+        echo "                                     eu-north-1a, eu-north-1b, eu-north-1c"
+      fi
     else
-      messageTitle "Azure Access Credentials"
-      messagePrint " - AWS AccwssKey"                $(maskPassword "$AWS_ACCESS_KEY")
-      messagePrint " - AWS SecretKey"                $(maskPassword "$AWS_SECRET_KEY")
-      messagePrint " - AWS Region"                   "$AWS_REGION"
+      messageTitle "AWS Access Credentials"
+      messagePrint " - AWS AccwssKey"                    $(maskPassword "$AWS_ACCESS_KEY")
+      messagePrint " - AWS SecretKey"                    $(maskPassword "$AWS_SECRET_KEY")
+      messagePrint " - AWS Region"                       "$AWS_REGION"
+      messagePrint " - AWS Primary Availability Zone"    "$AWS_PRIMARY_AZ"
     fi
   fi
 
@@ -659,7 +748,7 @@ checkCloudAccess() {
       missing_variables=1
       echo ""
       echo "  1MISSING ENVIRONMENT-VARIABES    DESCRIPTION        "
-      echo "  --------------------------------------------------------------------------------------------------------------"
+      echo "  -------------------------------------------------------------------------------------------------------------------------------------------------------"
 
       if [ "${AZURE_SUBSCRIPTION_ID}" == "" ]; then
         echo "  AZURE_SUBSCRIPTION_ID           (required) has the format <xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx>"
@@ -695,12 +784,222 @@ checkCloudAccess() {
   fi
 
   if [ ${missing_variables} -eq 1 ]; then
-    echo "  --------------------------------------------------------------------------------------------------------------"
-    echo "  IMPORTANT: Please set the missing environment variables either in your shell or in the pcfconfig"
+    echo "  -------------------------------------------------------------------------------------------------------------------------------------------------------"
+    echo "  IMPORTANT: Please set the missing environment variables either in your shell or in the tanzu-demo-hub"
     echo "             configuration file ~/.tanzu-demo-hub.cfg and set all variables with the 'export' notation"
-    echo "             ie. => export AZURE_PKS_TLS_CERTIFICATE=/home/demouser/certs/cert.pem"
-    echo "  --------------------------------------------------------------------------------------------------------------"
+    echo "             ie. => export <environment_variable>=\"<value>\""
+    echo "  -------------------------------------------------------------------------------------------------------------------------------------------------------"
     exit 1
+  fi
+}
+
+checkTDHenvironment() {
+  missing_variables=0
+
+  if [ "${TDH_MYVMWARE_USER}" == "" -o "${TDH_MYVMWARE_PASS}" == "" ]; then
+    missing_variables=1
+    echo ""
+    echo "  4MISSING ENVIRONMENT-VARIABES    DESCRIPTION        "
+    echo "  -------------------------------------------------------------------------------------------------------------------------------------------------------"
+
+    if [ "${TDH_MYVMWARE_USER}" == "" ]; then
+      echo "  TDH_MYVMWARE_USER                (required) myVMware (http://my.vmware.com/group/vmware/home) User"
+    fi
+
+    if [ "${TDH_MYVMWARE_PASS}" == "" ]; then
+      echo "  TDH_MYVMWARE_PASS                (required) myVMware (http://my.vmware.com/group/vmware/home) Password"
+    fi
+  else
+    messageTitle "myVMware (http://my.vmware.com) Access for Software Download"
+    messagePrint " - myVMare User:"            "$TDH_MYVMWARE_USER"
+    messagePrint " - myVMare Password:"        $(maskPassword "$TDH_MYVMWARE_PASS")
+  fi
+
+  if [ ${missing_variables} -eq 1 ]; then
+    echo "  -------------------------------------------------------------------------------------------------------------------------------------------------------"
+    echo "  IMPORTANT: Please set the missing environment variables either in your shell or in the tanzu-demo-hub"
+    echo "             configuration file ~/.tanzu-demo-hub.cfg and set all variables with the 'export' notation"
+    echo "             export TDH_MYVMWARE_USER=xxxxxxx"
+    echo "             export TDH_MYVMWARE_PASS='xxxxxxxxxxxx'"
+    echo "  IMPORTAND: Place the password in Single Quotes (') especialy if you use special characgters"
+    echo "  -------------------------------------------------------------------------------------------------------------------------------------------------------"
+    exit 1
+  fi
+}
+
+checkTMCintegration() {
+  TMC_INTEGRATION=$1
+
+  TDH_CLUSTER_NAME=$(getConfigMap tanzu-demo-hub TDH_CLUSTER_NAME)
+#hallo
+
+  if [ "${TMC_INTEGRATION}" == "TO" ]; then
+    if [ "${TDH_SERVICE_TANZU_OBSERVABILITY}" == "true" ]; then
+      messageTitle "Tanzu Observability Integration into TMC"
+
+      NAMESPACE=wavefront
+      kubectl get ns $NAMESPACE > /dev/null 2>&1
+      if [ $? -ne 0 ]; then
+
+        # --- VERIFY SERVICE CONFIGURATION ---
+        checkKubernetesServices tanzu_observability
+
+        # --- INSTALL WAVEFRONT HELM CHART ---
+        kubectl create ns $NAMESPACE > /dev/null 2>&1
+        helm uninstall wavefront -n $NAMESPACE > /dev/null 2>&1
+
+        helm install wavefront wavefront/wavefront \
+            --set wavefront.url=$TDH_TANZU_OBSERVABILITY_URL \
+            --set wavefront.token=$TDH_TANZU_OBSERVABILITY_API_TOKEN \
+            --set clusterName=$TDH_CLUSTER_NAME --namespace wavefront > /dev/null 2>&1
+        if [ $? -ne 0 ]; then
+          echo "ERROR: failed to install wavefront Helm Chart"
+          echo "       => helm install wavefront wavefront/wavefront \\"
+          echo "           --set wavefront.url=$TDH_TANZU_OBSERVABILITY_URL \\"
+          echo "           --set wavefront.token=$TDH_TANZU_OBSERVABILITY_API_TOKEN \\"
+          echo "           --set clusterName=$TDH_CLUSTER_NAME --namespace wavefront"
+          exit
+        else
+          messagePrint " - Install Wavefront Helm Chart"  "installed"      
+        fi
+      else
+        messagePrint " - Verify Wavefront Helm Chart"  "installed"      
+      fi
+
+      cnt=$(tmc cluster integration list --cluster-name $TDH_CLUSTER_NAME -m $TMC_MANAGEMENT_CLUSTER \
+            -p $TMC_PROVISIONER_NAME --name tanzu-observability-saas | egrep -c "tanzu-observability-saas") 
+      if [ $cnt -eq 0 ]; then 
+        TANZU_OBSERVABILITY=/tmp/tanzu_observability.yaml; rm -f $TANZU_OBSERVABILITY
+        echo ""                                                                      >  $TANZU_OBSERVABILITY
+        echo "{"                                                                     >> $TANZU_OBSERVABILITY
+        echo "    \"full_name\": {"                                                  >> $TANZU_OBSERVABILITY
+        echo "        \"provisionerName\": \"$TMC_PROVISONER_NAME\","                >> $TANZU_OBSERVABILITY
+        echo "        \"managementClusterName\": \"$TMC_MANAGEMENT_CLUSTER\","       >> $TANZU_OBSERVABILITY
+        echo "        \"clusterName\": \"$TDH_CLUSTER_NAME\","                       >> $TANZU_OBSERVABILITY
+        echo "        \"name\": \"tanzu-observability-saas\""                        >> $TANZU_OBSERVABILITY
+        echo "    },"                                                                >> $TANZU_OBSERVABILITY
+        echo "    \"spec\": {"                                                       >> $TANZU_OBSERVABILITY
+        echo "        \"configurations\": {"                                         >> $TANZU_OBSERVABILITY
+        echo "            \"url\": \"$TDH_TANZU_OBSERVABILITY_URL\""                 >> $TANZU_OBSERVABILITY
+        echo "        },"                                                            >> $TANZU_OBSERVABILITY
+        echo "        \"secrets\": {"                                                >> $TANZU_OBSERVABILITY
+        echo "            \"token\": \"$TDH_TANZU_OBSERVABILITY_API_TOKEN\""         >> $TANZU_OBSERVABILITY
+        echo "        }"                                                             >> $TANZU_OBSERVABILITY
+        echo "    }"                                                                 >> $TANZU_OBSERVABILITY
+        echo "}"                                                                     >> $TANZU_OBSERVABILITY
+
+        tmc cluster integration create -f $TANZU_OBSERVABILITY > /dev/null 2>&1
+        if [ $? -ne 0 ]; then 
+          echo "ERROR: failed to add integration"
+          echo "       => tmc cluster integration create -f $TANZU_OBSERVABILITY"
+          exit
+        else
+          messagePrint " -  Setup Cluster Integration for ($TDH_CLUSTER_NAME)"  "configured"      
+          rm -f $TANZU_OBSERVABILITY
+        fi
+      else
+        messagePrint " - Verify Cluster Integration for ($TDH_CLUSTER_NAME)"  "configured"      
+      fi
+
+      uodateConfigMap tanzu-demo-hub TDH_SERVICE_TANZU_OBSERVABILITY        "true"
+    else
+      uodateConfigMap tanzu-demo-hub TDH_SERVICE_TANZU_OBSERVABILITY        "false"
+    fi
+  fi
+
+  if [ "${TMC_INTEGRATION}" == "TDP" ]; then
+    if [ "${TDH_SERVICE_TANZU_DATA_PROTECTION}" == "true" ]; then
+      messageTitle "Data Protection Integration into TMC"
+      cnt=$(tmc cluster dataprotection backuplocation list --cluster-name $TDH_CLUSTER_NAME 2>/dev/null | grep -c " $TDH_CLUSTER_NAME ")
+      if [ $cnt -eq 0 ]; then
+        # --- VERIFY SERVICE CONFIGURATION ---
+        checkKubernetesServices tanzu_data_protection
+
+        # --- VERIFY BACKUP LOCATION ---
+        cnt=$(tmc cluster dataprotection backuplocation list --cluster-name $TDH_CLUSTER_NAME | grep -c " $TDH_CLUSTER_NAME ") 
+        if [ $cnt -eq 0 ]; then
+          tmc cluster dataprotection create -c $TDH_CLUSTER_NAME -m $TMC_MANAGEMENT_CLUSTER -p $TMC_PROVISONER_NAME \
+              --backup-location-names $TDH_TANZU_DATA_PROTECTION_BACKUP_LOCATION > /dev/null 2>&1
+          if [ $? -ne 0 ]; then
+            echo "ERROR: failed to enable dataprotection for cluster $TDH_CLUSTER_NAME"
+            echo "       => tmc cluster dataprotection create -c $TDH_CLUSTER_NAME -m $TMC_MANAGEMENT_CLUSTER \\"
+            echo "            -p $TMC_PROVISONER_NAME --backup-location-names $TDH_TANZU_DATA_PROTECTION_BACKUP_LOCATION"
+            exit
+          fi
+        fi
+
+        messagePrint " - Enable DataProtection for Cluster ($TDH_CLUSTER_NAME)"    "enabled"      
+        uodateConfigMap tanzu-demo-hub TDH_TANZU_DATA_PROTECTION_ARN               "$TDH_TANZU_DATA_PROTECTION_ARN"
+        uodateConfigMap tanzu-demo-hub TDH_TANZU_DATA_PROTECTION_BACKUP_LOCATION   "$TDH_TANZU_DATA_PROTECTION_BACKUP_LOCATION"
+        uodateConfigMap tanzu-demo-hub TDH_SERVICE_TANZU_DATA_PROTECTION           "true"
+      else
+        messagePrint " - Verify DataProtection for Cluster ($TDH_CLUSTER_NAME)"    "enabled"
+        messagePrint " - Backuo Lockation"                                         "$TDH_TANZU_DATA_PROTECTION_BACKUP_LOCATION" 
+        messagePrint " - AWS CloudFormation ARN"                                   "$TDH_TANZU_DATA_PROTECTION_ARN" 
+      fi
+
+      sleep 60
+
+      # --- CONFIGURE FULL BACKUP ---
+      cnt=$(tmc cluster dataprotection backup list --cluster-name $TDH_CLUSTER_NAME -p $TMC_PROVISONER_NAME -m $TMC_MANAGEMENT_CLUSTER  --name "full-backup" | egrep -c " full-backup ")
+      if [ $cnt -eq 0 ]; then 
+        messagePrint " - Configure Full Backup (full-backup) configuration"            "enabled"
+        tmc cluster dataprotection backup create -c $TDH_CLUSTER_NAME -p $TMC_PROVISONER_NAME -m $TMC_MANAGEMENT_CLUSTER \
+          --name "full-backup" --backup-location-name $TDH_TANZU_DATA_PROTECTION_BACKUP_LOCATION > /dev/null 2>&1
+        if [ $? -ne 0 ]; then
+          echo "ERROR: failed to configure a full-backup"
+          echo "       => tmc cluster dataprotection backup create -c $TDH_CLUSTER_NAME -p $TMC_PROVISONER_NAME \\"
+          echo "            -m $TMC_MANAGEMENT_CLUSTER --name \"full-backup\" --backup-location-name $TDH_TANZU_DATA_PROTECTION_BACKUP_LOCATION"
+          exit
+        fi
+      else
+        messagePrint " - Verify Full Backup (full-backup) configuration"            "enabled"
+      fi
+
+      uodateConfigMap tanzu-demo-hub TDH_SERVICE_TANZU_DATA_PROTECTION             "false"
+    fi
+  fi
+
+  if [ "${TMC_INTEGRATION}" == "TCI" ]; then
+    messageTitle "Cluster Inspections"
+
+    scanCluster   LITE
+    scanCluster   CIS
+    scanCluster   CONFORMANCE
+  fi
+}
+
+scanCluster() {
+  TYPE=$1
+
+  [ "$TYPE" == "LITE" ] && NAME=lite
+  [ "$TYPE" == "CIS" ]  && NAME=cis
+  [ "$TYPE" == "CONFORMANCE" ] && NAME=conformance
+
+  # --- VERIFY ACRIVE SCANNS ---
+  cnt=$(tmc cluster inspection scan list --cluster-name $TDH_CLUSTER_NAME -p $TMC_PROVISONER_NAME -m $TMC_MANAGEMENT_CLUSTER -o json | \
+     jq -r '.scans[].status.phase' | grep -v "COMPLETE" | wc -l | sed 's/  *//g')
+  while [ $cnt -ne 0 ]; do
+    cnt=$(tmc cluster inspection scan list --cluster-name $TDH_CLUSTER_NAME -p $TMC_PROVISONER_NAME -m $TMC_MANAGEMENT_CLUSTER -o json | \
+      jq -r '.scans[].status.phase' | grep -v "COMPLETE" | wc -l | sed 's/  *//g')
+    sleep 10
+  done
+
+  stt=$(tmc cluster inspection scan list --cluster-name $TDH_CLUSTER_NAME -p $TMC_PROVISONER_NAME -m $TMC_MANAGEMENT_CLUSTER -o json | \
+    jq -r --arg key $NAME '.scans[].status.report.info | select(.scanType == $key).result' | tail -1)
+  if [ "$stt" == "" ]; then 
+    messagePrint " - Scan Cluster ($TDH_CLUSTER_NAME) with $TYPE"       "scanning"
+    tmc cluster inspection scan create -c $TDH_CLUSTER_NAME -p $TMC_PROVISONER_NAME -m $TMC_MANAGEMENT_CLUSTER --inspection-type $TYPE > /dev/null 2>&1
+    if [ $? -ne 0 ]; then 
+      echo "ERROR: failed to scan cluster $TDH_CLUSTER_NAME"
+      echo "       => tmc cluster inspection scan create -c $TDH_CLUSTER_NAME -p $TMC_PROVISONER_NAME \\"
+      echo "             -m $TMC_MANAGEMENT_CLUSTER --inspection-type $TYPE"
+      exit
+    fi
+  else
+    dat=$(tmc cluster inspection scan list --cluster-name $TDH_CLUSTER_NAME -p $TMC_PROVISONER_NAME -m $TMC_MANAGEMENT_CLUSTER -o json | \
+      jq -r --arg key $NAME '.scans[].status.report.info | select(.scanType == $key).runDatetime' | sort -n | tail -1)
+    messagePrint " - Cluster Scan ($TDH_CLUSTER_NAME) with $TYPE completed"       "$dat"
   fi
 }
 
@@ -708,18 +1007,18 @@ checkTMCAccess() {
   missing_variables=0
 
   if [ "${TDH_DEPLOYMENT_CLOUD}" == "AWS" ]; then
-    if [ "${TMC_MANAGEMENT_CLUSTER}" == "" -o "${TMC_PROVISONER_NAME}" == "" ]; then
+    if [ "${TMC_MANAGEMENT_CLUSTER}" == "" -o "${TMC_PROVISIONER_NAME}" == "" ]; then
       missing_variables=1
       echo ""
       echo "  2MISSING ENVIRONMENT-VARIABES    DESCRIPTION        "
-      echo "  --------------------------------------------------------------------------------------------------------------"
+      echo "  -------------------------------------------------------------------------------------------------------------------------------------------------------"
   
       if [ "${TMC_MANAGEMENT_CLUSTER}" == "" ]; then
         echo "  TMC_MANAGEMENT_CLUSTER          (required) A Management Cluster deployed on AWS"
       fi
   
-      if [ "${TMC_PROVISONER_NAME}" == "" ]; then
-        echo "  TMC_PROVISONER_NAME             (required) The TMC Provisionert Name for AWS"
+      if [ "${TMC_PROVISIONER_NAME}" == "" ]; then
+        echo "  TMC_PROVISIONER_NAME            (required) The TMC Provisionert Name for AWS"
       fi
 
       if [ "${AWS_HOSTED_DNS_DOMAIN}" == "" ]; then
@@ -741,11 +1040,11 @@ checkTMCAccess() {
   fi
 
   if [ ${missing_variables} -eq 1 ]; then
-    echo "  --------------------------------------------------------------------------------------------------------------"
-    echo "  IMPORTANT: Please set the missing environment variables either in your shell or in the pcfconfig"
-    echo "             configuration file ~/.pcfconfig and set all variables with the 'export' notation"
-    echo "             ie. => export AZURE_PKS_TLS_CERTIFICATE=/home/demouser/certs/cert.pem"
-    echo "  --------------------------------------------------------------------------------------------------------------"
+    echo "  -------------------------------------------------------------------------------------------------------------------------------------------------------"
+    echo "  IMPORTANT: Please set the missing environment variables either in your shell or in the tanzu-demo-hub"
+    echo "             configuration file ~/.tanzu-demo-hub.cfg and set all variables with the 'export' notation"
+    echo "             ie. => export TMC_MANAGEMENT_CLUSTER=xxxxxxxx"
+    echo "  -------------------------------------------------------------------------------------------------------------------------------------------------------"
     exit 1
   fi
 }
@@ -753,11 +1052,13 @@ checkTMCAccess() {
 checkTDHAccess() {
   missing_variables=0
 
-  if [ "${PCF_PIVNET_TOKEN}" == "" -o "${AWS_HOSTED_DNS_DOMAIN}" == "" ]; then
+  if [ "${PCF_PIVNET_TOKEN}" == "" -o "${AWS_HOSTED_DNS_DOMAIN}" == "" -o "${AWS_ACCESS_KEY}" == "" -o "${AWS_SECRET_KEY}" == "" \
+    -o "${TDH_USER}" == "" -o "${AWS_REGION}" == "" ]; then
+
     missing_variables=1
     echo ""
     echo "  2MISSING ENVIRONMENT-VARIABES    DESCRIPTION        "
-    echo "  --------------------------------------------------------------------------------------------------------------"
+    echo "  -------------------------------------------------------------------------------------------------------------------------------------------------------"
 
     if [ "${PCF_PIVNET_TOKEN}" == "" ]; then
       echo "  PCF_PIVNET_TOKEN                (required) PIVNET Access Token to download software. Get a UAA API TOKEN from"
@@ -774,20 +1075,27 @@ checkTDHAccess() {
       echo "                                  valid DNS Zone. => https://console.aws.amazon.com/route53"
     fi
 
+    if [ "${AWS_REGION}" == "" ]; then
+      echo "  AWS_REGION                      (required) Choose the AWS Region where your installation should run"
+      echo "                                    => aws ec2 --region=eu-west-3 describe-regions --output text | awk '{ print $NF }'"
+      echo "                                       eu-north-1, eu-west-3, eu-central-1 etc."
+    fi
+
     if [ "${AWS_HOSTED_DNS_DOMAIN}" == "" ]; then
       echo "  AWS_HOSTED_DNS_DOMAIN           (required) A DNS Domain managed by AWS Route 53 ie. yourdomain.com with a"
       echo "                                  valid DNS Zone. => https://console.aws.amazon.com/route53"
     fi
 
-    #if [ "${AWS_HOSTED_ZONE_ID}" == "" ]; then
-    #  echo "  AWS_HOSTED_ZONE_ID              (required) An AWS Route 53 Token is required to add/update DNS records"
-    #  echo "                                  => https://console.aws.amazon.com/route53 -> hosted Zones -> Zone ID"
-    #fi
+    if [ "${TDH_USER}" == "" ]; then
+      echo "  TDH_USER                        (required) Tanzu Demo Hub User to tag TKG Clusters with your Name"
+      echo "                                   => (usually you VMware User Name without @vmware.com)"
+    fi
   else
     messageTitle "Supporting services access (Pivotal Network, AWS Route53)"
     messagePrint " - Pivotal Network Token"            "$PCF_PIVNET_TOKEN"
+    messagePrint " - Tanzu Demo Hube User"             "$TDH_USER"
     messagePrint " - AWS Route53 Hosted DNS Domain"    "$AWS_HOSTED_DNS_DOMAIN"
-    messagePrint " - AWS Route53 Hosted DNS SubDomain" "$TDH_ENVNAME"
+    messagePrint " - AWS Route53 Hosted DNS SubDomain" "$TDH_TKGMC_ENVNAME"
 
     # --- VERIFY PIVNET ACCESS ---
     pivnetAPI $PCF_PIVNET_TOKEN
@@ -821,11 +1129,11 @@ checkTDHAccess() {
   fi
 
   if [ ${missing_variables} -eq 1 ]; then
-    echo "  --------------------------------------------------------------------------------------------------------------"
-    echo "  IMPORTANT: Please set the missing environment variables either in your shell or in the pcfconfig"
-    echo "             configuration file ~/.pcfconfig and set all variables with the 'export' notation"
-    echo "             ie. => export AZURE_PKS_TLS_CERTIFICATE=/home/demouser/certs/cert.pem"
-    echo "  --------------------------------------------------------------------------------------------------------------"
+    echo "  -------------------------------------------------------------------------------------------------------------------------------------------------------"
+    echo "  IMPORTANT: Please set the missing environment variables either in your shell or in the tanzu-demo-hub"
+    echo "             configuration file ~/.tanzu-demo-hub.cfg and set all variables with the 'export' notation"
+    echo "             ie. => export <environment_variable>=\"<value>\""
+    echo "  -------------------------------------------------------------------------------------------------------------------------------------------------------"
     exit 1
   fi
 
@@ -851,7 +1159,7 @@ pivnetAPI() {
 }
 
 write_line() {
-  messageTitle "----------------------------------------------------------------------------------------------------------------"
+  messageTitle "-------------------------------------------------------------------------------------------------------------------------------------------------------"
 }
 
 createENVfile() {
@@ -1027,9 +1335,36 @@ createENVfile() {
   fi
 }
 
+configureLDAP() {
+  ldapwhoami -H ldap://jump.${TDH_TKGMC_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN} -x -ZZ >/dev/null 2>&1
+  if [ $? -ne 0 ]; then 
+    messageTitle "Install LDAP Server and (phpLDAPadmin) on Jump Host (jump.${TDH_TKGMC_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN})"
+    $SSH_COMMAND -n "[ -d $SSH_HOME/tanzu-demo-hub ] && chmod a+x ${TDHHOME}/scripts/InstallOpenLDAP.sh && \
+        sudo ${TDHHOME}/scripts/InstallOpenLDAP.sh \"${TDH_TKGMC_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}\" $DEBUG"; ret=$?
+
+    if [ ${ret} -ne 0 ]; then
+      echo "ERROR: Failed to install CLI Utilities (InstallUtilities.sh)"
+      echo "       => $SSH_COMMAND"
+      exit
+    fi
+    sleep 300
+  fi
+  
+  messagePrint "Verify LDAP Server" "$SSH_HOST"
+  ret=$(ldapwhoami -H ldap://jump.${TDH_TKGMC_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN} -x -ZZ)
+  if [ "$ret" == "anonymous" ]; then 
+    messagePrint " - LDAP CLI Access (ldapwhoami)"   "succeeded"
+  else
+    echo "ERROR: LDAP Access (ldapwhoami) failed with '$ret'"
+    echo "       => ldapwhoami -H ldap://jump.${TDH_TKGMC_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN} -x -ZZ"
+    exit
+  fi
+
+  messagePrint " - Verify LDAP Management (phpLDAPadmin)"   "http://jump.${TDH_TKGMC_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}/phpldapadmin"
+} 
+
 configureJumpHost() {
-  messagePrint "1 Configure Jump Server" "$SSH_HOST"
-echo "$SSH_COMMAND -n id "
+  messagePrint "Configure Jump Server" "$SSH_HOST"
 
   # --- WAIT UNTIL SSH DEAMON IS READY NO JUMPHOST ----
   ret=1
@@ -1055,16 +1390,35 @@ echo "$SSH_COMMAND -n id "
   stt=$($SSH_COMMAND -n "[ -f /tmp/tanzu-demo-hub.pid ] && pgrep -F /tmp/tanzu-demo-hub.pid")
   stt=$($SSH_COMMAND -n "[ -f /jump_software_installed ] && echo true")
   if [ "${stt}" == "" ]; then
-    messagePrint " - Install CLI Utilities"   "aws,az,gcp,bosh,pivnet,cf,om,jq"
+    messageTitle "Install CLI Utilities (aws,az,gcp,bosh,pivnet,cf,om,jq) on Jump Host (jump.${TDH_TKGMC_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN})"
     $SSH_COMMAND -n "[ -d $SSH_HOME/tanzu-demo-hub ] && chmod a+x ${TDHHOME}/scripts/InstallUtilities.sh && \
-        sudo ${TDHHOME}/scripts/InstallUtilities.sh $PCF_PIVNET_TOKEN > /dev/null 2>&1"
+        sudo ${TDHHOME}/scripts/InstallUtilities.sh $PCF_PIVNET_TOKEN $DEBUG"; ret=$?
 
-    # --- COPY THE AWS DIRECTORY ---
-    $SCP_COMMAND -r ~/.aws ${SSH_USER}@${SSH_HOST}:$SSH_HOME > /dev/null 2>&1
-    $SCP_COMMAND -r ~/.azure ${SSH_USER}@${SSH_HOST}:$SSH_HOME > /dev/null 2>&1
-    $SCP_COMMAND -r ~/.tanzu-demo-hub ${SSH_USER}@${SSH_HOST}:$SSH_HOME > /dev/null 2>&1
-    $SCP_COMMAND -r ~/.tanzu-demo-hub.cfg ${SSH_USER}@${SSH_HOST}:$SSH_HOME > /dev/null 2>&1
+    if [ ${ret} -ne 0 ]; then
+      echo "ERROR: Failed to install CLI Utilities (InstallUtilities.sh) on Jump Host"
+      echo "       => $SSH_COMMAND"
+      exit
+    else
+      messagePrint " - Rebooting Jump Server"   "wait for services comming up ..."
+      $SSH_COMMAND -n "sudo reboot" > /dev/null 2>&1
+    fi
+
+    # --- WAIT UNTIL SSH DEAMON IS READY NO JUMPHOST ----
+    ret=1
+    while [ $ret -ne 0 ]; do
+      $SSH_COMMAND -n id > /dev/null 2>&1; ret=$?
+      [ $ret -ne 0 ] && sleep 10
+    done
+
+    sleep 20
+
   fi
+
+  # --- COPY THE AWS DIRECTORY ---
+  $SCP_COMMAND -r ~/.aws ${SSH_USER}@${SSH_HOST}:$SSH_HOME > /dev/null 2>&1
+  $SCP_COMMAND -r ~/.azure ${SSH_USER}@${SSH_HOST}:$SSH_HOME > /dev/null 2>&1
+  $SCP_COMMAND -r ~/.tanzu-demo-hub ${SSH_USER}@${SSH_HOST}:$SSH_HOME > /dev/null 2>&1
+  $SCP_COMMAND -r ~/.tanzu-demo-hub.cfg ${SSH_USER}@${SSH_HOST}:$SSH_HOME > /dev/null 2>&1
 
   # --- COPY SOFTWARE ---
   stt=$($SSH_COMMAND -n "[ -d /home/ubuntu/tanzu-demo-hub/software ] && echo true")
@@ -1072,7 +1426,9 @@ echo "$SSH_COMMAND -n id "
     # --- COPY THE AWS DIRECTORY ---
     $SSH_COMMAND -n "[ ! -d $SSH_HOME/tanzu-demo-hub/software ] && mkdir -p $SSH_HOME/tanzu-demo-hub/software"
     if [ "$TDH_TKGMC_INFRASTRUCTURE" == "Azure" ]; then
-      $SCP_COMMAND -r ${TDHPATH}/software/tkg-* ${SSH_USER}@${SSH_HOST}:${SSH_HOME}/tanzu-demo-hub/software > /dev/null 2>&1
+      $SCP_COMMAND -r ${TDHPATH}/software/tkg-linux* ${SSH_USER}@${SSH_HOST}:${SSH_HOME}/tanzu-demo-hub/software > /dev/null 2>&1
+      $SCP_COMMAND -r ${TDHPATH}/software/tanzu-cli-bundle-linux* ${SSH_USER}@${SSH_HOST}:${SSH_HOME}/tanzu-demo-hub/software > /dev/null 2>&1
+      $SCP_COMMAND -r ${TDHPATH}/software/velero-linux* ${SSH_USER}@${SSH_HOST}:${SSH_HOME}/tanzu-demo-hub/software > /dev/null 2>&1
     fi
 
     if [ "$TDH_TKGMC_INFRASTRUCTURE" == "vSphere" ]; then
@@ -1084,18 +1440,27 @@ echo "$SSH_COMMAND -n id "
   # --- INSTALL TKG UTILITES ---
   stt=$($SSH_COMMAND -n "[ -f /tkg_software_installed ] && echo true")
   if [ "${stt}" == "" ]; then
-    messagePrint " - Install TKG Utilities"   "tkg, ytt, kapp, kbld, kubectl, kind"
+    messageTitle "Install TKG Utilities (tkg, ytt, kapp, kbld, kubectl, kind) on Jump Host (jump.${TDH_TKGMC_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN})"
     $SSH_COMMAND -n "[ -d $SSH_HOME/tanzu-demo-hub ] && chmod a+x ${TDHHOME}/scripts/InstallTKGutilities.sh && \
-        sudo ${TDHHOME}/scripts/InstallTKGutilities.sh \"$SSH_HOME/tanzu-demo-hub\" > /dev/null 2>&1"
-    #$SSH_COMMAND -n "[ -d $SSH_HOME/tanzu-demo-hub ] && chmod a+x ${TDHHOME}/scripts/InstallTKGutilities.sh && \
-    #    sudo ${TDHHOME}/scripts/InstallTKGutilities.sh \"$SSH_HOME/tanzu-demo-hub\"" 
+        sudo ${TDHHOME}/scripts/InstallTKGutilities.sh \"$SSH_HOME/tanzu-demo-hub\" \"$TDH_TKGMC_INFRASTRUCTURE\" $DEBUG"; ret=$?
+
+    if [ ${ret} -ne 0 ]; then
+      echo "ERROR: Failed to install TKG Utilities (InstallTKGutilities.sh) on Jump Host"
+      echo "       => $SSH_COMMAND"
+      exit
+    #else
+    #  messagePrint " - Rebooting Jump Server"   "wait for services comming up ..."
+    #  $SSH_COMMAND -n "sudo reboot" > /dev/null 2>&1
+    fi
 
     # --- WAIT UNTIL SSH DEAMON IS READY NO JUMPHOST ----
-    ret=1
-    while [ $ret -ne 0 ]; do
-      $SSH_COMMAND -n id > /dev/null 2>&1; ret=$?
-      [ $ret -ne 0 ] && sleep 10
-    done
+    #ret=1
+    #while [ $ret -ne 0 ]; do
+    #  $SSH_COMMAND -n id > /dev/null 2>&1; ret=$?
+    #  [ $ret -ne 0 ] && sleep 10
+    #done
+    #
+    #sleep 30
   fi
 }
 
@@ -1123,7 +1488,7 @@ route53createHostedZone() {
   fi
 
   aws route53 create-hosted-zone --name $zone --caller-reference "$(date)" \
-       --hosted-zone-config Comment="Managed by pcfconfig" > /dev/null 2>&1
+       --hosted-zone-config Comment="Managed by tanzu-demo-hub" > /dev/null 2>&1
   if [ $? -ne 0 ]; then
       echo "ERROR: failed to create AWS Route53 zone $ZONE_ID"
       echo "       => aws route53 create-hosted-zone --name $zone --caller-reference \"$(date)\" \\"
@@ -1294,8 +1659,164 @@ EOF
 
 createCluster() {
   unset TKG_CONFIG
-  TKG_TEMPLATE=${HOME}/.tanzu-demo-hub/${TDH_TKGMC_CONFIG}
-  TKG_KUBECONFIG=${HOME}/.tanzu-demo-hub/${TDH_TKGMC_NAME}.kubeconfig
+  TDH_TKGMC_NAME=${TDH_TKGMC_NAME}-${TDH_USER}
+  [ ! -d ${HOME}/.tanzu-demo-hub/config ] && mkdir -p ${HOME}/.tanzu-demo-hub/config
+  TKG_TEMPLATE=${HOME}/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.cfg; rm -f $TKG_TEMPLATE
+  TKG_KUBECONFIG=${HOME}/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.kubeconfig; rm -f $TKG_KUBECONFIG
+
+  if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "AWS" ]; then
+    MDOE=azure
+    messageTitle "Creating TKG Managment Cluster"
+    messagePrint " - Cluster Name"                "$TDH_TKGMC_NAME"
+    messagePrint " - Configuration File"          "$TKG_TEMPLATE"
+    messagePrint " - Control Plane Machine Type"  "$TDH_TKGMC_CONTROL_PLANE_MACHINE_TYPE"
+    messagePrint " - Worker Node Machine Type"    "$TDH_TKGMC_MACHINE_TYPE"
+    messagePrint " - Cluster CIDR"                "$TDH_TKGMC_CLUSTER_CIDR"
+    messagePrint " - Service CIDR"                "$TDH_TKGMC_SERVICE_CIDR"
+    messagePrint " - Health Check Enabled"        "$TDH_TKGMC_MACHINE_HEALTH_CHECK_ENABLED"
+
+    [ -f ${HOME}/.tkg/config.yaml ] && rm -f ${HOME}/.tkg/config.yaml
+    tkg get mc > /dev/null 2>&1
+    tanzu management-cluster get > /dev/null 2>&1
+    tanzu management-cluster create > /dev/null 2>&1
+    #cp ${HOME}/.tanzu/config.yaml $TKG_TEMPLATE
+
+    az ad app list --display-name "TanzuDemoHub" > /dev/null 2>&1
+    if [ $? -ne 0 ]; then
+      echo "ERROR: failed to list apps"
+      echo "       => az ad app list --display-name \"TanzuDemoHub\""
+      exit
+    fi
+
+    AZURE_SSH_PUBLIC_KEY_B64=$(cat ~/.tanzu-demo-hub/KeyPair-Azure.pub | base64 -w 10000)
+    AZURE_CLIENT_ID=$(az ad app list --display-name "TanzuDemoHub" | jq -r '.[].appId')
+    AZURE_CLIENT_SECRET="tanzu-demo-hub"
+
+    echo "INFRASTRUCTURE_PROVIDER: aws"                                                >  $TKG_TEMPLATE
+    echo "AWS_REGION: $AWS_REGION"                                                     >> $TKG_TEMPLATE
+    echo "AWS_NODE_AZ: \"$AWS_PRIMARY_AZ\""                                            >> $TKG_TEMPLATE
+    echo "AWS_ACCESS_KEY_ID: $AWS_ACCESS_KEY"                                          >> $TKG_TEMPLATE
+    echo "AWS_SECRET_ACCESS_KEY: $AWS_SECRET_KEY"                                      >> $TKG_TEMPLATE
+    echo "AWS_SSH_KEY_NAME: vmware-cloud-tmc"                                          >> $TKG_TEMPLATE
+    echo "BASTION_HOST_ENABLED: true"                                                  >> $TKG_TEMPLATE
+    echo "#AWS_AMI_ID: ami-066dad3403314512a"                                           >> $TKG_TEMPLATE
+    echo "CLUSTER_PLAN: dev"                                                           >> $TKG_TEMPLATE
+    echo "CLUSTER_NAME: tkgmc-aws-dev-sadubois"                                        >> $TKG_TEMPLATE
+    echo "CONTROL_PLANE_MACHINE_TYPE: c4.2xlarge"                                     >> $TKG_TEMPLATE
+    echo "NODE_MACHINE_TYPE: c4.2xlarge"                                              >> $TKG_TEMPLATE
+
+    echo "#AWS_ACCESS_KEY_ID:"                                                         >>  $TKG_TEMPLATE
+    echo "#AWS_B64ENCODED_CREDENTIALS: "                                               >> $TKG_TEMPLATE
+    echo "#AWS_NODE_AZ: eu-central-1a"                                                 >> $TKG_TEMPLATE
+    echo "#AWS_NODE_AZ_1: \"\""                                                        >> $TKG_TEMPLATE
+    echo "#AWS_NODE_AZ_2: \"\""                                                        >> $TKG_TEMPLATE
+    echo "#AWS_PRIVATE_NODE_CIDR: 10.0.16.0/20"                                        >> $TKG_TEMPLATE
+    echo "#AWS_PRIVATE_NODE_CIDR_1: \"\""                                              >> $TKG_TEMPLATE
+    echo "#AWS_PRIVATE_NODE_CIDR_2: \"\""                                              >> $TKG_TEMPLATE
+    echo "#AWS_PRIVATE_SUBNET_ID: \"\""                                                >> $TKG_TEMPLATE
+    echo "#AWS_PRIVATE_SUBNET_ID_1: \"\""                                              >> $TKG_TEMPLATE
+    echo "#AWS_PRIVATE_SUBNET_ID_2: \"\""                                              >> $TKG_TEMPLATE
+    echo "#AWS_PUBLIC_NODE_CIDR: 10.0.0.0/20"                                          >> $TKG_TEMPLATE
+    echo "#AWS_PUBLIC_NODE_CIDR_1: \"\""                                               >> $TKG_TEMPLATE
+    echo "#AWS_PUBLIC_NODE_CIDR_2: \"\""                                               >> $TKG_TEMPLATE
+    echo "#AWS_PUBLIC_SUBNET_ID: \"\""                                                 >> $TKG_TEMPLATE
+    echo "#AWS_PUBLIC_SUBNET_ID_1: \"\""                                               >> $TKG_TEMPLATE
+    echo "#AWS_PUBLIC_SUBNET_ID_2: \"\""                                               >> $TKG_TEMPLATE
+    echo "#AWS_VPC_CIDR: 10.0.0.0/16"                                                  >> $TKG_TEMPLATE
+    echo "#AWS_VPC_ID: \"\""                                                           >> $TKG_TEMPLATE
+    echo "#BASTION_HOST_ENABLED: \"true\""                                             >> $TKG_TEMPLATE
+    echo "#CLUSTER_CIDR: 100.96.0.0/11"                                                >> $TKG_TEMPLATE
+    echo "#ENABLE_CEIP_PARTICIPATION: \"false\""                                       >> $TKG_TEMPLATE
+    echo "#ENABLE_MHC: \"true\""                                                       >> $TKG_TEMPLATE
+    echo "#IDENTITY_MANAGEMENT_TYPE: oidc"                                             >> $TKG_TEMPLATE
+    echo "#INFRASTRUCTURE_PROVIDER: aws"                                               >> $TKG_TEMPLATE
+    echo "#LDAP_BIND_DN: \"\""                                                         >> $TKG_TEMPLATE
+    echo "#LDAP_BIND_PASSWORD: \"\""                                                   >> $TKG_TEMPLATE
+    echo "#LDAP_GROUP_SEARCH_BASE_DN: \"\""                                            >> $TKG_TEMPLATE
+    echo "#LDAP_GROUP_SEARCH_FILTER: \"\""                                             >> $TKG_TEMPLATE
+    echo "#LDAP_GROUP_SEARCH_GROUP_ATTRIBUTE: \"\""                                    >> $TKG_TEMPLATE
+    echo "#LDAP_GROUP_SEARCH_NAME_ATTRIBUTE: cn"                                       >> $TKG_TEMPLATE
+    echo "#LDAP_GROUP_SEARCH_USER_ATTRIBUTE: DN"                                       >> $TKG_TEMPLATE
+    echo "#LDAP_HOST: \"\""                                                            >> $TKG_TEMPLATE
+    echo "#LDAP_ROOT_CA_DATA_B64: \"\""                                                >> $TKG_TEMPLATE
+    echo "#LDAP_USER_SEARCH_BASE_DN: \"\""                                             >> $TKG_TEMPLATE
+    echo "#LDAP_USER_SEARCH_FILTER: \"\""                                              >> $TKG_TEMPLATE
+    echo "#LDAP_USER_SEARCH_NAME_ATTRIBUTE: \"\""                                      >> $TKG_TEMPLATE
+    echo "#LDAP_USER_SEARCH_USERNAME: userPrincipalName"                               >> $TKG_TEMPLATE
+
+    # --- LDAP IDENTITY PROVIDOR AVAILABLE ON THE JUMP SERVER ---
+    # https://docs.vmware.com/en/VMware-Tanzu-Kubernetes-Grid/1.3/vmware-tanzu-kubernetes-grid-13/GUID-mgmt-clusters-create-config-file.html#identity-mgmt
+    if [ "$TDH_TKGMC_IDENTITY_MANAGEMENT_TYPE" == "ldap" ]; then 
+      echo "IDENTITY_MANAGEMENT_TYPE: ldap"                                             >> $TKG_TEMPLATE
+      echo "LDAP_GROUP_SEARCH_BASE_DN: dc={TDH_TKGMC_ENVNAME},dc=pcfsdu,dc=com"         >> $TKG_TEMPLATE
+      echo "LDAP_HOST: jump.${TDH_TKGMC_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}"              >> $TKG_TEMPLATE
+      echo "INFRASTRUCTURE_PROVIDER: azure"                                             >> $TKG_TEMPLATE
+      echo "LDAP_GROUP_SEARCH_NAME_ATTRIBUTE: cn"                                       >> $TKG_TEMPLATE
+      echo "LDAP_GROUP_SEARCH_USER_ATTRIBUTE: DN"                                       >> $TKG_TEMPLATE
+      echo "LDAP_USER_SEARCH_USERNAME: userPrincipalName"                               >> $TKG_TEMPLATE
+      echo "SERVICE_CIDR: 100.64.0.0/13"                                                >> $TKG_TEMPLATE
+      echo "TKG_HTTP_PROXY_ENABLED: \"false\""                                          >> $TKG_TEMPLATE
+    fi
+
+    # --- OIDC IDENTITY PROVIDOR WITH (OKTA) ---
+    if [ "$TDH_TKGMC_IDENTITY_MANAGEMENT_TYPE" == "oidc" ]; then 
+      echo "IDENTITY_MANAGEMENT_TYPE: oidc"                                              >> $TKG_TEMPLATE
+      echo "OIDC_IDENTITY_PROVIDER_CLIENT_ID: \"$TDH_OKTA_SECRET_ID\""                   >> $TKG_TEMPLATE
+      echo "OIDC_IDENTITY_PROVIDER_CLIENT_SECRET: \"$TDH_OKTA_CLIENT_SECRET\""           >> $TKG_TEMPLATE
+      echo "OIDC_IDENTITY_PROVIDER_ISSUER_URL: \"$TDH_OKTA_URL\""                        >> $TKG_TEMPLATE
+      echo "OIDC_IDENTITY_PROVIDER_SCOPES: \"$TDH_OKTA_SCOPES\""                         >> $TKG_TEMPLATE
+      echo "OIDC_IDENTITY_PROVIDER_GROUPS_CLAIM:: \"$TDH_OKTA_GROUP_CLAIM\""             >> $TKG_TEMPLATE
+      echo "OIDC_IDENTITY_PROVIDER_USERNAME_CLAIM: \"$TDH_OKTA_USERNAME_CLAIM\""         >> $TKG_TEMPLATE
+    fi
+
+    if [ "$TDH_TKGMC_IDENTITY_MANAGEMENT_TYPE" == "none" ]; then 
+      echo "IDENTITY_MANAGEMENT_TYPE: none"                                              >> $TKG_TEMPLATE
+    fi
+
+#gaga
+    cnt=$(tanzu management-cluster get 2>/dev/null | egrep -c " $TDH_TKGMC_NAME ")
+    if [ ${cnt} -eq 0 ]; then
+      # --- CLEANUP OLD CONFIG ---
+      export KUBECONFIG=~/.kube-tkg/config
+
+      kubectl config unset clusters.${TDH_TKGMC_NAME}.log > /dev/null 2>&1
+      kubectl config unset contexts.${TDH_TKGMC_NAME}-admin@${TDH_TKGMC_NAME} > /dev/null 2>&1
+      kubectl config unset users.${TDH_TKGMC_NAME}-admin > /dev/null 2>&1
+
+      # --- CLEAN OLD MANAGEMENT CLUSTER CONFIG ---
+      rm -f ~/.tanzu/config.yaml /tmp/$TDH_TKGMC_NAME.log
+
+      messagePrint " - Management Cluster Creating"        "This may take up to 15min ..."
+
+      if [ $DEBUG -gt 0 ]; then
+        echo "-------------------------------------------------------------------------------------------------------------------------------------------------------"
+        tanzu management-cluster create --file $TKG_TEMPLATE -v 0 --log-file=/tmp/$TDH_TKGMC_NAME.log; ret=$?
+        echo "-------------------------------------------------------------------------------------------------------------------------------------------------------"
+      else
+        tanzu management-cluster create --file $TKG_TEMPLATE -v 0 --log-file=/tmp/$TDH_TKGMC_NAME.log > /dev/null 2>&1; ret=$?
+      fi
+
+      if [ ${ret} -ne 0 ]; then
+        echo "ERROR: failed to create TKG Management Cluster"
+        echo "       => tanzu management-cluster create --file $TKG_TEMPLATE -v 0 --log-file=/tmp/$TDH_TKGMC_NAME.log"
+        echo "-------------------------------------------------------------------------------------------------------------------------------------------------------"
+        cat /tmp/$TDH_TKGMC_NAME.log
+        echo "-------------------------------------------------------------------------------------------------------------------------------------------------------"
+
+        exit 1
+      fi
+
+      messagePrint " - Management Cluster Creating Completed"    "/tmp/$TDH_TKGMC_NAME.log"
+
+      tanzu management-cluster kubeconfig get --admin > /dev/null 2>&1
+      kubectl config set-cluster $TDH_TKGMC_NAME > /dev/null 2>&1
+      kubectl config use-context ${TDH_TKGMC_NAME}-admin@$TDH_TKGMC_NAME > /dev/null 2>&1
+      context=$(kubectl config view -o json | jq -r '.contexts[].name' 2>/dev/null)
+      tanzu management-cluster kubeconfig get --admin --export-file=${TKG_KUBECONFIG} > /dev/null 2>&1
+    fi
+
+  fi
+
   if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "Azure" ]; then
     MDOE=azure
     messageTitle "Creating TKG Managment Cluster"
@@ -1309,34 +1830,158 @@ createCluster() {
 
     [ -f ${HOME}/.tkg/config.yaml ] && rm -f ${HOME}/.tkg/config.yaml
     tkg get mc > /dev/null 2>&1
-    cp ${HOME}/.tkg/config.yaml $TKG_TEMPLATE
+    tanzu management-cluster get > /dev/null 2>&1
+    tanzu management-cluster create > /dev/null 2>&1
+    #cp ${HOME}/.tanzu/config.yaml $TKG_TEMPLATE
 
+    az ad app list --display-name "TanzuDemoHub" > /dev/null 2>&1
+    if [ $? -ne 0 ]; then 
+      echo "ERROR: failed to list apps"
+      echo "       => az ad app list --display-name \"TanzuDemoHub\""
+      exit
+    fi
     AZURE_SSH_PUBLIC_KEY_B64=$(cat ~/.tanzu-demo-hub/KeyPair-Azure.pub | base64 -w 10000)
     AZURE_CLIENT_ID=$(az ad app list --display-name "TanzuDemoHub" | jq -r '.[].appId')
     AZURE_CLIENT_SECRET="tanzu-demo-hub"
 
-    echo "AZURE_SSH_PUBLIC_KEY_B64: $AZURE_SSH_PUBLIC_KEY_B64"                        >> $TKG_TEMPLATE
-    echo "AZURE_NODE_MACHINE_TYPE: $TDH_TKGMC_MACHINE_TYPE"                           >> $TKG_TEMPLATE
-    echo "AZURE_TENANT_ID: $AZURE_TENANT_ID"                                          >> $TKG_TEMPLATE
+    echo "CLUSTER_NAME: $TDH_TKGMC_NAME"                                              >> $TKG_TEMPLATE
     echo "AZURE_CLIENT_ID: $AZURE_CLIENT_ID"                                          >> $TKG_TEMPLATE
     echo "AZURE_CLIENT_SECRET: $AZURE_CLIENT_SECRET"                                  >> $TKG_TEMPLATE
     echo "AZURE_CONTROL_PLANE_MACHINE_TYPE: $TDH_TKGMC_CONTROL_PLANE_MACHINE_TYPE"    >> $TKG_TEMPLATE
-    echo "SERVICE_CIDR: $TDH_TKGMC_SERVICE_CIDR"                                      >> $TKG_TEMPLATE
-    echo "CLUSTER_CIDR: $TDH_TKGMC_CLUSTER_CIDR"                                      >> $TKG_TEMPLATE
+    echo "AZURE_CONTROL_PLANE_SUBNET_CIDR: 10.0.0.0/16"                               >> $TKG_TEMPLATE
+    echo "AZURE_CONTROL_PLANE_SUBNET_NAME: control-plane-vnet"                        >> $TKG_TEMPLATE
     echo "AZURE_LOCATION: $AZURE_LOCATION"                                            >> $TKG_TEMPLATE
+    echo "AZURE_NODE_MACHINE_TYPE: $TDH_TKGMC_MACHINE_TYPE"                           >> $TKG_TEMPLATE
+    echo "AZURE_NODE_SUBNET_CIDR: 10.1.0.0/16"                                        >> $TKG_TEMPLATE
+    echo "AZURE_NODE_SUBNET_NAME: worker-node-vnet"                                   >> $TKG_TEMPLATE
+    echo "AZURE_RESOURCE_GROUP: ${TDH_TKGMC_NAME}"                                    >> $TKG_TEMPLATE
+    echo "AZURE_SSH_PUBLIC_KEY_B64: $AZURE_SSH_PUBLIC_KEY_B64"                        >> $TKG_TEMPLATE
     echo "AZURE_SUBSCRIPTION_ID: $AZURE_SUBSCRIPTION_ID"                              >> $TKG_TEMPLATE
+    echo "AZURE_TENANT_ID: $AZURE_TENANT_ID"                                          >> $TKG_TEMPLATE
+    echo ""                                                                           >> $TKG_TEMPLATE
+    echo "AZURE_VNET_CIDR: 10.0.0.0/8"                                                >> $TKG_TEMPLATE
+    echo "AZURE_VNET_NAME: ${TDH_TKGMC_NAME}-vnet"                                    >> $TKG_TEMPLATE
+    echo "AZURE_VNET_RESOURCE_GROUP: $TDH_TKGMC_NAME"                                 >> $TKG_TEMPLATE
+    echo "CLUSTER_CIDR: $TDH_TKGMC_CLUSTER_CIDR"                                      >> $TKG_TEMPLATE
+    echo "CLUSTER_PLAN: $TDH_TKGMC_PLAN"                                              >> $TKG_TEMPLATE
+    echo "ENABLE_CEIP_PARTICIPATION: \"false\""                                       >> $TKG_TEMPLATE
+    echo "ENABLE_MHC: \"true\""                                                       >> $TKG_TEMPLATE
+    echo "SERVICE_CIDR: $TDH_TKGMC_SERVICE_CIDR"                                      >> $TKG_TEMPLATE
+    echo ""                                                                           >> $TKG_TEMPLATE
+    echo "INFRASTRUCTURE_PROVIDER: azure"                                             >> $TKG_TEMPLATE
 
-    MPDE=azure
-
-    stt=$(tkg get mc --name $TDH_TKGMC_NAME -o json | jq -r '.[].status')
-    if [ "${stt}" != "Success" ]; then
-      echo "----------------------------------------------------------------------------------------------------------------"
-      echo "tkg init -q -i $MPDE -p dev --ceip-participation true --cni $TDH_TKGMC_CNI -v 0 \\"
-      echo "         --name $TDH_TKGMC_NAME --config $TKG_TEMPLATE --kubeconfig=$TKG_KUBECONFIG"
-      echo "----------------------------------------------------------------------------------------------------------------"
-      time tkg init -i $MPDE -p dev --ceip-participation true --cni $TDH_TKGMC_CNI -v 0 --name $TDH_TKGMC_NAME --config $TKG_TEMPLATE --kubeconfig=$TKG_KUBECONFIG
-      echo "----------------------------------------------------------------------------------------------------------------"
+    # --- LDAP IDENTITY PROVIDOR AVAILABLE ON THE JUMP SERVER ---
+    # https://docs.vmware.com/en/VMware-Tanzu-Kubernetes-Grid/1.3/vmware-tanzu-kubernetes-grid-13/GUID-mgmt-clusters-create-config-file.html#identity-mgmt
+    if [ "$TDH_TKGMC_IDENTITY_MANAGEMENT_TYPE" == "ldap" ]; then
+      echo "IDENTITY_MANAGEMENT_TYPE: ldap"                                             >> $TKG_TEMPLATE
+      echo "LDAP_GROUP_SEARCH_BASE_DN: dc={TDH_TKGMC_ENVNAME},dc=pcfsdu,dc=com"         >> $TKG_TEMPLATE
+      echo "LDAP_HOST: jump.${TDH_TKGMC_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}"              >> $TKG_TEMPLATE
+      echo "INFRASTRUCTURE_PROVIDER: azure"                                             >> $TKG_TEMPLATE
+      echo "LDAP_GROUP_SEARCH_NAME_ATTRIBUTE: cn"                                       >> $TKG_TEMPLATE
+      echo "LDAP_GROUP_SEARCH_USER_ATTRIBUTE: DN"                                       >> $TKG_TEMPLATE
+      echo "LDAP_USER_SEARCH_USERNAME: userPrincipalName"                               >> $TKG_TEMPLATE
+      echo "SERVICE_CIDR: 100.64.0.0/13"                                                >> $TKG_TEMPLATE
+      echo "TKG_HTTP_PROXY_ENABLED: \"false\""                                          >> $TKG_TEMPLATE
     fi
+
+    # --- OIDC IDENTITY PROVIDOR WITH (OKTA) ---
+    if [ "$TDH_TKGMC_IDENTITY_MANAGEMENT_TYPE" == "oidc" ]; then
+      echo "IDENTITY_MANAGEMENT_TYPE: oidc"                                              >> $TKG_TEMPLATE
+      echo "OIDC_IDENTITY_PROVIDER_CLIENT_ID: \"$TDH_OKTA_SECRET_ID\""                   >> $TKG_TEMPLATE
+      echo "OIDC_IDENTITY_PROVIDER_CLIENT_SECRET: \"$TDH_OKTA_CLIENT_SECRET\""           >> $TKG_TEMPLATE
+      echo "OIDC_IDENTITY_PROVIDER_ISSUER_URL: \"$TDH_OKTA_URL\""                        >> $TKG_TEMPLATE
+      echo "OIDC_IDENTITY_PROVIDER_SCOPES: \"$TDH_OKTA_SCOPES\""                         >> $TKG_TEMPLATE
+      echo "OIDC_IDENTITY_PROVIDER_GROUPS_CLAIM:: \"$TDH_OKTA_GROUP_CLAIM\""             >> $TKG_TEMPLATE
+      echo "OIDC_IDENTITY_PROVIDER_USERNAME_CLAIM: \"$TDH_OKTA_USERNAME_CLAIM\""         >> $TKG_TEMPLATE
+    fi
+
+    if [ "$TDH_TKGMC_IDENTITY_MANAGEMENT_TYPE" == "none" ]; then
+      echo "IDENTITY_MANAGEMENT_TYPE: none"                                              >> $TKG_TEMPLATE
+    fi
+
+    #MPDE=azure
+
+#gaga2
+    cnt=$(tanzu management-cluster get 2>/dev/null | egrep -c " $TDH_TKGMC_NAME ")
+    if [ ${cnt} -eq 0 ]; then
+      # --- CLEANUP OLD CONFIG ---
+      export KUBECONFIG=~/.kube-tkg/config
+
+      kubectl config unset clusters.${TDH_TKGMC_NAME}.log > /dev/null 2>&1
+      kubectl config unset contexts.${TDH_TKGMC_NAME}-admin@${TDH_TKGMC_NAME} > /dev/null 2>&1
+      kubectl config unset users.${TDH_TKGMC_NAME}-admin > /dev/null 2>&1
+     
+      # --- CLEAN OLD MANAGEMENT CLUSTER CONFIG ---
+      rm -f ~/.tanzu/config.yaml /tmp/$TDH_TKGMC_NAME.log
+
+      messagePrint " - Management Cluster Creating"        "This may take up to 15min ..."
+
+      if [ $DEBUG -gt 0 ]; then
+        echo "-------------------------------------------------------------------------------------------------------------------------------------------------------"
+        tanzu management-cluster create --file $TKG_TEMPLATE -v 0 --log-file=/tmp/$TDH_TKGMC_NAME.log; ret=$?
+        echo "-------------------------------------------------------------------------------------------------------------------------------------------------------"
+      else
+        tanzu management-cluster create --file $TKG_TEMPLATE -v 0 --log-file=/tmp/$TDH_TKGMC_NAME.log > /dev/null 2>&1; ret=$?
+      fi
+
+      if [ ${ret} -ne 0 ]; then
+        echo "ERROR: failed to create TKG Management Cluster"
+        echo "       => tanzu management-cluster create --file $TKG_TEMPLATE -v 0 --log-file=/tmp/$TDH_TKGMC_NAME.log"
+        echo "-------------------------------------------------------------------------------------------------------------------------------------------------------"
+        cat /tmp/$TDH_TKGMC_NAME.log
+        echo "-------------------------------------------------------------------------------------------------------------------------------------------------------"
+
+        exit 1
+      fi
+
+      messagePrint " - Management Cluster Creating Completed"    "/tmp/$TDH_TKGMC_NAME.log"
+
+      tanzu management-cluster kubeconfig get --admin > /dev/null 2>&1
+      kubectl config set-cluster $TDH_TKGMC_NAME > /dev/null 2>&1
+      kubectl config use-context ${TDH_TKGMC_NAME}-admin@$TDH_TKGMC_NAME > /dev/null 2>&1
+      context=$(kubectl config view -o json | jq -r '.contexts[].name' 2>/dev/null)
+      tanzu management-cluster kubeconfig get --admin --export-file=${TKG_KUBECONFIG} > /dev/null 2>&1
+    fi
+
+    kubectl config set-cluster $TDH_TKGMC_NAME > /dev/null 2>&1
+    kubectl config use-context ${TDH_TKGMC_NAME}-admin@$TDH_TKGMC_NAME > /dev/null 2>&1
+
+    context=$(kubectl config view -o json | jq -r '.contexts[].name')
+    messageTitle "Verify TKG Managment Cluster"
+    messagePrint " - Cluster Name"        "$TDH_TKGMC_NAME"
+    messagePrint " - Cluster Context"     "$context"
+    messagePrint " - Cluster Config"      "~/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.cfg"
+    messagePrint " - Cluster Kubeconfig"  "~/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.kubeconfig"
+
+    echo ""                                                                                         >  /tmp/motd
+    echo '     _____                       ____                         _   _       _'              >> /tmp/motd
+    echo '    |_   _|_ _ _ __  _____   _  |  _ \  ___ _ __ ___   ___   | | | |_   _| |__'           >> /tmp/motd
+    echo '      | |/ _  |  _ \|_  / | | | | | | |/ _ \  _   _ \ / _ \  | |_| | | | |  _ \'          >> /tmp/motd
+    echo '      | | (_| | | | |/ /| |_| | | |_| |  __/ | | | | | (_) | |  _  | |_| | |_) |'         >> /tmp/motd
+    echo '      |_|\__,_|_| |_/___|\__,_| |____/ \___|_| |_| |_|\___/  |_| |_|\__,_|_.__/'          >> /tmp/motd
+    echo ""                                                                                         >> /tmp/motd
+    echo "    ----------------------------------------------------------------------------"         >> /tmp/motd
+    echo "                   Demonstration for VMware Tanzu Product Portfolio"                      >> /tmp/motd
+    echo "                            by Sacha Dubois, VMware Inc"                                  >> /tmp/motd
+    echo "    ----------------------------------------------------------------------------"         >> /tmp/motd
+    echo ""                                                                                         >> /tmp/motd
+    echo "1.) Verify Envrionment"                                                                   >> /tmp/motd
+    echo "    => export KUBECONFIG=~/.tanzu-demo-hub/config/kubeconfig_$TDH_TKGMC_NAME.yaml"        >> /tmp/motd
+    echo "    => kubectl config get-clusters"                                                       >> /tmp/motd
+    echo "    => kubectl config get-contexts"                                                       >> /tmp/motd
+    echo ""                                                                                         >> /tmp/motd
+    echo "2.) Verify Tanzu Management Cluster Status"                                               >> /tmp/motd
+    echo "    => tanzu management-cluster get"                                                      >> /tmp/motd
+    echo ""                                                                                         >> /tmp/motd
+    echo "3.) Create Workload Cluster"                                                              >> /tmp/motd
+    echo "    => tanzu cluster create"                                                              >> /tmp/motd
+    echo ""                                                                                         >> /tmp/motd
+
+    cnt=$(egrep -c "export KUBECONFIG" ~/.bashrc) 
+    [ $cnt -eq 0 ] && sed -i '/export KUBECONFIG=.*$/d' ~/.bashrc
+    echo "export KUBECONFIG=~/.tanzu-demo-hub/config/kubeconfig_$TDH_TKGMC_NAME.yaml" >> ~/.bashrc
+
+    sudo mv /tmp/motd /etc/motd
   fi
 
   if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "vSphere" ]; then
@@ -1421,14 +2066,14 @@ createCluster() {
 
       [ -f $HOME/.kube/config ] && mv $HOME/.kube/config $HOME/.kube/config.old
 
-      echo "----------------------------------------------------------------------------------------------------------------"
+      echo "-------------------------------------------------------------------------------------------------------------------------------------------------------"
       echo "tkg init -q -i $MODE -p dev --vsphere-controlplane-endpoint-ip $VSPHERE_CONTROLPLANE_IP \\"
       echo "         --ceip-participation true --cni $TDH_TKGMC_CNI -v 0 \\"
       echo "         --name $TDH_TKGMC_NAME --config $TKG_TEMPLATE --kubeconfig $TKG_KUBECONFIG"
-      echo "----------------------------------------------------------------------------------------------------------------"
+      echo "-------------------------------------------------------------------------------------------------------------------------------------------------------"
       time tkg init -i $MODE -p dev --vsphere-controlplane-endpoint-ip $VSPHERE_CONTROLPLANE_IP --ceip-participation true \
            --cni $TDH_TKGMC_CNI -v 0 --name $TDH_TKGMC_NAME --config $TKG_TEMPLATE --kubeconfig $TKG_KUBECONFIG
-      echo "----------------------------------------------------------------------------------------------------------------"
+      echo "-------------------------------------------------------------------------------------------------------------------------------------------------------"
 
       cp $HOME/.kube/config $HOME/.tanzu-demo-hub/${TDH_TKGMC_NAME}.kubeconfig
       [ -f $HOME/.kube/config.old ] && mv $HOME/.kube/config.old $HOME/.kube/config
@@ -1617,7 +2262,7 @@ verifyTLScertificate() {
 
     if [ "${TLS_ROOT_CA}" == "" ]; then
       echo "ERROR: ROOT_CA for $ROOT_CA_NAME could not be found, please download the file manually"
-      echo "       and set the variable in the ~/.pcfconfig"
+      echo "       and set the variable in the ~/.tanzu-demo-hub.cfg"
       echo "       => export ${CLOUD}_${MODE}_TLS_ROOT_CA=<ca.crt>"
       exit 1
     fi
@@ -1646,7 +2291,7 @@ exit
 
     echo ""
     echo "  3MISSING ENVIRONMENT-VARIABES    DESCRIPTION        "
-    echo "  --------------------------------------------------------------------------------------------------------------"
+    echo "  -------------------------------------------------------------------------------------------------------------------------------------------------------"
     echo "  To allow TLS encrypted httpd traffic a Certificate and key needs to be created for your DNS Domain. Free"
     echo "  certificates can be optained through https://letsencrypt.org."
     echo ""
@@ -1913,7 +2558,7 @@ setDNSrecord() {
 
 listDeployments() {
   printf "%-32s %-8s  %-15s %-20s %-5s %s\n" "DEPLOYMENT" "PLATFORM" "PROFILE" "MGMT-CLUSTER" "PLAN" "CONFIGURATION"
-  echo "----------------------------------------------------------------------------------------------------------------"
+  echo "-------------------------------------------------------------------------------------------------------------------------------------------------------"
   for deployment in $(ls -1 ${TDHPATH}/deployments/minikube*.cfg) ; do
     mcr=$(egrep "^TDH_MINIKUBE_PROFILE=" $deployment | awk -F= '{ print $NF }') 
 
@@ -1925,7 +2570,7 @@ listDeployments() {
 
   echo 
   printf "%-32s %-8s  %-15s %-20s %-5s %s\n" "DEPLOYMENT" "CLOUD" "REGION" "MGMT-CLUSTER" "PLAN" "CONFIGURATION"
-  echo "----------------------------------------------------------------------------------------------------------------"
+  echo "-------------------------------------------------------------------------------------------------------------------------------------------------------"
   for deployment in $(ls -1 ${TDHPATH}/deployments/tkgmc*.cfg) ; do
 
     mci=$(egrep "^TDH_TKGMC_INFRASTRUCTURE=" $deployment | awk -F= '{ print $NF }') 
@@ -1941,7 +2586,7 @@ listDeployments() {
 
   done
 
-  echo "----------------------------------------------------------------------------------------------------------------"
+  echo "-------------------------------------------------------------------------------------------------------------------------------------------------------"
 }
 
 
@@ -2149,9 +2794,9 @@ VerifyServiceDependancies() {
 }
 
 verifyKubernetesContext() {
-  echo "----------------------------------------------------------------------------------------------------------------"
+  echo "-------------------------------------------------------------------------------------------------------------------------------------------------------"
   kubectl config get-contexts
-  echo "----------------------------------------------------------------------------------------------------------------"
+  echo "-------------------------------------------------------------------------------------------------------------------------------------------------------"
 
   ret=""
   while [ "$ret" != "y" -a "$ret" != "n" ]; do
@@ -2215,11 +2860,14 @@ verifyRequiredServices() {
 }
 
 checkTKGdownloads() {
+
+
   kpl=$(ls -1 software | egrep -c "^kp-linux|photon")
   ptl=$(ls -1 software | egrep -c "^photon")
-  tkg=$(ls -1 software | egrep -c "^tkg-linux")
+  tkg=$(ls -1 software | egrep -c "^tanzu-cli-bundle-linux")
   if [ $tkg -eq 0 ]; then 
     echo "ERROR: Please download TKG Utilies from https://www.vmware.com/go/get-tkg"
+    echo "       => $TANZU_DEMO_HUB/software/tkg-linux-amd64-vx.x.x-vmware.x.tar.gz"
     echo "       => $TANZU_DEMO_HUB/software/tkg-linux-amd64-vx.x.x-vmware.x.tar.gz"
     exit
   fi
@@ -2242,8 +2890,9 @@ checkCLIcommands() {
   fi
 
   if [ "$cat" == "TOOLS" ]; then
-    CLI_COMMANDS="/usr/local/bin/jq:brew:jq /usr/local/bin/wget:brew:wget /usr/local/bin/mc:brew:minio/stable/mc /usr/local/bin/helm:brew:helm"
+    CLI_COMMANDS="/usr/local/bin/jq:brew:jq /usr/local/bin/wget:brew:wget /usr/local/bin/mc:brew:minio/stable/mc /usr/local/bin/helm:brew:helm /usr/local/bin/npm:brew:npm"
 
+    # --- INSTALL BREW INSTALLABLE TOOLS ---
     for arg in $CLI_COMMANDS; do
       cmd=$(echo $arg | awk -F: '{ print $1 }') 
       sys=$(echo $arg | awk -F: '{ print $2 }') 
@@ -2256,8 +2905,81 @@ checkCLIcommands() {
           exit
         fi
       fi
-  
     done
+  fi
+
+  if [ "$cat" == "TANZU" ]; then
+    if [ ! -f /usr/local/bin/vmw-cli ]; then 
+      npm install vmw-cli --global > /dev/null 2>&1
+      if [ $? -ne 0 ]; then 
+        echo "ERROR: failed to install vmw-cli, please try manually"
+        echo "       => npm install vmw-cli --global"
+        exit
+      fi
+    fi
+
+    export VMWUSER="$TDH_MYVMWARE_USER"
+    export VMWPASS="$TDH_MYVMWARE_PASS"
+    cnt=$(vmw-cli ls vmware_tanzu_kubernetes_grid 2>&1 | grep -c "ERROR")
+    if [ $cnt -ne 0 ]; then
+      echo "ERROR: failed to login to vmw-cli, please make sure that the environment variables"
+      echo "       TDH_MYVMWARE_USER and TDH_MYVMWARE_PASS are set correctly. Please try manually"
+      echo "       -------------------------------------------------------------------------------------------------------------------------------------------------------"
+      echo "       => . ~/.tanzu-demo-hub.cfg"
+      echo "       => export VMWUSER=\$TDH_MYVMWARE_USER"
+      echo "       => export VMWPASS=\$TDH_MYVMWARE_PASS"
+      echo "       => vmw-cli ls vmware_tanzu_kubernetes_grid"
+      echo "       -------------------------------------------------------------------------------------------------------------------------------------------------------"
+      exit
+    fi
+
+    messageTitle "Verify Software Downloads from http://my.vmware.com"
+
+    if [ ! -f /usr/local/bin/tanzu ]; then 
+      arch=$(uname)
+      if [ "$arch" == "Darwin" ]; then 
+        vmwfile=$(vmw-cli ls vmware_tanzu_kubernetes_grid 2>/dev/null | egrep "^tanzu-cli-bundle-darwin" | tail -1 | awk '{ print $1 }') 
+        if [ ! -f /tmp/$vmwfile ]; then 
+          messagePrint " - Download Tanzu CLI:"                        "$vmwfile"
+          (cd /tmp/; vmw-cli cp $vmwfile > /dev/null 2>&1)
+          if [ ! -f /tmp/$vmwfile ]; then 
+            echo "ERROR: failed to download $vmwfile from http://my.vmware.com, please try manually"
+            echo "       -------------------------------------------------------------------------------------------------------------------------------------------------------"
+            echo "       => . ~/.tanzu-demo-hub.cfg"
+            echo "       => export VMWUSER=\$TDH_MYVMWARE_USER"
+            echo "       => export VMWPASS=\$TDH_MYVMWARE_PASS"
+            echo "       => vmw-cli ls vmware_tanzu_kubernetes_grid"
+            echo "       => vmw-cli cp $vmwfile"
+            echo "       -------------------------------------------------------------------------------------------------------------------------------------------------------"
+            exit
+          fi
+        else
+          echo "INFO: The tanzu CLI utility has been downloaded to /tmp/$vmwfile, please folow the instructions described here to install them:"
+          echo "      https://docs.vmware.com/en/VMware-Tanzu-Kubernetes-Grid/1.3/vmware-tanzu-kubernetes-grid-13/GUID-install-cli.html"
+          exit
+        fi
+      fi
+    else
+      ver=$(tanzu version | egrep "^version:" | awk '{ print $2 }')
+      messagePrint " - Tanzu CLI"                        "$ver"
+
+      # --- VERIFY PLUGINS ---
+      plg=$(tanzu plugin list | grep -v "alpha" | grep -c "not installed")
+      if [ $plg -ne 0 ]; then 
+        messagePrint " - Tanzu CLI Plugins"                        "not installed"
+        echo "----------------------------------------------------------------------------------------------------------------------------------------------"
+        tanzu plugin list
+        echo "----------------------------------------------------------------------------------------------------------------------------------------------"
+        echo "INFO: The tanzu CLI plugins are not installed please folow the instructions described here to install them:"
+        echo "      https://docs.vmware.com/en/VMware-Tanzu-Kubernetes-Grid/1.3/vmware-tanzu-kubernetes-grid-13/GUID-install-cli.html"
+        exit
+      else
+        messagePrint " - Tanzu CLI Plugins"                        "installed"
+        echo "----------------------------------------------------------------------------------------------------------------------------------------------"
+        tanzu plugin list
+        echo "----------------------------------------------------------------------------------------------------------------------------------------------"
+      fi
+    fi
   fi
 }
 
@@ -2267,7 +2989,7 @@ checkTMCAccess() {
   if [ "${TDH_DEPLOYMENT_CLOUD}" == "AWS" ]; then
     TMC_ACCOUNT_NAME=$TMC_ACCOUNT_NAME_AWS
 
-    if [ "${TMC_MANAGEMENT_CLUSTER}" == "" -o "${TMC_PROVISONER_NAME}" == "" -o "${TMC_ACCOUNT_NAME_AWS}" == "" -o "${TMC_CLUSTER_GROUP}" == "" -o "${TMC_USER}" == "" -o "${TMC_KUBERNETES_VERSION}" == "" ]; then
+    if [ "${TMC_MANAGEMENT_CLUSTER}" == "" -o "${TMC_PROVISIONER_NAME}" == "" -o "${TMC_ACCOUNT_NAME_AWS}" == "" -o "${TMC_CLUSTER_GROUP}" == "" -o "${TMC_KUBERNETES_VERSION}" == "" ]; then
       missing_variables=1
       echo ""
       echo "  2MISSING ENVIRONMENT-VARIABES    DESCRIPTION        "
@@ -2275,10 +2997,6 @@ checkTMCAccess() {
 
       if [ "${TMC_KUBERNETES_VERSION}" == "" ]; then
         echo "  TMC_KUBERNETES_VERSION          (required) The Kubernetes version for the cluster e.g. 1.19.1-3-amazon2"
-      fi
-
-      if [ "${TMC_USER}" == "" ]; then
-        echo "  TMC_USER                        (required) The name of the TMC UserID"
       fi
 
       if [ "${TMC_CLUSTER_GROUP}" == "" ]; then
@@ -2293,25 +3011,25 @@ checkTMCAccess() {
         echo "  TMC_MANAGEMENT_CLUSTER          (required) The name of the TKGm Management Cluster"
       fi
 
-      if [ "${TMC_PROVISONER_NAME}" == "" ]; then
-        echo "  TMC_PROVISONER_NAME             (required) The TMC Provisioner name"
+      if [ "${TMC_PROVISIONER_NAME}" == "" ]; then
+        echo "  TMC_PROVISIONER_NAME            (required) The TMC Provisioner name"
       fi
 
       if [ "${TMC_SSH_KEY_NAME_AWS}" == "" ]; then
         echo "  TMC_SSH_KEY_NAME_AWS            (required) AWS SSH Key name for Region"
       fi
-      TMC_CLUSTER_NAME="tdh-aws-${TMC_USER}"
+      TMC_CLUSTER_NAME="tdh-${TDH_USER}-aws"
     else
-      TMC_CLUSTER_NAME="tdh-aws-${TMC_USER}"
+      TMC_CLUSTER_NAME="tdh-${TDH_USER}-aws"
 
       messageTitle "Tanzu Mission Control (TMC) - Config" 
-      messagePrint " - TMC User"                        "$TMC_USER"
+      messagePrint " - TMC User"                        "$TDH_USER"
       messagePrint " - TMC Cluster Group"               "$TMC_CLUSTER_GROUP"
       messagePrint " - TMC Cluster Name"                "$TMC_CLUSTER_NAME"
       messagePrint " - TMC Context Name"                "$TMC_CONTEXT_NAME"
       messagePrint " - TMC AWS Account Name"            "$TMC_ACCOUNT_NAME_AWS"
       messagePrint " - TMC Management Cluster"          "$TMC_MANAGEMENT_CLUSTER"
-      messagePrint " - TMC Provisioner Name"            "$TMC_PROVISONER_NAME"
+      messagePrint " - TMC Provisioner Name"            "$TMC_PROVISIONER_NAME"
 
       # --- CHECK IF AWS CLI IS CONFIGURED ---
       if [ ! -d ~/.aws -o -d ~/.aws/credentials ]; then
@@ -2322,15 +3040,16 @@ checkTMCAccess() {
     fi
 
 
-   tmc clustergroup create -n tanzu-demo-hub -d "Tanzu Demo Hub by Sacha Dubois" > /dev/null 2>&1
-
+    if [ "$TDH_SERVICE_TANZU_MISSION_CONTROL" == "true" ]; then 
+     tmc clustergroup create -n tanzu-demo-hub -d "Tanzu Demo Hub by Sacha Dubois" > /dev/null 2>&1
+    fi
   fi
 
   if [ ${missing_variables} -eq 1 ]; then
     echo "  --------------------------------------------------------------------------------------------------------------"
-    echo "  IMPORTANT: Please set the missing environment variables either in your shell or in the pcfconfig"
-    echo "             configuration file ~/.pcfconfig and set all variables with the 'export' notation"
-    echo "             ie. => export AZURE_PKS_TLS_CERTIFICATE=/home/demouser/certs/cert.pem"
+    echo "  IMPORTANT: Please set the missing environment variables either in your shell or in the tanzu-demo-hub"
+    echo "             configuration file ~/.tanzu-demo-hub.cfg and set all variables with the 'export' notation"
+    echo "             ie. => export <environment_variable>=\"<value>\""
     echo "  --------------------------------------------------------------------------------------------------------------"
     exit 1
   fi
@@ -2361,17 +3080,26 @@ tmcCreateCluster() {
     messagePrint " - TMC Cluster Name"       "$TMC_CLUSTER_NAME"
     messagePrint " - TMC Cluster Group"      "$TMC_CLUSTER_GROUP"
     messagePrint " - TMC Template"           "$TMC_TKGWC_TEMPLATE"
-    messagePrint " - Provisioner Name"       "$TMC_PROVISONER_NAME"
+    messagePrint " - Provisioner Name"       "$TMC_PROVISIONER_NAME"
     messagePrint " - TKG Management Cluster" "$TMC_MANAGEMENT_CLUSTER"
     messagePrint " - Account Name"           "$TMC_ACCOUNT_NAME"
     messagePrint " - Kubernetes Version"     "$TMC_KUBERNETES_VERSION"
 
-    tmc cluster create -m $TMC_MANAGEMENT_CLUSTER -p $TMC_PROVISONER_NAME --ssh-key-name $TMC_SSH_KEY_NAME_AWS \
+    tmc cluster create -m $TMC_MANAGEMENT_CLUSTER -p $TMC_PROVISIONER_NAME --ssh-key-name $TMC_SSH_KEY_NAME_AWS \
                        -c $TMC_ACCOUNT_NAME -r $AWS_REGION -n $TMC_CLUSTER_NAME -q $TMC_TKGWC_WORKERNODES \
                        -g $TMC_CLUSTER_GROUP \
                        -t $TDH_TKGWC_TEMPLATE \
                        --version $TMC_KUBERNETES_VERSION \
                        --availability-zone ${AWS_REGION}a
+    if [ $? -ne 0 ]; then 
+      echo "ERROR: failed to build Cluster"
+      echo "       => tmc cluster create -m $TMC_MANAGEMENT_CLUSTER -p $TMC_PROVISIONER_NAME \\"
+      echo "          --ssh-key-name $TMC_SSH_KEY_NAME_AWS -c $TMC_ACCOUNT_NAME \\"
+      echo "          -r $AWS_REGION -n $TMC_CLUSTER_NAME -q $TMC_TKGWC_WORKERNODES \\"
+      echo "          -g $TMC_CLUSTER_GROUP -t $TMC_TKGWC_TEMPLATE \\"
+      echo "          --version $TMC_KUBERNETES_VERSION --availability-zone ${AWS_REGION}"
+      exit
+    fi
 
     messagePrint " - Cluster Status"         "creating ...."
     stt=""
@@ -2387,11 +3115,11 @@ tmcCreateCluster() {
   messagePrint " - Cluster Name"           "$TMC_CLUSTER_NAME"
   messagePrint " - TKG Management Cluster" "$TMC_MANAGEMENT_CLUSTER"
   messagePrint " - Cluster Status"         "$stt"
-  messagePrint " - Provisioner Name"       "$TMC_PROVISONER_NAME"
+  messagePrint " - Provisioner Name"       "$TMC_PROVISIONER_NAME"
   messagePrint " - Account Name"           "$TMC_ACCOUNT_NAME"
   echo "----------------------------------------------------------------------------------------"
   echo " TO-DELETE-THE-CLUSTER"
-  echo " => tmc cluster delete -m $TMC_MANAGEMENT_CLUSTER -p $TMC_PROVISONER_NAME $TMC_CLUSTER_NAME"
+  echo " => tmc cluster delete -m $TMC_MANAGEMENT_CLUSTER -p $TMC_PROVISIONER_NAME $TMC_CLUSTER_NAME"
   echo "----------------------------------------------------------------------------------------"
 }
 
@@ -2407,18 +3135,18 @@ getTDHClusterCredentials() {
 
   ret=1; cnt=0
   while [ $ret -ne 0 -a $cnt -lt 10 ]; do
-    tmc cluster auth kubeconfig get $TMC_CLUSTER_NAME -p $TMC_PROVISONER_NAME -m $TMC_MANAGEMENT_CLUSTER > /dev/null 2>&1; ret=$?
+    tmc cluster auth kubeconfig get $TMC_CLUSTER_NAME -p $TMC_PROVISIONER_NAME -m $TMC_MANAGEMENT_CLUSTER > /dev/null 2>&1; ret=$?
     sleep 60
     let cnt=cnt+1
   done
 
   if [ $ret -ne 0 ]; then 
     echo "ERROR: Failled to retrieve cluster credentials, aborting"
-    echo "       => tmc cluster auth kubeconfig get $TMC_CLUSTER_NAME -p $TMC_PROVISONER_NAME -m $TMC_MANAGEMENT_CLUSTER"
+    echo "       => tmc cluster auth kubeconfig get $TMC_CLUSTER_NAME -p $TMC_PROVISIONER_NAME -m $TMC_MANAGEMENT_CLUSTER"
     exit
   fi
 
-  tmc cluster auth kubeconfig get $TMC_CLUSTER_NAME -p $TMC_PROVISONER_NAME -m $TMC_MANAGEMENT_CLUSTER > /tmp/${TMC_CLUSTER_NAME}.kubeconfig
+  tmc cluster auth kubeconfig get $TMC_CLUSTER_NAME -p $TMC_PROVISIONER_NAME -m $TMC_MANAGEMENT_CLUSTER > /tmp/${TMC_CLUSTER_NAME}.kubeconfig
   export KUBECONFIG=/tmp/${TMC_CLUSTER_NAME}.kubeconfig
   chmod 600 /tmp/${TMC_CLUSTER_NAME}.kubeconfig
 
@@ -2568,7 +3296,7 @@ installMinio() {
   messagePrint " - Minio Access Key"               "$ACCESS_KEY"
   messagePrint " - Minio Secret Key"               "$SECRET_KEY"
   echo "-----------------------------------------------------------------------------------------------------------"
-  echo " Test Minio S3 Access: (https://docs.min.io/docs/minio-client-complete-guide)"
+  messageTitle " Test Minio S3 Access: (https://docs.min.io/docs/minio-client-complete-guide)"
   echo " => brew install minio/stable/mc"
   echo " => mc alias set minio https://minio.$DOMAIN $ACCESS_KEY $SECRET_KEY"
   echo " => mc ls minio"
@@ -2612,9 +3340,12 @@ installTanzuDataPostgres() {
   downloadFromPivnet tanzu-sql-postgres $TDH_SERVICE_TANZU_DATA_POSTGRES_VERSION "$TDH_SERVICE_TANZU_DATA_POSTGRES_VERSION" "Postgres for VMware Tanzu v$TDH_SERVICE_TANZU_DATA_POSTGRES_VERSION"
 
   TBS_FILE="/tmp/postgres-for-kubernetes-v$TDH_SERVICE_TANZU_DATA_POSTGRES_VERSION.tar.gz"
+  TBS_TAR_FILE="/tmp/postgres-for-kubernetes-v$TDH_SERVICE_TANZU_DATA_POSTGRES_VERSION.tar"
   [ -d /tmp/postgres-for-kubernetes ] && rm -rf /tmp/postgres-for-kubernetes
+  [ -f $TBS_TAR_FILE ] && rm -f $TBS_TAR_FILE
   mkdir -p /tmp/postgres-for-kubernetes
-  tar xfz $TBS_FILE -C /tmp/postgres-for-kubernetes
+  gunzip $TBS_FILE
+  tar xfz $TBS_TAR_FILE -C /tmp/postgres-for-kubernetes
 
   if [ "$TDH_SERVICE_REGISTRY_HARBOR" == "true" ]; then
     DNS_HARBOR=$(getConfigMap tanzu-demo-hub TDH_HARBOR_REGISTRY_DNS_HARBOR)
@@ -2675,31 +3406,31 @@ installTanzuDataPostgres() {
         exit
       fi
     fi
-
-    ver=$(helm ls -o json | jq -r --arg chart "postgres-operator" '.[] | select(.name == $chart).app_version')
-    crt=$(helm ls -o json | jq -r --arg chart "postgres-operator" '.[] | select(.name == $chart).chart')
-    stt=$(helm ls -o json | jq -r --arg chart "postgres-operator" '.[] | select(.name == $chart).status')
-    dat=$(helm ls -o json | jq -r --arg chart "postgres-operator" '.[] | select(.name == $chart).updated')
-    
-    messageTitle "Verify Postgres Operator"  
-    messagePrint " - Helm Chart"                     "$crt"
-    messagePrint " - Helm Chart Name"                "postgres-operator"
-    messagePrint " - Helm Chart Version"             "$ver"
-    messagePrint " - Helm Chart Status"              "$stt"
-    messagePrint " - Helm Chart Installed/Updated"   "$dat"
-
-    ver=$(helm ls -o json | jq -r --arg chart "tdh-pgadmin" '.[] | select(.name == $chart).app_version')
-    crt=$(helm ls -o json | jq -r --arg chart "tdh-pgadmin" '.[] | select(.name == $chart).chart')
-    stt=$(helm ls -o json | jq -r --arg chart "tdh-pgadmin" '.[] | select(.name == $chart).status')
-    dat=$(helm ls -o json | jq -r --arg chart "tdh-pgadmin" '.[] | select(.name == $chart).updated')
-
-    messageTitle "Verify pgAdmin" 
-    messagePrint " - Helm Chart"                     "$crt"
-    messagePrint " - Helm Chart Name"                "tdh-pgadmin"
-    messagePrint " - Helm Chart Version"             "$ver"
-    messagePrint " - Helm Chart Status"              "$stt"
-    messagePrint " - Helm Chart Installed/Updated"   "$dat"
   fi
+
+  ver=$(helm ls -o json | jq -r --arg chart "postgres-operator" '.[] | select(.name == $chart).app_version')
+  crt=$(helm ls -o json | jq -r --arg chart "postgres-operator" '.[] | select(.name == $chart).chart')
+  stt=$(helm ls -o json | jq -r --arg chart "postgres-operator" '.[] | select(.name == $chart).status')
+  dat=$(helm ls -o json | jq -r --arg chart "postgres-operator" '.[] | select(.name == $chart).updated')
+    
+  messageTitle "Verify Postgres Operator"  
+  messagePrint " - Helm Chart"                     "$crt"
+  messagePrint " - Helm Chart Name"                "postgres-operator"
+  messagePrint " - Helm Chart Version"             "$ver"
+  messagePrint " - Helm Chart Status"              "$stt"
+  messagePrint " - Helm Chart Installed/Updated"   "$dat"
+
+  #ver=$(helm ls -o json | jq -r --arg chart "tdh-pgadmin" '.[] | select(.name == $chart).app_version')
+  #crt=$(helm ls -o json | jq -r --arg chart "tdh-pgadmin" '.[] | select(.name == $chart).chart')
+  #stt=$(helm ls -o json | jq -r --arg chart "tdh-pgadmin" '.[] | select(.name == $chart).status')
+  #dat=$(helm ls -o json | jq -r --arg chart "tdh-pgadmin" '.[] | select(.name == $chart).updated')
+
+  #messageTitle "Verify pgAdmin" 
+  #messagePrint " - Helm Chart"                     "$crt"
+  #messagePrint " - Helm Chart Name"                "tdh-pgadmin"
+  #messagePrint " - Helm Chart Version"             "$ver"
+  #messagePrint " - Helm Chart Status"              "$stt"
+  #messagePrint " - Helm Chart Installed/Updated"   "$dat"
 
   uodateConfigMap tanzu-demo-hub TDH_SERVICE_TANZU_DATA_POSTGRES          "true"
   uodateConfigMap tanzu-demo-hub TDH_SERVICE_TANZU_DATA_POSTGRES_VERSION  $TDH_SERVICE_TANZU_DATA_POSTGRES_VERSION
@@ -2730,7 +3461,10 @@ installBuildService() {
   checkKubernetesServices registry_docker
   checkKubernetesServices github
 
-  messagePrint "Verify VMware Registry Access" "$TDH_REGISTRY_VMWARE_NAME"
+  messageTitle "Verify VMware Registry Access" 
+  messagePrint " - Registry URL"                "$TDH_REGISTRY_VMWARE_NAME"
+  messagePrint " - Registry User"               "$TDH_REGISTRY_VMWARE_USER"
+  messagePrint " - Registry Password"           "$(maskPassword \"$TDH_REGISTRY_VMWARE_PASS\")"
   docker login $TDH_REGISTRY_VMWARE_NAME -u $TDH_REGISTRY_VMWARE_USER -p $TDH_REGISTRY_VMWARE_PASS > /dev/null 2>&1
   if [ $? -ne 0 ]; then
     echo "ERROR: Docker login does not work"
@@ -2772,7 +3506,12 @@ installBuildService() {
     DNS_HARBOR=$(getConfigMap tanzu-demo-hub TDH_HARBOR_REGISTRY_DNS_HARBOR)
     TDH_HARBOR_REGISTRY_DNS_HARBOR=$(getConfigMap tanzu-demo-hub TDH_HARBOR_REGISTRY_DNS_HARBOR)
     TDH_HARBOR_REGISTRY_ADMIN_PASSWORD=$(getConfigMap tanzu-demo-hub TDH_HARBOR_REGISTRY_ADMIN_PASSWORD)
-    messagePrint "Verify Harbor Registry Access" "$TDH_HARBOR_REGISTRY_DNS_HARBOR"
+
+    messageTitle "Verify Harbor Registry Access"
+    messagePrint " - Registry URL"                "$TDH_HARBOR_REGISTRY_DNS_HARBOR"
+    messagePrint " - Registry User"               "admin"
+    messagePrint " - Registry Password"           "$(maskPassword \"$TDH_HARBOR_REGISTRY_ADMIN_PASSWORD\")"
+
     docker login $TDH_HARBOR_REGISTRY_DNS_HARBOR -u admin -p $TDH_HARBOR_REGISTRY_ADMIN_PASSWORD > /dev/null 2>&1
     if [ $? -ne 0 ]; then
       echo "ERROR: Docker login does not work 1"
@@ -2835,7 +3574,7 @@ installBuildService() {
     messagePrint "- Import Dependency Descriptors"
     kp import -f /tmp/descriptor-$TDH_SERVICE_BUILD_SERVICE_DEPENDANCIES.yaml > /dev/null 2>&1
   else
-    messagePrint "- Verify Dependency Descriptors"
+    messageTitle "- Verify Dependency Descriptors"
     echo "-----------------------------------------------------------------------------------------------------------"
     kp clusterbuilder list | sed '$d'
     echo "-----------------------------------------------------------------------------------------------------------"
@@ -3039,7 +3778,7 @@ InstallContour() {
   stt=$(helm -n $NAMESPACE ls -o json | jq -r '.[].status')
   dat=$(helm -n $NAMESPACE ls -o json | jq -r '.[].updated')
 
-messageTitle "Verify Ingress Contour"
+  messageTitle "Verify Ingress Contour"
   messagePrint " - Ingress Contour Namespace:"         "$NAMESPACE"
   messagePrint " - Ingress Contour Helm Chart:"        "$crt"
   messagePrint " - Ingress Contour Version:"           "$ver"
@@ -3079,6 +3818,13 @@ createClusterIssuer() {
     LETSENSCRIPT_SERVER="https://acme-v02.api.letsencrypt.org/directory"
   fi
 
+  # --- NOT CERTIFICATE CLEANUP ALL AND START OVER ---
+  stt=$(kubectl get certificate $TDH_TLS_CERT -o json 2>/dev/null | jq -r '.status.conditions[] | select(.type == "Ready").status')
+  if [ "${stt}" == "" -o "${stt}" == "False" ]; then
+    messageTitle "Cleaning up Let's Enscript objects"
+    kubectl delete clusterissuer,order,challenge,certificate --all > /dev/null 2>&1
+  fi
+
   kubectl get clusterissuer $TDH_TLS_ISSUER_NAME -n kube-system > /dev/null 2>&1
   if [ $? -ne 0 ]; then
     AWS_HOSTED_ZONE=$(aws route53 list-hosted-zones-by-name --dns-name ${TDH_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN} | \
@@ -3093,6 +3839,16 @@ createClusterIssuer() {
     messagePrint " - LetsEnscript Solver ZoneID"       "$AWS_HOSTED_ZONE_ID"
     messagePrint " - LetsEnscript DNSZone"             "*.apps-contour.${TDH_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}"
     messagePrint " - LetsEnscript DNSZone"             "*.apps-nginx.${TDH_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}"
+
+    if [ "${AWS_CERT_ACCESS_KEY}" == "" -o "${AWS_CERT_SECRET_KEY}" == "" ]; then
+      messagePrint " - LetsEnscript using AWS Route53 AccessKey" "AWS_ACCESS_KEY"
+      messagePrint " - LetsEnscript using AWS Route53 SecretKey" "AWS_ACCESS_KEY"
+      export AWS_CERT_ACCESS_KEY=$AWS_ACCESS_KEY
+      export AWS_CERT_SECRET_KEY=$AWS_SECRET_KEY
+    else
+      messagePrint " - LetsEnscript using AWS Route53 AccessKey" "AWS_CERT_ACCESS_KEY"
+      messagePrint " - LetsEnscript using AWS Route53 SecretKey" "AWS_CERT_SECRET_KEY"
+    fi
 
     echo "apiVersion: cert-manager.io/v1alpha2"                                    >  $TDH_TLS_ISSUER_NAME
     echo "kind: ClusterIssuer"                                                     >> $TDH_TLS_ISSUER_NAME
@@ -3124,13 +3880,26 @@ createClusterIssuer() {
     # --- CREATE/RECREATE AWS ROUTE53 SECRET ---
     kubectl -n cert-manager delete secret route53-credentials-secret > /dev/null 2>&1
     kubectl -n default delete secret route53-credentials-secret > /dev/null 2>&1
+
+    echo "$AWS_CERT_SECRET_KEY" > /tmp/aws-credentials
     kubectl -n cert-manager create secret generic route53-credentials-secret \
-            --from-literal=aws-credentials="$AWS_CERT_SECRET_KEY" > /dev/null 2>&1
+            --from-file=aws-credentials=/tmp/aws-credentials > /dev/null 2>&1
+
+    # --- VERIFY CERTIFICATE ---
+    kubectl -n cert-manager get secret route53-credentials-secret -o json | jq -r '.data."aws-credentials"' | base64 -d > /tmp/aws-credentials_secret
+    diff /tmp/aws-credentials /tmp/aws-credentials_secret > /dev/null 2>&1
+    if [ $? -ne 0 ]; then 
+      echo "ERROR: AWS Credentials in the secret: route53-credentials-secret to not match"
+      echo "       => diff /tmp/aws-credentials /tmp/aws-credentials_secret"
+      exit 
+    else
+      rm -f /tmp/aws-credentials /tmp/aws-credentials_secret
+    fi
 
     # --- RECREATE ISSUER ---
     kubectl -n $NAMESPACE delete --all clusterissuer,certificate,order,challenge > /dev/null 2>&1
     sleep 60
-    kubectl -n $NAMESPACE apply -f $TDH_TLS_ISSUER_NAME
+    kubectl -n $NAMESPACE apply -f $TDH_TLS_ISSUER_NAME > /dev/null 2>&1
     if [ $? -ne 0 ]; then
       echo "ERROR: failed to deploy letsenscript issuer"
       echo "       => kubectl -n $NAMESPACE apply -f $TDH_TLS_ISSUER_NAME"
@@ -3161,9 +3930,8 @@ createClusterIssuer() {
 
     messageTitle "Verify LetsEnscript ClusterIssuer"
     messagePrint " - LetsEnscript Issuer Name"         "$TDH_TLS_ISSUER_NAME"
-    messagePrint " - LetsEnscript DNSZone"             "$HARBOR_HOSTNAME"
-    messagePrint " - LetsEnscript DNSZone"             "$NOTARY_HOSTNAME"
-    messagePrint " - LetsEnscript DNSZone"             "$SACHA_HOSTNAME"
+    messagePrint " - LetsEnscript DNSZone"             "*.apps-contour.${TDH_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}"
+    messagePrint " - LetsEnscript DNSZone"             "*.apps-nginx.${TDH_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}"
     messagePrint " - LetsEnscript Request Requested"   "$issuer_date"
     messagePrint " - LetsEnscript Request Reason"      "$issuer_reason"
     messagePrint " - LetsEnscript Request Status"      "$issuer_status"
@@ -3175,6 +3943,10 @@ createClusterIssuer() {
   kubectl get secret $TDH_TLS_SECRET > /dev/null 2>&1; stt_sec=$?
   kubectl get certificate $TDH_TLS_CERT > /dev/null 2>&1; stt_crt=$?
   if [ "${stt_rdy}" == "Frue" -o $stt_sec -ne 0 -o $stt_crt -ne 0 ]; then
+    # --- CLEANUP OLD STUFF ---
+    kubectl delete secret $TDH_TLS_SECRET > /dev/null 2>&1
+    kubectl delete certificate $TDH_TLS_CERT > /dev/null 2>&1
+
     messageTitle "Create LetsEnscript Certificate"
     CERTIFICATE_CONFIG=/tmp/certificate.yaml
     echo "apiVersion: cert-manager.io/v1"                       >  $CERTIFICATE_CONFIG
@@ -3193,6 +3965,7 @@ createClusterIssuer() {
     echo "  - '*.apps-contour.${TDH_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}'"     >> $CERTIFICATE_CONFIG
     echo "  - '*.apps-nginx.${TDH_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}'"       >> $CERTIFICATE_CONFIG
 
+    messageTitle " - This may take a couple of minutes ...."
     kubectl create -f $CERTIFICATE_CONFIG > /dev/null 2>&1
     if [ $? -ne 0 ]; then
       echo "ERROR: failed to deploy letsenscript certificate"
@@ -3203,12 +3976,28 @@ createClusterIssuer() {
     sleep 30
 
     cnt=0
-    while [ $cnt -eq 0 ]; do
+    stt=$(kubectl get certificate $TDH_TLS_CERT -o json 2>/dev/null | \
+            jq -r '.status.conditions[] | select(.type == "Ready").status')
+    while [ $cnt -lt 5 -a "$stt" != "True" ]; do
       stt=$(kubectl get certificate $TDH_TLS_CERT -o json 2>/dev/null | \
             jq -r '.status.conditions[] | select(.type == "Ready").status')
       if [ "$stt" == "True" ]; then cnt=1; fi
-      sleep 5
+      sleep 30
+      let cnt=cnt+1
     done
+
+    stt=$(kubectl get certificate $TDH_TLS_CERT -o json 2>/dev/null | \
+            jq -r '.status.conditions[] | select(.type == "Ready").status')
+    if [ "$stt" != "True" ]; then 
+      challenge_pst=$(kubectl get challenge $challenge_obj -o json | jq -r '.status.presented')
+      if [ "$challenge_pst" == "false" ]; then
+         echo "------------------------------------------------------------------------------------------------------------------------"
+         echo "ERROR: Let's Enscript failed to verify the AWS Route53 challenge"
+         kubectl get challenge $challenge_obj -o json | jq -r '.status.reason'
+         echo "------------------------------------------------------------------------------------------------------------------------"
+         exit
+      fi
+    fi
 
     if [ "$stt" == "True" ]; then
       tim=$(kubectl get certificate $TDH_TLS_CERT -o json 2>/dev/null | jq -r '.status.conditions[].lastTransitionTime')
@@ -3311,6 +4100,7 @@ InstallCertManager() {
 }
 
 InstallHarborRegistry() {
+#hallo
   if [ "$TDH_SERVICE_BUILD_SERVICE" != "true" ]; then
     uodateConfigMap tanzu-demo-hub TDH_SERVICE_BUILD_SERVICE        "false"
     return
@@ -3745,6 +4535,7 @@ cleanAWSenv() {
     for id in $(aws --region $AWS_LOCATION ec2 describe-internet-gateways --filter "Name=attachment.vpc-id,Values=$vpc" | \
                 jq -r ".InternetGateways[].InternetGatewayId" 2>/dev/null); do
 
+      sleep 10
       messagePrint "  - Detach Internet Gateway:" "$id"
       aws --region $AWS_LOCATION ec2 detach-internet-gateway --internet-gateway-id $id --vpc-id $vpc > /dev/null 2>&1
       if [ $? -ne 0 ]; then
@@ -3753,6 +4544,7 @@ cleanAWSenv() {
         exit 1
       fi
 
+      sleep 10
       messagePrint "  - Delete Internet Gateway:" "$id"
       aws --region $AWS_LOCATION ec2 delete-internet-gateway --internet-gateway-id $id > /dev/null 2>&1
       if [ $? -ne 0 ]; then
@@ -3822,11 +4614,9 @@ cleanAWSenv() {
     # --- CLEANUP ---
     rm -f $SECGRP
 
-echo gaga1
     # --- DELETE ROUTING TABLES ---
     for id in $(aws --region $AWS_LOCATION ec2 describe-route-tables --filter "Name=vpc-id,Values=$vpc" | \
                 jq -r ".RouteTables[].RouteTableId" 2>/dev/null); do
-echo "ID:$id"
 
       messagePrint "  - Delete Routing Table:" "$id"
       aws --region $AWS_LOCATION ec2 delete-route-table --route-table-id $id> /dev/null 2>&1
@@ -4088,4 +4878,197 @@ echo "ID:$id"
   done
   rm -f $SECGRP
 }
+
+cleanKubeconfig() {
+  messageTitle "Cleaning Up kubectl config"
+
+  for cluster in $(kubectl config get-clusters | sed '1d' | egrep "^tdh|^tkg-mc"); do
+    ctx=$(kubectl config view -o json | jq -r --arg key $cluster '.contexts[] | select(.context.cluster == $key).name')
+    usr=$(kubectl config view -o json | jq -r --arg key $cluster '.contexts[] | select(.context.cluster == $key).context.user')
+    cnt=$(echo $cluster | grep -c minikube)
+    if [ $cnt -gt 0 ]; then 
+      if [ ! -d ~/.minikube/profiles/${cluster} ]; then
+        messagePrint " - Cleaning up k8s cluster ($cluster)" "Context: $ctx, User: $usr"
+        kubectl config unset clusters.${cluster} > /dev/null 2>&1
+        kubectl config unset contexts.${cluster} > /dev/null 2>&1
+        kubectl config unset users.${cluster} > /dev/null 2>&1
+      fi
+    else
+      kubectl config use-context $ctx > /dev/null
+      kubectl get ns > /dev/null 2>&1
+      if [ $? -gt 0 ]; then
+        messagePrint " - Cleaning up k8s cluster ($cluster)" "Context: $ctx, User: $usr"
+        kubectl config unset clusters.${cluster} > /dev/null 2>&1
+        kubectl config unset contexts.${cluster} > /dev/null 2>&1
+        kubectl config unset users.${cluster} > /dev/null 2>&1
+      fi
+    fi
+  done
+
+  # --- CLEANUP CONTEXTS WITHOUT CLUSTERS ---
+  for ctx in $(kubectl config view -o json | jq -r '.contexts[].name' 2>/dev/null); do
+    cls=$(kubectl config view -o json | jq -r --arg key $ctx '.contexts[] | select(.name == $key).context.cluster')
+    usr=$(kubectl config view -o json | jq -r --arg key $ctx '.contexts[] | select(.name == $key).context.user')
+
+    ret=$(kubectl config view -o json | jq -r --arg key $cls '.clusters[] | select(.name == $key).name')
+    if [ "$ret" == "" ]; then 
+      messagePrint " - Cleaning up unused k8s Context" "$ctx, User: $usr"
+      kubectl config unset contexts.${ctx} > /dev/null 2>&1
+      kubectl config unset users.${usr} > /dev/null 2>&1
+    fi
+
+  done
+}
+
+
+cleanManagementCluster() {
+  messageTitle "Cleaning up old kubeconfig definitions"
+
+  for n in $(tanzu config server list | grep " tkg-mc" | awk '{ print $1 }'); do
+    cnt=$(kubectl config get-clusters | grep -c "$n")
+    if [ $cnt -eq 0 ]; then 
+      messagePrint " - Cleaning up config of Cluster" "$n"
+      tanzu config server delete $n -y
+    fi
+  done
+}
+
+installSnap() {
+  PKG=$1
+  OPT=$2
+
+  snap list $PKG > /dev/null 2>&1
+  if [ $? -ne 0 ]; then
+    messagePrint " - Install Package ($PKG)" "installing"
+    cnt=0
+    snap install $PKG $OPT > /dev/null 2>&1; ret=$?
+    while [ $ret -ne 0 -a $cnt -lt 3 ]; do
+      snap install $PKG $OPT> /dev/null 2>&1; ret=$?
+      sleep 30
+      let cnt=cnt+1
+    done
+
+    if [ $ret -ne 0 ]; then
+      echo "ERROR: failed to install package $PKG"
+      echo "       => snap install $PKG"
+      exit 1
+    fi
+  else
+    ver=$(snap info $PKG | grep "installed:" | awk '{ print $2 }')
+    messagePrint " - Install Package ($PKG)" "$ver"
+  fi
+}
+
+installPackage() {
+  PKG=$1
+
+  dpkg -s $PKG > /dev/null 2>&1
+  if [ $? -ne 0 ]; then
+    messagePrint " - Install Package ($PKG)" "installing"
+    apt install $PKG -y > /dev/null 2>&1
+    if [ $? -ne 0 ]; then
+      echo "ERROR: failed to install package $PKG"
+      echo "       => apt install $PKG -y"
+      exit 1
+    fi
+  else
+    ver=$(dpkg -s $PKG | grep "Version" | grep -v "Config-Version" | sed 's/^Version: //g') 
+    messagePrint " - Verify Package ($PKG)" "$ver"
+  fi
+}
+
+# ------------------------------------------------------------------------------------------
+# Function Name ......: selfTestInit   
+# Function Category ..: selfTest - Tanzu Demo Hub automated testing facility for Demos
+# Function Purpose ...: Initialize SelfTest Counting and print the test Name
+# ------------------------------------------------------------------------------------------
+# Argument ($1) ......: Test Message Text (ie. "Deploy a Database") ............... (string)
+# Argument ($2) ......: Total count of Tests (ie. 20) ................................ (int)
+# Return Value .......: return 0 ..................................................... (int)
+# ------------------------------------------------------------------------------------------
+selfTestInit() {
+  _stp=1
+  _tot=$2
+  _msg="$1"
+  _cnt=$(echo "${_msg}" | wc -c | sed 's/ //g')
+  _dat=$(date "+%Y%m%d-%H:%M:%S")
+  _num="       "
+
+  if [ $first -eq 0 ]; then
+    #printf "\b\b\b\b\b\b\bcompleted\n"
+    #printf "\b\b\b\b\b\b\b\e[37mcompleted\e[0m\n"
+    printf "\b\b\b\b\b\e[37mcompleted\e[0m\n"
+  else
+    first=0
+  fi
+
+  _str=""
+  while [ $_cnt -lt 93 ]; do
+    _str="${_str}."
+    let _cnt=_cnt+1
+  done
+
+  [ $(uname) == "Linux" ] && HST="jump-host" || HST="localhost"
+
+  if [ "${PCF_DEPLOYMENT_DEBUG}" == "true" -o "${DEBUG}" == "1" ]; then
+    printf "\e[37m[${_dat}-$HST] - ${_msg} ${_str}: $_num\e[0m"
+  else
+    printf " \e[37m- ${_msg} ${_str}: $_num\e[0m"
+  fi
+}
+
+# ------------------------------------------------------------------------------------------
+# Function Name ......: selfTestStep
+# Function Category ..: selfTest - Tanzu Demo Hub automated testing facility for Demos
+# Function Purpose ...: Execute test and print result (sucessed / failed)
+# ------------------------------------------------------------------------------------------
+# Argument ($1) ......: Command to execute (ie. kubectl apply -f /tmp/<file>") .... (string)
+# Return Value .......: abort if ABORT_ON_FAILURE=1 otherwise only report the failed test
+# ------------------------------------------------------------------------------------------
+selfTestStep() {
+  CMD="$1"
+  _msg="$SELF_TEST_NAME"
+  _cnt=$(echo "${_msg}" | wc -c | sed 's/ //g')
+  _dat=$(date "+%Y%m%d-%H:%M:%S")
+
+  _str=""
+  while [ $_cnt -lt 78 ]; do
+    _str="${_str}."
+    let _cnt=_cnt+1
+  done
+
+  #[ $(uname) == "Linux" ] &&
+
+  eval $CMD > /tmp/selffTest.log 2>&1; ret=$?
+
+  _num=$(printf "[%02d/%02d]\n" $_stp $_tot)
+
+  if [ $ret -eq 0 ]; then
+    printf "\b\b\b\b\b\b\b\e[37m${_num}\e[0m"
+
+    let _stp=_stp+1
+  else
+    if [ "$TDHDEMO_ABORT_ON_FAILURE" -eq 0 ]; then
+      printf "\b\b\b\b\b\b\bcompleted\n"
+    else
+      printf "\n\n"
+      echo "=> $CMD"
+      echo "------------------------------------------------------------------------------"
+      cat /tmp/selffTest.log
+      echo "------------------------------------------------------------------------------"
+      exit
+    fi
+  fi
+
+}
+
+selfTestFine() {
+  printf "\b\b\b\b\b\b\b\e[37mcompleted\e[0m\n"
+}
+
+
+
+
+
+
 
