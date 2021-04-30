@@ -9,8 +9,7 @@ This demo package is to illustrate the capabilities of the **VMware Tanzu SQL wi
 - Create a Database Backup to Minio S3 storage with pgbench *(tanzu-postgres-pgbench)*
 - Deploy an Application connecting to the PostgreSQL database *(tanzu-postgres-spring-music-demo)*
 
-*Requirements*
-This demo is part of the Tanzu Demo Hub platform and requires a Kubernetes cluster deployd with either (deployMinikube, deployTMC or deployTKG). 
+*Requirements:* This demo is part of the Tanzu Demo Hub platform and requires a Kubernetes cluster deployd with either (deployMinikube, deployTMC or deployTKG). 
 
 ## Deploy a Single instance Database *(tanzu-postgres-deploy-singleton)*
 This demo is demonstrating the deployment of single instance PostgreSQL database on Kubernetes with the Postgres Operator. During the installation an Mini S3 datasore will be created to host the backup data (demonstrated in a seperated demo) and the PostgreSQL Tools (pgAdmin4) will be installed for the administration. 
