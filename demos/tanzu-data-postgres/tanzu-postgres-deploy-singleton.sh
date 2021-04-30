@@ -149,7 +149,7 @@ PGPASSWORD=$dbpass psql -h $dbhost -p $dbport -d $dbname -U $dbuser
 echo "-------------------------------------------------------------------------------------------------------------------------------------------------------"
 echo ""
 
-prtHead "Connect Datavase with psql within is pod ($INSTANCE-0)"
+prtHead "Connect Database with psql within is pod ($INSTANCE-0)"
 prtRead "=> kubectl -n $NAMESPACE exec -it $INSTANCE-0 -- bash -c \"psql\""
 prtText "     \?                                # List all Commands"
 prtText "     \l                                # List of Databases"
