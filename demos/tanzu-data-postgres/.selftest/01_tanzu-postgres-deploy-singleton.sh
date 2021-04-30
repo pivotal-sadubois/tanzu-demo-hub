@@ -25,7 +25,7 @@ done
 ########################## TANZU DATA FOR POSTGRESS - DEPLOY A SINGLE INSTANCE DATABASE  ################################
 #########################################################################################################################
 
-selfTestInit "Tanzu Data for Postgres - Deploy a Single Instance Database" 20
+selfTestInit "Tanzu Data for Postgres - Deploy a Single Instance Database" 21
 selfTestStep "kubectl get configmap tanzu-demo-hub"
 
 TDH_DOMAIN=$(getConfigMap tanzu-demo-hub TDH_DOMAIN)
@@ -76,6 +76,7 @@ dbpass=$(kubectl -n $NAMESPACE get secrets $INSTANCE-db-secret -o jsonpath='{.da
 dbhost=$(kubectl -n $NAMESPACE get service $INSTANCE -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
 dbport=$(kubectl -n $NAMESPACE get service $INSTANCE -o jsonpath='{.spec.ports[0].port}')
 
+selfTestStep "PGPASSWORD=$dbpass psql -h $dbhost -p $dbport -d $dbname -U $dbuser -f sql/tdh_info.sql"
 selfTestStep "echo \"select * from pg_hba_file_rules;\" | PGPASSWORD=$dbpass psql -h $dbhost -p $dbport -d $dbname -U $dbuser"
 selfTestStep "echo \"select * from pg_hba_file_rules;\" | kubectl -n $NAMESPACE exec -it $INSTANCE-0 -- bash -c psql"
 
