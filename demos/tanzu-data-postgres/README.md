@@ -11,6 +11,24 @@ This demo package is to illustrate the capabilities of the **VMware Tanzu SQL wi
 
 *Requirements:* This demo is part of the Tanzu Demo Hub platform and requires a Kubernetes cluster deployd with either (deployMinikube, deployTMC or deployTKG). 
 
+The demo comes with an self test feature which processes the individual steps of each demo automaticly. That will give you a guarante  that the demos will work in your environment.
+```
+*Tanzu Demo Hub - Demo Self Testing Suite*
+*by Sacha Dubois, VMware Inc,*
+*-----------------------------------------------------------------------------------------------------------*
+*Testing Demo (tanzu-data-postgres)*
+ - Tanzu Data for Postgres - Deploy a Single Instance Database .................................: completed
+ - Tanzu Data for Postgres - Load Generation on the Database ...................................: completed
+ - Tanzu Data for Postgres - Instance Backup (pgBackRest) to S3 (minio) ........................: completed
+ - Tanzu Data for Postgres - Database Resize (CPU, Memory and Disk) ............................: completed
+ - Tanzu Data for Postgres - Deploy a High Availability Database ...............................: completed
+ - Tanzu Data for Postgres - Load Generation on the Database ...................................: completed
+ - Tanzu Data for Postgres - Instance Backup (pgBackRest) to S3 (minio) ........................: completed
+ - Tanzu Data for Postgres - Database Resize (CPU, Memory and Disk) ............................: completed
+ - Tanzu Data for Postgres - Cleaning up Demo Environment in Namespace tanzu-data-postgres-demo : completed
+```
+
+
 ## Deploy a Single instance Database *(tanzu-postgres-deploy-singleton)*
 This demo is demonstrating the deployment of single instance PostgreSQL database on Kubernetes with the Postgres Operator. During the installation an Mini S3 datasore will be created to host the backup data (demonstrated in a seperated demo) and the PostgreSQL Tools (pgAdmin4) will be installed for the administration. 
 
@@ -18,7 +36,7 @@ This demo is demonstrating the deployment of single instance PostgreSQL database
 
 Play the recorded demo in a teminal: 
 ```
-$ tdh-demo-playback.sh ./tanzu-postgres-deploy-singleton.cast.cast
+$ tdh-demo-playback.sh ./tanzu-postgres-deploy-singleton.cast
 ```
 
 ## Deploy a High Available Database *(tanzu-postgres-deploy-ha)*
