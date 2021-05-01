@@ -31,7 +31,6 @@ Testing Demo (tanzu-data-postgres)
 ```
 
 
-## Deploy a Single instance Database
 ## Deploy a Single instance Database (tanzu-postgres-deploy-singleton)
 This demo is demonstrating the deployment of single instance PostgreSQL database on Kubernetes with the Postgres Operator. During the installation an Minio S3 datasore will be created to host the backup data (demonstrated in a seperated demo) and the PostgreSQL Tools (pgAdmin4) will be installed for the administration. 
 
