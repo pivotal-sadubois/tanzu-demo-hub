@@ -3,11 +3,13 @@
 This demo package is to illustrate the capabilities of the **VMware Tanzu SQL with PostgreSQL for Kubernetes** and the Postgres operator. The individual demos gides trough the live cycle of a database deployment containing *deployment, backup/restore, upgdrading and integration into an application*. Some of the demos requires to be used in order as they are depending on heach other (see more in the requirements section in the demo description). 
 
 *Featuring Demos*
-- [Deploy a Single instance Database](#Deploy-a-Single-instance-Database)
-- Deploy a High Available Database *(tanzu-postgres-deploy-ha)*
+- [Deploy a Single instance Database](#deploy-a-Single-instance-Database)
+- [Deploy a High Available Database](#deploy-a-high-available-database)
 - Generate Load to the database with pgbench *(tanzu-postgres-pgbench)*
 - Create a Database Backup to Minio S3 storage with pgbench *(tanzu-postgres-pgbench)*
+- [Database Resize (CPU, Memory and Disk)](database-resize-(CPU,-memory-and-disk))
 - Deploy an Application connecting to the PostgreSQL database *(tanzu-postgres-spring-music-demo)*
+
 
 *Requirements:* This demo is part of the Tanzu Demo Hub platform and requires a Kubernetes cluster deployd with either (deployMinikube, deployTMC or deployTKG). 
 
@@ -47,7 +49,7 @@ Play the recorded 'asciinema' demo in a teminal:
 $ tdh-demo-playback.sh ./tanzu-postgres-deploy-singleton.cast
 ```
 
-## Deploy a High Available Database *(tanzu-postgres-deploy-ha)*
+## Deploy a High Available Database
 This demo is demonstrating the deployment of single instance PostgreSQL database on Kubernetes with the Postgres Operator. During the installation an Minio S3 datasore will be created to
  host the backup data (demonstrated in a seperated demo) and the PostgreSQL Tools (pgAdmin4) will be installed for the administration. 
 
@@ -64,7 +66,7 @@ $ tdh-demo-playback.sh ./tanzu-postgres-deploy-ha.cast
 ```
 
 
-## Database Resize (CPU, Memory and Disk) *(tanzu-postgres-dbresize)*
+## Database Resize (CPU, Memory and Disk)
 In this demo we are going to resize the CPU, Memory and Storage capacity of a running PostgreSQL database instance. The Storage resize is depending on the StorageClass capabilities of the Cloud Storage provider. 
 
 [![asciicast](https://asciinema.org/a/UUVG31qu2ttBNTK2rVujEySr6.png)](https://asciinema.org/a/UUVG31qu2ttBNTK2rVujEySr6)
