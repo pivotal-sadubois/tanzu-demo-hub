@@ -11,7 +11,7 @@ This demo package is to illustrate the capabilities of the **VMware Tanzu SQL wi
 
 *Requirements:* This demo is part of the Tanzu Demo Hub platform and requires a Kubernetes cluster deployd with either (deployMinikube, deployTMC or deployTKG). 
 
-**Automated Self Test
+### Automated Self Test
 The demo comes with an self test feature which processes the individual steps of each demo automaticly. That will give you a guarante  that the demos will work in your environment.
 ```
 $ ./tdh-demo-selftest.sh
