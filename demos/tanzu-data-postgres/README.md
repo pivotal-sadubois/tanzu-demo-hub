@@ -13,10 +13,11 @@ This demo package is to illustrate the capabilities of the **VMware Tanzu SQL wi
 
 The demo comes with an self test feature which processes the individual steps of each demo automaticly. That will give you a guarante  that the demos will work in your environment.
 ```
-*Tanzu Demo Hub - Demo Self Testing Suite*
-*by Sacha Dubois, VMware Inc,*
-*-----------------------------------------------------------------------------------------------------------*
-*Testing Demo (tanzu-data-postgres)*
+$ ./tdh-demo-selftest.sh
+Tanzu Demo Hub - Demo Self Testing Suite
+by Sacha Dubois, VMware Inc,
+-----------------------------------------------------------------------------------------------------------
+Testing Demo (tanzu-data-postgres)*
  - Tanzu Data for Postgres - Deploy a Single Instance Database .................................: completed
  - Tanzu Data for Postgres - Load Generation on the Database ...................................: completed
  - Tanzu Data for Postgres - Instance Backup (pgBackRest) to S3 (minio) ........................: completed
