@@ -6,7 +6,7 @@ This demo package is to illustrate the capabilities of the **VMware Tanzu SQL wi
 - [Deploy a Single instance Database](#deploy-a-Single-instance-Database)
 - [Deploy a High Available Database](#deploy-a-high-available-database)
 - Generate Load to the database with pgbench *(tanzu-postgres-pgbench)*
-- Create a Database Backup to Minio S3 storage with pgbench *(tanzu-postgres-pgbench)*
+- [Create a Database Backup to Minio S3 storage with pgbackrest](create-a-database-backup-to-minio-s3-storage-with-pgbackrest)
 - [Database Resize CPU Memory and Disk](#database-resize-cpu-Memory-and-disk)
 - Deploy an Application connecting to the PostgreSQL database *(tanzu-postgres-spring-music-demo)*
 
@@ -32,7 +32,6 @@ Testing Demo (tanzu-data-postgres)
  - Tanzu Data for Postgres - Cleaning up Demo Environment in Namespace tanzu-data-postgres-demo : completed
 ```
 
-
 ## Deploy a Single instance Database
 Deploy a Single instance Database (tanzu-postgres-deploy-singleton)
 This demo is demonstrating the deployment of single instance PostgreSQL database on Kubernetes with the Postgres Operator. During the installation an Minio S3 datasore will be created to host the backup data (demonstrated in a seperated demo) and the PostgreSQL Tools (pgAdmin4) will be installed for the administration. 
@@ -46,7 +45,7 @@ $ ./tanzu-postgres-deploy-singleton.sh
 
 Play the recorded 'asciinema' demo in a teminal:
 ```
-$ tdh-demo-playback.sh ./tanzu-postgres-deploy-singleton.cast
+$ ./tdh-demo-playback.sh asciinema/tanzu-postgres-deploy-singleton.cast
 ```
 
 ## Deploy a High Available Database
@@ -62,9 +61,23 @@ $ ./tanzu-postgres-deploy-ha.sh
 
 Play the recorded 'asciinema' demo in a teminal:
 ```
-$ tdh-demo-playback.sh ./tanzu-postgres-deploy-ha.cast
+$ ./tdh-demo-playback.sh asciinema/tanzu-postgres-deploy-ha.cast
 ```
 
+## Create a Database Backup to Minio S3 storage with pgbackrest
+This demo demonstrations the backup of a PostgreSQL database with (pgbackrest) to S3 storagea. As backup target can be used any S3 Object Storage such as from 'Amazon AWS' or 'Minio S3'. For this demo we will use Minio S3 we have deployed on the same Kubernetes cluster.
+
+[![asciicast](https://asciinema.org/a/kuIhu8OOvVU2HXuScOhvSEFdW.png)](https://asciinema.org/a/kuIhu8OOvVU2HXuScOhvSEFdW)
+
+Run the demo as interactice session, the commands are real and executed on your Kubernetes Cluster
+```
+$ ./tanzu-postgres-dbresize.sh
+```
+
+Play the recorded 'asciinema' demo in a teminal:
+```
+$ ./tdh-demo-playback.sh asciinema/tanzu-postgres-pgbackrest.cast
+```
 
 ## Database Resize CPU Memory and Disk
 In this demo we are going to resize the CPU, Memory and Storage capacity of a running PostgreSQL database instance. The Storage resize is depending on the StorageClass capabilities of the Cloud Storage provider. 
@@ -78,7 +91,7 @@ $ ./tanzu-postgres-dbresize.sh
 
 Play the recorded 'asciinema' demo in a teminal:
 ```
-$ tdh-demo-playback.sh ./tanzu-postgres-deploy-dbresize.cast
+$ ./tdh-demo-playback.sh asciinema/tanzu-postgres-deploy-dbresize.cast
 ```
 
 
