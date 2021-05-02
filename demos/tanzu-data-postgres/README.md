@@ -5,8 +5,8 @@ This demo package is to illustrate the capabilities of the **VMware Tanzu SQL wi
 *Featuring Demos*
 - [Deploy a Single instance Database](#deploy-a-Single-instance-Database)
 - [Deploy a High Available Database](#deploy-a-high-available-database)
-- Generate Load to the database with pgbench *(tanzu-postgres-pgbench)*
-- [Create a Database Backup with pgbackrest](#create-a-backup-with-pgbackrest)
+- [Generate database load with pgbench](#generate-database-load-with-pgbench)
+- [Create a Database Backup with pgbackrest](#create-a-database-backup-with-pgbackrest)
 - [Database Resize CPU Memory and Disk](#database-resize-cpu-Memory-and-disk)
 - Deploy an Application connecting to the PostgreSQL database *(tanzu-postgres-spring-music-demo)*
 
@@ -43,7 +43,7 @@ Run the demo as interactice session, the commands are real and executed on your 
 $ ./tanzu-postgres-deploy-singleton.sh
 ```
 
-Play the recorded 'asciinema' demo in a teminal:
+Play the recorded 'asciinema' demo in a teminal (no kubernetes cluster or tdh environment required)
 ```
 $ ./tdh-demo-playback.sh asciinema/tanzu-postgres-deploy-singleton.cast
 ```
@@ -59,22 +59,37 @@ Run the demo as interactice session, the commands are real and executed on your 
 $ ./tanzu-postgres-deploy-ha.sh
 ```
 
-Play the recorded 'asciinema' demo in a teminal:
+Play the recorded 'asciinema' demo in a teminal (no kubernetes cluster or tdh environment required)
 ```
 $ ./tdh-demo-playback.sh asciinema/tanzu-postgres-deploy-ha.cast
 ```
 
-## Create a backup with pgbackrest
+## Create database load with pgbench
+To test the performnace of the PostgreSQL database, we can generate load to it with pgbench. This can simulate multiple parallel user sessions and application access to the database. 
+
+[![asciicast](https://asciinema.org/a/UfQ2SsP9sKLh9t330sgvkgE05.png)](https://asciinema.org/a/UfQ2SsP9sKLh9t330sgvkgE05)
+
+Run the demo as interactice session, the commands are real and executed on your Kubernetes Cluster
+```
+$ ./tanzu-postgres-pgbench.sh
+```
+
+Play the recorded 'asciinema' demo in a teminal (no kubernetes cluster or tdh environment required)
+```
+$ ./tdh-demo-playback.sh asciinema/tanzu-postgres-pgbench.cast
+```
+
+## Create a database backup with pgbackrest
 This demo demonstrations the backup of a PostgreSQL database with (pgbackrest) to S3 storagea. As backup target can be used any S3 Object Storage such as from 'Amazon AWS' or 'Minio S3'. For this demo we will use Minio S3 we have deployed on the same Kubernetes cluster.
 
 [![asciicast](https://asciinema.org/a/kuIhu8OOvVU2HXuScOhvSEFdW.png)](https://asciinema.org/a/kuIhu8OOvVU2HXuScOhvSEFdW)
 
 Run the demo as interactice session, the commands are real and executed on your Kubernetes Cluster
 ```
-$ ./tanzu-postgres-dbresize.sh
+$ ./tanzu-postgres-pgbackrest.sh
 ```
 
-Play the recorded 'asciinema' demo in a teminal:
+Play the recorded 'asciinema' demo in a teminal (no kubernetes cluster or tdh environment required)
 ```
 $ ./tdh-demo-playback.sh asciinema/tanzu-postgres-pgbackrest.cast
 ```
@@ -89,7 +104,7 @@ Run the demo as interactice session, the commands are real and executed on your 
 $ ./tanzu-postgres-dbresize.sh
 ```
 
-Play the recorded 'asciinema' demo in a teminal:
+Play the recorded 'asciinema' demo in a teminal (no kubernetes cluster or tdh environment required)
 ```
 $ ./tdh-demo-playback.sh asciinema/tanzu-postgres-deploy-dbresize.cast
 ```
