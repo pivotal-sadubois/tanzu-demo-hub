@@ -10,7 +10,6 @@ This demo package is to illustrate the capabilities of the **VMware Tanzu SQL wi
 - [Database Resize CPU Memory and Disk](#database-resize-cpu-Memory-and-disk)
 - Deploy an Application connecting to the PostgreSQL database *(tanzu-postgres-spring-music-demo)*
 
-
 *Requirements:* This demo is part of the Tanzu Demo Hub platform and requires a Kubernetes cluster deployd with either (deployMinikube, deployTMC or deployTKG). 
 
 ### Automated Self Test
@@ -64,7 +63,7 @@ Play the recorded 'asciinema' demo in a teminal (no kubernetes cluster or tdh en
 $ ./tdh-demo-playback.sh asciinema/tanzu-postgres-deploy-ha.cast
 ```
 
-## Create database load with pgbench
+## Generate database load with pgbench
 To test the performnace of the PostgreSQL database, we can generate load to it with pgbench. This can simulate multiple parallel user sessions and application access to the database. 
 
 [![asciicast](https://asciinema.org/a/UfQ2SsP9sKLh9t330sgvkgE05.png)](https://asciinema.org/a/UfQ2SsP9sKLh9t330sgvkgE05)
