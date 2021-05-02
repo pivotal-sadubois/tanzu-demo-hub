@@ -64,7 +64,7 @@ Play the recorded 'asciinema' demo in a teminal:
 $ ./tdh-demo-playback.sh asciinema/tanzu-postgres-deploy-ha.cast
 ```
 
-## Create a Database with pgbackrest
+## Create a backup with pgbackrest
 This demo demonstrations the backup of a PostgreSQL database with (pgbackrest) to S3 storagea. As backup target can be used any S3 Object Storage such as from 'Amazon AWS' or 'Minio S3'. For this demo we will use Minio S3 we have deployed on the same Kubernetes cluster.
 
 [![asciicast](https://asciinema.org/a/kuIhu8OOvVU2HXuScOhvSEFdW.png)](https://asciinema.org/a/kuIhu8OOvVU2HXuScOhvSEFdW)
