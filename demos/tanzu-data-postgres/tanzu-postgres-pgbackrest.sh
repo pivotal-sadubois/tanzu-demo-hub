@@ -4,7 +4,8 @@
 # Language .....: bash
 # Author .......: Sacha Dubois, VMware
 # --------------------------------------------------------------------------------------------
-# Description ..: Deploy the TKG Management Cluster on Azure
+# Category .....: VMware Tanzu Data for Postgres
+# Description ..: Instance Backup (pgBackRest) to S3 (minio)
 # ============================================================================================
 # https://postgres-kubernetes.docs.pivotal.io/1-1/backup-restore.html
 # https://pgbackrest.org/
@@ -88,7 +89,7 @@ kubectl -n tanzu-data-postgres-demo get pod tdh-postgres-singleton-0 > /dev/null
 kubectl -n tanzu-data-postgres-demo get pod tdh-postgres-ha-0 > /dev/null 2>&1; db_ha=$?
 
 if [ $db_singleton -ne 0 -a $db_ha -ne 0 ]; then 
-  echo "ERROR: No database has been deployed, please run eaither:"
+  echo "ERROR: No database has been deployed, please run either:"
   echo "       => ./tanzu-postgres-deploy-singleton.sh or"
   echo "       => ./tanzu-postgres-deploy-ha.sh" 
   exit
@@ -132,6 +133,10 @@ echo "--------------------------------------------------------------------------
 kubectl -n $NAMESPACE exec -it $PRIMARY_INSTANCE -- bash -c 'pgbackrest backup --stanza=${BACKUP_STANZA_NAME}'
 echo "-------------------------------------------------------------------------------------------------------------------------------------------------------"
 echo ""
+
+prtHead "Verify the Backup on Minio S3"
+execCmd "mc alias set minio https://minio.${DOMAIN} $TDH_SERVICE_MINIO_ACCESS_KEY $TDH_SERVICE_MINIO_SECRET_KEY"
+execCmd "mc ls minio/tdh-postgres-backup/var/lib/pgbackrest/backup --recursive"
 
 prtHead "Use Minio CLI to verify the Backup"
 prtText "=> mc alias set minio https://minio.${DOMAIN} $TDH_SERVICE_MINIO_ACCESS_KEY $TDH_SERVICE_MINIO_SECRET_KEY"

@@ -3,10 +3,10 @@ kind: Postgres
 metadata:
   name: tdh-postgres-singleton
 spec:
-  memory: 800Mi
-  cpu: "0.4"
+  memory: XXX_MEM_XXX
+  cpu: "XXX_CPU_XXX"
   storageClassName: standard
-  storageSize: 10G
+  storageSize: XXX_DISK_XXX
   pgConfig:
      dbname: tdh-postgres-db
      username: pgadmin

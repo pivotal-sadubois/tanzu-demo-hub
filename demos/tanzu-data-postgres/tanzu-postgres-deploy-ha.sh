@@ -1,10 +1,11 @@
 #!/bin/bash
 # ============================================================================================
-# File: ........: demo-privileged-access.sh
+# File: ........: tanzu-postgres-deploy-ha.sh
 # Language .....: bash
 # Author .......: Sacha Dubois, VMware
 # --------------------------------------------------------------------------------------------
-# Description ..: Deploy the TKG Management Cluster on Azure
+# Category .....: VMware Tanzu Data for Postgres 
+# Description ..: Deploy a High Available Database
 # ============================================================================================
 # https://postgres-kubernetes.docs.pivotal.io/1-1/high-availability.html#verify_configuration
 # kubectl exec -ti pod/my-postgres-ha-1 -- pg_autoctl show state
@@ -13,6 +14,11 @@ export TDH_DEMO_DIR="tanzu-data-postgres"
 export TDHHOME=$(echo -e "$(pwd)\n$(dirname $0)" | grep "tanzu-demo-hub" | head -1 | sed "s+\(^.*tanzu-demo-hub\).*+\1+g")
 export TDHDEMO=$(echo -e "$(pwd)\n$(dirname $0)" | grep "tanzu-demo-hub" | head -1 | sed "s+\(^.*$TDH_DEMO_DIR\).*+\1+g")
 export NAMESPACE="tanzu-data-postgres-demo"
+
+# --- LOCAL VARIABLES ---
+CAPACITY_MEMORY="800Mi"
+CAPACITY_DISK="5G"
+CAPACITY_CPU="0.2"
 
 if [ -f $TDHHOME/functions ]; then
   . $TDHHOME/functions
@@ -105,21 +111,25 @@ execCmd "kubectl get namespace"
 # --- PREPARATION ---
 cat $TDHDEMO/files/minio-s3-secret-backup.yaml | sed -e "s/MINIO_ACCESS_KEY/$TDH_SERVICE_MINIO_ACCESS_KEY/g" \
   -e "s/MINIO_SECRET_KEY/$TDH_SERVICE_MINIO_SECRET_KEY/g" > /tmp/minio-s3-secret-backup.yaml
+cat $TDHDEMO/files/tdh-postgres-ha.yaml | sed -e "s/XXX_MEM_XXX/$CAPACITY_MEMORY/g" -e "s/XXX_CPU_XXX/$CAPACITY_CPU/g" -e "s/XXX_DISK_XXX/$CAPACITY_DISK/g" \
+  > /tmp/tdh-postgres-ha.yaml
 
 prtHead "Create S3 Secret (Minio) used for pgBackRest"
 execCat "/tmp/minio-s3-secret-backup.yaml"
 execCmd "kubectl -n $NAMESPACE apply -f /tmp/minio-s3-secret-backup.yaml"
 
 prtHead "Create Database HA Instance"
-execCat "$TDHDEMO/files/tdh-postgres-ha.yaml"
-execCmd "kubectl -n $NAMESPACE create -f $TDHDEMO/files/tdh-postgres-ha.yaml"
+execCat "/tmp/tdh-postgres-ha.yaml"
+execCmd "kubectl -n $NAMESPACE create -f /tmp/tdh-postgres-ha.yaml"
 
 sleep 30 
 
 execCmd "kubectl -n $NAMESPACE get all"
+prtText "Show the associated Persistent Volume Claims (PVC)"
 execCmd "kubectl -n $NAMESPACE get pvc"
 #execCmd "kubectl -n $NAMESPACE get pv"
-helm uninstall tdh-pgadmin > /dev/null 2>&1
+prtText "Show the generated secret objects"
+execCmd "kubectl -n $NAMESPACE get secrets"
 
 dbname=$(kubectl -n $NAMESPACE get secrets $INSTANCE-db-secret -o jsonpath='{.data.dbname}' | base64 -D)
 dbuser=$(kubectl -n $NAMESPACE get secrets $INSTANCE-db-secret -o jsonpath='{.data.username}' | base64 -D)

@@ -1,11 +1,11 @@
 #!/bin/bash
 # ============================================================================================
-# File: ........: 01_tanzu-postgres-deploy-singleton.sh
+# File: ........: 05_tanzu-postgres-deploy-ha.sh
 # Language .....: bash
 # Author .......: Sacha Dubois, VMware
 # --------------------------------------------------------------------------------------------
 # Category .....: VMware Tanzu Data for Postgres
-# Description ..: Deploy a Single Instance Database Database
+# Description ..: Deploy a High Available Database
 # ============================================================================================
 
 export TDHDEMO=$(cd "$(pwd)/$(dirname $0)/.."; pwd)
@@ -35,10 +35,10 @@ while [ "$1" != "" ]; do
 done
 
 #########################################################################################################################
-########################## TANZU DATA FOR POSTGRESS - DEPLOY A SINGLE INSTANCE DATABASE  ################################
+########################## TANZU DATA FOR POSTGRESS - DEPLOY A HIGH AVAILABILITY DATABASE ###############################
 #########################################################################################################################
 
-selfTestInit "Tanzu Data for Postgres - Deploy a Single Instance Database" 20
+selfTestInit "Tanzu Data for Postgres - Deploy a High Availability Database" 21
 selfTestStep "kubectl get configmap tanzu-demo-hub"
 
 TDH_DOMAIN=$(getConfigMap tanzu-demo-hub TDH_DOMAIN)
@@ -50,7 +50,7 @@ TDH_LB_CONTOUR=$(getConfigMap tanzu-demo-hub TDH_INGRESS_CONTOUR_LB_DOMAIN)
 TDH_SERVICE_MINIO_ACCESS_KEY=$(getConfigMap tanzu-demo-hub TDH_SERVICE_MINIO_ACCESS_KEY)
 TDH_SERVICE_MINIO_SECRET_KEY=$(getConfigMap tanzu-demo-hub TDH_SERVICE_MINIO_SECRET_KEY)
 DOMAIN=${TDH_LB_CONTOUR}
-INSTANCE=tdh-postgres-singleton
+INSTANCE=tdh-postgres-ha
 DBNAME=tdh-postgres-db
 
 # --- CLEANUP ---
@@ -67,11 +67,11 @@ selfTestStep "kubectl get namespace"
 cat $TDHDEMO/files/minio-s3-secret-backup.yaml | \
 sed -e "s/MINIO_ACCESS_KEY/$TDH_SERVICE_MINIO_ACCESS_KEY/g" \
   -e "s/MINIO_SECRET_KEY/$TDH_SERVICE_MINIO_SECRET_KEY/g" > /tmp/minio-s3-secret-backup.yaml
-cat $TDHDEMO/files/tdh-postgres-singleton.yaml | sed -e "s/XXX_MEM_XXX/$CAPACITY_MEMORY/g" -e "s/XXX_CPU_XXX/$CAPACITY_CPU/g" -e "s/XXX_DISK_XXX/$CAPACITY_DISK/g" \
-  > /tmp/tdh-postgres-singleton.yaml
+cat $TDHDEMO/files/tdh-postgres-ha.yaml | sed -e "s/XXX_MEM_XXX/$CAPACITY_MEMORY/g" -e "s/XXX_CPU_XXX/$CAPACITY_CPU/g" -e "s/XXX_DISK_XXX/$CAPACITY_DISK/g" \
+  > /tmp/tdh-postgres-ha.yaml
 
 selfTestStep "kubectl -n $NAMESPACE apply -f /tmp/minio-s3-secret-backup.yaml"
-selfTestStep "kubectl -n $NAMESPACE create -f /tmp/tdh-postgres-singleton.yaml"
+selfTestStep "kubectl -n $NAMESPACE create -f /tmp/tdh-postgres-ha.yaml"
 selfTestStep "kubectl -n $NAMESPACE get all"
 selfTestStep "kubectl -n $NAMESPACE get pvc"
 
@@ -139,7 +139,8 @@ selfTestStep "helm install tdh-pgadmin cetic/pgadmin -f $HELM_VALUES --wait-for-
 selfTestStep "helm status tdh-pgadmin"
 selfTestStep "curl https://pgadmin.${DOMAIN}"
 
-selfTestFine
+
+selfTestFine 
 
 exit
 

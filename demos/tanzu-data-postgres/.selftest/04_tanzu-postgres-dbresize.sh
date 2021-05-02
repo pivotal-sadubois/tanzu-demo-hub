@@ -1,12 +1,13 @@
 #!/bin/bash
 # ============================================================================================
-# File: ........: 03_tanzu-postgres-pgbackrest.sh
+# File: ........: XX_tanzu-postgres-dbresize.sh
 # Language .....: bash
 # Author .......: Sacha Dubois, VMware
 # --------------------------------------------------------------------------------------------
 # Category .....: VMware Tanzu Data for Postgres
-# Description ..: Instance Backup (pgBackRest) to S3 (minio)
+# Description ..: Database Resize (CPU, Memory and Disk) 
 # ============================================================================================
+# https://postgres-kubernetes.docs.pivotal.io/1-1/update-instances.html
 
 export TDHDEMO=$(cd "$(pwd)/$(dirname $0)/.."; pwd)
 export TDHHOME=$(cd "$(pwd)/$(dirname $0)/../../.."; pwd)
@@ -14,6 +15,11 @@ export NAMESPACE="tanzu-data-postgres-demo"
 export TDHDEMO_ABORT_ON_FAILURE=1
 export DEBUG=0
 export first=1
+
+# --- LOCAL VARIABLES ---
+CAPACITY_MEMORY="800Mi"
+CAPACITY_DISK="5G"
+CAPACITY_CPU="0.2"
 
 if [ -f $TDHHOME/functions ]; then
   . $TDHHOME/functions
@@ -30,10 +36,10 @@ while [ "$1" != "" ]; do
 done
 
 #########################################################################################################################
-########################## TANZU DATA FOR POSTGRESS - POSTGRES BACKUP AND RESTORE DEMO ##################################
+########################## TANZU DATA FOR POSTGRESS - DEPLOY A SINGLE INSTANCE DATABASE  ################################
 #########################################################################################################################
 
-selfTestInit "Tanzu Data for Postgres - Instance Backup (pgBackRest) to S3 (minio)" 8
+selfTestInit "Tanzu Data for Postgres - Database Resize (CPU, Memory and Disk)" 9
 selfTestStep "kubectl get configmap tanzu-demo-hub"
 
 TDH_DOMAIN=$(getConfigMap tanzu-demo-hub TDH_DOMAIN)
@@ -68,16 +74,37 @@ else
   fi
 fi
 
-# --- CLEANUP ---
-mc rb minio/tdh-postgres-backup --force > /dev/null 2>&1
-selfTestStep "mc mb minio/tdh-postgres-backup"
-selfTestStep "mc ls minio"
+dbname=$(kubectl -n $NAMESPACE get secrets $INSTANCE-db-secret -o jsonpath='{.data.dbname}' | base64 -D)
+dbuser=$(kubectl -n $NAMESPACE get secrets $INSTANCE-db-secret -o jsonpath='{.data.username}' | base64 -D)
+dbpass=$(kubectl -n $NAMESPACE get secrets $INSTANCE-db-secret -o jsonpath='{.data.password}' | base64 -D)
+dbhost=$(kubectl -n $NAMESPACE get service $INSTANCE -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+dbport=$(kubectl -n $NAMESPACE get service $INSTANCE -o jsonpath='{.spec.ports[0].port}')
 
-selfTestStep "kubectl -n $NAMESPACE exec -it $PRIMARY_INSTANCE -- bash -c 'pgbackrest stanza-create --stanza=\${BACKUP_STANZA_NAME}'"
-selfTestStep "kubectl -n $NAMESPACE exec -it $PRIMARY_INSTANCE -- bash -c 'pgbackrest check --stanza=\${BACKUP_STANZA_NAME}'"
-selfTestStep "kubectl -n $NAMESPACE exec -it $PRIMARY_INSTANCE -- bash -c 'pgbackrest backup --stanza=\${BACKUP_STANZA_NAME}'"
+selfTestStep "PGPASSWORD=$dbpass psql -h $dbhost -p $dbport -d $dbname -U $dbuser -f sql/tdh_info.sql"
+selfTestStep "echo \"select * from pg_hba_file_rules;\" | PGPASSWORD=$dbpass psql -h $dbhost -p $dbport -d $dbname -U $dbuser"
+selfTestStep "echo \"select * from pg_hba_file_rules;\" | kubectl -n $NAMESPACE exec -it $INSTANCE-0 -- bash -c psql"
 
-selfTestStep "mc alias set minio https://minio.${DOMAIN} $TDH_SERVICE_MINIO_ACCESS_KEY $TDH_SERVICE_MINIO_SECRET_KEY"
-selfTestStep "mc ls minio/tdh-postgres-backup/"
+# --- PREPARATION ---
+cat $TDHDEMO/files/${INSTANCE}.yaml | sed -e "s/XXX_MEM_XXX/$CAPACITY_MEMORY/g" -e "s/XXX_CPU_XXX/$CAPACITY_CPU/g" -e "s/XXX_DISK_XXX/$CAPACITY_DISK/g" \
+  > /tmp/${INSTANCE}.yaml
 
+dbmem=$(kubectl -n $NAMESPACE get postgres/$INSTANCE -o jsonpath='{.spec.memory}')
+dbcpu=$(kubectl -n $NAMESPACE get postgres/$INSTANCE -o jsonpath='{.spec.cpu}')
+
+selfTestStep "dbmem=\$(kubectl -n $NAMESPACE get postgres/$INSTANCE -o jsonpath='{.spec.memory}')"
+selfTestStep "dbcpu=\$(kubectl -n $NAMESPACE get postgres/$INSTANCE -o jsonpath='{.spec.cpu}')"
+
+cat $TDHDEMO/files/${INSTANCE}.yaml | sed -e "s/XXX_MEM_XXX/1Gi/g" -e "s/XXX_CPU_XXX/0.4/g" -e "s/XXX_DISK_XXX/15G/g" \
+  > /tmp/${INSTANCE}.yaml
+
+selfTestStep "kubectl -n $NAMESPACE apply -f /tmp/${INSTANCE}.yaml"
+
+dbmem=$(kubectl -n $NAMESPACE get postgres/$INSTANCE -o jsonpath='{.spec.memory}')
+dbcpu=$(kubectl -n $NAMESPACE get postgres/$INSTANCE -o jsonpath='{.spec.cpu}')
+
+selfTestStep "dbmem=\$(kubectl -n $NAMESPACE get postgres/$INSTANCE -o jsonpath='{.spec.memory}')"
+selfTestStep "dbcpu=\$(kubectl -n $NAMESPACE get postgres/$INSTANCE -o jsonpath='{.spec.cpu}')"
 selfTestFine
+
+exit
+
