@@ -6,7 +6,7 @@ This demo package is to illustrate the capabilities of the **VMware Tanzu SQL wi
 - [Deploy a Single instance Database](#deploy-a-Single-instance-Database)
 - [Deploy a High Available Database](#deploy-a-high-available-database)
 - Generate Load to the database with pgbench *(tanzu-postgres-pgbench)*
-- [Create a Database Backup with pgbackrest](#create-a-backup--with-pgbackrest)
+- [Create a Database Backup with pgbackrest](#create-a-backup-with-pgbackrest)
 - [Database Resize CPU Memory and Disk](#database-resize-cpu-Memory-and-disk)
 - Deploy an Application connecting to the PostgreSQL database *(tanzu-postgres-spring-music-demo)*
 
