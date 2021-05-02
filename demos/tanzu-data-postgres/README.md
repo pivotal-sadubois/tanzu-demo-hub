@@ -8,7 +8,7 @@ This demo package is to illustrate the capabilities of the **VMware Tanzu SQL wi
 - [Generate database load with pgbench](#generate-database-load-with-pgbench)
 - [Create a Database Backup with pgbackrest](#create-a-database-backup-with-pgbackrest)
 - [Database Resize CPU Memory and Disk](#database-resize-cpu-Memory-and-disk)
-- Deploy an Application connecting to the PostgreSQL database *(tanzu-postgres-spring-music-demo)*
+- [Build and Attach an Application](#build-and-attach-an-application)
 
 *Requirements:* This demo is part of the Tanzu Demo Hub platform and requires a Kubernetes cluster deployd with either (deployMinikube, deployTMC or deployTKG). 
 
@@ -108,6 +108,18 @@ Play the recorded 'asciinema' demo in a teminal (no kubernetes cluster or tdh en
 $ ./tdh-demo-playback.sh asciinema/tanzu-postgres-deploy-dbresize.cast
 ```
 
+## Build and Attach an Application
+The final part of this demo is to deploy an application to kubernetes and attach it to our PostgreSQL database. We use the Sprint Music Demo application originaly build for CloudFoundry demos and package it into a docker container that we first push to the Harbor registry and then deploy it to the kubernetes environment. 
 
+[![asciicast](https://asciinema.org/a/6HGnRnQJeFqcp4DouwH1yOdFU.png)](https://asciinema.org/a/6HGnRnQJeFqcp4DouwH1yOdFU)
 
+Run the demo as interactice session, the commands are real and executed on your Kubernetes Cluster
+```
+$ ./tanzu-postgres-spring-music-app.sh
+```
+
+Play the recorded 'asciinema' demo in a teminal (no kubernetes cluster or tdh environment required)
+```
+$ ./tdh-demo-playback.sh asciinema/tanzu-postgres-spring-music-app.cast
+```
 
