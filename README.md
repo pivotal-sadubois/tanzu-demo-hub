@@ -1,6 +1,6 @@
 # Tanzu Demo Hub
 
-The tanzu-demo-hub initiative is to build a environment to run predefined and tested Demos demonstration the capabilites of the VMware Tanzu production portfolio. The scripts and tools provided deploy TKG Management clusters on vSphere, AWS Cloud or Microsoft Azure cloud and on your local Labtop (Minikube) and installs standard services such as LoadBalancer, Ingress Routers, Harbor Registry, Mini S3 etc. The deployment scripts will create Let's Enscript certificates for you automaticly that all installed services and demos have valid certificates.
+The Tanzu Demo Hub initiative is to build a environment to run predefined and tested Demos demonstration the capabilites of the VMware Tanzu production portfolio. The scripts and tools provided deploy TKG Management clusters on vSphere, AWS Cloud or Microsoft Azure cloud and on your local Labtop (Minikube) and installs standard services such as LoadBalancer, Ingress Routers, Harbor Registry, Mini S3 etc. The deployment scripts will create Let's Enscript certificates for you automaticly that all installed services and demos have valid certificates.
 
 ![TanzuDemoHub](https://github.com/pivotal-sadubois/tanzu-demo-hub/blob/main/files/TanzuDemoHub.jpg)
 
@@ -16,23 +16,22 @@ The tanzu-demo-hub initiative is to build a environment to run predefined and te
 - Tanzu Data Postgress Operator
 - Spring Cloud Gateway
 
-*Predefined Demos*
+*Prebuild Demos*
 - Kubernetes Pod Security
 - TMC Policies
 - TBS PetClinic Demo
 - Tanzu Data Postgres
 
-*Predefined Demos*
-
-*Tanzu-Demo-Hub on Minikube (GA)
-*Tanzu-Demo-Hub on vSphere (TechPreview)
-*Tanzu-Demo-Hub on AWS (In Development)
-*Tanzu-Demo-Hub on Azure (TechPreview)
+*Supported Environments*
+- [Tanzu-Demo-Hub on Minikube (GA)](#tanui-demo-hub-on-minikube)
+- Tanzu-Demo-Hub on vSphere (TechPreview)
+- Tanzu-Demo-Hub on AWS (In Development)
+- Tanzu-Demo-Hub on Azure (TechPreview)
 
 *Requirements*
 - AWS Route53 Domain (https://aws.amazon.com/route53)
 
-Tanzu-Demo-Hub on Minikube
+# Tanzu-Demo-Hub on Minikube
 ```
 $ ./deployMiniKube 
 
