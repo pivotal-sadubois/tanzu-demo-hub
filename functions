@@ -3337,6 +3337,7 @@ installTanzuDataPostgres() {
 
   # --- DOWNLOAD BUILD_SERVICE BINARIES ---
   downloadFromPivnet tanzu-sql-postgres $TDH_SERVICE_TANZU_DATA_POSTGRES_VERSION "$TDH_SERVICE_TANZU_DATA_POSTGRES_VERSION" "Postgres for VMware Tanzu v$TDH_SERVICE_TANZU_DATA_POSTGRES_VERSION"
+https://network.pivotal.io/api/v2/products/tanzu-sql-postgres/releases/769686/product_files/819245/download
 
   TBS_FILE="/tmp/postgres-for-kubernetes-v$TDH_SERVICE_TANZU_DATA_POSTGRES_VERSION.tar.gz"
   TBS_TAR_FILE="/tmp/postgres-for-kubernetes-v$TDH_SERVICE_TANZU_DATA_POSTGRES_VERSION.tar"
@@ -3405,6 +3406,8 @@ installTanzuDataPostgres() {
         exit
       fi
     fi
+
+
   fi
 
   ver=$(helm ls -o json | jq -r --arg chart "postgres-operator" '.[] | select(.name == $chart).app_version')
@@ -4992,11 +4995,13 @@ selfTestInit() {
   _cnt=$(echo "${_msg}" | wc -c | sed 's/ //g')
   _dat=$(date "+%Y%m%d-%H:%M:%S")
   _num="       "
+  
+  SELF_TEST_STATUS="completed"
 
   if [ $first -eq 0 ]; then
     #printf "\b\b\b\b\b\b\bcompleted\n"
     #printf "\b\b\b\b\b\b\b\e[37mcompleted\e[0m\n"
-    printf "\b\b\b\b\b\e[37mcompleted\e[0m\n"
+    printf "\b\b\b\b\b\e[37mcompleted1\e[0m\n"
   else
     first=0
   fi
@@ -5048,7 +5053,8 @@ selfTestStep() {
     let _stp=_stp+1
   else
     if [ "$TDHDEMO_ABORT_ON_FAILURE" -eq 0 ]; then
-      printf "\b\b\b\b\b\b\bcompleted\n"
+      SELF_TEST_STATUS="failed"
+      #printf "\b\b\b\b\b\b\bfailed\n"
     else
       printf "\n\n"
       echo "=> $CMD"
@@ -5062,7 +5068,7 @@ selfTestStep() {
 }
 
 selfTestFine() {
-  printf "\b\b\b\b\b\b\b\e[37mcompleted\e[0m\n"
+  printf "\b\b\b\b\b\b\b\e[37m$SELF_TEST_STATUS\e[0m\n"
 }
 
 
