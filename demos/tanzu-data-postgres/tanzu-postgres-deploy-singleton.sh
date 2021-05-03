@@ -12,6 +12,10 @@ export TDHHOME=$(echo -e "$(pwd)\n$(dirname $0)" | grep "tanzu-demo-hub" | head 
 export TDHDEMO=$(echo -e "$(pwd)\n$(dirname $0)" | grep "tanzu-demo-hub" | head -1 | sed "s+\(^.*$TDH_DEMO_DIR\).*+\1+g") 
 export NAMESPACE="tanzu-data-postgres-demo"
 
+CAPACITY_MEMORY="800Mi"
+CAPACITY_DISK="5G"
+CAPACITY_CPU="0.2"
+
 if [ -f $TDHHOME/functions ]; then
   . $TDHHOME/functions
 else
@@ -96,21 +100,25 @@ execCmd "kubectl get namespace"
 # --- PREPARATION ---
 cat $TDHDEMO/files/minio-s3-secret-backup.yaml | sed -e "s/MINIO_ACCESS_KEY/$TDH_SERVICE_MINIO_ACCESS_KEY/g" \
   -e "s/MINIO_SECRET_KEY/$TDH_SERVICE_MINIO_SECRET_KEY/g" > /tmp/minio-s3-secret-backup.yaml
+cat $TDHDEMO/files/tdh-postgres-singleton.yaml | sed -e "s/XXX_MEM_XXX/$CAPACITY_MEMORY/g" -e "s/XXX_CPU_XXX/$CAPACITY_CPU/g" -e "s/XXX_DISK_XXX/$CAPACITY_DISK/g" \
+  > /tmp/tdh-postgres-singleton.yaml
 
 prtHead "Create S3 Secret (Minio) used for pgBackRest"
 execCat "/tmp/minio-s3-secret-backup.yaml"
 execCmd "kubectl -n $NAMESPACE apply -f /tmp/minio-s3-secret-backup.yaml"
 
 prtHead "Create Database Instance"
-execCat "$TDHDEMO/files/tdh-postgres-singleton.yaml"
-execCmd "kubectl -n $NAMESPACE create -f $TDHDEMO/files/tdh-postgres-singleton.yaml"
+execCat "/tmp/tdh-postgres-singleton.yaml"
+execCmd "kubectl -n $NAMESPACE create -f /tmp/tdh-postgres-singleton.yaml"
 
 sleep 30
 
 execCmd "kubectl -n $NAMESPACE get all"
+prtText "Show the associated Persistent Volume Claims (PVC)"
 execCmd "kubectl -n $NAMESPACE get pvc"
 #execCmd "kubectl -n $NAMESPACE get pv"
-helm uninstall tdh-pgadmin > /dev/null 2>&1
+prtText "Show the generated secret objects"
+execCmd "kubectl -n $NAMESPACE get secrets"
 
 dbname=$(kubectl -n $NAMESPACE get secrets $INSTANCE-db-secret -o jsonpath='{.data.dbname}' | base64 -D)
 dbuser=$(kubectl -n $NAMESPACE get secrets $INSTANCE-db-secret -o jsonpath='{.data.username}' | base64 -D)
@@ -130,30 +138,37 @@ echo -e "        dbhost=$dbhost\n"
 slntCmd "dbport=\$(kubectl -n $NAMESPACE get service $INSTANCE -o jsonpath='{.spec.ports[0].port}')"
 echo -e "        dbport=$dbport\n"
 
-prtHead "Connect Database with psql via external LB ($dbhost)"
+prtHead "Access the database and Create a table (tdh_info) and insert some records"
+execCat sql/tdh_info.sql
+prtText "connecting the database ($dbname) with psql via external LB ($dbhost)"
+execCmd "PGPASSWORD=$dbpass psql -h $dbhost -p $dbport -d $dbname -U $dbuser -f sql/tdh_info.sql"
+
+# SELECT * FROM pg_catalog.pg_tables WHERE schemaname != 'pg_catalog' AND schemaname != 'information_schema';
+prtHead "Connect to the database with PSQL interactively"
 prtRead "=> PGPASSWORD=$dbpass psql -h $dbhost -p $dbport -d $dbname -U $dbuser"
-prtText "     \l                                # List of Databases"
-prtText "     \dr                               # List Roles"
-prtText "     \dT                               # List Data Types"
 prtText "     \?                                # List all Commands"
-prtText "     select * from pg_hba_file_rules;  # Show pg_hba access rules"
+prtText "     \l                                # List of Databases"
+prtText "     \c tdh-postgres-db                # Switch to Database (tdh-postgres-db)"
+prtText "     \dt                               # List Tables"
+prtText "     \dt+                              # List Tables with size and description"
+prtText "     select * from tdh_info;           # Show all entries in table tdh_info"
 echo "-------------------------------------------------------------------------------------------------------------------------------------------------------"
 PGPASSWORD=$dbpass psql -h $dbhost -p $dbport -d $dbname -U $dbuser 
 echo "-------------------------------------------------------------------------------------------------------------------------------------------------------"
 echo ""
 
-prtHead "Connect Datavase with psql within is pod ($INSTANCE-0)"
+prtHead "Connect Database with psql within is pod ($INSTANCE-0)"
 prtRead "=> kubectl -n $NAMESPACE exec -it $INSTANCE-0 -- bash -c \"psql\""
-prtText "     \l                                # List of Databases"
-prtText "     \dr                               # List Roles"
-prtText "     \dT                               # List Data Types"
 prtText "     \?                                # List all Commands"
-prtText "     select * from pg_hba_file_rules;  # Show pg_hba access rules"
+prtText "     \l                                # List of Databases"
+prtText "     \c tdh-postgres-db                # Switch to Database (tdh-postgres-db)"
+prtText "     \dt                               # List Tables"
+prtText "     \dt+                              # List Tables with size and description"
+prtText "     select * from tdh_info;           # Show all entries in table tdh_info"
 echo "-------------------------------------------------------------------------------------------------------------------------------------------------------"
 kubectl -n $NAMESPACE exec -it $INSTANCE-0 -- bash -c "psql"
 echo "-------------------------------------------------------------------------------------------------------------------------------------------------------"
 echo ""
-
 
 HELM_VALUES=/tmp/helm_values.yaml
 echo ""                                                                                                                     >  $HELM_VALUES

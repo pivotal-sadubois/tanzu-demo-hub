@@ -1,4 +1,12 @@
 #!/bin/bash
+# ============================================================================================
+# File: ........: 02_tanzu-postgres-pgbench.sh
+# Language .....: bash
+# Author .......: Sacha Dubois, VMware
+# --------------------------------------------------------------------------------------------
+# Category .....: VMware Tanzu Data for Postgres
+# Description ..: Load Generation on the Database 
+# ============================================================================================
 
 export TDHDEMO=$(cd "$(pwd)/$(dirname $0)/.."; pwd)
 export TDHHOME=$(cd "$(pwd)/$(dirname $0)/../../.."; pwd)
@@ -37,8 +45,6 @@ TDH_LB_CONTOUR=$(getConfigMap tanzu-demo-hub TDH_INGRESS_CONTOUR_LB_DOMAIN)
 TDH_SERVICE_MINIO_ACCESS_KEY=$(getConfigMap tanzu-demo-hub TDH_SERVICE_MINIO_ACCESS_KEY)
 TDH_SERVICE_MINIO_SECRET_KEY=$(getConfigMap tanzu-demo-hub TDH_SERVICE_MINIO_SECRET_KEY)
 DOMAIN=${TDH_LB_CONTOUR}
-INSTANCE=tdh-postgres-singleton
-DBNAME=tdh-postgres-db
 
 kubectl -n tanzu-data-postgres-demo get pod tdh-postgres-singleton-0 > /dev/null 2>&1; db_singleton=$?
 kubectl -n tanzu-data-postgres-demo get pod tdh-postgres-ha-0 > /dev/null 2>&1; db_ha=$?

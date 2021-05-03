@@ -1661,14 +1661,14 @@ createCluster() {
   unset TKG_CONFIG
   TDH_TKGMC_NAME=${TDH_TKGMC_NAME}-${TDH_USER}
   [ ! -d ${HOME}/.tanzu-demo-hub/config ] && mkdir -p ${HOME}/.tanzu-demo-hub/config
-  TKG_TEMPLATE=${HOME}/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.cfg; rm -f $TKG_TEMPLATE
+  TKG_TEMPLATE=${HOME}/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.yaml; rm -f $TKG_TEMPLATE
   TKG_KUBECONFIG=${HOME}/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.kubeconfig; rm -f $TKG_KUBECONFIG
 
   if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "AWS" ]; then
     MDOE=azure
     messageTitle "Creating TKG Managment Cluster"
     messagePrint " - Cluster Name"                "$TDH_TKGMC_NAME"
-    messagePrint " - Configuration File"          "$TKG_TEMPLATE"
+    messagePrint " - Configuration File"          "\${HOME}/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.yaml"
     messagePrint " - Control Plane Machine Type"  "$TDH_TKGMC_CONTROL_PLANE_MACHINE_TYPE"
     messagePrint " - Worker Node Machine Type"    "$TDH_TKGMC_MACHINE_TYPE"
     messagePrint " - Cluster CIDR"                "$TDH_TKGMC_CLUSTER_CIDR"
@@ -1814,7 +1814,6 @@ createCluster() {
       context=$(kubectl config view -o json | jq -r '.contexts[].name' 2>/dev/null)
       tanzu management-cluster kubeconfig get --admin --export-file=${TKG_KUBECONFIG} > /dev/null 2>&1
     fi
-
   fi
 
   if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "Azure" ]; then

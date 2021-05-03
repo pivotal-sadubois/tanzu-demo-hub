@@ -3,10 +3,10 @@ kind: Postgres
 metadata:
   name: tdh-postgres-ha
 spec:
-  memory: 800Mi
-  cpu: "0.2"
+  memory: XXX_MEM_XXX
+  cpu: "XXX_CPU_XXX"
   storageClassName: standard
-  storageSize: 10G
+  storageSize: XXX_DISK_XXX
   serviceType: LoadBalancer
   pgConfig:
     dbname: tdh-postgres-db

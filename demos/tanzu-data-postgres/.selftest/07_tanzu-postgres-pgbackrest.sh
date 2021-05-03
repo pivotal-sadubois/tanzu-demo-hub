@@ -1,4 +1,12 @@
 #!/bin/bash
+# ============================================================================================
+# File: ........: 03_tanzu-postgres-pgbackrest.sh
+# Language .....: bash
+# Author .......: Sacha Dubois, VMware
+# --------------------------------------------------------------------------------------------
+# Category .....: VMware Tanzu Data for Postgres
+# Description ..: Instance Backup (pgBackRest) to S3 (minio)
+# ============================================================================================
 
 export TDHDEMO=$(cd "$(pwd)/$(dirname $0)/.."; pwd)
 export TDHHOME=$(cd "$(pwd)/$(dirname $0)/../../.."; pwd)
@@ -25,7 +33,7 @@ done
 ########################## TANZU DATA FOR POSTGRESS - POSTGRES BACKUP AND RESTORE DEMO ##################################
 #########################################################################################################################
 
-selfTestInit "Tanzu Data for Postgres - Load Generation on the Database" 3
+selfTestInit "Tanzu Data for Postgres - Instance Backup (pgBackRest) to S3 (minio)" 8
 selfTestStep "kubectl get configmap tanzu-demo-hub"
 
 TDH_DOMAIN=$(getConfigMap tanzu-demo-hub TDH_DOMAIN)
@@ -37,8 +45,6 @@ TDH_LB_CONTOUR=$(getConfigMap tanzu-demo-hub TDH_INGRESS_CONTOUR_LB_DOMAIN)
 TDH_SERVICE_MINIO_ACCESS_KEY=$(getConfigMap tanzu-demo-hub TDH_SERVICE_MINIO_ACCESS_KEY)
 TDH_SERVICE_MINIO_SECRET_KEY=$(getConfigMap tanzu-demo-hub TDH_SERVICE_MINIO_SECRET_KEY)
 DOMAIN=${TDH_LB_CONTOUR}
-INSTANCE=tdh-postgres-singleton
-DBNAME=tdh-postgres-db
 
 kubectl -n tanzu-data-postgres-demo get pod tdh-postgres-singleton-0 > /dev/null 2>&1; db_singleton=$?
 kubectl -n tanzu-data-postgres-demo get pod tdh-postgres-ha-0 > /dev/null 2>&1; db_ha=$?
@@ -62,12 +68,16 @@ else
   fi
 fi
 
-dbname=$(kubectl -n $NAMESPACE get secrets $INSTANCE-db-secret -o jsonpath='{.data.dbname}' | base64 -D)
-dbuser=$(kubectl -n $NAMESPACE get secrets $INSTANCE-db-secret -o jsonpath='{.data.username}' | base64 -D)
-dbpass=$(kubectl -n $NAMESPACE get secrets $INSTANCE-db-secret -o jsonpath='{.data.password}' | base64 -D)
-dbhost=$(kubectl -n $NAMESPACE get service $INSTANCE -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
-dbport=$(kubectl -n $NAMESPACE get service $INSTANCE -o jsonpath='{.spec.ports[0].port}')
+# --- CLEANUP ---
+mc rb minio/tdh-postgres-backup --force > /dev/null 2>&1
+selfTestStep "mc mb minio/tdh-postgres-backup"
+selfTestStep "mc ls minio"
 
-selfTestStep "kubectl -n $NAMESPACE exec -it $PRIMARY_INSTANCE -- bash -c 'pgbench -i -p 5432 -d postgres'"
-selfTestStep "kubectl -n $NAMESPACE exec -it $PRIMARY_INSTANCE -- bash -c 'pgbench -c 10 -T 10'"
+selfTestStep "kubectl -n $NAMESPACE exec -it $PRIMARY_INSTANCE -- bash -c 'pgbackrest stanza-create --stanza=\${BACKUP_STANZA_NAME}'"
+selfTestStep "kubectl -n $NAMESPACE exec -it $PRIMARY_INSTANCE -- bash -c 'pgbackrest check --stanza=\${BACKUP_STANZA_NAME}'"
+selfTestStep "kubectl -n $NAMESPACE exec -it $PRIMARY_INSTANCE -- bash -c 'pgbackrest backup --stanza=\${BACKUP_STANZA_NAME}'"
+
+selfTestStep "mc alias set minio https://minio.${DOMAIN} $TDH_SERVICE_MINIO_ACCESS_KEY $TDH_SERVICE_MINIO_SECRET_KEY"
+selfTestStep "mc ls minio/tdh-postgres-backup/"
+
 selfTestFine

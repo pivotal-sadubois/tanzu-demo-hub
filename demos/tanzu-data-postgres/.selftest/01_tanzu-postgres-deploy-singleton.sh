@@ -1,4 +1,12 @@
 #!/bin/bash
+# ============================================================================================
+# File: ........: 01_tanzu-postgres-deploy-singleton.sh
+# Language .....: bash
+# Author .......: Sacha Dubois, VMware
+# --------------------------------------------------------------------------------------------
+# Category .....: VMware Tanzu Data for Postgres
+# Description ..: Deploy a Single Instance Database Database
+# ============================================================================================
 
 export TDHDEMO=$(cd "$(pwd)/$(dirname $0)/.."; pwd)
 export TDHHOME=$(cd "$(pwd)/$(dirname $0)/../../.."; pwd)
@@ -6,6 +14,11 @@ export NAMESPACE="tanzu-data-postgres-demo"
 export TDHDEMO_ABORT_ON_FAILURE=1
 export DEBUG=0
 export first=1
+
+# --- LOCAL VARIABLES ---
+CAPACITY_MEMORY="800Mi"
+CAPACITY_DISK="5G"
+CAPACITY_CPU="0.2"
 
 if [ -f $TDHHOME/functions ]; then
   . $TDHHOME/functions
@@ -54,9 +67,11 @@ selfTestStep "kubectl get namespace"
 cat $TDHDEMO/files/minio-s3-secret-backup.yaml | \
 sed -e "s/MINIO_ACCESS_KEY/$TDH_SERVICE_MINIO_ACCESS_KEY/g" \
   -e "s/MINIO_SECRET_KEY/$TDH_SERVICE_MINIO_SECRET_KEY/g" > /tmp/minio-s3-secret-backup.yaml
+cat $TDHDEMO/files/tdh-postgres-singleton.yaml | sed -e "s/XXX_MEM_XXX/$CAPACITY_MEMORY/g" -e "s/XXX_CPU_XXX/$CAPACITY_CPU/g" -e "s/XXX_DISK_XXX/$CAPACITY_DISK/g" \
+  > /tmp/tdh-postgres-singleton.yaml
 
 selfTestStep "kubectl -n $NAMESPACE apply -f /tmp/minio-s3-secret-backup.yaml"
-selfTestStep "kubectl -n $NAMESPACE create -f $TDHDEMO/files/tdh-postgres-singleton.yaml"
+selfTestStep "kubectl -n $NAMESPACE create -f /tmp/tdh-postgres-singleton.yaml"
 selfTestStep "kubectl -n $NAMESPACE get all"
 selfTestStep "kubectl -n $NAMESPACE get pvc"
 
@@ -76,6 +91,7 @@ dbpass=$(kubectl -n $NAMESPACE get secrets $INSTANCE-db-secret -o jsonpath='{.da
 dbhost=$(kubectl -n $NAMESPACE get service $INSTANCE -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
 dbport=$(kubectl -n $NAMESPACE get service $INSTANCE -o jsonpath='{.spec.ports[0].port}')
 
+selfTestStep "PGPASSWORD=$dbpass psql -h $dbhost -p $dbport -d $dbname -U $dbuser -f sql/tdh_info.sql"
 selfTestStep "echo \"select * from pg_hba_file_rules;\" | PGPASSWORD=$dbpass psql -h $dbhost -p $dbport -d $dbname -U $dbuser"
 selfTestStep "echo \"select * from pg_hba_file_rules;\" | kubectl -n $NAMESPACE exec -it $INSTANCE-0 -- bash -c psql"
 
