@@ -23,7 +23,7 @@ The Tanzu Demo Hub initiative is to build a environment to run predefined and te
 - Tanzu Data Postgres
 
 *Supported Environments*
-- [Tanzu-Demo-Hub on Minikube (GA)](#tanui-demo-hub-on-minikube)
+- [Tanzu-Demo-Hub on Minikube (GA)](#tanzu-demo-hub-on-minikube)
 - Tanzu-Demo-Hub on vSphere (TechPreview)
 - Tanzu-Demo-Hub on AWS (In Development)
 - Tanzu-Demo-Hub on Azure (TechPreview)
