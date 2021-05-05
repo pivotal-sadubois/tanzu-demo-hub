@@ -338,8 +338,6 @@ configureLetsEnscript() {
 }
 
 createJumpHost() {
-#gaga
-
   if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "AWS" ]; then
     JUMP_HOST="jump-${TDH_TKGMC_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}"
     TDH_TERRAFORM_TFVARS=~/.tanzu-demo-hub/terraform/terraform_${TDH_TKGMC_ENVNAME}.tfvars
@@ -501,6 +499,9 @@ createJumpHost() {
       ZONE_ID_STR=$(echo "${ZONE_ID}" | awk -F'/' '{ print $NF }')
       messagePrint " - DNS Zone (${AWS_HOSTED_DNS_DOMAIN}:" "zone managed by route53"
       messagePrint " - Updating Zone Record for ($JUMP_HOST)" "$pip"
+
+      # --- CREATE HOSTED ZONE ---
+      route53createHostedZone $TDH_TKGMC_ENVNAME.$AWS_HOSTED_DNS_DOMAIN
 
       # --- UPDATE DNS DOMAIN ---
       messagePrint " - Updating Zone Record for ($JUMP_HOST)" "$pip"
