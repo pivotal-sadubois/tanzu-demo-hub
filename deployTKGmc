@@ -9,6 +9,7 @@
 export TANZU_DEMO_HUB=$(cd "$(pwd)/$(dirname $0)"; pwd)
 export TDHPATH=$(cd "$(pwd)/$(dirname $0)"; pwd)
 export DEBUG=0
+export DEPLOY_TKG_CLEAN=0
 
 . $TANZU_DEMO_HUB/functions
 
@@ -251,6 +252,8 @@ checkKeyPairs() {
       aws ec2 --region=$AWS_REGION create-key-pair --key-name vmware-cloud-tmc | \
          jq -r '.KeyMaterial' > $SSH_KEY_FILE
       chmod 600 $SSH_KEY_FILE
+      key=$(aws ec2 --region=$AWS_REGION describe-key-pairs | \
+            jq -r --arg key "$SSH_KEY_NAME" '.KeyPairs[] | select(.KeyName == $key).KeyFingerprint')
     fi
 
     if [ -f "${SSH_KEY_FILE}" ]; then
@@ -356,21 +359,30 @@ createJumpHost() {
       echo "owner = \"tdh-$TDH_TKGMC_ENVNAME\""                    >> $TDH_TERRAFORM_TFVARS
       echo "aws_region_az = \"$az\""                               >> $TDH_TERRAFORM_TFVARS
 
-      if [ $DEBUG -gt 0 ]; then
-        echo "--------------------------------------------------------------------------------------------------------------"
-        terraform -chdir=${TDHPATH}/terraform/aws destroy -state=$TDH_TERRAFORM_TFSTATE \
-                  -var-file=$TDH_TERRAFORM_TFVARS -auto-approve; ret=$? 
-        echo "--------------------------------------------------------------------------------------------------------------"
-      else
-        terraform -chdir=${TDHPATH}/terraform/aws destroy -state=$TDH_TERRAFORM_TFSTATE \
-                  -var-file=$TDH_TERRAFORM_TFVARS -auto-approve > /dev/null 2>&1; ret=$? 
-      fi
+      if [ -x /usr/local/bin/terraform ]
+      then
+	if [ -f $TDH_TERRAFORM_TFSTATE ]
+	then
+	  if [ $DEBUG -gt 0 ]; then
+	    echo "--------------------------------------------------------------------------------------------------------------"
+	    terraform -chdir=${TDHPATH}/terraform/aws destroy -state=$TDH_TERRAFORM_TFSTATE \
+		      -var-file=$TDH_TERRAFORM_TFVARS -auto-approve; ret=$? 
+	    echo "--------------------------------------------------------------------------------------------------------------"
+	  else
+	    terraform -chdir=${TDHPATH}/terraform/aws destroy -state=$TDH_TERRAFORM_TFSTATE \
+		      -var-file=$TDH_TERRAFORM_TFVARS -auto-approve > /dev/null 2>&1; ret=$? 
+	  fi
 
-      if [ $ret -ne 0 ]; then
-        echo "ERROR: terraform destroy failed"
-        echo "       => terraform -chdir=${TDHPATH}/terraform/aws destroy -state=$TDH_TERRAFORM_TFSTATE \\"
-        echo "                    -var-file=$TDH_TERRAFORM_TFVARS -auto-approve"
-        exit
+	  if [ $ret -ne 0 ]; then
+	    echo "ERROR: terraform destroy failed"
+	    echo "       => terraform -chdir=${TDHPATH}/terraform/aws destroy -state=$TDH_TERRAFORM_TFSTATE \\"
+	    echo "                    -var-file=$TDH_TERRAFORM_TFVARS -auto-approve"
+	    exit
+	  fi
+	fi
+      else
+        echo "ERROR: HashiCorp terraform has not been installed, download it from https://www.terraform.io"
+        echo "       and install it in /usr/local/bin/terraform"; exit 0
       fi
 
       aws ec2 --region=$AWS_REGION describe-key-pairs --key-names ${KEY_NAME} > /dev/null 2>&1
