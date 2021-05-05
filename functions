@@ -213,6 +213,8 @@ sshEnvironment() {
     SSH_HOST=$JUMP_HOST
     SSH_USER=ubuntu
     SSH_HOME=/home/ubuntu
+    SSH_KEY_NAME=tanzu-demo-hub
+    SSH_KEY_FILE=~/.tanzu-demo-hub/KeyPair-${SSH_KEY_NAME}-${AWS_REGION}.pem
     SSH_OPTIONS="-o StrictHostKeyChecking=no -o RequestTTY=yes -o ServerAliveInterval=30"
     SSH_DISPLAY="-o StrictHostKeyChecking=no"
     SCP_OPTIONS="-o StrictHostKeyChecking=no"

@@ -234,7 +234,7 @@ checkKeyPairs() {
   fi
 
   if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "AWS" ]; then
-    SSH_KEY_NAME=vmware-cloud-tmc
+    SSH_KEY_NAME=tanzu-demo-hub
     SSH_KEY_FILE=~/.tanzu-demo-hub/KeyPair-${SSH_KEY_NAME}-${AWS_REGION}.pem
 
     #"KeyFingerprint": "a8:c4:01:2b:12:7e:0d:8f:56:8c:38:80:cf:8b:6d:53:13:9c:28:cd",
@@ -344,7 +344,7 @@ createJumpHost() {
     TDH_TERRAFORM_TFSTATE=~/.tanzu-demo-hub/terraform/terraform_${TDH_TKGMC_ENVNAME}.tfstate
     KEY_NAME=tanzu-demo-hub
 
-    messagePrint "Creating AWS Jump-Server" "$SSH_KEY_NAME"
+    messagePrint "Creating AWS Jump-Server" "$KEY_NAME"
     ins=$(aws ec2 --region=$AWS_REGION describe-instances --filters "Name=instance-state-name,Values=pending,running,stopped" \
          Name=tag:Owner,Values="tdh-${TDH_TKGMC_ENVNAME}" | jq -r ".Reservations[].Instances[].InstanceId" | head -1)
     if [ "${ins}" == "" ]; then
@@ -356,6 +356,7 @@ createJumpHost() {
       echo "aws_region = \"$AWS_REGION\""                          >  $TDH_TERRAFORM_TFVARS
       echo "owner = \"tdh-$TDH_TKGMC_ENVNAME\""                    >> $TDH_TERRAFORM_TFVARS
       echo "aws_region_az = \"$az\""                               >> $TDH_TERRAFORM_TFVARS
+      echo "key_pair = \"$KEY_NAME\""                              >> $TDH_TERRAFORM_TFVARS
 
       if [ -x /usr/local/bin/terraform ]
       then
@@ -395,7 +396,7 @@ createJumpHost() {
           echo "                  --query 'KeyMaterial' --output text > ~/.tanzu-demo-hub/KeyPair-${KEY_NAME}-${AWS_REGION}.pem"; exit 1
         fi
       else
-        messagePrint " - Verify Key Pair" "${KEY_NAME}"
+        messagePrint " - Key Pair exists on AWS" "${KEY_NAME}"
       fi
 
       messagePrint "Deploy vSphere Jump-Server with (terraforms)" "$JUMP_HOST"
@@ -411,6 +412,7 @@ createJumpHost() {
       echo "aws_region = \"$AWS_REGION\""                          >  $TDH_TERRAFORM_TFVARS
       echo "owner = \"tdh-$TDH_TKGMC_ENVNAME\""                    >> $TDH_TERRAFORM_TFVARS
       echo "aws_region_az = \"$az\""                               >> $TDH_TERRAFORM_TFVARS
+      echo "key_pair = \"$KEY_NAME\""                              >> $TDH_TERRAFORM_TFVARS
 
       if [ -x /usr/local/bin/terraform ]; then
         if [ $DEBUG -gt 0 ]; then 
