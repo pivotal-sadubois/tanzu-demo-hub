@@ -1693,7 +1693,7 @@ createCluster() {
     echo "AWS_NODE_AZ: \"$AWS_PRIMARY_AZ\""                                            >> $TKG_TEMPLATE
     echo "AWS_ACCESS_KEY_ID: $AWS_ACCESS_KEY"                                          >> $TKG_TEMPLATE
     echo "AWS_SECRET_ACCESS_KEY: $AWS_SECRET_KEY"                                      >> $TKG_TEMPLATE
-    echo "AWS_SSH_KEY_NAME: $SSH_KEY_NAME"                                             >> $TKG_TEMPLATE
+    echo "AWS_SSH_KEY_NAME: tanzu-demo-hub"                                            >> $TKG_TEMPLATE
     echo "BASTION_HOST_ENABLED: true"                                                  >> $TKG_TEMPLATE
     echo "#AWS_AMI_ID: ami-066dad3403314512a"                                          >> $TKG_TEMPLATE
     echo "CLUSTER_PLAN: dev"                                                           >> $TKG_TEMPLATE
