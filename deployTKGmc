@@ -9,6 +9,7 @@
 export TANZU_DEMO_HUB=$(cd "$(pwd)/$(dirname $0)"; pwd)
 export TDHPATH=$(cd "$(pwd)/$(dirname $0)"; pwd)
 export DEBUG=0
+export DEPLOY_TKG_CLEAN=0
 
 . $TANZU_DEMO_HUB/functions
 
@@ -233,7 +234,7 @@ checkKeyPairs() {
   fi
 
   if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "AWS" ]; then
-    SSH_KEY_NAME=vmware-cloud-tmc
+    SSH_KEY_NAME=tanzu-demo-hub
     SSH_KEY_FILE=~/.tanzu-demo-hub/KeyPair-${SSH_KEY_NAME}-${AWS_REGION}.pem
 
     #"KeyFingerprint": "a8:c4:01:2b:12:7e:0d:8f:56:8c:38:80:cf:8b:6d:53:13:9c:28:cd",
@@ -251,6 +252,8 @@ checkKeyPairs() {
       aws ec2 --region=$AWS_REGION create-key-pair --key-name vmware-cloud-tmc | \
          jq -r '.KeyMaterial' > $SSH_KEY_FILE
       chmod 600 $SSH_KEY_FILE
+      key=$(aws ec2 --region=$AWS_REGION describe-key-pairs | \
+            jq -r --arg key "$SSH_KEY_NAME" '.KeyPairs[] | select(.KeyName == $key).KeyFingerprint')
     fi
 
     if [ -f "${SSH_KEY_FILE}" ]; then
@@ -341,7 +344,7 @@ createJumpHost() {
     TDH_TERRAFORM_TFSTATE=~/.tanzu-demo-hub/terraform/terraform_${TDH_TKGMC_ENVNAME}.tfstate
     KEY_NAME=tanzu-demo-hub
 
-    messagePrint "Creating AWS Jump-Server" "$SSH_KEY_NAME"
+    messagePrint "Creating AWS Jump-Server" "$KEY_NAME"
     ins=$(aws ec2 --region=$AWS_REGION describe-instances --filters "Name=instance-state-name,Values=pending,running,stopped" \
          Name=tag:Owner,Values="tdh-${TDH_TKGMC_ENVNAME}" | jq -r ".Reservations[].Instances[].InstanceId" | head -1)
     if [ "${ins}" == "" ]; then
@@ -353,22 +356,32 @@ createJumpHost() {
       echo "aws_region = \"$AWS_REGION\""                          >  $TDH_TERRAFORM_TFVARS
       echo "owner = \"tdh-$TDH_TKGMC_ENVNAME\""                    >> $TDH_TERRAFORM_TFVARS
       echo "aws_region_az = \"$az\""                               >> $TDH_TERRAFORM_TFVARS
+      echo "key_pair = \"$KEY_NAME\""                              >> $TDH_TERRAFORM_TFVARS
 
-      if [ $DEBUG -gt 0 ]; then
-        echo "--------------------------------------------------------------------------------------------------------------"
-        terraform -chdir=${TDHPATH}/terraform/aws destroy -state=$TDH_TERRAFORM_TFSTATE \
-                  -var-file=$TDH_TERRAFORM_TFVARS -auto-approve; ret=$? 
-        echo "--------------------------------------------------------------------------------------------------------------"
+      if [ -x /usr/local/bin/terraform ]
+      then
+	if [ -f $TDH_TERRAFORM_TFSTATE ]
+	then
+	  if [ $DEBUG -gt 0 ]; then
+	    echo "--------------------------------------------------------------------------------------------------------------"
+	    terraform -chdir=${TDHPATH}/terraform/aws destroy -state=$TDH_TERRAFORM_TFSTATE \
+		      -var-file=$TDH_TERRAFORM_TFVARS -auto-approve; ret=$? 
+	    echo "--------------------------------------------------------------------------------------------------------------"
+	  else
+	    terraform -chdir=${TDHPATH}/terraform/aws destroy -state=$TDH_TERRAFORM_TFSTATE \
+		      -var-file=$TDH_TERRAFORM_TFVARS -auto-approve > /dev/null 2>&1; ret=$? 
+	  fi
+
+	  if [ $ret -ne 0 ]; then
+	    echo "ERROR: terraform destroy failed"
+	    echo "       => terraform -chdir=${TDHPATH}/terraform/aws destroy -state=$TDH_TERRAFORM_TFSTATE \\"
+	    echo "                    -var-file=$TDH_TERRAFORM_TFVARS -auto-approve"
+	    exit
+	  fi
+	fi
       else
-        terraform -chdir=${TDHPATH}/terraform/aws destroy -state=$TDH_TERRAFORM_TFSTATE \
-                  -var-file=$TDH_TERRAFORM_TFVARS -auto-approve > /dev/null 2>&1; ret=$? 
-      fi
-
-      if [ $ret -ne 0 ]; then
-        echo "ERROR: terraform destroy failed"
-        echo "       => terraform -chdir=${TDHPATH}/terraform/aws destroy -state=$TDH_TERRAFORM_TFSTATE \\"
-        echo "                    -var-file=$TDH_TERRAFORM_TFVARS -auto-approve"
-        exit
+        echo "ERROR: HashiCorp terraform has not been installed, download it from https://www.terraform.io"
+        echo "       and install it in /usr/local/bin/terraform"; exit 0
       fi
 
       aws ec2 --region=$AWS_REGION describe-key-pairs --key-names ${KEY_NAME} > /dev/null 2>&1
@@ -383,7 +396,7 @@ createJumpHost() {
           echo "                  --query 'KeyMaterial' --output text > ~/.tanzu-demo-hub/KeyPair-${KEY_NAME}-${AWS_REGION}.pem"; exit 1
         fi
       else
-        messagePrint " - Verify Key Pair" "${KEY_NAME}"
+        messagePrint " - Key Pair exists on AWS" "${KEY_NAME}"
       fi
 
       messagePrint "Deploy vSphere Jump-Server with (terraforms)" "$JUMP_HOST"
@@ -399,6 +412,7 @@ createJumpHost() {
       echo "aws_region = \"$AWS_REGION\""                          >  $TDH_TERRAFORM_TFVARS
       echo "owner = \"tdh-$TDH_TKGMC_ENVNAME\""                    >> $TDH_TERRAFORM_TFVARS
       echo "aws_region_az = \"$az\""                               >> $TDH_TERRAFORM_TFVARS
+      echo "key_pair = \"$KEY_NAME\""                              >> $TDH_TERRAFORM_TFVARS
 
       if [ -x /usr/local/bin/terraform ]; then
         if [ $DEBUG -gt 0 ]; then 
@@ -538,281 +552,6 @@ createJumpHost() {
       $SSH_COMMAND -n id > /dev/null 2>&1; ret=$?
       [ $ret -ne 0 ] && sleep 10
     done
-  fi
-
-  if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "AWS1" ]; then
-    JUMP_HOST="jump-${TDH_TKGMC_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}"
-    ins=$(aws ec2 --region=$AWS_REGION describe-instances --filters "Name=instance-state-name,Values=pending,running,stopped" \
-         Name=tag:Name,Values="$JUMP_HOST" | jq -r ".Reservations[].Instances[].InstanceId" | head -1)
-    if [ "${ins}" == "" ]; then
-      messagePrint "Cleanup old AWS Config" "$TDH_TKGMC_ENVNAME"
-      ENV_NAME="$TDH_TKGMC_ENVNAME"
-      AWS_LOCATION=$AWS_REGION
-      cleanAWSenv
-
-      messagePrint "Creating AWS Jump-Server" "$SSH_KEY_NAME"
-
-      # --- CREATE NEW KEY IF PEM FILE IS MISSING ---
-      #if [ ! -s ~/.ssh/${JUMP_HOST}.pem ]; then
-      #  messagePrint " - Missing pem file, deleting Key Pair" "${JUMP_HOST}"
-      #  aws ec2 --region=$AWS_REGION delete-key-pair --key-name ${JUMP_HOST}
-      #fi
-
-      aws ec2 --region=$AWS_REGION describe-key-pairs --key-names ${JUMP_HOST} > /dev/null 2>&1
-      if [ $? -ne 0 ]; then
-        messagePrint " - Creating Key Pair" "${JUMP_HOST}"
-        aws ec2 --region=$AWS_REGION create-key-pair --key-name ${JUMP_HOST} \
-              --query 'KeyMaterial' --output text > ~/.ssh/${JUMP_HOST}.pem 2>/dev/null
-        chmod 600 ~/.ssh/${JUMP_HOST}.pem
-        if [ $? -ne 0 ]; then
-          echo "ERROR: Creating Key Pairs failed"
-          echo "       => aws ec2 --region=$AWS_REGION create-key-pair --key-name ${JUMP_HOST}  \\"
-          echo "                  --query 'KeyMaterial' --output text > ~/.ssh/${JUMP_HOST}.pem"; exit 1
-        fi
-      else
-        #messagePrint " - Verify Key Pair" "${SSH_KEY_NAME}"
-        messagePrint " - Verify Key Pair" "${JUMP_HOST}"
-      fi
-
-      # --- CREATE VPC ---
-      vpc=$(aws ec2 --region=$AWS_REGION describe-vpcs --filters Name=tag:type,Values="pcfjump" | jq -r '.Vpcs[].VpcId')
-
-      if [ "${vpc}" == "" ]; then
-        vpc=$(aws ec2 --region=$AWS_REGION create-vpc --cidr-block 10.0.0.0/16 | jq -r '.Vpc.VpcId')
-        aws ec2 --region=$AWS_REGION create-tags --resources $vpc --tags Key=type,Value=pcfjump
-        messagePrint " - Creating VPC: $vpc" "10.0.0.0/16"
-      else
-        messagePrint " - Verify VPC: $vpc" "10.0.0.0/16"
-      fi
-
-      i=1
-      for zone in $(aws ec2 --region=$AWS_REGION describe-availability-zones | jq -r '.AvailabilityZones[].ZoneName'); do
-        sid=$(aws ec2 --region=$AWS_REGION describe-subnets --filters Name=tag:type,Values="pcfjump" \
-            Name=availability-zone,Values=$zone | jq -r '.Subnets[].SubnetId')
-        if [ "${sid}" == "" ]; then
-          sid=$(aws ec2 --region=$AWS_REGION create-subnet --vpc-id $vpc --availability-zone $zone \
-                        --cidr-block 10.0.$i.0/24 2>/dev/null | jq -r '.Subnet.SubnetId')
-          messagePrint " - Creating Subnet: $sid" "10.0.$i.0/16"
-          if [ "${sid}" == "" ]; then
-            echo "ERROR: Creating of default subnet in zone $zone failed"
-            echo "       => aws ec2 --region=$AWS_REGION create-subnet --vpc-id $vpc \\"
-            echo "                  --cidr-block 10.0.$i.0/24 --availability-zone $zone"; exit 1
-          fi
-        
-          aws ec2 --region=$AWS_REGION create-tags --resources $sid --tags Key=type,Value=pcfjump > /dev/null 2>&1
-          if [ $? -ne 0 ]; then
-            echo "ERROR: Creating of Tags failed"
-            echo "       => aws ec2 --region=$AWS_REGION create-tags --resources $sid --tags Key=type,Value=pcfjump"; exit 1
-          fi
-        else
-          messagePrint " - Verify Subnet: $sid" "10.0.$i.0/16"
-        fi
-      
-        let i=i+1
-      done
-
-      igw=$(aws ec2 --region=$AWS_REGION describe-internet-gateways --filters Name=tag:type,Values="pcfjump" | \
-        jq -r ".InternetGateways[].InternetGatewayId")
-      if [ "${igw}" == "" ]; then
-        igw=$(aws ec2 --region=$AWS_REGION create-internet-gateway | jq -r '.InternetGateway.InternetGatewayId')
-        messagePrint " - Creating Internet Gateway" "$igw"
-        if [ "${sid}" == "" ]; then
-          echo "ERROR: Creating of Internet Gateway failed"
-          echo "       => aws ec2 --region=$AWS_REGION create-internet-gateway"; exit 1
-        fi
-
-        aws ec2 --region=$AWS_REGION create-tags --resources $igw --tags Key=type,Value=pcfjump > /dev/null 2>&1
-        if [ $? -ne 0 ]; then
-          echo "ERROR: Creating of Tags failed"
-          echo "       => aws ec2 --region=$AWS_REGION create-tags --resources $sid --tags Key=type,Value=pcfjump"; exit 1
-        fi
-      else
-        messagePrint " - Verify Internet Gateway" "$igw"
-      fi
-
-      att=$(aws ec2 --region=$AWS_REGION describe-internet-gateways --filters Name=tag:type,Values="pcfjump" | \
-        jq -r ".InternetGateways[].Attachments[].VpcId")
-      if [ "${att}" == "" ]; then
-        aws ec2 --region=$AWS_REGION attach-internet-gateway --vpc-id $vpc --internet-gateway-id $igw > /dev/null 2>&1
-        messagePrint " - Attaching Internet Gateway" "$vpc"
-        if [ $? -ne 0 ]; then
-          echo "ERROR: Attaching Internet Gateway to VPC: $vpc failed"
-          echo "       => aws ec2 --region=$AWS_REGION attach-internet-gateway --vpc-id $vpc --internet-gateway-id $igw "; exit 1
-        fi
-      fi
-
-      # --- CREATE ROUTING TABLE ---
-      rtb=$(aws ec2 --region=$AWS_REGION describe-route-tables --filters Name=tag:type,Values="pcfjump" | \
-        jq -r ".RouteTables[].RouteTableId")
-      if [ "${rtb}" == "" ]; then
-        rtb=$(aws ec2 --region=$AWS_REGION create-route-table --vpc-id $vpc 2>/dev/null | jq -r '.RouteTable.RouteTableId')
-        messagePrint " - Creating Routing Table" "$igw"
-        if [ "${sid}" == "" ]; then
-          echo "ERROR: Creating of Routing Table failed"
-          echo "       => aws ec2 --region=$AWS_REGION create-route-table"; exit 1
-        fi
-
-        aws ec2 --region=$AWS_REGION create-tags --resources $rtb --tags Key=type,Value=pcfjump > /dev/null 2>&1
-        if [ $? -ne 0 ]; then
-          echo "ERROR: Creating of Tags failed"
-          echo "       => aws ec2 --region=$AWS_REGION create-tags --resources $rtb --tags Key=type,Value=pcfjump"; exit 1
-          exit 1
-        fi
-
-        aws ec2 --region=$AWS_REGION create-route --route-table-id $rtb --destination-cidr-block 0.0.0.0/0 --gateway-id $igw
-        if [ $? -ne 0 ]; then
-          echo "ERROR: Creating route failed"
-          echo "       => aws ec2 --region=$AWS_REGION create-route --route-table-id $rtb --destination-cidr-block 0.0.0.0/0 \\"
-          echo "                  --gateway-id $igw"
-          exit 1
-        fi
-      else
-        messagePrint " - Verify Internet Gateway" "$igw"
-      fi
-
-      for zone in $(aws ec2 --region=$AWS_REGION describe-availability-zones | jq -r '.AvailabilityZones[].ZoneName'); do
-        sid=$(aws ec2 --region=$AWS_REGION describe-subnets --filters Name=tag:type,Values="pcfjump" \
-            Name=availability-zone,Values=$zone | jq -r '.Subnets[].SubnetId')
-
-        messagePrint " - Associate Routing Table $rtb" "Subnet $sid"
-        aws ec2 --region=$AWS_REGION associate-route-table  --subnet-id $sid --route-table-id $rtb > /dev/null 2>&1
-        if [ $? -ne 0 ]; then
-          echo "ERROR: Associate Routing Table failed"
-          echo "       => aws ec2 --region=$AWS_REGION associate-route-table  --subnet-id $sid --route-table-id $rtb"
-          echo "-----------------------------------------------------------------------------------------------------------"
-          aws ec2 --region=$AWS_REGION associate-route-table  --subnet-id $sid --route-table-id $rtb
-          echo "-----------------------------------------------------------------------------------------------------------"
-        fi
-
-        aws ec2 --region=$AWS_REGION modify-subnet-attribute --subnet-id $sid --map-public-ip-on-launch > /dev/null 2>&1
-        if [ $? -ne 0 ]; then
-          echo "ERROR: Modify Routing Table attribut failed"
-          echo "       => aws ec2 --region=$AWS_REGION modify-subnet-attribute --subnet-id $sid --map-public-ip-on-launch"
-          echo "-----------------------------------------------------------------------------------------------------------"
-          aws ec2 --region=$AWS_REGION modify-subnet-attribute --subnet-id $sid --map-public-ip-on-launch
-          echo "-----------------------------------------------------------------------------------------------------------"
-        fi
-      done
-
-      # --- CREATE SECURITY GROUP ---
-      gid=$(aws ec2 --region=$AWS_REGION  describe-security-groups \
-                  --filters Name=vpc-id,Values=$vpc Name=group-name,Values=pcfjump-sg | jq -r ".SecurityGroups[].GroupId")
-      if [ "${gid}" == "" -o "${gid}" == "null" ]; then
-        gid=$(aws ec2 --region=$AWS_REGION create-security-group --group-name pcfjump-sg --vpc-id $vpc \
-                --description "PCF Jump Server" 2>/dev/null | jq -r ".GroupId")
-        messagePrint " - Creating Security Group (pcfjump-sg)" "$gid"
-        if [ "${gid}" == "" ]; then
-          echo "ERROR: Creating security Group failed"
-          echo "       => aws ec2 --region=$AWS_REGION create-security-group --group-name pcfjump-sg \\"
-          echo "                  --vpc-id $vpc --description \"PCF Jump Server\""; exit 1
-        fi
-  
-        messagePrint " - Creating Security Group Ingress for ssh" "Port: tcp/22 Cidr: 0.0.0.0/0"
-        aws ec2 --region=$AWS_REGION authorize-security-group-ingress --group-id $gid \
-                --protocol tcp --port 22 --cidr 0.0.0.0/0 > /dev/null 2>&1
-        if [ $? -ne 0 ]; then
-          echo "ERROR: Creating security Group ingress failed"
-          echo "       => aws ec2 --region=$AWS_REGION authorize-security-group-ingress --group-id $gid \\"
-          echo "                  --protocol tcp --port 22 --cidr 0.0.0.0/0"; exit 1
-        fi
-      else
-        messagePrint " - Verify Security Group (pcfjump-sg)" "$gid"
-      fi
-
-      aim=ami-0015c36f           # Amazon Linux  t2.nano
-      aim=ami-0085d4f8878cddc81  # Ubuntu Server t2.medium
-      aim=ami-0085d4f8878cddc81  # Ubuntu Server t2.micro
-      aim=ami-0085d4f8878cddc81  # Ubuntu Server t2.medium
-      aim=ami-075cd9bf9f73d75ca  # Ubuntu 18.04 LTS - Bionic
-      typ=t2.medium
-
-      messagePrint " - Create Instance" "$JUMP_HOST"
-
-      vpc=$(aws ec2 --region=$AWS_REGION describe-vpcs --filters Name=tag:type,Values="pcfjump" | jq -r '.Vpcs[].VpcId')
-      sgname=$(aws ec2 describe-security-groups --filter Name=vpc-id,Values=$vpc  \
-            Name=group-name,Values=pcfjump-sg --query 'SecurityGroups[*].[GroupId]' --output text)
-
-#echo "aws ec2 --region=$AWS_REGION run-instances --image-id $aim \
-#            --block-device-mapping DeviceName=/dev/sda1,Ebs={VolumeSize=30} \
-#            --instance-type $typ --key-name ${JUMP_HOST} --subnet-id $sid --security-group-ids $sgname \
-#            --tag-specifications 'ResourceType=instance,Tags=[{Key=Name,Value=$JUMP_HOST},{Key=type,Value=pcfjump}]'"
-      aws ec2 --region=$AWS_REGION run-instances --image-id $aim \
-            --block-device-mapping DeviceName=/dev/sda1,Ebs={VolumeSize=30} \
-            --instance-type $typ --key-name ${JUMP_HOST} --subnet-id $sid --security-group-ids $sgname \
-            --tag-specifications "ResourceType=instance,Tags=[{Key=Name,Value=$JUMP_HOST},{Key=type,Value=pcfjump}]" > /dev/null 2>&1
-      if [ $? -ne 0 ]; then
-        echo "ERROR: Creating of Instance failed 1"
-        echo "       => aws ec2 --region=$AWS_REGION run-instances --image-id $aim \\"
-        echo "                  --block-device-mapping DeviceName=/dev/sda1,Ebs={VolumeSize=30} \\"
-        echo "                  --instance-type $typ --key-name ${SSH_KEY_NAME} --subnet-id $sid \\"
-        echo "                  --tag-specifications 'ResourceType=instance,Tags=[{Key=Name,Value=$JUMP_HOST},{Key=type,Value=pcfjump}]'"
-        #echo "       => aws ec2 --region=$AWS_REGION run-instances --image-id $aim --security-groups pcfjump-sg \\"
-        #echo "                  --block-device-mapping DeviceName=/dev/sda1,Ebs={VolumeSize=30} \\"
-        #echo "                  --instance-type $typ --key-name ${SSH_KEY_NAME} --subnet-id $sid \\"
-        #echo "                  --tag-specifications 'ResourceType=instance,Tags=[{Key=type,Value=pcfjump}]'"
-        exit 1
-      else
-        sleep 20
-      fi
-
-      ins=$(aws ec2 --region=$AWS_REGION describe-instances --filters "Name=instance-state-name,Values=pending,running,stopped" \
-         Name=tag:Name,Values="$JUMP_HOST" | jq -r ".Reservations[].Instances[].InstanceId" | head -1)
-      stt=$(aws ec2 --region=$AWS_REGION describe-instances --instance-ids $ins | \
-         jq -r ".Reservations[].Instances[].State.Name")
-      dns=$(aws ec2 --region=$AWS_REGION describe-instances --instance-ids $ins | \
-         jq -r ".Reservations[].Instances[].PublicDnsName")
-      pip=$(aws ec2 --region=$AWS_REGION describe-instances --instance-ids $ins | \
-         jq -r ".Reservations[].Instances[].PublicIpAddress")
-
-      ZONE_ID=$(aws route53 list-hosted-zones-by-name --dns-name ${AWS_HOSTED_DNS_DOMAIN} | jq -r '.HostedZones[0].Id')
-      ZONE_ID_STR=$(echo "${ZONE_ID}" | awk -F'/' '{ print $NF }')
-      messagePrint " - DNS Zone (${AWS_HOSTED_DNS_DOMAIN}:" "zone managed by route53"
-      messagePrint " - Updating Zone Record for ($JUMP_HOST)" "$pip"
-
-      # --- UPDATE DNS DOMAIN ---
-      route53setDNSrecord "$pip" "$JUMP_HOST" "$AWS_HOSTED_DNS_DOMAIN"
-      route53setDNSrecord "$pip" "jump.$TDH_TKGMC_ENVNAME.$AWS_HOSTED_DNS_DOMAIN" "$TDH_TKGMC_ENVNAME.$AWS_HOSTED_DNS_DOMAIN"
-    else
-      messagePrint "Verify AWS Jump-Server" "$JUMP_HOST"
-    fi
-
-    stt=$(aws ec2 --region=$AWS_REGION describe-instances --instance-ids $ins | \
-      jq -r ".Reservations[].Instances[].State.Name")
-
-    messagePrint " - Verify Instance: $ins" "$stt"
-    if [ "${stt}" == "stopped" ]; then
-      messagePrint " - Starting Instance: $ins" "this can take several minutes"
-      aws ec2 --region=$AWS_REGION start-instances --instance-ids $ins > /dev/null 2>&1
- 
-      messagePrint " - Wait for SSH Daemon on jump-host to come online" "< 5min"
-      sleep 30
-    fi
-
-    ins=$(aws ec2 --region=$AWS_REGION describe-instances --filters "Name=instance-state-name,Values=pending,running,stopped" \
-       Name=tag:Name,Values="$JUMP_HOST" | jq -r ".Reservations[].Instances[].InstanceId" | head -1)
-    pip=$(aws ec2 --region=$AWS_REGION describe-instances --instance-ids $ins | \
-       jq -r ".Reservations[].Instances[].PublicIpAddress")
-    aip=$(route53getIPaddress $TDH_TKGMC_ENVNAME $AWS_HOSTED_DNS_DOMAIN)
-
-    # --- UPDATE DNS DOMAIN ---
-    if [ "${pip}" != "${aip}" ]; then
-      # --- UPDATE DNS DOMAIN ---
-      messagePrint " - DNS Zone (${AWS_HOSTED_DNS_DOMAIN}:" "zone managed by route53"
-      messagePrint " - Updating Zone Record for ($JUMP_HOST)" "$pip"
-      route53setDNSrecord "$pip" "$JUMP_HOST" "$AWS_HOSTED_DNS_DOMAIN"
-      messagePrint " - Updating Zone Record for (jump.$TDH_TKGMC_ENVNAME.$AWS_HOSTED_DNS_DOMAIN)" "$pip"
-      route53setDNSrecord "$pip" "jump.$TDH_TKGMC_ENVNAME.$AWS_HOSTED_DNS_DOMAIN" "$TDH_TKGMC_ENVNAME.$AWS_HOSTED_DNS_DOMAIN"
-    fi
-
-    sed -in "/$JUMP_HOST/d" ~/.ssh/known_hosts
-    SSH_USER=ubuntu
-    SSH_HOME=/home/ubuntu
-    SSH_HOST=$JUMP_HOST
-    SSH_OPTIONS="-o StrictHostKeyChecking=no -o RequestTTY=yes -o ServerAliveInterval=30"
-    SCP_OPTIONS="-o StrictHostKeyChecking=no"
-    SSH_COMMAND="ssh -q $SSH_OPTIONS -i ~/.ssh/${JUMP_HOST}.pem ${SSH_USER}@${SSH_HOST}"
-        SCP_COMMAND="scp -r $SCP_OPTIONS -i ~/.ssh/${JUMP_HOST}.pem"
-
   fi
 
   if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "vSphere" ]; then
@@ -1323,6 +1062,8 @@ else
   messagePrint " - Deployment File"        "$HOME/.tanzu-demo-hub/config/tkgmc-${TDH_TKGMC_NAME}.yaml"
   messagePrint " - Management Cluster"     "$TDH_TKGMC_NAME"
   messagePrint " - Cloud Infrastructure"   "$TDH_DEPLOYMENT_ENV_NAME"
+
+  mkdir -p $HOME/.tanzu/tkg/clusterconfigs
 
   DEPLOYMENT_FILE=${HOME}/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.cfg
   TKG_WC_CONFIG_DEV="$HOME/.tanzu/tkg/clusterconfigs/${TDH_TKGMC_NAME}-wc-dev.yaml"
