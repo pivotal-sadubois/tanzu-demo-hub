@@ -149,7 +149,7 @@ variable "instance_type" {
 variable "key_pair" {
   description = "SSH Key pair used to connect"
   type        = string
-  default     = "vmware-cloud-tmc"
+  default     = "tanzu-demo-hub"
 }
  
 variable "root_device_type" {
