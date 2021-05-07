@@ -590,7 +590,57 @@ checkCloudAccess() {
     fi
   fi
 
-  if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "vSphere" ]; then
+  if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "vSphere" -a "$TDH_TKGMC_CREATE_JUMPHOST" == "false" ]; then
+    if [ "${VSPHERE_VCENTER_ADMIN}" == "" -o "${VSPHERE_VCENTER_PASSWORD}" == "" -o "${VSPHERE_VCENTER_SERVER}" == "" -o \
+         "${VSPHERE_JUMPHOST_NAME}" == "" -o "${VSPHERE_JUMPHOST_USER}" == "" -o \
+         "${VSPHERE_SSH_PRIVATE_KEY_FILE}" == "" -o "${VSPHERE_SSH_PUBLIC_KEY_FILE}" == "" ]; then
+
+      missing_variables=1
+      echo ""
+      echo "  4MISSING ENVIRONMENT-VARIABES    DESCRIPTION        "
+      echo "  -------------------------------------------------------------------------------------------------------------------------------------------------------"
+
+      if [ "${VSPHERE_VCENTER_SERVER}" == "" ]; then
+        echo "  VSPHERE_VCENTER_SERVER           (required) vSphere Server Name"
+      fi
+
+      if [ "${VSPHERE_VCENTER_ADMIN}" == "" ]; then
+        echo "  VSPHERE_VCENTER_ADMIN            (required) vCenter Amdinistrator"
+      fi
+
+      if [ "${VSPHERE_VCENTER_PASSWORD}" == "" ]; then
+        echo "  VSPHERE_VCENTER_PASSWORD         (required) vCenter Admin Password"
+      fi
+
+      if [ "${VSPHERE_SSH_PRIVATE_KEY_FILE}" == "" ]; then
+        echo "  VSPHERE_SSH_PRIVATE_KEY_FILE     (required) SSH Private Key File"
+      fi
+
+      if [ "${VSPHERE_SSH_PUBLIC_KEY_FILE}" == "" ]; then
+        echo "  VSPHERE_SSH_PUBLIC_KEY_FILE      (required) SSH Public Key File"
+      fi
+
+      if [ "${VSPHERE_JUMPHOST_NAME}" == "" ]; then
+        echo "  VSPHERE_JUMPHOST_NAME            (required) vSphere Jump Host Name"
+      fi
+
+      if [ "${VSPHERE_JUMPHOST_USER}" == "" ]; then
+        echo "  VSPHERE_JUMPHOST_USER            (required) vSphere Jump Host User"
+      fi
+    else
+      echo "vSphere Access Credentials"
+      messagePrint " ▪ vCenter Server Name"                "$VSPHERE_VCENTER_SERVER"
+      messagePrint " ▪ vCenter Admin User"                 "$VSPHERE_VCENTER_ADMIN"
+      messagePrint " ▪ vCenter Admin Password"             $(maskPassword "$VSPHERE_VCENTER_PASSWORD")
+      messagePrint " ▪ Jump Host Name"                     "$VSPHERE_JUMPHOST_NAME"
+      messagePrint " ▪ Jump Host User"                     "$VSPHERE_JUMPHOST_USER"
+      messagePrint " ▪ SSH Private Key"                    "$VSPHERE_SSH_PRIVATE_KEY_FILE"
+      messagePrint " ▪ SSH Public Key"                     "$VSPHERE_SSH_PUBLIC_KEY_FILE"
+    fi
+
+  fi
+
+  if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "vSphere" -a "$TDH_TKGMC_CREATE_JUMPHOST" == "true" ]; then
     if [ "${VSPHERE_ADMIN}" == "" -o "${VSPHERE_PASSWORD}" == "" -o "${VSPHERE_SERVER}" == "" -o \
          "${VSPHERE_DATACENTER}" == "" -o "${VSPHERE_DATASTORE}" == "" -o "${VSPHERE_CLUSTER}" == "" -o \
          "${VSPHERE_SSH_PRIVATE_KEY_FILE}" == "" -o "${VSPHERE_SSH_PUBLIC_KEY_FILE}" == "" -o \
@@ -1063,7 +1113,7 @@ checkTDHAccess() {
 
     missing_variables=1
     echo ""
-    echo "  2MISSING ENVIRONMENT-VARIABES    DESCRIPTION        "
+    echo "  9MISSING ENVIRONMENT-VARIABES    DESCRIPTION        "
     echo "  -------------------------------------------------------------------------------------------------------------------------------------------------------"
 
     if [ "${PCF_PIVNET_TOKEN}" == "" ]; then
@@ -1119,6 +1169,21 @@ checkTDHAccess() {
       exit 1
     fi
 
+    if [ -d $HOME/.aws -a -f $HOME/.aws/credentials ]; then 
+      aky=$(egrep -c "$AWS_ACCESS_KEY" $HOME/.aws/credentials) 
+      sky=$(egrep -c "$AWS_SECRET_KEY" $HOME/.aws/credentials) 
+      if [ $aky -eq 0 -o $sky -eq 0 ]; then 
+        echo "ERROR: AWS_ACCESS_KEY and AWS_SECRET_KEY in ~/.tanzu-demo-hub.cfg do not match"
+        echo "       with the aws credentials defined in $HOME/.aws/credentials. Please configure manually"
+        echo "       => aws configure"
+        exit
+      fi
+    else
+      echo "ERROR: AWS Credentials not configured on local system, Please configure manually"
+      echo "       => aws configure"
+      exit
+    fi
+
     export AWS_HOSTED_ZONE_ID=$(aws route53 list-hosted-zones --query "HostedZones[?starts_with(to_string(Name), '${AWS_HOSTED_DNS_DOMAIN}.')]" | \
                         jq -r '.[].Id' | awk -F '/' '{ print $NF }')
     if [ $? -ne 0 -o "${AWS_HOSTED_ZONE_ID}" == "" ]; then
@@ -1128,10 +1193,6 @@ checkTDHAccess() {
     else
       messagePrint " ▪ AWS Route53 ZoneID"              "$AWS_HOSTED_ZONE_ID"
     fi
-
-    pslug="pivotal-container-service"; pver="1.5"
-    pslug="elastic-runtime"; pver="2.6.6"
-    pslug="elastic-runtime"; pver="467928"
   fi
 
   if [ ${missing_variables} -eq 1 ]; then
