@@ -542,8 +542,6 @@ checkCloudAccess() {
         echo "                                     eu-north-1a, eu-north-1b, eu-north-1c"
       fi
     else
-      TDH_MINIKUBE_PROFILE="tdh-minikube-${TDH_USER}"
-
       if [ -f ~/.minikube/profiles/$TDH_MINIKUBE_PROFILE/config.json ]; then 
         cpu=$(cat ~/.minikube/profiles/$TDH_MINIKUBE_PROFILE/config.json | jq -r '.CPUs')
         dsk=$(cat ~/.minikube/profiles/$TDH_MINIKUBE_PROFILE/config.json | jq -r '.DiskSize')
@@ -3241,7 +3239,7 @@ installSpringCloudGateway() {
   cnt=0; ret=1
   while [ $ret -ne 0 -a $cnt -lt 5 ]; do
     docker login $TDH_REGISTRY_VMWARE_NAME -u $TDH_REGISTRY_VMWARE_USER -p $TDH_REGISTRY_VMWARE_PASS > /dev/null 2>&1; ret=$?
-    sleep 10
+    sleep 60
     let cnt=cnt+1
   done
 
@@ -3715,12 +3713,14 @@ installBuildService() {
   fi
 
   kp clusterbuilder list > /dev/null 2>&1
-  [ $? -eq 0 ] && echo stt="successfuly installed" || stt="installed failed"
+  [ $? -eq 0 ] && stt="successfuly installed" || stt="installed failed"
   if [ $DEBUG -eq 1 ]; then
     messagePrint " - Verify Dependency Descriptors" "$stt"
     messageLine
     kp clusterbuilder list | sed '$d'
     messageLine
+  else
+    messagePrint " - Verify Dependency Descriptors" "$stt"
   fi
 
   uodateConfigMap tanzu-demo-hub TDH_SERVICE_BUILD_SERVICE          "true"
@@ -4347,7 +4347,7 @@ InstallHarborRegistry() {
     # --- WAIT FOR HARBOR TO COME ONLINE ---
     messagePrint " ▪ Verify Harbor Reistry Access" "$HARBOR_HOSTNAME"
     ret=1; cnt=0
-    while [ $ret -ne 0 -a $cnt -le 5 ]; do
+    while [ $ret -ne 0 -a $cnt -le 9 ]; do
       docker login $HARBOR_HOSTNAME -u admin -p $TDH_HARBOR_ADMIN_PASSWORD > /dev/null 2>&1; ret=$?
       sleep 60
       let cnt=cnt+1
@@ -5241,100 +5241,131 @@ verify_docker() {
 }
 
 tdh_tools_build() {
+  REBUILD_REQUIRED=0
   verify_docker
-  checkTDHenvironment
 
-  messageTitle "TDH Tools Docker Container"
+  messageTitle "TDH Tools Docker Container (tdh-tools)"
   TDH_DOCKER_FILES=/tmp/tdh-tools
   mkdir -p $TDH_DOCKER_FILES
   cp files/tdh-tools/Dockerfile     $TDH_DOCKER_FILES
   cp files/tdh-tools/wrapdocker     $TDH_DOCKER_FILES
+  cp files/tdh-tools/tmc            $TDH_DOCKER_FILES
+  DOCKER_CHKSUM=$(sum $TDHPATH/files/tdh-tools/Dockerfile | awk '{ print $1 }')
+  DOCKER_IMAGE_LATEST_ID=$(docker images | egrep "^tdh-tools" | grep "latest" | awk '{ print $3 }')
+  DOCKER_IMAGE_ID=$(docker images | egrep "^tdh-tools" | grep "CHKSUM" | grep "$DOCKER_IMAGE_LATEST_ID" | awk '{ print $3 }')
+  DOCKER_IMAGE_CHKSUM=$(docker images | egrep "^tdh-tools" | grep "CHKSUM" | grep "$DOCKER_IMAGE_LATEST_ID" | awk '{ print $2 }' | sed 's/CHKSUM-//g')
 
-  if [ ! -f $TDH_DOCKER_FILES/kubectl ]; then
-    curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
-    chmod a+x kubectl
-    mv kubectl $TDH_DOCKER_FILES/kubectl
+  #messagePrint " ▪ Docker Image (tdh-tools) Name / ID"                  "tdh-tools:latest / $DOCKER_IMAGE_LATEST_ID"
+
+  cnt=$(docker images | egrep -c "^tdh-tools") 
+  if [ $cnt -gt 0 ]; then 
+    if [ "$DOCKER_IMAGE_CHKSUM" == "$DOCKER_CHKSUM" ]; then 
+      messagePrint " ▪ Dockerfile Checksum (files/tdh-tools/Dockerfile)"  "$DOCKER_CHKSUM"
+      messagePrint " ▪ Docker Image (tdh-tools) Checksum"                 "$DOCKER_IMAGE_CHKSUM => No Rebuild required"
+    else
+      messagePrint " ▪ Dockerfile Checksum (files/tdh-tools/Dockerfile)"  "$DOCKER_CHKSUM"
+      messagePrint " ▪ Docker Image (tdh-tools) Checksum"                 "$DOCKER_IMAGE_CHKSUM => Rebuild required"
+      REBUILD_REQUIRED=1
+
+      docker image rm $DOCKER_IMAGE_ID -f > /dev/null 2>&1
+    fi
+  else
+    messagePrint " ▪ Docker Image (tdh-tools:latest) Not available"       "Initial Build"
+    REBUILD_REQUIRED=1
   fi
 
-  if [ ! -f $TDH_DOCKER_FILES/tanzu-cli-bundle-linux* ]; then
-    . ~/.tanzu-demo-hub.cfg
-    export VMWUSER="$TDH_MYVMWARE_USER"
-    export VMWPASS="$TDH_MYVMWARE_PASS"
-    /tmp/vmw-cli ls vmware_tanzu_kubernetes_grid > /dev/null 2>&1
+  if [ $REBUILD_REQUIRED -gt 0 ]; then 
+    if [ ! -f $TDH_DOCKER_FILES/kubectl ]; then
+      curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+      chmod a+x kubectl
+      mv kubectl $TDH_DOCKER_FILES/kubectl
+    fi
   
-    cnt=0
-    vmwfile=$(/tmp/vmw-cli ls vmware_tanzu_kubernetes_grid 2>/dev/null | egrep "^tanzu-cli-bundle-linux" | tail -1 | awk '{ print $1 }')
-    while [ "$vmwfile" == "" -a $cnt -lt 5 ]; do
-      vmwfile=$(/tmp/vmw-cli ls vmware_tanzu_kubernetes_grid 2>/dev/null | egrep "^tanzu-cli-bundle-linux" | tail -1 | awk '{ print $1 }')
-      let cnt=cnt+1
-      sleep 10
-    done
+    if [ ! -f $TDH_DOCKER_FILES/tanzu-cli-bundle-linux* ]; then
+      . ~/.tanzu-demo-hub.cfg
 
-    messagePrint " ▪ Downloading Tanzu CLI Bundle" "$TDH_DOCKER_FILES/$vmwfile"
-
-    if [ "$vmwfile" == "" ]; then
-      echo "ERROR: failed to download $vmwfile"
-      echo "       => export VMWUSER=\"$TDH_MYVMWARE_USER\""
-      echo "       => export VMWPASS=\"$TDH_MYVMWARE_PASS\""
-      echo "       => vmw-cli ls vmware_tanzu_kubernetes_grid"
-      exit 1
-    else
+      checkTDHenvironment
+      export VMWUSER="$TDH_MYVMWARE_USER"
+      export VMWPASS="$TDH_MYVMWARE_PASS"
+      /tmp/vmw-cli ls vmware_tanzu_kubernetes_grid > /dev/null 2>&1
+    
       cnt=0
-      while [ ! -f "$vmwfile" -a $cnt -lt 10 ]; do
-        /tmp/vmw-cli ls vmware_tanzu_kubernetes_grid > /dev/null 2>&1
-        /tmp/vmw-cli cp $vmwfile > /dev/null 2>&1
-         let cnt=cnt+1
-        sleep 30
+      vmwfile=$(/tmp/vmw-cli ls vmware_tanzu_kubernetes_grid 2>/dev/null | egrep "^tanzu-cli-bundle-linux" | tail -1 | awk '{ print $1 }')
+      while [ "$vmwfile" == "" -a $cnt -lt 5 ]; do
+        vmwfile=$(/tmp/vmw-cli ls vmware_tanzu_kubernetes_grid 2>/dev/null | egrep "^tanzu-cli-bundle-linux" | tail -1 | awk '{ print $1 }')
+        let cnt=cnt+1
+        sleep 10
       done
   
-      if [ ! -f $vmwfile ]; then
+      messagePrint " ▪ Downloading Tanzu CLI Bundle" "$TDH_DOCKER_FILES/$vmwfile"
+  
+      if [ "$vmwfile" == "" ]; then
         echo "ERROR: failed to download $vmwfile"
         echo "       => export VMWUSER=\"$TDH_MYVMWARE_USER\""
         echo "       => export VMWPASS=\"$TDH_MYVMWARE_PASS\""
         echo "       => vmw-cli ls vmware_tanzu_kubernetes_grid"
-        echo "       => vmw-cli cp $vmwfile"
         exit 1
       else
-        mv $vmwfile $TDH_DOCKER_FILES
+        cnt=0
+        while [ ! -f "$vmwfile" -a $cnt -lt 10 ]; do
+          /tmp/vmw-cli ls vmware_tanzu_kubernetes_grid > /dev/null 2>&1
+          /tmp/vmw-cli cp $vmwfile > /dev/null 2>&1
+           let cnt=cnt+1
+          sleep 30
+        done
+    
+        if [ ! -f $vmwfile ]; then
+          echo "ERROR: failed to download $vmwfile"
+          echo "       => export VMWUSER=\"$TDH_MYVMWARE_USER\""
+          echo "       => export VMWPASS=\"$TDH_MYVMWARE_PASS\""
+          echo "       => vmw-cli ls vmware_tanzu_kubernetes_grid"
+          echo "       => vmw-cli cp $vmwfile"
+          exit 1
+        else
+          mv $vmwfile $TDH_DOCKER_FILES
+        fi
       fi
+    else
+      vmwfile=$(ls -1 $TDH_DOCKER_FILES/tanzu-cli-bundle-linux* 2>/dev/null | awk -F'/' '{ print $NF }' | head -1)
     fi
-  else
-    vmwfile=$(ls -1 $TDH_DOCKER_FILES/tanzu-cli-bundle-linux* 2>/dev/null | awk -F'/' '{ print $NF }' | head -1)
-  fi
-
-  # --- CLEANUP SOME DISK SPACE ---
-  messagePrint " ▪ Cleanup unsued Docker images" "docker system prune, docker container prune"
-  docker rmi $(docker images -q) > /dev/null 2>&1
-  docker rm -v $(docker ps -qa) > /dev/null 2>&1
-  docker container prune -f > /dev/null 2>&1
-  docker system prune -f > /dev/null 2>&1
-
-  messagePrint " ▪ Building TDH Tools docker container" "tdh-tools:v0.1"
-  docker build -q -t tdh-tools:v0.1 \
-    --build-arg UID=$(id -u) \
-    --build-arg GID=$(id -g) \
-    --build-arg USER=$USER \
-    --build-arg HOME=$HOME \
-    --build-arg TANZU_CLI=$vmwfile \
-    --build-arg TANZU_DEMO_HUB=$TANZU_DEMO_HUB \
-    --build-arg TDHPATH=$TDHPATH \
-    --build-arg TZ=$(ls -l /etc/localtime | /usr/bin/cut -d '/' -f 8,9) $TDH_DOCKER_FILES > /dev/null 2>&1; ret=$?
-
-  if [ $ret -ne 0 ]; then 
-    echo "ERROR: failed to create tdh-tools container"
-    echo "       => docker build -q -t tdh-tools:v0.1 \\"
-    echo "             --build-arg UID=$(id -u) \\"
-    echo "             --build-arg GID=$(id -g) \\"
-    echo "             --build-arg USER=$USER \\"
-    echo "             --build-arg HOME=$HOME \\"
-    echo "             --build-arg TANZU_CLI=$vmwfile \\"
-    echo "             --build-arg TDHPATH=$TDHPATH \\"
-    echo "             --build-arg TZ=$(ls -l /etc/localtime | /usr/bin/cut -d '/' -f 8,9) $TDH_DOCKER_FILES"
-    exit 1
+  
+    # --- CLEANUP SOME DISK SPACE ---
+    messagePrint " ▪ Cleanup unsued Docker images" "docker system prune, docker container prune"
+    docker rmi $(docker images -q) > /dev/null 2>&1
+    docker rm -v $(docker ps -qa) > /dev/null 2>&1
+    docker container prune -f > /dev/null 2>&1
+    docker system prune -f > /dev/null 2>&1
+  
+    messagePrint " ▪ Building TDH Tools docker container" "tdh-tools:CHKSUM-$DOCKER_CHKSUM"
+    docker build -q -t tdh-tools:CHKSUM-$DOCKER_CHKSUM \
+      --build-arg UID=$(id -u) \
+      --build-arg GID=$(id -g) \
+      --build-arg USER=$USER \
+      --build-arg HOME=$HOME \
+      --build-arg TANZU_CLI=$vmwfile \
+      --build-arg TANZU_DEMO_HUB=$TANZU_DEMO_HUB \
+      --build-arg TDHPATH=$TDHPATH \
+      --build-arg TZ=$(ls -l /etc/localtime | /usr/bin/cut -d '/' -f 8,9) $TDH_DOCKER_FILES > /dev/null 2>&1; ret=$?
+  
+    if [ $ret -ne 0 ]; then 
+      echo "ERROR: failed to create tdh-tools container"
+      echo "       => docker build -q -t tdh-tools:CHKSUM-$DOCKER_CHKSUM \\"
+      echo "             --build-arg UID=$(id -u) \\"
+      echo "             --build-arg GID=$(id -g) \\"
+      echo "             --build-arg USER=$USER \\"
+      echo "             --build-arg HOME=$HOME \\"
+      echo "             --build-arg TANZU_CLI=$vmwfile \\"
+      echo "             --build-arg TDHPATH=$TDHPATH \\"
+      echo "             --build-arg TZ=$(ls -l /etc/localtime | /usr/bin/cut -d '/' -f 8,9) $TDH_DOCKER_FILES"
+      exit 1
+    fi
+  
+    messagePrint " ▪ Create Tag (latest) for  TDH Tools docker container" "tdh-tools:latest"
+    docker tag tdh-tools:CHKSUM-$DOCKER_CHKSUM tdh-tools:latest
   fi
 }
 
-
+  
 
 
 

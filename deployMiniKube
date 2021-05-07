@@ -8,12 +8,12 @@
 
 export TANZU_DEMO_HUB=$(cd "$(pwd)/$(dirname $0)"; pwd)
 export TDHPATH=$(cd "$(pwd)/$(dirname $0)"; pwd)
-export DEBUG=1
-export START_COMMAND="$*"
-
-export K8S_CLEAN_DEPLOYMENT=false
-
 export DEBUG=0
+export NATIVE=0                ## NATIVE=1 r(un on local host), NATIVE=0 (run within docker)
+export START_COMMAND="$*"
+export K8S_CLEAN_DEPLOYMENT=false
+export CMD_EXEC=$(basename $0)
+export CMD_ARGS=$*
 
 . $TANZU_DEMO_HUB/functions
 
@@ -36,17 +36,13 @@ usage() {
   echo "USAGE: $0 [options] -d <deployment> [--clean|--debug]"
 }
 
-echo ""
-echo "Tanzu Demo Hub - Deploy MiniKube cluster"
-echo "by Sacha Dubois, VMware Inc,"
-echo "-----------------------------------------------------------------------------------------------------------"
-
 while [ "$1" != "" ]; do
   case $1 in
     -d)            K8S_DEPLOYMENT=$2;;
     --clean)       K8S_CLEAN_DEPLOYMENT=true;;
     --clean-cert)  K8S_CLEAN_CERTIFICATES=true;;
     --debug)       DEBUG=1;;
+    --native)      NATIVE=1;;
   esac
   shift
 done
@@ -69,117 +65,6 @@ fi
 if [ -f ~/.tanzu-demo-hub.cfg ]; then
   . ~/.tanzu-demo-hub.cfg
 fi
-
-InstallContour_delete_me() {
-  if [ "$TDH_SERVICE_INGRESS_CONTOUR" != "true" ]; then
-    uodateConfigMap tanzu-demo-hub TDH_INGRESS_CONTOUR_ENABLED        "false"
-    return
-  fi
-
-  NAMESPACE=ingress-contour
-  
-  kubectl get ns $NAMESPACE > /dev/null 2>&1
-  if [ $? -ne 0 ]; then
-    # --- INSTALL CONTOUR INGRESS ---
-    messageTitle "Install Ingress Contour"
-    kubectl create ns $NAMESPACE > /dev/null 2>&1
-    helm repo add bitnami https://charts.bitnami.com/bitnami > /dev/null 2>&1
-    #helm install ingress bitnami/contour -n $NAMESPACE --version 3.3.1 > /dev/null 2>&1
-    helm install ingress bitnami/contour -n $NAMESPACE  > /dev/null 2>&1
-    if [ $? -ne 0 ]; then
-      echo "ERROR: failed to install bitnami/contour"
-      echo "       => helm install ingress bitnami/contour -n $NAMESPACE --version 3.3.1"
-      exit
-    fi
-
-    cnt=0
-    while [ $cnt -eq 0 ]; do
-      cnt=$(kubectl get pods -n ingress-contour | sed 1d | grep -vc Running)
-      if [ $cnt -eq 0 ]; then cnt=1; fi
-      sleep 5
-    done
-  fi
-
-  ver=$(helm -n $NAMESPACE ls -o json | jq -r '.[].app_version')
-  crt=$(helm -n $NAMESPACE ls -o json | jq -r '.[].chart')
-  stt=$(helm -n $NAMESPACE ls -o json | jq -r '.[].status')
-  dat=$(helm -n $NAMESPACE ls -o json | jq -r '.[].updated')
-
-  messageTitle "Verify Ingress Contour"
-  messagePrint " ▪ Ingress Contour Namespace:"         "$NAMESPACE"
-  messagePrint " ▪ Ingress Contour Helm Chart:"        "$crt"
-  messagePrint " ▪ Ingress Contour Version:"           "$ver"
-  messagePrint " ▪ Ingress Contour Status:"            "$stt"
-  messagePrint " ▪ Ingress Contour Installed/Updated:" "$dat"
-
-  # --- VERIFY DNS DOMAIN ---
-  verifyHostedZone ${TDH_ENVNAME}.$AWS_HOSTED_DNS_DOMAIN
-
-  # --- SET DNS RECORD ---
-  ipa=$(kubectl describe svc ingress-contour-envoy --namespace ingress-contour | grep Ingress | awk '{print $3}')
-  setDNSrecord "$ipa" "${TDH_ENVNAME}" "${AWS_HOSTED_DNS_DOMAIN}" "*.apps-contour" "A"
-
-  # --- STORE SETTINGS IN CONFIGMAP ---
-  uodateConfigMap tanzu-demo-hub TDH_INGRESS_CONTOUR_ENABLED        "true"
-  uodateConfigMap tanzu-demo-hub TDH_INGRESS_CONTOUR_LB_IP          "$ipa"
-  uodateConfigMap tanzu-demo-hub TDH_INGRESS_CONTOUR_LB_DOMAIN      "apps-contour.$TDH_ENVNAME.$AWS_HOSTED_DNS_DOMAIN"
-  uodateConfigMap tanzu-demo-hub TDH_INGRESS_CONTOUR_NAMESPACE      "$NAMESPACE"
-  uodateConfigMap tanzu-demo-hub TDH_INGRESS_CONTOUR_CHART_NAME     "$crt"
-  uodateConfigMap tanzu-demo-hub TDH_INGRESS_CONTOUR_CHART_VERSION  "$ver"
-  uodateConfigMap tanzu-demo-hub TDH_INGRESS_CONTOUR_CHART_STATUS   "$stt"
-  uodateConfigMap tanzu-demo-hub TDH_INGRESS_CONTOUR_CHART_UPDATE   "$dat"
-}
-
-InstallCertManager_delete_me() {
-  NAMESPACE=cert-manager 
-
-  kubectl get ns $NAMESPACE > /dev/null 2>&1
-  if [ $? -ne 0 ]; then 
-    # --- INSTALL CONTOUR INGRESS ---
-    messageTitle "Install Cert Manager"
-
-    kubectl create ns $NAMESPACE > /dev/null 2>&1
-    helm repo add jetstack https://charts.jetstack.io -n $NAMESPACE > /dev/null 2>&1
-    #helm install cert-manager jetstack/cert-manager --namespace cert-manager \
-    #   --version v1.0.2 --set installCRDs=true > /dev/null 2>&1
-
-    helm install cert-manager jetstack/cert-manager -n cert-manager --version v1.1.0 --set installCRDs=true > /dev/null 2>&1
-    if [ $? -ne 0 ]; then  
-      echo "ERROR: failed to install jetstack/cert-manager "
-      echo "       => helm install cert-manager jetstack/cert-manager --namespace cert-manager \\"
-      echo "          --version v1.1.0 --set installCRDs=true"
-      exit
-    fi
-
-    cnt=0
-    while [ $cnt -eq 0 ]; do
-      cnt=$(kubectl get pods -n $NAMESPACE | sed 1d | grep -vc Running)
-      if [ $cnt -eq 0 ]; then cnt=1; fi
-
-      sleep 5
-    done
-  fi
-
-  ver=$(helm -n cert-manager ls -o json | jq -r '.[].app_version')
-  crt=$(helm -n cert-manager ls -o json | jq -r '.[].chart')
-  stt=$(helm -n cert-manager ls -o json | jq -r '.[].status')
-  dat=$(helm -n cert-manager ls -o json | jq -r '.[].updated')
-
-  messageTitle "Verify Cert Manager"
-  messagePrint " ▪ Cert Manager Namespace:"         "$NAMESPACE"
-  messagePrint " ▪ Cert Manager Helm Chart:"        "$crt"
-  messagePrint " ▪ Cert Manager Version:"           "$ver"
-  messagePrint " ▪ Cert Manager Status:"            "$stt"
-  messagePrint " ▪ Cert Manager Installed/Updated:" "$dat"
-    
-  # --- STORE SETTINGS IN CONFIGMAP ---
-  uodateConfigMap tanzu-demo-hub TDH_CERTMANAGER_ENABLED        "true"
-  uodateConfigMap tanzu-demo-hub TDH_CERTMANAGER_NAMESPACE      "$NAMESPACE"
-  uodateConfigMap tanzu-demo-hub TDH_CERTMANAGER_CHART_NAME     "$crt"
-  uodateConfigMap tanzu-demo-hub TDH_CERTMANAGER_CHART_VERSION  "$ver"
-  uodateConfigMap tanzu-demo-hub TDH_CERTMANAGER_CHART_STATUS   "$stt"
-  uodateConfigMap tanzu-demo-hub TDH_CERTMANAGER_CHART_UPDATE   "$dat"
-}
 
 InstallMetallb() {
   adr=$(kubectl get configmap config -n metallb-system -o json 2> /dev/null | jq -r '.data.config' | egrep "[0-9]-[0-9]" | awk '{ print $2 }') 
@@ -241,8 +126,6 @@ createClusterIssuer_delete_me() {
                         jq -r '.[].Id' | awk -F '/' '{ print $NF }')
     HARBOR_HOSTNAME="harbor.apps-contour.$TDH_ENVNAME.$AWS_HOSTED_DNS_DOMAIN"
     NOTARY_HOSTNAME="notary.apps-contour.$TDH_ENVNAME.$AWS_HOSTED_DNS_DOMAIN"
-echo "HARBOR_HOSTNAME:$HARBOR_HOSTNAME"
-echo "NOTARY_HOSTNAME:$NOTARY_HOSTNAME"
 
     messageTitle "Create LetsEnscript ClusterIssuer"
     messagePrint " ▪ LetsEnscript Issuer Name"         "$TDH_TLS_ISSUER_NAME"
@@ -528,7 +411,7 @@ InstallHarborRegistry_delete_me() {
 }
 
 cleanUPNamespace() {
-  messagePrint "Delete Namespace" "$1"
+  messagePrint " ▪ Delete Namespace" "$1"
 
   kubectl delete ns $1 >/dev/null 2>&1
 }
@@ -554,7 +437,7 @@ if [ "$K8S_CLEAN_DEPLOYMENT" == "true" ]; then
   cleanUPNamespace registry-harbor
   cleanUPNamespace cert-manager
 
-  messagePrint "Delete ClusterIssuer" "$TDH_TLS_ISSUER_NAME"
+  messagePrint " ▪ Delete ClusterIssuer" "$TDH_TLS_ISSUER_NAME"
   kubectl delete clusterissuer $TDH_TLS_ISSUER_NAME -n kube-system > /dev/null 2>&1
   #kubectl delete crd extensionservices.projectcontour.io 
   #kubectl delete crd httpproxies.projectcontour.io 
@@ -571,18 +454,46 @@ if [ "$K8S_CLEAN_DEPLOYMENT" == "true" ]; then
   exit
 fi
 
-# --- VERIFY TOOLS AND ACCESS ---
-checkCLIcommands TOOLS
-checkCLIcommands TKG
-checkCloudAccess
+# --- SET MINIKUBE PROFILE ---
+TDH_MINIKUBE_PROFILE="tdh-minikube-${TDH_USER}"
 
-# --- CLEANUP KUNECONFIG ---
-cleanKubeconfig
+if [ ! -f /tdh_tools_docker_container  ]; then
+  echo ""
+  echo "Tanzu Demo Hub - Deploy MiniKube cluster"
+  echo "by Sacha Dubois, VMware Inc,"
+  echo "-----------------------------------------------------------------------------------------------------------"
 
-# --- MINIKUBE SETUP ----
-VerifyK8SDemoPlatform
-InstallMetallb
-checkTDHAccess
+
+  # --- MINIKUBE SETUP ----
+  VerifyK8SDemoPlatform
+  InstallMetallb
+  checkTDHAccess
+
+  # --- CLEANUP KUNECONFIG ---
+  cleanKubeconfig
+  checkCloudAccess
+
+  if [ $NATIVE -eq 0 ]; then
+    tdh_tools_build
+
+    messagePrint " ▪ Running TDH Tools Docker Container" "tdh-tools:latest $TDHPATH/$CMD_EXEC $CMD_ARGS"
+
+    mkdir -p $HOME/.mc $HOME/.cache $HOME/.config $HOME/.local
+    mkdir -p /tmp/docker && chmod a+w /tmp/docker
+    docker run -u $(id -u):$(id -g) --group-add 0 -it --rm --name tdh-tools \
+       -v $HOME:$HOME:ro -v $HOME/.local:$HOME/.local:rw -v $HOME/.tanzu-demo-hub:$HOME/.tanzu-demo-hub:rw \
+       -v /var/run/docker.sock:/var/run/docker.sock -v $HOME/.cache:$HOME/.cache:rw -v $HOME/.config:$HOME/.config:rw \
+       -v /tmp:/tmp:rw -v /tmp/docker:$HOME/.docker:rw -v $HOME/.mc:$HOME/.mc:rw \
+       -e "KUBECONFIG=$HOME/.kube/config" --hostname tdh-tools tdh-tools:latest $TDHPATH/$CMD_EXEC $CMD_ARGS
+
+    # --- FINISH CURRENT SESSION AS WE RUN AS CONTAINER ---
+    exit 0
+  else 
+    # --- VERIFY TOOLS AND ACCESS ---
+    checkCLIcommands TOOLS
+    checkCLIcommands TKG
+  fi
+fi
 
 uodateConfigMap tanzu-demo-hub TDH_DOMAIN               $AWS_HOSTED_DNS_DOMAIN 
 uodateConfigMap tanzu-demo-hub TDH_ENVNAME              $TDH_ENVNAME
@@ -597,24 +508,25 @@ InstallHarborRegistry
 getRootCA tanzu-demo-hub-tls
 installBuildService
 installTanzuDataPostgres
-installSpringCloudGateway
+#installSpringCloudGateway
 installMinio
 
 if [ "$TDH_TANZU_MISSION_CONTROL_REGISTRATION" == "true" ]; then 
   cnt=$(tmc cluster list --name $TDH_MINIKUBE_PROFILE 2>/dev/null | grep -c $TDH_MINIKUBE_PROFILE)
   if [ $cnt -eq 0 ]; then
-    tmc cluster attach --name $TDH_MINIKUBE_PROFILE --kubeconfig /Users/sdu/.kube/config -p attached -m attached > /dev/null 2>&1
-    if [ $? -ne 0 ]; then 
+    tmc cluster attach --name $TDH_MINIKUBE_PROFILE --kubeconfig /Users/sdu/.kube/config -p attached -m attached > /dev/null 2>&1; ret=$?
+    if [ $ret -ne 0 ]; then 
       tmc cluster delete $TDH_MINIKUBE_PROFILE -p attached -m attached > /dev/null 2>&1
   
       # --- WAIT FOR THE CLUSTER TO BE DELETED ---
-      cnt=$(tmc cluster list --name $TDH_MINIKUBE_PROFILE 2>/dev/null | grep -c $TDH_MINIKUBE_PROFILE) 
+      cnt=1
       while [ $cnt -ne 0 ]; do
+        cnt=$(tmc cluster list --name $TDH_MINIKUBE_PROFILE 2>/dev/null | grep -c $TDH_MINIKUBE_PROFILE) 
         sleep 20
       done
   
-      tmc cluster attach --name $TDH_MINIKUBE_PROFILE --kubeconfig /Users/sdu/.kube/config -p attached -m attached > /dev/null 2>&1
-      if [ $? -ne 0 ]; then 
+      tmc cluster attach --name $TDH_MINIKUBE_PROFILE --kubeconfig /Users/sdu/.kube/config -p attached -m attached > /dev/null 2>&1; ret=$?
+      if [ $ret -ne 0 ]; then 
         echo "ERROR: TMC failed to attach cluster"
         echo "       => tmc cluster reattach --name $TDH_MINIKUBE_PROFILE --kubeconfig /Users/sdu/.kube/config -p attached -m attached "
         exit
