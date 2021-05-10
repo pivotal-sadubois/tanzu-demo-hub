@@ -18,14 +18,14 @@ else
   exit 1
 fi
 
-if [ ! -f /usr/local/bin/vmw-cli ]; then
+if [ ! -s /usr/local/bin/vmw-cli ]; then
   messagePrint " - Install Package (vmw-cli)" "installing"
   docker run apnex/vmw-cli shell > vmw-cli 2>/dev/null
   mv vmw-cli /usr/local/bin
   chmod 755 /usr/local/bin/vmw-cli
 fi
 
-if [ ! -f /usr/local/bin/tanzu ]; then
+if [ ! -s /usr/local/bin/tanzu ]; then
   messagePrint " - Install Tanzu CLI" "installing"
   . ~/.tanzu-demo-hub.cfg
   export VMWUSER="$TDH_MYVMWARE_USER"
