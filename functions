@@ -1498,7 +1498,6 @@ configureJumpHost() {
 
     sleep 20
   fi
-exit
 
   # --- COPY THE AWS DIRECTORY ---
   $SCP_COMMAND -r ~/.aws ${SSH_USER}@${SSH_HOST}:$SSH_HOME > /dev/null 2>&1
