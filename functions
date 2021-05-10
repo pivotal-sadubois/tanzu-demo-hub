@@ -1475,7 +1475,6 @@ configureJumpHost() {
   # --- TEST FOR RUNNING REMOTE SCRIPT ---
   stt=$($SSH_COMMAND -n "[ -f /tmp/tanzu-demo-hub.pid ] && pgrep -F /tmp/tanzu-demo-hub.pid")
   stt=$($SSH_COMMAND -n "[ -f /jump_software_installed ] && echo true")
-echo "STT:$stt"
   if [ "${stt}" == "" ]; then
     messageTitle "Install CLI Utilities (aws,az,gcp,bosh,pivnet,cf,om,jq) on Jump Host (jump.${TDH_TKGMC_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN})"
     $SSH_COMMAND -n "[ -d $SSH_HOME/tanzu-demo-hub ] && chmod a+x ${TDHHOME}/scripts/InstallUtilities.sh && \
