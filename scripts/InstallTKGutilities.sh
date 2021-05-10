@@ -21,6 +21,12 @@ fi
 if [ ! -s /usr/local/bin/vmw-cli ]; then
   messagePrint " - Install Package (vmw-cli)" "installing"
   docker run apnex/vmw-cli shell > vmw-cli 2>/dev/null
+  if [ $? -ne 0 ]; then 
+    echo "ERROR: faileed to run vmw-cli docker container"
+    echo "       => docker run apnex/vmw-cli shell > vmw-cli"
+    exit 1
+  fi
+
   mv vmw-cli /usr/local/bin
   chmod 755 /usr/local/bin/vmw-cli
 fi
