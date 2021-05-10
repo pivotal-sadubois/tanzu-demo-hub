@@ -173,10 +173,10 @@ messagePrint() {
 
 sshEnvironment() {
   if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "vSphere" ]; then
-    JUMP_HOST="${TDH_TKGMC_VCENTER_JUMPHOST}"
+    JUMP_HOST="${VSPHERE_JUMPHOST_NAME}"
 
-    SSH_USER=ubuntu
-    SSH_HOME=/home/ubuntu
+    SSH_USER=$VSPHERE_JUMPHOST_USER
+    SSH_HOME=/home/$SSH_USER
     SSH_PRIVATE_KEY=~/.tanzu-demo-hub/KeyPair-Azure.pem
     SSH_PRIVATE_KEY=$VSPHERE_SSH_PRIVATE_KEY_FILE
     SSH_HOST=$JUMP_HOST
@@ -186,8 +186,7 @@ sshEnvironment() {
     SCP_OPTIONS="-o StrictHostKeyChecking=no"
     SSH_COMMAND="ssh -q $SSH_OPTIONS -i ${SSH_PRIVATE_KEY} ${SSH_USER}@${SSH_HOST}"
     SCP_COMMAND="scp -i ${SSH_PRIVATE_KEY} -r $SCP_OPTIONS"
-    SSH_DISPLAY="ssh $SSH_OPTIONS -i ${SSH_PRIVATE_KEY} ${SSH_USER}@${SSH_HOST}"
-
+    SSH_DISPLAY="ssh -i ${SSH_PRIVATE_KEY} ${SSH_USER}@${SSH_HOST}"
   fi
 
   if [ "${TDH_DEPLOYMENT_CLOUD}" == "Azure" -o "${TDH_TKGMC_INFRASTRUCTURE}" == "Azure" ]; then
@@ -638,7 +637,7 @@ checkCloudAccess() {
 
   fi
 
-  if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "vSphere" -a "$TDH_TKGMC_CREATE_JUMPHOST" == "true" ]; then
+  if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "vSphere" -a "$TDH_TKGMC_CREATE_JUMPHOST" == "true1" ]; then
     if [ "${VSPHERE_ADMIN}" == "" -o "${VSPHERE_PASSWORD}" == "" -o "${VSPHERE_SERVER}" == "" -o \
          "${VSPHERE_DATACENTER}" == "" -o "${VSPHERE_DATASTORE}" == "" -o "${VSPHERE_CLUSTER}" == "" -o \
          "${VSPHERE_SSH_PRIVATE_KEY_FILE}" == "" -o "${VSPHERE_SSH_PUBLIC_KEY_FILE}" == "" -o \
@@ -1429,7 +1428,7 @@ configureLDAP() {
 } 
 
 configureJumpHost() {
-  messagePrint "Configure Jump Server" "$SSH_HOST"
+  messageTitle "Configure Jump Server: $SSH_HOST"
 
   # --- WAIT UNTIL SSH DEAMON IS READY NO JUMPHOST ----
   ret=1
@@ -1441,15 +1440,36 @@ configureJumpHost() {
   GITTDH="https://github.com/pivotal-sadubois/tanzu-demo-hub.git"
   TDHHOME="${SSH_HOME}/tanzu-demo-hub"
 
-  messagePrint " ▪ Verify SSH Access" "success"
+  messagePrint " ▪ Clone TDH GIT Repository" "$GITTDH"
 
   $SSH_COMMAND -n "[ ! -d /home/ubuntu/tanzu-demo-hub ] && git clone $GITTDH > /dev/null 2>&1"
   $SSH_COMMAND -n "[ -d /home/ubuntu/tanzu-demo-hub ] && cd $SSH_HOME/tanzu-demo-hub; git pull > /dev/null 2>&1"
 
-  # --- HOSTNAME ---
-#  if [ "${TDH_DEPLOYMENT_CLOUD}" == "Azure" -o "${TDH_DEPLOYMENT_CLOUD}" == "AWS" ]; then
-#    $SSH_COMMAND -n "sudo hostname $JUMP_HOST > /dev/null 2>&1"
-#  fi
+  uid=$($SSH_COMMAND -n sudo whoami 2>/dev/null) 
+  if [ "$uid" != "root" ]; then 
+    messagePrint " ▪ Enable SuDO Access for user" "/etc/sudoers.d/$SSH_USER"
+    $SSH_COMMAND -n "echo $VSPHERE_JUMPHOST_PASSWORD | sudo -S $SSH_HOME/tanzu-demo-hub/tools/tdh-modify-sudoers.sh $SSH_USER" > /dev/null 2>&1; ret=$?
+    if [ $ret -eq 0 ]; then 
+      # --- TEST SUDO ROOT ACCESS ---
+      uid=$($SSH_COMMAND -n sudo whoami 2>/dev/null) 
+      if [ "$uid" != "root" ]; then 
+        echo "ERROR: Failed to configure Sudo Access for user $SH_USER on $JUMP_HOST"
+        echo "       please try manually (used the VSPHERE_JUMPHOST_PASSWORD password):"
+        echo "       => $SSH_DISPLAY"
+        echo "       => sudo echo \"$SSH_USER    ALL=(ALL:ALL) ALL\" > /etc/sudoers.d/$SSH_USER"
+        echo "       => chmod 440 /etc/sudoers.d/$SSH_USER"
+        exit 1
+    else
+      echo "ERROR: Failed to configure Sudo Access for user $SH_USER on $JUMP_HOST"
+      echo "       please try manually (used the VSPHERE_JUMPHOST_PASSWORD password):"
+      echo "       => $SSH_DISPLAY"
+      echo "       => sudo echo \"$SSH_USER    ALL=(ALL:ALL) ALL\" > /etc/sudoers.d/$SSH_USER"
+      echo "       => chmod 440 /etc/sudoers.d/$SSH_USER"
+      exit 1
+    fi
+  else
+    messagePrint " ▪ Verify SuDO Access for user" "/etc/sudoers.d/$SSH_USER"
+  fi
 
   # --- TEST FOR RUNNING REMOTE SCRIPT ---
   stt=$($SSH_COMMAND -n "[ -f /tmp/tanzu-demo-hub.pid ] && pgrep -F /tmp/tanzu-demo-hub.pid")
@@ -1476,8 +1496,8 @@ configureJumpHost() {
     done
 
     sleep 20
-
   fi
+exit
 
   # --- COPY THE AWS DIRECTORY ---
   $SCP_COMMAND -r ~/.aws ${SSH_USER}@${SSH_HOST}:$SSH_HOME > /dev/null 2>&1
@@ -2940,6 +2960,25 @@ checkCLIcommands() {
       echo "       => search for kp-darwin for Mac"
       exit
     fi
+  fi
+
+  if [ "$cat" == "VSPHERE" ]; then
+    CLI_COMMANDS="/usr/local/bin/govc:brew:govc /usr/local/bin/packer:brew:packer"
+
+   # --- INSTALL BREW INSTALLABLE VSPHERE ---
+    for arg in $CLI_COMMANDS; do
+      cmd=$(echo $arg | awk -F: '{ print $1 }')
+      sys=$(echo $arg | awk -F: '{ print $2 }')
+      pkg=$(echo $arg | awk -F: '{ print $3 }')
+
+      if [ $sys == "brew" ]; then
+        if [ ! -x $cmd ]; then
+          echo "ERROR: $cmd not installed, please install with brew"
+          echo "       => brew install $pkg"
+          exit
+        fi
+      fi
+    done
   fi
 
   if [ "$cat" == "TOOLS" ]; then
