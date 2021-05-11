@@ -18,6 +18,11 @@ else
   exit 1
 fi
 
+# --- CHECK ENVIRONMENT VARIABLES ---
+if [ -f ~/.tanzu-demo-hub.cfg ]; then
+  . ~/.tanzu-demo-hub.cfg
+fi
+
 messagePrint " - Login to Docker Registry" "$TDH_REGISTRY_DOCKER_NAME"
 cnt=0; ret=1
 while [ $ret -ne 0 -a $cnt -lt 5 ]; do
