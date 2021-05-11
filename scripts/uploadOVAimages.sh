@@ -69,6 +69,8 @@ while [ "$vmwlist" == "" -a $cnt -lt 5 ]; do
   sleep 10
 done
 
+id
+
 for file in $vmwlist; do
   if [ ! -f $TDHPATH/software/$file ]; then
     messagePrint " ▪ Download Photon Image:"                        "$file"
@@ -76,7 +78,7 @@ for file in $vmwlist; do
     cnt=0
     while [ ! -f "$vmwfile" -a $cnt -lt 10 ]; do
       vmw-cli ls vmware_tanzu_kubernetes_grid > /dev/null 2>&1
-      vmw-cli cp $vmwfile > /dev/null 2>&1
+      vmw-cli cp $vmwfile > /tmp/log 2>&1
       let cnt=cnt+1
       sleep 60
     done
@@ -87,6 +89,9 @@ for file in $vmwlist; do
       echo "       => export VMWPASS=\"$TDH_MYVMWARE_PASS\""
       echo "       => vmw-cli ls vmware_tanzu_kubernetes_grid"
       echo "       => vmw-cli cp $file"
+      messageLine
+      cat /tmp/log
+      messageLine
       exit 1
     else
       mv $file $TDHPATH/software
