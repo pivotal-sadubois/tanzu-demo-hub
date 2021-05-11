@@ -1536,7 +1536,7 @@ configureJumpHost() {
 
     if [ ${ret} -ne 0 ]; then
       echo "ERROR: Failed to install TKG Utilities (InstallTKGutilities.sh) on Jump Host"
-      echo "       => $SSH_COMMAND"
+      echo "       => $SSH_DISPLAY"
       exit
     #else
     #  messagePrint " ▪ Rebooting Jump Server"   "wait for services comming up ..."
@@ -5407,6 +5407,106 @@ tdh_tools_build() {
     messagePrint " ▪ Create Tag (latest) for  TDH Tools docker container" "tdh-tools:latest"
     docker tag tdh-tools:CHKSUM-$DOCKER_CHKSUM tdh-tools:latest
   fi
+}
+
+verify_datacenter() {
+  OVFCONN="vi://${VSPHERE_VCENTER_ADMIN}@${VSPHERE_VCENTER_SERVER}/${VSPHERE_DATACENTER}/host/${VSPHERE_CLUSTER}"
+  export GOVC_INSECURE=1
+  export GOVC_URL=https://${VSPHERE_VCENTER_SERVER}/sdk
+  export GOVC_USERNAME=$VSPHERE_VCENTER_ADMIN
+  export GOVC_PASSWORD=$VSPHERE_VCENTER_PASSWORD
+
+  govc ls /Datacenter/datastore > /dev/null 2>&1
+  if [ $? -ne 0 ]; then
+    echo ""
+    echo "ERROR: Can not login to vCenter, please veeify the following"
+    echo "       variablesi in $HOME/.tanzu-demo-hub.cfg"
+    echo "       => VSPHERE_VCENTER_SERVER=$VSPHERE_VCENTER_SERVER"
+    echo "       => GOVC_USERNAME=$GOVC_USERNAME"
+    echo "       => GOVC_PASSWORD=$GOVC_PASSWORD"
+    exit 1
+  fi
+
+  if [ "$VSPHERE_DATACENTER" == "" ]; then
+    echo ""
+    echo "Please set the variale: VSPHERE_DATASTORE=<datastore> in $HOME/.tanzu-demo-hub.cfg"
+    echo "from the following list:"
+    messageLine
+    govc ls /
+    messageLine
+  else
+    cnt=$(govc ls /$VSPHERE_DATACENTER | wc -l | sed 's/  *//g')
+    if [ $cnt -eq 0 ]; then
+      echo ""
+      echo "Datacenter: '$VSPHERE_DATACENTER' not found, please choose on from the list"
+      echo "below and set the $VSPHERE_DATACENTER=<datacenter> in $HOME/.tanzu-demo-hub.cfg"
+      messageLine
+      govc ls /$VSPHERE_DATACENTER
+      messageLine
+      exit 1
+    fi
+  fi
+
+  if [ "$VSPHERE_DATASTORE" == "" ]; then
+    echo ""
+    echo "Please set the variale: VSPHERE_DATASTORE=<datastore> in $HOME/.tanzu-demo-hub.cfg"
+    echo "from the following list:"
+    messageLine
+    govc ls /$VSPHERE_DATACENTER/datastore
+    messageLine
+  else
+    cnt=$(govc ls /$VSPHERE_DATACENTER/datastore/$VSPHERE_DATASTORE | wc -l | sed 's/  *//g')
+    if [ $cnt -eq 0 ]; then
+      echo ""
+      echo "Datastore: '$VSPHERE_DATASTORE' not found, please choose on from the list"
+      echo "below and set the VSPHERE_DATASTORE=<datastore> in $HOME/.tanzu-demo-hub.cfg"
+      messageLine
+      govc ls /$VSPHERE_DATACENTER/datastore
+      messageLine
+      exit 1
+    fi
+  fi
+
+  if [ "$VSPHERE_CLUSTER" == "" ]; then
+    echo ""
+    echo "Please set the variale: VSPHERE_CLUSTER=<cluster> in $HOME/.tanzu-demo-hub.cfg"
+    echo "from the following list:"
+    messageLine
+    govc ls /$VSPHERE_DATACENTER/host
+    messageLine
+  else
+    cnt=$(govc ls /$VSPHERE_DATACENTER/host/$VSPHERE_CLUSTER | wc -l | sed 's/  *//g')
+    if [ $cnt -eq 0 ]; then
+      echo ""
+      echo "Datacenter: '$VSPHERE_CLUSTER' not found, please choose on from the list"
+      echo "below and set the $VSPHERE_CLUSTER=<cluster> in $HOME/.tanzu-demo-hub.cfg"
+      messageLine
+      govc ls /$VSPHERE_DATACENTER/host
+      messageLine
+      exit 1
+    fi
+  fi
+
+  if [ "$VSPHERE_NETWORK" == "" ]; then
+    echo ""
+    echo "Please set the variale: VSPHERE_NETWORK=<network> in $HOME/.tanzu-demo-hub.cfg"
+    echo "from the following list:"
+    messageLine
+    govc ls /$VSPHERE_DATACENTER/network
+    messageLine
+  else
+    cnt=$(govc ls "/$VSPHERE_DATACENTER/network/$VSPHERE_NETWORK" | wc -l | sed 's/  *//g')
+    if [ $cnt -eq 0 ]; then
+      echo ""
+      echo "Datacenter: '$VSPHERE_NETWORK' not found, please choose on from the list"
+      echo "below and set the $VSPHERE_NETWORK=<network> in $HOME/.tanzu-demo-hub.cfg"
+      messageLine
+      govc ls /$VSPHERE_DATACENTER/network
+      messageLine
+      exit 1
+    fi
+  fi
+
 }
 
   
