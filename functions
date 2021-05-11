@@ -5428,6 +5428,14 @@ verify_datacenter() {
   fi
 
   if [ "$VSPHERE_DATACENTER" == "" ]; then
+    cnt=$(echo "$VSPHERE_DATACENTER" | egrep -c "/") 
+    if [ $cnt -gt 0 ]; then 
+      echo "ERROR: Please set the Variable 'VSPHERE_DATACENTER' without any '/'."
+      echo "       WRONG => $VSPHERE_DATACENTER"
+      echo "       RIGHT => $(echo $VSPHERE_DATACENTER | awk -F'/' '| print $NF }')"
+      exit
+    fi
+
     echo ""
     echo "Please set the variale: VSPHERE_DATASTORE=<datastore> in $HOME/.tanzu-demo-hub.cfg"
     echo "from the following list:"
@@ -5449,6 +5457,14 @@ verify_datacenter() {
   fi
 
   if [ "$VSPHERE_DATASTORE" == "" ]; then
+    cnt=$(echo "$VSPHERE_DATASTORE" | egrep -c "/") 
+    if [ $cnt -gt 0 ]; then 
+      echo "ERROR: Please set the Variable 'VSPHERE_DATASTORE' without any '/'."
+      echo "       WRONG => $VSPHERE_DATASTORE"
+      echo "       RIGHT => $(echo $VSPHERE_DATASTORE | awk -F'/' '| print $NF }')"
+      exit
+    fi
+
     echo ""
     echo "Please set the variale: VSPHERE_DATASTORE=<datastore> in $HOME/.tanzu-demo-hub.cfg"
     echo "from the following list:"
