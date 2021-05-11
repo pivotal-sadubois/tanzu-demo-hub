@@ -69,9 +69,6 @@ while [ "$vmwlist" == "" -a $cnt -lt 5 ]; do
   sleep 10
 done
 
-echo "vmwlist:$vmwlist"
-
-
 for file in $vmwlist; do
   if [ ! -f $TDHPATH/software/$file ]; then
     messagePrint " ▪ Download Photon Image:"                        "$file"
