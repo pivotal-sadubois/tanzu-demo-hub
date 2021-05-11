@@ -124,6 +124,7 @@ echo "N:$n"
   nam=$(echo $n | awk -F'/' '{ print $2 }')
   cnt=$(govc datastore.ls -ds=$VSPHERE_DATASTORE | grep -c "$pth")
 echo "CNT:$cnt PTH:$pth NAM:$nam"
+cnt=0
   if [ $cnt -eq 0 ]; then
     stt="uploaded"
 echo "$OVFTOOL $OVFOPTS tanzu-demo-hub/software/${n} $OVFCONN"
