@@ -5440,7 +5440,7 @@ verify_datacenter() {
     if [ $cnt -gt 0 ]; then
       echo "ERROR: Please set the Variable 'VSPHERE_DATACENTER' without any '/'."
       echo "       WRONG => $VSPHERE_DATACENTER"
-      echo "       RIGHT => $(echo $VSPHERE_DATACENTER | awk -F'/' '| print $NF }')"
+      echo "       RIGHT => $(echo $VSPHERE_DATACENTER | awk -F'/' '{ print $NF }')"
       exit
     fi
 
@@ -5469,7 +5469,7 @@ verify_datacenter() {
     if [ $cnt -gt 0 ]; then
       echo "ERROR: Please set the Variable 'VSPHERE_DATASTORE' without any '/'."
       echo "       WRONG => $VSPHERE_DATASTORE"
-      echo "       RIGHT => $(echo $VSPHERE_DATASTORE | awk -F'/' '| print $NF }')"
+      echo "       RIGHT => $(echo $VSPHERE_DATASTORE | awk -F'/' '{ print $NF }')"
       exit
     fi
 
@@ -5498,7 +5498,7 @@ verify_datacenter() {
     if [ $cnt -gt 0 ]; then
       echo "ERROR: Please set the Variable 'VSPHERE_CLUSTER' without any '/'."
       echo "       WRONG => $VSPHERE_CLUSTER"
-      echo "       RIGHT => $(echo $VSPHERE_CLUSTER | awk -F'/' '| print $NF }')"
+      echo "       RIGHT => $(echo $VSPHERE_CLUSTER | awk -F'/' '{ print $NF }')"
       exit
     fi
 
@@ -5527,7 +5527,7 @@ verify_datacenter() {
     if [ $cnt -gt 0 ]; then
       echo "ERROR: Please set the Variable 'VVSPHERE_NETWORK' without any '/'."
       echo "       WRONG => $VSPHERE_NETWORK"
-      echo "       RIGHT => $(echo $VSPHERE_NETWORK | awk -F'/' '| print $NF }')"
+      echo "       RIGHT => $(echo $VSPHERE_NETWORK | awk -F'/' '{ print $NF }')"
       exit
     fi
 
