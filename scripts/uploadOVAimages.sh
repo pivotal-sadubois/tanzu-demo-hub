@@ -81,11 +81,11 @@ for file in $vmwlist; do
       vmw-cli ls vmware_tanzu_kubernetes_grid > /dev/null 2>&1
       vmw-cli cp $vmwfile > /dev/null 2>&1
       let cnt=cnt+1
-      sleep 30
+      sleep 60
     done
 
     if [ ! -f $file ]; then
-      echo "ERROR: failed to download $file"
+      echo "ERROR: failed to download $file, after $cnt atempts"
       echo "       => export VMWUSER=\"$TDH_MYVMWARE_USER\""
       echo "       => export VMWPASS=\"$TDH_MYVMWARE_PASS\""
       echo "       => vmw-cli ls vmware_tanzu_kubernetes_grid"
