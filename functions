@@ -1400,6 +1400,8 @@ createENVfile() {
 }
 
 configureLDAP() {
+  if [ "${TDH_TKGMC_IDENTITY_MANAGEMENT_TYPE}" != "ldap" ]; then return; fi
+
   ldapwhoami -H ldap://jump.${TDH_TKGMC_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN} -x -ZZ >/dev/null 2>&1
   if [ $? -ne 0 ]; then 
     messageTitle "Install LDAP Server and (phpLDAPadmin) on Jump Host (jump.${TDH_TKGMC_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN})"
