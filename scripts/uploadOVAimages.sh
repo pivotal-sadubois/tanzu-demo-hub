@@ -76,9 +76,9 @@ for file in $vmwlist; do
     messagePrint " ▪ Download Photon Image:"                        "$file"
 
     cnt=0
-    while [ ! -f "$vmwfile" -a $cnt -lt 10 ]; do
+    while [ ! -f "$file" -a $cnt -lt 10 ]; do
       vmw-cli ls vmware_tanzu_kubernetes_grid > /dev/null 2>&1
-      vmw-cli cp $vmwfile > /tmp/log 2>&1
+      vmw-cli cp $file > /tmp/log 2>&1
       let cnt=cnt+1
       sleep 60
     done
