@@ -42,12 +42,8 @@ OVFTOOL="/usr/bin/ovftool -q --skipManifestCheck --noDestinationSSLVerify --noSo
 OVFOPTS="--network=$VSPHERE_MANAGEMENT_NETWORK --datastore=$VSPHERE_DATASTORE"
 OVFCONN="vi://${VSPHERE_ADMIN}@${VSPHERE_SERVER}/${VSPHERE_DATACENTER}/host/${VSPHERE_CLUSTER}"
 
-echo "export VMWUSER=\"$TDH_MYVMWARE_USER\""
-echo "export VMWPASS=\"$TDH_MYVMWARE_PASS\""
 export VMWUSER="$TDH_MYVMWARE_USER"
 export VMWPASS="$TDH_MYVMWARE_PASS"
-
-pwd
 
 cnt=$(vmw-cli ls vmware_tanzu_kubernetes_grid 2>&1 | grep -c "ERROR")
 if [ $cnt -ne 0 ]; then
@@ -63,10 +59,13 @@ if [ $cnt -ne 0 ]; then
 fi
 
 messageTitle "Verify Software Downloads from http://my.vmware.com"
-for file in $(sudo vmw-cli ls vmware_tanzu_kubernetes_grid | egrep "^photon" | awk '{ print $1 }'); do
+for file in $(vmw-cli ls vmware_tanzu_kubernetes_grid | egrep "^photon" | awk '{ print $1 }'); do
   if [ ! -f $TDHPATH/software/$file ]; then
     messagePrint " ▪ Download Photon Image:"                        "$file"
-    (cd $TDHPATH/software/; sudo vmw-cli cp $file > /dev/null 2>&1)
+    (cd $TDHPATH/software/; vmw-cli cp $file)
+
+
+    (cd $TDHPATH/software/; vmw-cli cp $file > /dev/null 2>&1)
     if [ ! -f $TDHPATH/software/$file ]; then
       echo "ERROR: failed to download $file from http://my.vmware.com, please try manually"
       messageLine

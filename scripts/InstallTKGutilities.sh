@@ -42,6 +42,7 @@ if [ ! -s /usr/local/bin/vmw-cli ]; then
 
   mv vmw-cli /usr/local/bin
   chmod 755 /usr/local/bin/vmw-cli
+  sudo chown -R ubuntu:ubuntu /home/ubuntu/.docker
 fi
 
 if [ ! -s /usr/local/bin/tanzu ]; then
@@ -144,6 +145,7 @@ fi
 
 messagePrint " ▪ Upgrading Packages" "apt upgrade -y"
 apt upgrade -y > /dev/null 2>&1
+sudo chown -R ubuntu:ubuntu /home/ubuntu/.docker
 
 touch /tkg_software_installed
 
