@@ -36,6 +36,13 @@ export GOVC_DATASTORE=$VSPHERE_DATASTORE
 export GOVC_NETWORK="$VSPHERE_NETWORK"
 export GOVC_RESOURCE_POOL=/${VSPHERE_DATACENTER}/host/${VSPHERE_CLUSTER}/Resources
 
+echo "export GOVC_URL=https://${VSPHERE_VCENTER_SERVER}/sdk"
+echo "export GOVC_USERNAME=$VSPHERE_VCENTER_ADMIN"
+echo "export GOVC_PASSWORD=$VSPHERE_VCENTER_PASSWORD"
+echo "export GOVC_DATASTORE=$VSPHERE_DATASTORE"
+echo "export GOVC_NETWORK="$VSPHERE_NETWORK""
+echo "export GOVC_RESOURCE_POOL=/${VSPHERE_DATACENTER}/host/${VSPHERE_CLUSTER}/Resources"
+
 OVFTOOL="/usr/bin/ovftool --skipManifestCheck --noDestinationSSLVerify --noSourceSSLVerify --acceptAllEulas"
 OVFTOOL="/usr/bin/ovftool -q --overwrite --skipManifestCheck --noDestinationSSLVerify --noSourceSSLVerify --acceptAllEulas"
 OVFTOOL="/usr/bin/ovftool -q --skipManifestCheck --noDestinationSSLVerify --noSourceSSLVerify --acceptAllEulas"
@@ -101,10 +108,10 @@ for file in $vmwlist; do
 done
 
 # --- TEST GOVC CONNECTION ---
-govc vm.info $(echo $VSPHERE_SERVER | awk -F. '{ print $1 }') > /dev/null 2>&1; ret=$?
+govc vm.info $(echo $VSPHERE_VCENTER_SERVER | awk -F. '{ print $1 }') > /dev/null 2>&1; ret=$?
 if [ $ret -ne 0 ]; then 
   echo "1 ERROR: govc: Connection to vCenter failed:"
-  echo "       => govc vm.info $(echo $VSPHERE_SERVER | awk -F. '{ print $1 }')"; exit
+  echo "       => govc vm.info $(echo $VSPHERE_VCENTER_SERVER | awk -F. '{ print $1 }')"; exit
 fi
 
 messageTitle "Uploading OVS Images to vSphere"
@@ -114,7 +121,7 @@ for n in $TDH_TKGMC_TKG_IMAGES; do
   cnt=$(govc datastore.ls -ds=$VSPHERE_DATASTORE | grep -c "$pth")
   if [ $cnt -eq 0 ]; then
     stt="uploaded"
-    echo "$VSPHERE_PASSWORD" | $OVFTOOL $OVFOPTS tanzu-demo-hub/${n} $OVFCONN > /dev/null 2>&1
+    echo "$VSPHERE_VCENTER_PASSWORD" | $OVFTOOL $OVFOPTS tanzu-demo-hub/${n} $OVFCONN > /dev/null 2>&1
     src=$(govc find -name "${pth}*")
     vmn=$(govc find -name "${pth}*" | awk -F'/' '{ print $NF }')
     govc vm.clone -template=true -vm /CoreDC/vm/${vmn} -folder=Templates -force=true ${vmn} > /dev/null 2>&1
