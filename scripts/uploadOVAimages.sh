@@ -115,10 +115,14 @@ if [ $ret -ne 0 ]; then
 fi
 
 messageTitle "Uploading OVS Images to vSphere"
+echo "TDH_TKGMC_TKG_IMAGES:$TDH_TKGMC_TKG_IMAGES"
+
+TDH_TKGMC_TKG_IMAGES=$(ls -1 $TDHPATH/software/phot*) 
 for n in $TDH_TKGMC_TKG_IMAGES; do
   pth=$(echo $n | awk -F'/' '{ print $2 }' | sed -e 's/-vmware.[0-9].ova//g' -e 's/+vmware.[0-9].ova//g')
   nam=$(echo $n | awk -F'/' '{ print $2 }')
   cnt=$(govc datastore.ls -ds=$VSPHERE_DATASTORE | grep -c "$pth")
+echo "CNT:$cnt PTH:$pth NAM:$nam"
   if [ $cnt -eq 0 ]; then
     stt="uploaded"
     echo "$VSPHERE_VCENTER_PASSWORD" | $OVFTOOL $OVFOPTS tanzu-demo-hub/${n} $OVFCONN > /dev/null 2>&1
