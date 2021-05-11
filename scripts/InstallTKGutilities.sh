@@ -131,12 +131,15 @@ if [ "$TDHENV" == "vSphere" ]; then
   
   installPackage golang-go
   installPackage gccgo-go
-  echo "=> Install GOVC"
-  wget https://github.com/vmware/govmomi/releases/download/v0.24.0/govc_linux_amd64.gz 2>/dev/null 1>&2
-  gunzip govc_linux_amd64.gz
 
-  mv govc_linux_amd64 /usr/local/bin/govc
-  chmod +x /usr/local/bin/govc
+  if [ ! -s /usr/bin/govc ]; then
+    messagePrint " ▪ Install GOVC" "installing"
+    wget https://github.com/vmware/govmomi/releases/download/v0.24.0/govc_linux_amd64.gz 2>/dev/null 1>&2
+    gunzip govc_linux_amd64.gz
+
+    mv govc_linux_amd64 /usr/local/bin/govc
+    chmod +x /usr/local/bin/govc
+  fi
 fi
 
 messagePrint " ▪ Upgrading Packages" "apt upgrade -y"
