@@ -1530,7 +1530,6 @@ configureJumpHost() {
   # --- INSTALL TKG UTILITES ---
   stt=$($SSH_COMMAND -n "[ -f /tkg_software_installed ] && echo true")
   if [ "${stt}" == "" ]; then
-echo "TDH_TKGMC_INFRASTRUCTURE:$TDH_TKGMC_INFRASTRUCTURE"
     messageTitle "Install TKG Utilities (tkg, ytt, kapp, kbld, kubectl, kind) on Jump Host (jump.${TDH_TKGMC_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN})"
     $SSH_COMMAND -n "[ -d $SSH_HOME/tanzu-demo-hub ] && chmod a+x ${TDHHOME}/scripts/InstallTKGutilities.sh && \
         sudo ${TDHHOME}/scripts/InstallTKGutilities.sh \"$SSH_HOME/tanzu-demo-hub\" \"$TDH_TKGMC_INFRASTRUCTURE\" $DEBUG"; ret=$?
