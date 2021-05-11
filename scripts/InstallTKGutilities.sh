@@ -112,9 +112,7 @@ mv kind /usr/local/bin
 # --- INSTALL KUNEADM ---
 installSnap kubeadm --classic
 
-echo "TDHENV:$TDHENV"
 if [ "$TDHENV" == "vSphere" ]; then 
-echo xxx0
   if [ ! -f /usr/bin/ovftool ]; then 
     messagePrint " ▪ Install ovftool" "installing"
     if [ -f $TDHPATH/software/VMware-ovftool-4.4.1-16812187-lin.x86_64.bundle ]; then 
@@ -134,11 +132,9 @@ echo xxx0
   installPackage golang-go
   installPackage gccgo-go
   echo "=> Install GOVC"
-pwd
   wget https://github.com/vmware/govmomi/releases/download/v0.24.0/govc_linux_amd64.gz 2>/dev/null 1>&2
-echo $?
-ls -la govc_linux_amd64.gz
   gunzip govc_linux_amd64.gz
+
   mv govc_linux_amd64 /usr/local/bin/govc
   chmod +x /usr/local/bin/govc
 fi
