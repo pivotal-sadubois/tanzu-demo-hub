@@ -99,8 +99,6 @@ for file in $vmwlist; do
   fi
 done
 
-exit
-
 # --- TEST GOVC CONNECTION ---
 govc vm.info $(echo $VSPHERE_SERVER | awk -F. '{ print $1 }') > /dev/null 2>&1; ret=$?
 if [ $ret -ne 0 ]; then 
