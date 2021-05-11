@@ -44,8 +44,8 @@ echo "export GOVC_NETWORK="$VSPHERE_NETWORK""
 echo "export GOVC_RESOURCE_POOL=/${VSPHERE_DATACENTER}/host/${VSPHERE_CLUSTER}/Resources"
 
 OVFTOOL="/usr/bin/ovftool --skipManifestCheck --noDestinationSSLVerify --noSourceSSLVerify --acceptAllEulas"
-OVFTOOL="/usr/bin/ovftool -q --overwrite --skipManifestCheck --noDestinationSSLVerify --noSourceSSLVerify --acceptAllEulas"
 OVFTOOL="/usr/bin/ovftool -q --skipManifestCheck --noDestinationSSLVerify --noSourceSSLVerify --acceptAllEulas"
+OVFTOOL="/usr/bin/ovftool -q --overwrite --skipManifestCheck --noDestinationSSLVerify --noSourceSSLVerify --acceptAllEulas"
 OVFOPTS="--network=\"$VSPHERE_NETWORK\" --datastore=\"$VSPHERE_DATASTORE\""
 OVFCONN="vi://${VSPHERE_VCENTER_ADMIN}@${VSPHERE_VCENTER_SERVER}/${VSPHERE_DATACENTER}/host/${VSPHERE_CLUSTER}"
 
@@ -119,15 +119,14 @@ echo "TDH_TKGMC_TKG_IMAGES:$TDH_TKGMC_TKG_IMAGES"
 
 TDH_TKGMC_TKG_IMAGES=$(ls -1 $TDHPATH/software/phot* | awk -F'/' '{ print $NF }') 
 for n in $TDH_TKGMC_TKG_IMAGES; do
-echo "N:$n"
   pth=$(echo $n | awk -F'/' '{ print $2 }' | sed -e 's/-vmware.[0-9].ova//g' -e 's/+vmware.[0-9].ova//g')
   pth=$(echo $n | sed -e 's/-tkg.*.ova//g')
   nam=$(echo $n | awk -F'/' '{ print $2 }')
   cnt=$(govc datastore.ls -ds=$VSPHERE_DATASTORE | grep -c "$pth")
-echo "CNT:$cnt PTH:$pth NAM:$nam"
+  cnt=0
+
   if [ $cnt -eq 0 ]; then
     stt="uploaded"
-echo "echo $VSPHERE_VCENTER_PASSWORD | $OVFTOOL $OVFOPTS tanzu-demo-hub/software/${n} $OVFCONN"
     echo "$VSPHERE_VCENTER_PASSWORD" | $OVFTOOL $OVFOPTS tanzu-demo-hub/software/${n} $OVFCONN > /dev/null 2>&1; ret=$?
     if [ $ret -ne 0 ]; then
       echo "ERROR: failed to upload image: $n"
@@ -135,11 +134,8 @@ echo "echo $VSPHERE_VCENTER_PASSWORD | $OVFTOOL $OVFOPTS tanzu-demo-hub/software
       exit
     fi
 
-echo $?
     src=$(govc find -name "${pth}*")
     vmn=$(govc find -name "${pth}*" | awk -F'/' '{ print $NF }')
-echo "SRC:$src"
-echo "VMN:$vmn"
     govc vm.clone -template=true -vm /${VSPHERE_DATACENTER}/vm/${vmn} -folder=Templates -force=true ${vmn} > /dev/null 2>&1
     govc vm.destroy /${VSPHERE_DATACENTER}/vm/${vmn}
   else
