@@ -5428,14 +5428,6 @@ verify_datacenter() {
   fi
 
   if [ "$VSPHERE_DATACENTER" == "" ]; then
-    cnt=$(echo "$VSPHERE_DATACENTER" | egrep -c "/") 
-    if [ $cnt -gt 0 ]; then 
-      echo "ERROR: Please set the Variable 'VSPHERE_DATACENTER' without any '/'."
-      echo "       WRONG => $VSPHERE_DATACENTER"
-      echo "       RIGHT => $(echo $VSPHERE_DATACENTER | awk -F'/' '| print $NF }')"
-      exit
-    fi
-
     echo ""
     echo "Please set the variale: VSPHERE_DATASTORE=<datastore> in $HOME/.tanzu-demo-hub.cfg"
     echo "from the following list:"
@@ -5444,6 +5436,14 @@ verify_datacenter() {
     messageLine
     exit
   else
+    cnt=$(echo "$VSPHERE_DATACENTER" | egrep -c "/")
+    if [ $cnt -gt 0 ]; then
+      echo "ERROR: Please set the Variable 'VSPHERE_DATACENTER' without any '/'."
+      echo "       WRONG => $VSPHERE_DATACENTER"
+      echo "       RIGHT => $(echo $VSPHERE_DATACENTER | awk -F'/' '| print $NF }')"
+      exit
+    fi
+
     cnt=$(govc ls /$VSPHERE_DATACENTER | wc -l | sed 's/  *//g')
     if [ $cnt -eq 0 ]; then
       echo ""
@@ -5457,14 +5457,6 @@ verify_datacenter() {
   fi
 
   if [ "$VSPHERE_DATASTORE" == "" ]; then
-    cnt=$(echo "$VSPHERE_DATASTORE" | egrep -c "/") 
-    if [ $cnt -gt 0 ]; then 
-      echo "ERROR: Please set the Variable 'VSPHERE_DATASTORE' without any '/'."
-      echo "       WRONG => $VSPHERE_DATASTORE"
-      echo "       RIGHT => $(echo $VSPHERE_DATASTORE | awk -F'/' '| print $NF }')"
-      exit
-    fi
-
     echo ""
     echo "Please set the variale: VSPHERE_DATASTORE=<datastore> in $HOME/.tanzu-demo-hub.cfg"
     echo "from the following list:"
@@ -5473,6 +5465,14 @@ verify_datacenter() {
     messageLine
     exit 1
   else
+    cnt=$(echo "$VSPHERE_DATASTORE" | egrep -c "/")
+    if [ $cnt -gt 0 ]; then
+      echo "ERROR: Please set the Variable 'VSPHERE_DATASTORE' without any '/'."
+      echo "       WRONG => $VSPHERE_DATASTORE"
+      echo "       RIGHT => $(echo $VSPHERE_DATASTORE | awk -F'/' '| print $NF }')"
+      exit
+    fi
+
     cnt=$(govc ls /$VSPHERE_DATACENTER/datastore/$VSPHERE_DATASTORE | wc -l | sed 's/  *//g')
     if [ $cnt -eq 0 ]; then
       echo ""
@@ -5486,14 +5486,6 @@ verify_datacenter() {
   fi
 
   if [ "$VSPHERE_CLUSTER" == "" ]; then
-    cnt=$(echo "$VSPHERE_CLUSTER" | egrep -c "/")
-    if [ $cnt -gt 0 ]; then
-      echo "ERROR: Please set the Variable 'VSPHERE_CLUSTER' without any '/'."
-      echo "       WRONG => $VSPHERE_CLUSTER"
-      echo "       RIGHT => $(echo $VSPHERE_CLUSTER | awk -F'/' '| print $NF }')"
-      exit
-    fi
-
     echo ""
     echo "Please set the variale: VSPHERE_CLUSTER=<cluster> in $HOME/.tanzu-demo-hub.cfg"
     echo "from the following list:"
@@ -5502,6 +5494,14 @@ verify_datacenter() {
     messageLine
     exit 1
   else
+    cnt=$(echo "$VSPHERE_CLUSTER" | egrep -c "/")
+    if [ $cnt -gt 0 ]; then
+      echo "ERROR: Please set the Variable 'VSPHERE_CLUSTER' without any '/'."
+      echo "       WRONG => $VSPHERE_CLUSTER"
+      echo "       RIGHT => $(echo $VSPHERE_CLUSTER | awk -F'/' '| print $NF }')"
+      exit
+    fi
+
     cnt=$(govc ls /$VSPHERE_DATACENTER/host/$VSPHERE_CLUSTER | wc -l | sed 's/  *//g')
     if [ $cnt -eq 0 ]; then
       echo ""
@@ -5515,14 +5515,6 @@ verify_datacenter() {
   fi
 
   if [ "$VSPHERE_NETWORK" == "" ]; then
-    cnt=$(echo "$VSPHERE_NETWORK" | egrep -c "/")
-    if [ $cnt -gt 0 ]; then
-      echo "ERROR: Please set the Variable 'VVSPHERE_NETWORK' without any '/'."
-      echo "       WRONG => $VSPHERE_NETWORK"
-      echo "       RIGHT => $(echo $VSPHERE_NETWORK | awk -F'/' '| print $NF }')"
-      exit
-    fi
-
     echo ""
     echo "Please set the variale: VSPHERE_NETWORK=<network> in $HOME/.tanzu-demo-hub.cfg"
     echo "from the following list:"
@@ -5531,6 +5523,14 @@ verify_datacenter() {
     messageLine
     exit 1
   else
+    cnt=$(echo "$VSPHERE_NETWORK" | egrep -c "/")
+    if [ $cnt -gt 0 ]; then
+      echo "ERROR: Please set the Variable 'VVSPHERE_NETWORK' without any '/'."
+      echo "       WRONG => $VSPHERE_NETWORK"
+      echo "       RIGHT => $(echo $VSPHERE_NETWORK | awk -F'/' '| print $NF }')"
+      exit
+    fi
+
     cnt=$(govc ls "/$VSPHERE_DATACENTER/network/$VSPHERE_NETWORK" | wc -l | sed 's/  *//g')
     if [ $cnt -eq 0 ]; then
       echo ""
