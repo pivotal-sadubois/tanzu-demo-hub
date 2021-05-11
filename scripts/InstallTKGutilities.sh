@@ -121,8 +121,10 @@ if [ "$TDHENV" == "vSphere" ]; then
       if [ $? -ne 0 ]; then 
         echo "ERROR: Unable to install ovftool"
         echo "       => sudo $TDHPATH/software/VMware-ovftool-4.4.1-16812187-lin.x86_64.bundl"
+        rm -f nohup.out
         exit
       fi
+     rm -f nohup.out
     else
       echo "ERROR: VMware ovtools not found, please download to tanzu-content-hub/software from: "
       echo "https://my.vmware.com/group/vmware/downloads/details?downloadGroup=OVFTOOL441&productId=734"

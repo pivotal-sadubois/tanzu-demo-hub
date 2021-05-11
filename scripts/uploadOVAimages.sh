@@ -59,25 +59,40 @@ if [ $cnt -ne 0 ]; then
 fi
 
 messageTitle "Verify Software Downloads from http://my.vmware.com"
-for file in $(vmw-cli ls vmware_tanzu_kubernetes_grid | egrep "^photon" | awk '{ print $1 }'); do
+vmw-cli ls vmware_tanzu_kubernetes_grid > /dev/null 2>&1
+
+cnt=0
+vmwlist=$(/tmp/vmw-cli ls vmware_tanzu_kubernetes_grid 2>/dev/null | egrep "^tanzu-cli-bundle-linux" | tail -1 | awk '{ print $1 }')
+while [ "$vmwlist" == "" -a $cnt -lt 5 ]; do
+  vmwlist=$(/tmp/vmw-cli ls vmware_tanzu_kubernetes_grid 2>/dev/null | egrep "^tanzu-cli-bundle-linux" | tail -1 | awk '{ print $1 }')
+  let cnt=cnt+1
+  sleep 10
+done
+
+echo "vmwlist:$vmwlist"
+
+
+for file in $vmwlist; do
   if [ ! -f $TDHPATH/software/$file ]; then
     messagePrint " ▪ Download Photon Image:"                        "$file"
-    (cd $TDHPATH/software/; vmw-cli cp $file)
 
+    cnt=0
+    while [ ! -f "$vmwfile" -a $cnt -lt 10 ]; do
+      vmw-cli ls vmware_tanzu_kubernetes_grid > /dev/null 2>&1
+      vmw-cli cp $vmwfile > /dev/null 2>&1
+      let cnt=cnt+1
+      sleep 30
+    done
 
-    (cd $TDHPATH/software/; vmw-cli cp $file > /dev/null 2>&1)
-    if [ ! -f $TDHPATH/software/$file ]; then
-      echo "ERROR: failed to download $file from http://my.vmware.com, please try manually"
-      messageLine
-      echo "       => . ~/.tanzu-demo-hub.cfg"
-      echo "       => export VMWUSER=\$TDH_MYVMWARE_USER"
-      echo "       => export VMWPASS=\$TDH_MYVMWARE_PASS"
+    if [ ! -f $file ]; then
+      echo "ERROR: failed to download $file"
+      echo "       => export VMWUSER=\"$TDH_MYVMWARE_USER\""
+      echo "       => export VMWPASS=\"$TDH_MYVMWARE_PASS\""
       echo "       => vmw-cli ls vmware_tanzu_kubernetes_grid"
       echo "       => vmw-cli cp $file"
-      messageLine
-      exit
-    else 
-      chown ubuntu:ubuntu $TDHPATH/software/$file
+      exit 1
+    else
+      mv $file $TDHPATH/software
     fi
   fi
 done
