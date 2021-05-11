@@ -64,10 +64,10 @@ fi
 
 messageTitle "Verify Software Downloads from http://my.vmware.com"
 for file in $(sudo vmw-cli ls vmware_tanzu_kubernetes_grid | egrep "^photon" | awk '{ print $1 }'); do
-  if [ ! -f software/$file ]; then
+  if [ ! -f $TDHPATH/software/$file ]; then
     messagePrint " ▪ Download Photon Image:"                        "$file"
-    (cd software/; sudo vmw-cli cp $file > /dev/null 2>&1)
-    if [ ! -f software/$file ]; then
+    (cd $TDHPATH/software/; sudo vmw-cli cp $file > /dev/null 2>&1)
+    if [ ! -f $TDHPATH/software/$file ]; then
       echo "ERROR: failed to download $file from http://my.vmware.com, please try manually"
       messageLine
       echo "       => . ~/.tanzu-demo-hub.cfg"
@@ -78,7 +78,7 @@ for file in $(sudo vmw-cli ls vmware_tanzu_kubernetes_grid | egrep "^photon" | a
       messageLine
       exit
     else 
-      chown ubuntu:ubuntu software/$file
+      chown ubuntu:ubuntu $TDHPATH/software/$file
     fi
   fi
 done
