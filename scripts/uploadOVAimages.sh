@@ -42,6 +42,49 @@ OVFTOOL="/usr/bin/ovftool -q --skipManifestCheck --noDestinationSSLVerify --noSo
 OVFOPTS="--network=$VSPHERE_MANAGEMENT_NETWORK --datastore=$VSPHERE_DATASTORE"
 OVFCONN="vi://${VSPHERE_ADMIN}@${VSPHERE_SERVER}/${VSPHERE_DATACENTER}/host/${VSPHERE_CLUSTER}"
 
+echo "export VMWUSER=\"$TDH_MYVMWARE_USER\""
+echo "export VMWPASS=\"$TDH_MYVMWARE_PASS\""
+export VMWUSER="$TDH_MYVMWARE_USER"
+export VMWPASS="$TDH_MYVMWARE_PASS"
+
+pwd
+
+cnt=$(vmw-cli ls vmware_tanzu_kubernetes_grid 2>&1 | grep -c "ERROR")
+if [ $cnt -ne 0 ]; then
+  echo "ERROR: failed to login to vmw-cli, please make sure that the environment variables"
+  echo "       TDH_MYVMWARE_USER and TDH_MYVMWARE_PASS are set correctly. Please try manually"
+  messageLine
+  echo "       => . ~/.tanzu-demo-hub.cfg"
+  echo "       => export VMWUSER=\$TDH_MYVMWARE_USER"
+  echo "       => export VMWPASS=\$TDH_MYVMWARE_PASS"
+  echo "       => vmw-cli ls vmware_tanzu_kubernetes_grid"
+  messageLine
+  exit
+fi
+
+messageTitle "Verify Software Downloads from http://my.vmware.com"
+for file in $(sudo vmw-cli ls vmware_tanzu_kubernetes_grid | egrep "^photon" | awk '{ print $1 }'); do
+  if [ ! -f software/$file ]; then
+    messagePrint " ▪ Download Photon Image:"                        "$file"
+    (cd software/; sudo vmw-cli cp $file > /dev/null 2>&1)
+    if [ ! -f software/$file ]; then
+      echo "ERROR: failed to download $file from http://my.vmware.com, please try manually"
+      messageLine
+      echo "       => . ~/.tanzu-demo-hub.cfg"
+      echo "       => export VMWUSER=\$TDH_MYVMWARE_USER"
+      echo "       => export VMWPASS=\$TDH_MYVMWARE_PASS"
+      echo "       => vmw-cli ls vmware_tanzu_kubernetes_grid"
+      echo "       => vmw-cli cp $file"
+      messageLine
+      exit
+    else 
+      chown ubuntu:ubuntu software/$file
+    fi
+  fi
+done
+
+exit
+
 # --- TEST GOVC CONNECTION ---
 govc vm.info $(echo $VSPHERE_SERVER | awk -F. '{ print $1 }') > /dev/null 2>&1; ret=$?
 if [ $ret -ne 0 ]; then 
