@@ -121,18 +121,20 @@ TDH_TKGMC_TKG_IMAGES=$(ls -1 $TDHPATH/software/phot* | awk -F'/' '{ print $NF }'
 for n in $TDH_TKGMC_TKG_IMAGES; do
 echo "N:$n"
   pth=$(echo $n | awk -F'/' '{ print $2 }' | sed -e 's/-vmware.[0-9].ova//g' -e 's/+vmware.[0-9].ova//g')
+  pth=$(echo $n | sed -e 's/-tkg.*.ova//g')
   nam=$(echo $n | awk -F'/' '{ print $2 }')
   cnt=$(govc datastore.ls -ds=$VSPHERE_DATASTORE | grep -c "$pth")
 echo "CNT:$cnt PTH:$pth NAM:$nam"
-cnt=0
   if [ $cnt -eq 0 ]; then
     stt="uploaded"
 echo "$OVFTOOL $OVFOPTS tanzu-demo-hub/software/${n} $OVFCONN"
     echo "$VSPHERE_VCENTER_PASSWORD" | $OVFTOOL $OVFOPTS tanzu-demo-hub/software/${n} $OVFCONN > /dev/null 2>&1
     src=$(govc find -name "${pth}*")
     vmn=$(govc find -name "${pth}*" | awk -F'/' '{ print $NF }')
-    #govc vm.clone -template=true -vm /CoreDC/vm/${vmn} -folder=Templates -force=true ${vmn} > /dev/null 2>&1
-    #govc vm.destroy /CoreDC/vm/${vmn}
+echo "SRC:$src"
+echo "VMN:$vmn"
+    govc vm.clone -template=true -vm /${VSPHERE_DATACENTER}/vm/${vmn} -folder=Templates -force=true ${vmn} > /dev/null 2>&1
+    ovc vm.destroy /${VSPHERE_DATACENTER}/vm/${vmn}
   else
     stt="already uploaded"
   fi
