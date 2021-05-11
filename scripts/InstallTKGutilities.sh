@@ -112,7 +112,9 @@ mv kind /usr/local/bin
 # --- INSTALL KUNEADM ---
 installSnap kubeadm --classic
 
+echo "TDHENV:$TDHENV"
 if [ "$TDHENV" == "vSphere" ]; then 
+echo xxx0
   if [ ! -f /usr/bin/ovftool ]; then 
     messagePrint " ▪ Install ovftool" "installing"
     if [ -f $TDHPATH/software/VMware-ovftool-4.4.1-16812187-lin.x86_64.bundle ]; then 

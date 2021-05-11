@@ -1400,11 +1400,14 @@ createENVfile() {
 }
 
 configureLDAP() {
-  if [ "${TDH_TKGMC_IDENTITY_MANAGEMENT_TYPE}" != "ldap" ]; then return; fi
+  #if [ "${TDH_TKGMC_IDENTITY_MANAGEMENT_TYPE}" != "ldap" ]; then return; fi
+  #VSPHERE_JUMPHOST_NAME
 
-  ldapwhoami -H ldap://jump.${TDH_TKGMC_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN} -x -ZZ >/dev/null 2>&1
+echo "gaga JUMP_JHOST:$JUMP_HOST"
+
+  ldapwhoami -H ldap://${JUMP_HOST} -x -ZZ >/dev/null 2>&1
   if [ $? -ne 0 ]; then 
-    messageTitle "Install LDAP Server and (phpLDAPadmin) on Jump Host (jump.${TDH_TKGMC_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN})"
+    messageTitle "Install LDAP Server and (phpLDAPadmin) on Jump Host (${JUMP_HOST})"
     $SSH_COMMAND -n "[ -d $SSH_HOME/tanzu-demo-hub ] && chmod a+x ${TDHHOME}/scripts/InstallOpenLDAP.sh && \
         sudo ${TDHHOME}/scripts/InstallOpenLDAP.sh \"${TDH_TKGMC_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}\" $DEBUG"; ret=$?
 
@@ -1416,17 +1419,17 @@ configureLDAP() {
     sleep 300
   fi
   
-  messagePrint "Verify LDAP Server" "$SSH_HOST"
-  ret=$(ldapwhoami -H ldap://jump.${TDH_TKGMC_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN} -x -ZZ)
+  messagePrint "Verify LDAP Server" "$JUMP_HOST"
+  ret=$(ldapwhoami -H ldap://${JUMP_HOST} -x -ZZ)
   if [ "$ret" == "anonymous" ]; then 
     messagePrint " ▪ LDAP CLI Access (ldapwhoami)"   "succeeded"
   else
     echo "ERROR: LDAP Access (ldapwhoami) failed with '$ret'"
-    echo "       => ldapwhoami -H ldap://jump.${TDH_TKGMC_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN} -x -ZZ"
+    echo "       => ldapwhoami -H ldap://${JUMP_HOST} -x -ZZ"
     exit
   fi
 
-  messagePrint " ▪ Verify LDAP Management (phpLDAPadmin)"   "http://jump.${TDH_TKGMC_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}/phpldapadmin"
+  messagePrint " ▪ Verify LDAP Management (phpLDAPadmin)"   "http://${JUMP_HOST}/phpldapadmin"
 } 
 
 configureJumpHost() {
@@ -1527,6 +1530,7 @@ configureJumpHost() {
   # --- INSTALL TKG UTILITES ---
   stt=$($SSH_COMMAND -n "[ -f /tkg_software_installed ] && echo true")
   if [ "${stt}" == "" ]; then
+echo "TDH_TKGMC_INFRASTRUCTURE:$TDH_TKGMC_INFRASTRUCTURE"
     messageTitle "Install TKG Utilities (tkg, ytt, kapp, kbld, kubectl, kind) on Jump Host (jump.${TDH_TKGMC_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN})"
     $SSH_COMMAND -n "[ -d $SSH_HOME/tanzu-demo-hub ] && chmod a+x ${TDHHOME}/scripts/InstallTKGutilities.sh && \
         sudo ${TDHHOME}/scripts/InstallTKGutilities.sh \"$SSH_HOME/tanzu-demo-hub\" \"$TDH_TKGMC_INFRASTRUCTURE\" $DEBUG"; ret=$?
@@ -3961,7 +3965,7 @@ InstallContour() {
     kubectl create ns $NAMESPACE > /dev/null 2>&1
     helm repo add bitnami https://charts.bitnami.com/bitnami > /dev/null 2>&1
     helm install ingress bitnami/contour -n $NAMESPACE --version 3.3.1 > /dev/null 2>&1
-#gaga
+
     if [ $? -ne 0 ]; then
       echo "ERROR: failed to install bitnami/contour"
       echo "       => helm install ingress bitnami/contour -n $NAMESPACE --version 3.3.1"
