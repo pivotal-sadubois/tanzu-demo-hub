@@ -7,7 +7,7 @@
 # ############################################################################################
 
 export TDHPATH=$1
-export DHENV=$2
+export TDHENV=$2
 export DEBUG=$3
 export LC_ALL=en_US.UTF-8
 
