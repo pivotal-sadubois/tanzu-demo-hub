@@ -46,7 +46,7 @@ echo "export GOVC_RESOURCE_POOL=/${VSPHERE_DATACENTER}/host/${VSPHERE_CLUSTER}/R
 OVFTOOL="/usr/bin/ovftool --skipManifestCheck --noDestinationSSLVerify --noSourceSSLVerify --acceptAllEulas"
 OVFTOOL="/usr/bin/ovftool -q --overwrite --skipManifestCheck --noDestinationSSLVerify --noSourceSSLVerify --acceptAllEulas"
 OVFTOOL="/usr/bin/ovftool -q --skipManifestCheck --noDestinationSSLVerify --noSourceSSLVerify --acceptAllEulas"
-OVFOPTS="--network=$VSPHERE_NETWORK --datastore=$VSPHERE_DATASTORE"
+OVFOPTS="--network=\"$VSPHERE_NETWORK\" --datastore=\"$VSPHERE_DATASTORE\""
 OVFCONN="vi://${VSPHERE_VCENTER_ADMIN}@${VSPHERE_VCENTER_SERVER}/${VSPHERE_DATACENTER}/host/${VSPHERE_CLUSTER}"
 
 echo "OVFCONN:$OVFCONN"
