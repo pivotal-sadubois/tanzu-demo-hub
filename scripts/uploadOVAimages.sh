@@ -62,9 +62,9 @@ messageTitle "Verify Software Downloads from http://my.vmware.com"
 vmw-cli ls vmware_tanzu_kubernetes_grid > /dev/null 2>&1
 
 cnt=0
-vmwlist=$(/tmp/vmw-cli ls vmware_tanzu_kubernetes_grid 2>/dev/null | egrep "^tanzu-cli-bundle-linux" | tail -1 | awk '{ print $1 }')
+vmwlist=$(vmw-cli ls vmware_tanzu_kubernetes_grid 2>/dev/null | egrep "^photon" | awk '{ print $1 }')
 while [ "$vmwlist" == "" -a $cnt -lt 5 ]; do
-  vmwlist=$(/tmp/vmw-cli ls vmware_tanzu_kubernetes_grid 2>/dev/null | egrep "^tanzu-cli-bundle-linux" | tail -1 | awk '{ print $1 }')
+  vmwlist=$(vmw-cli ls vmware_tanzu_kubernetes_grid 2>/dev/null | egrep "^photon" | awk '{ print $1 }')
   let cnt=cnt+1
   sleep 10
 done
