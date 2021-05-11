@@ -116,7 +116,7 @@ if [ "$TDHENV" == "vSphere" ]; then
   if [ ! -f /usr/bin/ovftool ]; then 
     messagePrint " ▪ Install ovftool" "installing"
     if [ -f $TDHPATH/software/VMware-ovftool-4.4.1-16812187-lin.x86_64.bundle ]; then 
-      echo -e "\n\n\nyes" | sudo nohup $TDHPATH/software/VMware-ovftool-4.4.1-16812187-lin.x86_64.bundle > /dev/null 2>&1
+      echo -e "\n\n\nyes" | nohup $TDHPATH/software/VMware-ovftool-4.4.1-16812187-lin.x86_64.bundle > /dev/null 2>&1
       if [ $? -ne 0 ]; then 
         echo "ERROR: Unable to install ovftool"
         echo "       => sudo $TDHPATH/software/VMware-ovftool-4.4.1-16812187-lin.x86_64.bundl"
