@@ -5486,6 +5486,14 @@ verify_datacenter() {
   fi
 
   if [ "$VSPHERE_CLUSTER" == "" ]; then
+    cnt=$(echo "$VSPHERE_CLUSTER" | egrep -c "/")
+    if [ $cnt -gt 0 ]; then
+      echo "ERROR: Please set the Variable 'VSPHERE_CLUSTER' without any '/'."
+      echo "       WRONG => $VSPHERE_CLUSTER"
+      echo "       RIGHT => $(echo $VSPHERE_CLUSTER | awk -F'/' '| print $NF }')"
+      exit
+    fi
+
     echo ""
     echo "Please set the variale: VSPHERE_CLUSTER=<cluster> in $HOME/.tanzu-demo-hub.cfg"
     echo "from the following list:"
@@ -5507,6 +5515,14 @@ verify_datacenter() {
   fi
 
   if [ "$VSPHERE_NETWORK" == "" ]; then
+    cnt=$(echo "$VSPHERE_NETWORK" | egrep -c "/")
+    if [ $cnt -gt 0 ]; then
+      echo "ERROR: Please set the Variable 'VVSPHERE_NETWORK' without any '/'."
+      echo "       WRONG => $VSPHERE_NETWORK"
+      echo "       RIGHT => $(echo $VSPHERE_NETWORK | awk -F'/' '| print $NF }')"
+      exit
+    fi
+
     echo ""
     echo "Please set the variale: VSPHERE_NETWORK=<network> in $HOME/.tanzu-demo-hub.cfg"
     echo "from the following list:"
