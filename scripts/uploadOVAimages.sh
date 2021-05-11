@@ -127,14 +127,21 @@ echo "N:$n"
 echo "CNT:$cnt PTH:$pth NAM:$nam"
   if [ $cnt -eq 0 ]; then
     stt="uploaded"
-echo "$OVFTOOL $OVFOPTS tanzu-demo-hub/software/${n} $OVFCONN"
-    echo "$VSPHERE_VCENTER_PASSWORD" | $OVFTOOL $OVFOPTS tanzu-demo-hub/software/${n} $OVFCONN > /dev/null 2>&1
+echo "echo $VSPHERE_VCENTER_PASSWORD | $OVFTOOL $OVFOPTS tanzu-demo-hub/software/${n} $OVFCONN"
+    echo "$VSPHERE_VCENTER_PASSWORD" | $OVFTOOL $OVFOPTS tanzu-demo-hub/software/${n} $OVFCONN > /dev/null 2>&1; ret=$?
+    if [ $ret -ne 0 ]; then
+      echo "ERROR: failed to upload image: $n"
+      echo "       => echo $VSPHERE_VCENTER_PASSWORD | $OVFTOOL $OVFOPTS tanzu-demo-hub/software/${n} $OVFCONN"
+      exit
+    fi
+
+echo $?
     src=$(govc find -name "${pth}*")
     vmn=$(govc find -name "${pth}*" | awk -F'/' '{ print $NF }')
 echo "SRC:$src"
 echo "VMN:$vmn"
     govc vm.clone -template=true -vm /${VSPHERE_DATACENTER}/vm/${vmn} -folder=Templates -force=true ${vmn} > /dev/null 2>&1
-    ovc vm.destroy /${VSPHERE_DATACENTER}/vm/${vmn}
+    govc vm.destroy /${VSPHERE_DATACENTER}/vm/${vmn}
   else
     stt="already uploaded"
   fi
