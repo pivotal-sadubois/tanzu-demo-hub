@@ -29,18 +29,21 @@ export TDH_DEPLOYMENT_ENV_NAME=$TDH_TKGMC_INFRASTRUCTURE
 export TKG_CONFIG=${TDHPATH}/config/$TDH_TKGMC_CONFIG
 
 export GOVC_INSECURE=1
-export GOVC_URL=https://${VSPHERE_SERVER}/sdk
-export GOVC_USERNAME=$VSPHERE_ADMIN
-export GOVC_PASSWORD=$VSPHERE_PASSWORD
+export GOVC_URL=https://${VSPHERE_VCENTER_SERVER}/sdk
+export GOVC_USERNAME=$VSPHERE_VCENTER_ADMIN
+export GOVC_PASSWORD=$VSPHERE_VCENTER_PASSWORD
 export GOVC_DATASTORE=$VSPHERE_DATASTORE
-export GOVC_NETWORK="$VSPHERE_MANAGEMENT_NETWORK"
+export GOVC_NETWORK="$VSPHERE_NETWORK"
 export GOVC_RESOURCE_POOL=/${VSPHERE_DATACENTER}/host/${VSPHERE_CLUSTER}/Resources
 
 OVFTOOL="/usr/bin/ovftool --skipManifestCheck --noDestinationSSLVerify --noSourceSSLVerify --acceptAllEulas"
 OVFTOOL="/usr/bin/ovftool -q --overwrite --skipManifestCheck --noDestinationSSLVerify --noSourceSSLVerify --acceptAllEulas"
 OVFTOOL="/usr/bin/ovftool -q --skipManifestCheck --noDestinationSSLVerify --noSourceSSLVerify --acceptAllEulas"
-OVFOPTS="--network=$VSPHERE_MANAGEMENT_NETWORK --datastore=$VSPHERE_DATASTORE"
-OVFCONN="vi://${VSPHERE_ADMIN}@${VSPHERE_SERVER}/${VSPHERE_DATACENTER}/host/${VSPHERE_CLUSTER}"
+OVFOPTS="--network=$VSPHERE_NETWORK --datastore=$VSPHERE_DATASTORE"
+OVFCONN="vi://${VSPHERE_VCENTER_ADMIN}@${VSPHERE_VCENTER_SERVER}/${VSPHERE_DATACENTER}/host/${VSPHERE_CLUSTER}"
+
+echo "OVFCONN:$OVFCONN"
+echo "OVFTOOL:$OVFTOOL"
 
 export VMWUSER="$TDH_MYVMWARE_USER"
 export VMWPASS="$TDH_MYVMWARE_PASS"
@@ -68,8 +71,6 @@ while [ "$vmwlist" == "" -a $cnt -lt 5 ]; do
   let cnt=cnt+1
   sleep 10
 done
-
-id
 
 for file in $vmwlist; do
   if [ ! -f $TDHPATH/software/$file ]; then
