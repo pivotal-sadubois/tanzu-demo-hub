@@ -23,7 +23,7 @@ if [ -f ~/.tanzu-demo-hub.cfg ]; then
   . ~/.tanzu-demo-hub.cfg
 fi
 
-messagePrint " - Login to Docker Registry" "$TDH_REGISTRY_DOCKER_NAME"
+messagePrint " ▪ Login to Docker Registry" "$TDH_REGISTRY_DOCKER_NAME"
 cnt=0; ret=1
 while [ $ret -ne 0 -a $cnt -lt 5 ]; do
   docker login $TDH_REGISTRY_DOCKER_NAME -u $TDH_REGISTRY_DOCKER_USER -p $TDH_REGISTRY_DOCKER_PASS > /dev/null 2>&1; ret=$?
@@ -32,7 +32,7 @@ while [ $ret -ne 0 -a $cnt -lt 5 ]; do
 done
 
 if [ ! -s /usr/local/bin/vmw-cli ]; then
-  messagePrint " - Install Package (vmw-cli)" "installing"
+  messagePrint " ▪ Install Package (vmw-cli)" "installing"
   docker run apnex/vmw-cli shell > vmw-cli 2>/dev/null
   if [ $? -ne 0 ]; then 
     echo "ERROR: faileed to run vmw-cli docker container"
@@ -45,8 +45,8 @@ if [ ! -s /usr/local/bin/vmw-cli ]; then
 fi
 
 if [ ! -s /usr/local/bin/tanzu ]; then
-  messagePrint " - Install Tanzu CLI" "installing"
-  . ~/.tanzu-demo-hub.cfg
+  messagePrint " ▪ Install Tanzu CLI" "installing"
+
   export VMWUSER="$TDH_MYVMWARE_USER"
   export VMWPASS="$TDH_MYVMWARE_PASS"
   vmw-cli ls vmware_tanzu_kubernetes_grid > /dev/null 2>&1
@@ -104,7 +104,7 @@ fi
 
 
 # INSTALL KIND
-messagePrint " - Install Kind Cluster" "installing"
+messagePrint " ▪ Install Kind Cluster" "installing"
 curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.9.0/kind-linux-amd64 2>/dev/null
 chmod +x ./kind
 mv kind /usr/local/bin
@@ -114,7 +114,7 @@ installSnap kubeadm --classic
 
 if [ "$TDHENV" == "vSphere" ]; then 
   if [ ! -f /usr/bin/ovftool ]; then 
-    messagePrint " - Install ovftool" "installing"
+    messagePrint " ▪ Install ovftool" "installing"
     if [ -f $TDHPATH/software/VMware-ovftool-4.4.1-16812187-lin.x86_64.bundle ]; then 
       echo -e "\n\n\nyes" | sudo nohup $TDHPATH/software/VMware-ovftool-4.4.1-16812187-lin.x86_64.bundle
     else
@@ -128,13 +128,16 @@ if [ "$TDHENV" == "vSphere" ]; then
   installPackage gccgo-go
   echo "=> Install GOVC"
   #curl -L https://github.com/vmware/govmomi/releases/download/v0.24.0/govc_linux_amd64.gz --output govc_linux_amd64.gz > /dev/null 2>&1
+echo xxx1
   wget https://github.com/vmware/govmomi/releases/download/v0.24.0/govc_linux_amd64.gz 2>/dev/null 1>&2
+echo $?
+ls -la /govc_linux_amd64.gz
   gunzip govc_linux_amd64.gz
   mv govc_linux_amd64 /usr/local/bin/govc
   chmod +x /usr/local/bin/govc
 fi
 
-messagePrint " - Upgrading Packages" "apt upgrade -y"
+messagePrint " ▪ Upgrading Packages" "apt upgrade -y"
 apt upgrade -y > /dev/null 2>&1
 
 touch /tkg_software_installed
