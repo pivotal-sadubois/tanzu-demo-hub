@@ -18,6 +18,14 @@ else
   exit 1
 fi
 
+messagePrint " - Login to Docker Registry" "$TDH_REGISTRY_DOCKER_NAME"
+cnt=0; ret=1
+while [ $ret -ne 0 -a $cnt -lt 5 ]; do
+  docker login $TDH_REGISTRY_DOCKER_NAME -u $TDH_REGISTRY_DOCKER_USER -p $TDH_REGISTRY_DOCKER_PASS > /dev/null 2>&1; ret=$?
+  sleep 60
+  let cnt=cnt+1
+done
+
 if [ ! -s /usr/local/bin/vmw-cli ]; then
   messagePrint " - Install Package (vmw-cli)" "installing"
   docker run apnex/vmw-cli shell > vmw-cli 2>/dev/null
