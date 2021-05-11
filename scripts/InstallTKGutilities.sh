@@ -118,7 +118,12 @@ echo xxx0
   if [ ! -f /usr/bin/ovftool ]; then 
     messagePrint " ▪ Install ovftool" "installing"
     if [ -f $TDHPATH/software/VMware-ovftool-4.4.1-16812187-lin.x86_64.bundle ]; then 
-      echo -e "\n\n\nyes" | sudo nohup $TDHPATH/software/VMware-ovftool-4.4.1-16812187-lin.x86_64.bundle
+      echo -e "\n\n\nyes" | sudo nohup $TDHPATH/software/VMware-ovftool-4.4.1-16812187-lin.x86_64.bundle > /dev/null 2>&1
+      if [ $? -ne 0 ]; then 
+        echo "ERROR: Unable to install ovftool"
+        echo "       => sudo $TDHPATH/software/VMware-ovftool-4.4.1-16812187-lin.x86_64.bundl"
+        exit
+      fi
     else
       echo "ERROR: VMware ovtools not found, please download to tanzu-content-hub/software from: "
       echo "https://my.vmware.com/group/vmware/downloads/details?downloadGroup=OVFTOOL441&productId=734"
@@ -129,11 +134,10 @@ echo xxx0
   installPackage golang-go
   installPackage gccgo-go
   echo "=> Install GOVC"
-  #curl -L https://github.com/vmware/govmomi/releases/download/v0.24.0/govc_linux_amd64.gz --output govc_linux_amd64.gz > /dev/null 2>&1
-echo xxx1
+pwd
   wget https://github.com/vmware/govmomi/releases/download/v0.24.0/govc_linux_amd64.gz 2>/dev/null 1>&2
 echo $?
-ls -la /govc_linux_amd64.gz
+ls -la govc_linux_amd64.gz
   gunzip govc_linux_amd64.gz
   mv govc_linux_amd64 /usr/local/bin/govc
   chmod +x /usr/local/bin/govc
