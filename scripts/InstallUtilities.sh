@@ -72,8 +72,8 @@ installPackage jq
 if [ ! -x /usr/local/bin/kubectl-vsphere ]; then
   cp $HOME/tanzu-demo-hub/software/vsphere-plugin-$(uname).zip /tmp
   unzip -d /tmp /tmp/vsphere-plugin-$(uname).zip > /dev/null 2>&1
-  mv /tmp/kubectl-vsphere /usr/local/bin
-  mv /tmp/kubectl /usr/local/bin
+  mv /tmp/bin/kubectl-vsphere /usr/local/bin
+  mv /tmp/bin/kubectl /usr/local/bin
   chmod a+x /usr/local/bin/kubectl-vsphere /usr/local/bin/kubectl
 fi
 
