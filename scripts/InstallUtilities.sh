@@ -66,8 +66,16 @@ echo "   -----------------------------------------------------------------------
 # --- INSTALL PACKAGTES ---
 installPackage zip
 installPackage awscli
-installSnap kubectl --classic
+#installSnap kubectl --classic
 installPackage jq
+
+if [ ! -x /usr/local/bin/kubectl-vsphere ]; then
+  cp $HOME/tanzu-demo-hub/software/vsphere-plugin-$(uname).zip /tmp
+  unzip -d /tmp /tmp/vsphere-plugin-$(uname).zip > /dev/null 2>&1
+  mv /tmp/kubectl-vsphere /usr/local/bin
+  mv /tmp/kubectl /usr/local/bin
+  chmod a+x /usr/local/bin/kubectl-vsphere /usr/local/bin/kubectl
+fi
 
 #if [ ! -x /usr/bin/zipinfo ]; then
 #  echo "=> Install ZIP"
