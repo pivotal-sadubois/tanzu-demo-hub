@@ -1412,7 +1412,7 @@ echo "gaga JUMP_JHOST:$JUMP_HOST"
         sudo ${TDHHOME}/scripts/InstallOpenLDAP.sh \"${TDH_TKGMC_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}\" $DEBUG"; ret=$?
 
     if [ ${ret} -ne 0 ]; then
-      echo "ERROR: Failed to install CLI Utilities (InstallUtilities.sh)"
+      echo "ERROR: Failed to install CLI Utilities (InstallOpenLDAP.sh)"
       echo "       => $SSH_COMMAND"
       exit
     fi
@@ -1480,6 +1480,8 @@ configureJumpHost() {
   # --- TEST FOR RUNNING REMOTE SCRIPT ---
   stt=$($SSH_COMMAND -n "[ -f /tmp/tanzu-demo-hub.pid ] && pgrep -F /tmp/tanzu-demo-hub.pid")
   stt=$($SSH_COMMAND -n "[ -f /jump_software_installed ] && echo true")
+echo "STT:$stt oooooooooooo"
+
   if [ "${stt}" == "" ]; then
     messageTitle "Install CLI Utilities (aws,az,gcp,bosh,pivnet,cf,om,jq) on Jump Host (jump.${TDH_TKGMC_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN})"
     $SSH_COMMAND -n "[ -d $SSH_HOME/tanzu-demo-hub ] && chmod a+x ${TDHHOME}/scripts/InstallUtilities.sh && \
@@ -5415,6 +5417,10 @@ verify_datacenter() {
   export GOVC_URL=https://${VSPHERE_VCENTER_SERVER}/sdk
   export GOVC_USERNAME=$VSPHERE_VCENTER_ADMIN
   export GOVC_PASSWORD=$VSPHERE_VCENTER_PASSWORD
+
+echo xxxxxxxxxxxx
+echo "export GOVC_URL=https://${VSPHERE_VCENTER_SERVER}/sdk"
+echo xxxxxxxxx
 
   govc ls /Datacenter/datastore > /dev/null 2>&1
   if [ $? -ne 0 ]; then
