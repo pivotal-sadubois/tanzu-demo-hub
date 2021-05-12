@@ -1403,8 +1403,6 @@ configureLDAP() {
   #if [ "${TDH_TKGMC_IDENTITY_MANAGEMENT_TYPE}" != "ldap" ]; then return; fi
   #VSPHERE_JUMPHOST_NAME
 
-echo "gaga JUMP_JHOST:$JUMP_HOST"
-
   ldapwhoami -H ldap://${JUMP_HOST} -x -ZZ >/dev/null 2>&1
   if [ $? -ne 0 ]; then 
     messageTitle "Install LDAP Server and (phpLDAPadmin) on Jump Host (${JUMP_HOST})"
@@ -5300,6 +5298,14 @@ tdh_tools_build() {
   DOCKER_IMAGE_LATEST_ID=$(docker images | egrep "^tdh-tools" | grep "latest" | awk '{ print $3 }')
   DOCKER_IMAGE_ID=$(docker images | egrep "^tdh-tools" | grep "CHKSUM" | grep "$DOCKER_IMAGE_LATEST_ID" | awk '{ print $3 }')
   DOCKER_IMAGE_CHKSUM=$(docker images | egrep "^tdh-tools" | grep "CHKSUM" | grep "$DOCKER_IMAGE_LATEST_ID" | awk '{ print $2 }' | sed 's/CHKSUM-//g')
+
+  if [ ! -x /usr/local/bin/kubectl-vsphere ]; then
+    cp $TDHPATH/software/vsphere-plugin-$(uname).zip /tmp
+    unzip -d /tmp /tmp/vsphere-plugin-$(uname).zip > /dev/null 2>&1
+    chmod a+x /tmp/bin/kubectl-vsphere /tmp/bin/kubectl
+    mv /tmp/bin/kubectl-vsphere $TDH_DOCKER_FILES
+    mv /tmp/bin/kubectl $TDH_DOCKER_FILES
+  fi
 
   #messagePrint " ▪ Docker Image (tdh-tools) Name / ID"                  "tdh-tools:latest / $DOCKER_IMAGE_LATEST_ID"
 
