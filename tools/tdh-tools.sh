@@ -6,8 +6,8 @@
 # Description ..: Tanzu Demo Hub - Deploy K8S Cluster
 # ############################################################################################
 
-export TANZU_DEMO_HUB=$(cd "$(pwd)/$(dirname $0)../"; pwd)
-export TDHPATH=$(cd "$(pwd)/$(dirname $0)../"; pwd)
+export TANZU_DEMO_HUB=$(cd "$(pwd)/$(dirname $0)/../"; pwd)
+export TDHPATH=$(cd "$(pwd)/$(dirname $0)/../"; pwd)
 export ROOT_SHELL=0
 
 . $TANZU_DEMO_HUB/functions
