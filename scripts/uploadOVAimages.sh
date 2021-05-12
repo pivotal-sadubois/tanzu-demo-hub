@@ -45,8 +45,8 @@ echo "export GOVC_NETWORK="$VSPHERE_NETWORK""
 echo "export GOVC_RESOURCE_POOL=/${VSPHERE_DATACENTER}/host/${VSPHERE_CLUSTER}/Resources"
 
 OVFTOOL="/usr/bin/ovftool --skipManifestCheck --noDestinationSSLVerify --noSourceSSLVerify --acceptAllEulas"
-OVFTOOL="/usr/bin/ovftool -q --skipManifestCheck --noDestinationSSLVerify --noSourceSSLVerify --acceptAllEulas"
 OVFTOOL="/usr/bin/ovftool -q --overwrite --skipManifestCheck --noDestinationSSLVerify --noSourceSSLVerify --acceptAllEulas"
+OVFTOOL="/usr/bin/ovftool -q --skipManifestCheck --noDestinationSSLVerify --noSourceSSLVerify --acceptAllEulas"
 OVFOPTS="--network=\"$VSPHERE_NETWORK\" --datastore=\"$VSPHERE_DATASTORE\""
 OVFCONN="vi://${VSPHERE_VCENTER_ADMIN}@${VSPHERE_VCENTER_SERVER}/${VSPHERE_DATACENTER}/host/${VSPHERE_CLUSTER}"
 
@@ -123,17 +123,12 @@ for n in $TDH_TKGMC_TKG_IMAGES; do
   tmp=$(echo $n | sed -e 's/-tkg.*.ova//g')
   nam=$(echo $tmp | sed -e 's/-vmware.*$//g' -e 's/+vmware.*$//g') 
   ver=$(echo $tmp | sed -e 's/^.*-\(vmware.*\)$/\1/g' -e 's/^.*+\(vmware.*\)$/\1/g')
-  cnt=$(govc datastore.ls -ds=$VSPHERE_DATASTORE | grep -c "$pth")
-  cnt=0
-
-echo "NAM:$nam"
-echo "VER:$ver"
+  cnt=$(govc datastore.ls -ds=$VSPHERE_DATASTORE | grep -c "$nam")
 
   if [ $cnt -eq 0 ]; then
     stt="uploaded"
     cnt=0; ret=1
     while [ $ret -ne 0 -a $cnt -lt 5 ]; do
-echo "echo $VSPHERE_VCENTER_PASSWORD | $OVFTOOL $OVFOPTS tanzu-demo-hub/software/${n} $OVFCONN"
       eval echo $VSPHERE_VCENTER_PASSWORD | $OVFTOOL $OVFOPTS tanzu-demo-hub/software/${n} $OVFCONN > /tmp/log 2>&1; ret=$?
       let cnt=cnt+1
       sleep 30
