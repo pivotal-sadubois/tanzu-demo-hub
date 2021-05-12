@@ -135,6 +135,8 @@ for n in $TDH_TKGMC_TKG_IMAGES; do
           --noSourceSSLVerify --acceptAllEulas --network="$VSPHERE_NETWORK" --datastore="$VSPHERE_DATASTORE" \
           "tanzu-demo-hub/software/${n}" \
           "vi://${VSPHERE_VCENTER_ADMIN}@${VSPHERE_VCENTER_SERVER}/${VSPHERE_DATACENTER}/host/${VSPHERE_CLUSTER}"; ret=$?
+
+echo "vi://${VSPHERE_VCENTER_ADMIN}@${VSPHERE_VCENTER_SERVER}/${VSPHERE_DATACENTER}/host/${VSPHERE_CLUSTER}"
       let cnt=cnt+1
       sleep 30
     done
@@ -154,7 +156,11 @@ for n in $TDH_TKGMC_TKG_IMAGES; do
 echo "SRC:$src"
 echo "vMN:$vmn"
     #govc vm.clone -template=true -vm /${VSPHERE_DATACENTER}/vm/${vmn} -folder=Templates -force=true ${vmn} > /dev/null 2>&1
-    govc vm.clone -template=true -vm /${VSPHERE_DATACENTER}/vm/${vmn} -folder=Templates -force=true ${vmn} 
+echo "govc vm.clone -template=true -vm /${VSPHERE_DATACENTER}/vm/${vmn} -folder=Templates -force=true ${vmn}"
+    #govc vm.clone -template=true -vm /${VSPHERE_DATACENTER}/vm/${vmn} -folder=Templates -force=true ${vmn} 
+    govc vm.clone -template=true -vm /${VSPHERE_DATACENTER}/vm/${vmn} -force=true ${vmn} 
+echo gaga1
+echo "govc vm.destroy /${VSPHERE_DATACENTER}/vm/${vmn}"
     govc vm.destroy /${VSPHERE_DATACENTER}/vm/${vmn}
   else
     stt="already uploaded"
