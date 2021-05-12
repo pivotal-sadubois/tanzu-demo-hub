@@ -129,7 +129,7 @@ for n in $TDH_TKGMC_TKG_IMAGES; do
     stt="uploaded"
     cnt=0; ret=1
     while [ $ret -ne 0 -a $cnt -lt 5 ]; do
-      eval echo $VSPHERE_VCENTER_PASSWORD | $OVFTOOL $OVFOPTS tanzu-demo-hub/software/${n} $OVFCONN > /tmp/log 2>&1; ret=$?
+      echo $VSPHERE_VCENTER_PASSWORD | $OVFTOOL $OVFOPTS tanzu-demo-hub/software/${n} $OVFCONN > /tmp/log 2>&1; ret=$?
       let cnt=cnt+1
       sleep 30
     done
