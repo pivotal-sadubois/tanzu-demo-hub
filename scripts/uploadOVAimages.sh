@@ -36,6 +36,7 @@ export GOVC_DATASTORE=$VSPHERE_DATASTORE
 export GOVC_NETWORK="$VSPHERE_NETWORK"
 export GOVC_RESOURCE_POOL=/${VSPHERE_DATACENTER}/host/${VSPHERE_CLUSTER}/Resources
 
+echo "export GOVC_INSECURE=1"
 echo "export GOVC_URL=https://${VSPHERE_VCENTER_SERVER}/sdk"
 echo "export GOVC_USERNAME=$VSPHERE_VCENTER_ADMIN"
 echo "export GOVC_PASSWORD=$VSPHERE_VCENTER_PASSWORD"
@@ -119,28 +120,40 @@ echo "TDH_TKGMC_TKG_IMAGES:$TDH_TKGMC_TKG_IMAGES"
 
 TDH_TKGMC_TKG_IMAGES=$(ls -1 $TDHPATH/software/phot* | awk -F'/' '{ print $NF }') 
 for n in $TDH_TKGMC_TKG_IMAGES; do
-  pth=$(echo $n | awk -F'/' '{ print $2 }' | sed -e 's/-vmware.[0-9].ova//g' -e 's/+vmware.[0-9].ova//g')
-  pth=$(echo $n | sed -e 's/-tkg.*.ova//g')
-  nam=$(echo $n | awk -F'/' '{ print $2 }')
+  tmp=$(echo $n | sed -e 's/-tkg.*.ova//g')
+  nam=$(echo $tmp | sed -e 's/-vmware.*$//g' -e 's/+vmware.*$//g') 
+  ver=$(echo $tmp | sed -e 's/^.*\(-vmware.*\)$/\1/g' -e 's/^.*\(+vmware.*\)$/\1/g')
   cnt=$(govc datastore.ls -ds=$VSPHERE_DATASTORE | grep -c "$pth")
   cnt=0
 
+echo "NAM:$nam"
+echo "VER:$ver"
+
   if [ $cnt -eq 0 ]; then
     stt="uploaded"
-    echo "$VSPHERE_VCENTER_PASSWORD" | $OVFTOOL $OVFOPTS tanzu-demo-hub/software/${n} $OVFCONN > /dev/null 2>&1; ret=$?
+    cnt=0; ret=1
+    vmwlist=$(vmw-cli ls vmware_tanzu_kubernetes_grid 2>/dev/null | egrep "^photon" | awk '{ print $1 }')
+    while [ $ret -ne 0 -a $cnt -lt 5 ]; do
+      echo "$VSPHERE_VCENTER_PASSWORD" | $OVFTOOL $OVFOPTS tanzu-demo-hub/software/${n} $OVFCONN > /dev/null 2>&1; ret=$?
+      let cnt=cnt+1
+      sleep 10
+    done
+
     if [ $ret -ne 0 ]; then
       echo "ERROR: failed to upload image: $n"
       echo "       => echo $VSPHERE_VCENTER_PASSWORD | $OVFTOOL $OVFOPTS tanzu-demo-hub/software/${n} $OVFCONN"
       exit
     fi
 
-    src=$(govc find -name "${pth}*")
-    vmn=$(govc find -name "${pth}*" | awk -F'/' '{ print $NF }')
-    govc vm.clone -template=true -vm /${VSPHERE_DATACENTER}/vm/${vmn} -folder=Templates -force=true ${vmn} > /dev/null 2>&1
+    src=$(govc find -name "${nam}*" | tail -1)
+    vmn=$(govc find -name "${nam}*" | tail -1 | awk -F'/' '{ print $NF }')
+    #govc vm.clone -template=true -vm /${VSPHERE_DATACENTER}/vm/${vmn} -folder=Templates -force=true ${vmn} > /dev/null 2>&1
+    govc vm.clone -template=true -vm /${VSPHERE_DATACENTER}/vm/${vmn} -folder=Templates -force=true ${vmn} 
     govc vm.destroy /${VSPHERE_DATACENTER}/vm/${vmn}
   else
     stt="already uploaded"
   fi
+#pth
 
   messagePrint " - OVA Image: $n"             "$stt"
 done
