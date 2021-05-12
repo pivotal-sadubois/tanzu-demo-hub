@@ -122,7 +122,7 @@ TDH_TKGMC_TKG_IMAGES=$(ls -1 $TDHPATH/software/phot* | awk -F'/' '{ print $NF }'
 for n in $TDH_TKGMC_TKG_IMAGES; do
   tmp=$(echo $n | sed -e 's/-tkg.*.ova//g')
   nam=$(echo $tmp | sed -e 's/-vmware.*$//g' -e 's/+vmware.*$//g') 
-  ver=$(echo $tmp | sed -e 's/^.*\(-vmware.*\)$/\1/g' -e 's/^.*\(+vmware.*\)$/\1/g')
+  ver=$(echo $tmp | sed -e 's/^.*-\(vmware.*\)$/\1/g' -e 's/^.*+\(vmware.*\)$/\1/g')
   cnt=$(govc datastore.ls -ds=$VSPHERE_DATASTORE | grep -c "$pth")
   cnt=0
 
@@ -134,19 +134,22 @@ echo "VER:$ver"
     cnt=0; ret=1
     vmwlist=$(vmw-cli ls vmware_tanzu_kubernetes_grid 2>/dev/null | egrep "^photon" | awk '{ print $1 }')
     while [ $ret -ne 0 -a $cnt -lt 5 ]; do
-      echo "$VSPHERE_VCENTER_PASSWORD" | $OVFTOOL $OVFOPTS tanzu-demo-hub/software/${n} $OVFCONN > /dev/null 2>&1; ret=$?
+      echo "$VSPHERE_VCENTER_PASSWORD" | $OVFTOOL $OVFOPTS tanzu-demo-hub/software/${n} $OVFCONN > /tmp/log 2>&1; ret=$?
       let cnt=cnt+1
-      sleep 10
+      sleep 30
     done
 
     if [ $ret -ne 0 ]; then
-      echo "ERROR: failed to upload image: $n"
+      echo "ERROR: failed to upload image: $n after $cnt attempts"
       echo "       => echo $VSPHERE_VCENTER_PASSWORD | $OVFTOOL $OVFOPTS tanzu-demo-hub/software/${n} $OVFCONN"
+      messageLine; cat /tmp/log; messageLine
       exit
     fi
 
     src=$(govc find -name "${nam}*" | tail -1)
     vmn=$(govc find -name "${nam}*" | tail -1 | awk -F'/' '{ print $NF }')
+echo "SRC:$src"
+echo "vMN:$vmn"
     #govc vm.clone -template=true -vm /${VSPHERE_DATACENTER}/vm/${vmn} -folder=Templates -force=true ${vmn} > /dev/null 2>&1
     govc vm.clone -template=true -vm /${VSPHERE_DATACENTER}/vm/${vmn} -folder=Templates -force=true ${vmn} 
     govc vm.destroy /${VSPHERE_DATACENTER}/vm/${vmn}
