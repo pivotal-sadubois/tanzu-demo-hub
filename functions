@@ -5300,8 +5300,8 @@ tdh_tools_build() {
   DOCKER_IMAGE_CHKSUM=$(docker images | egrep "^tdh-tools" | grep "CHKSUM" | grep "$DOCKER_IMAGE_LATEST_ID" | awk '{ print $2 }' | sed 's/CHKSUM-//g')
 
   if [ ! -x $TDH_DOCKER_FILES/kubectl-vsphere ]; then
-    cp $TDHPATH/software/vsphere-plugin-$(uname).zip /tmp
-    unzip -d /tmp /tmp/vsphere-plugin-$(uname).zip > /dev/null 2>&1
+    cp $TDHPATH/software/vsphere-plugin-Linux.zip /tmp
+    unzip -d /tmp /tmp/vsphere-plugin-Linux.zip > /dev/null 2>&1
     chmod a+x /tmp/bin/kubectl-vsphere /tmp/bin/kubectl
     mv /tmp/bin/kubectl-vsphere $TDH_DOCKER_FILES
     mv /tmp/bin/kubectl $TDH_DOCKER_FILES
