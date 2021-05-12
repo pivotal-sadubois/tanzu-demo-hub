@@ -132,9 +132,9 @@ echo "VER:$ver"
   if [ $cnt -eq 0 ]; then
     stt="uploaded"
     cnt=0; ret=1
-    vmwlist=$(vmw-cli ls vmware_tanzu_kubernetes_grid 2>/dev/null | egrep "^photon" | awk '{ print $1 }')
     while [ $ret -ne 0 -a $cnt -lt 5 ]; do
-      echo "$VSPHERE_VCENTER_PASSWORD" | $OVFTOOL $OVFOPTS tanzu-demo-hub/software/${n} $OVFCONN > /tmp/log 2>&1; ret=$?
+echo "echo $VSPHERE_VCENTER_PASSWORD | $OVFTOOL $OVFOPTS tanzu-demo-hub/software/${n} $OVFCONN"
+      echo $VSPHERE_VCENTER_PASSWORD | $OVFTOOL $OVFOPTS tanzu-demo-hub/software/${n} $OVFCONN > /tmp/log 2>&1; ret=$?
       let cnt=cnt+1
       sleep 30
     done
