@@ -1,5 +1,5 @@
 # ############################################################################################
-# File: ........: files/tdh-tools/Dockerfile
+# File: ........: files/tdh-tools/Dockerfile   
 # Language .....: docker
 # Author .......: Sacha Dubois, VMware
 # Description ..: Tanzu Demo Hub - Dockerfile for tdh-tools container
@@ -14,6 +14,8 @@ ADD kubectl /usr/local/bin
 #ADD kp              /usr/local/bin
 ADD mc              /usr/local/bin
 ADD tmc             /usr/local/bin
+ADD govc            /usr/local/bin
+ADD ovftool         /usr/local/bin
 ADD kubectl-vsphere /usr/local/bin
 ADD kubectl         /usr/local/bin
 
