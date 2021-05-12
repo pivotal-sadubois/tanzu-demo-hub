@@ -5299,7 +5299,7 @@ tdh_tools_build() {
   DOCKER_IMAGE_ID=$(docker images | egrep "^tdh-tools" | grep "CHKSUM" | grep "$DOCKER_IMAGE_LATEST_ID" | awk '{ print $3 }')
   DOCKER_IMAGE_CHKSUM=$(docker images | egrep "^tdh-tools" | grep "CHKSUM" | grep "$DOCKER_IMAGE_LATEST_ID" | awk '{ print $2 }' | sed 's/CHKSUM-//g')
 
-  if [ ! -x /usr/local/bin/kubectl-vsphere ]; then
+  if [ ! -x $TDH_DOCKER_FILES/kubectl-vsphere ]; then
     cp $TDHPATH/software/vsphere-plugin-$(uname).zip /tmp
     unzip -d /tmp /tmp/vsphere-plugin-$(uname).zip > /dev/null 2>&1
     chmod a+x /tmp/bin/kubectl-vsphere /tmp/bin/kubectl
@@ -5326,6 +5326,12 @@ tdh_tools_build() {
     REBUILD_REQUIRED=1
   fi
 
+  if [ ! -x $TDH_DOCKER_FILES/mc ]; then
+    wget https://dl.min.io/client/mc/release/linux-amd64/mc > /dev/null 2>&1
+    mv mc $TDH_DOCKER_FILES
+    chmod a+x $TDH_DOCKER_FILES/mc
+  fi
+
   if [ $REBUILD_REQUIRED -gt 0 ]; then 
     if [ ! -f $TDH_DOCKER_FILES/kubectl ]; then
       curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
@@ -5333,18 +5339,18 @@ tdh_tools_build() {
       mv kubectl $TDH_DOCKER_FILES/kubectl
     fi
   
-    if [ ! -f $TDH_DOCKER_FILES/tanzu-cli-bundle-linux* ]; then
+    if [ ! -f $TDH_DOCKER_FILES/tanzu-cli-bundle* ]; then
       . ~/.tanzu-demo-hub.cfg
 
       checkTDHenvironment
       export VMWUSER="$TDH_MYVMWARE_USER"
       export VMWPASS="$TDH_MYVMWARE_PASS"
-      /tmp/vmw-cli ls vmware_tanzu_kubernetes_grid > /dev/null 2>&1
+      vmw-cli ls vmware_tanzu_kubernetes_grid > /dev/null 2>&1
     
       cnt=0
-      vmwfile=$(/tmp/vmw-cli ls vmware_tanzu_kubernetes_grid 2>/dev/null | egrep "^tanzu-cli-bundle-linux" | tail -1 | awk '{ print $1 }')
+      vmwfile=$(vmw-cli ls vmware_tanzu_kubernetes_grid 2>/dev/null | egrep "^tanzu-cli-bundle" | grep linux | tail -1 | awk '{ print $1 }')
       while [ "$vmwfile" == "" -a $cnt -lt 5 ]; do
-        vmwfile=$(/tmp/vmw-cli ls vmware_tanzu_kubernetes_grid 2>/dev/null | egrep "^tanzu-cli-bundle-linux" | tail -1 | awk '{ print $1 }')
+        vmwfile=$(vmw-cli ls vmware_tanzu_kubernetes_grid 2>/dev/null | egrep "^tanzu-cli-bundle" | grep linux | tail -1 | awk '{ print $1 }')
         let cnt=cnt+1
         sleep 10
       done
@@ -5360,9 +5366,9 @@ tdh_tools_build() {
       else
         cnt=0
         while [ ! -f "$vmwfile" -a $cnt -lt 10 ]; do
-          /tmp/vmw-cli ls vmware_tanzu_kubernetes_grid > /dev/null 2>&1
-          /tmp/vmw-cli cp $vmwfile > /dev/null 2>&1
-           let cnt=cnt+1
+          vmw-cli ls vmware_tanzu_kubernetes_grid > /dev/null 2>&1
+          vmw-cli cp $vmwfile > /dev/null 2>&1
+          let cnt=cnt+1
           sleep 30
         done
     
@@ -5378,7 +5384,7 @@ tdh_tools_build() {
         fi
       fi
     else
-      vmwfile=$(ls -1 $TDH_DOCKER_FILES/tanzu-cli-bundle-linux* 2>/dev/null | awk -F'/' '{ print $NF }' | head -1)
+      vmwfile=$(ls -1 $TDH_DOCKER_FILES/tanzu-cli-bundle* 2>/dev/null | awk -F'/' '{ print $NF }' | head -1)
     fi
   
     # --- CLEANUP SOME DISK SPACE ---
