@@ -11,13 +11,14 @@ ENV TZ="Europe/Zurich"
 ARG UID GID USER TZ HOME VMWUSER VMWPASS TANZU_CLI START 
 ADD $TANZU_CLI /tmp
 ADD kubectl /usr/local/bin
-#ADD kp              /usr/local/bin
+ADD kp              /usr/local/bin
 ADD mc              /usr/local/bin
 ADD tmc             /usr/local/bin
 ADD govc            /usr/local/bin
-ADD ovftool         /usr/local/bin
 ADD kubectl-vsphere /usr/local/bin
 ADD kubectl         /usr/local/bin
+ADD vmware-ovftool  /usr/lib/vmware-ovftool
+RUN ln -s /usr/lib/vmware-ovftool/ovftool /usr/local/bin/ovftool
 
 # --- LOCAL TIME AND USER ---
 RUN touch /tdh_tools_docker_container 
