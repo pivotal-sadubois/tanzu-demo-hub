@@ -28,22 +28,44 @@ listTemplates() {
 }
 
 listDeployments() {
+  echo
+  printf "%-33s %-7s %-25s %s\n" "CONFIURATION" "CLOUD" "MANAGEMENT-CLUSTER" "STATUS"
+  echo "-----------------------------------------------------------------------------------------------------------"
+
+  for deployment in $(ls -1 ${TDHPATH}/deployments/tmc-*.cfg ${HOME}/.tanzu-demo-hub/config/tmc* 2>/dev/null ); do
+    TDH_TKGMC_INFRASTRUCTURE=$(egrep "^TDH_TKGMC_INFRASTRUCTURE=" $deployment | awk -F'=' '{ print $2 }' | sed 's/"//g')
+    TDH_TKGMC_ENVNAME=$(egrep "^TDH_TKGMC_ENVNAME=" $deployment | awk -F'=' '{ print $2 }' | sed 's/"//g')
+    TDH_DEPLOYMENT_CLOUD=$(egrep "^TDH_DEPLOYMENT_CLOUD=" $deployment | awk -F'=' '{ print $2 }' | sed 's/"//g')
+    TDH_MANAGEMENT_CLUSTER=$(egrep "^TDH_MANAGEMENT_CLUSTER=" $deployment | awk -F'=' '{ print $2 }')
+
+    tmc managementcluster get $TDH_MANAGEMENT_CLUSTER > /dev/null 2>&1
+    if [ $? -ne 0 ]; then 
+      stt="unavailable"
+    else
+      st1=$(tmc managementcluster get $TDH_MANAGEMENT_CLUSTER -o json | jq -r '.status.phase') 
+      st2=$(tmc managementcluster get $TDH_MANAGEMENT_CLUSTER -o json | jq -r '.status.health') 
+      stt="$st1 / $st2"
+    fi
+
+    dep=$(basename $deployment)
+
+    printf "%-33s %-7s %-25s %s\n" $dep $TDH_DEPLOYMENT_CLOUD $TDH_MANAGEMENT_CLUSTER "$stt"
+  done
+
+  echo "-----------------------------------------------------------------------------------------------------------"
+}
+
+listClusterConfig_old() {
   printf "%-33s %-5s %-10s %-10s %s\n" "CONFIURATION" "CLOUD" "MGMT-CLUSTER" "MAINTAINER" "DESCRIPTION"
   echo "-----------------------------------------------------------------------------------------------------------"
 
-  for deployment in $(ls -1 ${TDHPATH}/deployments/*.cfg); do
+  for deployment in $(ls -1 ${TDHPATH}/deployments/tkgmc-*.cfg); do
     PCF_TILE_PKS_VERSION=""
     PCF_TILE_PAS_VERSION=""
 
     . $deployment
 
     dep=$(basename $deployment)
-
-    if [ "$PCF_TILE_PKS_VERSION" != "" ]; then
-      TILE="PKS $PCF_TILE_PKS_VERSION"
-    else
-      TILE="PAS $PCF_TILE_PAS_VERSION"
-    fi
 
     printf "%-33s %-5s %-12s %-10s %s\n" $dep $TDH_DEPLOYMENT_CLOUD $TDH_MANAGEMENT_CLUSTER \
            $TDH_DEPLOYMENT_MAINTAINER "$TDH_DEPLOYMENT_DESCRIPTION"
@@ -304,5 +326,7 @@ exit
   checkCloudAccess
   configureJumpHost
 
-echo "$SSH_COMMAND"
+
+tmc managementcluster deregister tkgmc-vsphere-sadubois
+
 
