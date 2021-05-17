@@ -3155,7 +3155,7 @@ tmcCreateCluster() {
                        -g $TMC_CLUSTER_GROUP \
                        -t $TDH_TKGWC_TEMPLATE \
                        --version $TMC_KUBERNETES_VERSION \
-                       --availability-zone ${AWS_REGION}a
+                       --availability-zone ${AWS_PRIMARY_AZ}
     if [ $? -ne 0 ]; then 
       echo "ERROR: failed to build Cluster"
       echo "       => tmc cluster create -m $TMC_MANAGEMENT_CLUSTER -p $TMC_PROVISIONER_NAME \\"
