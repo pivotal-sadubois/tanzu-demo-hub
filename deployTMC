@@ -1,6 +1,6 @@
 #!/bin/bash
 # ############################################################################################
-# File: ........: deployTMCwc
+# File: ........: deployTMC
 # Language .....: bash
 # Author .......: Sacha Dubois, VMware
 # Description ..: Tanzu Demo Hub - Deploy TKG Workload Cluster
@@ -11,6 +11,7 @@ export TDHPATH=$(cd "$(pwd)/$(dirname $0)"; pwd)
 export TDH_DEPLOYMENT_ENV_NAME="awstkg"
 export TDH_DEPLOYMENT_CLOUD="AWS"
 export DEPLOY_PCF_DEPLOYMENT=aws_tkg_default.cfg
+export DEBUG=1
 
 . $TANZU_DEMO_HUB/functions
 
@@ -22,15 +23,15 @@ usage() {
 
 listTemplates() {
   echo "TKG CLUSTER TEMPLATES"
-  echo "-----------------------------------------------------------------------------------------------------------"
+  messageLine
   tmc cluster template list
-  echo "-----------------------------------------------------------------------------------------------------------"
+  messageLine
 }
 
 listDeployments() {
   echo
   printf "%-33s %-7s %-25s %s\n" "CONFIURATION" "CLOUD" "MANAGEMENT-CLUSTER" "STATUS"
-  echo "-----------------------------------------------------------------------------------------------------------"
+  messageLine
 
   for deployment in $(ls -1 ${TDHPATH}/deployments/tmc-*.cfg ${HOME}/.tanzu-demo-hub/config/tmc* 2>/dev/null ); do
     TDH_TKGMC_INFRASTRUCTURE=$(egrep "^TDH_TKGMC_INFRASTRUCTURE=" $deployment | awk -F'=' '{ print $2 }' | sed 's/"//g')
@@ -52,26 +53,7 @@ listDeployments() {
     printf "%-33s %-7s %-25s %s\n" $dep $TDH_DEPLOYMENT_CLOUD $TDH_MANAGEMENT_CLUSTER "$stt"
   done
 
-  echo "-----------------------------------------------------------------------------------------------------------"
-}
-
-listClusterConfig_old() {
-  printf "%-33s %-5s %-10s %-10s %s\n" "CONFIURATION" "CLOUD" "MGMT-CLUSTER" "MAINTAINER" "DESCRIPTION"
-  echo "-----------------------------------------------------------------------------------------------------------"
-
-  for deployment in $(ls -1 ${TDHPATH}/deployments/tkgmc-*.cfg); do
-    PCF_TILE_PKS_VERSION=""
-    PCF_TILE_PAS_VERSION=""
-
-    . $deployment
-
-    dep=$(basename $deployment)
-
-    printf "%-33s %-5s %-12s %-10s %s\n" $dep $TDH_DEPLOYMENT_CLOUD $TDH_MANAGEMENT_CLUSTER \
-           $TDH_DEPLOYMENT_MAINTAINER "$TDH_DEPLOYMENT_DESCRIPTION"
-  done
-
-  echo "-----------------------------------------------------------------------------------------------------------"
+  messageLine
 }
 
 createCluster_deleteme() {
@@ -265,6 +247,10 @@ export TDH_TLS_ISSUER_CONFIG=/tmp/issuer-dns-manager1.yaml
 # --- VERYFY TMC ACCESS ---
 checkCLIcommands TOOLS
 checkCLIcommands TKG
+
+# --- CLEANUP KUNECONFIG ---
+cleanKubeconfig
+
 tmcCheckLogin
 checkTDHAccess
 checkTMCAccess
