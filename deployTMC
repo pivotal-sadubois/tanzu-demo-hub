@@ -11,7 +11,7 @@ export TDHPATH=$(cd "$(pwd)/$(dirname $0)"; pwd)
 export TDH_DEPLOYMENT_ENV_NAME="awstkg"
 export TDH_DEPLOYMENT_CLOUD="AWS"
 export DEPLOY_PCF_DEPLOYMENT=aws_tkg_default.cfg
-export DEBUG=1
+export DEBUG=0
 
 . $TANZU_DEMO_HUB/functions
 
