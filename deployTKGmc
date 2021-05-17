@@ -59,11 +59,11 @@ createCluster_old() {
   fi
 
   messageTitle "Creating Cluster"
-  messagePrint " - Cluster Name"             "$TMC_CLUSTER_NAME"
-  messagePrint " - Cluster Group"            "$TMC_CLUSTER_GROUP"
-  messagePrint " - Cluster Template"         "$DEPLOY_TKG_TEMPLATE"
-  messagePrint " - AWS Credentials"          "$TMC_ACCOUNT_NAME_AWS"
-  messagePrint " - AWS Region"               "$AWS_REGION"
+  messagePrint " ▪ Cluster Name"             "$TMC_CLUSTER_NAME"
+  messagePrint " ▪ Cluster Group"            "$TMC_CLUSTER_GROUP"
+  messagePrint " ▪ Cluster Template"         "$DEPLOY_TKG_TEMPLATE"
+  messagePrint " ▪ AWS Credentials"          "$TMC_ACCOUNT_NAME_AWS"
+  messagePrint " ▪ AWS Region"               "$AWS_REGION"
 
   if [ "${stt}" == "" ]; then 
     echo "-----------------------------------------------------------------------------------------------------------"
@@ -82,7 +82,7 @@ createCluster_old() {
     sleep 60
   done
 
-  messagePrint " - Cluster Status"           "$stt"
+  messagePrint " ▪ Cluster Status"           "$stt"
 
   #tmc cluster create -c sadubois-aws -g sadubois --name sadubois-demo -s vmware-cloud-tmc -t default
   #tmc cluster list --group sadubois --name sadubois-demo --output json
@@ -292,9 +292,9 @@ configureLetsEnscript() {
     CERTS_EXPIRED=$($SSH_COMMAND -n "openssl x509 -noout -in ~/tanzu-demo-hub/certificates/cert.pem -checkend 3600 > /dev/null 2>&1; echo \$?")
 
     if [ $CERTS_EXPIRED -eq 0 ]; then
-      messagePrint " - Certificate Expiratation Data:" "$CERTS_ENDDATE"
+      messagePrint " ▪ Certificate Expiratation Data:" "$CERTS_ENDDATE"
     else
-      messagePrint " - Certificate Expiratation Data:" "$CERTS_ENDDATE [>>> *EXPIRED* <<<]"
+      messagePrint " ▪ Certificate Expiratation Data:" "$CERTS_ENDDATE [>>> *EXPIRED* <<<]"
       CERTS_GENERATE_NEW=true
     fi
   else
@@ -386,7 +386,7 @@ createJumpHost() {
 
       aws ec2 --region=$AWS_REGION describe-key-pairs --key-names ${KEY_NAME} > /dev/null 2>&1
       if [ $? -ne 0 ]; then
-        messagePrint " - Creating Key Pair" "${KEY_NAME}"
+        messagePrint " ▪ Creating Key Pair" "${KEY_NAME}"
         aws ec2 --region=$AWS_REGION create-key-pair --key-name ${KEY_NAME} \
               --query 'KeyMaterial' --output text > ~/.tanzu-demo-hub/KeyPair-${KEY_NAME}-$AWS_REGION.pem 2>/dev/null
         chmod 600 ~/.tanzu-demo-hub/KeyPair-${KEY_NAME}-${AWS_REGION}.pem
@@ -396,11 +396,11 @@ createJumpHost() {
           echo "                  --query 'KeyMaterial' --output text > ~/.tanzu-demo-hub/KeyPair-${KEY_NAME}-${AWS_REGION}.pem"; exit 1
         fi
       else
-        messagePrint " - Key Pair exists on AWS" "${KEY_NAME}"
+        messagePrint " ▪ Key Pair exists on AWS" "${KEY_NAME}"
       fi
 
       messagePrint "Deploy vSphere Jump-Server with (terraforms)" "$JUMP_HOST"
-      messagePrint " - Creating Variable file" "/tmp/terraform.tfvars"
+      messagePrint " ▪ Creating Variable file" "/tmp/terraform.tfvars"
 
       az=$(echo $AWS_PRIMARY_AZ | sed 's/^.*\(.\)$/\1/g') 
       if [ "$az" != "a" -a "$az" != "b" -a "$az" != "c" ]; then 
@@ -421,7 +421,7 @@ createJumpHost() {
           echo "--------------------------------------------------------------------------------------------------------------"
           terraform -chdir=${TDHPATH}/terraform/aws init; ret=$?
         else
-          messagePrint " - Terraform (init)" "${TDHPATH}/terraform/aws"
+          messagePrint " ▪ Terraform (init)" "${TDHPATH}/terraform/aws"
           terraform -chdir=${TDHPATH}/terraform/aws init > /dev/null 2>&1; ret=$?
         fi
 
@@ -439,7 +439,7 @@ createJumpHost() {
           terraform -chdir=${TDHPATH}/terraform/aws plan -var-file=$TDH_TERRAFORM_TFVARS \
                     -out "jump-$TDH_TKGMC_ENVNAME" -state=$TDH_TERRAFORM_TFSTATE; ret=$?
         else
-          messagePrint " - Terraform (plan)" "${TDHPATH}/terraform/aws"
+          messagePrint " ▪ Terraform (plan)" "${TDHPATH}/terraform/aws"
           terraform -chdir=${TDHPATH}/terraform/aws plan -var-file=$TDH_TERRAFORM_TFVARS \
                     -out "jump-$TDH_TKGMC_ENVNAME" -state=$TDH_TERRAFORM_TFSTATE > /dev/null 2>&1; ret=$?
         fi
@@ -456,7 +456,7 @@ createJumpHost() {
           echo "=> terraform -chdir=${TDHPATH}/terraform apply -state=$TDH_TERRAFORM_TFSTATE \"jump-$TDH_TKGMC_ENVNAME\""
           terraform -chdir=${TDHPATH}/terraform/aws apply -state=$TDH_TERRAFORM_TFSTATE "jump-$TDH_TKGMC_ENVNAME"; ret=$?
         else
-          messagePrint " - Terraform (apply)" "${TDHPATH}/terraform/aws"
+          messagePrint " ▪ Terraform (apply)" "${TDHPATH}/terraform/aws"
           terraform -chdir=${TDHPATH}/terraform/aws apply -state=$TDH_TERRAFORM_TFSTATE "jump-$TDH_TKGMC_ENVNAME" > /dev/null 2>&1; ret=$?
         fi
 
@@ -499,17 +499,17 @@ createJumpHost() {
 
       ZONE_ID=$(aws route53 list-hosted-zones-by-name --dns-name ${AWS_HOSTED_DNS_DOMAIN} | jq -r '.HostedZones[0].Id')
       ZONE_ID_STR=$(echo "${ZONE_ID}" | awk -F'/' '{ print $NF }')
-      messagePrint " - DNS Zone (${AWS_HOSTED_DNS_DOMAIN}:" "zone managed by route53"
-      messagePrint " - Updating Zone Record for ($JUMP_HOST)" "$pip"
+      messagePrint " ▪ DNS Zone (${AWS_HOSTED_DNS_DOMAIN}:" "zone managed by route53"
+      messagePrint " ▪ Updating Zone Record for ($JUMP_HOST)" "$pip"
 
       # --- CREATE HOSTED ZONE ---
       route53createHostedZone $TDH_TKGMC_ENVNAME.$AWS_HOSTED_DNS_DOMAIN
 
       # --- UPDATE DNS DOMAIN ---
-      messagePrint " - Updating Zone Record for ($JUMP_HOST)" "$pip"
+      messagePrint " ▪ Updating Zone Record for ($JUMP_HOST)" "$pip"
       route53setDNSrecord "$pip" "$JUMP_HOST" "$AWS_HOSTED_DNS_DOMAIN"
 
-      messagePrint " - Updating Zone Record for (jump.$TDH_TKGMC_ENVNAME.$AWS_HOSTED_DNS_DOMAIN)" "$pip"
+      messagePrint " ▪ Updating Zone Record for (jump.$TDH_TKGMC_ENVNAME.$AWS_HOSTED_DNS_DOMAIN)" "$pip"
       route53setDNSrecord "$pip" "jump.$TDH_TKGMC_ENVNAME.$AWS_HOSTED_DNS_DOMAIN" "$TDH_TKGMC_ENVNAME.$AWS_HOSTED_DNS_DOMAIN"
 #uuuuuuuuuuuuuuu
     fi
@@ -524,11 +524,11 @@ createJumpHost() {
        jq -r ".Reservations[].Instances[].PublicIpAddress")
 
     messageTitle "Verify AWS Jump-Server"
-    messagePrint " - AWS Instance ID" "$ins"
-    messagePrint " - Jump Server Hostname" "$JUMP_HOST"
-    messagePrint " - Jump Server Status" "$stt"
-    messagePrint " - Jump Server IP Address" "$pip"
-    messagePrint " - Destroy Command" "terraform destroy"
+    messagePrint " ▪ AWS Instance ID" "$ins"
+    messagePrint " ▪ Jump Server Hostname" "$JUMP_HOST"
+    messagePrint " ▪ Jump Server Status" "$stt"
+    messagePrint " ▪ Jump Server IP Address" "$pip"
+    messagePrint " ▪ Destroy Command" "terraform destroy"
 
     messageLine
     echo "terraform -chdir=${TDHPATH}/terraform/aws destroy \\"
@@ -545,7 +545,7 @@ createJumpHost() {
     SSH_COMMAND="ssh -q $SSH_OPTIONS -i ~/.tanzu-demo-hub/KeyPair-${KEY_NAME}-$AWS_REGION.pem ${SSH_USER}@${SSH_HOST}"
     SCP_COMMAND="scp -r $SCP_OPTIONS -i ~/.tanzu-demo-hub/KeyPair-${KEY_NAME}-$AWS_REGION.pem"
 
-    messagePrint " - Wait for SSH to be ready" "< 5m"
+    messagePrint " ▪ Wait for SSH to be ready" "< 5m"
     # --- WAIT UNTIL SSH DEAMON IS READY NO JUMPHOST ----
     ret=1
     while [ $ret -ne 0 ]; do
@@ -554,8 +554,31 @@ createJumpHost() {
     done
   fi
 
-  if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "vSphere" ]; then
-    JUMP_HOST="${TDH_TKGMC_VCENTER_JUMPHOST}"
+  if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "vSphere" -a "$TDH_TKGMC_CREATE_JUMPHOST" == "false" ]; then
+    JUMP_HOST="${VSPHERE_JUMPHOST_NAME}"
+    SSH_USER="${VSPHERE_JUMPHOST_USER}"
+    SSH_OPTIONS="-o StrictHostKeyChecking=no -o RequestTTY=yes -o ServerAliveInterval=240"
+    SSH_PRIVATE_KEY=$VSPHERE_SSH_PRIVATE_KEY_FILE
+    SSH_COMMAND="ssh -q $SSH_OPTIONS -i ${SSH_PRIVATE_KEY} ${SSH_USER}@${JUMP_HOST}"
+
+    messageTitle "Verify vSphere Jump-Server ($JUMP_HOST)"
+    messagePrint " ▪ Wait for SSH to be ready" "< 3m"
+
+    # --- WAIT UNTIL SSH DEAMON IS READY NO JUMPHOST ----
+    ret=1
+    while [ $ret -ne 0 ]; do
+      $SSH_COMMAND -n id > /dev/null 2>&1; ret=$?
+      [ $ret -ne 0 ] && sleep 10
+    done
+
+    messageTitle "Verify SuDO Access" "$JUMP_HOST"
+    verify_datacenter
+  fi
+
+  if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "vSphere" -a "$TDH_TKGMC_CREATE_JUMPHOST" == "true" ]; then
+    VSPHERE_JUMPHOST_NAME=jump.$VSPHERE_DNS_DOMAIN
+
+    JUMP_HOST="${VSPHERE_JUMPHOST_NAME}"
     SSH_USER=ubuntu
     SSH_OPTIONS="-o StrictHostKeyChecking=no -o RequestTTY=yes -o ServerAliveInterval=240"
     SSH_PRIVATE_KEY=$VSPHERE_SSH_PRIVATE_KEY_FILE
@@ -566,18 +589,20 @@ createJumpHost() {
     $SSH_COMMAND -n "hostname > /dev/null 2>&1"; ret=$?
     if [ "$ret" != 0 ]; then   
       # --- PACKER CREATE JUMP TEMPLATE ---
-      messagePrint "Crreate vSphere Jump-Server with (packer)" "$JUMP_HOST"
-      messagePrint " - Using Ubuntu Packer Config" "${TDHPATH}/packer/ubuntu.json"
-      messagePrint " - Generating Packer Config" "/tmp/jump.json"
+      messageTitle "Crreate vSphere Jump-Server ($JUMP_HOST) with (packer)"
+      messagePrint " ▪ Using Ubuntu Packer Config" "${TDHPATH}/packer/ubuntu.json"
+      messagePrint " ▪ Generating Packer Config" "/tmp/jump.json"
 
-      cat ${TDHPATH}/packer/jump_variables.json | sed -e "s/XXX_VSPHERE_SERVER_XXX/$VSPHERE_SERVER/g" \
-         -e "s/XXX_VSPHERE_PASSWORD_XXX/$VSPHERE_PASSWORD/g"  -e "s/XXX_VSPHERE_DATACENTER_XXX/$VSPHERE_DATACENTER/g" \
-         -e "s/XXX_VSPHERE_ADMIN_XXX/$VSPHERE_ADMIN/g"  -e "s/XXX_VSPHERE_DATACENTER_XXX/$VSPHERE_DATACENTER/g" \
+      verify_datacenter 
+
+      cat ${TDHPATH}/packer/jump_variables.json | sed -e "s/XXX_VSPHERE_SERVER_XXX/$VSPHERE_VCENTER_SERVER/g" \
+         -e "s/XXX_VSPHERE_PASSWORD_XXX/$VSPHERE_VCENTER_PASSWORD/g"  -e "s/XXX_VSPHERE_DATACENTER_XXX/$VSPHERE_DATACENTER/g" \
+         -e "s/XXX_VSPHERE_ADMIN_XXX/$VSPHERE_VCENTER_ADMIN/g"  -e "s/XXX_VSPHERE_DATACENTER_XXX/$VSPHERE_DATACENTER/g" \
          -e "s/XXX_VSPHERE_DATASTORE_XXX/$VSPHERE_DATASTORE/g" -e "s/XXX_VSPHERE_CLUSTER_XXX/$VSPHERE_CLUSTER/g"\
          -e "s/XXX_VSPHERE_WAN_NETWORK_XXX/$VSPHERE_WAN_NETWORK/g" \
-         -e "s/XXX_VSPHERE_MANAGEMENT_NETWORK_XXX/$VSPHERE_MANAGEMENT_NETWORK/g" > /tmp/jump.json
+         -e "s/XXX_VSPHERE_MANAGEMENT_NETWORK_XXX/$VSPHERE_NETWORK/g" > /tmp/jump.json
 
-      messagePrint " - Generating Preseed Config" "/tmp/preseed.cfg"
+      messagePrint " ▪ Generating Preseed Config" "/tmp/preseed.cfg"
       VSPHERE_SSH_PUBLIC_KEY=$(cat $VSPHERE_SSH_PUBLIC_KEY_FILE)
       echo "    in-target /bin/sh -c \"echo '$VSPHERE_SSH_PUBLIC_KEY' >> /home/ubuntu/.ssh/authorized_keys\"; " > /tmp/snipset.txt
       cat ${TDHPATH}/packer/jump_preseed.cfg | sed -e '/XXX_SSHKEY_XXX/r /tmp/snipset.txt' -e '/XXX_SSHKEY_XXX/d' > /tmp/preseed.cfg
@@ -594,15 +619,15 @@ createJumpHost() {
       fi
 
       messagePrint "Deploy vSphere Jump-Server with (terraforms)" "$JUMP_HOST"
-      messagePrint " - Creating Variable file" "/tmp/terraform.tfvars"
-      echo "vsphere_user = \"administrator@corelab.com\""          >  /tmp/terraform.tfvars
-      echo "vsphere_password = \"$VSPHERE_PASSWORD\""              >> /tmp/terraform.tfvars
+      messagePrint " ▪ Creating Variable file" "/tmp/terraform.tfvars"
+      echo "vsphere_user = \"$VSPHERE_VCENTER_ADMIN\""             >  /tmp/terraform.tfvars
+      echo "vsphere_password = \"$VSPHERE_VCENTER_PASSWORD\""      >> /tmp/terraform.tfvars
       echo "vsphere_server = \"$VSPHERE_SERVER\""                  >> /tmp/terraform.tfvars
       echo "vsphere_datacenter = \"$VSPHERE_DATACENTER\""          >> /tmp/terraform.tfvars
       echo "vsphere_datastore = \"$VSPHERE_DATASTORE\""            >> /tmp/terraform.tfvars
       echo "vsphere_compute_cluster = \"$VSPHERE_CLUSTER\""        >> /tmp/terraform.tfvars
       echo "#vsphere_resource_pool = \"cluster/Resources\""        >> /tmp/terraform.tfvars
-      echo "vsphere_network = \"$VSPHERE_MANAGEMENT_NETWORK\""     >> /tmp/terraform.tfvars
+      echo "vsphere_network = \"$VSPHERE_NETWORK\""                >> /tmp/terraform.tfvars
       echo "vsphere_virtual_machine_template = \"jump_template\""  >> /tmp/terraform.tfvars
       echo "vsphere_virtual_machine_name = \"jump\""               >> /tmp/terraform.tfvars
       echo "root_password = \"root\""                              >> /tmp/terraform.tfvars
@@ -631,8 +656,7 @@ createJumpHost() {
       messagePrint "Verify vSphere Jump-Server" "$JUMP_HOST"
     fi
 
-    messagePrint " - Wait for SSH to be ready" ""
-echo "$SSH_COMMAND -n id > /dev/null"
+    messagePrint " ▪ Wait for SSH to be ready" "< 3m"
     # --- WAIT UNTIL SSH DEAMON IS READY NO JUMPHOST ----
     ret=1
     while [ $ret -ne 0 ]; do
@@ -656,7 +680,7 @@ echo "$SSH_COMMAND -n id > /dev/null"
     appid=$(az ad app list --display-name "TanzuDemoHub" | jq -r '.[].appId')
     if [ "$appid" == "" ]; then 
       messageTitle "Register Azure Application (TanzuDemoHub)"
-      messagePrint " - Register Azure ApplicationID" "TanzuDemoHub"
+      messagePrint " ▪ Register Azure ApplicationID" "TanzuDemoHub"
       az ad app create --display-name TanzuDemoHub --key-type Password --password tanzu-demo-hub > /dev/null 2>&1
       if [ $? -ne 0 ]; then 
         echo "ERROR: failed to register app (TanzuDemoHub)"
@@ -664,7 +688,7 @@ echo "$SSH_COMMAND -n id > /dev/null"
         exit
       fi
      
-      messagePrint " - Create ServicePrincipal for Application" "TanzuDemoHub"
+      messagePrint " ▪ Create ServicePrincipal for Application" "TanzuDemoHub"
       appid=$(az ad app list --display-name "TanzuDemoHub" | jq -r '.[].appId')
       az ad sp create --id $appid > /dev/null 2>&1
       if [ $? -ne 0 ]; then 
@@ -673,7 +697,7 @@ echo "$SSH_COMMAND -n id > /dev/null"
         exit
       fi
 
-      messagePrint " - Create RoleBinding for Application (TanzuDemoHub)" "Owner"
+      messagePrint " ▪ Create RoleBinding for Application (TanzuDemoHub)" "Owner"
       objid=$(az ad sp list --all --display-name TanzuDemoHub | jq -r '.[].objectId')
       az role assignment create --subscription $AZURE_SUBSCRIPTION_ID --role owner \
           --assignee-principal-type ServicePrincipal --assignee-object-id $objid > /dev/null 2>&1
@@ -688,15 +712,15 @@ echo "$SSH_COMMAND -n id > /dev/null"
     appid=$(az ad app list --display-name "TanzuDemoHub" | jq -r '.[].appId')
     objid=$(az ad sp list --all --display-name TanzuDemoHub | jq -r '.[].objectId')
     messageTitle "Verify Azure Application (TanzuDemoHub)"
-    messagePrint " - Application ID" "$appid"
-    messagePrint " - Application Display Name" "TanzuDemoHub"
-    messagePrint " - ServicePrincipal" "$objid"
-    messagePrint " - Role Binding" "Owner"
+    messagePrint " ▪ Application ID" "$appid"
+    messagePrint " ▪ Application Display Name" "TanzuDemoHub"
+    messagePrint " ▪ ServicePrincipal" "$objid"
+    messagePrint " ▪ Role Binding" "Owner"
 
     messageTitle "Verifing Azure Jump-Server ($JUMP_HOST)"
     stt=$(az group exists --name Admin)
     if [ "$stt" == "false" ]; then
-      messagePrint " - Creating Azure Ressource Group" "Admin"
+      messagePrint " ▪ Creating Azure Ressource Group" "Admin"
       az group create --name Admin --location $AZURE_LOCATION > /dev/null 2>&1
       if [ $? -ne 0 ]; then
         echo "ERROR: Creating Ressource Group Admin"
@@ -710,7 +734,7 @@ echo "$SSH_COMMAND -n id > /dev/null"
       # --- VM DOES NOT EXIST, CREATING ---
       nam=$(az network vnet list -g Admin --query "[?contains(name, 'admin-vnet')]" | jq -r '.[].name')
       if [ "$nam" != "admin-vnet" ]; then
-        messagePrint " - Creating Vnet" "admin-vnet"
+        messagePrint " ▪ Creating Vnet" "admin-vnet"
 
         az network vnet create \
             --resource-group Admin \
@@ -723,12 +747,12 @@ echo "$SSH_COMMAND -n id > /dev/null"
           exit 1
         fi
       else
-        messagePrint " - Verify Vnet" "admin-vnet"
+        messagePrint " ▪ Verify Vnet" "admin-vnet"
       fi
 
       nam=$(az network public-ip list -g Admin --query "[?contains(name, 'AdminPublicIP_$TDH_TKGMC_ENVNAME')]" | jq -r '.[].name')
       if [ "$nam" != "AdminPublicIP_$TDH_TKGMC_ENVNAME" ]; then
-        messagePrint " - Creating PublicIP" "AdminPublicIP_$TDH_TKGMC_ENVNAME"
+        messagePrint " ▪ Creating PublicIP" "AdminPublicIP_$TDH_TKGMC_ENVNAME"
 
         az network public-ip create \
             --resource-group Admin \
@@ -740,12 +764,12 @@ echo "$SSH_COMMAND -n id > /dev/null"
       else
         pip=$(az network public-ip list -g Admin --query "[?contains(name, 'AdminPublicIP_$TDH_TKGMC_ENVNAME')]" | jq -r '.[].ipAddress')
 
-        messagePrint " - Verify PublicIP (AdminPublicIP_$TDH_TKGMC_ENVNAME)" "$pip"
+        messagePrint " ▪ Verify PublicIP (AdminPublicIP_$TDH_TKGMC_ENVNAME)" "$pip"
       fi
 
       nam=$(az network nsg list --query "[?contains(name, 'AdminSG')]" | jq -r '.[].name')
       if [ "$nam" != "AdminSG" ]; then
-        messagePrint " - Creating Security Group" "AdminSG"
+        messagePrint " ▪ Creating Security Group" "AdminSG"
 
         az network nsg create \
             --resource-group Admin \
@@ -755,13 +779,13 @@ echo "$SSH_COMMAND -n id > /dev/null"
           exit 1
         fi
       else
-        messagePrint " - Verify Security Group" "AdminSG"
+        messagePrint " ▪ Verify Security Group" "AdminSG"
       fi
 
       nam=$(az network nsg rule list -g Admin --nsg-name AdminSG --query "[?contains(name, 'AdminSG-RuleSSH')]" | \
             jq -r '.[].name')
       if [ "$nam" != "AdminSG-RuleSSH" ]; then
-        messagePrint " - Creating Security Group Rule" "AdminSG-RuleSSH (22)"
+        messagePrint " ▪ Creating Security Group Rule" "AdminSG-RuleSSH (22)"
 
         az network nsg rule create \
             --resource-group Admin \
@@ -776,7 +800,7 @@ echo "$SSH_COMMAND -n id > /dev/null"
           exit 1
         fi
 
-        messagePrint " - Creating Security Group Rule" "AdminSG-RuleLDAP (636/389)"
+        messagePrint " ▪ Creating Security Group Rule" "AdminSG-RuleLDAP (636/389)"
         az network nsg rule create \
             --resource-group Admin \
             --nsg-name AdminSG \
@@ -789,7 +813,7 @@ echo "$SSH_COMMAND -n id > /dev/null"
           exit 1
         fi
 
-        messagePrint " - Creating Security Group Rule" "AdminSG-RuleHTTP (80,443)"
+        messagePrint " ▪ Creating Security Group Rule" "AdminSG-RuleHTTP (80,443)"
         az network nsg rule create \
             --resource-group Admin \
             --nsg-name AdminSG \
@@ -803,13 +827,13 @@ echo "$SSH_COMMAND -n id > /dev/null"
         fi
 
       else
-        messagePrint " - Verify Security Group Rule" "AdminSG-RuleSSH"
+        messagePrint " ▪ Verify Security Group Rule" "AdminSG-RuleSSH"
       fi
 
       nam=$(az network nic list -g Admin --query "[?contains(name, 'AdminNic_$TDH_TKGMC_ENVNAME')]" | \
             jq -r '.[].name')
       if [ "$nam" != "AdminNic_$TDH_TKGMC_ENVNAME" ]; then
-        messagePrint " - Creating Nic" "AdminNic_$TDH_TKGMC_ENVNAME"
+        messagePrint " ▪ Creating Nic" "AdminNic_$TDH_TKGMC_ENVNAME"
 
         az network nic create \
             --resource-group Admin \
@@ -825,12 +849,12 @@ echo "$SSH_COMMAND -n id > /dev/null"
           exit 1
         fi
       else
-        messagePrint " - Verify NIC" "AdminNic_$TDH_TKGMC_ENVNAME"
+        messagePrint " ▪ Verify NIC" "AdminNic_$TDH_TKGMC_ENVNAME"
       fi
 
       #nam=$(az vm list --query "[?contains(name, '$JUMP_HOST')]" | jq -r '.[].name')
       #if [ "$nam" != "$JUMP_HOST" ]; then
-      messagePrint " - Creating VM" "$JUMP_HOST"
+      messagePrint " ▪ Creating VM" "$JUMP_HOST"
 
       az vm create \
           --resource-group Admin \
@@ -850,7 +874,7 @@ echo "$SSH_COMMAND -n id > /dev/null"
     else
       #stt=$(az vm list -d --query "[?contains(name, '$JUMP_HOST')]" | jq -r '.[].powerState')
       if [ "${vm_stt}" != "VM running" ]; then
-        messagePrint " - Starting VM" "$JUMP_HOST"
+        messagePrint " ▪ Starting VM" "$JUMP_HOST"
         az vm start --resource-group Admin --name $JUMP_HOST
       fi
     fi
@@ -866,28 +890,18 @@ echo "$SSH_COMMAND -n id > /dev/null"
 
     # --- UPDATE DNS DOMAIN ---
     if [ "${pip}" != "${aip}" ]; then
-      messagePrint " - DNS Zone (${AWS_HOSTED_DNS_DOMAIN})" "zone managed by route53"
-      messagePrint " - Updating Zone Record for ($JUMP_HOST)" "$pip"
+      messagePrint " ▪ DNS Zone (${AWS_HOSTED_DNS_DOMAIN})" "zone managed by route53"
+      messagePrint " ▪ Updating Zone Record for ($JUMP_HOST)" "$pip"
       route53setDNSrecord "$pip" "$JUMP_HOST" "$AWS_HOSTED_DNS_DOMAIN"
-      messagePrint " - Updating Zone Record for (jump.$TDH_TKGMC_ENVNAME.$AWS_HOSTED_DNS_DOMAIN)" "$pip"
+      messagePrint " ▪ Updating Zone Record for (jump.$TDH_TKGMC_ENVNAME.$AWS_HOSTED_DNS_DOMAIN)" "$pip"
       route53setDNSrecord "$pip" "jump.$TDH_TKGMC_ENVNAME.$AWS_HOSTED_DNS_DOMAIN" "$TDH_TKGMC_ENVNAME.$AWS_HOSTED_DNS_DOMAIN"
 #jjjjjjjjj az
 
       sed -in "/$JUMP_HOST/d" ~/.ssh/known_hosts
-      messagePrint " - Wait for SSH Daemon on jump-host to come online" "< 5min"
+      messagePrint " ▪ Wait for SSH Daemon on jump-host to come online" "< 5min"
     fi
   fi
 }
-
-# checkCloudAccess
-# => Minikube => ALL
-#    TDH_USER
-#    AWS_ACCESS_KEY
-#    AWS_SECRET_KEY
-#    AWS_REGION
-# checkTDHAccess
-# checkTMCAccess (if enabled by TDH_MISSION_CONTROL_ENABLED)
-
 
 # --- VERYFY ACCESS TO CLOUD ---
 checkTDHenvironment    
@@ -897,12 +911,14 @@ checkCLIcommands TOOLS
 checkCLIcommands TKG
 checkCLIcommands TANZU
 checkCLIcommands TMC
+checkCLIcommands VSPHERE
 
 # --- CLEANUP KUNECONFIG ---
 cleanKubeconfig
 
 checkTDHAccess
 checkCloudAccess
+
 #checkTMCAccess
 checkKeyPairs
 #checkTKGdownloads
@@ -911,67 +927,194 @@ tmcCheckLogin
 # --- CREATE TKG CLUSTER AND JUMP SERVER
 createJumpHost
 sshEnvironment
+
 configureJumpHost
 configureLetsEnscript
-configureLDAP
 
 export TDH_TKGMC_NAME=${TDH_TKGMC_NAME}-${TDH_USER}
 
 # --- UPLOAD OVA IMAGES TO VCENTER ---
 if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "vSphere" ]; then
-  $SSH_COMMAND -n "[ -f $SSH_HOME/tanzu-demo-hub/scripts/uploadOVAimages.sh ] && tanzu-demo-hub/scripts/uploadOVAimages.sh $DEPLOY_TKG_TEMPLATE"
+  if [ "${TDH_TKGMC_TKG_TYPE}" == "tkgm" ]; then
+    #########################################################################################################################
+    ######################################## TANZU KUBERNETS GRID FOR VPSHERE (TKGm) ########################################
+    #########################################################################################################################
 
-  docker ps > /dev/null 2>&1
-  if [ $? -ne 0 ]; then 
-    echo "ERROR: Docker Daemon not running"; exit
-    exit 1
+    $SSH_COMMAND -n "[ -f $SSH_HOME/tanzu-demo-hub/scripts/uploadOVAimages.sh ] && tanzu-demo-hub/scripts/uploadOVAimages.sh $DEPLOY_TKG_TEMPLATE"
+
+    docker ps > /dev/null 2>&1
+    if [ $? -ne 0 ]; then
+      echo "ERROR: Docker Daemon not running"; exit
+      exit 1
+    fi
+
+    #$TDHPATH/scripts/InstallTKGmc.sh $DEPLOY_TKG_TEMPLATE
+    scripts/InstallTKGmc.sh $DEPLOY_TKG_TEMPLATE $DEBUG
+    if [ $? -ne 0 ]; then
+      echo "ERROR: failed to deploy TKG Management Cluster"
+      exit 1
+    fi
+  else
+    #########################################################################################################################
+    ######################################## TANZU KUBERNETS GRID FOR VPSHERE (TKGs) ########################################
+    #########################################################################################################################
+
+    messageTitle "Login to vSphere Supervicer Cluster"
+    messagePrint " ▪ vSphere Supervisor Cluster API"        "$VSPHERE_API_SERVER"
+    messagePrint " ▪ vSphere Supervisor Cluster User"       "$VSPHERE_VCENTER_ADMIN"
+    messagePrint " ▪ vSphere Supervisor Cluster Password"   "$(maskPassword \"$VSPHERE_VCENTER_PASSWORD\")"
+    messagePrint " ▪ Kubernetes Context"                    "wcp.$VSPHERE_DNS_DOMAIN"
+    KUBECTL_VSPHERE_PASSWORD=$VSPHERE_VCENTER_PASSWORD kubectl vsphere login \
+      --insecure-skip-tls-verify --server $VSPHERE_API_SERVER -u administrator@vsphere.local > /dev/null 2>&1
+    if [ $? -ne 0 ]; then
+      echo "ERROR: Failed to login to vSphere Supervicer Cluster ($VSPHERE_API_SERVER)"
+      echo "       Please try manually"
+
+      echo "       => export KUBECTL_VSPHERE_PASSWORD=$VSPHERE_VCENTER_PASSWORD"
+      echo "       => kubectl vsphere login --insecure-skip-tls-verify --server $VSPHERE_API_SERVER -u $VSPHERE_VCENTER_ADMIN"
+      exit
+    fi
+
+    kubectl config use-context $wcp.$VSPHERE_DNS_DOMAIN > /dev/null 2>&1
+    messageLine
+    kubectl config get-contexts
+    messageLine
+
+    tmc managementcluster get $TDH_TKGMC_NAME > /dev/null 2>&1
+    if [ $? -ne 0 ]; then
+      messageTitle "Configure vSphere Supervicer Cluster as TMC Management Cluster"
+      messagePrint " ▪ TMC Register Cluster"             "$TDH_TKGMC_NAME"
+
+      ret=1; cnt=0
+      while [ $ret -ne 0 -a $cnt -lt 5 ]; do
+        tmc managementcluster register $TDH_TKGMC_NAME -c tanzu-demo-hub -p TKG -o /tmp/k8s-register-manifest.yaml >/dev/null 2>&1; ret=$?
+        [ $ret -eq 0 ] && break
+        sleep 30
+        let cnt=cnt+1
+      done
+
+      if [ $? -ne 0 ]; then
+        echo "ERROR: failed to register TKG Management Cluster: $TDH_TKGMC_NAME to TMC"
+        echo "       => tmc managementcluster register $TDH_TKGMC_NAME -c tanzu-demo-hub -o /tmp/k8s-register-manifest.yaml"
+        exit
+      fi
+
+      TMC_MGMT_NS=$(kubectl get ns | egrep "^svc-tmc" | awk '{ print $1 }')
+      gsed -i "s/  namespace:.*$/  namespace: $TMC_MGMT_NS/g" /tmp/k8s-register-manifest.yaml
+
+      messagePrint " ▪ Install TMC Agent in Namespace"             "vmware-system-tmc"
+      ret=1; cnt=0
+      while [ $ret -ne 0 -a $cnt -lt 5 ]; do
+        kubectl apply -f /tmp/k8s-register-manifest.yaml > /tmp/log 2>&1; ret=$?
+        [ $ret -eq 0 ] && break
+        sleep 30
+        let cnt=cnt+1
+      done
+
+      if [ $ret -ne 0 ]; then
+        echo "ERROR: failed to install TMC Agent"
+        echo "       => kubectl apply -f /tmp/k8s-register-manifest.yaml"
+        messageLine; cat /tmp/log; messageLine
+        exit
+      fi
+
+      cnt=0; stt="PENDING"
+      while [ "$stt" != "READY" -a $cnt -lt 10 ]; do
+        stt=$(tmc managementcluster get $TDH_TKGMC_NAME -o json | jq -r '.status.phase')
+        sleep 60
+  
+        let cnt=cnt+1
+      done
+    fi
+
+    #govc ls /Pacific-Datacenter/vm/Namespaces
+    #govc storage.policy.ls
+    if [ "$(vsNanespaceExists tanzu-demo-hub)" != "true" ]; then 
+      messageTitle "Create vSphere Naamespace (tanzu-demo-hub)"
+      messagePrint " ▪ vSphere Namespace Name"          "tanzu-demo-hub"
+      messagePrint " ▪ vSphere Namespace Permission"    "sadubois"
+      messagePrint " ▪ vSphere Storage Polocy"          "pacific-gold-storage-policy"
+      vsNamespaceCreate tanzu-demo-hub pacific-gold-storage-policy sadubois
+    fi
+
+    messageTitle "Verify vSphere Naamespace (tanzu-demo-hub)"
+    messagePrint " ▪ vSphere Namespace Name"          "tanzu-demo-hub"
+    messagePrint " ▪ vSphere Namespace Permission"    "sadubois"
+    messagePrint " ▪ vSphere Storage Polocy"          "pacific-gold-storage-policy"
+    if [ $DEBUG -gt 0 ]; then 
+      messageLine
+      vsNamespaceGet tanzu-demo-hub
+      messageLine
+    fi
+
+    messageTitle "Verify TMC Management Cluster"
+    messagePrint " ▪ TMC Register Cluster"             "$TDH_TKGMC_NAME"
+    if [ $DEBUG -gt 0 ]; then
+      messageLine
+      tmc managementcluster get $TDH_TKGMC_NAME
+      messageLine
+    else
+      stt=$(tmc managementcluster get $TDH_TKGMC_NAME -o json | jq -r '.status.phase')
+      msg=$(tmc managementcluster get $TDH_TKGMC_NAME -o json | jq -r '.status.message')
+      messagePrint " ▪ TMC Register Cluster Status"             "$stt"
+      if [ "$stt" != "READY" ]; then
+        messageLine
+        echo $msg
+        messageLine
+      fi
+    fi
+
+    mkdir -p $HOME/.tanzu-demo-hub/config
+    CLUSTER_TEMPLATE=$HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}_template.yaml
+    echo "apiVersion: run.tanzu.vmware.com/v1alpha1"              >  $CLUSTER_TEMPLATE
+    echo "kind: TanzuKubernetesCluster"                           >> $CLUSTER_TEMPLATE
+    echo "metadata:"                                              >> $CLUSTER_TEMPLATE
+    echo "  name: tkgs-cluster-1"                                 >> $CLUSTER_TEMPLATE
+    echo "  namespace: tanzu-demo-hub"                            >> $CLUSTER_TEMPLATE
+    echo "spec:"                                                  >> $CLUSTER_TEMPLATE
+    echo "  distribution:"                                        >> $CLUSTER_TEMPLATE
+    echo "    version: v1.20"                                     >> $CLUSTER_TEMPLATE
+    echo "  topology:"                                            >> $CLUSTER_TEMPLATE
+    echo "    controlPlane:"                                      >> $CLUSTER_TEMPLATE
+    echo "      count: 1"                                         >> $CLUSTER_TEMPLATE
+    echo "      class: best-effort-medium"                        >> $CLUSTER_TEMPLATE
+    echo "      storageClass: pacific-gold-storage-policy"        >> $CLUSTER_TEMPLATE
+    echo "    workers:"                                           >> $CLUSTER_TEMPLATE
+    echo "      count: 3"                                         >> $CLUSTER_TEMPLATE
+    echo "      class: best-effort-medium"                        >> $CLUSTER_TEMPLATE
+    echo "      storageClass: pacific-gold-storage-policy"        >> $CLUSTER_TEMPLATE
+
+    messageLine
+    printf "\e[1m1.) vCenter WebAccess Access ($VSPHERE_VCENTER_SERVER)\e[0m\n"
+    echo "    => http://$VSPHERE_VCENTER_SERVER  ($VSPHERE_VCENTER_ADMIN/$VSPHERE_VCENTER_PASSWORD)"
+    printf "\e[1m2.) vCenter CLI Access ($VSPHERE_VCENTER_SERVER)\e[0m\n"
+    echo "    => export GOVC_INSECURE=1"
+    echo "    => export GOVC_URL=https://${VSPHERE_VCENTER_SERVER}/sdk"
+    echo "    => export GOVC_USERNAME=$VSPHERE_VCENTER_ADMIN"
+    echo "    => export GOVC_PASSWORD=$VSPHERE_VCENTER_PASSWORD"
+    echo "    => govc ls /*/host/Workload-Cluster"
+    printf "\e[1m3.) login into the Supervisor Cluster\e[0m\n"
+    echo "    => export KUBECTL_VSPHERE_PASSWORD=$VSPHERE_VCENTER_PASSWORD"
+    echo "    => kubectl vsphere login --insecure-skip-tls-verify --server $VSPHERE_API_SERVER -u administrator@vsphere.local"
+    echo "    => kubectl config use-context wcp.${VSPHERE_DNS_DOMAIN}"
+    printf "\e[1m4.) Create Kubernetes Cluster\e[0m\n"
+    echo "    Adjust parameters such as cluster name and kubernetes version if you are not happy woth the" 
+    echo "    default settings."
+    echo "    => kubectl apply  -f $CLUSTER_TEMPLATE   ## Create the k8s Clusteer"
+    echo "    ?> kubectl get tanzukubernetesclusters -n tanzu-demo-hub"
+    echo "    => kubectl describe tanzukubernetescluster -n tanzu-demo-hub tkgs-cluster-1"
+    echo "    => kubectl delete -f $CLUSTER_TEMPLATE   ## Delete the k8s Clusteer"
+    printf "\e[1m5.) Create TKG Cluster for Tanzu-Demo-Hub\e[0m\n"
+    echo "    => kubectl config set-context $VSPHERE_API_SERVER"
+    echo "    => ./deployTKG -m $TDH_TKGMC_NAME -d tkg-tanzu-demo-hub.cfg -n tdh-${TDH_DEPLOYMENT_ENV_NAME}-${TDH_USER}"
+    echo "    => ./deployTKG -m $TDH_TKGMC_NAME -d tkg-tanzu-demo-hub.cfg -n tdh-${TDH_DEPLOYMENT_ENV_NAME}-${TDH_USER} -k \"v1.17.16---vmware.2-tkg.1\""
+    printf "\e[1m5.) Create Kubernetes Cluster through Tanzu Mission Control (TMC) ***UNSTABLE*** \e[0m\n"
+    echo "    => ./deployTMC"
+    messageLine
+
+    # Tanzu Kubernetes Cluster Operational Commands
+    # https://docs.vmware.com/en/VMware-vSphere/7.0/vmware-vsphere-with-tanzu/GUID-232CCCF3-CCC1-4D7E-B67C-64590CB891DD.html
   fi
-
-  #$TDHPATH/scripts/InstallTKGmc.sh $DEPLOY_TKG_TEMPLATE
-  scripts/InstallTKGmc.sh $DEPLOY_TKG_TEMPLATE $DEBUG
-  if [ $? -ne 0 ]; then
-    echo "ERROR: failed to deploy TKG Management Cluster"
-    exit 1
-  fi
-
-  echo "-----------------------------------------------------------------------------------------------------------"
-  tkg get mc --config ${HOME}/.tanzu-demo-hub/$TDH_TKGMC_CONFIG
-  echo "-----------------------------------------------------------------------------------------------------------"
-  messageTitle "1.) Login to Jump Server: $JUMP_HOST"
-  echo "    => $SSH_COMMAND"
-  messageTitle "2.) Check Management Cluster Status"
-  echo "    => export TKG_CONFIG=\${HOME}/.tanzu-demo-hub/$TDH_TKGMC_CONFIG"
-  echo "    => tkg set mc $TDH_TKGMC_NAME                # Set active mc cluster"
-  echo "    => tkg get mc"
-  printf "    => %-50s %s\n" "kubectl config set-context $TDH_TKGMC_NAME" "# Set k8s Context to mc Cluster"
-  printf "    => %-50s %s\n" "kubectl get nodes"        "# Set k8s Context to the TKG Management Cluster"
-  printf "    => %-50s %s\n" "kubectl get namespaces"   "# Set k8s Namespaces of the TKG Management Cluster"
-  messageTitle "3.) Ceeate TKG Workload Cluster"
-  echo "    => export TKG_CONFIG=\${HOME}/.tanzu-demo-hub/$TDH_TKGMC_CONFIG"
-  echo "    => export KUBECONFIG=\${HOME}/.tanzu-demo-hub/${TDH_TKGMC_NAME}.kubeconfig"
-  echo "    => tkg create cluster tkg01 --plan=dev --vsphere-controlplane-endpoint-ip 10.1.1.31"
-  echo "    => tkg create cluster tkg01 --plan=dev --kubernetes-version=v1.18.8  # available 1.19.1 1.18.8 1.17.11"
-  echo "    => tkg create cluster tkg01 --plan=prod --worker-machine-count 3 --controlplane-machine-count 3"
-  echo "-----------------------------------------------------------------------------------------------------------"
-
-  messageTitle "Creating Workload Cluster (tdh-1)"
-  $SSH_COMMAND -n "cd tanzu-demo-hub && ./deployTKG -d $DEPLOY_TKG_TEMPLATE -c tkg-tanzu-demo-hub.cfg -n tdh-1 -ip 10.1.1.31"
-
-  $SCP_COMMAND ${SSH_USER}@${SSH_HOST}:/home/ubuntu/.tanzu-demo-hub/tkg-mc-vsphere-dev.kubeconfig \
-          ${HOME}/.tanzu-demo-hub/tkg-mc-vsphere-dev.kubeconfig
-
-  #tkg get credentials tdh-1
-
-#  messageTitle "Creating Worload Cluster (tdh-1)"
-#  ./deployTKG -d $DEPLOY_TKG_TEMPLATE -c tkg-tanzu-demo-hub.cfg -n tdh-1 -ip 10.1.1.31
-
-exit
-  echo "./deployTKG -d $DEPLOY_TKG_TEMPLATE -c tkg-tanzu-demo-hub.cfg -n tdh-1 --vsphere-controlplane-endpoint-ip 10.1.1.31"
-  ./deployTKG -d $DEPLOY_TKG_TEMPLATE -c tkg-tanzu-demo-hub.cfg -n tdh-1 --vsphere-controlplane-endpoint-ip 10.1.1.31
-
-exit
-  $SSH_COMMAND -n "cd tanzu-demo-hub && ./deployTKG -d $DEPLOY_TKG_TEMPLATE -c tkg-tanzu-demo-hub.cfg -n tdh-1"
-
 else
   # --- ACCEPT LICENSE AGREEMENT ---
   if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "Azure" ]; then
@@ -982,7 +1125,7 @@ else
       nam=$(az vm image terms show --urn $img | jq -r '.plan')
 
       if [ "$stt" != "true" ]; then 
-        messagePrint " - Accepting Image Terms for image ($nam)" "$img"
+        messagePrint " ▪ Accepting Image Terms for image ($nam)" "$img"
         az vm image terms accept --urn $img > /dev/null 2>&1
         if [ $? -ne 0 ]; then 
           echo "ERROR: failed to accept image terms, please try manually"
@@ -1026,7 +1169,7 @@ else
   # --- VERIFY TMC REGISTRATION
   tmc managementcluster get $TDH_TKGMC_NAME > /dev/null 2>&1
   if [ $? -ne 0 ]; then
-    messagePrint " - TMC Register Cluster"             "$TDH_TKGMC_NAME"
+    messagePrint " ▪ TMC Register Cluster"             "$TDH_TKGMC_NAME"
     tmc managementcluster register $TDH_TKGMC_NAME -c tanzu-demo-hub -p TKG -o /tmp/k8s-register-manifest.yaml >/dev/null 2>&1
     if [ $? -ne 0 ]; then
       echo "ERROR: failed to register TKG Management Cluster: $TDH_TKGMC_NAME to TMC"
@@ -1034,7 +1177,7 @@ else
       exit
     fi
 
-    messagePrint " - Install TMC Agent in Namespace"             "vmware-system-tmc"
+    messagePrint " ▪ Install TMC Agent in Namespace"             "vmware-system-tmc"
     if [ $DEBUG -gt 0 ]; then
       echo "--------------------------------------------------------------------------------------------------------------"
       kubectl apply -f /tmp/k8s-register-manifest.yaml; ret=$?
@@ -1059,9 +1202,9 @@ else
   fi
 
   messageTitle "Create the TKG Management Cluster deployment File"
-  messagePrint " - Deployment File"        "$HOME/.tanzu-demo-hub/config/tkgmc-${TDH_TKGMC_NAME}.yaml"
-  messagePrint " - Management Cluster"     "$TDH_TKGMC_NAME"
-  messagePrint " - Cloud Infrastructure"   "$TDH_DEPLOYMENT_ENV_NAME"
+  messagePrint " ▪ Deployment File"        "$HOME/.tanzu-demo-hub/config/tkgmc-${TDH_TKGMC_NAME}.yaml"
+  messagePrint " ▪ Management Cluster"     "$TDH_TKGMC_NAME"
+  messagePrint " ▪ Cloud Infrastructure"   "$TDH_DEPLOYMENT_ENV_NAME"
 
   mkdir -p $HOME/.tanzu/tkg/clusterconfigs
 
@@ -1088,8 +1231,8 @@ else
   #echo "TDH_TKGMC_CONTROL_PLANE_MACHINE_TYPE=Standard_D2s_v3"           >> $DEPLOYMENT_FILE
 
   messageTitle "Create config file for TKG Workload Clusters"
-  messagePrint " - Deployment File (dev)"      "~/.tanzu/tkg/clusterconfigs/${TDH_TKGMC_NAME}-wc-dev.yaml"
-  messagePrint " - Deployment File (prod)"     "~/.tanzu/tkg/clusterconfigs/${TDH_TKGMC_NAME}-wc-prod.yaml"
+  messagePrint " ▪ Deployment File (dev)"      "~/.tanzu/tkg/clusterconfigs/${TDH_TKGMC_NAME}-wc-dev.yaml"
+  messagePrint " ▪ Deployment File (prod)"     "~/.tanzu/tkg/clusterconfigs/${TDH_TKGMC_NAME}-wc-prod.yaml"
 
   # --- CONFIG FOR PROD AND DEV ---
   idp=$(egrep "^IDENTITY_MANAGEMENT_TYPE:" $TKG_MC_CONFIG | awk '{ print $NF }')
