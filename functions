@@ -1478,7 +1478,6 @@ configureJumpHost() {
   # --- TEST FOR RUNNING REMOTE SCRIPT ---
   stt=$($SSH_COMMAND -n "[ -f /tmp/tanzu-demo-hub.pid ] && pgrep -F /tmp/tanzu-demo-hub.pid")
   stt=$($SSH_COMMAND -n "[ -f /jump_software_installed ] && echo true")
-echo "STT:$stt oooooooooooo"
 
   if [ "${stt}" == "" ]; then
     messageTitle "Install CLI Utilities (aws,az,gcp,bosh,pivnet,cf,om,jq) on Jump Host (jump.${TDH_TKGMC_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN})"
@@ -5451,18 +5450,14 @@ verify_datacenter() {
   export GOVC_USERNAME=$VSPHERE_VCENTER_ADMIN
   export GOVC_PASSWORD=$VSPHERE_VCENTER_PASSWORD
 
-echo xxxxxxxxxxxx
-echo "export GOVC_URL=https://${VSPHERE_VCENTER_SERVER}/sdk"
-echo xxxxxxxxx
-
-  govc ls /Datacenter/datastore > /dev/null 2>&1
+  govc ls / > /dev/null 2>&1
   if [ $? -ne 0 ]; then
     echo ""
-    echo "ERROR: Can not login to vCenter, please veeify the following"
-    echo "       variablesi in $HOME/.tanzu-demo-hub.cfg"
-    echo "       => VSPHERE_VCENTER_SERVER=$VSPHERE_VCENTER_SERVER"
-    echo "       => GOVC_USERNAME=$GOVC_USERNAME"
-    echo "       => GOVC_PASSWORD=$GOVC_PASSWORD"
+    echo "ERROR: Can not login to vCenter, please verify manually"
+    echo "       export GOVC_URL=https://${VSPHERE_VCENTER_SERVER}/sdk"
+    echo "       export GOVC_USERNAME=$VSPHERE_VCENTER_ADMIN"
+    echo "       export GOVC_PASSWORD=$GOVC_PASSWORD"
+    echo "       govc ls /"
     exit 1
   fi
 
@@ -5584,7 +5579,51 @@ echo xxxxxxxxx
 
 }
 
+getAPItoken() {
+  LOGIN_STR="$VSPHERE_VCENTER_ADMIN:$VSPHERE_VCENTER_PASSWORD"
+  curl -k -X POST -u $LOGIN_STR https://$VSPHERE_VCENTER_SERVER/rest/com/vmware/cis/session 2>/dev/null| jq -r '.value'
+}
+
+vsNamespaceCreate() {
+  NAMESPACE=$1
+  STORARGE_POLICY=$2
+  USER=$3
+  API_HOST=$VSPHERE_VCENTER_SERVER
+  API_TOKEN=$(getAPItoken)
+
+  CLUSTER_DOMAIN=$(curl -k -H "vmware-api-session-id: $API_TOKEN" https://$API_HOST/api/vcenter/namespaces/instances 2>/dev/null | jq -r '.[].cluster' | head -1)
+  STORARGE_POLICY_ID=$(curl -k -H "vmware-api-session-id: $API_TOKEN" https://$API_HOST/api/vcenter/storage/policies 2>/dev/null | \
+    jq --arg policy "$STORARGE_POLICY" -r '.[] | select(.name == $policy).policy')
+
+  curl -k -X POST -H "vmware-api-session-id: $API_TOKEN" -H "Content-Type: application/json" \
+  -d "{ \"cluster\": \"$CLUSTER_DOMAIN\", \"namespace\": \"$NAMESPACE\", \"storage_specs\": [{\"policy\":\"$STORARGE_POLICY_ID\"}], \"access_list\":[{\"domain\":\"vsphere.local\",\"role\":\"EDIT\",\"subject\":\"$USER\",\"subject_type\":\"USER\"}] }" \
+  https://$API_HOST/api/vcenter/namespaces/instances 2>/dev/null; ret=$?
   
+  if [ $? -ne 0 ]; then 
+    echo "ERROR: failed to create vSphere Namespace $NAMESPACE"
+    exit 1
+  fi
+}
+
+
+vsNamespaceGet() {
+  NAMESPACE=$1
+  API_HOST=$VSPHERE_VCENTER_SERVER
+  API_TOKEN=$(getAPItoken)
+
+  curl -k -H "vmware-api-session-id: $API_TOKEN" https://$API_HOST/api/vcenter/namespaces/instances 2>/dev/null | jq -r
+} 
+
+vsNanespaceExists() {
+  NAMESPACE=$1
+  API_HOST=$VSPHERE_VCENTER_SERVER
+  API_TOKEN=$(getAPItoken)
+
+  STT=$(curl -k -H "vmware-api-session-id: $API_TOKEN" https://$API_HOST/api/vcenter/namespaces/instances 2>/dev/null | \
+    jq -r --arg ns "$NAMESPACE" '.[] | select(.namespace == $ns).namespace')
+
+  if [ "$STT" != "" ]; then echo "true"; else echo "false"; fi
+}
 
 
 
