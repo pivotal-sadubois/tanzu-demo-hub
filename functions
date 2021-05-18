@@ -1659,38 +1659,6 @@ route53deleteHostedZone() {
   fi
 }
 
-checkKeyPairs_old() {
-  SSH_KEY_NAME=vmware-cloud-tmc
-  SSH_KEY_FILE=~/.tanzu-demo-hub/KeyPair-${SSH_KEY_NAME}-${AWS_REGION}.pem
-
-  #"KeyFingerprint": "a8:c4:01:2b:12:7e:0d:8f:56:8c:38:80:cf:8b:6d:53:13:9c:28:cd",
-  #aws ec2 --region=eu-central-1 create-key-pair --dry-run --key-name sacha
-  #/tmp/key.pem
-
-  if [ ! -d ~/.tanzu-demo-hub ] ; then mkdir ~/.tanzu-demo-hub; fi
-
-  # --- VERIFY KEY-PAIR ---
-  key=$(aws ec2 --region=$AWS_REGION describe-key-pairs | \
-        jq -r --arg key "$SSH_KEY_NAME" '.KeyPairs[] | select(.KeyName == $key).KeyFingerprint')
-
-  # --- CREATE ONE IF IT DOES NOT EXIST ---
-  if [ "${key}" == "" ]; then
-    aws ec2 --region=$AWS_REGION create-key-pair --key-name vmware-cloud-tmc | \
-       jq -r '.KeyMaterial' > $SSH_KEY_FILE
-    chmod 600 $SSH_KEY_FILE
-  fi
-
-  if [ -f "${SSH_KEY_FILE}" ]; then
-    kfp=$(openssl pkcs8 -in $SSH_KEY_FILE -inform PEM -outform DER -topk8 -nocrypt | openssl sha1 -c)
-
-    if [ "${key}" != "${kfp}" ]; then
-      echo "ERROR: Fingerprint of AWS SSH Key-pair ($SSH_KEY_NAME) and the local PEM file: "
-      echo "       $SSH_KEY_FILE are not the same"
-      exit
-    fi
-  fi
-}
-
 maskPassword() {
   echo "$1" | sed 's/[^-]/X/g'
 }
@@ -3114,9 +3082,9 @@ checkTMCAccess() {
       if [ "${TMC_SSH_KEY_NAME_AWS}" == "" ]; then
         echo "  TMC_SSH_KEY_NAME_AWS            (required) AWS SSH Key name for Region"
       fi
-      TMC_CLUSTER_NAME="tdh-${TDH_USER}-aws"
+      TMC_CLUSTER_NAME="tdh-aws-${TDH_USER}"
     else
-      TMC_CLUSTER_NAME="tdh-${TDH_USER}-aws"
+      TMC_CLUSTER_NAME="tdh-aws-${TDH_USER}"
 
       messageTitle "Tanzu Mission Control (TMC) - Config" 
       messagePrint " ▪ TMC User"                        "$TDH_USER"
@@ -3186,14 +3154,14 @@ tmcCreateCluster() {
                        -g $TMC_CLUSTER_GROUP \
                        -t $TDH_TKGWC_TEMPLATE \
                        --version $TMC_KUBERNETES_VERSION \
-                       --availability-zone ${AWS_REGION}a
+                       --availability-zone ${AWS_PRIMARY_AZ}
     if [ $? -ne 0 ]; then 
       echo "ERROR: failed to build Cluster"
       echo "       => tmc cluster create -m $TMC_MANAGEMENT_CLUSTER -p $TMC_PROVISIONER_NAME \\"
       echo "          --ssh-key-name $TMC_SSH_KEY_NAME_AWS -c $TMC_ACCOUNT_NAME \\"
       echo "          -r $AWS_REGION -n $TMC_CLUSTER_NAME -q $TMC_TKGWC_WORKERNODES \\"
       echo "          -g $TMC_CLUSTER_GROUP -t $TMC_TKGWC_TEMPLATE \\"
-      echo "          --version $TMC_KUBERNETES_VERSION --availability-zone ${AWS_REGION}"
+      echo "          --version $TMC_KUBERNETES_VERSION --availability-zone ${AWS_PRIMARY_AZ}"
       exit
     fi
 
