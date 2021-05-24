@@ -114,6 +114,7 @@ pivnetAPIdownload() {
   PRODUCT_FILE=$4
   FILE_NAME="$5"
 
+
   token=$(curl -X POST https://network.pivotal.io/api/v2/authentication/access_tokens \
                -d "{\"refresh_token\":\"$REFRESH_TOKEN\"}" 2>/dev/null | jq -r '.access_token')
   if [ "${token}" == "" -o "${token}" == "null" ]; then return 1; fi
@@ -588,53 +589,132 @@ checkCloudAccess() {
   fi
 
   if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "vSphere" -a "$TDH_TKGMC_CREATE_JUMPHOST" == "false" ]; then
-    if [ "${VSPHERE_VCENTER_ADMIN}" == "" -o "${VSPHERE_VCENTER_PASSWORD}" == "" -o "${VSPHERE_VCENTER_SERVER}" == "" -o \
-         "${VSPHERE_JUMPHOST_NAME}" == "" -o "${VSPHERE_JUMPHOST_USER}" == "" -o \
-         "${VSPHERE_SSH_PRIVATE_KEY_FILE}" == "" -o "${VSPHERE_SSH_PUBLIC_KEY_FILE}" == "" ]; then
+    if [ "${TDH_TKGMC_TKG_TYPE}" == "tkgs" ]; then
+      if [ "${VSPHERE_TKGS_VCENTER_ADMIN}" == "" -o "${VSPHERE_TKGS_VCENTER_PASSWORD}" == "" -o "${VSPHERE_TKGS_VCENTER_SERVER}" == "" -o \
+           "${VSPHERE_TKGS_JUMPHOST_NAME}" == "" -o "${VSPHERE_TKGS_JUMPHOST_USER}" == "" -o \
+           "${VSPHERE_TKGS_SSH_PRIVATE_KEY_FILE}" == "" -o "${VSPHERE_TKGS_SSH_PUBLIC_KEY_FILE}" == "" ]; then
+  
+        missing_variables=1
+        echo ""
+        echo "  4MISSING ENVIRONMENT-VARIABES    DESCRIPTION        "
+        echo "  -------------------------------------------------------------------------------------------------------------------------------------------------------"
+  
+        if [ "${VSPHERE_TKGS_VCENTER_SERVER}" == "" ]; then
+          echo "  VSPHERE_TKGS_VCENTER_SERVER           (required) vSphere Server Name"
+        fi
+  
+        if [ "${VSPHERE_TKGS_VCENTER_ADMIN}" == "" ]; then
+          echo "  VSPHERE_TKGS_VCENTER_ADMIN            (required) vCenter Amdinistrator"
+        fi
+  
+        if [ "${VSPHERE_TKGS_VCENTER_PASSWORD}" == "" ]; then
+          echo "  VSPHERE_TKGS_VCENTER_PASSWORD         (required) vCenter Admin Password"
+        fi
+  
+        if [ "${VSPHERE_TKGS_SSH_PRIVATE_KEY_FILE}" == "" ]; then
+          echo "  VSPHERE_TKGS_SSH_PRIVATE_KEY_FILE     (required) SSH Private Key File"
+        fi
 
-      missing_variables=1
-      echo ""
-      echo "  4MISSING ENVIRONMENT-VARIABES    DESCRIPTION        "
-      echo "  -------------------------------------------------------------------------------------------------------------------------------------------------------"
-
-      if [ "${VSPHERE_VCENTER_SERVER}" == "" ]; then
-        echo "  VSPHERE_VCENTER_SERVER           (required) vSphere Server Name"
+        if [ "${VSPHERE_TKGS_SSH_PUBLIC_KEY_FILE}" == "" ]; then
+          echo "  VSPHERE_TKGS_SSH_PUBLIC_KEY_FILE      (required) SSH Public Key File"
+        fi
+  
+        if [ "${VSPHERE_TKGS_JUMPHOST_NAME}" == "" ]; then
+          echo "  VSPHERE_TKGS_JUMPHOST_NAME            (required) vSphere Jump Host Name"
+        fi
+  
+        if [ "${VSPHERE_TKGS_JUMPHOST_USER}" == "" ]; then
+          echo "  VSPHERE_TKGS_JUMPHOST_USER            (required) vSphere Jump Host User"
+        fi
+      else
+        echo "vSphere Access Credentials (TKGs)"
+        messagePrint " ▪ vCenter Server Name"                "$VSPHERE_TKGS_VCENTER_SERVER"
+        messagePrint " ▪ vCenter Admin User"                 "$VSPHERE_TKGS_VCENTER_ADMIN"
+        messagePrint " ▪ vCenter Admin Password"             $(maskPassword "$VSPHERE_TKGS_VCENTER_PASSWORD")
+        messagePrint " ▪ Jump Host Name"                     "$VSPHERE_TKGS_JUMPHOST_NAME"
+        messagePrint " ▪ Jump Host User"                     "$VSPHERE_TKGS_JUMPHOST_USER"
+        messagePrint " ▪ SSH Private Key"                    "$VSPHERE_TKGS_SSH_PRIVATE_KEY_FILE"
+        messagePrint " ▪ SSH Public Key"                     "$VSPHERE_TKGS_SSH_PUBLIC_KEY_FILE"
       fi
 
-      if [ "${VSPHERE_VCENTER_ADMIN}" == "" ]; then
-        echo "  VSPHERE_VCENTER_ADMIN            (required) vCenter Amdinistrator"
-      fi
-
-      if [ "${VSPHERE_VCENTER_PASSWORD}" == "" ]; then
-        echo "  VSPHERE_VCENTER_PASSWORD         (required) vCenter Admin Password"
-      fi
-
-      if [ "${VSPHERE_SSH_PRIVATE_KEY_FILE}" == "" ]; then
-        echo "  VSPHERE_SSH_PRIVATE_KEY_FILE     (required) SSH Private Key File"
-      fi
-
-      if [ "${VSPHERE_SSH_PUBLIC_KEY_FILE}" == "" ]; then
-        echo "  VSPHERE_SSH_PUBLIC_KEY_FILE      (required) SSH Public Key File"
-      fi
-
-      if [ "${VSPHERE_JUMPHOST_NAME}" == "" ]; then
-        echo "  VSPHERE_JUMPHOST_NAME            (required) vSphere Jump Host Name"
-      fi
-
-      if [ "${VSPHERE_JUMPHOST_USER}" == "" ]; then
-        echo "  VSPHERE_JUMPHOST_USER            (required) vSphere Jump Host User"
-      fi
+      export VSPHERE_DNS_DOMAIN="$VSPHERE_TKGS_DNS_DOMAIN"
+      export VSPHERE_API_SERVER="$VSPHERE_TKGS_API_SERVER"
+      export VSPHERE_VCENTER_SERVER="$VSPHERE_TKGS_VCENTER_SERVER"
+      export VSPHERE_VCENTER_ADMIN="$VSPHERE_TKGS_VCENTER_ADMIN"
+      export VSPHERE_VCENTER_PASSWORD="$VSPHERE_TKGS_VCENTER_PASSWORD"
+      export VSPHERE_JUMPHOST_NAME="$VSPHERE_TKGS_JUMPHOST_NAME"
+      export VSPHERE_JUMPHOST_USER="$VSPHERE_TKGS_JUMPHOST_USER"
+      export VSPHERE_JUMPHOST_PASSWORD="$VSPHERE_TKGS_JUMPHOST_PASSWORD"
+      export VSPHERE_SSH_PRIVATE_KEY_FILE="$VSPHERE_TKGS_SSH_PRIVATE_KEY_FILE"
+      export VSPHERE_SSH_PUBLIC_KEY_FILE="$VSPHERE_TKGS_SSH_PUBLIC_KEY_FILE"
+      export VSPHERE_DATASTORE="$VSPHERE_TKGS_DATASTORE"
+      export VSPHERE_DATACENTER="$VSPHERE_TKGS_DATACENTER"
+      export VSPHERE_CLUSTER="$VSPHERE_TKGS_CLUSTER"
+      export VSPHERE_NETWORK="$VSPHERE_TKGS_NETWORK"
     else
-      echo "vSphere Access Credentials"
-      messagePrint " ▪ vCenter Server Name"                "$VSPHERE_VCENTER_SERVER"
-      messagePrint " ▪ vCenter Admin User"                 "$VSPHERE_VCENTER_ADMIN"
-      messagePrint " ▪ vCenter Admin Password"             $(maskPassword "$VSPHERE_VCENTER_PASSWORD")
-      messagePrint " ▪ Jump Host Name"                     "$VSPHERE_JUMPHOST_NAME"
-      messagePrint " ▪ Jump Host User"                     "$VSPHERE_JUMPHOST_USER"
-      messagePrint " ▪ SSH Private Key"                    "$VSPHERE_SSH_PRIVATE_KEY_FILE"
-      messagePrint " ▪ SSH Public Key"                     "$VSPHERE_SSH_PUBLIC_KEY_FILE"
-    fi
+      if [ "${VSPHERE_TKGM_VCENTER_ADMIN}" == "" -o "${VSPHERE_TKGM_VCENTER_PASSWORD}" == "" -o "${VSPHERE_TKGM_VCENTER_SERVER}" == "" -o \
+           "${VSPHERE_TKGM_JUMPHOST_NAME}" == "" -o "${VSPHERE_TKGM_JUMPHOST_USER}" == "" -o \
+           "${VSPHERE_TKGM_SSH_PRIVATE_KEY_FILE}" == "" -o "${VSPHERE_TKGM_SSH_PUBLIC_KEY_FILE}" == "" ]; then
 
+        missing_variables=1
+        echo ""
+        echo "  4MISSING ENVIRONMENT-VARIABES    DESCRIPTION        "
+        echo "  -------------------------------------------------------------------------------------------------------------------------------------------------------"
+
+        if [ "${VSPHERE_TKGM_VCENTER_SERVER}" == "" ]; then
+          echo "  VSPHERE_TKGM_VCENTER_SERVER           (required) vSphere Server Name"
+        fi
+
+        if [ "${VSPHERE_TKGM_VCENTER_ADMIN}" == "" ]; then
+          echo "  VSPHERE_TKGM_VCENTER_ADMIN            (required) vCenter Amdinistrator"
+        fi
+
+        if [ "${VSPHERE_TKGM_VCENTER_PASSWORD}" == "" ]; then
+          echo "  VSPHERE_TKGM_VCENTER_PASSWORD         (required) vCenter Admin Password"
+        fi
+
+        if [ "${VSPHERE_TKGM_SSH_PRIVATE_KEY_FILE}" == "" ]; then
+          echo "  VSPHERE_TKGM_SSH_PRIVATE_KEY_FILE     (required) SSH Private Key File"
+        fi
+
+        if [ "${VSPHERE_TKGM_SSH_PUBLIC_KEY_FILE}" == "" ]; then
+          echo "  VSPHERE_TKGM_SSH_PUBLIC_KEY_FILE      (required) SSH Public Key File"
+        fi
+
+        if [ "${VSPHERE_TKGM_JUMPHOST_NAME}" == "" ]; then
+          echo "  VSPHERE_TKGM_JUMPHOST_NAME            (required) vSphere Jump Host Name"
+        fi
+
+        if [ "${VSPHERE_TKGM_JUMPHOST_USER}" == "" ]; then
+          echo "  VSPHERE_TKGM_JUMPHOST_USER            (required) vSphere Jump Host User"
+        fi
+
+      else
+        echo "vSphere Access Credentials"
+        messagePrint " ▪ vCenter Server Name"                "$VSPHERE_TKGM_VCENTER_SERVER"
+        messagePrint " ▪ vCenter Admin User"                 "$VSPHERE_TKGM_VCENTER_ADMIN"
+        messagePrint " ▪ vCenter Admin Password"             $(maskPassword "$VSPHERE_TKGM_VCENTER_PASSWORD")
+        messagePrint " ▪ Jump Host Name"                     "$VSPHERE_TKGM_JUMPHOST_NAME"
+        messagePrint " ▪ Jump Host User"                     "$VSPHERE_TKGM_JUMPHOST_USER"
+        messagePrint " ▪ SSH Private Key"                    "$VSPHERE_TKGM_SSH_PRIVATE_KEY_FILE"
+        messagePrint " ▪ SSH Public Key"                     "$VSPHERE_TKGM_SSH_PUBLIC_KEY_FILE"
+      fi
+
+      export VSPHERE_DNS_DOMAIN="$VSPHERE_TKGM_DNS_DOMAIN"
+      export VSPHERE_API_SERVER="$VSPHERE_TKGM_API_SERVER"
+      export VSPHERE_VCENTER_SERVER="$VSPHERE_TKGM_VCENTER_SERVER"
+      export VSPHERE_VCENTER_ADMIN="$VSPHERE_TKGM_VCENTER_ADMIN"
+      export VSPHERE_VCENTER_PASSWORD="$VSPHERE_TKGM_VCENTER_PASSWORD"
+      export VSPHERE_JUMPHOST_NAME="$VSPHERE_TKGM_JUMPHOST_NAME"
+      export VSPHERE_JUMPHOST_USER="$VSPHERE_TKGM_JUMPHOST_USER"
+      export VSPHERE_JUMPHOST_PASSWORD="$VSPHERE_TKGM_JUMPHOST_PASSWORD"
+      export VSPHERE_SSH_PRIVATE_KEY_FILE="$VSPHERE_TKGM_SSH_PRIVATE_KEY_FILE"
+      export VSPHERE_SSH_PUBLIC_KEY_FILE="$VSPHERE_TKGM_SSH_PUBLIC_KEY_FILE"
+      export VSPHERE_DATASTORE="$VSPHERE_TKGM_DATASTORE"
+      export VSPHERE_DATACENTER="$VSPHERE_TKGM_DATACENTER"
+      export VSPHERE_CLUSTER="$VSPHERE_TKGM_CLUSTER"
+      export VSPHERE_NETWORK="$VSPHERE_TKGM_NETWORK"
+    fi
   fi
 
   if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "vSphere" -a "$TDH_TKGMC_CREATE_JUMPHOST" == "true1" ]; then
@@ -919,7 +999,7 @@ checkTMCintegration() {
         messagePrint " ▪ Verify Wavefront Helm Chart"  "installed"      
       fi
 
-      cnt=$(tmc cluster integration list --cluster-name $TDH_CLUSTER_NAME -m $TMC_MANAGEMENT_CLUSTER \
+      cnt=$(tmc cluster integration list --cluster-name $TDH_CLUSTER_NAME -m $TDH_MANAGEMENT_CLUSTER \
             -p $TMC_PROVISIONER_NAME --name tanzu-observability-saas | egrep -c "tanzu-observability-saas") 
       if [ $cnt -eq 0 ]; then 
         TANZU_OBSERVABILITY=/tmp/tanzu_observability.yaml; rm -f $TANZU_OBSERVABILITY
@@ -927,7 +1007,7 @@ checkTMCintegration() {
         echo "{"                                                                     >> $TANZU_OBSERVABILITY
         echo "    \"full_name\": {"                                                  >> $TANZU_OBSERVABILITY
         echo "        \"provisionerName\": \"$TMC_PROVISONER_NAME\","                >> $TANZU_OBSERVABILITY
-        echo "        \"managementClusterName\": \"$TMC_MANAGEMENT_CLUSTER\","       >> $TANZU_OBSERVABILITY
+        echo "        \"managementClusterName\": \"$TDH_MANAGEMENT_CLUSTER\","       >> $TANZU_OBSERVABILITY
         echo "        \"clusterName\": \"$TDH_CLUSTER_NAME\","                       >> $TANZU_OBSERVABILITY
         echo "        \"name\": \"tanzu-observability-saas\""                        >> $TANZU_OBSERVABILITY
         echo "    },"                                                                >> $TANZU_OBSERVABILITY
@@ -971,11 +1051,11 @@ checkTMCintegration() {
         # --- VERIFY BACKUP LOCATION ---
         cnt=$(tmc cluster dataprotection backuplocation list --cluster-name $TDH_CLUSTER_NAME | grep -c " $TDH_CLUSTER_NAME ") 
         if [ $cnt -eq 0 ]; then
-          tmc cluster dataprotection create -c $TDH_CLUSTER_NAME -m $TMC_MANAGEMENT_CLUSTER -p $TMC_PROVISONER_NAME \
+          tmc cluster dataprotection create -c $TDH_CLUSTER_NAME -m $TDH_MANAGEMENT_CLUSTER -p $TMC_PROVISONER_NAME \
               --backup-location-names $TDH_TANZU_DATA_PROTECTION_BACKUP_LOCATION > /dev/null 2>&1
           if [ $? -ne 0 ]; then
             echo "ERROR: failed to enable dataprotection for cluster $TDH_CLUSTER_NAME"
-            echo "       => tmc cluster dataprotection create -c $TDH_CLUSTER_NAME -m $TMC_MANAGEMENT_CLUSTER \\"
+            echo "       => tmc cluster dataprotection create -c $TDH_CLUSTER_NAME -m $TDH_MANAGEMENT_CLUSTER \\"
             echo "            -p $TMC_PROVISONER_NAME --backup-location-names $TDH_TANZU_DATA_PROTECTION_BACKUP_LOCATION"
             exit
           fi
@@ -994,15 +1074,15 @@ checkTMCintegration() {
       sleep 60
 
       # --- CONFIGURE FULL BACKUP ---
-      cnt=$(tmc cluster dataprotection backup list --cluster-name $TDH_CLUSTER_NAME -p $TMC_PROVISONER_NAME -m $TMC_MANAGEMENT_CLUSTER  --name "full-backup" | egrep -c " full-backup ")
+      cnt=$(tmc cluster dataprotection backup list --cluster-name $TDH_CLUSTER_NAME -p $TMC_PROVISONER_NAME -m $TDH_MANAGEMENT_CLUSTER  --name "full-backup" | egrep -c " full-backup ")
       if [ $cnt -eq 0 ]; then 
         messagePrint " ▪ Configure Full Backup (full-backup) configuration"            "enabled"
-        tmc cluster dataprotection backup create -c $TDH_CLUSTER_NAME -p $TMC_PROVISONER_NAME -m $TMC_MANAGEMENT_CLUSTER \
+        tmc cluster dataprotection backup create -c $TDH_CLUSTER_NAME -p $TMC_PROVISONER_NAME -m $TDH_MANAGEMENT_CLUSTER \
           --name "full-backup" --backup-location-name $TDH_TANZU_DATA_PROTECTION_BACKUP_LOCATION > /dev/null 2>&1
         if [ $? -ne 0 ]; then
           echo "ERROR: failed to configure a full-backup"
           echo "       => tmc cluster dataprotection backup create -c $TDH_CLUSTER_NAME -p $TMC_PROVISONER_NAME \\"
-          echo "            -m $TMC_MANAGEMENT_CLUSTER --name \"full-backup\" --backup-location-name $TDH_TANZU_DATA_PROTECTION_BACKUP_LOCATION"
+          echo "            -m $TDH_MANAGEMENT_CLUSTER --name \"full-backup\" --backup-location-name $TDH_TANZU_DATA_PROTECTION_BACKUP_LOCATION"
           exit
         fi
       else
@@ -1030,27 +1110,27 @@ scanCluster() {
   [ "$TYPE" == "CONFORMANCE" ] && NAME=conformance
 
   # --- VERIFY ACRIVE SCANNS ---
-  cnt=$(tmc cluster inspection scan list --cluster-name $TDH_CLUSTER_NAME -p $TMC_PROVISONER_NAME -m $TMC_MANAGEMENT_CLUSTER -o json | \
+  cnt=$(tmc cluster inspection scan list --cluster-name $TDH_CLUSTER_NAME -p $TMC_PROVISONER_NAME -m $TDH_MANAGEMENT_CLUSTER -o json | \
      jq -r '.scans[].status.phase' | grep -v "COMPLETE" | wc -l | sed 's/  *//g')
   while [ $cnt -ne 0 ]; do
-    cnt=$(tmc cluster inspection scan list --cluster-name $TDH_CLUSTER_NAME -p $TMC_PROVISONER_NAME -m $TMC_MANAGEMENT_CLUSTER -o json | \
+    cnt=$(tmc cluster inspection scan list --cluster-name $TDH_CLUSTER_NAME -p $TMC_PROVISONER_NAME -m $TDH_MANAGEMENT_CLUSTER -o json | \
       jq -r '.scans[].status.phase' | grep -v "COMPLETE" | wc -l | sed 's/  *//g')
     sleep 10
   done
 
-  stt=$(tmc cluster inspection scan list --cluster-name $TDH_CLUSTER_NAME -p $TMC_PROVISONER_NAME -m $TMC_MANAGEMENT_CLUSTER -o json | \
+  stt=$(tmc cluster inspection scan list --cluster-name $TDH_CLUSTER_NAME -p $TMC_PROVISONER_NAME -m $TDH_MANAGEMENT_CLUSTER -o json | \
     jq -r --arg key $NAME '.scans[].status.report.info | select(.scanType == $key).result' | tail -1)
   if [ "$stt" == "" ]; then 
     messagePrint " ▪ Scan Cluster ($TDH_CLUSTER_NAME) with $TYPE"       "scanning"
-    tmc cluster inspection scan create -c $TDH_CLUSTER_NAME -p $TMC_PROVISONER_NAME -m $TMC_MANAGEMENT_CLUSTER --inspection-type $TYPE > /dev/null 2>&1
+    tmc cluster inspection scan create -c $TDH_CLUSTER_NAME -p $TMC_PROVISONER_NAME -m $TDH_MANAGEMENT_CLUSTER --inspection-type $TYPE > /dev/null 2>&1
     if [ $? -ne 0 ]; then 
       echo "ERROR: failed to scan cluster $TDH_CLUSTER_NAME"
       echo "       => tmc cluster inspection scan create -c $TDH_CLUSTER_NAME -p $TMC_PROVISONER_NAME \\"
-      echo "             -m $TMC_MANAGEMENT_CLUSTER --inspection-type $TYPE"
+      echo "             -m $TDH_MANAGEMENT_CLUSTER --inspection-type $TYPE"
       exit
     fi
   else
-    dat=$(tmc cluster inspection scan list --cluster-name $TDH_CLUSTER_NAME -p $TMC_PROVISONER_NAME -m $TMC_MANAGEMENT_CLUSTER -o json | \
+    dat=$(tmc cluster inspection scan list --cluster-name $TDH_CLUSTER_NAME -p $TMC_PROVISONER_NAME -m $TDH_MANAGEMENT_CLUSTER -o json | \
       jq -r --arg key $NAME '.scans[].status.report.info | select(.scanType == $key).runDatetime' | sort -n | tail -1)
     messagePrint " ▪ Cluster Scan ($TDH_CLUSTER_NAME) with $TYPE completed"       "$dat"
   fi
@@ -1060,14 +1140,14 @@ checkTMCAccess() {
   missing_variables=0
 
   if [ "${TDH_DEPLOYMENT_CLOUD}" == "AWS" ]; then
-    if [ "${TMC_MANAGEMENT_CLUSTER}" == "" -o "${TMC_PROVISIONER_NAME}" == "" ]; then
+    if [ "${TDH_MANAGEMENT_CLUSTER}" == "" -o "${TMC_PROVISIONER_NAME}" == "" ]; then
       missing_variables=1
       echo ""
       echo "  2MISSING ENVIRONMENT-VARIABES    DESCRIPTION        "
       echo "  -------------------------------------------------------------------------------------------------------------------------------------------------------"
   
-      if [ "${TMC_MANAGEMENT_CLUSTER}" == "" ]; then
-        echo "  TMC_MANAGEMENT_CLUSTER          (required) A Management Cluster deployed on AWS"
+      if [ "${TDH_MANAGEMENT_CLUSTER}" == "" ]; then
+        echo "  TDH_MANAGEMENT_CLUSTER          (required) A Management Cluster deployed on AWS"
       fi
   
       if [ "${TMC_PROVISIONER_NAME}" == "" ]; then
@@ -1096,7 +1176,7 @@ checkTMCAccess() {
     echo "  -------------------------------------------------------------------------------------------------------------------------------------------------------"
     echo "  IMPORTANT: Please set the missing environment variables either in your shell or in the tanzu-demo-hub"
     echo "             configuration file ~/.tanzu-demo-hub.cfg and set all variables with the 'export' notation"
-    echo "             ie. => export TMC_MANAGEMENT_CLUSTER=xxxxxxxx"
+    echo "             ie. => export TDH_MANAGEMENT_CLUSTER=xxxxxxxx"
     echo "  -------------------------------------------------------------------------------------------------------------------------------------------------------"
     exit 1
   fi
@@ -2055,7 +2135,7 @@ createCluster() {
       messagePrint " ▪ Health Check Enabled"        "$TDH_TKGMC_MACHINE_HEALTH_CHECK_ENABLED"
 
       export GOVC_INSECURE=1
-      export GOVC_URL=https://${VSPHERE_SERVER}/sdk
+      export GOVC_URL=https://${VSPHERE_VCENTER_SERVER}/sdk
       export GOVC_USERNAME=$VSPHERE_ADMIN
       export GOVC_PASSWORD=$VSPHERE_PASSWORD
       export GOVC_DATASTORE=$VSPHERE_DATASTORE
@@ -2064,7 +2144,7 @@ createCluster() {
 
       nodes=$(govc find -name "$TDH_TKGMC_NAME*")
       if [ $? != 0 ]; then 
-        echo "ERROR: failed to login to vSphere"
+        echo "ERROR: failed to login to vSphere 1"
         echo "       => govc find -name \"$TDH_TKGMC_NAME*\""; exit
       fi
 
@@ -2903,8 +2983,6 @@ verifyRequiredServices() {
 }
 
 checkTKGdownloads() {
-
-
   kpl=$(ls -1 software | egrep -c "^kp-linux|photon")
   ptl=$(ls -1 software | egrep -c "^photon")
   tkg=$(ls -1 software | egrep -c "^tanzu-cli-bundle-linux")
@@ -3050,18 +3128,29 @@ checkCLIcommands() {
 checkTMCAccess() {
   missing_variables=0
 
+  if [ "${TDH_DEPLOYMENT_CLOUD}" == "vSphere" ]; then
+    TMC_ACCOUNT_NAME=$TMC_ACCOUNT_NAME_AWS
+    TMC_CLUSTER_NAME="tdh-vsphere-${TDH_USER}"
+
+    if [ "$TDH_SERVICE_TANZU_MISSION_CONTROL" == "true" ]; then 
+     tmc clustergroup create -n tanzu-demo-hub -d "Tanzu Demo Hub by Sacha Dubois" > /dev/null 2>&1
+    fi
+  fi
+#gaga
+
   if [ "${TDH_DEPLOYMENT_CLOUD}" == "AWS" ]; then
     TMC_ACCOUNT_NAME=$TMC_ACCOUNT_NAME_AWS
 
-    if [ "${TMC_MANAGEMENT_CLUSTER}" == "" -o "${TMC_PROVISIONER_NAME}" == "" -o "${TMC_ACCOUNT_NAME_AWS}" == "" -o "${TMC_CLUSTER_GROUP}" == "" -o "${TMC_KUBERNETES_VERSION}" == "" ]; then
+    #if [ "${TDH_MANAGEMENT_CLUSTER}" == "" -o "${TMC_PROVISIONER_NAME}" == "" -o "${TMC_ACCOUNT_NAME_AWS}" == "" -o "${TMC_CLUSTER_GROUP}" == "" -o "${TMC_KUBERNETES_VERSION}" == "" ]; then
+    if [ "${TDH_MANAGEMENT_CLUSTER}" == "" -o "${TMC_PROVISIONER_NAME}" == "" -o "${TMC_ACCOUNT_NAME_AWS}" == "" -o "${TMC_CLUSTER_GROUP}" == "" ]; then
       missing_variables=1
       echo ""
       echo "  2MISSING ENVIRONMENT-VARIABES    DESCRIPTION        "
       echo "  --------------------------------------------------------------------------------------------------------------"
 
-      if [ "${TMC_KUBERNETES_VERSION}" == "" ]; then
-        echo "  TMC_KUBERNETES_VERSION          (required) The Kubernetes version for the cluster e.g. 1.19.1-3-amazon2"
-      fi
+      #if [ "${TMC_KUBERNETES_VERSION}" == "" ]; then
+      #  echo "  TMC_KUBERNETES_VERSION          (required) The Kubernetes version for the cluster e.g. 1.19.1-3-amazon2"
+      #fi
 
       if [ "${TMC_CLUSTER_GROUP}" == "" ]; then
         echo "  TMC_CLUSTER_GROUP               (required) The name of the TMC Cluster Group"
@@ -3071,8 +3160,8 @@ checkTMCAccess() {
         echo "  TMC_ACCOUNT_NAME_AWS            (required) The name of the TMC Account Name"
       fi
 
-      if [ "${TMC_MANAGEMENT_CLUSTER}" == "" ]; then
-        echo "  TMC_MANAGEMENT_CLUSTER          (required) The name of the TKGm Management Cluster"
+      if [ "${TDH_MANAGEMENT_CLUSTER}" == "" ]; then
+        echo "  TDH_MANAGEMENT_CLUSTER          (required) The name of the TKGm Management Cluster"
       fi
 
       if [ "${TMC_PROVISIONER_NAME}" == "" ]; then
@@ -3092,7 +3181,7 @@ checkTMCAccess() {
       messagePrint " ▪ TMC Cluster Name"                "$TMC_CLUSTER_NAME"
       messagePrint " ▪ TMC Context Name"                "$TMC_CONTEXT_NAME"
       messagePrint " ▪ TMC AWS Account Name"            "$TMC_ACCOUNT_NAME_AWS"
-      messagePrint " ▪ TMC Management Cluster"          "$TMC_MANAGEMENT_CLUSTER"
+      messagePrint " ▪ TMC Management Cluster"          "$TDH_MANAGEMENT_CLUSTER"
       messagePrint " ▪ TMC Provisioner Name"            "$TMC_PROVISIONER_NAME"
 
       # --- CHECK IF AWS CLI IS CONFIGURED ---
@@ -3133,57 +3222,132 @@ checkTMCcontext() {
 
 tmcCreateCluster() {
   # steve: missing provisioner, returned sacha's cluster
-  stt=$(tmc cluster list -m $TMC_MANAGEMENT_CLUSTER -p $TMC_PROVISIONER_NAME --name $TMC_CLUSTER_NAME -o json 2>/dev/null | jq -r '.clusters[].status.phase' 2>/dev/null) 
+  if [ "$TDH_DEPLOYMENT_CLOUD" == "AWS" ]; then 
+    stt=$(tmc cluster list -m $TDH_MANAGEMENT_CLUSTER -p $TMC_PROVISIONER_NAME --name $TMC_CLUSTER_NAME -o json 2>/dev/null | \
+          jq -r '.clusters[].status.phase' 2>/dev/null) 
 
-  if [ "$stt" == "DELETING" ]; then                                         
-     echo "ERROR: Cluster is currently on deleting, please try again later"; exit 1
-  fi
-
-  if [ "$stt" == "" -o "$stt" != "READY" ]; then
-    messageTitle "TMC Create Cluster"     
-    messagePrint " ▪ TMC Cluster Name"       "$TMC_CLUSTER_NAME"
-    messagePrint " ▪ TMC Cluster Group"      "$TMC_CLUSTER_GROUP"
-    messagePrint " ▪ TMC Template"           "$TMC_TKGWC_TEMPLATE"
-    messagePrint " ▪ Provisioner Name"       "$TMC_PROVISIONER_NAME"
-    messagePrint " ▪ TKG Management Cluster" "$TMC_MANAGEMENT_CLUSTER"
-    messagePrint " ▪ Account Name"           "$TMC_ACCOUNT_NAME"
-    messagePrint " ▪ Kubernetes Version"     "$TMC_KUBERNETES_VERSION"
-
-    tmc cluster create -m $TMC_MANAGEMENT_CLUSTER -p $TMC_PROVISIONER_NAME --ssh-key-name $TMC_SSH_KEY_NAME_AWS \
-                       -c $TMC_ACCOUNT_NAME -r $AWS_REGION -n $TMC_CLUSTER_NAME -q $TMC_TKGWC_WORKERNODES \
-                       -g $TMC_CLUSTER_GROUP \
-                       -t $TDH_TKGWC_TEMPLATE \
-                       --version $TMC_KUBERNETES_VERSION \
-                       --availability-zone ${AWS_PRIMARY_AZ}
-    if [ $? -ne 0 ]; then 
-      echo "ERROR: failed to build Cluster"
-      echo "       => tmc cluster create -m $TMC_MANAGEMENT_CLUSTER -p $TMC_PROVISIONER_NAME \\"
-      echo "          --ssh-key-name $TMC_SSH_KEY_NAME_AWS -c $TMC_ACCOUNT_NAME \\"
-      echo "          -r $AWS_REGION -n $TMC_CLUSTER_NAME -q $TMC_TKGWC_WORKERNODES \\"
-      echo "          -g $TMC_CLUSTER_GROUP -t $TMC_TKGWC_TEMPLATE \\"
-      echo "          --version $TMC_KUBERNETES_VERSION --availability-zone ${AWS_PRIMARY_AZ}"
-      exit
+    if [ "$stt" == "DELETING" ]; then                                         
+       echo "ERROR: Cluster is currently on deleting, please try again later"; exit 1
     fi
 
-    messagePrint " ▪ Cluster Status"         "creating ...."
-    stt=""
-    while [ "$stt" != "READY" ]; do
-      stt=$(tmc cluster list -m $TMC_MANAGEMENT_CLUSTER --name $TMC_CLUSTER_NAME -o json 2>/dev/null | \
-            jq -r '.clusters[].status.phase' 2>/dev/null | head -1)
+    if [ "$stt" == "" -o "$stt" != "READY" ]; then
+      KUBERNETES_VERSION=$(for n in $TMC_K8S_VERSIONS; do echo v$n; done | egrep "$TDH_TKGWC_KUBERNETES" | tail -1 | sed 's/^v//g') 
 
-      sleep 10
-    done
+      messageTitle "TMC Create Cluster"     
+      messagePrint " ▪ TMC Cluster Name"       "$TMC_CLUSTER_NAME"
+      messagePrint " ▪ TMC Cluster Group"      "$TMC_CLUSTER_GROUP"
+      messagePrint " ▪ TMC Template"           "$TMC_TKGWC_TEMPLATE"
+      messagePrint " ▪ Provisioner Name"       "$TMC_PROVISIONER_NAME"
+      messagePrint " ▪ TKG Management Cluster" "$TDH_MANAGEMENT_CLUSTER"
+      messagePrint " ▪ Account Name"           "$TMC_ACCOUNT_NAME"
+      messagePrint " ▪ Kubernetes Version"     "$TDH_TKGWC_KUBERNETES"
+      messagePrint " ▪ Kubernetes Image"         "$KUBERNETES_VERSION"
+
+      tmc cluster create -m $TDH_MANAGEMENT_CLUSTER -p $TMC_PROVISIONER_NAME \
+                         --ssh-key-name $TMC_SSH_KEY_NAME_AWS -c $TMC_ACCOUNT_NAME \
+                         --worker-node-count $TDH_TKGWC_WORKERNODES \
+                         -r $AWS_REGION -n $TMC_CLUSTER_NAME \
+                         -g $TMC_CLUSTER_GROUP -t $TMC_TKGWC_TEMPLATE \
+                         --version $KUBERNETES_VERSION --availability-zone $AWS_PRIMARY_AZ
+
+      if [ $? -ne 0 ]; then 
+        echo "ERROR: failed to build TKG Cluster on AWS"
+        echo "       => tmc cluster create -m $TDH_MANAGEMENT_CLUSTER -p $TMC_PROVISIONER_NAME \\"
+        echo "          --ssh-key-name $TMC_SSH_KEY_NAME_AWS -c $TMC_ACCOUNT_NAME \\"
+        echo "          --worker-node-count $TDH_TKGWC_WORKERNODES \\"
+        echo "          -r $AWS_REGION -n $TMC_CLUSTER_NAME -q $TMC_TKGWC_WORKERNODES \\"
+        echo "          -g $TMC_CLUSTER_GROUP -t $TMC_TKGWC_TEMPLATE \\"
+        echo "          --version $KUBERNETES_VERSION --availability-zone $AWS_PRIMARY_AZ"
+        exit
+      fi
+
+      messagePrint " ▪ Cluster Status"         "creating ...."
+      stt=""
+      while [ "$stt" != "READY" ]; do
+        stt=$(tmc cluster list -m $TDH_MANAGEMENT_CLUSTER --name $TMC_CLUSTER_NAME -o json 2>/dev/null | \
+              jq -r '.clusters[].status.phase' 2>/dev/null | head -1)
+  
+        sleep 10
+      done
+    fi
+  else
+    TMC_PROVISIONER_NAME=tanzu-demo-hub
+    stt=$(tmc cluster list -m $TDH_MANAGEMENT_CLUSTER -p $TMC_PROVISIONER_NAME --name $TMC_CLUSTER_NAME -o json 2>/dev/null | \
+          jq -r '.clusters[].status.phase' 2>/dev/null)
+
+echo "STT:$stt"
+    if [ "$stt" == "DELETING" ]; then
+       echo "ERROR: Cluster is currently on deleting, please try again later"; exit 1
+    fi
+
+    if [ "$stt" == "" -o "$stt" != "READY" ]; then
+      KUBERNETES_VERSION=$(kubectl get tanzukubernetesreleases | egrep "^$TDH_TKGWC_KUBERNETES" | tail -1 | awk '{ print $2 }')
+      if [ "$KUBERNETES_VERSION" == "" ]; then TMC_CLUSTER_NAME
+        echo "ERROR: No such kubernetes release ($TDH_TKGWC_KUBERNETES), try another one"
+        echo "       => kubectl get tanzukubernetesreleases"
+        exit
+      fi
+
+      messageTitle "TMC Create Cluster"
+      messagePrint " ▪ TKG Cluster Name"         "$TMC_CLUSTER_NAME"
+      messagePrint " ▪ TKG Cluster Group"        "$TMC_CLUSTER_GROUP"
+      messagePrint " ▪ TKG Template"             "tkgs"
+      messagePrint " ▪ TKG Instance Type"        "$TDH_TKGWC_CONTROPLANE_TYPE"
+      messagePrint " ▪ TKG Control Plane Nodes"  "$TDH_TKGWC_CONTROPLANE"
+      messagePrint " ▪ TKG Worker Instance Type" "$TDH_TKGWC_WORKERNODES_TYPE"
+      messagePrint " ▪ TKG Worker Nodes"         "$TDH_TKGWC_WORKERNODES"
+      messagePrint " ▪ TKG Supervisor Cluster"   "$TDH_MANAGEMENT_CLUSTER"
+      messagePrint " ▪ TKG Storage Class"        "$TDH_TKGWC_STORAGE_CLASS"
+      messagePrint " ▪ TKG Service CIDR"         "$TDH_TKGMC_SERVICE_CIDR"
+      messagePrint " ▪ TKG Cluster CIDR"         "$TDH_TKGMC_CLUSTER_CIDR"
+      messagePrint " ▪ Provisioner Name"         "$TMC_PROVISIONER_NAME"
+      messagePrint " ▪ Kubernetes Version"       "$TDH_TKGWC_KUBERNETES"
+      messagePrint " ▪ Kubernetes Image"         "$KUBERNETES_VERSION"
+
+      # List of Tanzu Kubernetes Releases
+      # https://docs.vmware.com/en/VMware-vSphere/7.0/vmware-vsphere-with-tanzu/GUID-292482C2-A5FA-44B5-B26E-F887A91BB19D.html
+      # kubectl get tanzukubernetesreleases => v1.20.2+vmware.1-tkg.1.1d4f79a
+
+      tmc cluster create -t tkgs -m $TDH_MANAGEMENT_CLUSTER -p $TMC_PROVISIONER_NAME \
+                           --worker-instance-type $TDH_TKGWC_CONTROPLANE_TYPE \
+                           --instance-type $TDH_TKGWC_CONTROPLANE_TYPE \
+                           --pods-cidr-blocks "$TDH_TKGMC_SERVICE_CIDR" \
+                           --service-cidr-blocks "$TDH_TKGMC_CLUSTER_CIDR" \
+                           --worker-node-count $TDH_TKGWC_WORKERNODES \
+                           --storage-class $TDH_TKGWC_STORAGE_CLASS \
+                           -g $TMC_CLUSTER_GROUP --version $KUBERNETES_VERSION -n $TMC_CLUSTER_NAME > /dev/null 2>&1
+      if [ $? -ne 0 ]; then
+        echo "ERROR: failed to build Cluster on vSphere"
+        echo "       => tmc cluster create -t tkgs -m $TDH_MANAGEMENT_CLUSTER -p $TMC_PROVISIONER_NAME \\"
+        echo "              -c $TMC_ACCOUNT_NAME  -n $TMC_CLUSTER_NAME -q $TMC_TKGWC_WORKERNODES \\"
+        echo "              -y $TDH_TKGWC_CONTROPLANE_TYPE -q $TDH_TKGWC_WORKERNODES \\"
+        echo "              --default-storage-class $TDH_TKGWC_STORAGE_CLASS \\"
+        echo "              --worker-instance-type $TDH_TKGWC_CONTROPLANE_TYPE \\"
+        echo "              -g $TMC_CLUSTER_GROUP --version $KUBERNETES_VERSION"
+        exit
+      fi
+  
+      messagePrint " ▪ Cluster Status"         "creating ...."
+      stt=""
+      while [ "$stt" != "READY" ]; do
+        stt=$(tmc cluster list -m $TDH_MANAGEMENT_CLUSTER --name $TMC_CLUSTER_NAME -o json 2>/dev/null | \
+              jq -r '.clusters[].status.phase' 2>/dev/null | head -1)
+  
+        sleep 10
+      done
+  
+    fi
   fi
 
   messageTitle "TMC Verify Cluster"     
   messagePrint " ▪ Cluster Name"           "$TMC_CLUSTER_NAME"
-  messagePrint " ▪ TKG Management Cluster" "$TMC_MANAGEMENT_CLUSTER"
+  messagePrint " ▪ TKG Management Cluster" "$TDH_MANAGEMENT_CLUSTER"
   messagePrint " ▪ Cluster Status"         "$stt"
   messagePrint " ▪ Provisioner Name"       "$TMC_PROVISIONER_NAME"
   messagePrint " ▪ Account Name"           "$TMC_ACCOUNT_NAME"
   echo "----------------------------------------------------------------------------------------"
   echo " TO-DELETE-THE-CLUSTER"
-  echo " => tmc cluster delete -m $TMC_MANAGEMENT_CLUSTER -p $TMC_PROVISIONER_NAME $TMC_CLUSTER_NAME"
+  echo " => tmc cluster delete -m $TDH_MANAGEMENT_CLUSTER -p $TMC_PROVISIONER_NAME $TMC_CLUSTER_NAME"
   echo "----------------------------------------------------------------------------------------"
 }
 
@@ -3195,30 +3359,50 @@ getTDHClusterCredentials() {
   messageTitle "TMC Get TKG Cluster Credentials"
   messagePrint " ▪ Cluster Name"           "$TMC_CLUSTER_NAME"
   messagePrint " ▪ Kubeconfig File"        "/tmp/${TMC_CLUSTER_NAME}.kubeconfig"
-  messagePrint " ▪ Kubernetes Context"     "$TMC_CLUSTER_NAME"
+  messagePrint " ▪ Kubernetes Context"     "${TMC_CLUSTER_NAME}-admin@$TMC_CLUSTER_NAME"
 
   ret=1; cnt=0
   while [ $ret -ne 0 -a $cnt -lt 10 ]; do
-    tmc cluster auth kubeconfig get $TMC_CLUSTER_NAME -p $TMC_PROVISIONER_NAME -m $TMC_MANAGEMENT_CLUSTER > /dev/null 2>&1; ret=$?
+    #tmc cluster auth kubeconfig get $TMC_CLUSTER_NAME -p $TMC_PROVISIONER_NAME -m $TDH_MANAGEMENT_CLUSTER > /dev/null 2>&1; ret=$?
+    tmc cluster auth admin-kubeconfig get $TMC_CLUSTER_NAME -p $TMC_PROVISIONER_NAME -m $TDH_MANAGEMENT_CLUSTER > /dev/null 2>&1; ret=$?
     sleep 60
     let cnt=cnt+1
   done
 
   if [ $ret -ne 0 ]; then 
     echo "ERROR: Failled to retrieve cluster credentials, aborting"
-    echo "       => tmc cluster auth kubeconfig get $TMC_CLUSTER_NAME -p $TMC_PROVISIONER_NAME -m $TMC_MANAGEMENT_CLUSTER"
+    echo "       => tmc cluster auth admin-kubeconfig get $TMC_CLUSTER_NAME -p $TMC_PROVISIONER_NAME -m $TDH_MANAGEMENT_CLUSTER"
     exit
   fi
 
-  tmc cluster auth kubeconfig get $TMC_CLUSTER_NAME -p $TMC_PROVISIONER_NAME -m $TMC_MANAGEMENT_CLUSTER > /tmp/${TMC_CLUSTER_NAME}.kubeconfig
-  export KUBECONFIG=/tmp/${TMC_CLUSTER_NAME}.kubeconfig
-  chmod 600 /tmp/${TMC_CLUSTER_NAME}.kubeconfig
+  rm -f /tmp/${TMC_CLUSTER_NAME}.kubeconfig; touch /tmp/${TMC_CLUSTER_NAME}.kubeconfig
+  ret=1; cnt=0
+  while [ ! -s /tmp/${TMC_CLUSTER_NAME}.kubeconfig -a $ret -ne 0 -a $cnt -lt 5 ]; do
+    tmc cluster auth admin-kubeconfig get $TMC_CLUSTER_NAME -p $TMC_PROVISIONER_NAME \
+        -m $TDH_MANAGEMENT_CLUSTER > /tmp/${TMC_CLUSTER_NAME}.kubeconfig 2>/dev/null; ret=$?
+    sleep 60
+    let cnt=cnt+1
+  done
 
-  kubectl config use-context $TMC_CLUSTER_NAME 
-  echo "----------------------------------------------------------------------------------------"
-  echo "export KUBECONFIG=/tmp/${TMC_CLUSTER_NAME}.kubeconfig"
-  echo "kubectl config get-contexts"
-  echo "----------------------------------------------------------------------------------------"
+  if [ $ret -ne 0 ]; then
+    echo "ERROR: Failled to retrieve cluster credentials, aborting"
+    echo "       => tmc cluster auth admin-kubeconfig get $TMC_CLUSTER_NAME -p $TMC_PROVISIONER_NAME -m $TDH_MANAGEMENT_CLUSTER"
+    exit
+  fi
+ 
+  chmod 600 /tmp/${TMC_CLUSTER_NAME}.kubeconfig
+  export KUBECONFIG=$HOME/.kube/config:/tmp/${TMC_CLUSTER_NAME}.kubeconfig
+  kubectl config view --flatten > ~/.kube/config.new
+  mv ~/.kube/config ~/.kube/config.last
+  mv ~/.kube/config.new ~/.kube/config
+  chmod 600 ~/.kube/config
+  unset KUBECONFIG
+
+  kubectl config use-context ${TMC_CLUSTER_NAME}-admin@$TMC_CLUSTER_NAME
+  #echo "----------------------------------------------------------------------------------------"
+  #echo "export KUBECONFIG=/tmp/${TMC_CLUSTER_NAME}.kubeconfig"
+  #echo "kubectl config get-contexts"
+  #echo "----------------------------------------------------------------------------------------"
 }
 
 verifyDockerRegistry() {
@@ -5431,7 +5615,7 @@ verify_datacenter() {
 
   if [ "$VSPHERE_DATACENTER" == "" ]; then
     echo ""
-    echo "Please set the variale: VSPHERE_DATASTORE=<datastore> in $HOME/.tanzu-demo-hub.cfg"
+    echo "Please set the variale: VSPHERE_DATACENTER=<datacenter> in $HOME/.tanzu-demo-hub.cfg"
     echo "from the following list:"
     messageLine
     govc ls /
