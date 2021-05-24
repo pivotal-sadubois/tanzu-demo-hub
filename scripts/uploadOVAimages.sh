@@ -155,22 +155,30 @@ echo "TDH_TKGMC_TKG_IMAGES:$TDH_TKGMC_TKG_IMAGES"
 
 TDH_TKGMC_TKG_IMAGES=$(ls -1 $TDHPATH/software/phot* | awk -F'/' '{ print $NF }') 
 for n in $TDH_TKGMC_TKG_IMAGES; do
+echo ""
+echo ""
 echo "XXXXXXXXXXXXXXXXXXX $n XXXXXXXXXXXXXXX"
   tmp=$(echo $n | sed -e 's/-tkg.*.ova//g')
   nam=$(echo $tmp | sed -e 's/-vmware.*$//g' -e 's/+vmware.*$//g') 
   ver=$(echo $tmp | sed -e 's/^.*-\(vmware.*\)$/\1/g' -e 's/^.*+\(vmware.*\)$/\1/g')
   cnt=$(govc datastore.ls -ds=$VSPHERE_DATASTORE | grep -c "$nam")
 
+echo "CNT:$cnt"
   if [ $cnt -eq 0 ]; then
     stt="uploaded"
     cnt=0; ret=1
     while [ $ret -ne 0 -a $cnt -lt 5 ]; do
       #echo $VSPHERE_VCENTER_PASSWORD | $OVFTOOL $OVFOPTS "tanzu-demo-hub/software/${n}" $OVFCONN > /tmp/log 2>&1; ret=$?
+echo "echo $VSPHERE_VCENTER_PASSWORD | /usr/bin/ovftool -q --overwrite --skipManifestCheck --noDestinationSSLVerify \
+          --noSourceSSLVerify --acceptAllEulas --network=\"$VSPHERE_NETWORK\" --datastore=\"$VSPHERE_DATASTORE\" \
+          \"tanzu-demo-hub/software/${n}\" \
+          \"vi://${VSPHERE_VCENTER_ADMIN}@${VSPHERE_VCENTER_SERVER}/${VSPHERE_DATACENTER}/host/${VSPHERE_CLUSTER}\""
 
       echo $VSPHERE_VCENTER_PASSWORD | /usr/bin/ovftool -q --overwrite --skipManifestCheck --noDestinationSSLVerify \
           --noSourceSSLVerify --acceptAllEulas --network="$VSPHERE_NETWORK" --datastore="$VSPHERE_DATASTORE" \
           "tanzu-demo-hub/software/${n}" \
-          "vi://${VSPHERE_VCENTER_ADMIN}@${VSPHERE_VCENTER_SERVER}/${VSPHERE_DATACENTER}/host/${VSPHERE_CLUSTER}"; ret=$?
+          "vi://${VSPHERE_VCENTER_ADMIN}@${VSPHERE_VCENTER_SERVER}/${VSPHERE_DATACENTER}/host/${VSPHERE_CLUSTER}" > /dev/null 2>&1; ret=$?
+      [ $ret -eq 0 ] && break
       let cnt=cnt+1
       sleep 30
     done
