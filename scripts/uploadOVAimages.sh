@@ -154,9 +154,6 @@ echo "TDH_TKGMC_TKG_IMAGES:$TDH_TKGMC_TKG_IMAGES"
 
 TDH_TKGMC_TKG_IMAGES=$(ls -1 $TDHPATH/software/phot* | awk -F'/' '{ print $NF }') 
 for n in $TDH_TKGMC_TKG_IMAGES; do
-echo ""
-echo ""
-echo "XXXXXXXXXXXXXXXXXXX $n XXXXXXXXXXXXXXX"
   tmp=$(echo $n | sed -e 's/-tkg.*.ova//g')
   nam=$(echo $tmp | sed -e 's/-vmware.*$//g' -e 's/+vmware.*$//g') 
   ver=$(echo $tmp | sed -e 's/^.*-\(vmware.*\)$/\1/g' -e 's/^.*+\(vmware.*\)$/\1/g')
