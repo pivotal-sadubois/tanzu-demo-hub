@@ -147,11 +147,15 @@ if [ $ret -ne 0 ]; then
   echo "       => govc vm.info $(echo $VSPHERE_VCENTER_SERVER | awk -F. '{ print $1 }')"; exit
 fi
 
+messageTitle "Create Folder /$VSPHERE_DATACENTER/vm/Templates)"
+govc folder.create /$VSPHERE_DATACENTER/vm/Templates > /dev/null 2>&1
+
 messageTitle "Uploading OVS Images to vSphere"
 echo "TDH_TKGMC_TKG_IMAGES:$TDH_TKGMC_TKG_IMAGES"
 
 TDH_TKGMC_TKG_IMAGES=$(ls -1 $TDHPATH/software/phot* | awk -F'/' '{ print $NF }') 
 for n in $TDH_TKGMC_TKG_IMAGES; do
+echo "XXXXXXXXXXXXXXXXXXX $n XXXXXXXXXXXXXXX"
   tmp=$(echo $n | sed -e 's/-tkg.*.ova//g')
   nam=$(echo $tmp | sed -e 's/-vmware.*$//g' -e 's/+vmware.*$//g') 
   ver=$(echo $tmp | sed -e 's/^.*-\(vmware.*\)$/\1/g' -e 's/^.*+\(vmware.*\)$/\1/g')
@@ -167,8 +171,6 @@ for n in $TDH_TKGMC_TKG_IMAGES; do
           --noSourceSSLVerify --acceptAllEulas --network="$VSPHERE_NETWORK" --datastore="$VSPHERE_DATASTORE" \
           "tanzu-demo-hub/software/${n}" \
           "vi://${VSPHERE_VCENTER_ADMIN}@${VSPHERE_VCENTER_SERVER}/${VSPHERE_DATACENTER}/host/${VSPHERE_CLUSTER}"; ret=$?
-
-echo "vi://${VSPHERE_VCENTER_ADMIN}@${VSPHERE_VCENTER_SERVER}/${VSPHERE_DATACENTER}/host/${VSPHERE_CLUSTER}"
       let cnt=cnt+1
       sleep 30
     done
@@ -185,14 +187,10 @@ echo "vi://${VSPHERE_VCENTER_ADMIN}@${VSPHERE_VCENTER_SERVER}/${VSPHERE_DATACENT
 
     src=$(govc find -name "${nam}*" | tail -1)
     vmn=$(govc find -name "${nam}*" | tail -1 | awk -F'/' '{ print $NF }')
-echo "SRC:$src"
-echo "vMN:$vmn"
     #govc vm.clone -template=true -vm /${VSPHERE_DATACENTER}/vm/${vmn} -folder=Templates -force=true ${vmn} > /dev/null 2>&1
 echo "govc vm.clone -template=true -vm /${VSPHERE_DATACENTER}/vm/${vmn} -folder=Templates -force=true ${vmn}"
     #govc vm.clone -template=true -vm /${VSPHERE_DATACENTER}/vm/${vmn} -folder=Templates -force=true ${vmn} 
     govc vm.clone -template=true -vm /${VSPHERE_DATACENTER}/vm/${vmn} -force=true ${vmn} 
-echo gaga1
-echo "govc vm.destroy /${VSPHERE_DATACENTER}/vm/${vmn}"
     govc vm.destroy /${VSPHERE_DATACENTER}/vm/${vmn}
   else
     stt="already uploaded"
