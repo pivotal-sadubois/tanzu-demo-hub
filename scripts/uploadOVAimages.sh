@@ -85,7 +85,7 @@ OVFCONN="vi://${VSPHERE_VCENTER_ADMIN}@${VSPHERE_VCENTER_SERVER}/${VSPHERE_DATAC
 export VMWUSER="$TDH_MYVMWARE_USER"
 export VMWPASS="$TDH_MYVMWARE_PASS"
 echo "export VMWUSER=\"$TDH_MYVMWARE_USER\""
-echo "export VMWPASS=\\"$TDH_MYVMWARE_PASS\""
+echo "export VMWPASS=\"$TDH_MYVMWARE_PASS\""
 
 cnt=$(vmw-cli ls vmware_tanzu_kubernetes_grid 2>&1 | grep -c "ERROR")
 if [ $cnt -ne 0 ]; then
