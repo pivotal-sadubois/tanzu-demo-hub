@@ -82,11 +82,10 @@ OVFTOOL="/usr/bin/ovftool -q --skipManifestCheck --noDestinationSSLVerify --noSo
 OVFOPTS="--network=\"$VSPHERE_NETWORK\" --datastore=\"$VSPHERE_DATASTORE\""
 OVFCONN="vi://${VSPHERE_VCENTER_ADMIN}@${VSPHERE_VCENTER_SERVER}/${VSPHERE_DATACENTER}/host/${VSPHERE_CLUSTER}"
 
-echo "OVFCONN:$OVFCONN"
-echo "OVFTOOL:$OVFTOOL"
-
 export VMWUSER="$TDH_MYVMWARE_USER"
 export VMWPASS="$TDH_MYVMWARE_PASS"
+echo "export VMWUSER=\"$TDH_MYVMWARE_USER\""
+echo "export VMWPASS=\\"$TDH_MYVMWARE_PASS\""
 
 cnt=$(vmw-cli ls vmware_tanzu_kubernetes_grid 2>&1 | grep -c "ERROR")
 if [ $cnt -ne 0 ]; then
@@ -163,17 +162,10 @@ echo "XXXXXXXXXXXXXXXXXXX $n XXXXXXXXXXXXXXX"
   ver=$(echo $tmp | sed -e 's/^.*-\(vmware.*\)$/\1/g' -e 's/^.*+\(vmware.*\)$/\1/g')
   cnt=$(govc datastore.ls -ds=$VSPHERE_DATASTORE | grep -c "$nam")
 
-echo "CNT:$cnt"
   if [ $cnt -eq 0 ]; then
     stt="uploaded"
     cnt=0; ret=1
     while [ $ret -ne 0 -a $cnt -lt 5 ]; do
-      #echo $VSPHERE_VCENTER_PASSWORD | $OVFTOOL $OVFOPTS "tanzu-demo-hub/software/${n}" $OVFCONN > /tmp/log 2>&1; ret=$?
-echo "echo $VSPHERE_VCENTER_PASSWORD | /usr/bin/ovftool -q --overwrite --skipManifestCheck --noDestinationSSLVerify \
-          --noSourceSSLVerify --acceptAllEulas --network=\"$VSPHERE_NETWORK\" --datastore=\"$VSPHERE_DATASTORE\" \
-          \"tanzu-demo-hub/software/${n}\" \
-          \"vi://${VSPHERE_VCENTER_ADMIN}@${VSPHERE_VCENTER_SERVER}/${VSPHERE_DATACENTER}/host/${VSPHERE_CLUSTER}\""
-
       echo $VSPHERE_VCENTER_PASSWORD | /usr/bin/ovftool -q --overwrite --skipManifestCheck --noDestinationSSLVerify \
           --noSourceSSLVerify --acceptAllEulas --network="$VSPHERE_NETWORK" --datastore="$VSPHERE_DATASTORE" \
           "tanzu-demo-hub/software/${n}" \
@@ -182,8 +174,6 @@ echo "echo $VSPHERE_VCENTER_PASSWORD | /usr/bin/ovftool -q --overwrite --skipMan
       let cnt=cnt+1
       sleep 30
     done
-echo "Uploaded ..."
-echo read x
 
     # --- CLEANUP ---
     rm -f nohup
@@ -198,17 +188,12 @@ echo read x
     src=$(govc find -name "${nam}*" | tail -1)
     vmn=$(govc find -name "${nam}*" | tail -1 | awk -F'/' '{ print $NF }')
     #govc vm.clone -template=true -vm /${VSPHERE_DATACENTER}/vm/${vmn} -folder=Templates -force=true ${vmn} > /dev/null 2>&1
-echo "govc vm.clone -template=true -vm /${VSPHERE_DATACENTER}/vm/${vmn} -folder=Templates -force=true ${vmn}"
     #govc vm.clone -template=true -vm /${VSPHERE_DATACENTER}/vm/${vmn} -folder=Templates -force=true ${vmn} 
     govc vm.clone -template=true -vm /${VSPHERE_DATACENTER}/vm/${vmn} -folder=Templates -force=true ${vmn} 
-echo "Cloned ..."
-echo read x
-echo "govc vm.destroy /${VSPHERE_DATACENTER}/vm/${vmn}"
     govc vm.destroy /${VSPHERE_DATACENTER}/vm/${vmn}
   else
     stt="already uploaded"
   fi
-eixt
 
   messagePrint " - OVA Image: $n"             "$stt"
 done
