@@ -36,7 +36,7 @@ export GOVC_DATASTORE=$VSPHERE_DATASTORE
 export GOVC_NETWORK="$VSPHERE_NETWORK"
 export GOVC_RESOURCE_POOL=/${VSPHERE_DATACENTER}/host/${VSPHERE_CLUSTER}/Resources
 
-echo "export GOVC_INSECURE=1"
+echo "export GOVC_INSECURE=1 XXX"
 echo "export GOVC_URL=https://${VSPHERE_VCENTER_SERVER}/sdk"
 echo "export GOVC_USERNAME=$VSPHERE_VCENTER_ADMIN"
 echo "export GOVC_PASSWORD=$VSPHERE_VCENTER_PASSWORD"
@@ -111,7 +111,7 @@ done
 # --- TEST GOVC CONNECTION ---
 govc vm.info $(echo $VSPHERE_VCENTER_SERVER | awk -F. '{ print $1 }') > /dev/null 2>&1; ret=$?
 if [ $ret -ne 0 ]; then 
-  echo "1 ERROR: govc: Connection to vCenter failed:"
+  echo "1 ERROR: govc: Connection to vCenter failed 2:"
   echo "       => govc vm.info $(echo $VSPHERE_VCENTER_SERVER | awk -F. '{ print $1 }')"; exit
 fi
 
@@ -169,4 +169,7 @@ echo "govc vm.destroy /${VSPHERE_DATACENTER}/vm/${vmn}"
 
   messagePrint " - OVA Image: $n"             "$stt"
 done
+
+# KUBECTL_VSPHERE_PASSWORD
+# kubectl vsphere login --insecure-skip-tls-verify --server wcp.haas-513.pez.vmware.com -u administrator@vsphere.local o
 
