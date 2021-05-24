@@ -182,6 +182,8 @@ echo "echo $VSPHERE_VCENTER_PASSWORD | /usr/bin/ovftool -q --overwrite --skipMan
       let cnt=cnt+1
       sleep 30
     done
+echo "Uploaded ..."
+echo read x
 
     # --- CLEANUP ---
     rm -f nohup
@@ -198,12 +200,15 @@ echo "echo $VSPHERE_VCENTER_PASSWORD | /usr/bin/ovftool -q --overwrite --skipMan
     #govc vm.clone -template=true -vm /${VSPHERE_DATACENTER}/vm/${vmn} -folder=Templates -force=true ${vmn} > /dev/null 2>&1
 echo "govc vm.clone -template=true -vm /${VSPHERE_DATACENTER}/vm/${vmn} -folder=Templates -force=true ${vmn}"
     #govc vm.clone -template=true -vm /${VSPHERE_DATACENTER}/vm/${vmn} -folder=Templates -force=true ${vmn} 
-    govc vm.clone -template=true -vm /${VSPHERE_DATACENTER}/vm/${vmn} -force=true ${vmn} 
+    govc vm.clone -template=true -vm /${VSPHERE_DATACENTER}/vm/${vmn} -folder=Templates -force=true ${vmn} 
+echo "Cloned ..."
+echo read x
+echo "govc vm.destroy /${VSPHERE_DATACENTER}/vm/${vmn}"
     govc vm.destroy /${VSPHERE_DATACENTER}/vm/${vmn}
   else
     stt="already uploaded"
   fi
-#pth
+eixt
 
   messagePrint " - OVA Image: $n"             "$stt"
 done
