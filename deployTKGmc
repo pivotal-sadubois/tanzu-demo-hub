@@ -954,6 +954,7 @@ if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "vSphere" ]; then
       echo "ERROR: failed to deploy TKG Management Cluster"
       exit 1
     fi
+exit
   else
     #########################################################################################################################
     ######################################## TANZU KUBERNETS GRID FOR VPSHERE (TKGs) ########################################
@@ -969,7 +970,6 @@ if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "vSphere" ]; then
     if [ $? -ne 0 ]; then
       echo "ERROR: Failed to login to vSphere Supervicer Cluster ($VSPHERE_API_SERVER)"
       echo "       Please try manually"
-
       echo "       => export KUBECTL_VSPHERE_PASSWORD=$VSPHERE_VCENTER_PASSWORD"
       echo "       => kubectl vsphere login --insecure-skip-tls-verify --server $VSPHERE_API_SERVER -u $VSPHERE_VCENTER_ADMIN"
       exit
@@ -980,6 +980,25 @@ if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "vSphere" ]; then
     kubectl config get-contexts
     messageLine
 
+    # --- CLEANUP OLD SERVER CONFIG ---
+    cnt=$(tanzu config server list | egrep -c " $TDH_TKGMC_NAME ") 
+    if [ $cnt -gt 0 ]; then 
+      tanzu config server delete $TDH_TKGMC_NAME -y > /dev/null 2>&1
+      if [ $? -ne 0 ]; then
+        echo "ERROR: Failed to delete server $TDH_TKGMC_NAME"
+        echo "       => tanzu config server delete $TDH_TKGMC_NAME"
+        exit
+      fi
+    fi
+
+    tanzu login --name $TDH_TKGMC_NAME --kubeconfig ~/.kube/config --context wcp.$VSPHERE_DNS_DOMAIN > /dev/null 2>&1
+    if [ $? -ne 0 ]; then
+      echo "ERROR: Failed to login to vSphere Supervicer Cluster ($VSPHERE_API_SERVER)"
+      echo "       Please try manually"
+      echo "       => tanzu login --name $TDH_TKGMC_NAME --kubeconfig ~/.kube/config --context wcp.$VSPHERE_DNS_DOMAIN"
+      exit
+    fi
+
     tmc managementcluster get $TDH_TKGMC_NAME > /dev/null 2>&1
     if [ $? -ne 0 ]; then
       messageTitle "Configure vSphere Supervicer Cluster as TMC Management Cluster"
@@ -987,7 +1006,7 @@ if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "vSphere" ]; then
 
       ret=1; cnt=0
       while [ $ret -ne 0 -a $cnt -lt 5 ]; do
-        tmc managementcluster register $TDH_TKGMC_NAME -c tanzu-demo-hub -p TKG -o /tmp/k8s-register-manifest.yaml >/dev/null 2>&1; ret=$?
+        tmc managementcluster register $TDH_TKGMC_NAME -c tanzu-demo-hub -p TKGS -o /tmp/k8s-register-manifest.yaml >/dev/null 2>&1; ret=$?
         [ $ret -eq 0 ] && break
         sleep 30
         let cnt=cnt+1
@@ -1065,25 +1084,91 @@ if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "vSphere" ]; then
     fi
 
     mkdir -p $HOME/.tanzu-demo-hub/config
-    CLUSTER_TEMPLATE=$HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}_template.yaml
-    echo "apiVersion: run.tanzu.vmware.com/v1alpha1"              >  $CLUSTER_TEMPLATE
-    echo "kind: TanzuKubernetesCluster"                           >> $CLUSTER_TEMPLATE
-    echo "metadata:"                                              >> $CLUSTER_TEMPLATE
-    echo "  name: tkgs-cluster-1"                                 >> $CLUSTER_TEMPLATE
-    echo "  namespace: tanzu-demo-hub"                            >> $CLUSTER_TEMPLATE
-    echo "spec:"                                                  >> $CLUSTER_TEMPLATE
-    echo "  distribution:"                                        >> $CLUSTER_TEMPLATE
-    echo "    version: v1.20"                                     >> $CLUSTER_TEMPLATE
-    echo "  topology:"                                            >> $CLUSTER_TEMPLATE
-    echo "    controlPlane:"                                      >> $CLUSTER_TEMPLATE
-    echo "      count: 1"                                         >> $CLUSTER_TEMPLATE
-    echo "      class: best-effort-medium"                        >> $CLUSTER_TEMPLATE
-    echo "      storageClass: pacific-gold-storage-policy"        >> $CLUSTER_TEMPLATE
-    echo "    workers:"                                           >> $CLUSTER_TEMPLATE
-    echo "      count: 3"                                         >> $CLUSTER_TEMPLATE
-    echo "      class: best-effort-medium"                        >> $CLUSTER_TEMPLATE
-    echo "      storageClass: pacific-gold-storage-policy"        >> $CLUSTER_TEMPLATE
+    TMC_DEPLOMENT_CONFIG=$HOME/.tanzu-demo-hub/config/tmc-vsphere-$TDH_USER.cfg
+    echo "# ----------------------------------------------------------------------------------------------------" >  $TMC_DEPLOMENT_CONFIG
+    echo "# TDH Configuration Utility - TKG Deployment Config"                                                    >> $TMC_DEPLOMENT_CONFIG
+    echo "# ----------------------------------------------------------------------------------------------------" >> $TMC_DEPLOMENT_CONFIG
+    echo "# 2020-10-16 sdubois  AWS TKG Cluster"                                                                  >> $TMC_DEPLOMENT_CONFIG
+    echo "# ----------------------------------------------------------------------------------------------------" >> $TMC_DEPLOMENT_CONFIG
+    echo "TDH_INFRASTRUCTURE=tmc"                                                                                 >> $TMC_DEPLOMENT_CONFIG
+    echo "TDH_ENVNAME=vstkg"                                                                                      >> $TMC_DEPLOMENT_CONFIG
+    echo "TDH_DEPLOYMENT_CLOUD=vSphere"                                                                           >> $TMC_DEPLOMENT_CONFIG
+    echo "TDH_TKGMC_TKG_TYPE=tkgs"                                                                                >> $TMC_DEPLOMENT_CONFIG
+    echo "TDH_MANAGEMENT_CLUSTER=$TDH_TKGMC_NAME"                                                                 >> $TMC_DEPLOMENT_CONFIG
+    echo "TMC_TKGWC_TEMPLATE=default    # "default" = 1 control plane node; "aws-ha" = 3 control plane nodes"     >> $TMC_DEPLOMENT_CONFIG
+    echo "#TDH_TKGWC_CONTROPLANE_TYPE=best-effort-small"                                                          >> $TMC_DEPLOMENT_CONFIG
+    echo "#TDH_TKGWC_WORKERNODES_TYPE=best-effort-small"                                                          >> $TMC_DEPLOMENT_CONFIG
+    echo "TDH_TKGWC_CONTROPLANE_TYPE=guaranteed-small"                                                            >> $TMC_DEPLOMENT_CONFIG
+    echo "TDH_TKGWC_WORKERNODES_TYPE=guaranteed-small"                                                            >> $TMC_DEPLOMENT_CONFIG
+    echo "TDH_TKGWC_STORAGE_CLASS=pacific-gold-storage-policy"                                                    >> $TMC_DEPLOMENT_CONFIG
+    echo "TDH_TKGMC_SERVICE_CIDR=172.20.0.0/16"                                                                   >> $TMC_DEPLOMENT_CONFIG
+    echo "TDH_TKGMC_CLUSTER_CIDR=10.96.0.0/16"                                                                    >> $TMC_DEPLOMENT_CONFIG
 
+    mkdir -p $HOME/.tanzu-demo-hub/config
+    CLUSTER_TEMPLATE=$HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}_template.yaml
+    echo "# ClusterAPI Examples for Provisioning Tanzu Kubernetes Clusters"                                                         >  $CLUSTER_TEMPLATE
+    echo "# https://docs.vmware.com/en/VMware-vSphere/7.0/vmware-vsphere-with-tanzu/GUID-B1034373-8C38-4FE2-9517-345BF7271A1E.html" >> $CLUSTER_TEMPLATE
+    echo "apiVersion: run.tanzu.vmware.com/v1alpha1"                                                                                >> $CLUSTER_TEMPLATE
+    echo "kind: TanzuKubernetesCluster"                                                                                             >> $CLUSTER_TEMPLATE
+    echo "metadata:"                                                                                                                >> $CLUSTER_TEMPLATE
+    echo "  name: tkgs-cluster-1"                                                                                                   >> $CLUSTER_TEMPLATE
+    echo "  namespace: tanzu-demo-hub"                                                                                              >> $CLUSTER_TEMPLATE
+    echo "spec:"                                                                                                                    >> $CLUSTER_TEMPLATE
+    echo "  distribution:"                                                                                                          >> $CLUSTER_TEMPLATE
+    echo "    version: v1.20"                                                                                                       >> $CLUSTER_TEMPLATE
+    echo "  topology:"                                                                                                              >> $CLUSTER_TEMPLATE
+    echo "    controlPlane:"                                                                                                        >> $CLUSTER_TEMPLATE
+    echo "      count: 1"                                                                                                           >> $CLUSTER_TEMPLATE
+    echo "      class: guaranteed-small"                                                                                            >> $CLUSTER_TEMPLATE
+    echo "      storageClass: pacific-gold-storage-policy"                                                                          >> $CLUSTER_TEMPLATE
+    echo "    workers:"                                                                                                             >> $CLUSTER_TEMPLATE
+    echo "      count: 3"                                                                                                           >> $CLUSTER_TEMPLATE
+    echo "      class: guaranteed-small-medium"                                                                                     >> $CLUSTER_TEMPLATE
+    echo "      storageClass: pacific-gold-storage-policy"                                                                          >> $CLUSTER_TEMPLATE
+
+    messageTitle "Create the TKG Management Cluster deployment File"
+    messagePrint " ▪ Deployment File"        "$HOME/.tanzu-demo-hub/config/tkgmc-${TDH_TKGMC_NAME}.yaml"
+    messagePrint " ▪ Management Cluster"     "$TDH_TKGMC_NAME"
+    messagePrint " ▪ Cloud Infrastructure"   "$TDH_DEPLOYMENT_ENV_NAME"
+
+    mkdir -p $HOME/.tanzu/tkg/clusterconfigs
+
+    STORAGE_CLASS=$(kubectl get storageclasses | sed '1d' | head -1 | awk '{ print $1 }')
+
+    DEPLOYMENT_FILE=${HOME}/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.cfg
+    TKG_WC_CONFIG_DEV="$HOME/.tanzu/tkg/clusterconfigs/${TDH_TKGMC_NAME}-wc-dev.yaml"
+    TKG_WC_CONFIG_PRD="$HOME/.tanzu/tkg/clusterconfigs/${TDH_TKGMC_NAME}-wc-prod.yaml"
+    TKG_MC_CONFIG="$HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.yaml"
+
+    echo "TDH_TKGMC_INFRASTRUCTURE=$TDH_DEPLOYMENT_ENV_NAME"               >  $DEPLOYMENT_FILE
+    echo "TDH_TKGMC_NAME=$TDH_TKGMC_NAME"                                  >> $DEPLOYMENT_FILE
+    echo "TDH_TKGMC_TKG_TYPE=TKGs"                                         >> $DEPLOYMENT_FILE
+    echo "TDH_TKGMC_CONFIG=${TDH_TKGMC_NAME}.yaml"                         >> $DEPLOYMENT_FILE
+    echo "TDH_TKGMC_WC_CONFIG_DEV=${TDH_TKGMC_NAME}-wc-dev.yaml"           >> $DEPLOYMENT_FILE
+    echo "TDH_TKGMC_WC_CONFIG_PROD=${TDH_TKGMC_NAME}-wc-prod.yaml"         >> $DEPLOYMENT_FILE
+    echo "TDH_TKGMC_KUBECONFIG=${TDH_TKGMC_NAME}.kubeconfig"               >> $DEPLOYMENT_FILE
+
+    echo "WORKER_STORAGE_CLASS: $STORAGE_CLASS"                            >  $TKG_MC_CONFIG
+    echo "CONTROL_PLANE_STORAGE_CLASS: $STORAGE_CLASS"                     >> $TKG_MC_CONFIG
+    echo "DEFAULT_STORAGE_CLASS: $STORAGE_CLASS"                           >> $TKG_MC_CONFIG
+    echo "NAMESPACE: tanzu-demo-hub"                                       >> $TKG_MC_CONFIG
+    echo "INFRASTRUCTURE_PROVIDER: tkg-service-vsphere"                    >> $TKG_MC_CONFIG
+    echo "WORKER_VM_CLASS: guaranteed-small"                               >> $TKG_MC_CONFIG
+    echo "CONTROL_PLANE_VM_CLASS: guaranteed-small"                        >> $TKG_MC_CONFIG
+    echo "SERVICE_DOMAIN: $VSPHERE_DNS_DOMAIN"                             >> $TKG_MC_CONFIG
+
+    messageTitle "Create config file for TKG Workload Clusters"
+    messagePrint " ▪ Deployment File (dev)"      "~/.tanzu/tkg/clusterconfigs/${TDH_TKGMC_NAME}-wc-dev.yaml"
+    messagePrint " ▪ Deployment File (prod)"     "~/.tanzu/tkg/clusterconfigs/${TDH_TKGMC_NAME}-wc-prod.yaml"
+
+    # --- CONFIG FOR PROD AND DEV ---
+    cat $TKG_MC_CONFIG > $TKG_WC_CONFIG_DEV
+    cat $TKG_MC_CONFIG > $TKG_WC_CONFIG_PRD
+    echo "CLUSTER_PLAN: dev"             >>  $TKG_WC_CONFIG_DEV
+    echo "CLUSTER_PLAN: prod"            >>  $TKG_WC_CONFIG_PRD
+
+    WC_DEV_PATH=$HOME/.tanzu/tkg/clusterconfigs/${TDH_TKGMC_NAME}-wc-dev.yaml
+    WC_PRD_PATH=$HOME/.tanzu/tkg/clusterconfigs/${TDH_TKGMC_NAME}-wc-prod.yaml
     messageLine
     printf "\e[1m1.) vCenter WebAccess Access ($VSPHERE_VCENTER_SERVER)\e[0m\n"
     echo "    => http://$VSPHERE_VCENTER_SERVER  ($VSPHERE_VCENTER_ADMIN/$VSPHERE_VCENTER_PASSWORD)"
@@ -1097,24 +1182,33 @@ if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "vSphere" ]; then
     echo "    => export KUBECTL_VSPHERE_PASSWORD=$VSPHERE_VCENTER_PASSWORD"
     echo "    => kubectl vsphere login --insecure-skip-tls-verify --server $VSPHERE_API_SERVER -u administrator@vsphere.local"
     echo "    => kubectl config use-context wcp.${VSPHERE_DNS_DOMAIN}"
-    printf "\e[1m4.) Create Kubernetes Cluster\e[0m\n"
+    echo "    => tanzu login --name $TDH_TKGMC_NAME --kubeconfig ~/.kube/config --context wcp.$VSPHERE_DNS_DOMAIN"
+    printf "\e[1m4.) Create Kubernetes Cluster with the ClusterAPI\e[0m\n"
     echo "    Adjust parameters such as cluster name and kubernetes version if you are not happy woth the" 
     echo "    default settings."
     echo "    => kubectl apply  -f $CLUSTER_TEMPLATE   ## Create the k8s Clusteer"
     echo "    ?> kubectl get tanzukubernetesclusters -n tanzu-demo-hub"
     echo "    => kubectl describe tanzukubernetescluster -n tanzu-demo-hub tkgs-cluster-1"
     echo "    => kubectl delete -f $CLUSTER_TEMPLATE   ## Delete the k8s Clusteer"
-    printf "\e[1m5.) Create TKG Cluster for Tanzu-Demo-Hub\e[0m\n"
+    printf "\e[1m5.) Create Kubernetes Cluster with Tanzu CLI\e[0m\n"
+    echo "    => tanzu config server list"
+    echo "    => tanzu kubernetes-release get"
+    echo "    => tanzu cluster create --file $WC_DEV_PATH --tkr=\"v1.20.2---vmware.1-tkg.1.1d4f79a\" <cluster-name>  -y"
+    echo "    => tanzu cluster create --file $WC_PRD_PATH --tkr=\"v1.18.5---vmware.1-tkg.1.c40d30d\" <cluster-name> -y"
+    echo "    => tanzu cluster list"
+    echo "    => tanzu cluster delete -n tanzu-demo-hub <cluster-name> -y"
+    printf "\e[1m6.) Create TKG Cluster for Tanzu-Demo-Hub\e[0m\n"
     echo "    => kubectl config set-context $VSPHERE_API_SERVER"
     echo "    => ./deployTKG -m $TDH_TKGMC_NAME -d tkg-tanzu-demo-hub.cfg -n tdh-${TDH_DEPLOYMENT_ENV_NAME}-${TDH_USER}"
     echo "    => ./deployTKG -m $TDH_TKGMC_NAME -d tkg-tanzu-demo-hub.cfg -n tdh-${TDH_DEPLOYMENT_ENV_NAME}-${TDH_USER} -k \"v1.17.16---vmware.2-tkg.1\""
-    printf "\e[1m5.) Create Kubernetes Cluster through Tanzu Mission Control (TMC) ***UNSTABLE*** \e[0m\n"
-    echo "    => ./deployTMC"
+    printf "\e[1m7.) Create Kubernetes Cluster through Tanzu Mission Control (TMC) ***UNSTABLE*** \e[0m\n"
+    echo "    => ./deployTMC tmc-vsphere-${TDH_USER}.cfg"
     messageLine
 
     # Tanzu Kubernetes Cluster Operational Commands
     # https://docs.vmware.com/en/VMware-vSphere/7.0/vmware-vsphere-with-tanzu/GUID-232CCCF3-CCC1-4D7E-B67C-64590CB891DD.html
   fi
+
 else
   # --- ACCEPT LICENSE AGREEMENT ---
   if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "Azure" ]; then
