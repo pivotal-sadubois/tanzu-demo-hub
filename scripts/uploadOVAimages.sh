@@ -68,14 +68,6 @@ export GOVC_DATASTORE=$VSPHERE_DATASTORE
 export GOVC_NETWORK="$VSPHERE_NETWORK"
 export GOVC_RESOURCE_POOL=/${VSPHERE_DATACENTER}/host/${VSPHERE_CLUSTER}/Resources
 
-echo "export GOVC_INSECURE=1 XXX"
-echo "export GOVC_URL=https://${VSPHERE_VCENTER_SERVER}/sdk"
-echo "export GOVC_USERNAME=$VSPHERE_VCENTER_ADMIN"
-echo "export GOVC_PASSWORD=$VSPHERE_VCENTER_PASSWORD"
-echo "export GOVC_DATASTORE=$VSPHERE_DATASTORE"
-echo "export GOVC_NETWORK="$VSPHERE_NETWORK""
-echo "export GOVC_RESOURCE_POOL=/${VSPHERE_DATACENTER}/host/${VSPHERE_CLUSTER}/Resources"
-
 OVFTOOL="/usr/bin/ovftool --skipManifestCheck --noDestinationSSLVerify --noSourceSSLVerify --acceptAllEulas"
 OVFTOOL="/usr/bin/ovftool -q --overwrite --skipManifestCheck --noDestinationSSLVerify --noSourceSSLVerify --acceptAllEulas"
 OVFTOOL="/usr/bin/ovftool -q --skipManifestCheck --noDestinationSSLVerify --noSourceSSLVerify --acceptAllEulas"
@@ -84,9 +76,6 @@ OVFCONN="vi://${VSPHERE_VCENTER_ADMIN}@${VSPHERE_VCENTER_SERVER}/${VSPHERE_DATAC
 
 export VMWUSER="$TDH_MYVMWARE_USER"
 export VMWPASS="$TDH_MYVMWARE_PASS"
-echo "export VMWUSER=\"$TDH_MYVMWARE_USER\""
-echo "export VMWPASS=\"$TDH_MYVMWARE_PASS\""
-
 cnt=$(vmw-cli ls vmware_tanzu_kubernetes_grid 2>&1 | grep -c "ERROR")
 if [ $cnt -ne 0 ]; then
   echo "ERROR: failed to login to vmw-cli, please make sure that the environment variables"
@@ -153,6 +142,7 @@ messageTitle "Uploading OVS Images to vSphere"
 echo "TDH_TKGMC_TKG_IMAGES:$TDH_TKGMC_TKG_IMAGES"
 
 TDH_TKGMC_TKG_IMAGES=$(ls -1 $TDHPATH/software/phot* | awk -F'/' '{ print $NF }') 
+TDH_TKGMC_TKG_IMAGES=$(ls -1 $TDHPATH/software/photon-3-kube-v1.20.5* | awk -F'/' '{ print $NF }') 
 for n in $TDH_TKGMC_TKG_IMAGES; do
   tmp=$(echo $n | sed -e 's/-tkg.*.ova//g')
   nam=$(echo $tmp | sed -e 's/-vmware.*$//g' -e 's/+vmware.*$//g') 
@@ -171,6 +161,8 @@ for n in $TDH_TKGMC_TKG_IMAGES; do
       let cnt=cnt+1
       sleep 30
     done
+
+continue
 
     # --- CLEANUP ---
     rm -f nohup
