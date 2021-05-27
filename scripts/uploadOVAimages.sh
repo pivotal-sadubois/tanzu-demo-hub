@@ -95,7 +95,7 @@ vmw-cli ls vmware_tanzu_kubernetes_grid > /dev/null 2>&1
 cnt=0
 vmwlist=$(vmw-cli ls vmware_tanzu_kubernetes_grid 2>/dev/null | egrep "^photon" | awk '{ print $1 }')
 while [ "$vmwlist" == "" -a $cnt -lt 5 ]; do
-  vmwlist=$(vmw-cli ls vmware_tanzu_kubernetes_grid 2>/dev/null | egrep "^photon" | awk '{ print $1 }')
+  vmwlist=$(vmw-cli ls vmware_tanzu_kubernetes_grid 2>/dev/null | egrep "^photon|ubuntu" | awk '{ print $1 }')
   let cnt=cnt+1
   sleep 10
 done
@@ -141,8 +141,7 @@ govc folder.create /$VSPHERE_DATACENTER/vm/Templates > /dev/null 2>&1
 messageTitle "Uploading OVS Images to vSphere"
 echo "TDH_TKGMC_TKG_IMAGES:$TDH_TKGMC_TKG_IMAGES"
 
-TDH_TKGMC_TKG_IMAGES=$(ls -1 $TDHPATH/software/phot* | awk -F'/' '{ print $NF }') 
-TDH_TKGMC_TKG_IMAGES=$(ls -1 $TDHPATH/software/photon-3-kube-v1.20.5* | awk -F'/' '{ print $NF }') 
+TDH_TKGMC_TKG_IMAGES=$(ls -1 $TDHPATH/software/phot* $TDHPATH/software/ubuntu* | awk -F'/' '{ print $NF }') 
 for n in $TDH_TKGMC_TKG_IMAGES; do
   tmp=$(echo $n | sed -e 's/-tkg.*.ova//g')
   nam=$(echo $tmp | sed -e 's/-vmware.*$//g' -e 's/+vmware.*$//g') 
@@ -161,8 +160,6 @@ for n in $TDH_TKGMC_TKG_IMAGES; do
       let cnt=cnt+1
       sleep 30
     done
-
-continue
 
     # --- CLEANUP ---
     rm -f nohup
