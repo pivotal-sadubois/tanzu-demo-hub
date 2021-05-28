@@ -49,16 +49,27 @@ verifyRequiredServices TDH_INGRESS_CONTOUR_ENABLED "Ingress Contour"
 
 TDH_DOMAIN=$(getConfigMap tanzu-demo-hub TDH_DOMAIN)
 TDH_ENVNAME=$(getConfigMap tanzu-demo-hub TDH_ENVNAME)
-TDH_LB_CONTOUR=$(getConfigMap tanzu-demo-hub TDH_LB_CONTOUR)
+TDH_INGRESS_CONTOUR_LB_DOMAIN=$(getConfigMap tanzu-demo-hub TDH_INGRESS_CONTOUR_LB_DOMAIN)
+TDH_INGRESS_CONTOUR_LB_IP=$(getConfigMap tanzu-demo-hub TDH_INGRESS_CONTOUR_LB_IP)
 TDH_LB_NGINX=$(getConfigMap tanzu-demo-hub TDH_LB_NGINX)
-DOMAIN=${TDH_LB_CONTOUR}.${TDH_ENVNAME}.${TDH_DOMAIN}
+DOMAIN=${TDH_INGRESS_CONTOUR_LB_DOMAIN}
 
 # --- CLEANUP DEPLOYMENT ---
 kubectl delete namespace $NAMESPACE > /dev/null 2>&1
 
 # --- PREPARATION ---
-cat files/http-ingress.yaml | sed -e "s/DNS_DOMAIN/${TDH_LB_CONTOUR}.${TDH_ENVNAME}.${TDH_DOMAIN}/g" \
+cat files/http-ingress.yaml | sed -e "s/DNS_DOMAIN/${TDH_INGRESS_CONTOUR_LB_DOMAIN}/g" \
             -e "s/NAMESPACE/$NAMESPACE/g" > /tmp/http-ingress.yaml
+
+prtHead "Show Countour Ingress Controller Helm Chart"
+execCmd "helm list -n ingress-contour"
+
+prtHead "Get Contour Kubernetes objects (pod, svc)"
+execCmd "kubectl get pods,svc -n ingress-contour"
+
+prtHead "Show LoadBalancer and domain (*.$DOMAIN) DNS records"
+execCmd "nslookup $TDH_INGRESS_CONTOUR_LB_IP"
+execCmd "nslookup myapp.$TDH_INGRESS_CONTOUR_LB_DOMAIN"
 
 prtHead "Create seperate namespace to host the Ingress Demo"
 execCmd "kubectl create namespace $NAMESPACE"
@@ -74,7 +85,8 @@ execCmd "kubectl expose deployment echoserver-2 --port=8080 -n $NAMESPACE"
 execCmd "kubectl get svc,pods -n $NAMESPACE"
 
 prtHead "Create the ingress route with context based routing"
-execCmd "cat /tmp/http-ingress.yaml"
+#execCmd "cat /tmp/http-ingress.yaml"
+execCat "/tmp/http-ingress.yaml"
 execCmd "kubectl create -f /tmp/http-ingress.yaml"
 execCmd "kubectl get ingress,svc,pods -n $NAMESPACE"
 
@@ -82,35 +94,10 @@ prtHead "Open WebBrowser and verify the deployment"
 echo "     # --- Context Based Routing"
 echo "     => curl http://echoserver.${DOMAIN}/foo"
 echo "     => curl http://echoserver.${DOMAIN}/bar"
+echo ""
 echo "     # --- Domain Based Routing"
 echo "     => curl http://echoserver1.$DOMAIN"
 echo "     => curl http://echoserver2.$DOMAIN"
 echo ""
 
 exit
-
-#nginxdemos/hello
-#TDH_TKGWC_NAME=tanzu-demo-hub
-#K8S_CONTEXT=tanzu-demo-hub-admin@tanzu-demo-hub
-#TKG_DEPLOYMENT=tkgmc-dev-azure-westeurope.cfg
-#TDH_TKGMC_CONFIG=tkgmc-dev-azure-westeurope.yaml
-#TKG_WC_CLUSTER=tkg-tanzu-demo-hub.cfg
-
-  841  docker run -p 8888:80 shomika17/animals
-  842  docker run -p 8887:80 shomika17/animals:latest
-  843  docker run shomika17/animals:latest
-  844  docker run -p 8887:80 bersling/animals
-  845  docker run -p 8887:80 kritouf/animals
-  846  docker run -p 8887:80 testingmky9394/docker-whale
-  847  docker run -p 8887:80 amithrr/fortuneteller
-  848  docker run -p 8887:80 paulbouwer/hello-kubernetes:1.8
-  849  docker run -p 8887:8080 paulbouwer/hello-kubernetes:1.8
-  863  docker run -p 8888:8080 gcr.io/google-samples/hello-app:1.0
-
-export TDH_DEPLOYMENT_ENV_NAME="Azure"
-export TKG_CONFIG=/Users/sdubois/workspace/tanzu-demo-hub/config/tkgmc-azure-westeurope.yaml
-
-
-
-
-
