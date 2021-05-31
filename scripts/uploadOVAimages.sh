@@ -99,6 +99,7 @@ fi
 
 messageTitle "Verify Software Downloads from http://my.vmware.com"
 vmw-cli ls vmware_tanzu_kubernetes_grid > /dev/null 2>&1
+vmw-cli ls vmware_tanzu_kubernetes_grid
 
 cnt=0
 vmwlist=$(vmw-cli ls vmware_tanzu_kubernetes_grid 2>/dev/null | egrep "^photon|ubuntu" | awk '{ print $1 }')
@@ -203,8 +204,8 @@ echo "CNT:$cnt NAM:$nam VER:$ver"
 echo "SRC:$src"
 echo "VMN:$vmn"
 
-echo "govc vm.clone -template=true -vm /${VSPHERE_DATACENTER}/vm/${vmn} -folder=Templates -force=true ${vmn}"
-      govc vm.clone -template=true -vm /${VSPHERE_DATACENTER}/vm/${vmn} -folder=Templates -force=true ${vmn} 
+echo "govc vm.clone -template=true -vm /${VSPHERE_DATACENTER}/vm/Templates/${vmn} -folder=Templates -force=true ${vmn}"
+      govc vm.clone -template=true -vm /${VSPHERE_DATACENTER}/vm/Templates/${vmn} -folder=Templates -force=true ${vmn} 
       govc vm.destroy /${VSPHERE_DATACENTER}/vm/${vmn}
     else
       echo "OFA Image: $src not found, ignoring"
