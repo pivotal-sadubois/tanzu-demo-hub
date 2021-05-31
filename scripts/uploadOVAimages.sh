@@ -100,8 +100,6 @@ fi
 messageTitle "Verify Software Downloads from http://my.vmware.com"
 vmw-cli ls vmware_tanzu_kubernetes_grid > /dev/null 2>&1
 
-vmw-cli ls vmware_tanzu_kubernetes_grid
-
 cnt=0
 vmwlist=$(vmw-cli ls vmware_tanzu_kubernetes_grid 2>/dev/null | egrep "^photon|ubuntu" | awk '{ print $1 }')
 while [ "$vmwlist" == "" -a $cnt -lt 5 ]; do
@@ -159,6 +157,9 @@ for n in $TDH_TKGMC_TKG_IMAGES; do
   cnt=$(govc datastore.ls -ds=$VSPHERE_DATASTORE | grep -c "$nam")
 
   cnt=$(govc ls /${VSPHERE_DATACENTER}/vm/Templates/ | grep -c "$nam")
+
+echo "---------------------------------------------------
+echo "CNT:$cnt NAM:$nam VER:$ver"
 
   if [ $cnt -eq 0 ]; then
     stt="uploaded"
