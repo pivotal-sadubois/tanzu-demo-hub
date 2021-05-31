@@ -158,7 +158,6 @@ for n in $TDH_TKGMC_TKG_IMAGES; do
   ver=$(echo $tmp | sed -e 's/^.*-\(vmware.*\)$/\1/g' -e 's/^.*+\(vmware.*\)$/\1/g')
   cnt=$(govc datastore.ls -ds=$VSPHERE_DATASTORE | grep -c "$nam")
 
-echo "NAM:$nam"
   cnt=$(govc ls /${VSPHERE_DATACENTER}/vm/Templates/ | grep -c "$nam")
 
   if [ $cnt -eq 0 ]; then
@@ -188,6 +187,8 @@ echo "NAM:$nam"
     vmn=$(govc find -name "${nam}*" | tail -1 | awk -F'/' '{ print $NF }')
     #govc vm.clone -template=true -vm /${VSPHERE_DATACENTER}/vm/${vmn} -folder=Templates -force=true ${vmn} > /dev/null 2>&1
     #govc vm.clone -template=true -vm /${VSPHERE_DATACENTER}/vm/${vmn} -folder=Templates -force=true ${vmn} 
+
+echo "govc vm.clone -template=true -vm /${VSPHERE_DATACENTER}/vm/${vmn} -folder=Templates -force=true ${vmn}"
     govc vm.clone -template=true -vm /${VSPHERE_DATACENTER}/vm/${vmn} -folder=Templates -force=true ${vmn} 
     govc vm.destroy /${VSPHERE_DATACENTER}/vm/${vmn}
   else
