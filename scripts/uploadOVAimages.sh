@@ -172,7 +172,7 @@ echo "CNT:$cnt NAM:$nam VER:$ver"
 #          "vi://${VSPHERE_VCENTER_ADMIN}@${VSPHERE_VCENTER_SERVER}/${VSPHERE_DATACENTER}/host/${VSPHERE_CLUSTER}" > /dev/null 2>&1; ret=$?
       echo $VSPHERE_VCENTER_PASSWORD | /usr/bin/ovftool -q --overwrite --skipManifestCheck --noDestinationSSLVerify \
           --noSourceSSLVerify --acceptAllEulas --network="$VSPHERE_NETWORK" --datastore="$VSPHERE_DATASTORE" \
-          --vmFolder Templates \
+          --vmFolder=Templates \
           "tanzu-demo-hub/software/${n}" \
           "vi://${VSPHERE_VCENTER_ADMIN}@${VSPHERE_VCENTER_SERVER}/${VSPHERE_DATACENTER}/host/${VSPHERE_CLUSTER}"; ret=$?
       [ $ret -eq 0 ] && break
@@ -184,7 +184,7 @@ echo "CNT:$cnt NAM:$nam VER:$ver"
     rm -f nohup
 
     if [ $ret -ne 0 ]; then
-      OVFOPTS="-q --overwrite --skipManifestCheck --noDestinationSSLVerify --noSourceSSLVerify --acceptAllEulas --network=\"$VSPHERE_NETWORK\" --datastore="$VSPHERE_DATASTORE" --vmFolder Templates"
+      OVFOPTS="-q --overwrite --skipManifestCheck --noDestinationSSLVerify --noSourceSSLVerify --acceptAllEulas --network=\"$VSPHERE_NETWORK\" --datastore="$VSPHERE_DATASTORE" --vmFolder=Templates"
       echo "ERROR: failed to upload image: $n after $cnt attempts"
       echo "       => echo $VSPHERE_VCENTER_PASSWORD | $OVFTOOL $OVFOPTS tanzu-demo-hub/software/${n} $OVFCONN"
       messageLine; cat /tmp/log; messageLine
