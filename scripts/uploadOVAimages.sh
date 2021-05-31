@@ -68,6 +68,14 @@ export GOVC_DATASTORE=$VSPHERE_DATASTORE
 export GOVC_NETWORK="$VSPHERE_NETWORK"
 export GOVC_RESOURCE_POOL=/${VSPHERE_DATACENTER}/host/${VSPHERE_CLUSTER}/Resources
 
+echo "GOVC_INSECURE=1"
+echo "GOVC_URL=https://${VSPHERE_VCENTER_SERVER}/sdk"
+echo "GOVC_USERNAME=$VSPHERE_VCENTER_ADMIN"
+echo "GOVC_PASSWORD=$VSPHERE_VCENTER_PASSWORD"
+echo "GOVC_DATASTORE=$VSPHERE_DATASTORE"
+echo "GOVC_NETWORK="$VSPHERE_NETWORK""
+echo "GOVC_RESOURCE_POOL=/${VSPHERE_DATACENTER}/host/${VSPHERE_CLUSTER}/Resources"
+
 OVFTOOL="/usr/bin/ovftool --skipManifestCheck --noDestinationSSLVerify --noSourceSSLVerify --acceptAllEulas"
 OVFTOOL="/usr/bin/ovftool -q --overwrite --skipManifestCheck --noDestinationSSLVerify --noSourceSSLVerify --acceptAllEulas"
 OVFTOOL="/usr/bin/ovftool -q --skipManifestCheck --noDestinationSSLVerify --noSourceSSLVerify --acceptAllEulas"
@@ -149,7 +157,6 @@ for n in $TDH_TKGMC_TKG_IMAGES; do
   nam=$(echo $tmp | sed -e 's/-vmware.*$//g' -e 's/+vmware.*$//g') 
   ver=$(echo $tmp | sed -e 's/^.*-\(vmware.*\)$/\1/g' -e 's/^.*+\(vmware.*\)$/\1/g')
   cnt=$(govc datastore.ls -ds=$VSPHERE_DATASTORE | grep -c "$nam")
-echo "NAM:$nam CNT:$cnt VER:$ver"
 
   if [ $cnt -eq 0 ]; then
     stt="uploaded"
@@ -178,6 +185,7 @@ echo "NAM:$nam CNT:$cnt VER:$ver"
     vmn=$(govc find -name "${nam}*" | tail -1 | awk -F'/' '{ print $NF }')
     #govc vm.clone -template=true -vm /${VSPHERE_DATACENTER}/vm/${vmn} -folder=Templates -force=true ${vmn} > /dev/null 2>&1
     #govc vm.clone -template=true -vm /${VSPHERE_DATACENTER}/vm/${vmn} -folder=Templates -force=true ${vmn} 
+echo "govc vm.clone -template=true -vm /${VSPHERE_DATACENTER}/vm/${vmn} -folder=Templates -force=true ${vmn}"
     govc vm.clone -template=true -vm /${VSPHERE_DATACENTER}/vm/${vmn} -folder=Templates -force=true ${vmn} 
     govc vm.destroy /${VSPHERE_DATACENTER}/vm/${vmn}
   else
