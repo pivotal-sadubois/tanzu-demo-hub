@@ -158,6 +158,9 @@ for n in $TDH_TKGMC_TKG_IMAGES; do
   ver=$(echo $tmp | sed -e 's/^.*-\(vmware.*\)$/\1/g' -e 's/^.*+\(vmware.*\)$/\1/g')
   cnt=$(govc datastore.ls -ds=$VSPHERE_DATASTORE | grep -c "$nam")
 
+echo "NAM:$nam"
+  cnt=$(govc ls /${VSPHERE_DATACENTER}/vm/Templates/ | grep -c "$nam")
+
   if [ $cnt -eq 0 ]; then
     stt="uploaded"
     cnt=0; ret=1
@@ -185,7 +188,6 @@ for n in $TDH_TKGMC_TKG_IMAGES; do
     vmn=$(govc find -name "${nam}*" | tail -1 | awk -F'/' '{ print $NF }')
     #govc vm.clone -template=true -vm /${VSPHERE_DATACENTER}/vm/${vmn} -folder=Templates -force=true ${vmn} > /dev/null 2>&1
     #govc vm.clone -template=true -vm /${VSPHERE_DATACENTER}/vm/${vmn} -folder=Templates -force=true ${vmn} 
-echo "govc vm.clone -template=true -vm /${VSPHERE_DATACENTER}/vm/${vmn} -folder=Templates -force=true ${vmn}"
     govc vm.clone -template=true -vm /${VSPHERE_DATACENTER}/vm/${vmn} -folder=Templates -force=true ${vmn} 
     govc vm.destroy /${VSPHERE_DATACENTER}/vm/${vmn}
   else
@@ -197,4 +199,16 @@ done
 
 # KUBECTL_VSPHERE_PASSWORD
 # kubectl vsphere login --insecure-skip-tls-verify --server wcp.haas-513.pez.vmware.com -u administrator@vsphere.local o
+
+exit
+# govc find | grep photon
+/Datacenter/vm/Templates/photon-3-kube-v1.19.8+vmware.1
+/Datacenter/vm/Templates/photon-3-kube-v1.20.5+vmware.2
+/Datacenter/vm/Templates/photon-3-kube-v1.20.4+vmware.1
+/Datacenter/vm/Templates/photon-3-kube-v1.17.16+vmware.2
+/Datacenter/vm/Templates/photon-3-kube-v1.18.16+vmware.1
+
+govc vm.unregister /Datacenter/vm/Templates/photon-3-kube-v1.20.5+vmware.2
+
+
 
