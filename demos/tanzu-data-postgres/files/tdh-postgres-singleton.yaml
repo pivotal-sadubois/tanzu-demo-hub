@@ -1,0 +1,17 @@
+apiVersion: sql.tanzu.vmware.com/v1
+kind: Postgres
+metadata:
+  name: tdh-postgres-singleton
+spec:
+  memory: XXX_MEM_XXX
+  cpu: "XXX_CPU_XXX"
+  storageClassName: standard
+  storageSize: XXX_DISK_XXX
+  pgConfig:
+     dbname: tdh-postgres-db
+     username: pgadmin
+  serviceType: LoadBalancer
+  highAvailability:
+     enabled: false
+  backupLocationSecret:
+     name: s3-secret-postgres

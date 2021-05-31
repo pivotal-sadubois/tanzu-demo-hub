@@ -6,32 +6,42 @@
 # Description ..: Tanzu Demo Hub - Deploy TKG Workload Cluster
 # ############################################################################################
 
-#if [ ! -f /tkg_software_installed ]; then 
-#  echo "ERROR: $0 Needs to run on a TKG Jump Host"; exit 
-#fi
-
 export TANZU_DEMO_HUB=$(cd "$(pwd)/$(dirname $0)"; pwd)
 export TDHPATH=$(cd "$(pwd)/$(dirname $0)"; pwd)
-export DEBUG=1
+#export TDH_DEPLOYMENT_ENV_NAME="awstkg"
+#export TDH_DEPLOYMENT_CLOUD="AWS"
+#export DEPLOY_PCF_DEPLOYMENT=aws_tkg_default.cfg
+export DEBUG=0
+export TDH_TKGWC_K8S_VERSION=""
 
 . $TANZU_DEMO_HUB/functions
 
 usage() {
   echo ""
-  echo "USAGE: $0 [options] -d <deployment> -c <cluster-config> -n <cluster-name>"
+  echo "USAGE: $0 [options] -m <mgmt-cluster> -d <deployment> -n <cluster-name> [-k <kubernetes-version>] [--debug]"
+  echo "            Options:  -n <cluster-name>        # Should reflect the environment and its purpose. Make sure"
+  echo "                                               # to add your user name, to prevent conflicts in TMC"
+  echo "                                               # ie. tdh-sdubois-azure or tdh-sdubois-aws-01"
+  echo ""
+  echo "                      -k <kubernetes-version>  # default (latest)"
+  echo "                                               # use 'tanzu kubernetes-release get' to see available"
+  echo ""
+  echo "                      --debug                  # default (disabled)"
+  echo ""
 }
 
 listClusterConfig() {
   echo
-  printf "%-31s %-5s %-15s %-20s %-5s %s\n" "CONFIURATION" "DESCRIPTION" 
+  printf "%-31s %-5s %-15s %-20s %-5s %s\n" "DEPLOYMENT" "PLAN" "DESCRIPTION" 
   echo "-----------------------------------------------------------------------------------------------------------"
 
-  for deployment in $(ls -1 ${TDHPATH}/deployments/tkg-*.cfg); do
-    . $deployment
+  for deployment in $(ls -1 ${TDHPATH}/deployments/tkg-*.cfg | grep -v "tkgmc-"); do
+    TDH_DEPLOYMENT_DESCRIPTION=$(egrep "^TDH_DEPLOYMENT_DESCRIPTION=" $deployment | awk -F'=' '{ print $2 }' | sed 's/"//g')
+    TDH_DEPLOYMENT_CLUSTER_PLAN=$(egrep "^TDH_DEPLOYMENT_CLUSTER_PLAN=" $deployment | awk -F'=' '{ print $2 }')
 
     dep=$(basename $deployment)
 
-    printf "%-31s %-5s %-15s %-20s %-5s %s\n" $dep "$TDH_TKGWC_DESCRIPTION"
+    printf "%-31s %-5s %-15s %-20s %-5s %s\n" $dep "$TDH_DEPLOYMENT_CLUSTER_PLAN" "$TDH_DEPLOYMENT_DESCRIPTION"
   done
 
   echo "-----------------------------------------------------------------------------------------------------------"
@@ -39,26 +49,37 @@ listClusterConfig() {
 
 listDeployments() {
   echo
-  printf "%-31s %-5s %-15s %-22s %-5s %s\n" "DEPLOYMENTS" "CLOUD" "REGION" "MGMT-CLUSTER" "PLAN" "status"
+  printf "%-31s %-7s %-15s %-22s %-5s %s\n" "TKG-MANAGEMENT-CLUSTER" "CLOUD" "REGION" "STATUS"
   echo "-----------------------------------------------------------------------------------------------------------"
 
-  for deployment in $(ls -1 ${TDHPATH}/deployments/tkgmc-*.cfg); do
-    . $deployment
+  cnt=$(ls -1 ${HOME}/.tanzu-demo-hub/config/tkgmc-*.cfg 2>/dev/null | wc -l | sed 's/  *//g')
+  if [ $cnt -eq 0 ]; then 
+    echo "No TKG Management Cluster has been deployed, Please use ./deployTKGmc"
+  else
+    for deployment in $(ls -1 ${HOME}/.tanzu-demo-hub/config/tkgmc-*.cfg 2>/dev/null); do
+      TDH_TKGMC_NAME=$(egrep "^TDH_TKGMC_NAME=" $deployment | awk -F'=' '{ print $2 }') 
+      TDH_TKGMC_CONFIG=$(egrep "^TDH_TKGMC_CONFIG=" $deployment | awk -F'=' '{ print $2 }') 
+      TDH_TKGMC_INFRASTRUCTURE=$(egrep "^TDH_TKGMC_INFRASTRUCTURE=" $deployment | awk -F'=' '{ print $2 }')
+      TDH_TKGMC_KUBECONFIG=$(egrep "^TDH_TKGMC_KUBECONFIG=" $deployment | awk -F'=' '{ print $2 }')
 
-    dep=$(basename $deployment)
-    sdp="undeployed"
-    smc="inactive"
+      if [ "$TDH_TKGMC_INFRASTRUCTURE" == "Azure" ]; then
+        TDH_REGION=$(egrep "^AZURE_LOCATION:" ${HOME}/.tanzu-demo-hub/config/$TDH_TKGMC_CONFIG | awk '{ print $2 }')
+      fi
 
-    stt=$(tkg get mc -q $TDH_TKGMC_NAME -o json --config ${TDHPATH}/config/$TDH_TKGMC_CONFIG | jq -r '.[].status')
-    if [ "${stt}" != "" ]; then 
-      if [ "${stt}" == "Success" ]; then smc="deployed/active"; else smc="deployed/$stt"; fi
-    else
-      smc=""
-    fi
+      if [ "$TDH_TKGMC_INFRASTRUCTURE" == "AWS" ]; then 
+        TDH_REGION=$(egrep "^AWS_REGION:" ${HOME}/.tanzu-demo-hub/config/$TDH_TKGMC_CONFIG | awk '{ print $2 }')
+      fi
 
-    printf "%-31s %-5s %-15s %-22s %-5s %s\n" $dep $TDH_TKGMC_INFRASTRUCTURE $TDH_TKGMC_REGION $TDH_TKGMC_NAME \
-           $TDH_TKGMC_PLAN "$smc"
-  done
+      # --- VERIFY MANAGEMENT CLUSTER ---
+      kubectl get cluster --kubeconfig ${HOME}/.tanzu-demo-hub/config/${TDH_TKGMC_KUBECONFIG} > /dev/null 2>&1
+      if [ $? -ne 0 ]; then smc="unavailable"; else smc="active"; fi
+      
+      cnt=$(kubectl config get-clusters | egrep -c "^$TDH_TKGMC_NAME") 
+      if [ $cnt -eq 0 ]; then stt="not-deployed"; else stt="deployed/$smc"; fi
+  
+      printf "%-31s %-7s %-15s %-22s %-5s %s\n" $TDH_TKGMC_NAME $TDH_TKGMC_INFRASTRUCTURE $TDH_REGION "$stt"
+    done
+  fi
 
   echo "-----------------------------------------------------------------------------------------------------------"
 }
@@ -71,14 +92,15 @@ echo "--------------------------------------------------------------------------
 while [ "$1" != "" ]; do
   case $1 in
     -d)  TKG_DEPLOYMENT=$2;;
-    -c)  TKG_WC_CLUSTER=$2;;
+    -m)  TDH_TKGMC_NAME=$2;;
     -n)  TDH_TKGWC_NAME=$2;;
-    -ip) TDH_TKGWC_IP=$2;;
+    -k)  TDH_TKGWC_K8S_VERSION=$2;;
+    --debug) DEBUG=1;;
   esac
   shift
 done
 
-if [ "${TKG_DEPLOYMENT}" == "" -o "${TKG_WC_CLUSTER}" == "" -o "${TDH_TKGWC_NAME}" == "" ]; then
+if [ "${TKG_DEPLOYMENT}" == "" -o "${TDH_TKGMC_NAME}" == "" -o "${TDH_TKGWC_NAME}" == "" ]; then
   if [ "${TKG_DEPLOYMENT}" == "" ]; then 
     listDeployments
   fi
@@ -89,7 +111,35 @@ if [ "${TKG_DEPLOYMENT}" == "" -o "${TKG_WC_CLUSTER}" == "" -o "${TDH_TKGWC_NAME
   usage; exit 0
 fi
 
+if [ "$TDH_TKGWC_K8S_VERSION" != "" ]; then 
+  tanzu kubernetes-release get 2323 | sed '1d'
+  cnt=$(tanzu kubernetes-release get $TDH_TKGWC_K8S_VERSION | sed '1d' | wc -l | sed 's/  *//g') 
+  if [ $cnt -eq 0 ]; then 
+    cnt=$(tanzu kubernetes-release get | grep -c " $TDH_TKGWC_K8S_VERSION ")
+    if [ $cnt -gt 0 ]; then 
+      echo "ERROR: Kubernetes Version ($TDH_TKGWC_K8S_VERSION) not found, Please take the 'NAME'"
+      echo "       instead of the 'VERSION'."
+      echo "       => tanzu kubernetes-release get"
+      echo ""
+      tanzu kubernetes-release get
+      echo "-----------------------------------------------------------------------------------------------------------"
+      exit
+    else
+      echo "ERROR: Kubernetes Version ($TDH_TKGWC_K8S_VERSION) not found, Please choose one from"
+      echo "       the 'NAME' Column."
+      echo "       => tanzu kubernetes-release get"
+      echo ""
+      tanzu kubernetes-release get
+      echo "-----------------------------------------------------------------------------------------------------------"
+      exit
+    fi
+  fi
+else
+  TDH_TKGWC_K8S_VERSION=$(tanzu kubernetes-release get | tail -1 | awk '{ print $1 }')
+fi
+
 # --- VERIFY DEPLOYMENT ---
+TKG_DEPLOYMENT_CONFIG=$(echo $TKG_DEPLOYMENT | sed 's/cfg/yaml/g') 
 if [ ! -f ${TDHPATH}/deployments/${TKG_DEPLOYMENT} ]; then
   echo "ERROR: Deployment file $TKG_DEPLOYMENT can not be found in ${TDHPATH}/deployments"
   exit 1
@@ -97,13 +147,10 @@ else
   . ${TDHPATH}/deployments/${TKG_DEPLOYMENT}
 fi
 
-# --- VERIFY DEPLOYMENT ---
-echo "${TDHPATH}/deployments/${TKG_WC_CLUSTER}"
-if [ ! -f ${TDHPATH}/deployments/${TKG_WC_CLUSTER} ]; then
-  echo "ERROR: Config file $TKG_WC_CLUSTER can not be found in ${TDHPATH}/deployments"
+if [ ! -f ${TDHPATH}/deployments/${TKG_DEPLOYMENT_CONFIG} ]; then
+  echo "ERROR: The Deployment deployments/$TKG_DEPLOYMENT does not have a releated $TKG_DEPLOYMENT_CONFIG file"
+  echo "       Please take deployments/tkg-tanzu-demo-hub.yaml as a template."
   exit 1
-else
-  . ${TDHPATH}/deployments/${TKG_WC_CLUSTER}
 fi
 
 # --- CHECK ENVIRONMENT VARIABLES ---
@@ -111,787 +158,42 @@ if [ -f ~/.tanzu-demo-hub.cfg ]; then
   . ~/.tanzu-demo-hub.cfg
 fi
 
-sshEnvironment
-
-export TDH_OPTIONS=""
-export TDH_DEPLOYMENT_ENV_NAME=$TDH_TKGMC_INFRASTRUCTURE
-export TKG_CONFIG=${HOME}/.tanzu-demo-hub/$TDH_TKGMC_CONFIG
-export KUBECONFIG=${HOME}/.tanzu-demo-hub/$TDH_TKGMC_NAME.kubeconfig
-
-if [ "${TDH_TKGWC_PLAN}" != "" ]; then TDH_OPTIONS="$TDH_OPTIONS --plan=$TDH_TKGWC_PLAN"; fi
-if [ "${TDH_TKGWC_KUBERNETES}" != "" ]; then TDH_OPTIONS="$TDH_OPTIONS --kubernetes-version=$TDH_TKGWC_KUBERNETES"; fi
-if [ "${TDH_TKGWC_CONTROPLANE}" != "" ]; then TDH_OPTIONS="$TDH_OPTIONS --controlplane-machine-count=$TDH_TKGWC_CONTROPLANE"; fi
-if [ "${TDH_TKGWC_WORKERNODES}" != "" ]; then TDH_OPTIONS="$TDH_OPTIONS --worker-machine-count=$TDH_TKGWC_WORKERNODES"; fi
-if [ "${TDH_TKGWC_IP}" != "" ]; then TDH_OPTIONS="$TDH_OPTIONS --vsphere-controlplane-endpoint-ip=$TDH_TKGWC_IP"; fi
-
-# --- VERIFY TKG MANAGEMENT CLUSTER ---
-stt=$(tkg get mc --name $TDH_TKGMC_NAME -o json | jq -r '.[].status')
-con=$(tkg get mc --name $TDH_TKGMC_NAME -o json | jq -r '.[].context')
-isc=$(tkg get mc --name $TDH_TKGMC_NAME -o json | jq -r '.[].true')
-
-if [ "${stt}" != "Success" ]; then 
-  echo "ERROR: $0 TKG Management Cluster deployment was not Successfil"; exit 1
+# --- SOURCE MANAGEMENT CLUSTER VARIABLES ---
+if [ -f $HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.cfg ]; then
+  . $HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.cfg
 fi
 
-if [ "${isc}" != "true" ]; then 
-  tkg set mc -c "$con" $TDH_TKGMC_NAME > /dev/null 2>&1
+if [ "$TDH_DEPLOYMENT_CLUSTER_PLAN" == "dev" ]; then 
+  TDH_TKGMC_CONFIG=$TDH_TKGMC_WC_CONFIG_DEV
+else
+  TDH_TKGMC_CONFIG=$TDH_TKGMC_WC_CONFIG_PROD
 fi
 
-# --- VERIFY TKG WORKLOAD CLUSTER ---
-stt=$(tkg get cluster -o json | jq -r --arg key $TDH_TKGWC_NAME '.[] | select(.name == $key).status')
-echo "STT:$stt"
-if [ "${stt}" == "" ]; then 
-  messageTitle "Creating TKG Cluster ($TDH_TKGWC_NAME)"
+cat $HOME/.tanzu/tkg/clusterconfigs/$TDH_TKGMC_CONFIG $HOME/.tanzu-demo-hub/config/$TKG_DEPLOYMENT_CONFIG | \
+   egrep -v "^#" | sed -e '/^$/d' > /tmp/${TDH_TKGWC_NAME}.yaml
+
+messageTitle "Tanzu Kubernetes Grid Deployment"
+messagePrint " - Management Cluster Name"               "$TDH_TKGMC_NAME"
+messagePrint " - Management Cluster Configuration"      "deployments/${TDH_TKGMC_NAME}.cfg"
+messagePrint " - Deployment Configuration"              "deployments/$TKG_DEPLOYMENT_CONFIG"
+messagePrint " - Workload Cluster Name"                 "$TDH_TKGWC_NAME"
+messagePrint " - Workload Cluster Cloud Config"         "$HOME/.tanzu/tkg/clusterconfigs/$TDH_TKGMC_CONFIG"
+messagePrint " - Workload Cluster Configuration"        "deployments/$TKG_DEPLOYMENT_CONFIG"
+messagePrint " - Workload Cluster consolidated Config"  "/tmp/${TDH_TKGWC_NAME}.yaml"
+if [ $DEBUG -gt 0 ]; then 
   echo "-----------------------------------------------------------------------------------------------------------"
-  tkg create cluster $TDH_TKGWC_NAME $TDH_OPTIONS
-  tkg get credentials $TDH_TKGWC_NAME
-  messagePrint "- Kubernetes Context:" "$TDH_TKGWC_NAME-admin@$TDH_TKGWC_NAME"
-  kubectl config use-context $TDH_TKGWC_NAME-admin@$TDH_TKGWC_NAME > /dev/null 2>&1
+  cat $HOME/.tanzu/tkg/clusterconfigs/$TDH_TKGMC_CONFIG deployments/$TKG_DEPLOYMENT_CONFIG | egrep -v "^#" | sed -e '/^$/d'
+fi
 
+tanzu cluster get $TDH_TKGWC_NAME >/dev/null 2>&1
+if [ $? -ne 0 ]; then  
+  echo "-----------------------------------------------------------------------------------------------------------"
+  echo "=> tanzu cluster create $TDH_TKGWC_NAME -f /tmp/${TDH_TKGWC_NAME}.yaml --tkr $TDH_TKGWC_K8S_VERSION" 
+  tanzu cluster create $TDH_TKGWC_NAME -f /tmp/${TDH_TKGWC_NAME}.yaml --tkr $TDH_TKGWC_K8S_VERSION
   echo "-----------------------------------------------------------------------------------------------------------"
 else
-  messageTitle "Verify TKG Cluster ($TDH_TKGWC_NAME)"
-  messagePrint "- Kubernetes Context:" "$TDH_TKGWC_NAME-admin@$TDH_TKGWC_NAME"
-  #kubectl config use-context $con > /dev/null 2>&1
-  kubectl config use-context $TDH_TKGWC_NAME-admin@$TDH_TKGWC_NAME > /dev/null 2>&1
+ tanzu cluster get $TDH_TKGWC_NAME
 fi
-
-#echo "TDH_TKGWC_NAME=$TDH_TKGWC_NAME"                        >  ${TDHPATH}/config/${TDH_TKGWC_NAME}.cfg
-#echo "K8S_CONTEXT=$TDH_TKGWC_NAME-admin@$TDH_TKGWC_NAME"     >> ${TDHPATH}/config/${TDH_TKGWC_NAME}.cfg
-#echo "TKG_DEPLOYMENT=$TKG_DEPLOYMENT"                        >> ${TDHPATH}/config/${TDH_TKGWC_NAME}.cfg
-#echo "TDH_TKGMC_CONFIG=$TDH_TKGMC_CONFIG"                    >> ${TDHPATH}/config/${TDH_TKGWC_NAME}.cfg
-#echo "TKG_WC_CLUSTER=$TKG_WC_CLUSTER"                        >> ${TDHPATH}/config/${TDH_TKGWC_NAME}.cfg
-
-if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "vSphere" ]; then 
-  messageTitle "Install Metalib Load Balancer" 
-
-  stt=$(kubectl get ns -o json | jq -r '.items[] | select(.metadata.name == "metallb-system").status.phase')
-  if [ "${stt}" == "" ]; then
-    kubectl create ns metallb-system > /dev/null 2>&1
-    kubectl apply -f https://raw.githubusercontent.com/google/metallb/v0.9.2/manifests/metallb.yaml -n metallb-system > /dev/null 2>&1
-    kubectl create secret generic -n metallb-system memberlist --from-literal=secretkey="$(openssl rand -base64 128)" > /dev/null 2>&1
-
-    echo "apiVersion: v1"                               >  /tmp/metallb-configmap.yaml
-    echo "kind: ConfigMap"                              >> /tmp/metallb-configmap.yaml
-    echo "metadata:"                              >> /tmp/metallb-configmap.yaml
-    echo "  namespace: metallb-system"                              >> /tmp/metallb-configmap.yaml
-    echo "  name: config"                              >> /tmp/metallb-configmap.yaml
-    echo "data:"                              >> /tmp/metallb-configmap.yaml
-    echo "  config: |"                              >> /tmp/metallb-configmap.yaml
-    echo "    address-pools:"                              >> /tmp/metallb-configmap.yaml
-    echo "    - name: default"                              >> /tmp/metallb-configmap.yaml
-    echo "      protocol: layer2"                              >> /tmp/metallb-configmap.yaml
-    echo "      addresses:"                              >> /tmp/metallb-configmap.yaml
-    echo "      - 10.1.1.220-10.1.1.250"                              >> /tmp/metallb-configmap.yaml
-
-    kubectl apply -f /tmp/metallb-configmap.yaml > /dev/null 2>&1
-    if [ $? -ne 0 ]; then
-      messagePrint "- Install Metalib Load Balancer" "failed"
-      echo "ERROR: Installation of Cert Manager failed"
-      echo "       => cd $TDHPATH/extensions/$TDH_TKGWC_EXTENSIONS"
-      echo "       => kubectl apply -f ../cert-manager/"
-      exit
-    else
-      messagePrint "- Install Metalib Load Balancer" "completed"
-    fi
-  fi
-fi
-
-if [ "${TDH_TKGWC_INGRESS_CONTOUR}" == "true" ]; then 
-  messageTitle "Install Ingress Contour" 
-  stt=$(kubectl get ns -o json | jq -r '.items[] | select(.metadata.name == "vmware-system-tmc").status.phase')
-  if [ "${stt}" == "" ]; then
-    cd ${TDHPATH}/extensions/$TDH_TKGWC_EXTENSIONS/extensions
-    # --- INSTALL TMC EXTENSION MANAGER ---
-    kubectl apply -f tmc-extension-manager.yaml >/dev/null 2>&1; ret=$?
-    if [ $ret -ne 0 ]; then 
-      messagePrint "- Install Extension Manager" "failed"
-      echo "ERROR: Installation of TMC Extension manager failed"
-      echo "       => cd $TDHPATH/extensions/$TDH_TKGWC_EXTENSIONS"
-      echo "       => kubectl apply -f tmc-extension-manager.yaml"
-      exit
-    else
-      messagePrint "- Install TMC Extension Manager" "completed"
-    fi
-  else
-    messagePrint "- Verify TMC Extension Manager"  "installed/running"
-  fi
-
-  # -- INSTALL KAPP CONTROLLER ---
-  #kubectl config use-context $con > /dev/null 2>&1
-  kubectl apply -f kapp-controller.yaml > /dev/null 2>&1
-
-  # -- INSTALL CERT MANAGER ---
-  stt=$(kubectl get ns -o json | jq -r '.items[] | select(.metadata.name == "cert-manager").status.phase')
-  if [ "${stt}" == "" ]; then
-    cd ${TDHPATH}/extensions/$TDH_TKGWC_EXTENSIONS/extensions
-    kubectl apply -f ../cert-manager/ > /dev/null 2>&1
-    if [ $? -ne 0 ]; then
-      messagePrint "- Install Cert Manager" "failed"
-      echo "ERROR: Installation of Cert Manager failed"
-      echo "       => cd $TDHPATH/extensions/$TDH_TKGWC_EXTENSIONS"
-      echo "       => kubectl apply -f ../cert-manager/"
-      exit
-    else
-      messagePrint "- Install Cert Manager" "completed"
-    fi
-  fi
-
-  # -- INSTALL CONTOUR INGRESS CONTROLLER ---
-  stt=$(kubectl get ns -o json | jq -r '.items[] | select(.metadata.name == "tanzu-system-ingress").status.phase')
-  if [ "${stt}" == "" ]; then
-    cd ${TDHPATH}/extensions/$TDH_TKGWC_EXTENSIONS/extensions
-    kubectl apply -f ingress/contour/namespace-role.yaml 
-    kubectl apply -f ingress/contour/namespace-role.yaml > /dev/null 2>&1
-    if [ $? -ne 0 ]; then
-      messagePrint "- Install Contour Ingress" "failed"
-      echo "ERROR: Installation of Contour Ingress failed"
-      echo "       => cd $TDHPATH/extensions/$TDH_TKGWC_EXTENSIONS/extensions"
-      echo "       => kubectl apply -f ingress/contour/namespace-role.yaml"
-      exit
-    fi
-
-    while [ $(kubectl get pods -A | sed 1d | grep -v Running | wc -l) -ne 0 ]; do
-      sleep 10
-    done
-
-    if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "vSphere" ]; then 
-      cd ${TDHPATH}/extensions/$TDH_TKGWC_EXTENSIONS/extensions
-      cp ingress/contour/vsphere/contour-data-values.yaml.example ingress/contour/vsphere/contour-data-values.yaml
-      echo ""                               >> ingress/contour/vsphere/contour-data-values.yaml
-      echo "  service:"                     >> ingress/contour/vsphere/contour-data-values.yaml
-      echo "    type: LoadBalancer"         >> ingress/contour/vsphere/contour-data-values.yaml
-
-
-      stt=$(kubectl get secret contour-data-values -n tanzu-system-ingress -o json 2>/dev/null | jq -r '.metadata.name') 
-      if [ "${stt}" == "" ]; then
-        cd ${TDHPATH}/extensions/$TDH_TKGWC_EXTENSIONS/extensions
-        kubectl create secret generic contour-data-values --from-file=values.yaml=ingress/contour/vsphere/contour-data-values.yaml \
-                -n tanzu-system-ingress > /dev/null 2>&1
-      fi
-    fi
-
-    if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "Azure" ]; then 
-      cd ${TDHPATH}/extensions/$TDH_TKGWC_EXTENSIONS/extensions
-      cp ingress/contour/azure/contour-data-values.yaml.example ingress/contour/azure/contour-data-values.yaml
-      echo ""                               >> ingress/contour/azure/contour-data-values.yaml
-      echo "  service:"                     >> ingress/contour/azure/contour-data-values.yaml
-      echo "    type: LoadBalancer"         >> ingress/contour/azure/contour-data-values.yaml
-
-      stt=$(kubectl get secret contour-data-values -n tanzu-system-ingress -o json 2>/dev/null | jq -r '.metadata.name') 
-      if [ "${stt}" == "" ]; then
-        cd ${TDHPATH}/extensions/$TDH_TKGWC_EXTENSIONS/extensions
-        kubectl create secret generic contour-data-values --from-file=values.yaml=ingress/contour/azure/contour-data-values.yaml \
-                -n tanzu-system-ingress > /dev/null 2>&1
-      fi
-    fi
-
-    cnt=$(kubectl get extension contour -n tanzu-system-ingress 2>/dev/null | egrep -c "^contour" )
-    if [ $cnt -eq 0 ]; then
-      kubectl apply -f ingress/contour/contour-extension.yaml > /dev/null 2>&1
-      sleep 10
-    fi
-
-    i=0
-    while [ $i -lt 5 ]; do
-      stt=$(kubectl get app contour -n tanzu-system-ingress -o json | jq -r '.status.friendlyDescription')
-      while [ "${stt}" == "Reconciling" ]; do
-        stt=$(kubectl get app contour -n tanzu-system-ingress -o json | jq -r '.status.friendlyDescription')
-        sleep 10
-      done
-      sleep 30
-      let i=i+1
-    done
-
-    if [ "${stt}" == "Reconcile succeeded" ]; then
-      messagePrint "- Install Contour Ingress" "completed"
-    else
-      kubectl get app contour -n tanzu-system-ingress
-      #kubectl get app contour -n tanzu-system-ingress -o yaml
-      messagePrint "- Install Contour Ingress" "failed"; exit
-    fi
-
-    cd ${TDHPATH}
-  fi
-
-  # --- SET CLUSTER DNS ---
-  ipa=$(kubectl get svc envoy -n tanzu-system-ingress -o json | jq -r '.status.loadBalancer.ingress[].ip')
-  if [ "${ipa}" != "" ]; then 
-    setTKGclusterDNS "$TDH_TKGWC_NAME" "${ipa}" "apps"
-  else
-    echo "ERROR: Unable to get LoadBalancer IP-Adress of the Ingress"
-    echo "       => kubectl get svc envoy -n tanzu-system-ingress"
-    exit 1
-  fi
-fi
-
-  messageTitle "Install and configure Helm Charts"
-  cnt=$(helm repo list -o json 2>/dev/null | jq -r --arg key "stable" '.[] | select(.name == $key).url')
-  if [ "${cnt}" == "" ]; then 
-    messagePrint "- Confogure Helm Repo" "https://charts.helm.sh/stable"
-    helm repo add stable https://charts.helm.sh/stable > /dev/null 2>&1
-    helm repo update > /dev/null 2>&1
-  fi
-
-  cnt=$(helm repo list -o json 2>/dev/null | jq -r --arg key "bitnami" '.[] | select(.name == $key).url')
-  if [ "${cnt}" == "" ]; then 
-    messagePrint "- Configure Bitnami Helm Repo" "https://charts.bitnami.com/bitnami"
-    helm repo add bitnami https://charts.bitnami.com/bitnami > /dev/null 2>&1
-    helm repo update > /dev/null 2>&1
-  fi
-
-  ### => NEEDED BY HELM-2
-#  messagePrint "- Create ServiceAccount for tiller" "demos/k8s-helm/rbac-config.yaml "
-#  kubectl apply -f demos/k8s-helm/rbac-config.yaml > /dev/null 2>&1
-#  if [ $? -ne 0 ]; then 
-#    echo "ERROR: Failed to create tiller service aacount"
-#    echo "       => kubectl apply -f demos/k8s-helm/rbac-config.yaml"
-#  fi
-
-#  helm init --service-account tiller > /dev/null 2>&1
-#  if [ $? -ne 0 ]; then 
-#    echo "ERROR: Failed to initialize tiller"
-#    echo "       => helm init --service-account tiller > /dev/null 2>&1"
-#  fi
-
-if [ "${TDH_TKGWC_INGRESS_NGINX}" == "true" ]; then 
-  #https://docs.bitnami.com/kubernetes/get-started-tkg/
-  messageTitle "Install Ingress NGINX" 
-
-  messagePrint "- Install Ingress Controller" "bitnami/nginx-ingress-controller"
-  kubectl get namespace nginx-ingress > /dev/null 2>&1
-  if [ $? -ne 0 ]; then kubectl create namespace nginx-ingress > /dev/null 2>&1; fi
-
-  stt=$(helm list -n nginx-ingress -o json | jq -r --arg key "nginx-ingress-controller" '.[] | select(.chart | contains($key)).status')
-  if [ "$stt" != "deployed" ]; then 
-    helm install bitnami bitnami/nginx-ingress-controller -n nginx-ingress > /dev/null 2>&1
-    if [ $? -ne 0 ]; then
-      echo "ERROR: Failed to install bitnami/nginx-ingress-controller"
-      echo "       => helm install stable bitnami/nginx-ingress-controller"
-    fi
-  fi
-
-  # --- SET CLUSTER DNS ---
-  ipa=$(kubectl get svc bitnami-nginx-ingress-controller -n nginx-ingress -o json 2>/dev/null | jq -r '.status.loadBalancer.ingress[].ip' 2>/dev/null)
-  while [ "${ipa}" == "" ]; do
-    sleep 10
-    ipa=$(kubectl get svc bitnami-nginx-ingress-controller -n nginx-ingress -o json 2>/dev/null | jq -r '.status.loadBalancer.ingress[].ip' 2>/dev/null)
-  done
-
-  if [ "${ipa}" != "" ]; then
-    setTKGclusterDNS "$TDH_TKGWC_NAME" "${ipa}" "nginx"
-  else
-    echo "ERROR: Unable to get LoadBalancer IP-Adress of the Ingress"
-    echo "       => kubectl get svc envoy -n tanzu-system-ingress"
-    exit 1
-  fi
-fi
-
-if [ "${TDH_TKGWC_INGRESS_HARBOR}" == "true" ]; then
-#hhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh
-  messageTitle "Install Harbor Registry XXXX"
-  messagePrint "- Confogure Helm Repo" "https://charts.helm.sh/stable"
-
-  HARBOR_NAMESPACE=tanzu-system-registry
-  HARBOR_VALUES=/tmp/harbor-data-values.yaml
-
-  if [ -d certificates ]; then
-    TLS_CERTIFICATE=certificates/fullchain.pem
-    TLS_PRIVATE_KEY=certificates/privkey.pem
-    TLS_ROOT_CA=certificates/ca.pem
-  fi
-
-  # --- CHECK IF CERTIFICATE HAS BEEN DEFINED ---
-  if [ "${TLS_CERTIFICATE}" == "" -o "${TLS_PRIVATE_KEY}" == "" ]; then
-    echo ""
-    echo "ERROR: Certificate and Private-Key has not been specified. Please set"
-    echo "       the following environment variables:"
-    echo "       => export TLS_CERTIFICATE=<cert.pem>"
-    echo "       => export TLS_PRIVATE_KEY=<private_key.pem>"
-    echo ""
-    exit 1
-  else
-    verifyTLScertificate $TLS_CERTIFICATE $TLS_PRIVATE_KEY
-  fi
-
-  kubectl create ns $HARBOR_NAMESPACE > /dev/null 2>&1
-
-  EXTENSIONS=${TDHPATH}/extensions/$TDH_TKGWC_EXTENSIONS/extensions
-  messagePrint "- Create a namespace for the Harbor service" "$HARBOR_NAMESPACE"
-  kubectl apply -f ${EXTENSIONS}/registry/harbor/namespace-role.yaml > /dev/null 2>&1
-  if [ $? -ne 0 ]; then
-    echo "ERROR: Failed to create namespace for the Harbor service"
-    echo "       => kubectl apply -f ${EXTENSIONS}/registry/harbor/namespace-role.yaml"
-    exit
-  fi
-
-  messagePrint "- Create Harbor service configuration" ""
-  sudo snap install yq > /dev/null 2>&1
-
-  DNS_HARBOR="harbor.apps-${TDH_TKGWC_NAME}.${TDH_TKGMC_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}"
-  DNS_NOTARY="notary.apps-${TDH_TKGWC_NAME}.${TDH_TKGMC_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}"
-  HARBOR_VALUES=/tmp/harbor-data-values.yaml
-  HARBOR_PASS=Password12345
-
-  kubectl -n $HARBOR_NAMESPACE get secret harbor-certs > /dev/null 2>&1
-  if [ $? -ne 0 ]; then
-    kubectl -n $HARBOR_NAMESPACE create secret tls harbor-certs --cert=$TLS_CERTIFICATE  --key=$TLS_PRIVATE_KEY
-    if [ $? -ne 0 ]; then
-      echo "ERROR: failed to create TLS Secret"
-      echo "       => kubectl -n $HARBOR_NAMESPACE create secret tls harbor-certs --cert=$TLS_CERTIFICATE  --key=$TLS_PRIVATE_KEY"; exit
-    fi
-  fi
-
-  echo "harborAdminPassword: $HARBOR_PASS"                                           >  $HARBOR_VALUES
-  echo ""                                                                            >> $HARBOR_VALUES
-  echo "service:"                                                                    >> $HARBOR_VALUES
-  echo "  type: LoadBalancer"                                                        >> $HARBOR_VALUES
-  echo "  tls:"                                                                      >> $HARBOR_VALUES
-  echo "    enabled: true"                                                           >> $HARBOR_VALUES
-  echo "    existingSecret: harbor-certs"                                            >> $HARBOR_VALUES
-  echo "    notaryExistingSecret: notary-certs"                                      >> $HARBOR_VALUES
-  echo ""                                                                            >> $HARBOR_VALUES
-  echo "ingress:"                                                                    >> $HARBOR_VALUES
-  echo "  enabled: true"                                                             >> $HARBOR_VALUES
-  echo "  hosts:"                                                                    >> $HARBOR_VALUES
-  echo "    core: $DNS_HARBOR"                                                       >> $HARBOR_VALUES
-  echo "    notary: $DNS_NOTARY"                                                     >> $HARBOR_VALUES
-  echo "  annotations:"                                                              >> $HARBOR_VALUES
-  echo "    ingress.kubernetes.io/force-ssl-redirect: \"true\""                      >> $HARBOR_VALUES
-  echo "    kubernetes.io/ingress.class: contour"                                    >> $HARBOR_VALUES
-  echo "externalURL: https://$DNS_HARBOR"                                            >> $HARBOR_VALUES
-  echo ""                                                                            >> $HARBOR_VALUES
-  echo "portal:"                                                                     >> $HARBOR_VALUES
-  echo "  tls:"                                                                      >> $HARBOR_VALUES
-  echo "    existingSecret: harbor-certs"                                            >> $HARBOR_VALUES
-  echo ""                                                                            >> $HARBOR_VALUES
-  echo "persistence:"                                                                >> $HARBOR_VALUES
-  echo "  enabled: true"                                                             >> $HARBOR_VALUES
-  echo "  resourcePolicy: 'keep'"                                                    >> $HARBOR_VALUES
-  echo "  persistentVolumeClaim:"                                                    >> $HARBOR_VALUES
-  echo "    registry:"                                                               >> $HARBOR_VALUES
-  echo "      accessMode: ReadWriteOnce"                                             >> $HARBOR_VALUES
-  echo "      size: 15Gi"                                                            >> $HARBOR_VALUES
-
-#gaga
-
-if [ 1 -eq 1 ]; then 
-  cnt=$(helm ls -n tanzu-system-registry | egrep -c "^harbor")
-  if [ $cnt -eq 0 ]; then
-    helm install harbor bitnami/harbor -f $HARBOR_VALUES -n $HARBOR_NAMESPACE --version 9.2.2 > /dev/null 2>&1
-
-    cnt=1
-    while [ $cnt -ne 0 ]; do
-      echo "  wait for containers to become ready ...."
-      cnt=$(kubectl get pods -n tanzu-system-registry | sed 1d | grep -vc Running)
-      sleep 10
-    done
-  fi
-
-  # --- TESTING REGISTRY ---
-  docker login $DNS_HARBOR -u admin -p $HARBOR_PASS > /dev/null 2>&1
-  if [ $? -ne 0 ]; then  
-    echo "ERROR: Docker login does not work 3"
-    echo "       => docker login $DNS_HARBOR -u admin -p $HARBOR_PASS"; exit
-  fi
-
-else
-  cnt=$(kubectl get secrets harbor-data-values -n $HARBOR_NAMESPACE 2>/dev/null | grep -c "harbor-data-values")
-  if [ $cnt -eq 0 ]; then
-    messagePrint "- Create secrets for the Harbor config" "$HARBOR_VALUES"
-    kubectl create secret generic harbor-data-values --from-file=values.yaml=$HARBOR_VALUES \
-         -n $HARBOR_NAMESPACE  > /dev/null 2>&1
-    if [ $? -ne 0 ]; then
-      echo "ERROR: Failed to create secret for the Harbor service"
-      echo "       => kubectl create secret generic harbor-data-values --from-file=values.yaml=$HARBOR_VALUES -n $HARBOR_NAMESPACE"
-      exit
-    fi
-  fi
-
-  kubectl get app harbor -n tanzu-system-registry >/dev/null 2>&1; ret=$?
-  if [ ${ret} -ne 0 ]; then
-    messagePrint "- Deploy the Harbor service" "${EXTENSIONS}/registry/harbor/harbor-extension.yaml"
-    kubectl apply -f ${EXTENSIONS}/registry/harbor/harbor-extension.yaml > /dev/null 2>&1
-    if [ $? -ne 0 ]; then
-      echo "ERROR: Failed to deploy the Harbor service"
-      echo "       => kubectl apply -f ${EXTENSIONS}/registry/harbor/harbor-extension.yaml"
-      exit
-    fi
-
-    cnt=$(kubectl get extension harbor -n tanzu-system-registry 2>/dev/null | egrep -c "^harbor")
-    if [ $cnt -eq 0 ]; then
-      kubectl apply -f ${EXTENSIONS}/ingress/contour/harbor-extension.yaml > /dev/null 2>&1
-      sleep 10
-    fi
-
-    i=0
-    while [ $i -lt 5 ]; do
-      stt=$(kubectl get app harbor -n tanzu-system-registry -o json 2>/dev/null | jq -r '.status.friendlyDescription')
-      while [ "${stt}" == "Reconciling" ]; do
-        stt=$(kubectl get app harbor -n tanzu-system-registry -o json 2>/dev/null | jq -r '.status.friendlyDescription')
-        sleep 10
-      done
-      sleep 30
-      let i=i+1
-    done
-
-    if [ "${stt}" == "Reconcile succeeded" ]; then
-      messagePrint "- Install Harbor Registry" "completed"
-    else
-      echo "-----------------------------------------------------------------------------------------------------------"
-      tkg get cluster --include-management-cluster
-      echo "-----------------------------------------------------------------------------------------------------------"
- 
-      kubectl get app harbor -n tanzu-system-registry
-      messagePrint "- Install Harbor Registry" "failed"; exit
-    fi
-  else
-    messagePrint "- Verify the Harbor service" "registry/harbor/harbor-extension.yaml"
-  fi
-fi
-#hhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh
-fi
-
-if [ "${TDH_TKGWC_INGRESS_HARBOR}" == "true1" ]; then
-  # https://docs.vmware.com/en/VMware-Tanzu-Kubernetes-Grid/1.2/vmware-tanzu-kubernetes-grid-12/GUID-extensions-harbor-registry.html"
-  messageTitle "Install Harbor Registry"
-  messagePrint "- Confogure Helm Repo" "https://charts.helm.sh/stable"
-
-  if [ -d certificates ]; then
-    TLS_CERTIFICATE=certificates/fullchain.pem
-    TLS_PRIVATE_KEY=certificates/privkey.pem
-    TLS_ROOT_CA=certificates/ca.pem
-  fi
-
-  # --- CHECK IF CERTIFICATE HAS BEEN DEFINED ---
-  if [ "${TLS_CERTIFICATE}" == "" -o "${TLS_PRIVATE_KEY}" == "" ]; then
-    echo ""
-    echo "ERROR: Certificate and Private-Key has not been specified. Please set"
-    echo "       the following environment variables:"
-    echo "       => export TLS_CERTIFICATE=<cert.pem>"
-    echo "       => export TLS_PRIVATE_KEY=<private_key.pem>"
-    echo ""
-    exit 1
-  else
-    verifyTLScertificate $TLS_CERTIFICATE $TLS_PRIVATE_KEY
-  fi
-
-  # --- CONVERT CERTS TO BASE64 ---
-  cert=$(base64 --wrap=10000 $TLS_CERTIFICATE)
-  pkey=$(base64 --wrap=10000 $TLS_PRIVATE_KEY)
-  cart=$(base64 --wrap=10000 $TLS_ROOT_CA)
-
-  cd ${TDHPATH}/extensions/$TDH_TKGWC_EXTENSIONS/extensions
-
-  kubectl delete ns $HARBOR_NAMESPACE > /dev/null 2>&1
-  kubectl create ns $HARBOR_NAMESPACE > /dev/null 2>&1
-
-  messagePrint "- Create a namespace for the Harbor service" "registry/harbor/namespace-role.yaml"
-  kubectl apply -f registry/harbor/namespace-role.yaml > /dev/null 2>&1
-  if [ $? -ne 0 ]; then
-    echo "ERROR: Failed to create namespace for the Harbor service"
-    echo "       => kubectl apply -f registry/harbor/namespace-role.yaml"
-  fi
-
-  messagePrint "- Create Harbor service configuration" "registry/harbor/harbor-data-values.yaml"
-  sudo snap install yq > /dev/null 2>&1
-
-  DNS_HARBOR="harbor.apps-${TDH_TKGWC_NAME}.${TDH_TKGMC_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}"
-  DNS_NOTARY="notary.apps-${TDH_TKGWC_NAME}.${TDH_TKGMC_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}"
-  HARBOR_VALUES=/tmp/harbor-data-values.yaml
-  HARBOR_VALUES=registry/harbor/harbor-data-values.yaml
-
-  kubectl -n cattle-system create secret tls harbor-tls-sacha -n tanzu-system-registry \
-  --cert=$TDHPATH/$TLS_CERTIFICATE --key=$TDHPATH/$TLS_PRIVATE_KEY
-
-if [ 1 -eq 1 ]; then 
-  echo "harborAdminPassword: Password12345"                                          >  $HARBOR_VALUES
-  echo ""                                                                            >> $HARBOR_VALUES
-  echo "service:"                                                                    >> $HARBOR_VALUES
-  echo "  type: ClusterIP"                                                           >> $HARBOR_VALUES
-  echo "  tls:"                                                                      >> $HARBOR_VALUES
-  echo "    enabled: true"                                                           >> $HARBOR_VALUES
-  echo "    existingSecret: harbor-tls-sacha"                                        >> $HARBOR_VALUES
-  echo "    notaryExistingSecret: notary-tls-sacha"                                  >> $HARBOR_VALUES
-  echo ""                                                                            >> $HARBOR_VALUES
-  echo "ingress:"                                                                    >> $HARBOR_VALUES
-  echo "  enabled: true"                                                             >> $HARBOR_VALUES
-  echo "  hosts:"                                                                    >> $HARBOR_VALUES
-  echo "    core: $DNS_HARBOR"                                                       >> $HARBOR_VALUES
-  echo "    notary: $DNS_NOTARY"                                                     >> $HARBOR_VALUES
-  echo "  annotations:"                                                              >> $HARBOR_VALUES
-  echo "    cert-manager.io/cluster-issuer: letsencrypt-staging"                     >> $HARBOR_VALUES
-  echo "    ingress.kubernetes.io/force-ssl-redirect: \"true\""                      >> $HARBOR_VALUES
-  echo "    kubernetes.io/ingress.class: contour"                                    >> $HARBOR_VALUES
-  echo "    kubernetes.io/tls-acme: \"true\""                                        >> $HARBOR_VALUES
-  echo "externalURL: https://$DNS_HARBOR"                                            >> $HARBOR_VALUES
-  echo ""                                                                            >> $HARBOR_VALUES
-  echo "portal:"                                                                     >> $HARBOR_VALUES
-  echo "  tls:"                                                                      >> $HARBOR_VALUES
-  echo "    existingSecret: harbor-tls-sacha"                                        >> $HARBOR_VALUES
-  echo ""                                                                            >> $HARBOR_VALUES
-
-else
-echo "OLD STYLE"
-  cp registry/harbor/harbor-data-values.yaml.example registry/harbor/harbor-data-values.yaml
-  bash registry/harbor/generate-passwords.sh registry/harbor/harbor-data-values.yaml > /dev/null 2>&1
-
-  messagePrint "- Configure Harber Name" "$DNS_HARBOR"
-  sed -i "s/hostname: core.harbor.domain/hostname: $DNS_HARBOR/g" registry/harbor/harbor-data-values.yaml
-  messagePrint "- Set Admin Password" "XXXXXXXXX"
-  sed -i "s/^harborAdminPassword: .*$/harborAdminPassword: 00Penwin/g" registry/harbor/harbor-data-values.yaml
-  sed -i "s/^enableContourHttpProxy: .*$/enableContourHttpProxy: false/g" registry/harbor/harbor-data-values.yaml
-  messagePrint "- Add Cerfificate and PrivateKey for domain" "$DNS_HARBOR"
-  sed -i "s/  tls.crt:/  tls.crt: $cert/g" registry/harbor/harbor-data-values.yaml
-  sed -i "s/  tls.key:/  tls.key: $pkey/g" registry/harbor/harbor-data-values.yaml
-  sed -i "s/  ca.crt:/  ca.crt: $cart/g" registry/harbor/harbor-data-values.yaml
-
-  echo "externalURL: https://$DNS_HARBOR"                                            >> $HARBOR_VALUES
-  echo ""                                                                            >> $HARBOR_VALUES
-  echo "portal:"                                                                     >> $HARBOR_VALUES
-  echo "  tls:"                                                                      >> $HARBOR_VALUES
-  echo "    existingSecret: harbor-tls-sacha"                                        >> $HARBOR_VALUES
-fi
-
-  #echo | openssl s_client -showcerts -servername harbor.vstkg.pcfsdu.com -connect harbor.vstkg.pcfsdu.com:8443 2>/dev/null | openssl x509 -inform pem -noout -text
-  #kubectl exec harbor-registry-7d6fcfccb9-phh7f -c registry -n tanzu-system-registry -i -t -- bash -il
-  #kubectl get secrets harbor-data-values -n tanzu-system-registry -o json | jq -r '.data."values.yaml"' | base64 --decode
-  #kubectl get secrets harbor-tls-sacha -n tanzu-system-registry -o json | jq -r '.data."tls.crt"' | base64 --decode
-
-  cnt=$(kubectl get secrets harbor-data-values -n tanzu-system-registry 2>/dev/null | grep -c "harbor-data-values")
-  if [ $cnt -eq 0 ]; then
-    messagePrint "- Create secrets for the Harbor config" "registry/harbor/harbor-data-values.yaml"
-    kubectl create secret generic harbor-data-values --from-file=values.yaml=registry/harbor/harbor-data-values.yaml \
-         -n tanzu-system-registry  > /dev/null 2>&1
-    if [ $? -ne 0 ]; then
-      echo "ERROR: Failed to create secret for the Harbor service"
-      echo "       => kubectl create secret generic harbor-data-values --from-file=values.yaml=registry/harbor/harbor-data-values.yaml \
-         -n tanzu-system-registry"
-    fi
-  fi
-
-  kubectl get app harbor -n tanzu-system-registry >/dev/null 2>&1; ret=$?
-  if [ ${ret} -ne 0 ]; then 
-    messagePrint "- Deploy the Harbor service" "registry/harbor/harbor-extension.yaml"
-    kubectl apply -f registry/harbor/harbor-extension.yaml > /dev/null 2>&1
-    if [ $? -ne 0 ]; then
-      echo "ERROR: Failed to deploy the Harbor service"
-      echo "       => kubectl apply -f registry/harbor/harbor-extension.yaml"
-    fi
-
-    cnt=$(kubectl get extension harbor -n tanzu-system-registry 2>/dev/null | egrep -c "^harbor")
-    if [ $cnt -eq 0 ]; then
-      kubectl apply -f ingress/contour/harbor-extension.yaml > /dev/null 2>&1
-      sleep 10
-    fi
-
-    i=0
-    while [ $i -lt 5 ]; do
-      stt=$(kubectl get app harbor -n tanzu-system-registry -o json | jq -r '.status.friendlyDescription')
-      while [ "${stt}" == "Reconciling" ]; do
-        stt=$(kubectl get app harbor -n tanzu-system-registry -o json 2>/dev/null | jq -r '.status.friendlyDescription')
-        sleep 10
-      done
-      sleep 30
-      let i=i+1
-    done
-
-    if [ "${stt}" == "Reconcile succeeded" ]; then
-      messagePrint "- Install Harbor Registry" "completed"
-    else
-      echo "-----------------------------------------------------------------------------------------------------------"
-      tkg get cluster --include-management-cluster
-      echo "-----------------------------------------------------------------------------------------------------------"
-  
-      kubectl get app harbor -n tanzu-system-registry
-      messagePrint "- Install Harbor Registry" "failed"; exit
-    fi
-  else 
-    messagePrint "- Verify the Harbor service" "registry/harbor/harbor-extension.yaml"
-  fi
-
-  messagePrint "- Deploy Ingress for Harbor" "/tmp/harbor_ingress.yaml"
-  sed -e "s/XXX_HARBORFGDM_XXX/$DNS_HARBOR/g" -e "s/XXX_NOTARYFGDM_XXX/$DNS_NOTARY/g" \
-  ${TDHPATH}/files/harbor_ingresa_template.yaml > /tmp/harbor_ingresa.yaml
-#  if [ $DEBUG -eq 1 ]; then 
-#    echo "-----------------------------------------------------------------------------------------------------------"
-#    kubectl apply -f /tmp/harbor_ingresa.yaml 
-#    echo "-----------------------------------------------------------------------------------------------------------"
-#    kubectl describe ingress harbor-ingress -n tanzu-system-registry
-#    echo "-----------------------------------------------------------------------------------------------------------"
-#  else
-#    kubectl apply -f /tmp/harbor_ingresa.yaml > /dev/null 2>&+
-#  fi
-
-  messageTitle "Define Cluster as a shared service" 
-  messagePrint "- Current Context" "$(kubectl config current-context)"
-  kubectl -n tanzu-system-registry get secret harbor-tls -o=jsonpath="{.data.ca\.crt}" | base64 -d > /tmp/hatbor-tls.pem
-  #kubectl config use-context $TDH_TKGWC_NAME-admin@$TDH_TKGWC_NAME > /dev/null 2>&1
-  kubectl config use-context $con > /dev/null 2>&1
-
-  cnt=$(tkg get cluster --include-management-cluster -o json | jq -r --arg key "$TDH_TKGWC_NAME" '.[] | select(.name == $key).roles[]' | \
-            egrep -c "tanzu-services") 
-  if [ $cnt -eq 0 ]; then 
-    messagePrint "- Set a cluster-role label on $TDH_TKGWC_NAME cluster" "Role: tanzu-services"
-    kubectl label cluster.cluster.x-k8s.io/$TDH_TKGWC_NAME cluster-role.tkg.tanzu.vmware.com/tanzu-services="" --overwrite=true
-  else
-    messagePrint "- Verify cluster-role label on $TDH_TKGWC_NAME cluster" "Role: tanzu-services on"
-  fi
-
-  #kubectl config use-context $TDH_TKGWC_NAME-admin@$TDH_TKGWC_NAME > /dev/null 2>&1
-  cd ${TDHPATH}
-
-  messageTitle "Install the Tanzu Kubernetes Grid Connectivity API on the Management Cluster" ""
-  messagePrint "- Current Context" "$(kubectl config current-context)"
-  stt=$(kubectl get ns -o json | jq -r '.items[] | select(.metadata.name == "tanzu-system-connectivity").status.phase')
-  if [ -d extensions/manifests -a "${stt}" != "Active" ]; then 
-    cd extensions 
-    tar xvf ../software/$TKG_CONNECTIVITY
-    ca_cert=$(cat /tmp/hatbor-tls.pem) 
-    sed -i "s/  enabled:.*$/  enabled: \"true\"/g" manifests/tanzu-registry/values.yaml
-    sed -i "s/  dnsOverride:.*$/  dnsOverride: \"false\"/g" manifests/tanzu-registry/values.yaml
-    sed -i "s/  fqdn:.*$/  fqdn: \"$DNS_HARBOR\"/g" manifests/tanzu-registry/values.yaml
-    sed -i "s/  vip:.*$/  vip: \"1.2.3.4\"/g" manifests/tanzu-registry/values.yaml
-    sed -i "s/  bootstrapProxy:.*$/  bootstrapProxy: \"true\"/g" manifests/tanzu-registry/values.yaml
-    sed -i "s/  rootCA:.*$/  rootCA: \"$ca_cert\"/g" manifests/tanzu-registry/values.yaml
-
-    kubectl config use-context $con > /dev/null 2>&1
-    ytt --ignore-unknown-comments -f manifests/tanzu-registry | kubectl apply -f -  > /dev/null 2>&1
-    ytt -f manifests/tkg-connectivity-operator | kubectl apply -f - > /dev/null 2>&1
-
-    kubectl config use-context $TDH_TKGWC_NAME-admin@$TDH_TKGWC_NAME > /dev/null 2>&1
-    kubectl -n tanzu-system-registry annotate httpproxy harbor-httpproxy connectivity.tanzu.vmware.com/vip=1.2.3.4 > /dev/null 2>&1
-    kubectl -n tanzu-system-registry label httpproxy harbor-httpproxy connectivity.tanzu.vmware.com/export= > /dev/null 2>&1
-
-    pip=$(kubectl get svc envoy -n tanzu-system-ingress -o jsonpath='{.status.loadBalancer.ingress[0]}' | jq -r '.ip')
-    #route53setDNSrecord "$pip" "JUMP_HOST" "$AWS_HOSTED_DNS_DOMAIN"
-  fi
-
-
-echo gaga10
-#gaga
-
-    #kubectl apply -f extensions/tkg-extensions-v1.2.0+vmware.1/registry/harbor/harbor.ingress.yaml
-    #curl http://harbor.apps-tdh-1.vstkg.pcfsdu.com/api/v2.0/systeminfo/getcert | base64 --decode | openssl x509 -text -noout
-
-    kubectl config use-context $TDH_TKGWC_NAME-admin@$TDH_TKGWC_NAME > /dev/null 2>&1
-    pip=$(kubectl get svc envoy -n tanzu-system-ingress -o jsonpath='{.status.loadBalancer.ingress[0]}' | jq -r '.ip')
-    messagePrint "- LoadBalancer PublicIP:" "$pip"
-    messagePrint "- Create DNS Entry for:" "$DNS_HARBOR"
-    messagePrint "- Create DNS Entry for:" "$DNS_NOTARY"
-    setDNSrecord "$pip" "${TDH_TKGMC_ENVNAME}" "${AWS_HOSTED_DNS_DOMAIN}" "harbor"
-    setDNSrecord "$pip" "${TDH_TKGMC_ENVNAME}" "${AWS_HOSTED_DNS_DOMAIN}" "notary.harbor"
-fi
-
-if [ "${TDH_TKGWC_TBS}" == "true" ]; then
-  messageTitle "Installing Tanzu Build Service"
-  if [ ! -x /usr/local/bin/kp ]; then
-    sudo cp $TDHPATH/software/kp-linux-0.1.3 /usr/local/bin/kp
-    sudo chmod 777 /usr/local/bin/kp
-  fi
-
-  TBS_FILE=$(ls -1tr $TDHPATH/software/build-service-*.tar | tail -1)
-  [ -d /tmp/build-service ] && rm -rf /tmp/build-service 
-  mkdir /tmp/build-service
-  tar xf $TBS_FILE -C /tmp/build-service
-
-  kubectl config use-context $TDH_TKGWC_NAME-admin@$TDH_TKGWC_NAME > /dev/null 2>&1
-
-  if [ "$PCF_REGISTRY_NAME" == "" -o "$PCF_REGISTRA_USER" == "" -o "$PCF_REGISTRA_PASS" == "" ]; then
-    if [ "$PCF_REGISTRY_NAME" == "" ]; then 
-      echo "ERROR: Variable PCF_REGISTRY_NAME has not been set in ~/.tanzu-demo-hub.cfg"; exit
-    fi
-
-    if [ "$PCF_REGISTRA_USER" == "" ]; then 
-      echo "ERROR: Variable PCF_REGISTRY_USER has not been set in ~/.tanzu-demo-hub.cfg"; exit
-    fi
-
-    if [ "$PCF_REGISTRA_PASS" == "" ]; then 
-      echo "ERROR: Variable PCF_REGISTRA_PASS has not been set in ~/.tanzu-demo-hub.cfg"; exit
-    fi
-  else
-    # --- TESTING REGISTRY ---
-    docker login $PCF_REGISTRY_NAME -u $PCF_REGISTRA_USER -p $PCF_REGISTRA_PASS > /dev/null 2>&1
-    if [ $? -ne 0 ]; then
-      echo "ERROR: Docker login does not work"
-      echo "       => docker login $PCF_REGISTRY_NAME -u $PCF_REGISTRA_USER -p $PCF_REGISTRA_PASS"; exit
-    fi
-
-    # --- TESTING REGISTRY ---
-    docker login $DNS_HARBOR -u admin -p $HARBOR_PASS > /dev/null 2>&1
-    if [ $? -ne 0 ]; then  
-      echo "ERROR: Docker login does not work 1"
-      echo "       => docker login $DNS_HARBOR -u admin -p $HARBOR_PASS"; exit
-    fi
-  fi
-
-  messagePrint "- Relocate the images" "$PCF_REGISTRY_NAME/library/build-service"
-  kbld relocate -f /tmp/images.lock --lock-output /tmp/images-relocated.lock --repository $DNS_HARBOR/library/build-service > /dev/null 2>&1
-  if [ $? -ne 0 ]; then  
-    echo "ERROR: Image Relocation faied"
-    echo "       => kbld relocate -f /tmp/images.lock --lock-output /tmp/images-relocated.lock \\"
-    echo "          --repository $DNS_HARBOR/library/build-service"; exit
-  fi
-
-  cnt=$(kubectl get namespace kpack build-service 2>/dev/null | egrep -c "kpack|build-service")
-  if [ $cnt -ne 2 ]; then 
-    messagePrint "- Install Build Service" ""
-    echo "-----------------------------------------------------------------------------------------------------------"
-    ret=1; cnt=0
-    while [ $ret -ne 0 -a $cnt -lt 5 ]; do
-      ytt -f /tmp/build-service/values.yaml \
-          -f /tmp/build-service/manifests/ \
-          -v docker_repository="$DNS_HARBOR/library/build-service" \
-          -v docker_username="admin" \
-          -v docker_password="$HARBOR_PASS" \
-          | kbld -f /tmp/images-relocated.lock -f- \
-          | kapp deploy -a tanzu-build-service -f- -y > /dev/null 2>&1; ret=$?
-        let cnt=cnt+1
-      done
-    echo "-----------------------------------------------------------------------------------------------------------"
-
-    if [ $ret -ne 0 ]; then
-      echo "ERROR: Installing Build Service"
-      echo "       => ytt -f /tmp/build-service/values.yaml \\"
-      echo "          -f /tmp/build-service/manifests/ \\"
-      echo "          -v docker_repository=\"$DNS_HARBOR/library/build-service\" \\"
-      echo "          -v docker_username=\"admin\" \\"
-      echo "          -v docker_password=\"$HARBOR_PASS\" \\"
-      echo "          | kbld -f /tmp/images-relocated.lock -f- \\"
-      echo "          | kapp deploy -a tanzu-build-service -f- -y"
-    fi
-
-    kp clusterbuilder list
-    echo "-----------------------------------------------------------------------------------------------------------"
-  fi
-
-  fil=$(ls -1 software/tbs/descriptor-* | tail -1)
-  messagePrint "- Import Tanzu Build Service Dependencies" "$fil"
-  kp import -f $fil
-  if [ $? -ne 0 ]; then
-    echo "ERROR: Install dependancies"
-   echo "       => kp import -f $fil"; exit
-  fi
-fi
-
-exit
-echo gugu
-hostname
-echo "$SCP_COMMAND ${SSH_USER}@${SSH_HOST}:"
-    $SCP_COMMAND ${SSH_USER}@${SSH_HOST}:/home/ubuntu/.tanzu-demo-hub/tkg-mc-vsphere-dev.kubeconfig \
-          ${HOME}/.tanzu-demo-hub/tkg-mc-vsphere-dev.kubeconfig
-    tkg get credentials $TDH_TKGWC_NAME > /dev/null 2>&1
-echo gaga
-
-
-    #scp -i ~/.tanzu-demo-hub/KKeyPair-vSphere.pub ubuntu@jump.corelab.com:/home/ubuntu/.tanzu-demo-hub/tkg-mc-vsphere-dev.kubeconfig ${HOME}/.tanzu-demo-hub/tkg-mc-vsphere-dev.kubeconfig
-
-exit
-
-echo "PIP:$pip"
-#setTKGclusterDNS "$TDH_TKGWC_NAME" "${ipa}" "apps"
-
-echo "CON:$con"
 
 
 exit
