@@ -185,8 +185,13 @@ for n in $TDH_TKGMC_TKG_IMAGES; do
 
     src=$(govc find -name "${nam}*" | tail -1)
     vmn=$(govc find -name "${nam}*" | tail -1 | awk -F'/' '{ print $NF }')
+
+    src=$(govc ls /${VSPHERE_DATACENTER}/vm/Templates/ | grep "$nam" | tail -1)
+    vmn=$(govc ls /${VSPHERE_DATACENTER}/vm/Templates/ | grep "$nam" | tail -1 | awk -F'/' '{ print $NF }')
     #govc vm.clone -template=true -vm /${VSPHERE_DATACENTER}/vm/${vmn} -folder=Templates -force=true ${vmn} > /dev/null 2>&1
     #govc vm.clone -template=true -vm /${VSPHERE_DATACENTER}/vm/${vmn} -folder=Templates -force=true ${vmn} 
+echo "SRC:$src"
+echo "VMN:$vmn"
 
 echo "govc vm.clone -template=true -vm /${VSPHERE_DATACENTER}/vm/${vmn} -folder=Templates -force=true ${vmn}"
     govc vm.clone -template=true -vm /${VSPHERE_DATACENTER}/vm/${vmn} -folder=Templates -force=true ${vmn} 
