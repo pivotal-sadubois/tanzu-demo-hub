@@ -158,7 +158,7 @@ for n in $TDH_TKGMC_TKG_IMAGES; do
 
   cnt=$(govc ls /${VSPHERE_DATACENTER}/vm/Templates/ | grep -c "$nam")
 
-echo "---------------------------------------------------
+echo "---------------------------------------------------"
 echo "CNT:$cnt NAM:$nam VER:$ver"
 
   if [ $cnt -eq 0 ]; then
