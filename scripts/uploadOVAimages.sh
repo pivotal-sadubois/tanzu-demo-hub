@@ -179,6 +179,7 @@ echo "CNT:$cnt NAM:$nam VER:$ver"
     rm -f nohup
 
     if [ $ret -ne 0 ]; then
+      OVFOPTS="-q --overwrite --skipManifestCheck --noDestinationSSLVerify --noSourceSSLVerify --acceptAllEulas --network="$VSPHERE_NETWORK" --datastore="$VSPHERE_DATASTORE" --vmFolder Templates"
       echo "ERROR: failed to upload image: $n after $cnt attempts"
       echo "       => echo $VSPHERE_VCENTER_PASSWORD | $OVFTOOL $OVFOPTS tanzu-demo-hub/software/${n} $OVFCONN"
       messageLine; cat /tmp/log; messageLine
