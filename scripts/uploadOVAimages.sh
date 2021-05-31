@@ -167,6 +167,7 @@ echo "CNT:$cnt NAM:$nam VER:$ver"
     while [ $ret -ne 0 -a $cnt -lt 5 ]; do
       echo $VSPHERE_VCENTER_PASSWORD | /usr/bin/ovftool -q --overwrite --skipManifestCheck --noDestinationSSLVerify \
           --noSourceSSLVerify --acceptAllEulas --network="$VSPHERE_NETWORK" --datastore="$VSPHERE_DATASTORE" \
+          --vmFolder Templates \
           "tanzu-demo-hub/software/${n}" \
           "vi://${VSPHERE_VCENTER_ADMIN}@${VSPHERE_VCENTER_SERVER}/${VSPHERE_DATACENTER}/host/${VSPHERE_CLUSTER}" > /dev/null 2>&1; ret=$?
       [ $ret -eq 0 ] && break
@@ -191,12 +192,17 @@ echo "CNT:$cnt NAM:$nam VER:$ver"
     vmn=$(govc ls /${VSPHERE_DATACENTER}/vm/Templates/ | grep "$nam" | tail -1 | awk -F'/' '{ print $NF }')
     #govc vm.clone -template=true -vm /${VSPHERE_DATACENTER}/vm/${vmn} -folder=Templates -force=true ${vmn} > /dev/null 2>&1
     #govc vm.clone -template=true -vm /${VSPHERE_DATACENTER}/vm/${vmn} -folder=Templates -force=true ${vmn} 
+
+    if [ "$vmn" != "" ]; then 
 echo "SRC:$src"
 echo "VMN:$vmn"
 
 echo "govc vm.clone -template=true -vm /${VSPHERE_DATACENTER}/vm/${vmn} -folder=Templates -force=true ${vmn}"
-    govc vm.clone -template=true -vm /${VSPHERE_DATACENTER}/vm/${vmn} -folder=Templates -force=true ${vmn} 
-    govc vm.destroy /${VSPHERE_DATACENTER}/vm/${vmn}
+      govc vm.clone -template=true -vm /${VSPHERE_DATACENTER}/vm/${vmn} -folder=Templates -force=true ${vmn} 
+      govc vm.destroy /${VSPHERE_DATACENTER}/vm/${vmn}
+    else
+      echo "OFA Image: $src not found, ignoring"
+    fi
   else
     stt="already uploaded"
   fi
