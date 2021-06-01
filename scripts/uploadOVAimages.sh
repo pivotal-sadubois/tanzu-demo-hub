@@ -111,7 +111,7 @@ fi
 
 
 cnt=0; rm -f /tmp/vmwlist.txt; rec=0
-while [ $rec -gt 3  -a $cnt -lt 5 ]; do
+while [ $rec -gt 3 -a $cnt -lt 5 ]; do
   vmw-cli ls vmware_tanzu_kubernetes_grid 2>/dev/null > /tmp/vmwlist.txt
   rec=$(egrep -c "photon|ubuntu" /tmp/vmwlist.txt) 
   [ $rec -gt 3 ] && break
@@ -122,7 +122,7 @@ done
 
 vmwpth=$(vmw-cli ls vmware_tanzu_kubernetes_grid 2>/dev/null | egrep "^photon" | sort -n | awk '{ print $1 }' | tail -3) 
 vmwubt=$(vmw-cli ls vmware_tanzu_kubernetes_grid 2>/dev/null | egrep "^ubuntu" | sort -n | awk '{ print $1 }' | tail -3) 
-vmwlist="${vmwpth} ${vmwubt}
+vmwlist="${vmwpth} ${vmwubt}"
 
 echo "vmwpth:$vmwpth"
 echo "vmwubt:$vmwubt"
