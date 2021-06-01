@@ -187,8 +187,8 @@ for n in $TDH_TKGMC_TKG_IMAGES; do
       messageLine; cat /tmp/log; messageLine
       exit
     fi
-  done
-
+  fi
+done
 exit
 
     src=$(govc find -name "${nam}*" | tail -1)
