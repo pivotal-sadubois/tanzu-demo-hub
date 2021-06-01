@@ -6,6 +6,7 @@
 # Description ..: Tanzu Demo Hub - Deploy TKG Management Cluster
 # ############################################################################################
 
+if [ "$DEBUG" == "" ]; then DEBUG=0; fi
 export TANZU_DEMO_HUB=$(cd "$(pwd)/$(dirname $0)/.."; pwd)
 export TDHPATH=$(cd "$(pwd)/$(dirname $0)/.."; pwd)
 export DEPLOY_TKG_TEMPLATE=$1
@@ -68,13 +69,15 @@ export GOVC_DATASTORE=$VSPHERE_DATASTORE
 export GOVC_NETWORK="$VSPHERE_NETWORK"
 export GOVC_RESOURCE_POOL=/${VSPHERE_DATACENTER}/host/${VSPHERE_CLUSTER}/Resources
 
-echo "GOVC_INSECURE=1"
-echo "GOVC_URL=https://${VSPHERE_VCENTER_SERVER}/sdk"
-echo "GOVC_USERNAME=$VSPHERE_VCENTER_ADMIN"
-echo "GOVC_PASSWORD=$VSPHERE_VCENTER_PASSWORD"
-echo "GOVC_DATASTORE=$VSPHERE_DATASTORE"
-echo "GOVC_NETWORK="$VSPHERE_NETWORK""
-echo "GOVC_RESOURCE_POOL=/${VSPHERE_DATACENTER}/host/${VSPHERE_CLUSTER}/Resources"
+if [ $DEBUG -eq 1 ]; then 
+  echo "GOVC_INSECURE=1"
+  echo "GOVC_URL=https://${VSPHERE_VCENTER_SERVER}/sdk"
+  echo "GOVC_USERNAME=$VSPHERE_VCENTER_ADMIN"
+  echo "GOVC_PASSWORD=$VSPHERE_VCENTER_PASSWORD"
+  echo "GOVC_DATASTORE=$VSPHERE_DATASTORE"
+  echo "GOVC_NETWORK="$VSPHERE_NETWORK""
+  echo "GOVC_RESOURCE_POOL=/${VSPHERE_DATACENTER}/host/${VSPHERE_CLUSTER}/Resources"
+fi
 
 OVFTOOL="/usr/bin/ovftool --skipManifestCheck --noDestinationSSLVerify --noSourceSSLVerify --acceptAllEulas"
 OVFTOOL="/usr/bin/ovftool -q --overwrite --skipManifestCheck --noDestinationSSLVerify --noSourceSSLVerify --acceptAllEulas"
@@ -99,7 +102,10 @@ fi
 
 messageTitle "Verify Software Downloads from http://my.vmware.com"
 vmw-cli ls vmware_tanzu_kubernetes_grid > /dev/null 2>&1
-vmw-cli ls vmware_tanzu_kubernetes_grid
+
+if [ $DEBUG -eq 1 ]; then 
+  vmw-cli ls vmware_tanzu_kubernetes_grid
+fi
 
 cnt=0
 vmwlist=$(vmw-cli ls vmware_tanzu_kubernetes_grid 2>/dev/null | egrep "^photon|ubuntu" | awk '{ print $1 }')
@@ -163,11 +169,16 @@ for n in $TDH_TKGMC_TKG_IMAGES; do
     stt="uploaded"
     cnt=0; ret=1
     while [ $ret -ne 0 -a $cnt -lt 5 ]; do
+#      echo $VSPHERE_VCENTER_PASSWORD | /usr/bin/ovftool -q --overwrite --skipManifestCheck --noDestinationSSLVerify \
+#          --noSourceSSLVerify --acceptAllEulas --network="$VSPHERE_NETWORK" --datastore="$VSPHERE_DATASTORE" \
+#          --vmFolder Templates \
+#          "tanzu-demo-hub/software/${n}" \
+#          "vi://${VSPHERE_VCENTER_ADMIN}@${VSPHERE_VCENTER_SERVER}/${VSPHERE_DATACENTER}/host/${VSPHERE_CLUSTER}" > /dev/null 2>&1; ret=$?
       echo $VSPHERE_VCENTER_PASSWORD | /usr/bin/ovftool -q --overwrite --skipManifestCheck --noDestinationSSLVerify \
           --noSourceSSLVerify --acceptAllEulas --network="$VSPHERE_NETWORK" --datastore="$VSPHERE_DATASTORE" \
           --vmFolder Templates \
           "tanzu-demo-hub/software/${n}" \
-          "vi://${VSPHERE_VCENTER_ADMIN}@${VSPHERE_VCENTER_SERVER}/${VSPHERE_DATACENTER}/host/${VSPHERE_CLUSTER}" > /dev/null 2>&1; ret=$?
+          "vi://${VSPHERE_VCENTER_ADMIN}@${VSPHERE_VCENTER_SERVER}/${VSPHERE_DATACENTER}/host/${VSPHERE_CLUSTER}"; ret=$?
       [ $ret -eq 0 ] && break
       let cnt=cnt+1
       sleep 30
@@ -195,10 +206,11 @@ for n in $TDH_TKGMC_TKG_IMAGES; do
     if [ "$vmn" != "" ]; then 
       # --- UNREGISTER OLD VM FIRST ---
       govc vm.unregister /Datacenter/vm/Templates/$nam > /dev/null 2>&1
+govc vm.unregister /Datacenter/vm/Templates/ubuntu-2004-kube-v1.20.5+vmware.2
 
 #echo "govc vm.clone -template=true -vm /${VSPHERE_DATACENTER}/vm/Templates/${vmn} -folder=Templates -force=true ${vmn}"
       govc vm.clone -template=true -vm /${VSPHERE_DATACENTER}/vm/Templates/${vmn} -folder=Templates -force=true ${vmn} 
-      govc vm.destroy /${VSPHERE_DATACENTER}/vm/${vmn}
+      govc vm.destroy /${VSPHERE_DATACENTER}/vm/Templates/${vmn}
     else
       echo "OFA Image: $src not found, ignoring"
     fi
