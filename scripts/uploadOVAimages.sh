@@ -118,6 +118,8 @@ while [ "$vmwlist" == "" -a $cnt -lt 5 ]; do
 done
 
 for file in $vmwlist; do
+echo "FILE:$file"
+echi "$TDHPATH/software/$file"
   if [ ! -f $TDHPATH/software/$file ]; then
     messagePrint " ▪ Download Photon Image:"                        "$file"
 
@@ -142,8 +144,12 @@ for file in $vmwlist; do
     else
       mv $file $TDHPATH/software
     fi
+  else
+echo gaga
   fi
 done
+
+exit
 
 # --- TEST GOVC CONNECTION ---
 govc vm.info $(echo $VSPHERE_VCENTER_SERVER | awk -F. '{ print $1 }') > /dev/null 2>&1; ret=$?
