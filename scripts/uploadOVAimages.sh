@@ -209,13 +209,13 @@ for n in $TDH_TKGMC_TKG_IMAGES; do
 done
 
 for n in $(govc ls /${VSPHERE_DATACENTER}/vm/Upload | awk -F'/' '{ print $NF }'); do
-  echo "N:$n"
+  src=$n
+  vmn=$(echo "$n" | awk -F'/' '{ print $NF }')
+  echo "N:$a SRC:$src NAM:$namn"
 
 done
 exit
 
-    src=$(govc find -name "${nam}*" | tail -1)
-    vmn=$(govc find -name "${nam}*" | tail -1 | awk -F'/' '{ print $NF }')
 
     src=$(govc ls /${VSPHERE_DATACENTER}/vm/Templates/ | grep "$nam" | tail -1)
     vmn=$(govc ls /${VSPHERE_DATACENTER}/vm/Templates/ | grep "$nam" | tail -1 | awk -F'/' '{ print $NF }')
