@@ -174,11 +174,21 @@ for n in $TDH_TKGMC_TKG_IMAGES; do
 #          --vmFolder Templates \
 #          "tanzu-demo-hub/software/${n}" \
 #          "vi://${VSPHERE_VCENTER_ADMIN}@${VSPHERE_VCENTER_SERVER}/${VSPHERE_DATACENTER}/host/${VSPHERE_CLUSTER}" > /dev/null 2>&1; ret=$?
+echo gaga1
+echo "echo $VSPHERE_VCENTER_PASSWORD | /usr/bin/ovftool -q --overwrite --skipManifestCheck --noDestinationSSLVerify \
+          --noSourceSSLVerify --acceptAllEulas --network=\"$VSPHERE_NETWORK\" --datastore=\"$VSPHERE_DATASTORE\" \
+          --vmFolder Templates \
+          \"tanzu-demo-hub/software/${n}\" \
+          \"vi://${VSPHERE_VCENTER_ADMIN}@${VSPHERE_VCENTER_SERVER}/${VSPHERE_DATACENTER}/host/${VSPHERE_CLUSTER}\""
+echo gaga2
+
+
       echo $VSPHERE_VCENTER_PASSWORD | /usr/bin/ovftool -q --overwrite --skipManifestCheck --noDestinationSSLVerify \
           --noSourceSSLVerify --acceptAllEulas --network="$VSPHERE_NETWORK" --datastore="$VSPHERE_DATASTORE" \
           --vmFolder Templates \
           "tanzu-demo-hub/software/${n}" \
           "vi://${VSPHERE_VCENTER_ADMIN}@${VSPHERE_VCENTER_SERVER}/${VSPHERE_DATACENTER}/host/${VSPHERE_CLUSTER}"; ret=$?
+echo gaga3
       [ $ret -eq 0 ] && break
       let cnt=cnt+1
       sleep 30
