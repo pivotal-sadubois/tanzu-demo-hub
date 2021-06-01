@@ -199,6 +199,11 @@ for n in $TDH_TKGMC_TKG_IMAGES; do
     fi
   fi
 done
+
+for n in $(govc ls /${VSPHERE_DATACENTER}/vm/Upload | awk -F'/' '{ print $NF }')
+  echo "N:$n"
+
+done
 exit
 
     src=$(govc find -name "${nam}*" | tail -1)
