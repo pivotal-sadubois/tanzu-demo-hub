@@ -150,9 +150,17 @@ if [ $ret -ne 0 ]; then
   echo "       => govc vm.info $(echo $VSPHERE_VCENTER_SERVER | awk -F. '{ print $1 }')"; exit
 fi
 
-messageTitle "Create Folder /$VSPHERE_DATACENTER/vm/Templates)"
-govc folder.create /$VSPHERE_DATACENTER/vm/Templates > /dev/null 2>&1
-govc folder.create /$VSPHERE_DATACENTER/vm/Upload > /dev/null 2>&1
+cnt=$(govc ls /$VSPHERE_DATACENTER/vm | grep -c Templates) 
+if [ $cnt -gt 0 ]; then 
+  messageTitle "Create Folder /$VSPHERE_DATACENTER/vm/Templates)"
+  govc folder.create /$VSPHERE_DATACENTER/vm/Templates > /dev/null 2>&1
+fi
+
+cnt=$(govc ls /$VSPHERE_DATACENTER/vm | grep -c Upload) 
+if [ $cnt -gt 0 ]; then 
+  messageTitle "Create Folder /$VSPHERE_DATACENTER/vm/Upload)"
+  govc folder.create /$VSPHERE_DATACENTER/vm/Upload > /dev/null 2>&1
+fi
 
 messageTitle "Uploading OVS Images to vSphere"
 TDH_TKGMC_TKG_IMAGES=$(ls -1 $TDHPATH/software/phot* $TDHPATH/software/ubuntu* | awk -F'/' '{ print $NF }') 
