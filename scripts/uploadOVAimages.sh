@@ -124,12 +124,6 @@ vmwpth=$(vmw-cli ls vmware_tanzu_kubernetes_grid 2>/dev/null | egrep "^photon" |
 vmwubt=$(vmw-cli ls vmware_tanzu_kubernetes_grid 2>/dev/null | egrep "^ubuntu" | sort -n | awk '{ print $1 }' | tail -3) 
 vmwlist="${vmwpth} ${vmwubt}"
 
-echo "vmwpth:$vmwpth"
-echo "vmwubt:$vmwubt"
-echo $vmwlist
-
-exit
-
 for file in $vmwlist; do
   if [ ! -f $TDHPATH/software/$file ]; then
     messagePrint " ▪ Download Photon Image:"                        "$file"
