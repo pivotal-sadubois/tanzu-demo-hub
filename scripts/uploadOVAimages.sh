@@ -203,7 +203,7 @@ echo "govc vm.unregister /Datacenter/vm/Templates/$nam "
       govc vm.unregister /Datacenter/vm/Templates/$nam > /dev/null 2>&1
 
 echo gaga2
-#echo "govc vm.clone -template=true -vm /${VSPHERE_DATACENTER}/vm/Templates/${vmn} -folder=Templates -force=true ${vmn}"
+echo "govc vm.clone -template=true -vm /${VSPHERE_DATACENTER}/vm/Templates/${vmn} -folder=Templates -force=true ${vmn}"
       govc vm.clone -template=true -vm /${VSPHERE_DATACENTER}/vm/Templates/${vmn} -folder=Templates -force=true ${vmn} 
 echo gaga3
       govc vm.destroy /${VSPHERE_DATACENTER}/vm/Templates/${vmn} > /dev/null 2>&1
