@@ -152,6 +152,7 @@ fi
 
 messageTitle "Create Folder /$VSPHERE_DATACENTER/vm/Templates)"
 govc folder.create /$VSPHERE_DATACENTER/vm/Templates > /dev/null 2>&1
+govc folder.create /$VSPHERE_DATACENTER/vm/Upload > /dev/null 2>&1
 
 messageTitle "Uploading OVS Images to vSphere"
 TDH_TKGMC_TKG_IMAGES=$(ls -1 $TDHPATH/software/phot* $TDHPATH/software/ubuntu* | awk -F'/' '{ print $NF }') 
@@ -169,7 +170,7 @@ for n in $TDH_TKGMC_TKG_IMAGES; do
     while [ $ret -ne 0 -a $cnt -lt 5 ]; do
       echo $VSPHERE_VCENTER_PASSWORD | /usr/bin/ovftool -q --overwrite --skipManifestCheck --noDestinationSSLVerify \
           --noSourceSSLVerify --acceptAllEulas --network="$VSPHERE_NETWORK" --datastore="$VSPHERE_DATASTORE" \
-          --vmFolder=Templates \
+          --vmFolder=Upload \
           "tanzu-demo-hub/software/${n}" \
           "vi://${VSPHERE_VCENTER_ADMIN}@${VSPHERE_VCENTER_SERVER}/${VSPHERE_DATACENTER}/host/${VSPHERE_CLUSTER}" > /dev/null 2>&1; ret=$?
       [ $ret -eq 0 ] && break
@@ -181,7 +182,6 @@ for n in $TDH_TKGMC_TKG_IMAGES; do
     rm -f nohup
 
     if [ $ret -ne 0 ]; then
-      OVFOPTS="-q --overwrite --skipManifestCheck --noDestinationSSLVerify --noSourceSSLVerify --acceptAllEulas --network=\"$VSPHERE_NETWORK\" --datastore="$VSPHERE_DATASTORE" --vmFolder=Templates"
       echo "ERROR: failed to upload image: $n after $cnt attempts"
       echo "       => echo $VSPHERE_VCENTER_PASSWORD | $OVFTOOL $OVFOPTS tanzu-demo-hub/software/${n} $OVFCONN"
       messageLine; cat /tmp/log; messageLine
@@ -201,12 +201,13 @@ for n in $TDH_TKGMC_TKG_IMAGES; do
 echo gaga1
 echo "govc vm.unregister /Datacenter/vm/Templates/$nam "
       govc vm.unregister /Datacenter/vm/Templates/$nam > /dev/null 2>&1
+      govc vm.unregister /Datacenter/vm/Upload/$nam > /dev/null 2>&1
 
 echo gaga2
-echo "govc vm.clone -template=true -vm /${VSPHERE_DATACENTER}/vm/Templates/${vmn} -folder=Templates -force=true ${vmn}"
-      govc vm.clone -template=true -vm /${VSPHERE_DATACENTER}/vm/Templates/${vmn} -folder=Templates -force=true ${vmn} 
+echo "govc vm.clone -template=true -vm /${VSPHERE_DATACENTER}/vm/Upload/${vmn} -folder=Templates -force=true ${vmn}"
+      govc vm.clone -template=true -vm /${VSPHERE_DATACENTER}/vm/Upload/${vmn} -folder=Templates -force=true ${vmn} 
 echo gaga3
-      govc vm.destroy /${VSPHERE_DATACENTER}/vm/Templates/${vmn} > /dev/null 2>&1
+      govc vm.destroy /${VSPHERE_DATACENTER}/vm/Upload/${vmn} > /dev/null 2>&1
 echo gaga4
     else
       echo "OFA Image: $src not found, ignoring"
