@@ -6,7 +6,7 @@
 # Description ..: Tanzu Demo Hub - Deploy TKG Management Cluster
 # ############################################################################################
 
-if [ "$DEBUG" == "" ]; then DEBUG=0; fi
+if [ "$DEBUG" == "" ]; then DEBUG=1; fi
 export TANZU_DEMO_HUB=$(cd "$(pwd)/$(dirname $0)/.."; pwd)
 export TDHPATH=$(cd "$(pwd)/$(dirname $0)/.."; pwd)
 export DEPLOY_TKG_TEMPLATE=$1
