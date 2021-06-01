@@ -208,7 +208,7 @@ for n in $TDH_TKGMC_TKG_IMAGES; do
   fi
 done
 
-for n in $(govc ls /${VSPHERE_DATACENTER}/vm/Upload | awk -F'/' '{ print $NF }')
+for n in $(govc ls /${VSPHERE_DATACENTER}/vm/Upload | awk -F'/' '{ print $NF }'); do
   echo "N:$n"
 
 done
