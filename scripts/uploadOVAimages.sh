@@ -187,6 +187,9 @@ for n in $TDH_TKGMC_TKG_IMAGES; do
       messageLine; cat /tmp/log; messageLine
       exit
     fi
+  done
+
+exit
 
     src=$(govc find -name "${nam}*" | tail -1)
     vmn=$(govc find -name "${nam}*" | tail -1 | awk -F'/' '{ print $NF }')
@@ -217,7 +220,7 @@ echo gaga4
   fi
 
   messagePrint " - OVA Image: $n"             "$stt"
-done
+#done
 
 # KUBECTL_VSPHERE_PASSWORD
 # kubectl vsphere login --insecure-skip-tls-verify --server wcp.haas-513.pez.vmware.com -u administrator@vsphere.local o
