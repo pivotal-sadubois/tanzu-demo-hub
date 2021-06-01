@@ -210,6 +210,7 @@ echo "WWWWWW $n"
 done
 
 for n in $(govc ls /${VSPHERE_DATACENTER}/vm/Upload | awk -F'/' '{ print $NF }'); do
+echo "N:$n"
   # --- UNREGISTER OLD VM FIRST ---
   govc vm.unregister /Datacenter/vm/Templates/$n > /dev/null 2>&1
 
@@ -218,7 +219,9 @@ echo "govc vm.clone -template=true -vm /${VSPHERE_DATACENTER}/vm/Upload/${n} -fo
   govc vm.clone -template=true -vm /${VSPHERE_DATACENTER}/vm/Upload/${n} -folder=Templates -force=true ${n}
   echo gaga3
 
+echo "govc vm.destroy /${VSPHERE_DATACENTER}/vm/Upload/${n}"
   govc vm.destroy /${VSPHERE_DATACENTER}/vm/Upload/${n} > /dev/null 2>&1 
+echo $?
   echo gaga4
 
 done
