@@ -154,8 +154,6 @@ messageTitle "Create Folder /$VSPHERE_DATACENTER/vm/Templates)"
 govc folder.create /$VSPHERE_DATACENTER/vm/Templates > /dev/null 2>&1
 
 messageTitle "Uploading OVS Images to vSphere"
-echo "TDH_TKGMC_TKG_IMAGES:$TDH_TKGMC_TKG_IMAGES"
-
 TDH_TKGMC_TKG_IMAGES=$(ls -1 $TDHPATH/software/phot* $TDHPATH/software/ubuntu* | awk -F'/' '{ print $NF }') 
 for n in $TDH_TKGMC_TKG_IMAGES; do
   tmp=$(echo $n | sed -e 's/-tkg.*.ova//g')
@@ -200,12 +198,16 @@ for n in $TDH_TKGMC_TKG_IMAGES; do
 
     if [ "$vmn" != "" ]; then 
       # --- UNREGISTER OLD VM FIRST ---
+echo gaga1
+echo "govc vm.unregister /Datacenter/vm/Templates/$nam "
       govc vm.unregister /Datacenter/vm/Templates/$nam > /dev/null 2>&1
-govc vm.unregister /Datacenter/vm/Templates/ubuntu-2004-kube-v1.20.5+vmware.2
 
+echo gaga2
 #echo "govc vm.clone -template=true -vm /${VSPHERE_DATACENTER}/vm/Templates/${vmn} -folder=Templates -force=true ${vmn}"
       govc vm.clone -template=true -vm /${VSPHERE_DATACENTER}/vm/Templates/${vmn} -folder=Templates -force=true ${vmn} 
-      govc vm.destroy /${VSPHERE_DATACENTER}/vm/Templates/${vmn}
+echo gaga3
+      govc vm.destroy /${VSPHERE_DATACENTER}/vm/Templates/${vmn} > /dev/null 2>&1
+echo gaga4
     else
       echo "OFA Image: $src not found, ignoring"
     fi
