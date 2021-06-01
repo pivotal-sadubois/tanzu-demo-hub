@@ -119,9 +119,10 @@ done
 
 for file in $vmwlist; do
 echo "FILE:$file"
-echi "$TDHPATH/software/$file"
+echo "$TDHPATH/software/$file"
   if [ ! -f $TDHPATH/software/$file ]; then
     messagePrint " ▪ Download Photon Image:"                        "$file"
+    rm -f $file > /dev/null
 
     cnt=0
     while [ ! -f "$file" -a $cnt -lt 10 ]; do
