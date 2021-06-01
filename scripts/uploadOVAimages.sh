@@ -6,7 +6,9 @@
 # Description ..: Tanzu Demo Hub - Deploy TKG Management Cluster
 # ############################################################################################
 
-if [ "$DEBUG" == "" ]; then DEBUG=1; fi
+export DEBUG="$2"
+if [ "$DEBUG" == "" ]; then DEBUG=0; fi
+
 export TANZU_DEMO_HUB=$(cd "$(pwd)/$(dirname $0)/.."; pwd)
 export TDHPATH=$(cd "$(pwd)/$(dirname $0)/.."; pwd)
 export DEPLOY_TKG_TEMPLATE=$1
@@ -151,13 +153,13 @@ if [ $ret -ne 0 ]; then
 fi
 
 cnt=$(govc ls /$VSPHERE_DATACENTER/vm | grep -c Templates) 
-if [ $cnt -gt 0 ]; then 
+if [ $cnt -eq 0 ]; then 
   messageTitle "Create Folder /$VSPHERE_DATACENTER/vm/Templates)"
   govc folder.create /$VSPHERE_DATACENTER/vm/Templates > /dev/null 2>&1
 fi
 
 cnt=$(govc ls /$VSPHERE_DATACENTER/vm | grep -c Upload) 
-if [ $cnt -gt 0 ]; then 
+if [ $cnt -eq 0 ]; then 
   messageTitle "Create Folder /$VSPHERE_DATACENTER/vm/Upload)"
   govc folder.create /$VSPHERE_DATACENTER/vm/Upload > /dev/null 2>&1
 fi

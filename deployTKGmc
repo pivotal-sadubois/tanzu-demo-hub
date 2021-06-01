@@ -940,7 +940,7 @@ if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "vSphere" ]; then
     ######################################## TANZU KUBERNETS GRID FOR VPSHERE (TKGm) ########################################
     #########################################################################################################################
 
-    $SSH_COMMAND -n "[ -f $SSH_HOME/tanzu-demo-hub/scripts/uploadOVAimages.sh ] && tanzu-demo-hub/scripts/uploadOVAimages.sh $DEPLOY_TKG_TEMPLATE"
+    $SSH_COMMAND -n "[ -f $SSH_HOME/tanzu-demo-hub/scripts/uploadOVAimages.sh ] && tanzu-demo-hub/scripts/uploadOVAimages.sh $DEPLOY_TKG_TEMPLATE $DEBUG"
 
     docker ps > /dev/null 2>&1
     if [ $? -ne 0 ]; then
