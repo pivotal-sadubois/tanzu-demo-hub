@@ -175,6 +175,7 @@ fi
 messageTitle "Uploading OVS Images to vSphere"
 TDH_TKGMC_TKG_IMAGES=$(ls -1 $TDHPATH/software/phot* $TDHPATH/software/ubuntu* | awk -F'/' '{ print $NF }') 
 for n in $TDH_TKGMC_TKG_IMAGES; do
+echo "WWWWWW $n"
   tmp=$(echo $n | sed -e 's/-tkg.*.ova//g')
   nam=$(echo $tmp | sed -e 's/-vmware.*$//g' -e 's/+vmware.*$//g') 
   ver=$(echo $tmp | sed -e 's/^.*-\(vmware.*\)$/\1/g' -e 's/^.*+\(vmware.*\)$/\1/g')
