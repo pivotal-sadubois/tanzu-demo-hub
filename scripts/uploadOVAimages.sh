@@ -109,13 +109,26 @@ if [ $DEBUG -eq 1 ]; then
   vmw-cli ls vmware_tanzu_kubernetes_grid
 fi
 
-cnt=0
-vmwlist=$(vmw-cli ls vmware_tanzu_kubernetes_grid 2>/dev/null | egrep "^photon|ubuntu" | awk '{ print $1 }')
-while [ "$vmwlist" == "" -a $cnt -lt 5 ]; do
-  vmwlist=$(vmw-cli ls vmware_tanzu_kubernetes_grid 2>/dev/null | egrep "^photon|ubuntu" | awk '{ print $1 }')
+
+cnt=0; rm -f /tmp/vmwlist.txt; rec=0
+while [ $rec -gt 3  -a $cnt -lt 5 ]; do
+  vmw-cli ls vmware_tanzu_kubernetes_grid 2>/dev/null > /tmp/vmwlist.txt
+  rec=$(egrep -c "photon|ubuntu" /tmp/vmwlist.txt) 
+  [ $rec -gt 3 ] && break
+
   let cnt=cnt+1
   sleep 10
 done
+
+vmwpth=$(vmw-cli ls vmware_tanzu_kubernetes_grid 2>/dev/null | egrep "^photon" | sort -n | awk '{ print $1 }' | tail -3) 
+vmwubt=$(vmw-cli ls vmware_tanzu_kubernetes_grid 2>/dev/null | egrep "^ubuntu" | sort -n | awk '{ print $1 }' | tail -3) 
+vmwlist="${vmwpth} ${vmwubt}
+
+echo "vmwpth:$vmwpth"
+echo "vmwubt:$vmwubt"
+echo $vmwlist
+
+exit
 
 for file in $vmwlist; do
   if [ ! -f $TDHPATH/software/$file ]; then
