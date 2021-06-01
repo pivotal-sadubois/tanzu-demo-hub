@@ -209,9 +209,14 @@ for n in $TDH_TKGMC_TKG_IMAGES; do
 done
 
 for n in $(govc ls /${VSPHERE_DATACENTER}/vm/Upload | awk -F'/' '{ print $NF }'); do
-  src=$n
-  vmn=$(echo "$n" | awk -F'/' '{ print $NF }')
-  echo "N:$a SRC:$src NAM:$namn"
+  # --- UNREGISTER OLD VM FIRST ---
+  govc vm.unregister /Datacenter/vm/Templates/$nam > /dev/null 2>&1
+
+  echo gaga2
+echo "govc vm.clone -template=true -vm /${VSPHERE_DATACENTER}/vm/Upload/${vmn} -folder=Templates -force=true ${vmn}"
+  govc vm.clone -template=true -vm /${VSPHERE_DATACENTER}/vm/Upload/${vmn} -folder=Templates -force=true ${vmn}
+
+  govc vm.destroy /${VSPHERE_DATACENTER}/vm/Upload/${vmn} > /dev/null 2>&1 
 
 done
 exit
