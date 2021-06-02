@@ -175,7 +175,6 @@ fi
 messageTitle "Uploading OVS Images to vSphere"
 TDH_TKGMC_TKG_IMAGES=$(ls -1 $TDHPATH/software/phot* $TDHPATH/software/ubuntu* | awk -F'/' '{ print $NF }') 
 for n in $TDH_TKGMC_TKG_IMAGES; do
-echo "WWWWWW $n"
   tmp=$(echo $n | sed -e 's/-tkg.*.ova//g')
   nam=$(echo $tmp | sed -e 's/-vmware.*$//g' -e 's/+vmware.*$//g') 
   ver=$(echo $tmp | sed -e 's/^.*-\(vmware.*\)$/\1/g' -e 's/^.*+\(vmware.*\)$/\1/g')
@@ -210,54 +209,11 @@ echo "WWWWWW $n"
 done
 
 for n in $(govc ls /${VSPHERE_DATACENTER}/vm/Upload | awk -F'/' '{ print $NF }'); do
-echo "N:$n"
   # --- UNREGISTER OLD VM FIRST ---
   govc vm.unregister /Datacenter/vm/Templates/$n > /dev/null 2>&1
-
-  echo gaga2
-echo "govc vm.clone -template=true -vm /${VSPHERE_DATACENTER}/vm/Upload/${n} -folder=Templates -force=true ${n}"
-  govc vm.clone -template=true -vm /${VSPHERE_DATACENTER}/vm/Upload/${n} -folder=Templates -force=true ${n}
-  echo gaga3
-
-echo "govc vm.destroy /${VSPHERE_DATACENTER}/vm/Upload/${n}"
+  govc vm.clone -template=true -vm /${VSPHERE_DATACENTER}/vm/Upload/${n} -folder=Templates -force=true ${n} > /dev/null 2>&1
   govc vm.destroy /${VSPHERE_DATACENTER}/vm/Upload/${n} > /dev/null 2>&1 
-echo $?
-  echo gaga4
-
 done
-exit
-
-
-    src=$(govc ls /${VSPHERE_DATACENTER}/vm/Templates/ | grep "$nam" | tail -1)
-    vmn=$(govc ls /${VSPHERE_DATACENTER}/vm/Templates/ | grep "$nam" | tail -1 | awk -F'/' '{ print $NF }')
-    #govc vm.clone -template=true -vm /${VSPHERE_DATACENTER}/vm/${vmn} -folder=Templates -force=true ${vmn} > /dev/null 2>&1
-    #govc vm.clone -template=true -vm /${VSPHERE_DATACENTER}/vm/${vmn} -folder=Templates -force=true ${vmn} 
-
-    if [ "$vmn" != "" ]; then 
-      # --- UNREGISTER OLD VM FIRST ---
-echo gaga1
-echo "govc vm.unregister /Datacenter/vm/Templates/$nam "
-      govc vm.unregister /Datacenter/vm/Templates/$nam > /dev/null 2>&1
-      govc vm.unregister /Datacenter/vm/Upload/$nam > /dev/null 2>&1
-
-echo gaga2
-echo "govc vm.clone -template=true -vm /${VSPHERE_DATACENTER}/vm/Upload/${vmn} -folder=Templates -force=true ${vmn}"
-      govc vm.clone -template=true -vm /${VSPHERE_DATACENTER}/vm/Upload/${vmn} -folder=Templates -force=true ${vmn} 
-echo gaga3
-      govc vm.destroy /${VSPHERE_DATACENTER}/vm/Upload/${vmn} > /dev/null 2>&1
-echo gaga4
-    else
-      echo "OFA Image: $src not found, ignoring"
-    fi
-  else
-    stt="already uploaded"
-  fi
-
-  messagePrint " - OVA Image: $n"             "$stt"
-#done
-
-# KUBECTL_VSPHERE_PASSWORD
-# kubectl vsphere login --insecure-skip-tls-verify --server wcp.haas-513.pez.vmware.com -u administrator@vsphere.local o
 
 exit
 # govc find | grep photon
