@@ -942,18 +942,30 @@ if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "vSphere" ]; then
 
     $SSH_COMMAND -n "[ -f $SSH_HOME/tanzu-demo-hub/scripts/uploadOVAimages.sh ] && tanzu-demo-hub/scripts/uploadOVAimages.sh $DEPLOY_TKG_TEMPLATE $DEBUG"
 
+    # --- VERIFY IF DOCKER IS RUNNING ---
     docker ps > /dev/null 2>&1
     if [ $? -ne 0 ]; then
       echo "ERROR: Docker Daemon not running"; exit
       exit 1
     fi
 
-    #$TDHPATH/scripts/InstallTKGmc.sh $DEPLOY_TKG_TEMPLATE
-    scripts/InstallTKGmc.sh $DEPLOY_TKG_TEMPLATE $DEBUG
-    if [ $? -ne 0 ]; then
-      echo "ERROR: failed to deploy TKG Management Cluster"
-      exit 1
+    # --- CREATE MANAGEMENT CLUSTER ---
+    [ ! -d ~/.tanzu-demo-hub/config ] && mkdir -p ~/.tanzu-demo-hub/config
+    $SSH_COMMAND -n "[ -f $SSH_HOME/tanzu-demo-hub/scripts/InstallTKGmc.sh ] && tanzu-demo-hub/scripts/InstallTKGmc.sh \"$DEPLOY_TKG_TEMPLATE\" \"$DEBUG\""; ret=$?
+    if [ ${ret} -ne 0 ]; then
+      echo "ERROR: Failed to deploy Management Server on $JUMP_HOST"
+      echo "       => $SSH_DISPLAY -n tanzu-demo-hub/scripts/InstallTKGmc.sh \"$DEPLOY_TKG_TEMPLATE\" \"$DEBUG\""
+      exit
     fi
+
+#    #$TDHPATH/scripts/InstallTKGmc.sh $DEPLOY_TKG_TEMPLATE
+#    scripts/InstallTKGmc.sh $DEPLOY_TKG_TEMPLATE $DEBUG
+#    if [ $? -ne 0 ]; then
+#      echo "ERROR: failed to deploy TKG Management Cluster"
+#      exit 1
+#    fi
+
+#gaga
 exit
   else
     #########################################################################################################################
@@ -1394,3 +1406,4 @@ fi
 
 exit
 
+tanzu management-cluster create -y --file vs1.yaml 

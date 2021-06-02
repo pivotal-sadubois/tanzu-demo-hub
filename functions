@@ -1797,6 +1797,21 @@ createCluster() {
   TKG_TEMPLATE=${HOME}/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.yaml; rm -f $TKG_TEMPLATE
   TKG_KUBECONFIG=${HOME}/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.kubeconfig; rm -f $TKG_KUBECONFIG
 
+  if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "vSphere" ]; then
+    messageTitle "Creating TKG Managment Cluster"
+    messagePrint " ▪ Cluster Name"                "$TDH_TKGMC_NAME"
+    messagePrint " ▪ Configuration File"          "\${HOME}/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.yaml"
+    messagePrint " ▪ Control Plane Machine Type"  "$TDH_TKGMC_CONTROL_PLANE_MACHINE_TYPE"
+    messagePrint " ▪ Worker Node Machine Type"    "$TDH_TKGMC_MACHINE_TYPE"
+    messagePrint " ▪ Cluster CIDR"                "$TDH_TKGMC_CLUSTER_CIDR"
+    messagePrint " ▪ Service CIDR"                "$TDH_TKGMC_SERVICE_CIDR"
+    messagePrint " ▪ Health Check Enabled"        "$TDH_TKGMC_MACHINE_HEALTH_CHECK_ENABLED"
+
+echo "gagagagagagag"
+#gaga
+exit
+  fi
+
   if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "AWS" ]; then
     messageTitle "Creating TKG Managment Cluster"
     messagePrint " ▪ Cluster Name"                "$TDH_TKGMC_NAME"
@@ -3136,7 +3151,6 @@ checkTMCAccess() {
      tmc clustergroup create -n tanzu-demo-hub -d "Tanzu Demo Hub by Sacha Dubois" > /dev/null 2>&1
     fi
   fi
-#gaga
 
   if [ "${TDH_DEPLOYMENT_CLOUD}" == "AWS" ]; then
     TMC_ACCOUNT_NAME=$TMC_ACCOUNT_NAME_AWS
@@ -4112,13 +4126,33 @@ InstallContour() {
   if [ $? -ne 0 ]; then
     # --- INSTALL CONTOUR INGRESS ---
     messageTitle "Install Ingress Contour"
+    messagePrint " ▪ Create Namespace" "$NAMESPACE" 
     kubectl create ns $NAMESPACE > /dev/null 2>&1
     helm repo add bitnami https://charts.bitnami.com/bitnami > /dev/null 2>&1
-    helm install ingress bitnami/contour -n $NAMESPACE --version 3.3.1 > /dev/null 2>&1
 
+    messagePrint " ▪ Create Docker secret"  "tdh-docker-repo"
+    kubectl -n $NAMESPACE create secret docker-registry tdh-docker-repo \
+            --docker-server $TDH_REGISTRY_DOCKER_NAME \
+            --docker-username $TDH_REGISTRY_DOCKER_USER \
+            --docker-password $TDH_REGISTRY_DOCKER_PASS
+  
+    messagePrint " ▪ Install Contour Helm Chart" "bitnami/contour"
+    HELM_CONTOUR_VERSION=$(helm search repo bitnami/contour | tail -1 | sed '1d' | awk '{ print $2 }') 
+    messagePrint " ▪ Install Contour Helm Chart Version" "$HELM_CONTOUR_VERSION"
+
+    echo "global:"                                     >  /tmp/contour_values.yaml
+    echo "  imageRegistry: docker.io"                  >> /tmp/contour_values.yaml
+    echo "  imagePullSecrets:"                         >> /tmp/contour_values.yaml
+    echo "    - tdh-docker-repo"                       >> /tmp/contour_values.yaml
+
+
+#gaga
+    #helm install ingress bitnami/contour -n $NAMESPACE --version 3.3.1 > /dev/null 2>&1
+    #helm install ingress bitnami/contour -n $NAMESPACE --version 3.3.1 
+    helm install -f /tmp/contour_values.yaml ingress bitnami/contour -n $NAMESPACE --version $HELM_CONTOUR_VERSION > /dev/null 2>&1
     if [ $? -ne 0 ]; then
       echo "ERROR: failed to install bitnami/contour"
-      echo "       => helm install ingress bitnami/contour -n $NAMESPACE --version 3.3.1"
+      echo "       => helm install -f /tmp/contour_values.yaml ingress bitnami/contour -n $NAMESPACE --version $HELM_CONTOUR_VERSION"
       exit
     fi
 
@@ -4483,15 +4517,36 @@ InstallHarborRegistry() {
     messagePrint " ▪ Harbor TLS Staging Cert"              "$TDH_HARBOR_STAGING_TLS_CERT"
 
     # --- INSTALL CONTOUR INGRESS ---
+    messagePrint " ▪ Create Namespace" "$NAMESPACE"
     kubectl create ns $NAMESPACE > /dev/null 2>&1
     helm uninstall harbor -n $NAMESPACE > /dev/null 2>&1
 
+    messagePrint " ▪ Create Docker secret"  "tdh-docker-repo"
+    kubectl -n $NAMESPACE create secret docker-registry tdh-docker-repo \
+            --docker-server $TDH_REGISTRY_DOCKER_NAME \
+            --docker-username $TDH_REGISTRY_DOCKER_USER \
+            --docker-password $TDH_REGISTRY_DOCKER_PASS > /dev/null 2>&1
+#gaga
+
     # --- COPY SECRET TO NAMESPACE ---
     kubectl get secret tanzu-demo-hub-tls --namespace=default  -oyaml | grep -v '^\s*namespace:\s' | \
-    kubectl apply --namespace=registry-harbor -f -
+    kubectl apply --namespace=$NAMESPACE -f - > /dev/null 2>&1
 
     HARBOR_VALUES=/tmp/harbor_values.yaml
     echo "harborAdminPassword: $TDH_HARBOR_ADMIN_PASSWORD"                                                                      >  $HARBOR_VALUES
+    echo ""                                                                                                                     >> $HARBOR_VALUES
+
+    echo ""                                                                                                                     >> $HARBOR_VALUES
+    echo "global:"                                                                                                              >> $HARBOR_VALUES
+    echo "  imageRegistry: docker.io"                                                                                           >> $HARBOR_VALUES
+    echo "  imagePullSecrets:"                                                                                                  >> $HARBOR_VALUES
+    echo "    - tdh-docker-repo"                                                                                                >> $HARBOR_VALUES
+
+    if [ "${TDH_DEPLOYMENT_CLOUD}" == "vSphere" -a "${TDH_TKGMC_TKG_TYPE}" == "tkgs" ]; then
+      echo "  storageClass: $VSPHERE_TKGS_STORAGE_CLASS"                                                                       >> $HARBOR_VALUES
+    fi
+#gaga
+
     echo ""                                                                                                                     >> $HARBOR_VALUES
     echo "service:"                                                                                                             >> $HARBOR_VALUES
     echo "  type: ClusterIP"                                                                                                    >> $HARBOR_VALUES
