@@ -1839,8 +1839,6 @@ createCluster() {
     SSH_KEY=$(cat $VSPHERE_TKGM_SSH_PUBLIC_KEY_FILE) 
 
     # --- VSPHERE ---
-      echo "VSPHERE_PASSWORD: <encoded:$(eval printf \"$VSPHERE_PASSWORD\" | base64)>"    >> $TKG_TEMPLATE
-
     echo "VSPHERE_CONTROL_PLANE_DISK_GIB: \"20\""                                      >> $TKG_TEMPLATE
     echo "VSPHERE_CONTROL_PLANE_ENDPOINT: 10.212.168.100"                              >> $TKG_TEMPLATE
     echo "VSPHERE_CONTROL_PLANE_MEM_MIB: \"4096\""                                     >> $TKG_TEMPLATE
@@ -1852,7 +1850,7 @@ createCluster() {
     echo "VSPHERE_PASSWORD: <encoded:$(eval printf \"$VSPHERE_PASSWORD\" | base64)>"   >> $TKG_TEMPLATE
     echo "VSPHERE_RESOURCE_POOL: /$VSPHERE_TKGM_DATACENTER/host/$VSPHERE_TKGM_CLUSTER/Resources"        >> $TKG_TEMPLATE
     echo "VSPHERE_SERVER: $VSPHERE_TKGM_VCENTER_SERVER"                             >> $TKG_TEMPLATE
-    echo "VSPHERE_SSH_AUTHORIZED_KEY: $SSH_KEY""                                       >> $TKG_TEMPLATE
+    echo "VSPHERE_SSH_AUTHORIZED_KEY: $SSH_KEY"                                       >> $TKG_TEMPLATE
     echo "VSPHERE_INSECURE: true"                                                      >> $TKG_TEMPLATE
     echo "#VSPHERE_TLS_THUMBPRINT: F3:C6:9D:6E:B1:4B:BC:49:E3:68:6F:F6:7C:AE:5F:24:96:E8:C8:9C"         >> $TKG_TEMPLATE
     echo "VSPHERE_USERNAME: administrator@vsphere.local"                               >> $TKG_TEMPLATE
