@@ -1848,7 +1848,7 @@ echo "VSPHERE_TKGM_SSH_PUBLIC_KEY_FILE:$VSPHERE_TKGM_SSH_PUBLIC_KEY_FILE"
     echo "VSPHERE_DATASTORE: /$VSPHERE_TKGM_DATACENTER/datastore/$VSPHERE_TKGM_DATASTORE"                              >> $TKG_TEMPLATE
     echo "VSPHERE_FOLDER: /$VSPHERE_TKGM_DATACENTER/vm/Templates"                                    >> $TKG_TEMPLATE
     echo "VSPHERE_NETWORK: \"$VSPHERE_TKGM_NETWORK\""                                  >> $TKG_TEMPLATE
-    echo "VSPHERE_PASSWORD: <encoded:$(eval printf \"$VSPHERE_PASSWORD\" | base64)>"   >> $TKG_TEMPLATE
+    echo "VSPHERE_PASSWORD: <encoded:$(eval printf \"$VSPHERE_TKGM_VCENTER_PASSWORD\" | base64)>"   >> $TKG_TEMPLATE
     echo "VSPHERE_RESOURCE_POOL: /$VSPHERE_TKGM_DATACENTER/host/$VSPHERE_TKGM_CLUSTER/Resources"        >> $TKG_TEMPLATE
     echo "VSPHERE_SERVER: $VSPHERE_TKGM_VCENTER_SERVER"                             >> $TKG_TEMPLATE
     echo "VSPHERE_SSH_AUTHORIZED_KEY: $SSH_KEY"                                       >> $TKG_TEMPLATE
