@@ -1836,6 +1836,7 @@ createCluster() {
     echo "AVI_SERVICE_ENGINE_GROUP: \"\""                                              >> $TKG_TEMPLATE
     echo "AVI_USERNAME: \"\""                                                          >> $TKG_TEMPLATE
 
+echo "VSPHERE_TKGM_SSH_PUBLIC_KEY_FILE:$VSPHERE_TKGM_SSH_PUBLIC_KEY_FILE"
     SSH_KEY=$(cat $VSPHERE_TKGM_SSH_PUBLIC_KEY_FILE) 
 
     # --- VSPHERE ---
