@@ -1799,13 +1799,97 @@ createCluster() {
 
   if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "vSphere" ]; then
     messageTitle "Creating TKG Managment Cluster"
-    messagePrint " ▪ Cluster Name"                "$TDH_TKGMC_NAME"
-    messagePrint " ▪ Configuration File"          "\${HOME}/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.yaml"
-    messagePrint " ▪ Control Plane Machine Type"  "$TDH_TKGMC_CONTROL_PLANE_MACHINE_TYPE"
-    messagePrint " ▪ Worker Node Machine Type"    "$TDH_TKGMC_MACHINE_TYPE"
-    messagePrint " ▪ Cluster CIDR"                "$TDH_TKGMC_CLUSTER_CIDR"
-    messagePrint " ▪ Service CIDR"                "$TDH_TKGMC_SERVICE_CIDR"
-    messagePrint " ▪ Health Check Enabled"        "$TDH_TKGMC_MACHINE_HEALTH_CHECK_ENABLED"
+    messagePrint " ▪ Cluster Name"                  "$TDH_TKGMC_NAME"
+    messagePrint " ▪ Configuration File"            "\${HOME}/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.yaml"
+    messagePrint " ▪ Control Plane Machine CPU"     "$TDH_TKGMC_CONTROL_PLANE_NUM_CPUS"
+    messagePrint " ▪ Control Plane Machine Memory"  "$TDH_TKGMC_CONTROL_PLANE_MEM_MIB"
+    messagePrint " ▪ Control Plane Machine Disk"    "$TDH_TKGMC_CONTROL_PLANE_DISK_GIB"
+    messagePrint " ▪ Worker Node Machine CPU"       "$TDH_TKGMC_WORKER_NUM_CPUS"
+    messagePrint " ▪ Worker Node Machine Memory"    "$TDH_TKGMC_WORKER_MEM_MIB"
+    messagePrint " ▪ Worker Node Machine Disk"      "$TDH_TKGMC_WORKER_DISK_GIB"
+    messagePrint " ▪ Cluster CIDR"                  "$TDH_TKGMC_CLUSTER_CIDR"
+    messagePrint " ▪ Service CIDR"                  "$TDH_TKGMC_SERVICE_CIDR"
+    messagePrint " ▪ Health Check Enabled"          "$TDH_TKGMC_MACHINE_HEALTH_CHECK_ENABLED"
+
+    tanzu management-cluster get > /dev/null 2>&1
+    tanzu management-cluster create > /dev/null 2>&1
+
+    echo "INFRASTRUCTURE_PROVIDER: vsphere"                                            >  $TKG_TEMPLATE
+    echo "DEPLOY_TKG_ON_VSPHERE7: true"                                                >> $TKG_TEMPLATE
+    echo "SERVICE_CIDR: 100.64.0.0/13"                                                 >> $TKG_TEMPLATE
+    echo "TKG_HTTP_PROXY_ENABLED: \"false\""                                           >> $TKG_TEMPLATE
+    echo "CLUSTER_CIDR: 100.96.0.0/11"                                                 >> $TKG_TEMPLATE
+    echo "CLUSTER_NAME: $TDH_TKGMC_NAME"                                               >> $TKG_TEMPLATE
+    echo "CLUSTER_PLAN: dev"                                                           >> $TKG_TEMPLATE
+    echo "ENABLE_CEIP_PARTICIPATION: \"true\""                                         >> $TKG_TEMPLATE
+    echo "ENABLE_MHC: \"true\""                                                        >> $TKG_TEMPLATE
+
+    # --- AVI ---
+    echo "AVI_CA_DATA_B64: \"\""                                                       >> $TKG_TEMPLATE
+    echo "AVI_CLOUD_NAME: \"\""                                                        >> $TKG_TEMPLATE
+    echo "AVI_CONTROLLER: \"\""                                                        >> $TKG_TEMPLATE
+    echo "AVI_DATA_NETWORK: \"\""                                                      >> $TKG_TEMPLATE
+    echo "AVI_DATA_NETWORK_CIDR: \"\""                                                 >> $TKG_TEMPLATE
+    echo "AVI_ENABLE: \"false\""                                                       >> $TKG_TEMPLATE
+    echo "AVI_LABELS: \"\""                                                            >> $TKG_TEMPLATE
+    echo "AVI_PASSWORD: \"\""                                                          >> $TKG_TEMPLATE
+    echo "AVI_SERVICE_ENGINE_GROUP: \"\""                                              >> $TKG_TEMPLATE
+    echo "AVI_USERNAME: \"\""                                                          >> $TKG_TEMPLATE
+
+    SSH_KEY=$(cat $VSPHERE_TKGM_SSH_PUBLIC_KEY_FILE) 
+
+    # --- VSPHERE ---
+      echo "VSPHERE_PASSWORD: <encoded:$(eval printf \"$VSPHERE_PASSWORD\" | base64)>"    >> $TKG_TEMPLATE
+
+    echo "VSPHERE_CONTROL_PLANE_DISK_GIB: \"20\""                                      >> $TKG_TEMPLATE
+    echo "VSPHERE_CONTROL_PLANE_ENDPOINT: 10.212.168.100"                              >> $TKG_TEMPLATE
+    echo "VSPHERE_CONTROL_PLANE_MEM_MIB: \"4096\""                                     >> $TKG_TEMPLATE
+    echo "VSPHERE_CONTROL_PLANE_NUM_CPUS: \"2\""                                       >> $TKG_TEMPLATE
+    echo "VSPHERE_DATACENTER: /$VSPHERE_TKGM_DATACENTER"                                             >> $TKG_TEMPLATE
+    echo "VSPHERE_DATASTORE: /$VSPHERE_TKGM_DATACENTER/datastore/$VSPHERE_TKGM_DATASTORE"                              >> $TKG_TEMPLATE
+    echo "VSPHERE_FOLDER: /$VSPHERE_TKGM_DATACENTER/vm/Templates"                                    >> $TKG_TEMPLATE
+    echo "VSPHERE_NETWORK: \"$VSPHERE_TKGM_NETWORK\""                                  >> $TKG_TEMPLATE
+    echo "VSPHERE_PASSWORD: <encoded:$(eval printf \"$VSPHERE_PASSWORD\" | base64)>"   >> $TKG_TEMPLATE
+    echo "VSPHERE_RESOURCE_POOL: /$VSPHERE_TKGM_DATACENTER/host/$VSPHERE_TKGM_CLUSTER/Resources"        >> $TKG_TEMPLATE
+    echo "VSPHERE_SERVER: $VSPHERE_TKGM_VCENTER_SERVER"                             >> $TKG_TEMPLATE
+    echo "VSPHERE_SSH_AUTHORIZED_KEY: $SSH_KEY""                                       >> $TKG_TEMPLATE
+    echo "VSPHERE_INSECURE: true"                                                      >> $TKG_TEMPLATE
+    echo "#VSPHERE_TLS_THUMBPRINT: F3:C6:9D:6E:B1:4B:BC:49:E3:68:6F:F6:7C:AE:5F:24:96:E8:C8:9C"         >> $TKG_TEMPLATE
+    echo "VSPHERE_USERNAME: administrator@vsphere.local"                               >> $TKG_TEMPLATE
+    echo "VSPHERE_WORKER_DISK_GIB: \"20\""                                             >> $TKG_TEMPLATE
+    echo "VSPHERE_WORKER_MEM_MIB: \"4096\""                                            >> $TKG_TEMPLATE
+    echo "VSPHERE_WORKER_NUM_CPUS: \"2\""                                              >> $TKG_TEMPLATE
+
+    # --- LDAP IDENTITY PROVIDOR AVAILABLE ON THE JUMP SERVER ---
+    # https://docs.vmware.com/en/VMware-Tanzu-Kubernetes-Grid/1.3/vmware-tanzu-kubernetes-grid-13/GUID-mgmt-clusters-create-config-file.html#identity-mgmt
+    if [ "$TDH_TKGMC_IDENTITY_MANAGEMENT_TYPE" == "ldap" ]; then
+      echo "IDENTITY_MANAGEMENT_TYPE: ldap"                                             >> $TKG_TEMPLATE
+      echo "LDAP_GROUP_SEARCH_BASE_DN: ${LDAP_DOMAIN}"                                  >> $TKG_TEMPLATE
+      echo "LDAP_HOST: jump.${TDH_TKGMC_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}"              >> $TKG_TEMPLATE
+      echo "INFRASTRUCTURE_PROVIDER: azure"                                             >> $TKG_TEMPLATE
+      echo "LDAP_GROUP_SEARCH_NAME_ATTRIBUTE: cn"                                       >> $TKG_TEMPLATE
+      echo "LDAP_GROUP_SEARCH_USER_ATTRIBUTE: DN"                                       >> $TKG_TEMPLATE
+      echo "LDAP_USER_SEARCH_USERNAME: userPrincipalName"                               >> $TKG_TEMPLATE
+      echo "SERVICE_CIDR: 100.64.0.0/13"                                                >> $TKG_TEMPLATE
+      echo "TKG_HTTP_PROXY_ENABLED: \"false\""                                          >> $TKG_TEMPLATE
+    fi
+
+    # --- OIDC IDENTITY PROVIDOR WITH (OKTA) ---
+    if [ "$TDH_TKGMC_IDENTITY_MANAGEMENT_TYPE" == "oidc" ]; then
+      echo "IDENTITY_MANAGEMENT_TYPE: oidc"                                              >> $TKG_TEMPLATE
+      echo "OIDC_IDENTITY_PROVIDER_CLIENT_ID: \"$TDH_OKTA_SECRET_ID\""                   >> $TKG_TEMPLATE
+      echo "OIDC_IDENTITY_PROVIDER_CLIENT_SECRET: \"$TDH_OKTA_CLIENT_SECRET\""           >> $TKG_TEMPLATE
+      echo "OIDC_IDENTITY_PROVIDER_ISSUER_URL: \"$TDH_OKTA_URL\""                        >> $TKG_TEMPLATE
+      echo "OIDC_IDENTITY_PROVIDER_SCOPES: \"$TDH_OKTA_SCOPES\""                         >> $TKG_TEMPLATE
+      echo "OIDC_IDENTITY_PROVIDER_GROUPS_CLAIM:: \"$TDH_OKTA_GROUP_CLAIM\""             >> $TKG_TEMPLATE
+      echo "OIDC_IDENTITY_PROVIDER_USERNAME_CLAIM: \"$TDH_OKTA_USERNAME_CLAIM\""         >> $TKG_TEMPLATE
+    fi
+
+    if [ "$TDH_TKGMC_IDENTITY_MANAGEMENT_TYPE" == "none" ]; then
+      echo "IDENTITY_MANAGEMENT_TYPE: none"                                              >> $TKG_TEMPLATE
+    fi
+
+echo "TKG_TEMPLATE:$TKG_TEMPLATE"
 
 echo "gagagagagagag"
 #gaga
@@ -2122,7 +2206,7 @@ exit
     sudo mv /tmp/motd /etc/motd
   fi
 
-  if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "vSphere" ]; then
+  if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "vSphere_old" ]; then
     MODE=vsphere
     MC_CLUSTER_STATUS=1  ### MC-CLUSTER IS ACTIVE
 
@@ -2181,6 +2265,7 @@ exit
       tkg get mc > /dev/null 2>&1
       cp ${HOME}/.tkg/config.yaml $TKG_TEMPLATE
 
+#gaga
       echo "VSPHERE_WORKER_MEM_MIB: 2048"                                                 >> $TKG_TEMPLATE
       echo "_VSPHERE_CONTROL_PLANE_ENDPOINT_IP: 10.1.1.30"                                >> $TKG_TEMPLATE
       echo "VSPHERE_CONTROL_PLANE_DISK_GIB: 20"                                           >> $TKG_TEMPLATE
