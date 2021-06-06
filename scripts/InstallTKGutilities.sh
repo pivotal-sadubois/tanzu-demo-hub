@@ -53,9 +53,9 @@ if [ ! -s /usr/local/bin/tanzu ]; then
   vmw-cli ls vmware_tanzu_kubernetes_grid > /dev/null 2>&1
 
   cnt=0
-  vmwfile=$(vmw-cli ls vmware_tanzu_kubernetes_grid 2>/dev/null | egrep "^tanzu-cli-bundle-linux" | tail -1 | awk '{ print $1 }')
+  vmwfile=$(vmw-cli ls vmware_tanzu_kubernetes_grid 2>/dev/null | egrep "^tanzu-cli-bundle" | grep "linux" | tail -1 | awk '{ print $1 }')
   while [ "$vmwfile" == "" -a $cnt -lt 5 ]; do
-    vmwfile=$(vmw-cli ls vmware_tanzu_kubernetes_grid 2>/dev/null | egrep "^tanzu-cli-bundle-linux" | tail -1 | awk '{ print $1 }')
+    vmwfile=$(vmw-cli ls vmware_tanzu_kubernetes_grid 2>/dev/null | egrep "^tanzu-cli-bundle" | grep "linux" | tail -1 | awk '{ print $1 }')
     let cnt=cnt+1
     sleep 10
   done
