@@ -9,7 +9,10 @@
 export TANZU_DEMO_HUB=$(cd "$(pwd)/$(dirname $0)"; pwd)
 export TDHPATH=$(cd "$(pwd)/$(dirname $0)"; pwd)
 export DEBUG=0
+export NATIVE=0                ## NATIVE=1 r(un on local host), NATIVE=0 (run within docker)
 export DEPLOY_TKG_CLEAN=0
+export CMD_EXEC=$(basename $0)
+export CMD_ARGS=$*
 
 . $TANZU_DEMO_HUB/functions
 
@@ -139,6 +142,7 @@ while [ "$1" != "" ]; do
     --clean) DEPLOY_TKG_CLEAN=1;;
     -d)      DEBUG=1;;
     --debug) DEBUG=1;;
+    --native)      NATIVE=1;;
     *)       DEPLOY_TKG_TEMPLATE=$1;;
   esac
   shift
@@ -903,23 +907,74 @@ createJumpHost() {
   fi
 }
 
-# --- VERYFY ACCESS TO CLOUD ---
-checkTDHenvironment    
+if [ ! -f /tdh_tools_docker_container  ]; then
+  echo ""
+  echo "Tanzu Demo Hub - Deploy MiniKube cluster"
+  echo "by Sacha Dubois, VMware Inc,"
+  echo "-----------------------------------------------------------------------------------------------------------"
 
-checkCloudCLI
-checkCLIcommands TOOLS
-checkCLIcommands TKG
-checkCLIcommands TANZU
-checkCLIcommands TMC
-checkCLIcommands VSPHERE
+  # --- VERYFY ACCESS TO CLOUD ---
+  checkTDHenvironment    
+
+  # --- VERIFY TOOLS AND ACCESS ---
+  checkCLIcommands TANZU
+
+  # --- CLEANUP KUNECONFIG ---
+  cleanKubeconfig
+  checkTDHAccess
+  checkCloudAccess
+
+  if [ $NATIVE -eq 0 ]; then
+    tdh_tools_build
+
+    messagePrint " ▪ Running TDH Tools Docker Container" "tdh-tools:latest $TDHPATH/$CMD_EXEC $CMD_ARGS"
+
+    mkdir -p $HOME/.mc $HOME/.cache $HOME/.config $HOME/.local
+    mkdir -p /tmp/docker && chmod a+w /tmp/docker
+    docker run -u $(id -u):$(id -g) --group-add 0 -it --rm --name tdh-tools \
+       -v $HOME:$HOME:ro -v $HOME/.local:$HOME/.local:rw -v $HOME/.tanzu-demo-hub:$HOME/.tanzu-demo-hub:rw \
+       -v /var/run/docker.sock:/var/run/docker.sock -v $HOME/.cache:$HOME/.cache:rw -v $HOME/.config:$HOME/.config:rw \
+       -v /tmp:/tmp:rw -v /tmp/docker:$HOME/.docker:rw -v $HOME/.mc:$HOME/.mc:rw \
+       -e "KUBECONFIG=$HOME/.kube/config" --hostname tdh-tools tdh-tools:latest $TDHPATH/$CMD_EXEC $CMD_ARGS
+
+    # --- FINISH CURRENT SESSION AS WE RUN AS CONTAINER ---
+    exit 0
+  else
+    # --- VERYFY ACCESS TO CLOUD ---
+    checkTDHenvironment    
+
+    # --- VERIFY TOOLS AND ACCESS ---
+    checkCloudCLI
+    checkCLIcommands TOOLS
+    checkCLIcommands TKG
+    checkCLIcommands TANZU
+    checkCLIcommands TMC
+    checkCLIcommands VSPHERE
+  fi
+fi
+
+echo gaga10
+hostname
+exit
+
+# --- VERYFY ACCESS TO CLOUD ---
+#checkTDHenvironment    
+
+#checkCloudCLI
+#checkCLIcommands TOOLS
+#checkCLIcommands TKG
+#checkCLIcommands TANZU
+#checkCLIcommands TMC
+#checkCLIcommands VSPHERE
+
+exit
 
 # --- CLEANUP KUNECONFIG ---
-cleanKubeconfig
+#cleanKubeconfig
+#checkTDHAccess
+#checkCloudAccess
 
-checkTDHAccess
-checkCloudAccess
-
-#checkTMCAccess
+##checkTMCAccess
 checkKeyPairs
 #checkTKGdownloads
 tmcCheckLogin
