@@ -147,7 +147,7 @@ fi
 
 messagePrint " ▪ Upgrading Packages" "apt upgrade -y"
 apt upgrade -y > /dev/null 2>&1
-sudo chown -R ubuntu:ubuntu /home/ubuntu/.docker
+[ -f /home/ubuntu/.docker ] && chown -R ubuntu:ubuntu /home/ubuntu/.docker
 
 touch /tkg_software_installed
 
