@@ -371,8 +371,6 @@ checkCloudCLI() {
 checkKubernetesServices() {
   service=$1
   missing_variables=0
-#hallo
-
 
   if [ 1 -eq 1 ]; then
     if [ "${service}" == "tanzu_data_protection" ]; then
@@ -929,11 +927,17 @@ checkCloudAccess() {
 checkTDHenvironment() {
   missing_variables=0
 
-  if [ "${TDH_MYVMWARE_USER}" == "" -o "${TDH_MYVMWARE_PASS}" == "" ]; then
+#hallo
+  if [ "${TDH_MYVMWARE_USER}" == "" -o "${TDH_MYVMWARE_PASS}" == "" -o "${PCF_PIVNET_TOKEN}" == "" ]; then
     missing_variables=1
     echo ""
-    echo "  4MISSING ENVIRONMENT-VARIABES    DESCRIPTION        "
+    echo "  ?MISSING ENVIRONMENT-VARIABES    DESCRIPTION        "
     echo "  -------------------------------------------------------------------------------------------------------------------------------------------------------"
+
+    if [ "${PCF_PIVNET_TOKEN}" == "" ]; then
+      echo "  PCF_PIVNET_TOKEN                 (required) PIVNET Access Token to download software. Get a UAA API TOKEN from"
+      echo "                                   => https://network.pivotal.io/users/dashboard/edit-profile"
+    fi
 
     if [ "${TDH_MYVMWARE_USER}" == "" ]; then
       echo "  TDH_MYVMWARE_USER                (required) myVMware (http://my.vmware.com/group/vmware/home) User"
@@ -943,6 +947,8 @@ checkTDHenvironment() {
       echo "  TDH_MYVMWARE_PASS                (required) myVMware (http://my.vmware.com/group/vmware/home) Password"
     fi
   else
+    messageTitle "Pivotal Network Access (network.pivotal.io)"
+    messagePrint " ▪ Pivotal Network Token"    "$PCF_PIVNET_TOKEN"
     messageTitle "myVMware (http://my.vmware.com) Access for Software Download"
     messagePrint " ▪ myVMare User:"            "$TDH_MYVMWARE_USER"
     messagePrint " ▪ myVMare Password:"        $(maskPassword "$TDH_MYVMWARE_PASS")
@@ -954,7 +960,7 @@ checkTDHenvironment() {
     echo "             configuration file ~/.tanzu-demo-hub.cfg and set all variables with the 'export' notation"
     echo "             export TDH_MYVMWARE_USER=xxxxxxx"
     echo "             export TDH_MYVMWARE_PASS='xxxxxxxxxxxx'"
-    echo "  IMPORTAND: Place the password in Single Quotes (') especialy if you use special characgters"
+    echo "  IMPORTANT: Place the password in Single Quotes (') especialy if you use special characgters"
     echo "  -------------------------------------------------------------------------------------------------------------------------------------------------------"
     exit 1
   fi
@@ -1159,6 +1165,7 @@ checkTMCAccess() {
         echo "                                  valid DNS Zone. => https://console.aws.amazon.com/route53"
       fi
     else
+#hallonn
       messageTitle "Supporting services access (Pivotal Network, AWS Route53)"
       messagePrint " ▪ Pivotal Network Token"           "$PCF_PIVNET_TOKEN"
       messagePrint " ▪ AWS Route53 Hosted DNS Domain"   "$AWS_HOSTED_DNS_DOMAIN"
@@ -1890,8 +1897,6 @@ echo "VSPHERE_TKGM_SSH_PUBLIC_KEY_FILE:$VSPHERE_TKGM_SSH_PUBLIC_KEY_FILE"
 
 echo "TKG_TEMPLATE:$TKG_TEMPLATE"
 
-echo "gagagagagagag"
-#gaga
 exit
   fi
 
@@ -2264,7 +2269,6 @@ exit
       tkg get mc > /dev/null 2>&1
       cp ${HOME}/.tkg/config.yaml $TKG_TEMPLATE
 
-#gaga
       echo "VSPHERE_WORKER_MEM_MIB: 2048"                                                 >> $TKG_TEMPLATE
       echo "_VSPHERE_CONTROL_PLANE_ENDPOINT_IP: 10.1.1.30"                                >> $TKG_TEMPLATE
       echo "VSPHERE_CONTROL_PLANE_DISK_GIB: 20"                                           >> $TKG_TEMPLATE
@@ -3130,8 +3134,27 @@ checkCLIcommands() {
     done
   fi
 
+  if [ "$cat" == "BASIC" ]; then
+    CLI_COMMANDS="/usr/local/bin/jq:brew:jq /usr/local/bin/wget:brew:wget"
+
+    # --- INSTALL BREW INSTALLABLE TOOLS ---
+    for arg in $CLI_COMMANDS; do
+      cmd=$(echo $arg | awk -F: '{ print $1 }')
+      sys=$(echo $arg | awk -F: '{ print $2 }')
+      pkg=$(echo $arg | awk -F: '{ print $3 }')
+
+      if [ $sys == "brew" ]; then
+        if [ ! -x $cmd ]; then
+          echo "ERROR: $cmd not installed, please install with brew"
+          echo "       => brew install $pkg"
+          exit
+        fi
+      fi
+    done
+  fi
+
   if [ "$cat" == "TOOLS" ]; then
-    CLI_COMMANDS="/usr/local/bin/jq:brew:jq /usr/local/bin/wget:brew:wget /usr/local/bin/mc:brew:minio/stable/mc /usr/local/bin/helm:brew:helm /usr/local/bin/npm:brew:npm"
+    CLI_COMMANDS="/usr/local/bin/mc:brew:minio/stable/mc /usr/local/bin/helm:brew:helm /usr/local/bin/npm:brew:npm"
 
     # --- INSTALL BREW INSTALLABLE TOOLS ---
     for arg in $CLI_COMMANDS; do
@@ -4230,7 +4253,6 @@ InstallContour() {
     echo "    - tdh-docker-repo"                       >> /tmp/contour_values.yaml
 
 
-#gaga
     #helm install ingress bitnami/contour -n $NAMESPACE --version 3.3.1 > /dev/null 2>&1
     #helm install ingress bitnami/contour -n $NAMESPACE --version 3.3.1 
     helm install -f /tmp/contour_values.yaml ingress bitnami/contour -n $NAMESPACE --version $HELM_CONTOUR_VERSION > /dev/null 2>&1
@@ -4576,7 +4598,6 @@ InstallCertManager() {
 }
 
 InstallHarborRegistry() {
-#hallo
   if [ "$TDH_SERVICE_BUILD_SERVICE" != "true" ]; then
     uodateConfigMap tanzu-demo-hub TDH_SERVICE_BUILD_SERVICE        "false"
     return
@@ -4610,7 +4631,6 @@ InstallHarborRegistry() {
             --docker-server $TDH_REGISTRY_DOCKER_NAME \
             --docker-username $TDH_REGISTRY_DOCKER_USER \
             --docker-password $TDH_REGISTRY_DOCKER_PASS > /dev/null 2>&1
-#gaga
 
     # --- COPY SECRET TO NAMESPACE ---
     kubectl get secret tanzu-demo-hub-tls --namespace=default  -oyaml | grep -v '^\s*namespace:\s' | \
@@ -4629,7 +4649,6 @@ InstallHarborRegistry() {
     if [ "${TDH_DEPLOYMENT_CLOUD}" == "vSphere" -a "${TDH_TKGMC_TKG_TYPE}" == "tkgs" ]; then
       echo "  storageClass: $VSPHERE_TKGS_STORAGE_CLASS"                                                                       >> $HARBOR_VALUES
     fi
-#gaga
 
     echo ""                                                                                                                     >> $HARBOR_VALUES
     echo "service:"                                                                                                             >> $HARBOR_VALUES
@@ -5577,8 +5596,8 @@ verify_docker() {
 tdh_tools_build() {
   REBUILD_REQUIRED=0
   verify_docker
+  checkTDHenvironment
 
-  messageTitle "TDH Tools Docker Container (tdh-tools)"
   TDH_DOCKER_FILES=/tmp/tdh-tools
   mkdir -p $TDH_DOCKER_FILES
   cp files/tdh-tools/Dockerfile           $TDH_DOCKER_FILES
@@ -5592,9 +5611,10 @@ tdh_tools_build() {
 
   # --- DOWNLOAD BUILD_SERVICE BINARIES ---
   TDH_SERVICE_BUILD_SERVICE_VERSION=1.1.4
-  downloadFromPivnet build-service $TDH_SERVICE_BUILD_SERVICE_VERSION "0.2.0" "kp-linux"
+  downloadFromPivnet build-service $TDH_SERVICE_BUILD_SERVICE_VERSION "0.2.0" "kp-linux" 
   [ -f /tmp/kp-linux-0.2.0 ] && mv /tmp/kp-linux-0.2.0 $TDH_DOCKER_FILES/kp && chmod a+x $TDH_DOCKER_FILES/kp
 
+  messageTitle "TDH Tools Docker Container (tdh-tools)"
   if [ ! -x $TDH_DOCKER_FILES/kubectl-vsphere ]; then
     cp $TDHPATH/software/vsphere-plugin-Linux.zip /tmp
     unzip -d /tmp /tmp/vsphere-plugin-Linux.zip > /dev/null 2>&1
@@ -5653,15 +5673,28 @@ tdh_tools_build() {
     if [ ! -f $TDH_DOCKER_FILES/tanzu-cli-bundle* ]; then
       . ~/.tanzu-demo-hub.cfg
 
-      checkTDHenvironment
+      VMWCLI=/tmp/vmw-cli
+
+      if [ ! -s $VMWCLI ]; then
+        messagePrint " ▪ Install Package (vmw-cli)" "installing"
+        docker run apnex/vmw-cli shell > $VMWCLI 2>/dev/null
+        if [ $? -ne 0 ]; then
+          echo "ERROR: faileed to run vmw-cli docker container"
+          echo "       => docker run apnex/vmw-cli shell > /tmp/vmw-cli"
+          exit 1
+        fi
+      
+        chmod 755 $VMWCLI
+      fi
+
       export VMWUSER="$TDH_MYVMWARE_USER"
       export VMWPASS="$TDH_MYVMWARE_PASS"
-      vmw-cli ls vmware_tanzu_kubernetes_grid > /dev/null 2>&1
+      $VMWCLI ls vmware_tanzu_kubernetes_grid > /dev/null 2>&1
     
       cnt=0
-      vmwfile=$(vmw-cli ls vmware_tanzu_kubernetes_grid 2>/dev/null | egrep "^tanzu-cli-bundle" | grep linux | tail -1 | awk '{ print $1 }')
+      vmwfile=$($VMWCLI ls vmware_tanzu_kubernetes_grid 2>/dev/null | egrep "^tanzu-cli-bundle" | grep linux | tail -1 | awk '{ print $1 }')
       while [ "$vmwfile" == "" -a $cnt -lt 5 ]; do
-        vmwfile=$(vmw-cli ls vmware_tanzu_kubernetes_grid 2>/dev/null | egrep "^tanzu-cli-bundle" | grep linux | tail -1 | awk '{ print $1 }')
+        vmwfile=$($VMWCLI ls vmware_tanzu_kubernetes_grid 2>/dev/null | egrep "^tanzu-cli-bundle" | grep linux | tail -1 | awk '{ print $1 }')
         let cnt=cnt+1
         sleep 10
       done
@@ -5672,13 +5705,13 @@ tdh_tools_build() {
         echo "ERROR: failed to download $vmwfile"
         echo "       => export VMWUSER=\"$TDH_MYVMWARE_USER\""
         echo "       => export VMWPASS=\"$TDH_MYVMWARE_PASS\""
-        echo "       => vmw-cli ls vmware_tanzu_kubernetes_grid"
+        echo "       => $VMWCLI ls vmware_tanzu_kubernetes_grid"
         exit 1
       else
         cnt=0
         while [ ! -f "$vmwfile" -a $cnt -lt 10 ]; do
-          vmw-cli ls vmware_tanzu_kubernetes_grid > /dev/null 2>&1
-          vmw-cli cp $vmwfile > /dev/null 2>&1
+          $VMWCLI ls vmware_tanzu_kubernetes_grid > /dev/null 2>&1
+          $VMWCLI cp $vmwfile > /dev/null 2>&1
           let cnt=cnt+1
           sleep 30
         done
@@ -5687,8 +5720,8 @@ tdh_tools_build() {
           echo "ERROR: failed to download $vmwfile"
           echo "       => export VMWUSER=\"$TDH_MYVMWARE_USER\""
           echo "       => export VMWPASS=\"$TDH_MYVMWARE_PASS\""
-          echo "       => vmw-cli ls vmware_tanzu_kubernetes_grid"
-          echo "       => vmw-cli cp $vmwfile"
+          echo "       => $VMWCLI ls vmware_tanzu_kubernetes_grid"
+          echo "       => $VMWCLI cp $vmwfile"
           exit 1
         else
           mv $vmwfile $TDH_DOCKER_FILES
