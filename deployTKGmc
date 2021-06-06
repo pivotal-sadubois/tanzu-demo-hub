@@ -131,11 +131,6 @@ listClusters() {
   fi
 }
 
-echo ""
-echo "Tanzu Demo Hub - Deploy TKG Management Cluster"
-echo "by Sacha Dubois, VMware Inc,"
-echo "----------------------------------------------------------------------------------------------------------------------------------------------"
-
 while [ "$1" != "" ]; do
   case $1 in
     -c)      DEPLOY_TKG_CLEAN=1;;
@@ -909,19 +904,15 @@ createJumpHost() {
 
 if [ ! -f /tdh_tools_docker_container  ]; then
   echo ""
-  echo "Tanzu Demo Hub - Deploy MiniKube cluster"
+  echo "Tanzu Demo Hub - Deploy TKG Management Cluster"
   echo "by Sacha Dubois, VMware Inc,"
-  echo "-----------------------------------------------------------------------------------------------------------"
-
-  # --- VERYFY ACCESS TO CLOUD ---
-  checkTDHenvironment    
+  echo "----------------------------------------------------------------------------------------------------------------------------------------------"
 
   # --- VERIFY TOOLS AND ACCESS ---
   checkCLIcommands BASIC
 
   if [ $NATIVE -eq 0 ]; then
     tdh_tools_build
-echo xxxx
 
     messagePrint " ▪ Running TDH Tools Docker Container" "tdh-tools:latest $TDHPATH/$CMD_EXEC $CMD_ARGS"
 
@@ -930,6 +921,7 @@ echo xxxx
     docker run -u $(id -u):$(id -g) --group-add 0 -it --rm --name tdh-tools \
        -v $HOME:$HOME:ro -v $HOME/.local:$HOME/.local:rw -v $HOME/.tanzu-demo-hub:$HOME/.tanzu-demo-hub:rw \
        -v /var/run/docker.sock:/var/run/docker.sock -v $HOME/.cache:$HOME/.cache:rw -v $HOME/.config:$HOME/.config:rw \
+       -v $HOME/.aws:$HOME/.aws:rw \
        -v /tmp:/tmp:rw -v /tmp/docker:$HOME/.docker:rw -v $HOME/.mc:$HOME/.mc:rw \
        -e "KUBECONFIG=$HOME/.kube/config" --hostname tdh-tools tdh-tools:latest $TDHPATH/$CMD_EXEC $CMD_ARGS
 
@@ -949,26 +941,13 @@ echo xxxx
   fi
 fi
 
-echo gaga10
+# --- CLEANUP KUNECONFIG ---
+cleanKubeconfig
+checkTDHAccess
+checkCloudAccess
+
 hostname
 exit
-
-# --- VERYFY ACCESS TO CLOUD ---
-#checkTDHenvironment    
-
-#checkCloudCLI
-#checkCLIcommands TOOLS
-#checkCLIcommands TKG
-#checkCLIcommands TANZU
-#checkCLIcommands TMC
-#checkCLIcommands VSPHERE
-
-exit
-
-# --- CLEANUP KUNECONFIG ---
-#cleanKubeconfig
-#checkTDHAccess
-#checkCloudAccess
 
 ##checkTMCAccess
 checkKeyPairs

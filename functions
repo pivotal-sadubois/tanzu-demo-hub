@@ -927,7 +927,6 @@ checkCloudAccess() {
 checkTDHenvironment() {
   missing_variables=0
 
-#hallo
   if [ "${TDH_MYVMWARE_USER}" == "" -o "${TDH_MYVMWARE_PASS}" == "" -o "${PCF_PIVNET_TOKEN}" == "" ]; then
     missing_variables=1
     echo ""
@@ -946,12 +945,12 @@ checkTDHenvironment() {
     if [ "${TDH_MYVMWARE_PASS}" == "" ]; then
       echo "  TDH_MYVMWARE_PASS                (required) myVMware (http://my.vmware.com/group/vmware/home) Password"
     fi
-  else
-    messageTitle "Pivotal Network Access (network.pivotal.io)"
-    messagePrint " ▪ Pivotal Network Token"    "$PCF_PIVNET_TOKEN"
-    messageTitle "myVMware (http://my.vmware.com) Access for Software Download"
-    messagePrint " ▪ myVMare User:"            "$TDH_MYVMWARE_USER"
-    messagePrint " ▪ myVMare Password:"        $(maskPassword "$TDH_MYVMWARE_PASS")
+#  else
+#    messageTitle "Pivotal Network Access (network.pivotal.io)"
+#    messagePrint " ▪ Pivotal Network Token"    $(maskPassword "$PCF_PIVNET_TOKEN")
+#    messageTitle "myVMware (http://my.vmware.com) Access for Software Download"
+#    messagePrint " ▪ myVMare User:"            "$TDH_MYVMWARE_USER"
+#    messagePrint " ▪ myVMare Password:"        $(maskPassword "$TDH_MYVMWARE_PASS")
   fi
 
   if [ ${missing_variables} -eq 1 ]; then
@@ -1259,12 +1258,24 @@ checkTDHAccess() {
       if [ $aky -eq 0 -o $sky -eq 0 ]; then 
         echo "ERROR: AWS_ACCESS_KEY and AWS_SECRET_KEY in ~/.tanzu-demo-hub.cfg do not match"
         echo "       with the aws credentials defined in $HOME/.aws/credentials. Please configure manually"
-        echo "       => aws configure"
+        if [ "$NATIVE" == "0" ]; then 
+          echo "       => tools/tdh-tools.sh"
+          echo "          tdh-tools:/$ aws configure"
+          echo "          tdh-tools:/$ exit"
+        else
+          echo "       => aws configure"
+        fi
         exit
       fi
     else
       echo "ERROR: AWS Credentials not configured on local system, Please configure manually"
-      echo "       => aws configure"
+      if [ "$NATIVE" == "0" ]; then
+        echo "       => tools/tdh-tools.sh"
+        echo "          tdh-tools:/$ aws configure"
+        echo "          tdh-tools:/$ exit"
+      else
+        echo "       => aws configure"
+      fi
       exit
     fi
 
@@ -5610,9 +5621,11 @@ tdh_tools_build() {
   DOCKER_IMAGE_CHKSUM=$(docker images | egrep "^tdh-tools" | grep "CHKSUM" | grep "$DOCKER_IMAGE_LATEST_ID" | awk '{ print $2 }' | sed 's/CHKSUM-//g')
 
   # --- DOWNLOAD BUILD_SERVICE BINARIES ---
-  TDH_SERVICE_BUILD_SERVICE_VERSION=1.1.4
-  downloadFromPivnet build-service $TDH_SERVICE_BUILD_SERVICE_VERSION "0.2.0" "kp-linux" 
-  [ -f /tmp/kp-linux-0.2.0 ] && mv /tmp/kp-linux-0.2.0 $TDH_DOCKER_FILES/kp && chmod a+x $TDH_DOCKER_FILES/kp
+  if [ ! -f $TDH_DOCKER_FILES/kp ]; then 
+    TDH_SERVICE_BUILD_SERVICE_VERSION=1.1.4
+    downloadFromPivnet build-service $TDH_SERVICE_BUILD_SERVICE_VERSION "0.2.0" "kp-linux" 
+    [ -f /tmp/kp-linux-0.2.0 ] && mv /tmp/kp-linux-0.2.0 $TDH_DOCKER_FILES/kp && chmod a+x $TDH_DOCKER_FILES/kp
+  fi
 
   messageTitle "TDH Tools Docker Container (tdh-tools)"
   if [ ! -x $TDH_DOCKER_FILES/kubectl-vsphere ]; then
