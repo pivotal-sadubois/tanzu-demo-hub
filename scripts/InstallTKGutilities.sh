@@ -61,7 +61,7 @@ if [ ! -s /usr/local/bin/tanzu ]; then
   done
 
   if [ "$vmwfile" == "" ]; then 
-    echo "ERROR: failed to download $vmwfile"
+    echo "ERROR: failed to download repo vmware_tanzu_kubernetes_grid"
     echo "       => export VMWUSER=\"$TDH_MYVMWARE_USER\""
     echo "       => export VMWPASS=\"$TDH_MYVMWARE_PASS\""
     echo "       => vmw-cli ls vmware_tanzu_kubernetes_grid"
