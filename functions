@@ -4034,6 +4034,7 @@ installBuildService() {
       let cnt=cnt+1
     done
 
+hostname
     if [ $ret -ne 0 ]; then
       echo "ERROR: Docker login does not work 1'"
       echo "       => docker login $TDH_HARBOR_REGISTRY_DNS_HARBOR -u admin -p $TDH_HARBOR_REGISTRY_ADMIN_PASSWORD"; exit
@@ -4333,7 +4334,7 @@ InstallContour() {
             --docker-password $TDH_REGISTRY_DOCKER_PASS
   
     messagePrint " ▪ Install Contour Helm Chart" "bitnami/contour"
-    HELM_CONTOUR_VERSION=$(helm search repo bitnami/contour | tail -1 | sed '1d' | awk '{ print $2 }') 
+    HELM_CONTOUR_VERSION=$(helm search repo bitnami/contour | tail -1 | awk '{ print $2 }') 
     messagePrint " ▪ Install Contour Helm Chart Version" "$HELM_CONTOUR_VERSION"
 
     echo "global:"                                     >  /tmp/contour_values.yaml
