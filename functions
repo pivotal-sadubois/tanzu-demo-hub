@@ -5806,6 +5806,17 @@ tdh_tools_build() {
     docker container prune -f > /dev/null 2>&1
     docker system prune -f > /dev/null 2>&1
   
+#    messagePrint " ▪ Building TDH Tools docker container" "tdh-tools:CHKSUM-$DOCKER_CHKSUM"
+#    cd $TDH_DOCKER_FILES && docker build -q -t tdh-tools:CHKSUM-$DOCKER_CHKSUM \
+#      --build-arg UID=$(id -u) \
+#      --build-arg GID=$(id -g) \
+#      --build-arg USER=$USER \
+#      --build-arg HOME=$HOME \
+#      --build-arg TANZU_CLI=$vmwfile \
+#      --build-arg TANZU_DEMO_HUB=$TANZU_DEMO_HUB \
+#      --build-arg TDHPATH=$TDHPATH \
+#      --build-arg TZ=$(ls -l /etc/localtime | /usr/bin/cut -d '/' -f 8,9) $TDH_DOCKER_FILES > /dev/null 2>&1; ret=$?
+
     messagePrint " ▪ Building TDH Tools docker container" "tdh-tools:CHKSUM-$DOCKER_CHKSUM"
     cd $TDH_DOCKER_FILES && docker build -q -t tdh-tools:CHKSUM-$DOCKER_CHKSUM \
       --build-arg UID=$(id -u) \
@@ -5815,7 +5826,8 @@ tdh_tools_build() {
       --build-arg TANZU_CLI=$vmwfile \
       --build-arg TANZU_DEMO_HUB=$TANZU_DEMO_HUB \
       --build-arg TDHPATH=$TDHPATH \
-      --build-arg TZ=$(ls -l /etc/localtime | /usr/bin/cut -d '/' -f 8,9) $TDH_DOCKER_FILES > /dev/null 2>&1; ret=$?
+      --build-arg TZ=$(ls -l /etc/localtime | /usr/bin/cut -d '/' -f 8,9) .; ret=$?
+
   
     if [ $ret -ne 0 ]; then 
       echo "ERROR: failed to create tdh-tools container"
@@ -6019,10 +6031,9 @@ vsNanespaceExists() {
 
 installTanzuPlugins() {
   cnt=$(tanzu plugin list | grep -c "not installed") 
-echo "CNT;$cnt"
   if [ $cnt -gt 0 ]; then 
-    tanzu plugin install --local cli all > /dev/null 2>&1
-    tanzu plugin install --local cli all 
+    #cd /tanzu && tanzu plugin install --local cli all > /dev/null 2>&1
+    cd /tanzu && tanzu plugin install --local cli all 
   fi
 }
 

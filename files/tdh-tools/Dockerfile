@@ -10,7 +10,7 @@ MAINTAINER Sacha Dubois <sdubois@vmware.com>
 ENV TZ="Europe/Zurich"
 ARG UID GID USER TZ HOME VMWUSER VMWPASS TANZU_CLI START 
 #ADD $TANZU_CLI /tmp
-ADD cli             /tmp/cli
+ADD cli             /tanzu/cli
 ADD kubectl         /usr/local/bin
 ADD kp              /usr/local/bin
 ADD mc              /usr/local/bin
@@ -67,16 +67,17 @@ RUN apt-get update && apt-get install -y \
     git vim azure-cli jq awscli 
 
 # --- INSTALL TANZU UTILITIES ---
-RUN install /tmp/cli/core/v*/tanzu-core-linux_amd64 /usr/local/bin/tanzu
-RUN gunzip -q /tmp/cli/*.gz
-RUN cd /tmp && tanzu plugin install --local cli all
+RUN install /tanzu/cli/core/v*/tanzu-core-linux_amd64 /usr/local/bin/tanzu
+RUN gunzip -q /tanzu/cli/*.gz
+RUN cd /tanzu && tanzu plugin install --local cli all
 
-RUN mv /tmp/cli/imgpkg-linux* /usr/local/bin/imgpkg && chmod a+x /usr/local/bin/imgpkg
-RUN mv /tmp/cli/kapp-linux* /usr/local/bin/kapp && chmod a+x /usr/local/bin/kapp
-RUN mv /tmp/cli/kbld-linux* /usr/local/bin/kbld && chmod a+x /usr/local/bin/kbld
-RUN mv /tmp/cli/ytt-linux* /usr/local/bin/ytt && chmod a+x /usr/local/bin/ytt
+RUN mv /tanzu/cli/imgpkg-linux* /usr/local/bin/imgpkg && chmod a+x /usr/local/bin/imgpkg
+RUN mv /tanzu/cli/kapp-linux* /usr/local/bin/kapp && chmod a+x /usr/local/bin/kapp
+RUN mv /tanzu/cli/kbld-linux* /usr/local/bin/kbld && chmod a+x /usr/local/bin/kbld
+RUN mv /tanzu/cli/ytt-linux* /usr/local/bin/ytt && chmod a+x /usr/local/bin/ytt
 
 # --- CLEANUP ---
 #RUN rm -rf /tmp/cli
 CMD chmod g+rwx /var/run/docker.sock
-#CMD tanzu plugin install --local cli all
+CMD cd /tanzu && tanzu plugin install --local cli all
+
