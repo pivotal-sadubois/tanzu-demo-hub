@@ -67,17 +67,14 @@ RUN apt-get update && apt-get install -y \
     git vim azure-cli jq awscli 
 
 # --- INSTALL TANZU UTILITIES ---
-RUN ls -la /tmp
-RUN ls -la /tmp/cli
-RUN ls -la /tmp/cli/core/v*
 RUN install /tmp/cli/core/v*/tanzu-core-linux_amd64 /usr/local/bin/tanzu
 RUN gunzip -q /tmp/cli/*.gz
-RUN cd /tmp && tanzu plugin install --local cli all
+RUN cd /tmp/tdh-tools && tanzu plugin install --local cli all
 
-RUN mv /tmp/cli/imgpkg-linux* /usr/local/bin/imgpkg && chmod a+x /usr/local/bin/imgpkg
-RUN mv /tmp/cli/kapp-linux* /usr/local/bin/kapp && chmod a+x /usr/local/bin/kapp
-RUN mv /tmp/cli/kbld-linux* /usr/local/bin/kbld && chmod a+x /usr/local/bin/kbld
-RUN mv /tmp/cli/ytt-linux* /usr/local/bin/ytt && chmod a+x /usr/local/bin/ytt
+RUN mv /tmp/tdh-tools/cli/imgpkg-linux* /usr/local/bin/imgpkg && chmod a+x /usr/local/bin/imgpkg
+RUN mv /tmp/tdh-tools/cli/kapp-linux* /usr/local/bin/kapp && chmod a+x /usr/local/bin/kapp
+RUN mv /tmp/tdh-tools/cli/kbld-linux* /usr/local/bin/kbld && chmod a+x /usr/local/bin/kbld
+RUN mv /tmp/tdh-tools/cli/ytt-linux* /usr/local/bin/ytt && chmod a+x /usr/local/bin/ytt
 
 # --- CLEANUP ---
 RUN rm -rf /tmp/cli
