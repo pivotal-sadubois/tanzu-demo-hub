@@ -6018,6 +6018,7 @@ installTanzuPlugins() {
 echo "CNT;$cnt"
   if [ $cnt -gt 0 ]; then 
     tanzu plugin install --local cli all > /dev/null 2>&1
+    tanzu plugin install --local cli all 
   fi
 }
 
