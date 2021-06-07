@@ -5807,7 +5807,7 @@ tdh_tools_build() {
     docker system prune -f > /dev/null 2>&1
   
     messagePrint " ▪ Building TDH Tools docker container" "tdh-tools:CHKSUM-$DOCKER_CHKSUM"
-    docker build -q -t tdh-tools:CHKSUM-$DOCKER_CHKSUM \
+    cd $TDH_DOCKER_FILES && docker build -q -t tdh-tools:CHKSUM-$DOCKER_CHKSUM \
       --build-arg UID=$(id -u) \
       --build-arg GID=$(id -g) \
       --build-arg USER=$USER \
@@ -5819,7 +5819,7 @@ tdh_tools_build() {
   
     if [ $ret -ne 0 ]; then 
       echo "ERROR: failed to create tdh-tools container"
-      echo "       => docker build -q -t tdh-tools:CHKSUM-$DOCKER_CHKSUM \\"
+      echo "       => cd $TDH_DOCKER_FILES && docker build -q -t tdh-tools:CHKSUM-$DOCKER_CHKSUM \\"
       echo "             --build-arg UID=$(id -u) \\"
       echo "             --build-arg GID=$(id -g) \\"
       echo "             --build-arg USER=$USER \\"
