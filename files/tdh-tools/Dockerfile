@@ -10,7 +10,7 @@ MAINTAINER Sacha Dubois <sdubois@vmware.com>
 ENV TZ="Europe/Zurich"
 ARG UID GID USER TZ HOME VMWUSER VMWPASS TANZU_CLI START 
 #ADD $TANZU_CLI /tmp
-ADD cli             /tmp
+ADD cli             /tmp/cli
 ADD kubectl         /usr/local/bin
 ADD kp              /usr/local/bin
 ADD mc              /usr/local/bin
@@ -67,6 +67,9 @@ RUN apt-get update && apt-get install -y \
     git vim azure-cli jq awscli 
 
 # --- INSTALL TANZU UTILITIES ---
+RUN ls -la /tmp
+RUN ls -la /tmp/cli
+RUN ls -la /tmp/cli/core/v*
 RUN install /tmp/cli/core/v*/tanzu-core-linux_amd64 /usr/local/bin/tanzu
 RUN gunzip -q /tmp/cli/*.gz
 RUN cd /tmp && tanzu plugin install --local cli all
