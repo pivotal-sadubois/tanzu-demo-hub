@@ -2299,6 +2299,7 @@ exit
       messagePrint " ▪ Service CIDR"                "$TDH_TKGMC_SERVICE_CIDR"
       messagePrint " ▪ Health Check Enabled"        "$TDH_TKGMC_MACHINE_HEALTH_CHECK_ENABLED"
 
+echo kkkk1
       export GOVC_INSECURE=1
       export GOVC_URL=https://${VSPHERE_VCENTER_SERVER}/sdk
       export GOVC_USERNAME=$VSPHERE_ADMIN
@@ -2312,6 +2313,7 @@ exit
         echo "ERROR: failed to login to vSphere 1"
         echo "       => govc find -name \"$TDH_TKGMC_NAME*\""; exit
       fi
+echo kkkk2
 
       for n in $nodes; do
         messagePrint " ▪ Cleanup Old Cluster Nodes"  "$n"
@@ -2321,15 +2323,18 @@ exit
           echo "       => govc vm.destroy $n"; exit 
         fi
       done
+echo kkkk3
 
       for n in $(kind get clusters); do
         messagePrint " ▪ Cleanup local kind Clusters:"  "$n"
         kind delete clusters $n > /dev/null 2>&1
       done
+echo kkkk4
 
       [ -f ${HOME}/.tkg/config.yaml ] && rm -f ${HOME}/.tkg/config.yaml
       tkg get mc > /dev/null 2>&1
       cp ${HOME}/.tkg/config.yaml $TKG_TEMPLATE
+echo kkkk5
 
       echo "VSPHERE_WORKER_MEM_MIB: 2048"                                                 >> $TKG_TEMPLATE
       echo "_VSPHERE_CONTROL_PLANE_ENDPOINT_IP: 10.1.1.30"                                >> $TKG_TEMPLATE
@@ -2353,6 +2358,7 @@ exit
       echo "VSPHERE_DATACENTER: /$VSPHERE_DATACENTER"                                     >> $TKG_TEMPLATE
 
       [ -f $HOME/.kube/config ] && mv $HOME/.kube/config $HOME/.kube/config.old
+echo kkkk6
 
       echo "-------------------------------------------------------------------------------------------------------------------------------------------------------"
       echo "tkg init -q -i $MODE -p dev --vsphere-controlplane-endpoint-ip $VSPHERE_CONTROLPLANE_IP \\"
@@ -2365,16 +2371,19 @@ exit
 
       cp $HOME/.kube/config $HOME/.tanzu-demo-hub/${TDH_TKGMC_NAME}.kubeconfig
       [ -f $HOME/.kube/config.old ] && mv $HOME/.kube/config.old $HOME/.kube/config
+echo kkkk7
 
       # --- COPY TKG CONFIG ---
       $SCP_COMMAND $HOME/.tanzu-demo-hub/${TDH_TKGMC_CONFIG} $SSH_USER@$SSH_HOST:${SSH_HOME}/.tanzu-demo-hub > /dev/null 2>&1
       $SCP_COMMAND $HOME/.tanzu-demo-hub/${TDH_TKGMC_NAME}.kubeconfig $SSH_USER@$SSH_HOST:${SSH_HOME}/.tanzu-demo-hub > /dev/null 2>&1
       $SSH_COMMAND -n "echo \"y\" | tkg get mc --config \${HOME}/.tanzu-demo-hub/$TDH_TKGMC_CONFIG" > /dev/null 2>&1
       $SSH_COMMAND -n "sed -i 's+file: /Users/sdu/.kube-tkg/config+file: /home/ubuntu/.kube-tkg/config+g' ~/.tanzu-demo-hub/tkgmc-dev-vsphere-macbook.yaml"
+echo kkkk8
 
       $SSH_COMMAND -n "[ ! -d \$HOME/.kube-tkg ] && mkdir -p \$HOME/.kube-tkg"
       $SCP_COMMAND $HOME/.kube-tkg/config $SSH_USER@$SSH_HOST:${SSH_HOME}/.kube-tkg/  > /dev/null 2>&1
       #tkg get credentials tdh-1 > /dev/null 2>&1
+echo kkkk9
     else
       messageTitle "Verify TKG Managment Cluster"
       messagePrint " ▪ Cluster Name"                "$TDH_TKGMC_NAME"
@@ -5458,9 +5467,10 @@ cleanAWSenv() {
 }
 
 cleanKubeconfig() {
-  messageTitle "Cleaning Up kubectl config"
+  messageTitle "Cleaning Up kubectl config 1"
 
   for cluster in $(kubectl config get-clusters | sed '1d' | egrep "^tdh|^tkg-mc"); do
+echo "cluster:$cluster"
     ctx=$(kubectl config view -o json | jq -r --arg key $cluster '.contexts[] | select(.context.cluster == $key).name')
     usr=$(kubectl config view -o json | jq -r --arg key $cluster '.contexts[] | select(.context.cluster == $key).context.user')
     cnt=$(echo $cluster | grep -c minikube)
@@ -5472,6 +5482,7 @@ cleanKubeconfig() {
         kubectl config unset users.${cluster} > /dev/null 2>&1
       fi
     else
+echo "CLUSTER:$cluster CTX:$ctx"
       kubectl config use-context $ctx > /dev/null
       kubectl get ns > /dev/null 2>&1
       if [ $? -gt 0 ]; then
