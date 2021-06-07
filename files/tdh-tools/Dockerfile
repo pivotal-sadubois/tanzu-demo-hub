@@ -79,5 +79,7 @@ RUN mv /tanzu/cli/ytt-linux* /usr/local/bin/ytt && chmod a+x /usr/local/bin/ytt
 # --- CLEANUP ---
 #RUN rm -rf /tmp/cli
 CMD chmod g+rwx /var/run/docker.sock
+#CMD chmod 666 /var/run/docker.sock
+#CMD chgrp root:docker /var/run/docker.sock
 CMD cd /tanzu && tanzu plugin install --local cli all
 
