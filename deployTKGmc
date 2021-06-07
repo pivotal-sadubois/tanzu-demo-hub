@@ -946,6 +946,8 @@ tanzu plugin list
 installTanzuPlugins
 tanzu plugin list
 
+exit
+
 # --- CLEANUP KUNECONFIG ---
 cleanKubeconfig
 checkTDHAccess
