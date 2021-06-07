@@ -9,8 +9,9 @@ FROM ubuntu:20.04
 MAINTAINER Sacha Dubois <sdubois@vmware.com>
 ENV TZ="Europe/Zurich"
 ARG UID GID USER TZ HOME VMWUSER VMWPASS TANZU_CLI START 
-ADD $TANZU_CLI /tmp
-ADD kubectl /usr/local/bin
+#ADD $TANZU_CLI /tmp
+ADD cli             /tmp
+ADD kubectl         /usr/local/bin
 ADD kp              /usr/local/bin
 ADD mc              /usr/local/bin
 ADD tmc             /usr/local/bin
@@ -68,6 +69,7 @@ RUN apt-get update && apt-get install -y \
 # --- INSTALL TANZU UTILITIES ---
 RUN install /tmp/cli/core/v*/tanzu-core-linux_amd64 /usr/local/bin/tanzu
 RUN gunzip -q /tmp/cli/*.gz
+RUN cd /tmp && tanzu plugin install --local cli all
 
 RUN mv /tmp/cli/imgpkg-linux* /usr/local/bin/imgpkg && chmod a+x /usr/local/bin/imgpkg
 RUN mv /tmp/cli/kapp-linux* /usr/local/bin/kapp && chmod a+x /usr/local/bin/kapp
@@ -77,4 +79,4 @@ RUN mv /tmp/cli/ytt-linux* /usr/local/bin/ytt && chmod a+x /usr/local/bin/ytt
 # --- CLEANUP ---
 RUN rm -rf /tmp/cli
 CMD chmod g+rwx /var/run/docker.sock
-
+#CMD tanzu plugin install --local cli all

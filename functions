@@ -5794,7 +5794,11 @@ tdh_tools_build() {
     else
       vmwfile=$(ls -1 $TDH_DOCKER_FILES/tanzu-cli-bundle* 2>/dev/null | awk -F'/' '{ print $NF }' | head -1)
     fi
-  
+
+    if [ ! -d $TDH_DOCKER_FILES/cli  ]; then 
+      cd $TDH_DOCKER_FILES && tar xf $vmwfile
+    fi
+
     # --- CLEANUP SOME DISK SPACE ---
     messagePrint " ▪ Cleanup unsued Docker images" "docker system prune, docker container prune"
     docker rmi $(docker images -q) > /dev/null 2>&1
