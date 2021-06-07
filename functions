@@ -2251,7 +2251,7 @@ echo ggggg6
     kubectl config set-cluster $TDH_TKGMC_NAME > /dev/null 2>&1
     kubectl config use-context ${TDH_TKGMC_NAME}-admin@$TDH_TKGMC_NAME > /dev/null 2>&1
 
-    context=$(kubectl config view -o json | jq -r '.contexts[].name')
+    context=$(kubectl config view -o json | jq -r '.contexts[].name' 2>/dev/null)
     messageTitle "Verify TKG Managment Cluster"
     messagePrint " ▪ Cluster Name"        "$TDH_TKGMC_NAME"
     messagePrint " ▪ Cluster Context"     "$context"
@@ -5488,7 +5488,6 @@ cleanKubeconfig() {
   messageTitle "Cleaning Up kubectl config 1"
 
   for cluster in $(kubectl config get-clusters | sed '1d' | egrep "^tdh|^tkg-mc"); do
-echo "cluster:$cluster"
     ctx=$(kubectl config view -o json | jq -r --arg key $cluster '.contexts[] | select(.context.cluster == $key).name')
     usr=$(kubectl config view -o json | jq -r --arg key $cluster '.contexts[] | select(.context.cluster == $key).context.user')
     cnt=$(echo $cluster | grep -c minikube)
@@ -5500,7 +5499,6 @@ echo "cluster:$cluster"
         kubectl config unset users.${cluster} > /dev/null 2>&1
       fi
     else
-echo "CLUSTER:$cluster CTX:$ctx"
       kubectl config use-context $ctx > /dev/null
       kubectl get ns > /dev/null 2>&1
       if [ $? -gt 0 ]; then
