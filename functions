@@ -2383,7 +2383,7 @@ echo kkkk8
       $SSH_COMMAND -n "[ ! -d \$HOME/.kube-tkg ] && mkdir -p \$HOME/.kube-tkg"
       $SCP_COMMAND $HOME/.kube-tkg/config $SSH_USER@$SSH_HOST:${SSH_HOME}/.kube-tkg/  > /dev/null 2>&1
       #tkg get credentials tdh-1 > /dev/null 2>&1
-echo kkkk9
+echo kkkk91
     else
       messageTitle "Verify TKG Managment Cluster"
       messagePrint " ▪ Cluster Name"                "$TDH_TKGMC_NAME"
