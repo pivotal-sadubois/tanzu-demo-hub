@@ -78,11 +78,54 @@ execCmd() {
   if [ $? -ne 0 ]; then exit 1; fi
 }
 
+#gaga
 tmcCheckLogin() {
+  [ "${TDH_TANZU_MISSION_CONTROL_REGISTRATION}" == "false" ] && return
+  missing_variables=0
+
+  if [ "${TMC_SERVICE_TOKEN}" == "" -o "${TMC_CONTEXT_NAME}" == "" ]; then
+    missing_variables=1
+    echo ""
+    echo "  ?MISSING ENVIRONMENT-VARIABES    DESCRIPTION        "
+    echo "  -------------------------------------------------------------------------------------------------------------------------------------------------------"
+
+    if [ "${TMC_SERVICE_TOKEN}" == "" ]; then
+      echo "  TMC_SERVICE_TOKEN                (required) is the TMC_API_TOKEN which can be optained in the TMC console"
+    fi
+
+    if [ "${TMC_CONTEXT_NAME}" == "" ]; then
+      echo "  TMC_CONTEXT_NAME                 (required) The TMC Context Name"
+    fi
+  fi
+
+  if [ ${missing_variables} -eq 1 ]; then
+    echo "  -------------------------------------------------------------------------------------------------------------------------------------------------------"
+    echo "  IMPORTANT: Please set the missing environment variables either in your shell or in the tanzu-demo-hub"
+    echo "             configuration file ~/.tanzu-demo-hub.cfg and set all variables with the 'export' notation"
+    echo "             export TMC_SERVICE_TOKEN='xxxxxxxxxxxx'"
+    echo "  -------------------------------------------------------------------------------------------------------------------------------------------------------"
+    exit 1
+  fi
+
+  export TMC_API_TOKEN=$TMC_SERVICE_TOKEN
+  tmc login --name $TMC_CONTEXT_NAME --no-configure > /dev/null 2>&1; ret=$?
+  if [ $ret -ne 0 ]; then
+    echo "ERROR: failed to login into TMC"
+    if [ "$NATIVE" == "0" ]; then
+      echo "       => tools/tdh-tools.sh"
+      echo "          tdh-tools:/$ export TMC_API_TOKEN=$TMC_SERVICE_TOKEN"
+      echo "          tdh-tools:/$ tmc login --name $TMC_CONTEXT_NAME --no-configure"
+      echo "          tdh-tools:/$ exit"
+    else
+      echo "       => export TMC_API_TOKEN=$TMC_SERVICE_TOKEN"
+      echo "       => tmc login --name $TMC_CONTEXT_NAME --no-configure"
+    fi
+  fi
+
   tmc cluster list >/dev/null 2>&1
 
   if [ $? -ne 0 ]; then 
-    echo "ERROR: Currently not logged in in TMC, please login: tmc login"
+    echo "ERROR: Currently not logged in TMC, please login: tmc login"
     exit 1
   fi
 }
@@ -911,6 +954,12 @@ checkCloudAccess() {
       #messagePrint " ▪ Azure ClientId"               $(maskPassword "$AZURE_CLIENT_ID")
       #messagePrint " ▪ Azure Client Secret"          $(maskPassword "$AZURE_CLIENT_SECRET")
       messagePrint " ▪ Azure Region"                 "$AZURE_LOCATION"
+
+      az ad app list > /dev/null 2>&1
+      if [ $? -ne 0 ]; then
+        echo "Please login to Microsoft Azure as described below:"
+        az login --tenant $AZURE_TENANT_ID -o none
+      fi
     fi
   fi
 
@@ -924,6 +973,7 @@ checkCloudAccess() {
   fi
 }
 
+#gaga
 checkTDHenvironment() {
   missing_variables=0
 
@@ -1634,6 +1684,7 @@ configureJumpHost() {
     if [ ${ret} -ne 0 ]; then
       echo "ERROR: Failed to install TKG Utilities (InstallTKGutilities.sh) on Jump Host"
       echo "       => $SSH_DISPLAY"
+      echo "       => sudo ${TDHHOME}/scripts/InstallTKGutilities.sh \"$SSH_HOME/tanzu-demo-hub\" \"$TDH_TKGMC_INFRASTRUCTURE\" $DEBUG"
       exit
     #else
     #  messagePrint " ▪ Rebooting Jump Server"   "wait for services comming up ..."
@@ -5962,5 +6013,11 @@ vsNanespaceExists() {
   if [ "$STT" != "" ]; then echo "true"; else echo "false"; fi
 }
 
+installTanzuPlugins() {
+  cnt=$(tanzu plugin list | grep -c "not installed") 
+  if [ $cnt -gt 0 ]; then 
+    tanzu plugin install --local cli all > /dev/null 2>&1
+  fi
+}
 
 

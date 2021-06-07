@@ -275,17 +275,17 @@ configureLetsEnscript() {
   CERTS_GENERATE_NEW=false
   domain="${TDH_TKGMC_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}"
 
-  if [ -d $TDHPATH/certificates/$domain -a -f $TDHPATH/certificates/$domain/privkey.pem ]; then
+  if [ -d $HOME/.tanzu-demo-hub/certificates/$domain -a -f $HOME/.tanzu-demo-hub/certificates/$domain/privkey.pem ]; then
     messageTitle "Install Certificate for domain ($domain)"
-    $SSH_COMMAND -n "mkdir -p $SSH_HOME//tanzu-demo-hub/certificates"
-    $SCP_COMMAND $TDHPATH/certificates/$domain/* ${SSH_USER}@${SSH_HOST}:~/tanzu-demo-hub/certificates > /dev/null 2>&1
+    $SSH_COMMAND -n "mkdir -p $SSH_HOME/tanzu-demo-hub/certificates"
+    $SCP_COMMAND $HOME/.tanzu-demo-hub/certificates/$domain/* ${SSH_USER}@${SSH_HOST}:~/tanzu-demo-hub/certificates > /dev/null 2>&1
   fi
 
   CERTS_INSTALLED=$($SSH_COMMAND -n "[ -f ~/tanzu-demo-hub/certificates/privkey.pem ] && echo true || echo false")
 
   if [ "${CERTS_INSTALLED}" == "true" ]; then
     messageTitle "Validate Certificates for domain ($domain)"
-    $SCP_COMMAND $TDHPATH/certificates/$domain/* ${SSH_USER}@${SSH_HOST}:~/tanzu-demo-hub/certificates > /dev/null 2>&1
+    $SCP_COMMAND $HOME/.tanzu-demo-hub/certificates/$domain/* ${SSH_USER}@${SSH_HOST}:~/tanzu-demo-hub/certificates > /dev/null 2>&1
 
     CERTS_ENDDATE=$($SSH_COMMAND -n "openssl x509 -noout -in ~/tanzu-demo-hub/certificates/cert.pem -enddate | awk -F'=' '{ print \$2 }'")
     CERTS_EXPIRED=$($SSH_COMMAND -n "openssl x509 -noout -in ~/tanzu-demo-hub/certificates/cert.pem -checkend 3600 > /dev/null 2>&1; echo \$?")
@@ -317,7 +317,7 @@ configureLetsEnscript() {
     fi
 
     # --- GET A COPY OF THE CERTIFICATES BACK ---
-    [ ! -d ./certificates/$domain ] && mkdir -p ./certificates/$domain
+    [ ! -d $HOME/.tanzu-demo-hub/certificates/$domain ] && mkdir -p $HOME/.tanzu-demo-hub/certificates/$domain
 
     $SSH_COMMAND -n "[ -d /etc/letsencrypt/live ] && sudo chmod -R a+r /etc/letsencrypt/live /etc/letsencrypt/archive"
     $SSH_COMMAND -n "[ -d /etc/letsencrypt/live ] && sudo chmod 777 /etc/letsencrypt/live /etc/letsencrypt/live/$domain"
@@ -327,7 +327,7 @@ configureLetsEnscript() {
 
     messageTitle " Copy new certificates from jump to local ./certificates/$domain"
     while [ ! -f ./certificates/$domain/fullchain.pem ]; do
-      $SCP_COMMAND ${SSH_USER}@${SSH_HOST}:$SSH_HOME/tanzu-demo-hub/certificates/* $TDHPATH/certificates/$domain/ > /dev/null 2>&1
+      $SCP_COMMAND ${SSH_USER}@${SSH_HOST}:$SSH_HOME/tanzu-demo-hub/certificates/* $HOME/.tanzu-demo-hub/certificates/$domain/ > /dev/null 2>&1
 
       sleep 10
     done
@@ -921,8 +921,8 @@ if [ ! -f /tdh_tools_docker_container  ]; then
     docker run -u $(id -u):$(id -g) --group-add 0 -it --rm --name tdh-tools \
        -v $HOME:$HOME:ro -v $HOME/.local:$HOME/.local:rw -v $HOME/.tanzu-demo-hub:$HOME/.tanzu-demo-hub:rw \
        -v /var/run/docker.sock:/var/run/docker.sock -v $HOME/.cache:$HOME/.cache:rw -v $HOME/.config:$HOME/.config:rw \
-       -v $HOME/.aws:$HOME/.aws:rw \
-       -v /tmp:/tmp:rw -v /tmp/docker:$HOME/.docker:rw -v $HOME/.mc:$HOME/.mc:rw \
+       -v $HOME/.aws:$HOME/.aws:rw -v $HOME/.vmware-cna-saas:$HOME/.vmware-cna-saas:rw -v $HOME/.azure:$HOME/.azure:rw \
+       -v /tmp:/tmp:rw -v /tmp/docker:$HOME/.docker:rw -v $HOME/.mc:$HOME/.mc:rw -v $HOME/.tanzu:$HOME/.tanzu:rw \
        -e "KUBECONFIG=$HOME/.kube/config" --hostname tdh-tools tdh-tools:latest $TDHPATH/$CMD_EXEC $CMD_ARGS
 
     # --- FINISH CURRENT SESSION AS WE RUN AS CONTAINER ---
@@ -941,15 +941,17 @@ if [ ! -f /tdh_tools_docker_container  ]; then
   fi
 fi
 
+# --- INSTALL TANZU PLUGINS ---
+tanzu plugin list
+installTanzuPlugins
+tanzu plugin list
+
 # --- CLEANUP KUNECONFIG ---
 cleanKubeconfig
 checkTDHAccess
 checkCloudAccess
 
-hostname
-exit
-
-##checkTMCAccess
+#checkTMCAccess
 checkKeyPairs
 #checkTKGdownloads
 tmcCheckLogin
@@ -1225,7 +1227,6 @@ else
     $SSH_COMMAND -n "[ -f $SSH_HOME/tanzu-demo-hub/scripts/uploadOVAimages.sh ] && tanzu-demo-hub/scripts/uploadOVAimages.sh $DEPLOY_TKG_TEMPLATE $DEBUG"
   fi
 
-#gaga
   # --- ACCEPT LICENSE AGREEMENT ---
   if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "Azure" ]; then
     messageTitle "Accepting Image Terms for Provider (vmware-inc) / Offer: (tkg-capi)"
@@ -1247,10 +1248,12 @@ else
   fi
 
   # --- VERIFY IF DOCKER IS RUNNING ---
-  docker ps > /dev/null 2>&1
-  if [ $? -ne 0 ]; then
-    echo "ERROR: Docker Daemon not running"; exit
-    exit 1
+  if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "vSphere" ]; then
+    docker ps > /dev/null 2>&1
+    if [ $? -ne 0 ]; then
+      echo "ERROR: Docker Daemon not running"; exit
+      exit 1
+    fi
   fi
 
   # --- CREATE MANAGEMENT CLUSTER ---
