@@ -5827,7 +5827,6 @@ tdh_tools_build() {
       --build-arg TANZU_DEMO_HUB=$TANZU_DEMO_HUB \
       --build-arg TDHPATH=$TDHPATH \
       --build-arg TZ=$(ls -l /etc/localtime | /usr/bin/cut -d '/' -f 8,9) .; ret=$?
-
   
     if [ $ret -ne 0 ]; then 
       echo "ERROR: failed to create tdh-tools container"
@@ -6030,10 +6029,10 @@ vsNanespaceExists() {
 }
 
 installTanzuPlugins() {
-  cnt=$(tanzu plugin list | grep -c "not installed") 
-  if [ $cnt -gt 0 ]; then 
-    #cd /tanzu && tanzu plugin install --local cli all > /dev/null 2>&1
-    cd /tanzu && tanzu plugin install --local cli all 
+  cnt=$(tanzu plugin list | grep -v "alpha" | grep -c "not installed") 
+  if [ $cnt -gt 0 -a $NATIVE -eq 0 ]; then
+    messagePrint " ▪ Install Tanzu Plugins" "tanzu plugin install --local cli all"
+    cd /tanzu && tanzu plugin install --local cli all > /dev/null 2>&1
   fi
 }
 
