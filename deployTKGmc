@@ -1341,6 +1341,7 @@ else
 
   echo "TDH_TKGMC_INFRASTRUCTURE=$TDH_DEPLOYMENT_ENV_NAME"               >  $DEPLOYMENT_FILE
   echo "TDH_TKGMC_NAME=$TDH_TKGMC_NAME"                                  >> $DEPLOYMENT_FILE
+  echo "TDH_TKGMC_ENVNAME=$TDH_TKGMC_ENVNAME"                            >> $DEPLOYMENT_FILE
   echo "TDH_TKGMC_CONFIG=${TDH_TKGMC_NAME}.yaml"                         >> $DEPLOYMENT_FILE
   echo "TDH_TKGMC_WC_CONFIG_DEV=${TDH_TKGMC_NAME}-wc-dev.yaml"           >> $DEPLOYMENT_FILE
   echo "TDH_TKGMC_WC_CONFIG_PROD=${TDH_TKGMC_NAME}-wc-prod.yaml"         >> $DEPLOYMENT_FILE
