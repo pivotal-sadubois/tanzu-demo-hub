@@ -76,10 +76,3 @@ RUN mv /tanzu/cli/kapp-linux* /usr/local/bin/kapp && chmod a+x /usr/local/bin/ka
 RUN mv /tanzu/cli/kbld-linux* /usr/local/bin/kbld && chmod a+x /usr/local/bin/kbld
 RUN mv /tanzu/cli/ytt-linux* /usr/local/bin/ytt && chmod a+x /usr/local/bin/ytt
 
-# --- CLEANUP ---
-#RUN rm -rf /tmp/cli
-CMD chmod g+rwx /var/run/docker.sock
-#CMD chmod 666 /var/run/docker.sock
-#CMD chgrp root:docker /var/run/docker.sock
-CMD cd /tanzu && tanzu plugin install --local cli all
-
