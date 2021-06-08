@@ -915,12 +915,16 @@ if [ ! -f /tdh_tools_docker_container  ]; then
     tdh_tools_build
 
     messagePrint " ▪ Running TDH Tools Docker Container" "tdh-tools:latest $TDHPATH/$CMD_EXEC $CMD_ARGS"
+ 
+    cid=$(docker ps | grep tdh-tools:latest | awk '{ print $1 }') 
+    [ "$cid" != "" ] && docker rm $cid -f > /dev/null 2>&1
 
     mkdir -p $HOME/.mc $HOME/.cache $HOME/.config $HOME/.local
     mkdir -p /tmp/docker && chmod a+w /tmp/docker
+    docker run -it --rm --name tdh-tools -v /var/run/docker.sock:/var/run/docker.sock tdh-tools:latest  chmod 666 /var/run/docker.sock > /dev/null 2>&1
     docker run -u $(id -u):$(id -g) --group-add 0 -it --rm --name tdh-tools \
        -v $HOME:$HOME:ro -v $HOME/.local:$HOME/.local:rw -v $HOME/.tanzu-demo-hub:$HOME/.tanzu-demo-hub:rw \
-       -v /var/run/docker.sock:/var/run/docker.sock -v $HOME/.cache:$HOME/.cache:rw -v $HOME/.config:$HOME/.config:rw \
+       -v /var/run/docker.sock:/var/run/docker.sock:rw -v $HOME/.cache:$HOME/.cache:rw -v $HOME/.config:$HOME/.config:rw \
        -v $HOME/.aws:$HOME/.aws:rw -v $HOME/.vmware-cna-saas:$HOME/.vmware-cna-saas:rw -v $HOME/.azure:$HOME/.azure:rw \
        -v /tmp:/tmp:rw -v /tmp/docker:$HOME/.docker:rw -v $HOME/.mc:$HOME/.mc:rw -v $HOME/.tanzu:$HOME/.tanzu:rw \
        -e "KUBECONFIG=$HOME/.kube/config" --hostname tdh-tools tdh-tools:latest $TDHPATH/$CMD_EXEC $CMD_ARGS
@@ -942,11 +946,7 @@ if [ ! -f /tdh_tools_docker_container  ]; then
 fi
 
 # --- INSTALL TANZU PLUGINS ---
-tanzu plugin list
 installTanzuPlugins
-tanzu plugin list
-
-exit
 
 # --- CLEANUP KUNECONFIG ---
 cleanKubeconfig
@@ -1233,16 +1233,16 @@ else
   if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "Azure" ]; then
     messageTitle "Accepting Image Terms for Provider (vmware-inc) / Offer: (tkg-capi)"
 
-    for img in $(az vm image list --publisher vmware-inc --offer tkg-capi --all | jq -r '.[].urn' | sort | uniq); do
-      stt=$(az vm image terms show --urn $img | jq -r '.accepted')
-      nam=$(az vm image terms show --urn $img | jq -r '.plan')
+    for img in $(az vm image list --publisher vmware-inc --offer tkg-capi --all | jq -r '.[].urn' | \
+                 grep -v "2020" | awk -F: '{ printf("%s:%s:%s\n",$1,$2,$3)}' | sort | uniq); do
+      stt=$(az vm image terms show --urn $img:latest | jq -r '.accepted')
 
       if [ "$stt" != "true" ]; then 
-        messagePrint " ▪ Accepting Image Terms for image ($nam)" "$img"
+        messagePrint " ▪ Accepting Image Terms for image ($img)" "$img"
         az vm image terms accept --urn $img > /dev/null 2>&1
         if [ $? -ne 0 ]; then 
           echo "ERROR: failed to accept image terms, please try manually"
-          echo "       => az vm image terms accept --urn $img"
+          echo "       => az vm image terms accept --urn $img:latest"
           exit
         fi
       fi
@@ -1267,6 +1267,7 @@ else
     exit
   fi
 
+  cleanKubeconfig
   cleanManagementCluster
   cnt=$(tanzu management-cluster get 2>/dev/null | grep -c " $TDH_TKGMC_NAME ")
   if [ $cnt -eq 0 ]; then
@@ -1322,7 +1323,6 @@ else
       let cnt=cnt+1
     done
   fi
-#gaga
 
   messageTitle "Create the TKG Management Cluster deployment File"
   messagePrint " ▪ Deployment File"        "$HOME/.tanzu-demo-hub/config/tkgmc-${TDH_TKGMC_NAME}.yaml"
@@ -1369,7 +1369,6 @@ else
     egrep "$var_aws_1|$var_aws_2" $TKG_MC_CONFIG     >> $TKG_WC_CONFIG_PRD
     egrep "$var_aws_1|$var_aws_2" $TKG_MC_CONFIG     >> $TKG_WC_CONFIG_DEV
   fi
-#gaga
 
   if [ "$TDH_DEPLOYMENT_ENV_NAME" == "Azure" ]; then 
     var_azure_1="AZURE_TENANT_ID:|AZURE_CLIENT_ID:|AZURE_CLIENT_SECRET:|AZURE_SSH_PUBLIC_KEY_B64:|AZURE_CONTROL_PLANE_MACHINE_TYPE:"
