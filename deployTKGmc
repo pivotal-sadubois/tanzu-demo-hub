@@ -18,8 +18,9 @@ export CMD_ARGS=$*
 
 usage() {
   echo "USAGE: $0 [oprions] <deployment>"
-  echo "                   --clean/-c   # Clean previous installation and stop the jump server"
-  echo "                   --debug/-d   # Enable debugging"
+  echo "            --clean                  # Clean previous installation and stop the jump server"
+  echo "            --debug                  # default (disabled)"
+  echo "            --native                 # Use 'native' installed tools instead of the tdh-tools container"
 }
 
 listTemplates() {
@@ -1411,8 +1412,8 @@ else
   echo "    => tanzu cluster kubeconfig get <cluster-name> --admin"
   echo "    => tanzu cluster list --include-management-cluster"
   printf "\e[1m2.) Ceeate Tanzu Demo Hub (TDH) Workload Cluster with services (TBS, Harbor, Ingres etc.)\e[0m\n"
-  echo "    => ./deployTKG -m $TDH_TKGMC_NAME -d tkg-tanzu-demo-hub.cfg -n tdh-$TDH_USER-$CLOUD "
-  echo "    => ./deployTKG -m $TDH_TKGMC_NAME -d tkg-tanzu-demo-hub.cfg -n tdh-$TDH_USER-$CLOUD -k \"v1.17.16---vmware.2-tkg.1\""
+  echo "    => ./deployTKG -m $TDH_TKGMC_NAME -d tkg-tanzu-demo-hub.cfg -n tdh-$CLOUD-$TDH_USER"
+  echo "    => ./deployTKG -m $TDH_TKGMC_NAME -d tkg-tanzu-demo-hub.cfg -n tdh-$CLOUD-$TDH_USER -k \"v1.17.16---vmware.2-tkg.1\""
   printf "\e[1m3.) Delete the Management Cluster\e[0m\n"
   echo "    => tanzu management-cluster delete tkg-mc-azure-dev-sadubois -y"
   printf "\e[1m4.) Login to Jump Server: $JUMP_HOST (only if required)\e[0m\n"
