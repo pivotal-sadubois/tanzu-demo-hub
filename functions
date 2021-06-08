@@ -2108,7 +2108,6 @@ exit
   fi
 
   if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "Azure" ]; then
-echo ggggg1
     messageTitle "Creating TKG Managment Cluster"
     messagePrint " ▪ Cluster Name"                "$TDH_TKGMC_NAME"
     messagePrint " ▪ Configuration File"          "$TKG_TEMPLATE"
@@ -2118,13 +2117,11 @@ echo ggggg1
     messagePrint " ▪ Service CIDR"                "$TDH_TKGMC_SERVICE_CIDR"
     messagePrint " ▪ Health Check Enabled"        "$TDH_TKGMC_MACHINE_HEALTH_CHECK_ENABLED"
 
-echo ggggg2
     [ -f ${HOME}/.tkg/config.yaml ] && rm -f ${HOME}/.tkg/config.yaml
     tkg get mc > /dev/null 2>&1
     tanzu management-cluster get > /dev/null 2>&1
     tanzu management-cluster create > /dev/null 2>&1
     #cp ${HOME}/.tanzu/config.yaml $TKG_TEMPLATE
-echo ggggg3
 
     az ad app list --display-name "TanzuDemoHub" > /dev/null 2>&1
     if [ $? -ne 0 ]; then 
@@ -2135,7 +2132,6 @@ echo ggggg3
     AZURE_SSH_PUBLIC_KEY_B64=$(cat ~/.tanzu-demo-hub/KeyPair-Azure.pub | base64 -w 10000)
     AZURE_CLIENT_ID=$(az ad app list --display-name "TanzuDemoHub" | jq -r '.[].appId')
     AZURE_CLIENT_SECRET="tanzu-demo-hub"
-echo ggggg4
 
     echo "CLUSTER_NAME: $TDH_TKGMC_NAME"                                              >> $TKG_TEMPLATE
     echo "AZURE_CLIENT_ID: $AZURE_CLIENT_ID"                                          >> $TKG_TEMPLATE
@@ -2191,13 +2187,11 @@ echo ggggg4
     if [ "$TDH_TKGMC_IDENTITY_MANAGEMENT_TYPE" == "none" ]; then
       echo "IDENTITY_MANAGEMENT_TYPE: none"                                              >> $TKG_TEMPLATE
     fi
-echo ggggg5
 
     #MPDE=azure
 
     cnt=$(tanzu management-cluster get 2>/dev/null | egrep -c " $TDH_TKGMC_NAME ")
     if [ ${cnt} -eq 0 ]; then
-echo ggggg51
       # --- CLEANUP OLD CONFIG ---
       export KUBECONFIG=~/.kube-tkg/config
 
@@ -2207,7 +2201,6 @@ echo ggggg51
      
       # --- CLEAN OLD MANAGEMENT CLUSTER CONFIG ---
       rm -f ~/.tanzu/config.yaml /tmp/$TDH_TKGMC_NAME.log
-echo ggggg52
 
       messagePrint " ▪ Management Cluster Creating"        "This may take up to 15min ..."
 
@@ -2219,7 +2212,6 @@ echo ggggg52
         tanzu management-cluster create --file $TKG_TEMPLATE -v 0 --log-file=/tmp/$TDH_TKGMC_NAME.log > /dev/null 2>&1; ret=$?
       fi
 
-echo ggggg53
       if [ ${ret} -ne 0 ]; then
         echo "ERROR: failed to create TKG Management Cluster"
         echo "       => tanzu management-cluster create --file $TKG_TEMPLATE -v 0 --log-file=/tmp/$TDH_TKGMC_NAME.log"
@@ -2229,24 +2221,14 @@ echo ggggg53
 
         exit 1
       fi
-echo ggggg54
 
       messagePrint " ▪ Management Cluster Creating Completed"    "/tmp/$TDH_TKGMC_NAME.log"
-echo "tanzu management-cluster kubeconfig get --admin"
       tanzu management-cluster kubeconfig get --admin > /dev/null 2>&1
-echo "gaga-1: $?"
-echo "kubectl config set-cluster $TDH_TKGMC_NAME"
       kubectl config set-cluster $TDH_TKGMC_NAME > /dev/null 2>&1
-echo "gaga-2: $?"
-echo "kubectl config use-context ${TDH_TKGMC_NAME}-admin@$TDH_TKGMC_NAME"
       kubectl config use-context ${TDH_TKGMC_NAME}-admin@$TDH_TKGMC_NAME > /dev/null 2>&1
-echo "gaga-3: $?"
       context=$(kubectl config view -o json | jq -r '.contexts[].name' 2>/dev/null)
-echo "gaga-4: $?"
       tanzu management-cluster kubeconfig get --admin --export-file=${TKG_KUBECONFIG} > /dev/null 2>&1
-echo "gaga-5: $?"
     fi
-echo ggggg6
 
     kubectl config set-cluster $TDH_TKGMC_NAME > /dev/null 2>&1
     kubectl config use-context ${TDH_TKGMC_NAME}-admin@$TDH_TKGMC_NAME > /dev/null 2>&1
@@ -2257,7 +2239,6 @@ echo ggggg6
     messagePrint " ▪ Cluster Context"     "$context"
     messagePrint " ▪ Cluster Config"      "~/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.cfg"
     messagePrint " ▪ Cluster Kubeconfig"  "~/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.kubeconfig"
-echo ggggg7
 
     echo ""                                                                                         >  /tmp/motd
     echo '     _____                       ____                         _   _       _'              >> /tmp/motd
