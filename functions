@@ -5542,7 +5542,7 @@ cleanKubeconfig() {
 cleanManagementCluster() {
   messageTitle "Cleaning up old kubeconfig definitions"
 
-  for n in $(tanzu config server list | grep " tkg-mc" | awk '{ print $1 }'); do
+  for n in $(tanzu config server list | grep " tkgmc" | awk '{ print $1 }'); do
     cnt=$(kubectl config get-clusters | grep -c "$n")
     if [ $cnt -eq 0 ]; then 
       messagePrint " ▪ Cleaning up config of Cluster" "$n"
