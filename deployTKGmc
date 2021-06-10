@@ -1232,65 +1232,69 @@ else
     $SSH_COMMAND -n "[ -f $SSH_HOME/tanzu-demo-hub/scripts/uploadOVAimages.sh ] && tanzu-demo-hub/scripts/uploadOVAimages.sh $DEPLOY_TKG_TEMPLATE $DEBUG"
   fi
 
-  # --- ACCEPT LICENSE AGREEMENT ---
-  if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "Azure" ]; then
-    messageTitle "Accepting Image Terms for Provider (vmware-inc) / Offer: (tkg-capi)"
-
-    for img in $(az vm image list --publisher vmware-inc --offer tkg-capi --all | jq -r '.[].urn' | \
-                 grep -v "2020" | awk -F: '{ printf("%s:%s:%s\n",$1,$2,$3)}' | sort | uniq); do
-      stt=$(az vm image terms show --urn $img:latest | jq -r '.accepted')
-
-      if [ "$stt" != "true" ]; then 
-        messagePrint " ▪ Accepting Image Terms for image ($img)" "$img"
-        az vm image terms accept --urn $img > /dev/null 2>&1
-        if [ $? -ne 0 ]; then 
-          echo "ERROR: failed to accept image terms, please try manually"
-          echo "       => az vm image terms accept --urn $img:latest"
-          exit
-        fi
-      fi
-    done
-  fi
-
-  # --- VERIFY IF DOCKER IS RUNNING ---
-  if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "vSphere" ]; then
-    docker ps > /dev/null 2>&1
-    if [ $? -ne 0 ]; then
-      echo "ERROR: Docker Daemon not running"; exit
-      exit 1
-    fi
-  fi
-
-  # --- CREATE MANAGEMENT CLUSTER ---
-  [ ! -d ~/.tanzu-demo-hub/config ] && mkdir -p ~/.tanzu-demo-hub/config
-  $SSH_COMMAND -n "[ -f $SSH_HOME/tanzu-demo-hub/scripts/InstallTKGmc.sh ] && tanzu-demo-hub/scripts/InstallTKGmc.sh \"$DEPLOY_TKG_TEMPLATE\" \"$DEBUG\""; ret=$?
-  if [ ${ret} -ne 0 ]; then
-    echo "ERROR: Failed to deploy Management Server on $JUMP_HOST"
-    echo "       => $SSH_DISPLAY -n tanzu-demo-hub/scripts/InstallTKGmc.sh \"$DEPLOY_TKG_TEMPLATE\" \"$DEBUG\""
-    exit
-  fi
-
-  cleanKubeconfig
-  cleanManagementCluster
   cnt=$(tanzu management-cluster get 2>/dev/null | grep -c " $TDH_TKGMC_NAME ")
   if [ $cnt -eq 0 ]; then
-    $SCP_COMMAND ${SSH_USER}@${SSH_HOST}:$SSH_HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.kubeconfig ~/.tanzu-demo-hub/config > /dev/null 2>&1
-    $SCP_COMMAND ${SSH_USER}@${SSH_HOST}:$SSH_HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.yaml ~/.tanzu-demo-hub/config > /dev/null 2>&1
+    # --- ACCEPT LICENSE AGREEMENT ---
+    if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "Azure" ]; then
+      messageTitle "Accepting Image Terms for Provider (vmware-inc) / Offer: (tkg-capi)"
 
-    tanzu login --kubeconfig ~/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.kubeconfig  --name $TDH_TKGMC_NAME --server $TDH_TKGMC_NAME \
-       --context ${TDH_TKGMC_NAME}-admin@$TDH_TKGMC_NAME > /dev/null 2>&1
-    if [ $? -ne 0 ]; then
-      echo "ERROR: failed to login to TKG Management Cluster: ${TDH_TKGMC_NAME}.kubeconfig"
-      echo "       => tanzu login --kubeconfig ~/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.kubeconfig  \\"
-      echo "            --name $TDH_TKGMC_NAME --server $TDH_TKGMC_NAME \\"
-      echo "            --context ${TDH_TKGMC_NAME}-admin@$TDH_TKGMC_NAME"
+      for img in $(az vm image list --publisher vmware-inc --offer tkg-capi --all | jq -r '.[].urn' | \
+                   grep -v "2020" | awk -F: '{ printf("%s:%s:%s\n",$1,$2,$3)}' | sort | uniq); do
+        stt=$(az vm image terms show --urn $img:latest | jq -r '.accepted')
+  
+        if [ "$stt" != "true" ]; then 
+          messagePrint " ▪ Accepting Image Terms for image ($img)" "$img"
+          az vm image terms accept --urn $img > /dev/null 2>&1
+          if [ $? -ne 0 ]; then 
+            echo "ERROR: failed to accept image terms, please try manually"
+            echo "       => az vm image terms accept --urn $img:latest"
+            exit
+          fi
+        fi
+      done
+    fi
+
+    # --- VERIFY IF DOCKER IS RUNNING ---
+    if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "vSphere" ]; then
+      docker ps > /dev/null 2>&1
+      if [ $? -ne 0 ]; then
+        echo "ERROR: Docker Daemon not running"; exit
+        exit 1
+      fi
+    fi
+
+    # --- CREATE MANAGEMENT CLUSTER ---
+    [ ! -d ~/.tanzu-demo-hub/config ] && mkdir -p ~/.tanzu-demo-hub/config
+    $SSH_COMMAND -n "[ -f $SSH_HOME/tanzu-demo-hub/scripts/InstallTKGmc.sh ] && tanzu-demo-hub/scripts/InstallTKGmc.sh \"$DEPLOY_TKG_TEMPLATE\" \"$DEBUG\""; ret=$?
+    if [ ${ret} -ne 0 ]; then
+      echo "ERROR: Failed to deploy Management Server on $JUMP_HOST"
+      echo "       => $SSH_DISPLAY -n tanzu-demo-hub/scripts/InstallTKGmc.sh \"$DEPLOY_TKG_TEMPLATE\" \"$DEBUG\""
       exit
     fi
-  fi
 
-  tanzu management-cluster kubeconfig get --admin > /dev/null 2>&1
-  kubectl config set-cluster $TDH_TKGMC_NAME > /dev/null 2>&1
-  kubectl config use-context ${TDH_TKGMC_NAME}-admin@$TDH_TKGMC_NAME > /dev/null 2>&1
+    cleanKubeconfig
+    cleanManagementCluster
+    cnt=$(tanzu management-cluster get 2>/dev/null | grep -c " $TDH_TKGMC_NAME ")
+    if [ $cnt -eq 0 ]; then
+      $SCP_COMMAND ${SSH_USER}@${SSH_HOST}:$SSH_HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.kubeconfig ~/.tanzu-demo-hub/config > /dev/null 2>&1
+      $SCP_COMMAND ${SSH_USER}@${SSH_HOST}:$SSH_HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.yaml ~/.tanzu-demo-hub/config > /dev/null 2>&1
+  
+      tanzu login --kubeconfig ~/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.kubeconfig  --name $TDH_TKGMC_NAME --server $TDH_TKGMC_NAME \
+         --context ${TDH_TKGMC_NAME}-admin@$TDH_TKGMC_NAME > /dev/null 2>&1
+      tanzu management-cluster get > /dev/null 2>&1
+      if [ $? -ne 0 ]; then
+        echo "ERROR: failed to login to TKG Management Cluster: ${TDH_TKGMC_NAME}.kubeconfig"
+        echo "       => tanzu login --kubeconfig ~/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.kubeconfig  \\"
+        echo "            --name $TDH_TKGMC_NAME --server $TDH_TKGMC_NAME \\"
+        echo "            --context ${TDH_TKGMC_NAME}-admin@$TDH_TKGMC_NAME"
+        exit
+      fi
+    fi
+
+    tanzu management-cluster kubeconfig get --admin > /dev/null 2>&1
+    kubectl config set-cluster $TDH_TKGMC_NAME > /dev/null 2>&1
+    kubectl config use-context ${TDH_TKGMC_NAME}-admin@$TDH_TKGMC_NAME > /dev/null 2>&1
+  fi
 
   # --- VERIFY TMC REGISTRATION
   tmc managementcluster get $TDH_TKGMC_NAME > /dev/null 2>&1

@@ -8,10 +8,11 @@
 
 export TANZU_DEMO_HUB=$(cd "$(pwd)/$(dirname $0)"; pwd)
 export TDHPATH=$(cd "$(pwd)/$(dirname $0)"; pwd)
+export DEBUG=0
+export NATIVE=0
 export TDH_DEPLOYMENT_ENV_NAME="awstkg"
 export TDH_DEPLOYMENT_CLOUD="AWS"
 export DEPLOY_PCF_DEPLOYMENT=aws_tkg_default.cfg
-export DEBUG=0
 
 unset TMC_MANAGEMENT_CLUSTER
 unset TMC_ACCOUNT_NAME

@@ -1740,6 +1740,7 @@ route53createHostedZone() {
 
 route53setNSrecord () {
   hnm=$1; dom=$2; dns="$3"
+echo "gaga HNM:$hnm"
 
   ZONE_ID=$(aws route53 list-hosted-zones-by-name --dns-name ${dom} | jq -r ".HostedZones[] | select(.Name | \
             scan(\"^$dom.\")).Id")
@@ -2766,6 +2767,8 @@ setDNSalias() {
   HOSTNAME="$4"
   TYPE="$5"
 
+echo "gaga TKG_IPADRESS:$TKG_IPADRESS"
+
   AWS_LB_NAME=$(aws elb --region $AWS_REGION describe-load-balancers | \
                 jq -r --arg n $TKG_IPADRESS '.LoadBalancerDescriptions[] | select(.DNSName == $n).LoadBalancerName')
   AWS_LB_ZONE=$(aws elb --region $AWS_REGION describe-load-balancers | \
@@ -2796,7 +2799,7 @@ setDNSalias() {
     aws route53 change-resource-record-sets --hosted-zone-id $ZONE_ID \
         --change-batch file://${TMPROUTE53} > /dev/null 2>&1
     if [ $? -ne 0 ]; then
-      echo "2ERROR: failed to set DNS for $hnm"
+      echo "9ERROR: failed to set DNS for $hnm"
       echo "       => aws route53 change-resource-record-sets --hosted-zone-id \"${ZONE_ID}\" \\"
       echo "              --change-batch file://${TMPROUTE53}"
       cat $TMPROUTE53
@@ -4353,8 +4356,11 @@ InstallContour() {
   messagePrint " ▪ Ingress Contour Status:"            "$stt"
   messagePrint " ▪ Ingress Contour Installed/Updated:" "$dat"
 
+echo "XXX ${TDH_ENVNAME}.$AWS_HOSTED_DNS_DOMAIN"
+echo gaga1
   # --- VERIFY DNS DOMAIN ---
   verifyHostedZone ${TDH_ENVNAME}.$AWS_HOSTED_DNS_DOMAIN
+echo gaga2
 
   # --- SET DNS RECORD ---
   if [ "$TDH_INFRASTRUCTURE" == "minikube" ]; then 
@@ -4362,6 +4368,17 @@ InstallContour() {
     setDNSrecord "$ipa" "${TDH_ENVNAME}" "${AWS_HOSTED_DNS_DOMAIN}" "*.apps-contour" "A"
   else
     ipa=$(kubectl describe svc ingress-contour-envoy --namespace ingress-contour | grep Ingress | awk '{print $3}')
+    if [ "$ipa" == "" ]; then 
+      echo "ERROR: Failed to gather IP Adress of the ingress-contour-envoy service in namespace ingress-contour"
+      echo "       Please check manually:"
+      echo "       => kubectl get svc --namespace ingress-contour"
+      exit
+    fi
+
+
+
+echo "gaga3 IPA:$ipa"
+echo "setDNSalias \"$ipa\" \"${TDH_ENVNAME}\" \"${AWS_HOSTED_DNS_DOMAIN}\" \"*.apps-contour\" \"A\""
     setDNSalias "$ipa" "${TDH_ENVNAME}" "${AWS_HOSTED_DNS_DOMAIN}" "*.apps-contour" "A"
   fi
 

@@ -8,11 +8,11 @@
 
 export TANZU_DEMO_HUB=$(cd "$(pwd)/$(dirname $0)"; pwd)
 export TDHPATH=$(cd "$(pwd)/$(dirname $0)"; pwd)
-#export TDH_DEPLOYMENT_ENV_NAME="awstkg"
-#export TDH_DEPLOYMENT_CLOUD="AWS"
-#export DEPLOY_PCF_DEPLOYMENT=aws_tkg_default.cfg
 export DEBUG=0
+export NATIVE=0
 export TDH_TKGWC_K8S_VERSION=""
+export CMD_EXEC=$(basename $0)
+export CMD_ARGS=$*
 
 . $TANZU_DEMO_HUB/functions
 
@@ -27,6 +27,7 @@ usage() {
   echo "                                               # use 'tanzu kubernetes-release get' to see available"
   echo ""
   echo "                      --debug                  # default (disabled)"
+  echo "                      --native                 # Use 'native' installed tools instead of the tdh-tools container"
   echo ""
 }
 
@@ -84,18 +85,14 @@ listDeployments() {
   echo "-----------------------------------------------------------------------------------------------------------"
 }
 
-echo ""
-echo "Tanzu Demo Hub - Deploy TKG Workload Cluster"
-echo "by Sacha Dubois, VMware Inc,"
-echo "-----------------------------------------------------------------------------------------------------------"
-
 while [ "$1" != "" ]; do
   case $1 in
     -d)  TKG_DEPLOYMENT=$2;;
     -m)  TDH_TKGMC_NAME=$2;;
     -n)  TDH_TKGWC_NAME=$2;;
     -k)  TDH_TKGWC_K8S_VERSION=$2;;
-    --debug) DEBUG=1;;
+    --debug)       DEBUG=1;;
+    --native)      NATIVE=1;;
   esac
   shift
 done
@@ -109,6 +106,82 @@ if [ "${TKG_DEPLOYMENT}" == "" -o "${TDH_TKGMC_NAME}" == "" -o "${TDH_TKGWC_NAME
     listClusterConfig
   fi
   usage; exit 0
+fi
+
+# --- VERIFY DEPLOYMENT ---
+TKG_DEPLOYMENT_CONFIG=$(echo $TKG_DEPLOYMENT | sed 's/cfg/yaml/g')
+if [ ! -f ${TDHPATH}/deployments/${TKG_DEPLOYMENT} ]; then
+  echo "ERROR: Deployment file $TKG_DEPLOYMENT can not be found in ${TDHPATH}/deployments"
+  exit 1
+else
+  . ${TDHPATH}/deployments/${TKG_DEPLOYMENT}
+fi
+
+if [ ! -f ${TDHPATH}/deployments/${TKG_DEPLOYMENT} ]; then
+  echo "ERROR: The Deployment deployments/$TKG_DEPLOYMENT does not have a releated $TKG_DEPLOYMENT file"
+  echo "       Please take deployments/tkg-tanzu-demo-hub.yaml as a template."
+  exit 1
+fi
+
+# --- CHECK ENVIRONMENT VARIABLES ---
+if [ -f ~/.tanzu-demo-hub.cfg ]; then
+  . ~/.tanzu-demo-hub.cfg
+fi
+
+# --- SOURCE MANAGEMENT CLUSTER VARIABLES ---
+if [ -f $HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.cfg ]; then
+  . $HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.cfg
+fi
+
+if [ "$TDH_DEPLOYMENT_CLUSTER_PLAN" == "dev" ]; then
+  TDH_TKGMC_CONFIG=$TDH_TKGMC_WC_CONFIG_DEV
+else
+  TDH_TKGMC_CONFIG=$TDH_TKGMC_WC_CONFIG_PROD
+fi
+
+if [ ! -f /tdh_tools_docker_container  ]; then
+  echo ""
+  echo "Tanzu Demo Hub - Deploy TKG Workload Cluster"
+  echo "by Sacha Dubois, VMware Inc,"
+  echo "-----------------------------------------------------------------------------------------------------------"
+
+  # --- VERIFY TOOLS AND ACCESS ---
+  checkCLIcommands BASIC
+
+  if [ $NATIVE -eq 0 ]; then
+    tdh_tools_build
+
+    messagePrint " ▪ Running TDH Tools Docker Container" "tdh-tools:latest $TDHPATH/$CMD_EXEC $CMD_ARGS"
+
+    cid=$(docker ps -a | grep tdh-tools:latest | awk '{ print $1 }')
+    [ "$cid" != "" ] && for n in $cid; do docker rm $n -f > /dev/null 2>&1; done
+
+    mkdir -p $HOME/.mc $HOME/.cache $HOME/.config $HOME/.local
+    mkdir -p /tmp/docker && chmod a+w /tmp/docker
+    docker run -it --rm --name tdh-tools -v /var/run/docker.sock:/var/run/docker.sock tdh-tools:latest  chmod 666 /var/run/docker.sock > /dev/null 2>&1
+    #docker run -u $(id -u):$(id -g) --group-add 0 -it --rm --name tdh-tools \
+    #   -e "KUBECONFIG=$HOME/.kube/config" --hostname tdh-tools tdh-tools:latest $TDHPATH/$CMD_EXEC $CMD_ARGS
+    docker run -u $(id -u):$(id -g) -it --rm --name tdh-tools \
+       -v $HOME:$HOME:ro -v $HOME/.local:$HOME/.local:rw -v $HOME/.tanzu-demo-hub:$HOME/.tanzu-demo-hub:rw \
+       -v /var/run/docker.sock:/var/run/docker.sock -v $HOME/.cache:$HOME/.cache:rw -v $HOME/.config:$HOME/.config:rw \
+       -v $HOME/.aws:$HOME/.aws:rw -v $HOME/.vmware-cna-saas:$HOME/.vmware-cna-saas:rw -v $HOME/.azure:$HOME/.azure:rw \
+       -v /tmp:/tmp:rw -v /tmp/docker:$HOME/.docker:rw -v $HOME/.mc:$HOME/.mc:rw -v $HOME/.tanzu:$HOME/.tanzu:rw \
+       -v $HOME/.kube-tkg:$HOME/.kube-tkg:rw -v $HOME/.kube:$HOME/.kube:rw \
+       -e "KUBECONFIG=$HOME/.kube/config" --hostname tdh-tools tdh-tools:latest $TDHPATH/$CMD_EXEC $CMD_ARGS
+
+    # --- FINISH CURRENT SESSION AS WE RUN AS CONTAINER ---
+    exit 0
+  else
+    # --- VERYFY ACCESS TO CLOUD ---
+    checkTDHenvironment
+
+    # --- VERIFY TOOLS AND ACCESS ---
+    checkCloudCLI
+    checkCLIcommands TOOLS
+    checkCLIcommands TKG
+    checkCLIcommands TANZU
+    checkCLIcommands TMC
+  fi
 fi
 
 if [ "$TDH_TKGWC_K8S_VERSION" != "" ]; then 
@@ -138,61 +211,90 @@ else
   TDH_TKGWC_K8S_VERSION=$(tanzu kubernetes-release get | tail -1 | awk '{ print $1 }')
 fi
 
-# --- VERIFY DEPLOYMENT ---
-TKG_DEPLOYMENT_CONFIG=$(echo $TKG_DEPLOYMENT | sed 's/cfg/yaml/g') 
-if [ ! -f ${TDHPATH}/deployments/${TKG_DEPLOYMENT} ]; then
-  echo "ERROR: Deployment file $TKG_DEPLOYMENT can not be found in ${TDHPATH}/deployments"
-  exit 1
-else
-  . ${TDHPATH}/deployments/${TKG_DEPLOYMENT}
-fi
-
-if [ ! -f ${TDHPATH}/deployments/${TKG_DEPLOYMENT_CONFIG} ]; then
-  echo "ERROR: The Deployment deployments/$TKG_DEPLOYMENT does not have a releated $TKG_DEPLOYMENT_CONFIG file"
-  echo "       Please take deployments/tkg-tanzu-demo-hub.yaml as a template."
-  exit 1
-fi
-
-# --- CHECK ENVIRONMENT VARIABLES ---
-if [ -f ~/.tanzu-demo-hub.cfg ]; then
-  . ~/.tanzu-demo-hub.cfg
-fi
-
-# --- SOURCE MANAGEMENT CLUSTER VARIABLES ---
-if [ -f $HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.cfg ]; then
-  . $HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.cfg
-fi
-
 if [ "$TDH_DEPLOYMENT_CLUSTER_PLAN" == "dev" ]; then 
-  TDH_TKGMC_CONFIG=$TDH_TKGMC_WC_CONFIG_DEV
+  cat $HOME/.tanzu/tkg/clusterconfigs/${TDH_TKGMC_NAME}-wc-dev.yaml $HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.yaml | \
+     egrep -v "^#" | sed -e '/^$/d' > $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml
 else
-  TDH_TKGMC_CONFIG=$TDH_TKGMC_WC_CONFIG_PROD
+  cat $HOME/.tanzu/tkg/clusterconfigs/${TDH_TKGMC_NAME}-wc-dev.yaml $HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.yaml | \
+     egrep -v "^#" | sed -e '/^$/d' > $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml
 fi
-
-cat $HOME/.tanzu/tkg/clusterconfigs/$TDH_TKGMC_CONFIG $HOME/.tanzu-demo-hub/config/$TKG_DEPLOYMENT_CONFIG | \
-   egrep -v "^#" | sed -e '/^$/d' > /tmp/${TDH_TKGWC_NAME}.yaml
 
 messageTitle "Tanzu Kubernetes Grid Deployment"
 messagePrint " - Management Cluster Name"               "$TDH_TKGMC_NAME"
 messagePrint " - Management Cluster Configuration"      "deployments/${TDH_TKGMC_NAME}.cfg"
-messagePrint " - Deployment Configuration"              "deployments/$TKG_DEPLOYMENT_CONFIG"
+messagePrint " - Deployment Configuration"              "deployments/$TKG_DEPLOYMENT"
 messagePrint " - Workload Cluster Name"                 "$TDH_TKGWC_NAME"
 messagePrint " - Workload Cluster Cloud Config"         "$HOME/.tanzu/tkg/clusterconfigs/$TDH_TKGMC_CONFIG"
-messagePrint " - Workload Cluster Configuration"        "deployments/$TKG_DEPLOYMENT_CONFIG"
-messagePrint " - Workload Cluster consolidated Config"  "/tmp/${TDH_TKGWC_NAME}.yaml"
+messagePrint " - Workload Cluster Configuration"        "deployments/$TKG_DEPLOYMENT"
+messagePrint " - Workload Cluster consolidated Config"  "$HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml"
+
 if [ $DEBUG -gt 0 ]; then 
   echo "-----------------------------------------------------------------------------------------------------------"
-  cat $HOME/.tanzu/tkg/clusterconfigs/$TDH_TKGMC_CONFIG deployments/$TKG_DEPLOYMENT_CONFIG | egrep -v "^#" | sed -e '/^$/d'
+  cat $HOME/.tanzu/tkg/clusterconfigs/$TDH_TKGMC_CONFIG deployments/$TKG_DEPLOYMENT | egrep -v "^#" | sed -e '/^$/d'
 fi
 
 tanzu cluster get $TDH_TKGWC_NAME >/dev/null 2>&1
 if [ $? -ne 0 ]; then  
   echo "-----------------------------------------------------------------------------------------------------------"
-  echo "=> tanzu cluster create $TDH_TKGWC_NAME -f /tmp/${TDH_TKGWC_NAME}.yaml --tkr $TDH_TKGWC_K8S_VERSION" 
-  tanzu cluster create $TDH_TKGWC_NAME -f /tmp/${TDH_TKGWC_NAME}.yaml --tkr $TDH_TKGWC_K8S_VERSION
+  echo "=> tanzu cluster create $TDH_TKGWC_NAME -f $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml --tkr $TDH_TKGWC_K8S_VERSION" 
+  tanzu cluster create $TDH_TKGWC_NAME -f $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml --tkr $TDH_TKGWC_K8S_VERSION
   echo "-----------------------------------------------------------------------------------------------------------"
-else
- tanzu cluster get $TDH_TKGWC_NAME
+
+  # --- GET CREDENTIALS ---
+  tanzu cluster kubeconfig get $TDH_TKGWC_NAME --admin > /dev/null 2>&1
+fi
+
+#tanzu cluster get $TDH_TKGWC_NAME
+kubectl config use-context ${TDH_TKGWC_NAME}-admin@$TDH_TKGWC_NAME
+
+kubectl create clusterrolebinding tanzu-demo-hub-privileged-cluster-role-binding \
+        --clusterrole=vmware-system-tmc-psp-privileged --group=system:authenticated > /dev/null 2>&1
+
+export TDH_ENVNAME=$TDH_TKGMC_ENVNAME
+
+uodateConfigMap tanzu-demo-hub TDH_DOMAIN                         $AWS_HOSTED_DNS_DOMAIN
+uodateConfigMap tanzu-demo-hub TDH_ENVNAME                        $TDH_TKGMC_ENVNAME
+uodateConfigMap tanzu-demo-hub TDH_DEPLOYMENT_TYPE                "tkg"
+uodateConfigMap tanzu-demo-hub TDH_MANAGED_BY_TMC                 "false"
+
+uodateConfigMap tanzu-demo-hub TDH_CLUSTER_NAME                   "$TDH_TKGWC_NAME"
+uodateConfigMap tanzu-demo-hub TDH_MANAGEMENT_CLUSTER             "$TDH_TKGMC_NAME"
+uodateConfigMap tanzu-demo-hub TDH_PROVISONER_NAME                "ukn"
+uodateConfigMap tanzu-demo-hub TDH_MISSION_CONTROL_ACCOUNT_NAME   "ukn"
+
+# --- INSTALL K8 SERVICES ---
+InstallCertManager
+InstallContour
+createClusterIssuer
+InstallHarborRegistry
+getRootCA tanzu-demo-hub-tls
+installBuildService
+installTanzuDataPostgres
+#installSpringCloudGateway
+installMinio
+
+if [ "$TDH_TANZU_MISSION_CONTROL_REGISTRATION" == "true" ]; then
+  cnt=$(tmc cluster list --name $TDH_MINIKUBE_PROFILE 2>/dev/null | grep -c $TDH_MINIKUBE_PROFILE)
+  if [ $cnt -eq 0 ]; then
+    tmc cluster attach --name $TDH_MINIKUBE_PROFILE --kubeconfig /Users/sdu/.kube/config -p attached -m attached > /dev/null 2>&1; ret=$?
+    if [ $ret -ne 0 ]; then
+      tmc cluster delete $TDH_MINIKUBE_PROFILE -p attached -m attached > /dev/null 2>&1
+
+      # --- WAIT FOR THE CLUSTER TO BE DELETED ---
+      cnt=1
+      while [ $cnt -ne 0 ]; do
+        cnt=$(tmc cluster list --name $TDH_MINIKUBE_PROFILE 2>/dev/null | grep -c $TDH_MINIKUBE_PROFILE)
+        sleep 20
+      done
+
+      tmc cluster attach --name $TDH_MINIKUBE_PROFILE --kubeconfig /Users/sdu/.kube/config -p attached -m attached > /dev/null 2>&1; ret=$?
+      if [ $ret -ne 0 ]; then
+        echo "ERROR: TMC failed to attach cluster"
+        echo "       => tmc cluster reattach --name $TDH_MINIKUBE_PROFILE --kubeconfig /Users/sdu/.kube/config -p attached -m attached "
+        exit
+      fi
+    fi
+  fi
 fi
 
 
