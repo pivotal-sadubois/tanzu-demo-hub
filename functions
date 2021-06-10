@@ -336,7 +336,7 @@ checkCloudCLI() {
     fi
   fi
 
-  if [ "${TDH_DEPLOYMENT_CLOUD}" == "AWS" ]; then
+  if [ "${TDH_DEPLOYMENT_CLOUD}" == "AWS" -o "$TDH_DEPLOYMENT_ENV_NAME" == "AWS" ]; then
     # --- CHECK FOR AWS CLI ---
     AWSCLI=$(which aws)
     if [ "${AWSCLI}" != "" ]; then
@@ -357,7 +357,7 @@ checkCloudCLI() {
     fi
   fi
 
-  if [ "${TDH_DEPLOYMENT_CLOUD}" == "Azure" ]; then
+  if [ "${TDH_DEPLOYMENT_CLOUD}" == "Azure" -o "$TDH_DEPLOYMENT_ENV_NAME" == "Azure" ]; then
     # --- CHECK FOR AWS CLI ---
     AZCLI=$(which az)
     if [ "${AZCLI}" != "" ]; then
@@ -371,9 +371,23 @@ checkCloudCLI() {
         echo "ERROR: the $cloud CLI $(which az) does not seam to be correct"
         echo "       please install it from https://docs.microsoft.com/en-us/cli/azure/install-azure-cli?view=azure-cli-latest"; exit 1
       fi
+
+      # --- CHECK FOR THE CLI VERSION ---
+      az vm image terms -h > /dev/null 2>&1; ret=$?
+
+      if [ ${ret} -ne 0 ]; then
+        ver=$(az -v 2>/dev/null | egrep "^azure-cli" | awk '{ print $2 }')
+        echo "ERROR: Your azure CLI utility is to old ($ver), please update to a more recent one"
+        echo "       https://docs.microsoft.com/en-us/cli/azure/update-azure-cli"
+        echo "       => brew upgrade az (if version <= 2.11.0)"
+        echo "       => az upgrade (if version => 2.11.0)"
+        exit
+      fi
+
     else
       messagePrint " ▪ checking for $cloud CLI utility" "no installed"
     fi
+
     # --- CHECK FOR AWS CLI ---
     AWSCLI=$(which aws)
     if [ "${AWSCLI}" != "" ]; then
