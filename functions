@@ -1876,10 +1876,14 @@ EOF
 
 createCluster() {
   unset TKG_CONFIG
+echo "gaga TDH_TKGMC_NAME:$TDH_TKGMC_NAME"
   TDH_TKGMC_NAME=${TDH_TKGMC_NAME}-${TDH_USER}
   [ ! -d ${HOME}/.tanzu-demo-hub/config ] && mkdir -p ${HOME}/.tanzu-demo-hub/config
   TKG_TEMPLATE=${HOME}/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.yaml; rm -f $TKG_TEMPLATE
   TKG_KUBECONFIG=${HOME}/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.kubeconfig; rm -f $TKG_KUBECONFIG
+echo "gaga TKG_KUBECONFIG:$TKG_KUBECONFIG"
+
+exit
 
   if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "vSphere" ]; then
     messageTitle "Creating TKG Managment Cluster"
@@ -2251,6 +2255,7 @@ exit
       kubectl config use-context ${TDH_TKGMC_NAME}-admin@$TDH_TKGMC_NAME > /dev/null 2>&1
       context=$(kubectl config view -o json | jq -r '.contexts[].name' 2>/dev/null)
       tanzu management-cluster kubeconfig get --admin --export-file=${TKG_KUBECONFIG} > /dev/null 2>&1
+echo "gaga3 TKG_KUBECONFIG:$TKG_KUBECONFIG"
     fi
 
     kubectl config set-cluster $TDH_TKGMC_NAME > /dev/null 2>&1
@@ -3576,6 +3581,7 @@ getTDHClusterCredentials() {
   messagePrint " ▪ Cluster Name"           "$TMC_CLUSTER_NAME"
   messagePrint " ▪ Kubeconfig File"        "/tmp/${TMC_CLUSTER_NAME}.kubeconfig"
   messagePrint " ▪ Kubernetes Context"     "${TMC_CLUSTER_NAME}-admin@$TMC_CLUSTER_NAME"
+echo "gaga4 TMC_CLUSTER_NAME:$TMC_CLUSTER_NAME"
 
   ret=1; cnt=0
   while [ $ret -ne 0 -a $cnt -lt 10 ]; do
