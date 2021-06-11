@@ -1265,7 +1265,7 @@ else
 
     # --- CREATE MANAGEMENT CLUSTER ---
     [ ! -d ~/.tanzu-demo-hub/config ] && mkdir -p ~/.tanzu-demo-hub/config
-    $SSH_COMMAND -n "[ -f $SSH_HOME/tanzu-demo-hub/scripts/InstallTKGmc.sh ] && tanzu-demo-hub/scripts/InstallTKGmc.sh \"$DEPLOY_TKG_TEMPLATE\" \"$DEBUG\""; ret=$?
+    $SSH_COMMAND -n "[ -f $SSH_HOME/tanzu-demo-hub/scripts/InstallTKGmc.sh ] && tanzu-demo-hub/scripts/InstallTKGmc.sh \"$DEPLOY_TKG_TEMPLATE\" \"$TDH_TKGMC_NAME\" \"$DEBUG\""; ret=$?
     if [ ${ret} -ne 0 ]; then
       echo "ERROR: Failed to deploy Management Server on $JUMP_HOST"
       echo "       => $SSH_DISPLAY -n tanzu-demo-hub/scripts/InstallTKGmc.sh \"$DEPLOY_TKG_TEMPLATE\" \"$DEBUG\""
@@ -1300,10 +1300,18 @@ else
   tmc managementcluster get $TDH_TKGMC_NAME > /dev/null 2>&1
   if [ $? -ne 0 ]; then
     messagePrint " ▪ TMC Register Cluster"             "$TDH_TKGMC_NAME"
-    tmc managementcluster register $TDH_TKGMC_NAME -c tanzu-demo-hub -p TKG -o /tmp/k8s-register-manifest.yaml >/dev/null 2>&1
+
+    ret=1; cnt=0
+    while [ $ret -ne 0 -a $cnt -lt 5 ]; do
+      tmc managementcluster register $TDH_TKGMC_NAME -c tanzu-demo-hub -p TKG -o /tmp/k8s-register-manifest.yaml >/dev/null 2>&1; ret=$?
+      [ $ret -eq 0 ] && break
+      sleep 30
+      let cnt=cnt+1
+    done
+
     if [ $? -ne 0 ]; then
       echo "ERROR: failed to register TKG Management Cluster: $TDH_TKGMC_NAME to TMC"
-      echo "       => tmc managementcluster register $TDH_TKGMC_NAME -c tanzu-demo-hub"
+      echo "       => tmc managementcluster register $TDH_TKGMC_NAME -c tanzu-demo-hub -p TKG"
       exit
     fi
 
@@ -1422,7 +1430,7 @@ else
   echo "    => ./deployTKG -m $TDH_TKGMC_NAME -d tkg-tanzu-demo-hub.cfg -n tdh-$CLOUD-$TDH_USER"
   echo "    => ./deployTKG -m $TDH_TKGMC_NAME -d tkg-tanzu-demo-hub.cfg -n tdh-$CLOUD-$TDH_USER -k \"v1.17.16---vmware.2-tkg.1\""
   printf "\e[1m3.) Delete the Management Cluster\e[0m\n"
-  echo "    => tanzu management-cluster delete tkg-mc-azure-dev-sadubois -y"
+  echo "    => tanzu management-cluster delete $TDH_TKGMC_NAME-$TDH_USER -y"
   printf "\e[1m4.) Login to Jump Server: $JUMP_HOST (only if required)\e[0m\n"
   echo "    => $SSH_DISPLAY"
   echo ""
