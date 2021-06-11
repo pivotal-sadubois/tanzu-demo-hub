@@ -9,7 +9,11 @@
 export TANZU_DEMO_HUB=$(cd "$(pwd)/$(dirname $0)/.."; pwd)
 export TDHPATH=$(cd "$(pwd)/$(dirname $0)/.."; pwd)
 export DEPLOY_TKG_TEMPLATE=$1
-export DEBUG="$2"
+export TDH_TKGMC_NAME="$2"
+export DEBUG="$3"
+
+echo "XXX ${TDHPATH}/deployments/${DEPLOY_TKG_TEMPLATE}"
+echo "XXX TDH_TKGMC_NAME:$TDH_TKGMC_NAME"
 
 . $TANZU_DEMO_HUB/functions
 
@@ -28,6 +32,10 @@ fi
 
 export TDH_DEPLOYMENT_ENV_NAME=$TDH_TKGMC_INFRASTRUCTURE
 export TKG_CONFIG=${TDHPATH}/config/$TDH_TKGMC_CONFIG
+
+echo "YYY TDH_USER:$TDH_USER"
+echo "YYY TDH_TKGMC_NAME:$TDH_TKGMC_NAME"
+
 
 # --- ACCEPT LICENSE AGREEMENT ---
 if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "Azure" ]; then
