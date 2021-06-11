@@ -1875,7 +1875,6 @@ EOF
 }
 
 createTKGMCcluster() {
-echo archschloch
   unset TKG_CONFIG
   TDH_TKGMC_NAME=${TDH_TKGMC_NAME}-${TDH_USER}
   [ ! -d ${HOME}/.tanzu-demo-hub/config ] && mkdir -p ${HOME}/.tanzu-demo-hub/config
@@ -2132,7 +2131,6 @@ exit
   fi
 
   if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "Azure" ]; then
-echo gaga1
     messageTitle "Creating TKG Managment Cluster"
     messagePrint " ▪ Cluster Name"                "$TDH_TKGMC_NAME"
     messagePrint " ▪ Configuration File"          "$TKG_TEMPLATE"
@@ -2142,7 +2140,6 @@ echo gaga1
     messagePrint " ▪ Service CIDR"                "$TDH_TKGMC_SERVICE_CIDR"
     messagePrint " ▪ Health Check Enabled"        "$TDH_TKGMC_MACHINE_HEALTH_CHECK_ENABLED"
 
-echo gaga2
     [ -f ${HOME}/.tkg/config.yaml ] && rm -f ${HOME}/.tkg/config.yaml
     tkg get mc > /dev/null 2>&1
     tanzu management-cluster get > /dev/null 2>&1
@@ -2253,9 +2250,10 @@ echo gaga2
       kubectl config set-cluster $TDH_TKGMC_NAME > /dev/null 2>&1
       kubectl config use-context ${TDH_TKGMC_NAME}-admin@$TDH_TKGMC_NAME > /dev/null 2>&1
       context=$(kubectl config view -o json | jq -r '.contexts[].name' 2>/dev/null)
-      tanzu management-cluster kubeconfig get --admin --export-file=${TKG_KUBECONFIG} > /dev/null 2>&1
-echo "tanzu management-cluster kubeconfig get --admin --export-file=${TKG_KUBECONFIG}"
-ls -la $TKG_KUBECONFIG
+      tanzu management-cluster kubeconfig get --admin --export-file=${TKG_KUBECONFIG} > /dev/null 2>&1; ret=$?
+      if [ ${ret} -ne 0 ]; then
+        echo "ERROR: failed to export kubeconfig"
+      fi
     fi
 
     kubectl config set-cluster $TDH_TKGMC_NAME > /dev/null 2>&1
