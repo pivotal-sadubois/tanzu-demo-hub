@@ -2012,7 +2012,7 @@ exit
     echo "BASTION_HOST_ENABLED: true"                                                  >> $TKG_TEMPLATE
     echo "#AWS_AMI_ID: ami-066dad3403314512a"                                          >> $TKG_TEMPLATE
     echo "CLUSTER_PLAN: dev"                                                           >> $TKG_TEMPLATE
-    echo "CLUSTER_NAME: tkgmc-aws-dev-$TDH_USER"                                       >> $TKG_TEMPLATE
+    echo "CLUSTER_NAME: $TDH_TKGMC_NAME-$TDH_USER"                                     >> $TKG_TEMPLATE
     echo "CONTROL_PLANE_MACHINE_TYPE: c4.2xlarge"                                      >> $TKG_TEMPLATE
     echo "NODE_MACHINE_TYPE: c4.2xlarge"                                               >> $TKG_TEMPLATE
 
@@ -2404,7 +2404,7 @@ echo kkkk7
       $SCP_COMMAND $HOME/.tanzu-demo-hub/${TDH_TKGMC_CONFIG} $SSH_USER@$SSH_HOST:${SSH_HOME}/.tanzu-demo-hub > /dev/null 2>&1
       $SCP_COMMAND $HOME/.tanzu-demo-hub/${TDH_TKGMC_NAME}.kubeconfig $SSH_USER@$SSH_HOST:${SSH_HOME}/.tanzu-demo-hub > /dev/null 2>&1
       $SSH_COMMAND -n "echo \"y\" | tkg get mc --config \${HOME}/.tanzu-demo-hub/$TDH_TKGMC_CONFIG" > /dev/null 2>&1
-      $SSH_COMMAND -n "sed -i 's+file: /Users/sdu/.kube-tkg/config+file: /home/ubuntu/.kube-tkg/config+g' ~/.tanzu-demo-hub/tkgmc-dev-vsphere-macbook.yaml"
+      $SSH_COMMAND -n "sed -i 's+file: /Users/sdu/.kube-tkg/config+file: /home/ubuntu/.kube-tkg/config+g' ~/.tanzu-demo-hub/tkgmc-vsphere-macbook.yaml"
 echo kkkk8
 
       $SSH_COMMAND -n "[ ! -d \$HOME/.kube-tkg ] && mkdir -p \$HOME/.kube-tkg"
