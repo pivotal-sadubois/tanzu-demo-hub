@@ -35,6 +35,12 @@ while [ $ret -ne 0 -a $cnt -lt 5 ]; do
   let cnt=cnt+1
 done
 
+if [ $ret -ne 0 ]; then
+  echo "ERROR: failed to login to docker"
+  echo "       => docker login $TDH_REGISTRY_DOCKER_NAME -u $TDH_REGISTRY_DOCKER_USER -p $TDH_REGISTRY_DOCKER_PASS"
+  exit
+fi
+
 if [ ! -s /usr/local/bin/vmw-cli ]; then
   messagePrint " ▪ Install Package (vmw-cli)" "installing"
   docker run apnex/vmw-cli shell > vmw-cli 2>/dev/null
