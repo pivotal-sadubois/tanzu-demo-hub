@@ -5899,6 +5899,7 @@ verify_datacenter() {
   export GOVC_USERNAME=$VSPHERE_VCENTER_ADMIN
   export GOVC_PASSWORD=$VSPHERE_VCENTER_PASSWORD
 
+  govc ls / 
   govc ls / > /dev/null 2>&1
   if [ $? -ne 0 ]; then
     echo ""
