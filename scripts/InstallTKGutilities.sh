@@ -11,6 +11,10 @@ export TDHENV=$2
 export DEBUG=$3
 export LC_ALL=en_US.UTF-8
 
+if [ -f /home/ubuntu/.docker/config.json ]; then
+  chown ubuntu:ubuntu /home/ubuntu/.docker/config.json
+fi
+
 if [ -f $HOME/tanzu-demo-hub/functions ]; then
   . $HOME/tanzu-demo-hub/functions 
 else
