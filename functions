@@ -5903,6 +5903,7 @@ verify_datacenter() {
   if [ $? -ne 0 ]; then
     echo ""
     echo "ERROR: Can not login to vCenter, please verify manually"
+    echo "       export GOVC_INSECURE=1"
     echo "       export GOVC_URL=https://${VSPHERE_VCENTER_SERVER}/sdk"
     echo "       export GOVC_USERNAME=$VSPHERE_VCENTER_ADMIN"
     echo "       export GOVC_PASSWORD=$GOVC_PASSWORD"
