@@ -35,6 +35,9 @@ while [ $ret -ne 0 -a $cnt -lt 5 ]; do
   let cnt=cnt+1
 done
 
+echo "docker login $TDH_REGISTRY_DOCKER_NAME -u $TDH_REGISTRY_DOCKER_USER -p $TDH_REGISTRY_DOCKER_PASS "
+echo $ret
+
 if [ $ret -ne 0 ]; then
   echo "ERROR: failed to login to docker"
   echo "       => docker login $TDH_REGISTRY_DOCKER_NAME -u $TDH_REGISTRY_DOCKER_USER -p $TDH_REGISTRY_DOCKER_PASS"
