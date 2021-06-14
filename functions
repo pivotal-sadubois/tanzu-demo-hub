@@ -2006,6 +2006,8 @@ echo "tanzu management-cluster create --file $TKG_TEMPLATE -v 0 --log-file=/tmp/
       kubectl config use-context ${TDH_TKGMC_NAME}-admin@$TDH_TKGMC_NAME > /dev/null 2>&1
       context=$(kubectl config view -o json | jq -r '.contexts[].name' 2>/dev/null)
       tanzu management-cluster kubeconfig get --admin --export-file=${TKG_KUBECONFIG} > /dev/null 2>&1; ret=$?
+echo "tanzu management-cluster kubeconfig get --admin --export-file=${TKG_KUBECONFIG}"
+echo "RET:$ret"
       if [ $ret -ne 0 ]; then
         echo "ERROR: failed to generate kubeconfig:"
         echo "       => tanzu management-cluster kubeconfig get --admin --export-file=${TKG_KUBECONFIG}"
