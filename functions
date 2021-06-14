@@ -1972,6 +1972,7 @@ echo "VSPHERE_TKGM_SSH_PUBLIC_KEY_FILE:$VSPHERE_TKGM_SSH_PUBLIC_KEY_FILE"
 echo "TKG_TEMPLATE:$TKG_TEMPLATE"
 
     cnt=$(tanzu management-cluster get 2>/dev/null | egrep -c " $TDH_TKGMC_NAME ")
+echo "CNT:$cnt"
     if [ ${cnt} -eq 0 ]; then
       # --- CLEAN OLD MANAGEMENT CLUSTER CONFIG ---
       rm -f ~/.tanzu/config.yaml /tmp/$TDH_TKGMC_NAME.log
@@ -2014,9 +2015,6 @@ echo "tanzu management-cluster create --file $TKG_TEMPLATE -v 0 --log-file=/tmp/
         exit
       fi
     fi
-#gaga
-
-exit 1
   fi
 
   if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "AWS" ]; then
