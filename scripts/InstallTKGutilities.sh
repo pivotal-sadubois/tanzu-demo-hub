@@ -30,13 +30,13 @@ fi
 messagePrint " ▪ Login to Docker Registry" "$TDH_REGISTRY_DOCKER_NAME"
 cnt=0; ret=1
 while [ $ret -ne 0 -a $cnt -lt 5 ]; do
-  docker login $TDH_REGISTRY_DOCKER_NAME -u $TDH_REGISTRY_DOCKER_USER -p $TDH_REGISTRY_DOCKER_PASS > /dev/null 2>&1; ret=$?
+  docker login docker.io -u $TDH_REGISTRY_DOCKER_USER -p $TDH_REGISTRY_DOCKER_PASS > /dev/null 2>&1; ret=$?
   sleep 60
   let cnt=cnt+1
 done
 
 # --- VERIFY RATE-LIMIT ---
-TOKEN=$(curl --user "$TDH_REGISTRY_DOCKER_USER:$TDH_REGISTRY_DOCKER_PASS" "https://auth.docker.io/token?service=registry.docker.io&scope=repository:ratelimitpreview/test:pull" | jq -r .token)
+TOKEN=$(curl --user "$TDH_REGISTRY_DOCKER_USER:$TDH_REGISTRY_DOCKER_PASS" "https://auth.docker.io/token?service=registry.docker.io&scope=repository:ratelimitpreview/test:pull" 2>/dev/null| jq -r .token)
 rlm=$(curl --head -H "Authorization: Bearer $TOKEN" https://registry-1.docker.io/v2/ratelimitpreview/test/manifests/latest 2>/dev/null | grep "ratelimit-limit" | awk '{ print $NF }') 
 rrm=$(curl --head -H "Authorization: Bearer $TOKEN" https://registry-1.docker.io/v2/ratelimitpreview/test/manifests/latest 2>/dev/null | grep "ratelimit-remaining" | awk '{ print $NF }') 
 messagePrint " ▪ Docker Ratelimit:" "$rlm"
