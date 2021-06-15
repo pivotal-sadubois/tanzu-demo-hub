@@ -1972,7 +1972,7 @@ echo "VSPHERE_TKGM_SSH_PUBLIC_KEY_FILE:$VSPHERE_TKGM_SSH_PUBLIC_KEY_FILE"
 echo "TKG_TEMPLATE:$TKG_TEMPLATE"
 
     cnt=$(tanzu management-cluster get 2>/dev/null | egrep -c " $TDH_TKGMC_NAME ")
-echo "CNT:$cnt"
+echo "SACHA CNT:$cnt"
     if [ ${cnt} -eq 0 ]; then
       # --- CLEAN OLD MANAGEMENT CLUSTER CONFIG ---
       rm -f ~/.tanzu/config.yaml /tmp/$TDH_TKGMC_NAME.log $TKG_KUBECONFIG
@@ -2000,6 +2000,7 @@ echo "CNT:$cnt"
       messagePrint " ▪ Management Cluster Creating Completed"    "/tmp/$TDH_TKGMC_NAME.log"
     fi
 
+echo "XXXXX TKG_KUBECONFIG:$TKG_KUBECONFIG"
     if [ ! -f $TKG_KUBECONFIG ]; then 
       messagePrint " ▪ Export Kubeconfig"    "$TKG_KUBECONFIG"
       tanzu management-cluster kubeconfig get --admin > /dev/null 2>&1
