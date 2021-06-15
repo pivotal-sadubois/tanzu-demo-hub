@@ -1975,7 +1975,7 @@ echo "TKG_TEMPLATE:$TKG_TEMPLATE"
 echo "CNT:$cnt"
     if [ ${cnt} -eq 0 ]; then
       # --- CLEAN OLD MANAGEMENT CLUSTER CONFIG ---
-      rm -f ~/.tanzu/config.yaml /tmp/$TDH_TKGMC_NAME.log
+      rm -f ~/.tanzu/config.yaml /tmp/$TDH_TKGMC_NAME.log $TKG_KUBECONFIG
 
       messagePrint " ▪ Management Cluster Creating"        "This may take up to 15min ..."
 
@@ -1984,9 +1984,7 @@ echo "CNT:$cnt"
         tanzu management-cluster create --file $TKG_TEMPLATE -v 0 --log-file=/tmp/$TDH_TKGMC_NAME.log; ret=$?
         echo "-------------------------------------------------------------------------------------------------------------------------------------------------------"
       else
-        #tanzu management-cluster create --file $TKG_TEMPLATE -v 0 --log-file=/tmp/$TDH_TKGMC_NAME.log > /dev/null 2>&1; ret=$?
-echo "tanzu management-cluster create --file $TKG_TEMPLATE -v 0 --log-file=/tmp/$TDH_TKGMC_NAME.log"
-        tanzu management-cluster create --file $TKG_TEMPLATE -v 0 --log-file=/tmp/$TDH_TKGMC_NAME.log
+        tanzu management-cluster create --file $TKG_TEMPLATE -v 0 --log-file=/tmp/$TDH_TKGMC_NAME.log > /dev/null 2>&1; ret=$?
       fi
 
       if [ ${ret} -ne 0 ]; then
@@ -2000,7 +1998,10 @@ echo "tanzu management-cluster create --file $TKG_TEMPLATE -v 0 --log-file=/tmp/
       fi
 
       messagePrint " ▪ Management Cluster Creating Completed"    "/tmp/$TDH_TKGMC_NAME.log"
+    fi
 
+    if [ ! -f $TKG_KUBECONFIG ]; then 
+      messagePrint " ▪ Export Kubeconfig"    "$TKG_KUBECONFIG"
       tanzu management-cluster kubeconfig get --admin > /dev/null 2>&1
       kubectl config set-cluster $TDH_TKGMC_NAME > /dev/null 2>&1
       kubectl config use-context ${TDH_TKGMC_NAME}-admin@$TDH_TKGMC_NAME > /dev/null 2>&1
