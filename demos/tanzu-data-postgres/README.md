@@ -35,7 +35,7 @@ Testing Demo (tanzu-data-postgres)
 Deploy a Single instance Database (tanzu-postgres-deploy-singleton)
 This demo is demonstrating the deployment of single instance PostgreSQL database on Kubernetes with the Postgres Operator. During the installation an Minio S3 datasore will be created to host the backup data (demonstrated in a seperated demo) and the PostgreSQL Tools (pgAdmin4) will be installed for the administration. 
 
-[![asciicast](https://asciinema.org/a/IgerhydQM91apIPEI7dTRA2xl.png)](https://asciinema.org/a/IgerhydQM91apIPEI7dTRA2xl)
+[![asciicast](https://asciinema.org/a/azVq2ZpCI4uflqYqICW4U4lSu.png)](https://asciinema.org/a/azVq2ZpCI4uflqYqICW4U4lSu)
 
 Run the demo as interactice session, the commands are real and executed on your Kubernetes Cluster
 ```
@@ -51,7 +51,7 @@ $ ./tdh-demo-playback.sh asciinema/tanzu-postgres-deploy-singleton.cast
 This demo is demonstrating the deployment of single instance PostgreSQL database on Kubernetes with the Postgres Operator. During the installation an Minio S3 datasore will be created to
  host the backup data (demonstrated in a seperated demo) and the PostgreSQL Tools (pgAdmin4) will be installed for the administration. 
 
-[![asciicast](https://asciinema.org/a/5aET6ekFMllThGPAVHJtzwH2P.png)](https://asciinema.org/a/5aET6ekFMllThGPAVHJtzwH2P)
+[![asciicast](https://asciinema.org/a/nsFkXQlffsdkNGScpa7X4T8fI.png)](https://asciinema.org/a/nsFkXQlffsdkNGScpa7X4T8fI)
 
 Run the demo as interactice session, the commands are real and executed on your Kubernetes Cluster
 ```
@@ -66,7 +66,7 @@ $ ./tdh-demo-playback.sh asciinema/tanzu-postgres-deploy-ha.cast
 ## Generate database load with pgbench
 To test the performnace of the PostgreSQL database, we can generate load to it with pgbench. This can simulate multiple parallel user sessions and application access to the database. 
 
-[![asciicast](https://asciinema.org/a/UfQ2SsP9sKLh9t330sgvkgE05.png)](https://asciinema.org/a/UfQ2SsP9sKLh9t330sgvkgE05)
+[![asciicast](https://asciinema.org/a/vL0SpNtGTKF2EOeQzfiVw0u0Y.png)](https://asciinema.org/a/vL0SpNtGTKF2EOeQzfiVw0u0Y)
 
 Run the demo as interactice session, the commands are real and executed on your Kubernetes Cluster
 ```
@@ -81,7 +81,7 @@ $ ./tdh-demo-playback.sh asciinema/tanzu-postgres-pgbench.cast
 ## Create a database backup with pgbackrest
 This demo demonstrations the backup of a PostgreSQL database with (pgbackrest) to S3 storagea. As backup target can be used any S3 Object Storage such as from 'Amazon AWS' or 'Minio S3'. For this demo we will use Minio S3 we have deployed on the same Kubernetes cluster.
 
-[![asciicast](https://asciinema.org/a/kuIhu8OOvVU2HXuScOhvSEFdW.png)](https://asciinema.org/a/kuIhu8OOvVU2HXuScOhvSEFdW)
+[![asciicast](https://asciinema.org/a/UAkBqZpsFQCSIE5MiM28Yvodm.png)](https://asciinema.org/a/UAkBqZpsFQCSIE5MiM28Yvodm)
 
 Run the demo as interactice session, the commands are real and executed on your Kubernetes Cluster
 ```
@@ -96,7 +96,7 @@ $ ./tdh-demo-playback.sh asciinema/tanzu-postgres-pgbackrest.cast
 ## Database Resize CPU Memory and Disk
 In this demo we are going to resize the CPU, Memory and Storage capacity of a running PostgreSQL database instance. The Storage resize is depending on the StorageClass capabilities of the Cloud Storage provider. 
 
-[![asciicast](https://asciinema.org/a/UUVG31qu2ttBNTK2rVujEySr6.png)](https://asciinema.org/a/UUVG31qu2ttBNTK2rVujEySr6)
+[![asciicast](https://asciinema.org/a/NbPDGw5dzH6VLZt4KmVi1qC18.png)](https://asciinema.org/a/NbPDGw5dzH6VLZt4KmVi1qC18)
 
 Run the demo as interactice session, the commands are real and executed on your Kubernetes Cluster
 ```
@@ -111,7 +111,7 @@ $ ./tdh-demo-playback.sh asciinema/tanzu-postgres-deploy-dbresize.cast
 ## Deploy and Attach an Application
 The final part of this demo is to deploy an application to kubernetes and attach it to our PostgreSQL database. We use the Sprint Music Demo application originaly build for CloudFoundry demos and package it into a docker container that we first push to the Harbor registry and then deploy it to the kubernetes environment. 
 
-[![asciicast](https://asciinema.org/a/6HGnRnQJeFqcp4DouwH1yOdFU.png)](https://asciinema.org/a/6HGnRnQJeFqcp4DouwH1yOdFU)
+[![asciicast](https://asciinema.org/a/4H1YMBJcYtIplmK7hosodjuvm.png)](https://asciinema.org/a/4H1YMBJcYtIplmK7hosodjuvm)
 
 Run the demo as interactice session, the commands are real and executed on your Kubernetes Cluster
 ```
