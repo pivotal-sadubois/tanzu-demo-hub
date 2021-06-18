@@ -1989,6 +1989,7 @@ echo "SACHA CNT:$cnt"
       else
         tanzu management-cluster create --file $TKG_TEMPLATE -v 0 --log-file=/tmp/$TDH_TKGMC_NAME.log > /dev/null 2>&1; ret=$?
       fi
+echo "tanzu management-cluster create --file $TKG_TEMPLATE -v 0 --log-file=/tmp/$TDH_TKGMC_NAME.log"
 
       if [ ${ret} -ne 0 ]; then
         echo "ERROR: failed to create TKG Management Cluster"
