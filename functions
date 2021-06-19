@@ -760,7 +760,7 @@ checkCloudAccess() {
       fi
 
       # --- VERIFY VSPHERE_TKGM_VCENTER_SERVER ADRESS ---
-      vsp=$(nslookup $VSPHERE_TKGM_VCENTER_SERVER | grep "Address:" | awk '{ print $NF }')
+      vsp=$(nslookup $VSPHERE_TKGM_VCENTER_SERVER | grep "Address:" | tail -1 | awk '{ print $NF }')
 
       #ping -c 1 $vsp >/dev/null 2>&1; ret=$?
 
@@ -781,6 +781,27 @@ echo "VSP:$vsp"
 echo "VSP A:$vsp_a"
 echo "VSP B:$vsp_b"
 echo "VSP C:$vsp_c"
+
+     if [ "$vsp_a" == "$cpe_a" ]; then 
+       if [ "$vsp_b" == "$cpe_b" ]; then 
+         if [ "$vsp_c" != "$cpe_c" ]; then 
+           echo "ERROR: Control Pane IP Addres (VSPHERE_TKGM_CONTROL_PLANE_ENDPOINT): is"
+           echo "       is not in the same ip range as the vCenter Server $VSPHERE_TKGM_VCENTER_SERVER"
+           printf "       => %20s %s\n" $vsp VSPHERE_TKGM_VCENTER_SERVER"
+           printf "       => %20s %s\n" $cpe VSPHERE_TKGM_CONTROL_PLANE_ENDPOINT"
+         fi
+       else
+         echo "ERROR: Control Pane IP Addres (VSPHERE_TKGM_CONTROL_PLANE_ENDPOINT): is"
+         echo "       is not in the same ip range as the vCenter Server $VSPHERE_TKGM_VCENTER_SERVER"
+         printf "       => %20s %s\n" $vsp VSPHERE_TKGM_VCENTER_SERVER"
+         printf "       => %20s %s\n" $cpe VSPHERE_TKGM_CONTROL_PLANE_ENDPOINT"
+       fi
+     else
+       echo "ERROR: Control Pane IP Addres (VSPHERE_TKGM_CONTROL_PLANE_ENDPOINT): is"
+       echo "       is not in the same ip range as the vCenter Server $VSPHERE_TKGM_VCENTER_SERVER"
+       printf "       => %20s %s\n" $vsp VSPHERE_TKGM_VCENTER_SERVER"
+       printf "       => %20s %s\n" $cpe VSPHERE_TKGM_CONTROL_PLANE_ENDPOINT"
+     fi
 
 echo "VSPHERE_TKGM_CONTROL_PLANE_ENDPOINT:$VSPHERE_TKGM_CONTROL_PLANE_ENDPOINT"
 exit 1
