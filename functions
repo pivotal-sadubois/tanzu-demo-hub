@@ -760,51 +760,36 @@ checkCloudAccess() {
       fi
 
       # --- VERIFY VSPHERE_TKGM_VCENTER_SERVER ADRESS ---
-      vsp=$(nslookup $VSPHERE_TKGM_VCENTER_SERVER | grep "Address:" | tail -1 | awk '{ print $NF }')
-
-      #ping -c 1 $vsp >/dev/null 2>&1; ret=$?
-
-      vsp_a=$(echo $vsp | awk -F'.' '{ print $1 }')
-      vsp_b=$(echo $vsp | awk -F'.' '{ print $2 }')
-      vsp_c=$(echo $vsp | awk -F'.' '{ print $3 }')
-
-      cpe_a=$(echo $VSPHERE_TKGM_CONTROL_PLANE_ENDPOINT | awk -F'.' '{ print $1 }')
-      cpe_b=$(echo $VSPHERE_TKGM_CONTROL_PLANE_ENDPOINT | awk -F'.' '{ print $2 }')
-      cpe_c=$(echo $VSPHERE_TKGM_CONTROL_PLANE_ENDPOINT | awk -F'.' '{ print $3 }')
-
-echo "CPE:$vsp"
-echo "CPE A:$cpe_a"
-echo "CPE B:$cpe_b"
-echo "CPE C:$cpe_c"
-
-echo "VSP:$vsp"
-echo "VSP A:$vsp_a"
-echo "VSP B:$vsp_b"
-echo "VSP C:$vsp_c"
-
-     if [ "$vsp_a" == "$cpe_a" ]; then 
-       if [ "$vsp_b" == "$cpe_b" ]; then 
-         if [ "$vsp_c" != "$cpe_c" ]; then 
-           echo "ERROR: Control Pane IP Addres (VSPHERE_TKGM_CONTROL_PLANE_ENDPOINT) defined in (~/.tanzu-demo-hub.cfg)"
-           echo "       is not in the same ip range as the vCenter Server $VSPHERE_TKGM_VCENTER_SERVER"
-           printf "       => %-16s %s\n" $vsp "VSPHERE_TKGM_VCENTER_SERVER=$VSPHERE_TKGM_VCENTER_SERVER)"
-           printf "       => %-16s %s\n" $VSPHERE_TKGM_CONTROL_PLANE_ENDPOINT "VSPHERE_TKGM_CONTROL_PLANE_ENDPOINT (~/.tanzu-demo-hub.cfg)"
-         fi
-       else
-         echo "ERROR: Control Pane IP Addres (VSPHERE_TKGM_CONTROL_PLANE_ENDPOINT) defined in (~/.tanzu-demo-hub.cfg)"
-         echo "       is not in the same ip range as the vCenter Server $VSPHERE_TKGM_VCENTER_SERVER"
-         printf "       => %-16s %s\n" $vsp "VSPHERE_TKGM_VCENTER_SERVER=$VSPHERE_TKGM_VCENTER_SERVER)"
-         printf "       => %-16s %s\n" $VSPHERE_TKGM_CONTROL_PLANE_ENDPOINT "VSPHERE_TKGM_CONTROL_PLANE_ENDPOINT (~/.tanzu-demo-hub.cfg)"
-       fi
-     else
-       echo "ERROR: Control Pane IP Addres (VSPHERE_TKGM_CONTROL_PLANE_ENDPOINT) defined in (~/.tanzu-demo-hub.cfg)"
-       echo "       is not in the same ip range as the vCenter Server $VSPHERE_TKGM_VCENTER_SERVER"
-       printf "       => %-16s %s\n" $vsp "VSPHERE_TKGM_VCENTER_SERVER=$VSPHERE_TKGM_VCENTER_SERVER)"
-       printf "       => %-16s %s\n" $VSPHERE_TKGM_CONTROL_PLANE_ENDPOINT "VSPHERE_TKGM_CONTROL_PLANE_ENDPOINT (~/.tanzu-demo-hub.cfg)"
-     fi
-
-echo "VSPHERE_TKGM_CONTROL_PLANE_ENDPOINT:$VSPHERE_TKGM_CONTROL_PLANE_ENDPOINT"
-exit 1
+#      vsp=$(nslookup $VSPHERE_TKGM_VCENTER_SERVER | grep "Address:" | tail -1 | awk '{ print $NF }')
+#
+#      vsp_a=$(echo $vsp | awk -F'.' '{ print $1 }')
+#      vsp_b=$(echo $vsp | awk -F'.' '{ print $2 }')
+#      vsp_c=$(echo $vsp | awk -F'.' '{ print $3 }')
+#
+#      cpe_a=$(echo $VSPHERE_TKGM_CONTROL_PLANE_ENDPOINT | awk -F'.' '{ print $1 }')
+#      cpe_b=$(echo $VSPHERE_TKGM_CONTROL_PLANE_ENDPOINT | awk -F'.' '{ print $2 }')
+#      cpe_c=$(echo $VSPHERE_TKGM_CONTROL_PLANE_ENDPOINT | awk -F'.' '{ print $3 }')
+#
+#     if [ "$vsp_a" == "$cpe_a" ]; then 
+#       if [ "$vsp_b" == "$cpe_b" ]; then 
+#         if [ "$vsp_c" != "$cpe_c" ]; then 
+#           echo "ERROR: Control Pane IP Addres (VSPHERE_TKGM_CONTROL_PLANE_ENDPOINT) defined in (~/.tanzu-demo-hub.cfg)"
+#           echo "       is not in the same ip range as the vCenter Server $VSPHERE_TKGM_VCENTER_SERVER"
+#           printf "       => %-16s %s\n" $vsp "VSPHERE_TKGM_VCENTER_SERVER=$VSPHERE_TKGM_VCENTER_SERVER)"
+#           printf "       => %-16s %s\n" $VSPHERE_TKGM_CONTROL_PLANE_ENDPOINT "VSPHERE_TKGM_CONTROL_PLANE_ENDPOINT (~/.tanzu-demo-hub.cfg)"
+#         fi
+#       else
+#         echo "ERROR: Control Pane IP Addres (VSPHERE_TKGM_CONTROL_PLANE_ENDPOINT) defined in (~/.tanzu-demo-hub.cfg)"
+#         echo "       is not in the same ip range as the vCenter Server $VSPHERE_TKGM_VCENTER_SERVER"
+#         printf "       => %-16s %s\n" $vsp "VSPHERE_TKGM_VCENTER_SERVER=$VSPHERE_TKGM_VCENTER_SERVER)"
+#         printf "       => %-16s %s\n" $VSPHERE_TKGM_CONTROL_PLANE_ENDPOINT "VSPHERE_TKGM_CONTROL_PLANE_ENDPOINT (~/.tanzu-demo-hub.cfg)"
+#       fi
+#     else
+#       echo "ERROR: Control Pane IP Addres (VSPHERE_TKGM_CONTROL_PLANE_ENDPOINT) defined in (~/.tanzu-demo-hub.cfg)"
+#       echo "       is not in the same ip range as the vCenter Server $VSPHERE_TKGM_VCENTER_SERVER"
+#       printf "       => %-16s %s\n" $vsp "VSPHERE_TKGM_VCENTER_SERVER=$VSPHERE_TKGM_VCENTER_SERVER)"
+#       printf "       => %-16s %s\n" $VSPHERE_TKGM_CONTROL_PLANE_ENDPOINT "VSPHERE_TKGM_CONTROL_PLANE_ENDPOINT (~/.tanzu-demo-hub.cfg)"
+#     fi
 
       export VSPHERE_DNS_DOMAIN="$VSPHERE_TKGM_DNS_DOMAIN"
       export VSPHERE_API_SERVER="$VSPHERE_TKGM_API_SERVER"
