@@ -707,7 +707,7 @@ checkCloudAccess() {
       export VSPHERE_NETWORK="$VSPHERE_TKGS_NETWORK"
     else
       if [ "${VSPHERE_TKGM_VCENTER_ADMIN}" == "" -o "${VSPHERE_TKGM_VCENTER_PASSWORD}" == "" -o "${VSPHERE_TKGM_VCENTER_SERVER}" == "" -o \
-           "${VSPHERE_TKGM_JUMPHOST_NAME}" == "" -o "${VSPHERE_TKGM_JUMPHOST_USER}" == "" -o \
+           "${VSPHERE_TKGM_JUMPHOST_NAME}" == "" -o "${VSPHERE_TKGM_JUMPHOST_USER}" == "" -o "${VSPHERE_TKGM_CONTROL_PLANE_ENDPOINT}" == "" -o \
            "${VSPHERE_TKGM_SSH_PRIVATE_KEY_FILE}" == "" -o "${VSPHERE_TKGM_SSH_PUBLIC_KEY_FILE}" == "" ]; then
 
         missing_variables=1
@@ -743,16 +743,47 @@ checkCloudAccess() {
           echo "  VSPHERE_TKGM_JUMPHOST_USER            (required) vSphere Jump Host User"
         fi
 
+        if [ "${VSPHERE_TKGM_CONTROL_PLANE_ENDPOINT}" == "" ]; then
+          echo "  VSPHERE_TKGM_CONTROL_PLANE_ENDPOINT   (required) IP Address of the TKG Management Cluster"
+        fi
+
       else
         echo "vSphere Access Credentials"
         messagePrint " ▪ vCenter Server Name"                "$VSPHERE_TKGM_VCENTER_SERVER"
         messagePrint " ▪ vCenter Admin User"                 "$VSPHERE_TKGM_VCENTER_ADMIN"
         messagePrint " ▪ vCenter Admin Password"             $(maskPassword "$VSPHERE_TKGM_VCENTER_PASSWORD")
+        messagePrint " ▪ TKG Management Cluster IP"          "$VSPHERE_TKGM_CONTROL_PLANE_ENDPOINT"
         messagePrint " ▪ Jump Host Name"                     "$VSPHERE_TKGM_JUMPHOST_NAME"
         messagePrint " ▪ Jump Host User"                     "$VSPHERE_TKGM_JUMPHOST_USER"
         messagePrint " ▪ SSH Private Key"                    "$VSPHERE_TKGM_SSH_PRIVATE_KEY_FILE"
         messagePrint " ▪ SSH Public Key"                     "$VSPHERE_TKGM_SSH_PUBLIC_KEY_FILE"
       fi
+
+      # --- VERIFY VSPHERE_TKGM_VCENTER_SERVER ADRESS ---
+      vsp=$(nslookup $VSPHERE_TKGM_VCENTER_SERVER | grep "Address:" | awk '{ print $NF }')
+
+      #ping -c 1 $vsp >/dev/null 2>&1; ret=$?
+
+      vsp_a=$(echo $vsp | awk -F'.' '{ print $1 }'
+      vsp_b=$(echo $vsp | awk -F'.' '{ print $2 }'
+      vsp_c=$(echo $vsp | awk -F'.' '{ print $3 }'
+
+      cpe_a=$(echo $VSPHERE_TKGM_CONTROL_PLANE_ENDPOINT | awk -F'.' '{ print $1 }'
+      cpe_b=$(echo $VSPHERE_TKGM_CONTROL_PLANE_ENDPOINT | awk -F'.' '{ print $2 }'
+      cpe_c=$(echo $VSPHERE_TKGM_CONTROL_PLANE_ENDPOINT | awk -F'.' '{ print $3 }'
+
+ech0 "CPE:$vsp"
+ech0 "CPE A:$cpe_a"
+ech0 "CPE B:$cpe_b"
+ech0 "CPE C:$cpe_c"
+
+ech0 "VSP:$vsp"
+ech0 "VSP A:$vsp_a"
+ech0 "VSP B:$vsp_b"
+ech0 "VSP C:$vsp_c"
+
+echo "VSPHERE_TKGM_CONTROL_PLANE_ENDPOINT:$VSPHERE_TKGM_CONTROL_PLANE_ENDPOINT"
+exit
 
       export VSPHERE_DNS_DOMAIN="$VSPHERE_TKGM_DNS_DOMAIN"
       export VSPHERE_API_SERVER="$VSPHERE_TKGM_API_SERVER"
@@ -1918,7 +1949,6 @@ echo hhhhhhhhhhhhhhhhhhhh
     echo "AVI_SERVICE_ENGINE_GROUP: \"\""                                              >> $TKG_TEMPLATE
     echo "AVI_USERNAME: \"\""                                                          >> $TKG_TEMPLATE
 
-echo "VSPHERE_TKGM_SSH_PUBLIC_KEY_FILE:$VSPHERE_TKGM_SSH_PUBLIC_KEY_FILE"
     SSH_KEY=$(cat $VSPHERE_TKGM_SSH_PUBLIC_KEY_FILE) 
 
     # --- VSPHERE ---
@@ -1972,10 +2002,7 @@ echo "VSPHERE_TKGM_SSH_PUBLIC_KEY_FILE:$VSPHERE_TKGM_SSH_PUBLIC_KEY_FILE"
       echo "IDENTITY_MANAGEMENT_TYPE: none"                                              >> $TKG_TEMPLATE
     fi
 
-echo "TKG_TEMPLATE:$TKG_TEMPLATE"
-
     cnt=$(tanzu management-cluster get 2>/dev/null | egrep -c " $TDH_TKGMC_NAME ")
-echo "SACHA CNT:$cnt"
     if [ ${cnt} -eq 0 ]; then
       # --- CLEAN OLD MANAGEMENT CLUSTER CONFIG ---
       rm -f ~/.tanzu/config.yaml /tmp/$TDH_TKGMC_NAME.log $TKG_KUBECONFIG
