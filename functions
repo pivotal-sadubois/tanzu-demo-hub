@@ -764,13 +764,13 @@ checkCloudAccess() {
 
       #ping -c 1 $vsp >/dev/null 2>&1; ret=$?
 
-      vsp_a=$(echo $vsp | awk -F'.' '{ print $1 }'
-      vsp_b=$(echo $vsp | awk -F'.' '{ print $2 }'
-      vsp_c=$(echo $vsp | awk -F'.' '{ print $3 }'
+      vsp_a=$(echo $vsp | awk -F'.' '{ print $1 }')
+      vsp_b=$(echo $vsp | awk -F'.' '{ print $2 }')
+      vsp_c=$(echo $vsp | awk -F'.' '{ print $3 }')
 
-      cpe_a=$(echo $VSPHERE_TKGM_CONTROL_PLANE_ENDPOINT | awk -F'.' '{ print $1 }'
-      cpe_b=$(echo $VSPHERE_TKGM_CONTROL_PLANE_ENDPOINT | awk -F'.' '{ print $2 }'
-      cpe_c=$(echo $VSPHERE_TKGM_CONTROL_PLANE_ENDPOINT | awk -F'.' '{ print $3 }'
+      cpe_a=$(echo $VSPHERE_TKGM_CONTROL_PLANE_ENDPOINT | awk -F'.' '{ print $1 }')
+      cpe_b=$(echo $VSPHERE_TKGM_CONTROL_PLANE_ENDPOINT | awk -F'.' '{ print $2 }')
+      cpe_c=$(echo $VSPHERE_TKGM_CONTROL_PLANE_ENDPOINT | awk -F'.' '{ print $3 }')
 
 ech0 "CPE:$vsp"
 ech0 "CPE A:$cpe_a"
