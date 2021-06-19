@@ -772,18 +772,18 @@ checkCloudAccess() {
       cpe_b=$(echo $VSPHERE_TKGM_CONTROL_PLANE_ENDPOINT | awk -F'.' '{ print $2 }')
       cpe_c=$(echo $VSPHERE_TKGM_CONTROL_PLANE_ENDPOINT | awk -F'.' '{ print $3 }')
 
-ech0 "CPE:$vsp"
-ech0 "CPE A:$cpe_a"
-ech0 "CPE B:$cpe_b"
-ech0 "CPE C:$cpe_c"
+echo "CPE:$vsp"
+echo "CPE A:$cpe_a"
+echo "CPE B:$cpe_b"
+echo "CPE C:$cpe_c"
 
-ech0 "VSP:$vsp"
-ech0 "VSP A:$vsp_a"
-ech0 "VSP B:$vsp_b"
-ech0 "VSP C:$vsp_c"
+echo "VSP:$vsp"
+echo "VSP A:$vsp_a"
+echo "VSP B:$vsp_b"
+echo "VSP C:$vsp_c"
 
 echo "VSPHERE_TKGM_CONTROL_PLANE_ENDPOINT:$VSPHERE_TKGM_CONTROL_PLANE_ENDPOINT"
-exit
+exit 1
 
       export VSPHERE_DNS_DOMAIN="$VSPHERE_TKGM_DNS_DOMAIN"
       export VSPHERE_API_SERVER="$VSPHERE_TKGM_API_SERVER"
