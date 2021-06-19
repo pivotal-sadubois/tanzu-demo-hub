@@ -787,20 +787,20 @@ echo "VSP C:$vsp_c"
          if [ "$vsp_c" != "$cpe_c" ]; then 
            echo "ERROR: Control Pane IP Addres (VSPHERE_TKGM_CONTROL_PLANE_ENDPOINT): is"
            echo "       is not in the same ip range as the vCenter Server $VSPHERE_TKGM_VCENTER_SERVER"
-           printf "       => %20s %s\n" $vsp VSPHERE_TKGM_VCENTER_SERVER"
-           printf "       => %20s %s\n" $cpe VSPHERE_TKGM_CONTROL_PLANE_ENDPOINT"
+           printf "       => %20s %s\n" $vsp VSPHERE_TKGM_VCENTER_SERVER
+           printf "       => %20s %s\n" $cpe VSPHERE_TKGM_CONTROL_PLANE_ENDPOINT
          fi
        else
          echo "ERROR: Control Pane IP Addres (VSPHERE_TKGM_CONTROL_PLANE_ENDPOINT): is"
          echo "       is not in the same ip range as the vCenter Server $VSPHERE_TKGM_VCENTER_SERVER"
-         printf "       => %20s %s\n" $vsp VSPHERE_TKGM_VCENTER_SERVER"
-         printf "       => %20s %s\n" $cpe VSPHERE_TKGM_CONTROL_PLANE_ENDPOINT"
+         printf "       => %20s %s\n" $vsp VSPHERE_TKGM_VCENTER_SERVER
+         printf "       => %20s %s\n" $cpe VSPHERE_TKGM_CONTROL_PLANE_ENDPOINT
        fi
      else
        echo "ERROR: Control Pane IP Addres (VSPHERE_TKGM_CONTROL_PLANE_ENDPOINT): is"
        echo "       is not in the same ip range as the vCenter Server $VSPHERE_TKGM_VCENTER_SERVER"
-       printf "       => %20s %s\n" $vsp VSPHERE_TKGM_VCENTER_SERVER"
-       printf "       => %20s %s\n" $cpe VSPHERE_TKGM_CONTROL_PLANE_ENDPOINT"
+       printf "       => %20s %s\n" $vsp VSPHERE_TKGM_VCENTER_SERVER
+       printf "       => %20s %s\n" $cpe VSPHERE_TKGM_CONTROL_PLANE_ENDPOINT
      fi
 
 echo "VSPHERE_TKGM_CONTROL_PLANE_ENDPOINT:$VSPHERE_TKGM_CONTROL_PLANE_ENDPOINT"
