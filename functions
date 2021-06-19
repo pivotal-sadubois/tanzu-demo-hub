@@ -1903,7 +1903,6 @@ EOF
 }
 
 createTKGMCcluster() {
-echo hhhhhhhhhhhhhhhhhhhh
   unset TKG_CONFIG
   TDH_TKGMC_NAME=${TDH_TKGMC_NAME}-${TDH_USER}
   [ ! -d ${HOME}/.tanzu-demo-hub/config ] && mkdir -p ${HOME}/.tanzu-demo-hub/config
@@ -2016,7 +2015,6 @@ echo hhhhhhhhhhhhhhhhhhhh
       else
         tanzu management-cluster create --file $TKG_TEMPLATE -v 0 --log-file=/tmp/$TDH_TKGMC_NAME.log > /dev/null 2>&1; ret=$?
       fi
-echo "tanzu management-cluster create --file $TKG_TEMPLATE -v 0 --log-file=/tmp/$TDH_TKGMC_NAME.log"
 
       if [ ${ret} -ne 0 ]; then
         echo "ERROR: failed to create TKG Management Cluster"
@@ -2031,7 +2029,6 @@ echo "tanzu management-cluster create --file $TKG_TEMPLATE -v 0 --log-file=/tmp/
       messagePrint " ▪ Management Cluster Creating Completed"    "/tmp/$TDH_TKGMC_NAME.log"
     fi
 
-echo "XXXXX TKG_KUBECONFIG:$TKG_KUBECONFIG"
     if [ ! -f $TKG_KUBECONFIG ]; then 
       messagePrint " ▪ Export Kubeconfig"    "$TKG_KUBECONFIG"
       tanzu management-cluster kubeconfig get --admin > /dev/null 2>&1
@@ -2039,8 +2036,6 @@ echo "XXXXX TKG_KUBECONFIG:$TKG_KUBECONFIG"
       kubectl config use-context ${TDH_TKGMC_NAME}-admin@$TDH_TKGMC_NAME > /dev/null 2>&1
       context=$(kubectl config view -o json | jq -r '.contexts[].name' 2>/dev/null)
       tanzu management-cluster kubeconfig get --admin --export-file=${TKG_KUBECONFIG} > /dev/null 2>&1; ret=$?
-echo "tanzu management-cluster kubeconfig get --admin --export-file=${TKG_KUBECONFIG}"
-echo "RET:$ret"
       if [ $ret -ne 0 ]; then
         echo "ERROR: failed to generate kubeconfig:"
         echo "       => tanzu management-cluster kubeconfig get --admin --export-file=${TKG_KUBECONFIG}"
