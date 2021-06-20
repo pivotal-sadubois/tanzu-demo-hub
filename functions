@@ -1915,6 +1915,9 @@ createTKGMCcluster() {
   TKG_TEMPLATE=${HOME}/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.yaml; rm -f $TKG_TEMPLATE
   TKG_KUBECONFIG=${HOME}/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.kubeconfig; rm -f $TKG_KUBECONFIG
 
+echo "gaga TKG_TEMPLATE:$TKG_TEMPLATE"
+echo "gaga TDH_TKGMC_INFRASTRUCTURE:$TDH_TKGMC_INFRASTRUCTURE"
+
   if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "vSphere" ]; then
     messageTitle "Creating TKG Managment Cluster"
     messagePrint " ▪ Cluster Name"                  "$TDH_TKGMC_NAME"
