@@ -533,8 +533,6 @@ checkKubernetesServices() {
     fi
 
     if [ "${service}" == "harbor" ]; then
-      TDH_HARBOR_STAGING_TLS_CERT="false"
-
       if [ "${TDH_SERVICE_REGISTRY_HARBOR}" == "true" ]; then
         if [ "${TDH_HARBOR_ADMIN_PASSWORD}" == "" -o "${TDH_HARBOR_STAGING_TLS_CERT}" == "" ]; then
           missing_variables=1
