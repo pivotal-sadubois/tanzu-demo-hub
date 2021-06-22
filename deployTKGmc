@@ -1463,7 +1463,19 @@ else
   printf "    => %-80s %s\n" "tanzu management-cluster get" "# Show Tanzu Management Cluster"
   
   if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "vSphere" ]; then
+
     printf "\e[1m2.) Ceeate TKG Workload Cluster\e[0m\n"
+    echo "    TKG Workload Cluster 01 ...............................: NAME_TAG: TKG_CLUSTER_01"
+    echo "        Cluster Control Plane .............................: $VSPHERE_TKGM_WKLD_CLUSTER01_CONTROL_PLANE"
+    echo "        LoadBalancer IP Pool ..............................: $VSPHERE_TKGM_WKLD_CLUSTER01_LOADBALANCER_POOL"
+    echo "    TKG Workload Cluster 02 ...............................: NAME_TAG: TKG_CLUSTER_02"
+    echo "        Cluster Control Plane .............................: $VSPHERE_TKGM_WKLD_CLUSTER02_CONTROL_PLANE"
+    echo "        LoadBalancer IP Pool ..............................: $VSPHERE_TKGM_WKLD_CLUSTER02_LOADBALANCER_POOL"
+    echo "    TKG Workload Cluster 03 ...............................: NAME_TAG: TKG_CLUSTER_03"
+    echo "        Cluster Control Plane .............................: $VSPHERE_TKGM_WKLD_CLUSTER03_CONTROL_PLANE"
+    echo "        LoadBalancer IP Pool ..............................: $VSPHERE_TKGM_WKLD_CLUSTER03_LOADBALANCER_POOL"
+    echo ""
+
     echo "    => export CLUSTER_NAME=<cluster_name>                   ## Workload Cluster Name"
     echo "    => export VSPHERE_CONTROL_PLANE_ENDPOINT=<ip-address>   ## Control Plane IP Adress for the worklaod Cluster"
     echo "    => tanzu cluster create -f \$HOME/.tanzu/tkg/clusterconfigs/${TDH_TKGMC_NAME}-wc-dev.yaml --tkr v1.20.4---vmware.3-tkg.1"
@@ -1483,8 +1495,8 @@ else
 
   printf "\e[1m2.) Ceeate Tanzu Demo Hub (TDH) Workload Cluster with services (TBS, Harbor, Ingres etc.)\e[0m\n"
   if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "vSphere" ]; then
-    echo "    => ./deployTKG -m $TDH_TKGMC_NAME -d tkg-tanzu-demo-hub.cfg -n tdh-$CLOUD-$TDH_USER -ip <cp-ip-address>"
-    echo "    => ./deployTKG -m $TDH_TKGMC_NAME -d tkg-tanzu-demo-hub.cfg -n tdh-$CLOUD-$TDH_USER -ip <cp-ip-address> -k \"v1.17.16---vmware.2-tkg.1\""
+    echo "    => ./deployTKG -m $TDH_TKGMC_NAME -d tkg-tanzu-demo-hub.cfg -n tdh-$CLOUD-$TDH_USER -tag TKG_CLUSTER_01"
+    echo "    => ./deployTKG -m $TDH_TKGMC_NAME -d tkg-tanzu-demo-hub.cfg -n tdh-$CLOUD-$TDH_USER -tag TKG_CLUSTER_02 -k \"v1.17.16---vmware.2-tkg.1\""
   else
     echo "    => ./deployTKG -m $TDH_TKGMC_NAME -d tkg-tanzu-demo-hub.cfg -n tdh-$CLOUD-$TDH_USER"
     echo "    => ./deployTKG -m $TDH_TKGMC_NAME -d tkg-tanzu-demo-hub.cfg -n tdh-$CLOUD-$TDH_USER -k \"v1.17.16---vmware.2-tkg.1\""
