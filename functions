@@ -764,7 +764,7 @@ checkCloudAccess() {
         fi
 
         if [ "${VSPHERE_TKGM_WKLD_CLUSTER02_CONTROL_PLANE}" == "" -o "${VSPHERE_TKGM_WKLD_CLUSTER02_LOADBALANCER_POOL}" == "" ]; then
-          echo "  TKG Workload Cluster 02"              (required) Control Plane IP / LoadBalancer Pool"
+          echo "  TKG Workload Cluster 02               (required) Control Plane IP / LoadBalancer Pool"
           echo "  VSPHERE_TKGM_WKLD_CLUSTER02_CONTROL_PLANE=\${VSPHERE_TKGM_SUBNET}.111"
           echo "  VSPHERE_TKGM_WKLD_CLUSTER02_LOADBALANCER_POOL=\${VSPHERE_TKGM_SUBNET}.115-\${VSPHERE_TKGM_SUBNET}.119"
         fi
