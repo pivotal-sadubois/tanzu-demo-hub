@@ -750,21 +750,33 @@ checkCloudAccess() {
              "${VSPHERE_TKGM_LOADBALANCER_IPPOOL}" == "" ]; then
           echo "  VSPHERE_TKGM_CONTROL_PLANE_ENDPOINT   (required) IP Address of the TKG Management Cluster"
           echo "  VSPHERE_TKGM_WORKLOAD_CLUSTER_IP_LIST (required) List of IP's for the TKG Workload Clusters" 
-          echo "                                        ie: VSPHERE_TKGM_WORKLOAD_CLUSTER_IP_LIST=\"10.213.107.101 10.213.107.102 10.213.107.101\""
+          echo "                                        ie: VSPHERE_TKGM_WORKLOAD_CLUSTER_IP_LIST=\"10.213.107.101 10.213.107.102 10.213.107.103 10.213.107.104\""
           echo "  VSPHERE_TKGM_LOADBALANCER_IPPOOL      (required) Addresses to be used for K8s LoadBalancers"
           echo "                                        ie: VSPHERE_TKGM_LOADBALANCER_IPPOOL=\"10.213.107.150-10.213.107.160\""
         fi
 
       else
         echo "vSphere Access Credentials"
-        messagePrint " ▪ vCenter Server Name"                "$VSPHERE_TKGM_VCENTER_SERVER"
-        messagePrint " ▪ vCenter Admin User"                 "$VSPHERE_TKGM_VCENTER_ADMIN"
-        messagePrint " ▪ vCenter Admin Password"             $(maskPassword "$VSPHERE_TKGM_VCENTER_PASSWORD")
-        messagePrint " ▪ TKG Management Cluster IP"          "$VSPHERE_TKGM_CONTROL_PLANE_ENDPOINT"
-        messagePrint " ▪ Jump Host Name"                     "$VSPHERE_TKGM_JUMPHOST_NAME"
-        messagePrint " ▪ Jump Host User"                     "$VSPHERE_TKGM_JUMPHOST_USER"
-        messagePrint " ▪ SSH Private Key"                    "$VSPHERE_TKGM_SSH_PRIVATE_KEY_FILE"
-        messagePrint " ▪ SSH Public Key"                     "$VSPHERE_TKGM_SSH_PUBLIC_KEY_FILE"
+        messagePrint " ▪ vCenter Server Name"                   "$VSPHERE_TKGM_VCENTER_SERVER"
+        messagePrint " ▪ vCenter Admin User"                    "$VSPHERE_TKGM_VCENTER_ADMIN"
+        messagePrint " ▪ vCenter Admin Password"                $(maskPassword "$VSPHERE_TKGM_VCENTER_PASSWORD")
+        messagePrint " ▪ TKG Management Cluster IP"             "$VSPHERE_TKGM_CONTROL_PLANE_ENDPOINT"
+        messagePrint " ▪ Jump Host Name"                        "$VSPHERE_TKGM_JUMPHOST_NAME"
+        messagePrint " ▪ Jump Host User"                        "$VSPHERE_TKGM_JUMPHOST_USER"
+        messagePrint " ▪ SSH Private Key"                       "$VSPHERE_TKGM_SSH_PRIVATE_KEY_FILE"
+        messagePrint " ▪ SSH Public Key"                        "$VSPHERE_TKGM_SSH_PUBLIC_KEY_FILE"
+        messagePrint " ▪ TKG Management Custer Control Plane"   "$VSPHERE_TKGM_CONTROL_PLANE_ENDPOINT"
+        messagePrint " ▪ TKG LoadBalancer IP Pool"              "$VSPHERE_TKGM_LOADBALANCER_IPPOOL"
+
+        first=1
+        for n in $VSPHERE_TKGM_WORKLOAD_CLUSTER_IP_LIST; do
+          if [ $first -eq 1 ]; then 
+            messagePrint " ▪ TKG Workload Cluster Control Plane"    "$n"
+          else
+            messagePrint ""                                         "$n"
+          fi
+          first=0
+        done
       fi
 
       # --- VERIFY VSPHERE_TKGM_VCENTER_SERVER ADRESS ---
