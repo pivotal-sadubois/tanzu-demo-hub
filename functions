@@ -1264,7 +1264,7 @@ checkTMCAccess() {
   missing_variables=0
 
   if [ "${TDH_DEPLOYMENT_CLOUD}" == "AWS" ]; then
-    if [ "${TDH_MANAGEMENT_CLUSTER}" == "" -o "${TMC_PROVISIONER_NAME}" == "" ]; then
+    if [ "${TDH_MANAGEMENT_CLUSTER}" == "" -o "${TMC_PROVISIONER_NAME}" == "" -o "${AWS_PRIMARY_AZ}" == "" ]; then
       missing_variables=1
       echo ""
       echo "  2MISSING ENVIRONMENT-VARIABES    DESCRIPTION        "
@@ -1282,8 +1282,13 @@ checkTMCAccess() {
         echo "  AWS_HOSTED_DNS_DOMAIN           (required) A DNS Domain managed by AWS Route 53 ie. yourdomain.com with a"
         echo "                                  valid DNS Zone. => https://console.aws.amazon.com/route53"
       fi
+
+      if [ "${AWS_PRIMARY_AZ}" == "" ]; then
+        echo "  AWS_PRIMARY_AZ                  (required) Choose the Primary Availability Zone of a AWS Region"
+        echo "                                    => aws ec2 --region=eu-west-3 describe-availability-zones --output text"
+        echo "                                       eu-north-1a, eu-north-1b, eu-north-1c"
+      fi
     else
-#hallonn
       messageTitle "Supporting services access (Pivotal Network, AWS Route53)"
       messagePrint " ▪ Pivotal Network Token"           "$PCF_PIVNET_TOKEN"
       messagePrint " ▪ AWS Route53 Hosted DNS Domain"   "$AWS_HOSTED_DNS_DOMAIN"
