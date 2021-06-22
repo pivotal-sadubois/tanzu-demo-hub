@@ -327,11 +327,21 @@ configureLetsEnscript() {
     $SSH_COMMAND -n "[ -d /etc/letsencrypt/live/$domain ] && cp /etc/letsencrypt/live/$domain/* ~/tanzu-demo-hub/certificates"
 
     messageTitle " Copy new certificates from jump to local ./certificates/$domain"
+    cnt=0; ret=1
     while [ ! -f ./certificates/$domain/fullchain.pem ]; do
-      $SCP_COMMAND ${SSH_USER}@${SSH_HOST}:$SSH_HOME/tanzu-demo-hub/certificates/* $HOME/.tanzu-demo-hub/certificates/$domain/ > /dev/null 2>&1
+      $SCP_COMMAND ${SSH_USER}@${SSH_HOST}:$SSH_HOME/tanzu-demo-hub/certificates/* $HOME/.tanzu-demo-hub/certificates/$domain/ > /dev/null 2>&1; ret=$?
+      [ $cnt -gt 5 ] && break
 
       sleep 10
+      let cnt=cnt+1
     done
+
+    if [ $ret -ne 0 ]; then 
+      $SCP_COMMAND ${SSH_USER}@${SSH_HOST}:$SSH_HOME/tanzu-demo-hub/certificates/* $HOME/.tanzu-demo-hub/certificates/$domain/ 
+      echo "ERROR: failed to copy SSL/TLS cert from jumphost"
+      echo "       => SCP_COMMAND ${SSH_USER}@${SSH_HOST}:$SSH_HOME/tanzu-demo-hub/certificates/* $HOME/.tanzu-demo-hub/certificates/$domain/ "
+      exit
+    fi
 
     echo "----------------------------------------------------------------------------------------------------------------"
   fi
@@ -928,7 +938,7 @@ if [ ! -f /tdh_tools_docker_container  ]; then
        -v /var/run/docker.sock:/var/run/docker.sock:rw -v $HOME/.cache:$HOME/.cache:rw -v $HOME/.config:$HOME/.config:rw \
        -v $HOME/.aws:$HOME/.aws:rw -v $HOME/.vmware-cna-saas:$HOME/.vmware-cna-saas:rw -v $HOME/.azure:$HOME/.azure:rw \
        -v /tmp:/tmp:rw -v /tmp/docker:$HOME/.docker:rw -v $HOME/.mc:$HOME/.mc:rw -v $HOME/.tanzu:$HOME/.tanzu:rw \
-       -v $HOME/.kube-tkg:$HOME/.kube-tkg:rw -v $HOME/.kube:$HOME/.kube:rw \
+       -v $HOME/.kube-tkg:$HOME/.kube-tkg:rw -v $HOME/.kube:$HOME/.kube:rw -v $HOME/.govmomi:$HOME/.govmomi:rw \
        -e "KUBECONFIG=$HOME/.kube/config" --hostname tdh-tools tdh-tools:latest $TDHPATH/$CMD_EXEC $CMD_ARGS
 
     # --- FINISH CURRENT SESSION AS WE RUN AS CONTAINER ---
@@ -1274,6 +1284,10 @@ else
 
     cleanKubeconfig
     cleanManagementCluster
+
+    # --- LOGIN ---
+    tanzu login --server $TDH_TKGMC_NAME > /dev/null 2>&1
+
     cnt=$(tanzu management-cluster get 2>/dev/null | grep -c " $TDH_TKGMC_NAME ")
     if [ $cnt -eq 0 ]; then
       $SCP_COMMAND ${SSH_USER}@${SSH_HOST}:$SSH_HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.kubeconfig ~/.tanzu-demo-hub/config > /dev/null 2>&1
@@ -1297,6 +1311,23 @@ else
   fi
 
   # --- VERIFY TMC REGISTRATION
+  tmc managementcluster get $TDH_TKGMC_NAME > /dev/null 2>&1
+  if [ $? -eq 0 ]; then
+    #tmc managementcluster get aws-hosted -o json | jq -r '.status.phase'
+    stt=$(tmc managementcluster get $TDH_TKGMC_NAME -o json 2>/dev/null | jq -r '.status.conditions.READY.status') 
+    if [ "$stt" == "FALSE" ]; then 
+      messagePrint " ▪ TMC ReRegister Cluster"             "$TDH_TKGMC_NAME"
+      tmc managementcluster reregister $TDH_TKGMC_NAME -o /tmp/k8s-register-manifest.yaml > /dev/null 2>&1
+      if [ $? -eq 0 ]; then
+        kubectl apply -f /tmp/k8s-register-manifest.yaml
+        if [ $? -eq 0 ]; then
+          messagePrint " ▪ TMC ReRegister Cluster failed, deregister"             "$TDH_TKGMC_NAME"
+          tmc managementcluster deregister $TDH_TKGMC_NAME > /dev/null 2>&1
+        fi
+      fi
+    fi
+  fi
+
   tmc managementcluster get $TDH_TKGMC_NAME > /dev/null 2>&1
   if [ $? -ne 0 ]; then
     messagePrint " ▪ TMC Register Cluster"             "$TDH_TKGMC_NAME"
@@ -1327,7 +1358,6 @@ else
     if [ $ret -ne 0 ]; then
       echo "ERROR: failed to install TMC Agent"
       echo "       => kubectl apply -f /tmp/k8s-register-manifest.yaml"
-      exit
     fi
 
     cnt=0; stt="PENDING"
@@ -1386,6 +1416,14 @@ else
     egrep "$var_aws_1|$var_aws_2" $TKG_MC_CONFIG     >> $TKG_WC_CONFIG_DEV
   fi
 
+  if [ "$TDH_DEPLOYMENT_ENV_NAME" == "vSphere" ]; then
+    var_azure_1="AZURE_TENANT_ID:|AZURE_CLIENT_ID:|AZURE_CLIENT_SECRET:|AZURE_SSH_PUBLIC_KEY_B64:|AZURE_CONTROL_PLANE_MACHINE_TYPE:"
+    var_azure_2="AZURE_LOCATION:|AZURE_NODE_MACHINE_TYPE:|AZURE_SUBSCRIPTION_ID:"
+
+    egrep "VSPHERE" $TKG_MC_CONFIG | egrep -v "VSPHERE_CONTROL_PLANE_ENDPOINT"     >> $TKG_WC_CONFIG_PRD
+    egrep "VSPHERE" $TKG_MC_CONFIG | egrep -v "VSPHERE_CONTROL_PLANE_ENDPOINT"     >> $TKG_WC_CONFIG_DEV
+  fi
+
   if [ "$TDH_DEPLOYMENT_ENV_NAME" == "Azure" ]; then 
     var_azure_1="AZURE_TENANT_ID:|AZURE_CLIENT_ID:|AZURE_CLIENT_SECRET:|AZURE_SSH_PUBLIC_KEY_B64:|AZURE_CONTROL_PLANE_MACHINE_TYPE:"
     var_azure_2="AZURE_LOCATION:|AZURE_NODE_MACHINE_TYPE:|AZURE_SUBSCRIPTION_ID:"
@@ -1420,15 +1458,37 @@ else
   printf "    => %-80s %s\n" "kubectl config set-context ${TDH_TKGMC_NAME}-admin@${TDH_TKGMC_NAME}" "# Set k8s Context to mc Cluster"
   printf "    => %-80s %s\n" "kubectl get cluster --all-namespaces" "# Set k8s Context to the TKG Management Cluster"
   printf "    => %-80s %s\n" "kubectl get kubeadmcontrolplane,machine,machinedeployment --all-namespaces" "# To verify the first control plane is up"
+  printf "    => %-80s %s\n" "tanzu login --server $TDH_TKGMC_NAME" "# Show Tanzu Management Cluster"
   printf "    => %-80s %s\n" "tanzu management-cluster get" "# Show Tanzu Management Cluster"
-  printf "\e[1m2.) Ceeate TKG Workload Cluster\e[0m\n"
-  echo "    => tanzu cluster create -f \$HOME/.tanzu/tkg/clusterconfigs/${TDH_TKGMC_NAME}-wc-dev.yaml  <cluster-name>"
-  echo "    => tanzu cluster create -f \$HOME/.tanzu/tkg/clusterconfigs/${TDH_TKGMC_NAME}-wc-prod.yaml <cluster-name>"
-  echo "    => tanzu cluster kubeconfig get <cluster-name> --admin"
-  echo "    => tanzu cluster list --include-management-cluster"
+  
+  if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "vSphere" ]; then
+    printf "\e[1m2.) Ceeate TKG Workload Cluster\e[0m\n"
+    echo "    => export CLUSTER_NAME=<cluster_name>                   ## Workload Cluster Name"
+    echo "    => export VSPHERE_CONTROL_PLANE_ENDPOINT=<ip-address>   ## Control Plane IP Adress for the worklaod Cluster"
+    echo "    => tanzu cluster create -f \$HOME/.tanzu/tkg/clusterconfigs/${TDH_TKGMC_NAME}-wc-dev.yaml --tkr v1.20.4---vmware.3-tkg.1"
+    echo "    => tanzu cluster create -f \$HOME/.tanzu/tkg/clusterconfigs/${TDH_TKGMC_NAME}-wc-prod.yaml"
+    echo "    => tanzu cluster kubeconfig get \$CLUSTER_NAME --admin"
+    echo "    => kubectl config use-context \${CLUSTER_NAME}-admin@\$CLUSTER_NAME"
+    echo "    => tanzu cluster list --include-management-cluster"
+    echo "    => tanzu cluster delete \$CLUSTER_NAME -y"
+  else
+    printf "\e[1m2.) Ceeate TKG Workload Cluster\e[0m\n"
+    echo "    => tanzu kubernetes-release get"
+    echo "    => tanzu cluster create -f \$HOME/.tanzu/tkg/clusterconfigs/${TDH_TKGMC_NAME}-wc-dev.yaml  <cluster-name> -tkr v1.18.17---vmware.2-tkg.1"
+    echo "    => tanzu cluster create -f \$HOME/.tanzu/tkg/clusterconfigs/${TDH_TKGMC_NAME}-wc-prod.yaml <cluster-name>"
+    echo "    => tanzu cluster kubeconfig get <cluster-name> --admin"
+    echo "    => tanzu cluster list --include-management-cluster"
+  fi
+
   printf "\e[1m2.) Ceeate Tanzu Demo Hub (TDH) Workload Cluster with services (TBS, Harbor, Ingres etc.)\e[0m\n"
-  echo "    => ./deployTKG -m $TDH_TKGMC_NAME -d tkg-tanzu-demo-hub.cfg -n tdh-$CLOUD-$TDH_USER"
-  echo "    => ./deployTKG -m $TDH_TKGMC_NAME -d tkg-tanzu-demo-hub.cfg -n tdh-$CLOUD-$TDH_USER -k \"v1.17.16---vmware.2-tkg.1\""
+  if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "vSphere" ]; then
+    echo "    => ./deployTKG -m $TDH_TKGMC_NAME -d tkg-tanzu-demo-hub.cfg -n tdh-$CLOUD-$TDH_USER -ip <cp-ip-address>"
+    echo "    => ./deployTKG -m $TDH_TKGMC_NAME -d tkg-tanzu-demo-hub.cfg -n tdh-$CLOUD-$TDH_USER -ip <cp-ip-address> -k \"v1.17.16---vmware.2-tkg.1\""
+  else
+    echo "    => ./deployTKG -m $TDH_TKGMC_NAME -d tkg-tanzu-demo-hub.cfg -n tdh-$CLOUD-$TDH_USER"
+    echo "    => ./deployTKG -m $TDH_TKGMC_NAME -d tkg-tanzu-demo-hub.cfg -n tdh-$CLOUD-$TDH_USER -k \"v1.17.16---vmware.2-tkg.1\""
+  fi
+
   printf "\e[1m3.) Delete the Management Cluster\e[0m\n"
   echo "    => tanzu management-cluster delete $TDH_TKGMC_NAME-$TDH_USER -y"
   printf "\e[1m4.) Login to Jump Server: $JUMP_HOST (only if required)\e[0m\n"
