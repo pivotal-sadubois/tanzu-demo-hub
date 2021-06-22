@@ -920,7 +920,9 @@ if [ ! -f /tdh_tools_docker_container  ]; then
   echo "----------------------------------------------------------------------------------------------------------------------------------------------"
 
   # --- VERIFY TOOLS AND ACCESS ---
-  checkCLIcommands BASIC
+  verify_docker
+  checkCLIcommands        BASIC
+  checkKubernetesServices registry_docker
 
   if [ $NATIVE -eq 0 ]; then
     tdh_tools_build
