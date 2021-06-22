@@ -4459,6 +4459,13 @@ InstallContour() {
             --docker-server $TDH_REGISTRY_DOCKER_NAME \
             --docker-username $TDH_REGISTRY_DOCKER_USER \
             --docker-password $TDH_REGISTRY_DOCKER_PASS
+
+    kubectl patch serviceaccount default -p '{"imagePullSecrets": [{"name": "tdh-docker-repo"}]}' -n $NAMESPACE > /dev/null 2>&1
+    if [ $? -ne 0 ]; then
+      echo "ERROR: Failed to Patch Service account"
+      echo "       => kubectl patch serviceaccount default -p '{\"imagePullSecrets\": [{\"name\": \"tdh-docker-repo\"}]}' -n $NAMESPACE"
+      exit
+    fi
   
     messagePrint " ▪ Install Contour Helm Chart" "bitnami/contour"
     HELM_CONTOUR_VERSION=$(helm search repo bitnami/contour | tail -1 | awk '{ print $2 }') 
