@@ -710,7 +710,10 @@ checkCloudAccess() {
     else
       if [ "${VSPHERE_TKGM_VCENTER_ADMIN}" == "" -o "${VSPHERE_TKGM_VCENTER_PASSWORD}" == "" -o "${VSPHERE_TKGM_VCENTER_SERVER}" == "" -o \
            "${VSPHERE_TKGM_JUMPHOST_NAME}" == "" -o "${VSPHERE_TKGM_JUMPHOST_USER}" == "" -o "${VSPHERE_TKGM_CONTROL_PLANE_ENDPOINT}" == "" -o \
-           "${VSPHERE_TKGM_LOADBALANCER_IPPOOL}" == "" -o "${VSPHERE_TKGM_LOADBALANCER_IPPOOL}" == "" -o \
+           "${VSPHERE_TKGM_SUBNET}" == "" -o \
+           "${VSPHERE_TKGM_WKLD_CLUSTER01_CONTROL_PLANE}" == "" -o "${VSPHERE_TKGM_WKLD_CLUSTER01_LOADBALANCER_POOL}" == "" -o \
+           "${VSPHERE_TKGM_WKLD_CLUSTER02_CONTROL_PLANE}" == "" -o "${VSPHERE_TKGM_WKLD_CLUSTER02_LOADBALANCER_POOL}" == "" -o \
+           "${VSPHERE_TKGM_WKLD_CLUSTER03_CONTROL_PLANE}" == "" -o "${VSPHERE_TKGM_WKLD_CLUSTER03_LOADBALANCER_POOL}" == "" -o \
            "${VSPHERE_TKGM_SSH_PRIVATE_KEY_FILE}" == "" -o "${VSPHERE_TKGM_SSH_PUBLIC_KEY_FILE}" == "" ]; then
 
         missing_variables=1
@@ -746,13 +749,24 @@ checkCloudAccess() {
           echo "  VSPHERE_TKGM_JUMPHOST_USER            (required) vSphere Jump Host User"
         fi
 
-        if [ "${VSPHERE_TKGM_CONTROL_PLANE_ENDPOINT}" == "" -o "${VSPHERE_TKGM_WORKLOAD_CLUSTER_IP_LIST}" == "" -o \
+        if [ "${VSPHERE_TKGM_SUBNET}" == "" ]; then
+          echo "  VSPHERE_TKGM_SUBNET                   (required) vSphere VM Subnet (ie: 10.213.108) 
+        fi
+
+        if [ "${}" == "" -o "${VSPHERE_TKGM_WORKLOAD_CLUSTER_IP_LIST}" == "" -o \
              "${VSPHERE_TKGM_LOADBALANCER_IPPOOL}" == "" ]; then
-          echo "  VSPHERE_TKGM_CONTROL_PLANE_ENDPOINT   (required) IP Address of the TKG Management Cluster"
-          echo "  VSPHERE_TKGM_WORKLOAD_CLUSTER_IP_LIST (required) List of IP's for the TKG Workload Clusters" 
-          echo "                                        ie: VSPHERE_TKGM_WORKLOAD_CLUSTER_IP_LIST=\"10.213.107.101 10.213.107.102 10.213.107.103 10.213.107.104\""
-          echo "  VSPHERE_TKGM_LOADBALANCER_IPPOOL      (required) Addresses to be used for K8s LoadBalancers"
-          echo "                                        ie: VSPHERE_TKGM_LOADBALANCER_IPPOOL=\"10.213.107.150-10.213.107.160\""
+
+
+        if [ "${VSPHERE_TKGM_WKLD_CLUSTER01_CONTROL_PLANE}" == "" -o "${VSPHERE_TKGM_WKLD_CLUSTER01_LOADBALANCER_POOL}" == "" ]; then
+          echo "  TKG Workload Cluster 01"              (required) Control Plane IP / LoadBalancer Pool"
+          echo "  VSPHERE_TKGM_WKLD_CLUSTER01_CONTROL_PLANE=\${VSPHERE_TKGM_SUBNET}.111"
+          echo "  VSPHERE_TKGM_WKLD_CLUSTER01_LOADBALANCER_POOL=\${VSPHERE_TKGM_SUBNET}.115-\${VSPHERE_TKGM_SUBNET}.119"
+        fi
+
+        if [ "${VSPHERE_TKGM_WKLD_CLUSTER02_CONTROL_PLANE}" == "" -o "${VSPHERE_TKGM_WKLD_CLUSTER02_LOADBALANCER_POOL}" == "" ]; then
+          echo "  TKG Workload Cluster 02"              (required) Control Plane IP / LoadBalancer Pool"
+          echo "  VSPHERE_TKGM_WKLD_CLUSTER02_CONTROL_PLANE=\${VSPHERE_TKGM_SUBNET}.111"
+          echo "  VSPHERE_TKGM_WKLD_CLUSTER02_LOADBALANCER_POOL=\${VSPHERE_TKGM_SUBNET}.115-\${VSPHERE_TKGM_SUBNET}.119"
         fi
 
       else
@@ -765,19 +779,20 @@ checkCloudAccess() {
         messagePrint " ▪ Jump Host User"                        "$VSPHERE_TKGM_JUMPHOST_USER"
         messagePrint " ▪ SSH Private Key"                       "$VSPHERE_TKGM_SSH_PRIVATE_KEY_FILE"
         messagePrint " ▪ SSH Public Key"                        "$VSPHERE_TKGM_SSH_PUBLIC_KEY_FILE"
-        messagePrint " ▪ TKG Management Custer Control Plane"   "$VSPHERE_TKGM_CONTROL_PLANE_ENDPOINT"
-        messagePrint " ▪ TKG LoadBalancer IP Pool"              "$VSPHERE_TKGM_LOADBALANCER_IPPOOL"
-
-        first=1
-        for n in $VSPHERE_TKGM_WORKLOAD_CLUSTER_IP_LIST; do
-          if [ $first -eq 1 ]; then 
-            messagePrint " ▪ TKG Workload Cluster Control Plane"    "$n"
-          else
-            messagePrint ""                                         "$n"
-          fi
-          first=0
-        done
+        messagePrint " ▪ TKG Management Custer Control Plane"   "$VSPHERE_TKGM_MGMT_CLUSTER_CONTROL_PLANE"
+        messageTitle " ▪ TKG Workload Cluster 01"
+        messagePrint " ▪     Cluster Control Plane"             "$VSPHERE_TKGM_WKLD_CLUSTER01_CONTROL_PLANE"
+        messagePrint " ▪     LoadBalancer IP Pool"              "$VSPHERE_TKGM_WKLD_CLUSTER01_LOADBALANCER_POOL"
+        messageTitle " ▪ TKG Workload Cluster 02"
+        messagePrint " ▪     Cluster Control Plane"             "$VSPHERE_TKGM_WKLD_CLUSTER02_CONTROL_PLANE"
+        messagePrint " ▪     LoadBalancer IP Pool"              "$VSPHERE_TKGM_WKLD_CLUSTER02_LOADBALANCER_POOL"
+        messageTitle " ▪ TKG Workload Cluster 03"
+        messagePrint " ▪     Cluster Control Plane"             "$VSPHERE_TKGM_WKLD_CLUSTER03_CONTROL_PLANE"
+        messagePrint " ▪     LoadBalancer IP Pool"              "$VSPHERE_TKGM_WKLD_CLUSTER03_LOADBALANCER_POOL"
       fi
+
+#VSPHERE_TKGM_MGMT_CLUSTER_CONTROL_PLANE => VSPHERE_TKGM_MGMT_CLUSTER_CONTROL_PLANE
+#VSPHERE_TKGM_WORKLOAD_CLUSTER_IP_LIST => 
 
       # --- VERIFY VSPHERE_TKGM_VCENTER_SERVER ADRESS ---
 #      vsp=$(nslookup $VSPHERE_TKGM_VCENTER_SERVER | grep "Address:" | tail -1 | awk '{ print $NF }')
@@ -4436,9 +4451,9 @@ getRootCA() {
 }
 
 InstallMetallLB() {
-  if [ "$TDH_TKGMC_LOADBALANCER" != "metallb" ]; then
-    return
-  fi
+  #if [ "$TDH_TKGMC_LOADBALANCER" != "metallb" ]; then
+  #  return
+  #fi
 
   NAMESPACE=metallb
   kubectl get namespace $NAMESPACE > /dev/null 2>&1
@@ -4469,9 +4484,23 @@ InstallMetallLB() {
     echo "   - name: default"                          >> $HELM_VALUES
     echo "     protocol: layer2"                       >> $HELM_VALUES
     echo "     addresses:"                             >> $HELM_VALUES
-    echo "     - 10.213.107.150-10.213.107.160"        >> $HELM_VALUES
-  fi
+    echo "     - $VSPHERE_TKGM_LOADBALANCER_IPPOOL"    >> $HELM_VALUES
 
+    helm install metallb metallb/metallb -f /tmp/values.yaml -n $NAMESPACE > /dev/null 2>&1
+  
+    if [ $? -ne 0 ]; then
+      echo "ERROR: failed to install bitnami/contour"
+      echo "       => helm install metallb metallb/metallb -f /tmp/values.yaml -n $NAMESPACE"
+      exit
+    fi
+
+    cnt=0
+    while [ $cnt -eq 0 ]; do
+      cnt=$(kubectl get pods -n $NAMESPACE | sed 1d | grep -vc Running)
+      if [ $cnt -eq 0 ]; then cnt=1; fi
+      sleep 5
+    done
+  fi
 
 
 
