@@ -710,6 +710,7 @@ checkCloudAccess() {
     else
       if [ "${VSPHERE_TKGM_VCENTER_ADMIN}" == "" -o "${VSPHERE_TKGM_VCENTER_PASSWORD}" == "" -o "${VSPHERE_TKGM_VCENTER_SERVER}" == "" -o \
            "${VSPHERE_TKGM_JUMPHOST_NAME}" == "" -o "${VSPHERE_TKGM_JUMPHOST_USER}" == "" -o "${VSPHERE_TKGM_CONTROL_PLANE_ENDPOINT}" == "" -o \
+           "${VSPHERE_TKGM_LOADBALANCER_IPPOOL}" == "" -o "${VSPHERE_TKGM_LOADBALANCER_IPPOOL}" == "" -o \
            "${VSPHERE_TKGM_SSH_PRIVATE_KEY_FILE}" == "" -o "${VSPHERE_TKGM_SSH_PUBLIC_KEY_FILE}" == "" ]; then
 
         missing_variables=1
@@ -745,8 +746,13 @@ checkCloudAccess() {
           echo "  VSPHERE_TKGM_JUMPHOST_USER            (required) vSphere Jump Host User"
         fi
 
-        if [ "${VSPHERE_TKGM_CONTROL_PLANE_ENDPOINT}" == "" ]; then
+        if [ "${VSPHERE_TKGM_CONTROL_PLANE_ENDPOINT}" == "" -o "${VSPHERE_TKGM_WORKLOAD_CLUSTER_IP_LIST}" == "" -o \
+             "${VSPHERE_TKGM_LOADBALANCER_IPPOOL}" == "" ]; then
           echo "  VSPHERE_TKGM_CONTROL_PLANE_ENDPOINT   (required) IP Address of the TKG Management Cluster"
+          echo "  VSPHERE_TKGM_WORKLOAD_CLUSTER_IP_LIST (required) List of IP's for the TKG Workload Clusters" 
+          echo "                                        ie: VSPHERE_TKGM_WORKLOAD_CLUSTER_IP_LIST=\"10.213.107.101 10.213.107.102 10.213.107.101\""
+          echo "  VSPHERE_TKGM_LOADBALANCER_IPPOOL      (required) Addresses to be used for K8s LoadBalancers"
+          echo "                                        ie: VSPHERE_TKGM_LOADBALANCER_IPPOOL=\"10.213.107.150-10.213.107.160\""
         fi
 
       else
@@ -4417,10 +4423,23 @@ InstallMetallLB() {
   fi
 
   NAMESPACE=metallb
+  kubectl get namespace $NAMESPACE > /dev/null 2>&1
+  if [ $? -ne 0 ]; then kubectl create namespace $NAMESPACE > /dev/null 2>&1; fi
 
   cnt=$(helm list -q -n $NAMESPACE | egrep -c "^metallb")
   if [ $cnt -eq 0 ]; then
     messageTitle "Installing MetallLB Loadbalancer"
+
+    kubectl get namespace $NAMESPACE > /dev/null 2>&1
+    if [ $? -ne 0 ]; then 
+      messagePrint " ▪ Cleanup from privious installation"
+      kubectl delete namespace $NAMESPACE > /dev/null 2>&1
+    fi
+
+    messagePrint " ▪ Create Namespace" "$NAMESPACE"
+    kubectl create namespace $NAMESPACE > /dev/null 2>&1
+    patchServiceAccount default $NAMESPACE
+
     HELM_VALUES=/tmp/metallb_values.yaml
 
     echo "global:"                                     >  $HELM_VALUES
