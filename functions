@@ -722,51 +722,65 @@ checkCloudAccess() {
         echo "  -------------------------------------------------------------------------------------------------------------------------------------------------------"
 
         if [ "${VSPHERE_TKGM_VCENTER_SERVER}" == "" ]; then
-          echo "  VSPHERE_TKGM_VCENTER_SERVER           (required) vSphere Server Name"
+          echo "  VSPHERE_TKGM_VCENTER_SERVER                      (required) vSphere Server Name"
         fi
 
         if [ "${VSPHERE_TKGM_VCENTER_ADMIN}" == "" ]; then
-          echo "  VSPHERE_TKGM_VCENTER_ADMIN            (required) vCenter Amdinistrator"
+          echo "  VSPHERE_TKGM_VCENTER_ADMIN                       (required) vCenter Amdinistrator"
         fi
 
         if [ "${VSPHERE_TKGM_VCENTER_PASSWORD}" == "" ]; then
-          echo "  VSPHERE_TKGM_VCENTER_PASSWORD         (required) vCenter Admin Password"
+          echo "  VSPHERE_TKGM_VCENTER_PASSWORD                    (required) vCenter Admin Password"
         fi
 
         if [ "${VSPHERE_TKGM_SSH_PRIVATE_KEY_FILE}" == "" ]; then
-          echo "  VSPHERE_TKGM_SSH_PRIVATE_KEY_FILE     (required) SSH Private Key File"
+          echo "  VSPHERE_TKGM_SSH_PRIVATE_KEY_FILE                (required) SSH Private Key File"
         fi
 
         if [ "${VSPHERE_TKGM_SSH_PUBLIC_KEY_FILE}" == "" ]; then
-          echo "  VSPHERE_TKGM_SSH_PUBLIC_KEY_FILE      (required) SSH Public Key File"
+          echo "  VSPHERE_TKGM_SSH_PUBLIC_KEY_FILE                 (required) SSH Public Key File"
         fi
 
         if [ "${VSPHERE_TKGM_JUMPHOST_NAME}" == "" ]; then
-          echo "  VSPHERE_TKGM_JUMPHOST_NAME            (required) vSphere Jump Host Name"
+          echo "  VSPHERE_TKGM_JUMPHOST_NAME                       (required) vSphere Jump Host Name"
         fi
 
         if [ "${VSPHERE_TKGM_JUMPHOST_USER}" == "" ]; then
-          echo "  VSPHERE_TKGM_JUMPHOST_USER            (required) vSphere Jump Host User"
+          echo "  VSPHERE_TKGM_JUMPHOST_USER                       (required) vSphere Jump Host User"
         fi
 
         if [ "${VSPHERE_TKGM_SUBNET}" == "" ]; then
-          echo "  VSPHERE_TKGM_SUBNET                   (required) vSphere VM Subnet (ie: 10.213.108) 
+          echo "  VSPHERE_TKGM_SUBNET                              (required) vSphere VM Subnet (ie: 10.213.108)"
         fi
 
-        if [ "${}" == "" -o "${VSPHERE_TKGM_WORKLOAD_CLUSTER_IP_LIST}" == "" -o \
-             "${VSPHERE_TKGM_LOADBALANCER_IPPOOL}" == "" ]; then
-
-
         if [ "${VSPHERE_TKGM_WKLD_CLUSTER01_CONTROL_PLANE}" == "" -o "${VSPHERE_TKGM_WKLD_CLUSTER01_LOADBALANCER_POOL}" == "" ]; then
-          echo "  TKG Workload Cluster 01"              (required) Control Plane IP / LoadBalancer Pool"
-          echo "  VSPHERE_TKGM_WKLD_CLUSTER01_CONTROL_PLANE=\${VSPHERE_TKGM_SUBNET}.111"
-          echo "  VSPHERE_TKGM_WKLD_CLUSTER01_LOADBALANCER_POOL=\${VSPHERE_TKGM_SUBNET}.115-\${VSPHERE_TKGM_SUBNET}.119"
+          echo "  TKG Workload Cluster 01"                        
+          echo "  - VSPHERE_TKGM_WKLD_CLUSTER01_CONTROL_PLANE      (required) Control Plane IP"
+          echo "  - VSPHERE_TKGM_WKLD_CLUSTER01_LOADBALANCER_POOL  (required) LoadBalancer Pool"
+          echo "  => ie. set following variables in ~/.tanzu-demo-hub.cfg and adjust IP if needed"
+          echo "    export VSPHERE_TKGM_WKLD_CLUSTER01_CONTROL_PLANE=\${VSPHERE_TKGM_SUBNET}.111"
+          echo "    export VSPHERE_TKGM_WKLD_CLUSTER01_LOADBALANCER_POOL=\${VSPHERE_TKGM_SUBNET}.115-\${VSPHERE_TKGM_SUBNET}.119"
+          echo ""
         fi
 
         if [ "${VSPHERE_TKGM_WKLD_CLUSTER02_CONTROL_PLANE}" == "" -o "${VSPHERE_TKGM_WKLD_CLUSTER02_LOADBALANCER_POOL}" == "" ]; then
-          echo "  TKG Workload Cluster 02               (required) Control Plane IP / LoadBalancer Pool"
-          echo "  VSPHERE_TKGM_WKLD_CLUSTER02_CONTROL_PLANE=\${VSPHERE_TKGM_SUBNET}.111"
-          echo "  VSPHERE_TKGM_WKLD_CLUSTER02_LOADBALANCER_POOL=\${VSPHERE_TKGM_SUBNET}.115-\${VSPHERE_TKGM_SUBNET}.119"
+          echo "  TKG Workload Cluster 02"                         
+          echo "  - VSPHERE_TKGM_WKLD_CLUSTER02_CONTROL_PLANE      (required) Control Plane IP"
+          echo "  - VSPHERE_TKGM_WKLD_CLUSTER02_LOADBALANCER_POOL  (required) LoadBalancer Pool"
+          echo "  => ie. set following variables in ~/.tanzu-demo-hub.cfg and adjust IP if needed"
+          echo "     export VSPHERE_TKGM_WKLD_CLUSTER02_CONTROL_PLANE=\${VSPHERE_TKGM_SUBNET}.121"
+          echo "     export VSPHERE_TKGM_WKLD_CLUSTER02_LOADBALANCER_POOL=\${VSPHERE_TKGM_SUBNET}.125-\${VSPHERE_TKGM_SUBNET}.129"
+          echo ""
+        fi
+
+        if [ "${VSPHERE_TKGM_WKLD_CLUSTER03_CONTROL_PLANE}" == "" -o "${VSPHERE_TKGM_WKLD_CLUSTER03_LOADBALANCER_POOL}" == "" ]; then
+          echo "  TKG Workload Cluster 03"                         
+          echo "  - VSPHERE_TKGM_WKLD_CLUSTER03_CONTROL_PLANE      (required) Control Plane IP"
+          echo "  - VSPHERE_TKGM_WKLD_CLUSTER03_LOADBALANCER_POOL  (required) LoadBalancer Pool"
+          echo "  => ie. set following variables in ~/.tanzu-demo-hub.cfg and adjust IP if needed"
+          echo "    export VSPHERE_TKGM_WKLD_CLUSTER03_CONTROL_PLANE=\${VSPHERE_TKGM_SUBNET}.131"
+          echo "    export VSPHERE_TKGM_WKLD_CLUSTER03_LOADBALANCER_POOL=\${VSPHERE_TKGM_SUBNET}.135-\${VSPHERE_TKGM_SUBNET}.139"
+          echo ""
         fi
 
       else
@@ -780,13 +794,13 @@ checkCloudAccess() {
         messagePrint " ▪ SSH Private Key"                       "$VSPHERE_TKGM_SSH_PRIVATE_KEY_FILE"
         messagePrint " ▪ SSH Public Key"                        "$VSPHERE_TKGM_SSH_PUBLIC_KEY_FILE"
         messagePrint " ▪ TKG Management Custer Control Plane"   "$VSPHERE_TKGM_MGMT_CLUSTER_CONTROL_PLANE"
-        messageTitle " ▪ TKG Workload Cluster 01"
+        messagePrint " ▪ TKG Workload Cluster 01"               "NAME_TAG: TKG_CLUSTER_01"
         messagePrint " ▪     Cluster Control Plane"             "$VSPHERE_TKGM_WKLD_CLUSTER01_CONTROL_PLANE"
         messagePrint " ▪     LoadBalancer IP Pool"              "$VSPHERE_TKGM_WKLD_CLUSTER01_LOADBALANCER_POOL"
-        messageTitle " ▪ TKG Workload Cluster 02"
+        messagePrint " ▪ TKG Workload Cluster 02"               "NAME_TAG: TKG_CLUSTER_02"
         messagePrint " ▪     Cluster Control Plane"             "$VSPHERE_TKGM_WKLD_CLUSTER02_CONTROL_PLANE"
         messagePrint " ▪     LoadBalancer IP Pool"              "$VSPHERE_TKGM_WKLD_CLUSTER02_LOADBALANCER_POOL"
-        messageTitle " ▪ TKG Workload Cluster 03"
+        messagePrint " ▪ TKG Workload Cluster 03"               "NAME_TAG: TKG_CLUSTER_03"
         messagePrint " ▪     Cluster Control Plane"             "$VSPHERE_TKGM_WKLD_CLUSTER03_CONTROL_PLANE"
         messagePrint " ▪     LoadBalancer IP Pool"              "$VSPHERE_TKGM_WKLD_CLUSTER03_LOADBALANCER_POOL"
       fi
