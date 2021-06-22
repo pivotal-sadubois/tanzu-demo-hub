@@ -472,10 +472,12 @@ checkKubernetesServices() {
     fi
 
     if [ "${service}" == "registry_docker" ]; then
+      export TDH_REGISTRY_DOCKER_NAME=docker.io
+
       if [ "${TDH_REGISTRY_DOCKER_NAME}" == "" -o "${TDH_REGISTRY_DOCKER_USER}" == "" -o "${TDH_REGISTRY_DOCKER_PASS}" == "" ]; then
         missing_variables=1
         echo ""
-        echo "  4MISSING ENVIRONMENT-VARIABES    DESCRIPTION        "
+        echo "  MISSING ENVIRONMENT-VARIABES    DESCRIPTION        "
         echo "  -------------------------------------------------------------------------------------------------------------------------------------------------------"
 
         if [ "${TDH_REGISTRY_DOCKER_NAME}" == "" ]; then
