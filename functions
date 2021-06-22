@@ -1959,8 +1959,8 @@ createTKGMCcluster() {
     # --- VSPHERE ---
     echo "VSPHERE_CONTROL_PLANE_DISK_GIB: \"40\""                                      >> $TKG_TEMPLATE
     echo "VSPHERE_CONTROL_PLANE_ENDPOINT: $VSPHERE_TKGM_CONTROL_PLANE_ENDPOINT"        >> $TKG_TEMPLATE
-    #echo "VSPHERE_CONTROL_PLANE_MEM_MIB: \"4096\""                                     >> $TKG_TEMPLATE
-    echo "VSPHERE_CONTROL_PLANE_MEM_MIB: \"8192\""                                     >> $TKG_TEMPLATE
+    echo "VSPHERE_CONTROL_PLANE_MEM_MIB: \"4096\""                                     >> $TKG_TEMPLATE
+    #echo "VSPHERE_CONTROL_PLANE_MEM_MIB: \"8192\""                                     >> $TKG_TEMPLATE
     echo "VSPHERE_CONTROL_PLANE_NUM_CPUS: \"2\""                                       >> $TKG_TEMPLATE
     echo "VSPHERE_DATACENTER: /$VSPHERE_TKGM_DATACENTER"                                             >> $TKG_TEMPLATE
     echo "VSPHERE_DATASTORE: /$VSPHERE_TKGM_DATACENTER/datastore/$VSPHERE_TKGM_DATASTORE"                              >> $TKG_TEMPLATE
@@ -1974,7 +1974,7 @@ createTKGMCcluster() {
     echo "#VSPHERE_TLS_THUMBPRINT: F3:C6:9D:6E:B1:4B:BC:49:E3:68:6F:F6:7C:AE:5F:24:96:E8:C8:9C"         >> $TKG_TEMPLATE
     echo "VSPHERE_USERNAME: administrator@vsphere.local"                               >> $TKG_TEMPLATE
     echo "VSPHERE_WORKER_DISK_GIB: \"40\""                                             >> $TKG_TEMPLATE
-    #echo "VSPHERE_WORKER_MEM_MIB: \"4096\""                                            >> $TKG_TEMPLATE
+    echo "VSPHERE_WORKER_MEM_MIB: \"4096\""                                            >> $TKG_TEMPLATE
     echo "VSPHERE_WORKER_MEM_MIB: \"8192\""                                            >> $TKG_TEMPLATE
     echo "VSPHERE_WORKER_NUM_CPUS: \"2\""                                              >> $TKG_TEMPLATE
 
@@ -3808,6 +3808,7 @@ installMinio() {
   TDH_ENVNAME=$(getConfigMap tanzu-demo-hub TDH_ENVNAME)
   DOMAIN=$(getConfigMap tanzu-demo-hub TDH_INGRESS_CONTOUR_LB_DOMAIN)
 
+#gaga
   cnt=$(helm list -q | egrep -c "^tdh-minio")
   if [ $cnt -eq 0 ]; then
     messageTitle "Installing Minio"
@@ -4125,7 +4126,6 @@ installBuildService() {
       let cnt=cnt+1
     done
 
-hostname
     if [ $ret -ne 0 ]; then
       echo "ERROR: Docker login does not work 1'"
       echo "       => docker login $TDH_HARBOR_REGISTRY_DNS_HARBOR -u admin -p $TDH_HARBOR_REGISTRY_ADMIN_PASSWORD"; exit
@@ -4402,6 +4402,35 @@ getRootCA() {
   messagePrint " ▪ Verify Cert ($THD_TLS_CERTIFICATE) with CertKey ($THD_TLS_KEY)"  "$vry"
 }
 
+InstallMetallLB() {
+  if [ "$TDH_TKGMC_LOADBALANCER" != "metallb" ]; then
+    return
+  fi
+
+  NAMESPACE=metallb
+
+  cnt=$(helm list -q -n $NAMESPACE | egrep -c "^metallb")
+  if [ $cnt -eq 0 ]; then
+    messageTitle "Installing MetallLB Loadbalancer"
+    HELM_VALUES=/tmp/metallb_values.yaml
+
+    echo "global:"                                     >  $HELM_VALUES
+    echo "  imageRegistry: docker.io"                  >> $HELM_VALUES
+    echo "  imagePullSecrets:"                         >> $HELM_VALUES
+    echo "    - tdh-docker-repo"                       >> $HELM_VALUES
+    echo "configInline:"                               >> $HELM_VALUES
+    echo "  address-pools:"                            >> $HELM_VALUES
+    echo "   - name: default"                          >> $HELM_VALUES
+    echo "     protocol: layer2"                       >> $HELM_VALUES
+    echo "     addresses:"                             >> $HELM_VALUES
+    echo "     - 10.213.107.150-10.213.107.160"        >> $HELM_VALUES
+  fi
+
+
+
+
+}
+
 InstallContour() {
   if [ "$TDH_SERVICE_INGRESS_CONTOUR" != "true" ]; then
     uodateConfigMap tanzu-demo-hub TDH_INGRESS_CONTOUR_ENABLED        "false"
@@ -4428,6 +4457,7 @@ InstallContour() {
     HELM_CONTOUR_VERSION=$(helm search repo bitnami/contour | tail -1 | awk '{ print $2 }') 
     messagePrint " ▪ Install Contour Helm Chart Version" "$HELM_CONTOUR_VERSION"
 
+#gaga
     echo "global:"                                     >  /tmp/contour_values.yaml
     echo "  imageRegistry: docker.io"                  >> /tmp/contour_values.yaml
     echo "  imagePullSecrets:"                         >> /tmp/contour_values.yaml
