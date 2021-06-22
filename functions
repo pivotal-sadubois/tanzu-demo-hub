@@ -1134,11 +1134,18 @@ checkTMCintegration() {
         kubectl create ns $NAMESPACE > /dev/null 2>&1
         helm uninstall wavefront -n $NAMESPACE > /dev/null 2>&1
 
-        helm install wavefront wavefront/wavefront \
-            --set wavefront.url=$TDH_TANZU_OBSERVABILITY_URL \
-            --set wavefront.token=$TDH_TANZU_OBSERVABILITY_API_TOKEN \
-            --set clusterName=$TDH_CLUSTER_NAME --namespace wavefront > /dev/null 2>&1
-        if [ $? -ne 0 ]; then
+        ret=1; cnt=0
+        while [ $ret -ne 0 -a $cnt -lt 5 ]; do
+          helm install wavefront wavefront/wavefront \
+              --set wavefront.url=$TDH_TANZU_OBSERVABILITY_URL \
+              --set wavefront.token=$TDH_TANZU_OBSERVABILITY_API_TOKEN \
+              --set clusterName=$TDH_CLUSTER_NAME --namespace wavefront > /dev/null 2>&1; ret=$?
+          [ $ret -eq 0 ] && break
+          let cnt=cnt+1
+          sleep 30
+        done
+
+        if [ $ret -ne 0 ]; then
           echo "ERROR: failed to install wavefront Helm Chart"
           echo "       => helm install wavefront wavefront/wavefront \\"
           echo "           --set wavefront.url=$TDH_TANZU_OBSERVABILITY_URL \\"
@@ -1230,9 +1237,17 @@ checkTMCintegration() {
       cnt=$(tmc cluster dataprotection backup list --cluster-name $TDH_CLUSTER_NAME -p $TMC_PROVISIONER_NAME -m $TDH_MANAGEMENT_CLUSTER  --name "full-backup" | egrep -c " full-backup ")
       if [ $cnt -eq 0 ]; then 
         messagePrint " ▪ Configure Full Backup (full-backup) configuration"            "enabled"
-        tmc cluster dataprotection backup create -c $TDH_CLUSTER_NAME -p $TMC_PROVISIONER_NAME -m $TDH_MANAGEMENT_CLUSTER \
-          --name "full-backup" --backup-location-name $TDH_TANZU_DATA_PROTECTION_BACKUP_LOCATION > /dev/null 2>&1
-        if [ $? -ne 0 ]; then
+
+        ret=1; cnt=0
+        while [ $ret -ne 0 -a $cnt -lt 5 ]; do
+          tmc cluster dataprotection backup create -c $TDH_CLUSTER_NAME -p $TMC_PROVISIONER_NAME -m $TDH_MANAGEMENT_CLUSTER \
+            --name "full-backup" --backup-location-name $TDH_TANZU_DATA_PROTECTION_BACKUP_LOCATION > /dev/null 2>&1; ret=$?
+          [ $ret -eq 0 ] && break
+          let cnt=cnt+1
+          sleep 30
+        done
+
+        if [ $ret -ne 0 ]; then
           echo "ERROR: failed to configure a full-backup"
           echo "       => tmc cluster dataprotection backup create -c $TDH_CLUSTER_NAME -p $TMC_PROVISIONER_NAME \\"
           echo "            -m $TDH_MANAGEMENT_CLUSTER --name \"full-backup\" --backup-location-name $TDH_TANZU_DATA_PROTECTION_BACKUP_LOCATION"
@@ -3814,7 +3829,7 @@ installSpringCloudGateway() {
     DNS_HARBOR=$(getConfigMap tanzu-demo-hub TDH_HARBOR_REGISTRY_DNS_HARBOR)
     TDH_HARBOR_REGISTRY_DNS_HARBOR=$(getConfigMap tanzu-demo-hub TDH_HARBOR_REGISTRY_DNS_HARBOR)
     TDH_HARBOR_REGISTRY_ADMIN_PASSWORD=$(getConfigMap tanzu-demo-hub TDH_HARBOR_REGISTRY_ADMIN_PASSWORD)
-    messagePrint "Verify Harbor Registry Access" "$TDH_HARBOR_REGISTRY_DNS_HARBOR"
+    messagePrint " ▪ Verify Harbor Registry Access" "$TDH_HARBOR_REGISTRY_DNS_HARBOR"
 
     cnt=0; ret=1
     while [ $ret -ne 0 -a $cnt -lt 5 ]; do
@@ -4256,7 +4271,8 @@ installBuildService() {
         kp import -f /tmp/descriptor-$TDH_SERVICE_BUILD_SERVICE_DEPENDANCIES.yaml > /dev/null 2>&1; ret=$?
         messageLine
       else
-        kp import -f /tmp/descriptor-$TDH_SERVICE_BUILD_SERVICE_DEPENDANCIES.yaml > /dev/null 2>&1; ret=$?
+        #kp import -f /tmp/descriptor-$TDH_SERVICE_BUILD_SERVICE_DEPENDANCIES.yaml > /dev/null 2>&1; ret=$?
+        kp import -f /tmp/descriptor-$TDH_SERVICE_BUILD_SERVICE_DEPENDANCIES.yaml; ret=$?
       fi
 
       [ $ret -eq 0 ] && break
@@ -4498,7 +4514,7 @@ InstallMetallLB() {
     echo "   - name: default"                          >> $HELM_VALUES
     echo "     protocol: layer2"                       >> $HELM_VALUES
     echo "     addresses:"                             >> $HELM_VALUES
-    echo "     - $VSPHERE_TKGM_LOADBALANCER_IPPOOL"    >> $HELM_VALUES
+    echo "     - $TDH_TKGWC_LB_ADDRESS"    >> $HELM_VALUES
 
     helm install metallb metallb/metallb -f /tmp/values.yaml -n $NAMESPACE > /dev/null 2>&1
   
