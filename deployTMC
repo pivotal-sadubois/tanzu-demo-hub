@@ -17,7 +17,7 @@ export CMD_EXEC=$(basename $0)
 export CMD_ARGS=$*
 
 unset TMC_MANAGEMENT_CLUSTER
-unset TMC_ACCOUNT_NAME
+unset TMC_ACCOUNT_NAME  
 
 . $TANZU_DEMO_HUB/functions
 
