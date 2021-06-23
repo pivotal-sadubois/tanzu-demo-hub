@@ -4617,6 +4617,7 @@ InstallContour() {
   # --- VERIFY DNS DOMAIN ---
   verifyHostedZone ${TDH_ENVNAME}.$AWS_HOSTED_DNS_DOMAIN
 
+echo "TDH_INFRASTRUCTURE:$TDH_INFRASTRUCTURE"
   # --- SET DNS RECORD ---
   if [ "$TDH_INFRASTRUCTURE" == "minikube" ]; then 
     ipa=$(kubectl describe svc ingress-contour-envoy --namespace ingress-contour | grep Ingress | awk '{print $3}')
