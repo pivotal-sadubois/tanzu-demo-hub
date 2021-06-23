@@ -4276,11 +4276,10 @@ installBuildService() {
     while [ $ret -ne 0 -a $cnt -lt 5 ]; do
       if [ $DEBUG -eq 1 ]; then
         messageLine
-        kp import -f /tmp/descriptor-$TDH_SERVICE_BUILD_SERVICE_DEPENDANCIES.yaml > /dev/null 2>&1; ret=$?
+        kp import -f /tmp/descriptor-$TDH_SERVICE_BUILD_SERVICE_DEPENDANCIES.yaml; ret=$?
         messageLine
       else
-        #kp import -f /tmp/descriptor-$TDH_SERVICE_BUILD_SERVICE_DEPENDANCIES.yaml > /dev/null 2>&1; ret=$?
-        kp import -f /tmp/descriptor-$TDH_SERVICE_BUILD_SERVICE_DEPENDANCIES.yaml; ret=$?
+        kp import -f /tmp/descriptor-$TDH_SERVICE_BUILD_SERVICE_DEPENDANCIES.yaml > /dev/null 2>&1; ret=$?
       fi
 
       [ $ret -eq 0 ] && break
