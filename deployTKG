@@ -23,7 +23,7 @@ usage() {
   echo "                                                # to add your user name, to prevent conflicts in TMC"
   echo "                                                # ie. tdh-sdubois-azure or tdh-sdubois-aws-01"
   echo ""
-  echo "                      -ip <kubernetes-version>  # Control Plane IP Address (TKGm on vSphere)"
+  echo "                      -tag <name-tag>           # Cluster NameTag ie. TKG_CLUSTER_01 or TKG_CLUSTER_02"
   echo "                      -k  <controlplane-ip>     # default (latest)"
   echo "                                                # use 'tanzu kubernetes-release get' to see available"
   echo ""
@@ -139,16 +139,17 @@ listDeployments_old() {
 
 while [ "$1" != "" ]; do
   case $1 in
-    -d)  TKG_DEPLOYMENT=$2;;
-    -m)  TDH_TKGMC_NAME=$2;;
-    -n)  TDH_TKGWC_NAME=$2;;
-    -k)  TDH_TKGWC_K8S_VERSION=$2;;
-    -ip) TDH_TKGWC_CPIP_ADDRESS=$2;;
+    -d)   TKG_DEPLOYMENT=$2;;
+    -m)   TDH_TKGMC_NAME=$2;;
+    -n)   TDH_TKGWC_NAME=$2;;
+    -k)   TDH_TKGWC_K8S_VERSION=$2;;
+    -tag) TDH_TKGWC_NAME_TAG=$2;;
     --debug)       DEBUG=1;;
     --native)      NATIVE=1;;
   esac
   shift
 done
+
 
 if [ "${TKG_DEPLOYMENT}" == "" -o "${TDH_TKGMC_NAME}" == "" -o "${TDH_TKGWC_NAME}" == "" ]; then
   if [ "${TKG_DEPLOYMENT}" == "" ]; then 
@@ -191,6 +192,14 @@ if [ "$TDH_DEPLOYMENT_CLUSTER_PLAN" == "dev" ]; then
 else
   TDH_TKGMC_CONFIG=$TDH_TKGMC_WC_CONFIG_PROD
 fi
+
+# --- DIRTY FIX ---
+export TDH_INFRASTRUCTURE=$TDH_TKGMC_INFRASTRUCTURE
+export TDH_DEPLOYMENT_ENV_NAME=$TDH_INFRASTRUCTURE
+export TDH_TLS_CERT=tanzu-demo-hub
+export TDH_TLS_SECRET=${TDH_TLS_CERT}-tls
+export TDH_TLS_ISSUER_NAME=letsencrypt-staging
+export TDH_TLS_ISSUER_CONFIG=/tmp/issuer-dns-manager1.yaml
 
 if [ ! -f /tdh_tools_docker_container  ]; then
   echo ""
@@ -264,12 +273,50 @@ else
   TDH_TKGWC_K8S_VERSION=$(tanzu kubernetes-release get | tail -1 | awk '{ print $1 }')
 fi
 
+# --- GET TDH_TKGWC_CPIP_ADDRESS FROM NAME TAG ---
+if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "vSphere" ]; then
+  if [ "$TDH_TKGWC_NAME_TAG" == "TKG_CLUSTER_01" -o "$TDH_TKGWC_NAME_TAG" == "TKG_CLUSTER_02" -o \
+       "$TDH_TKGWC_NAME_TAG" == "TKG_CLUSTER_03" ]; then
+
+    if [ "$TDH_TKGWC_NAME_TAG" == "TKG_CLUSTER_01" ]; then 
+      TDH_TKGWC_CPIP_ADDRESS=$VSPHERE_TKGM_WKLD_CLUSTER01_CONTROL_PLANE
+      TDH_TKGWC_LB_ADDRESS=$VSPHERE_TKGM_WKLD_CLUSTER01_LOADBALANCER_POOL
+    fi
+
+    if [ "$TDH_TKGWC_NAME_TAG" == "TKG_CLUSTER_02" ]; then 
+      TDH_TKGWC_CPIP_ADDRESS=$VSPHERE_TKGM_WKLD_CLUSTER02_CONTROL_PLANE
+      TDH_TKGWC_LB_ADDRESS=$VSPHERE_TKGM_WKLD_CLUSTER03_LOADBALANCER_POOL
+    fi
+
+    if [ "$TDH_TKGWC_NAME_TAG" == "TKG_CLUSTER_04" ]; then 
+      TDH_TKGWC_CPIP_ADDRESS=$VSPHERE_TKGM_WKLD_CLUSTER04_CONTROL_PLANE
+      TDH_TKGWC_LB_ADDRESS=$VSPHERE_TKGM_WKLD_CLUSTER04_LOADBALANCER_POOL
+    fi
+  else
+    echo "ERROR: Option -tag should be either: TKG_CLUSTER_01, TKG_CLUSTER_02 or TKG_CLUSTER_03"
+    usage; exit 0
+  fi
+
+  #TDH_TKGWC_CPIP_ADDRESS
+  #TDH_TKGWC_NAME_TAG
+fi
+
 if [ "$TDH_DEPLOYMENT_CLUSTER_PLAN" == "dev" ]; then 
   cat $HOME/.tanzu/tkg/clusterconfigs/${TDH_TKGMC_NAME}-wc-dev.yaml $HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.yaml | \
-     egrep -v "^#" | sed -e '/^$/d' > $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml
+     egrep -v "^#|VSPHERE_CONTROL_PLANE_ENDPOINT" | sed -e '/^$/d' > $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml
+
+  echo "CLUSTER_NAME: $TDH_TKGWC_NAME" >> $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml
+  if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "vSphere" ]; then
+    echo "VSPHERE_CONTROL_PLANE_ENDPOINT: $TDH_TKGWC_CPIP_ADDRESS" >> $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml
+  fi
 else
   cat $HOME/.tanzu/tkg/clusterconfigs/${TDH_TKGMC_NAME}-wc-dev.yaml $HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.yaml | \
-     egrep -v "^#" | sed -e '/^$/d' > $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml
+     egrep -v "^#|VSPHERE_CONTROL_PLANE_ENDPOINT" | sed -e '/^$/d' > $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml
+
+  echo "CLUSTER_NAME: $TDH_TKGWC_NAME" >> $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml
+  if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "vSphere" ]; then
+    echo "VSPHERE_CONTROL_PLANE_ENDPOINT: $TDH_TKGWC_CPIP_ADDRESS" >> $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml
+  fi
 fi
 
 messageTitle "Tanzu Kubernetes Grid Deployment"
@@ -285,10 +332,9 @@ if [ $DEBUG -gt 0 ]; then
   echo "-----------------------------------------------------------------------------------------------------------"
   cat $HOME/.tanzu/tkg/clusterconfigs/$TDH_TKGMC_CONFIG deployments/$TKG_DEPLOYMENT | egrep -v "^#" | sed -e '/^$/d'
 fi
-exit
 
-tanzu cluster get $TDH_TKGWC_NAME >/dev/null 2>&1
-if [ $? -ne 0 ]; then  
+tanzu cluster get $TDH_TKGWC_NAME >/dev/null 2>&1; ret=$?
+if [ $ret -ne 0 ]; then  
   echo "-----------------------------------------------------------------------------------------------------------"
   echo "=> tanzu cluster create $TDH_TKGWC_NAME -f $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml --tkr $TDH_TKGWC_K8S_VERSION" 
   tanzu cluster create $TDH_TKGWC_NAME -f $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml --tkr $TDH_TKGWC_K8S_VERSION
@@ -298,9 +344,11 @@ if [ $? -ne 0 ]; then
   tanzu cluster kubeconfig get $TDH_TKGWC_NAME --admin > /dev/null 2>&1
 fi
 
+messagePrint " ▪ Set Kubernetes Context"               "${TDH_TKGWC_NAME}-admin@$TDH_TKGWC_NAME"
 #tanzu cluster get $TDH_TKGWC_NAME
-kubectl config use-context ${TDH_TKGWC_NAME}-admin@$TDH_TKGWC_NAME
+kubectl config use-context ${TDH_TKGWC_NAME}-admin@$TDH_TKGWC_NAME > /dev/null 2>&1
 
+messagePrint " ▪ Set Kubernetes clusterrolebinding"    "tanzu-demo-hub-privileged-cluster-role-binding"
 kubectl create clusterrolebinding tanzu-demo-hub-privileged-cluster-role-binding \
         --clusterrole=vmware-system-tmc-psp-privileged --group=system:authenticated > /dev/null 2>&1
 
@@ -317,9 +365,17 @@ uodateConfigMap tanzu-demo-hub TDH_MANAGEMENT_CLUSTER             "$TDH_TKGMC_NA
 uodateConfigMap tanzu-demo-hub TDH_PROVISONER_NAME                "ukn"
 uodateConfigMap tanzu-demo-hub TDH_MISSION_CONTROL_ACCOUNT_NAME   "ukn"
 
+# --- WHERE SOULD I PLACE THAT DAMMN VARIABLE - sdubois 
+#echo "VSPHERE_TKGM_LOADBALANCER_IPPOOL:$VSPHERE_TKGM_LOADBALANCER_IPPOOL"
+
+if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "vSphere" ]; then
+  InstallMetallLB
+fi
+
 # --- INSTALL K8 SERVICES ---
 InstallCertManager
 InstallContour
+
 createClusterIssuer
 InstallHarborRegistry
 getRootCA tanzu-demo-hub-tls
