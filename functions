@@ -4516,9 +4516,10 @@ InstallMetallLB() {
     echo "     addresses:"                             >> $HELM_VALUES
     echo "     - $TDH_TKGWC_LB_ADDRESS"    >> $HELM_VALUES
 
-    helm install metallb metallb/metallb -f /tmp/values.yaml -n $NAMESPACE > /dev/null 2>&1
+    helm install metallb metallb/metallb -f /tmp/values.yaml -n $NAMESPACE > /dev/null 2>&1; ret=$?
+echo "ret:$ret"
   
-    if [ $? -ne 0 ]; then
+    if [ $ret -ne 0 ]; then
       echo "ERROR: failed to install bitnami/contour"
       echo "       => helm install metallb metallb/metallb -f /tmp/values.yaml -n $NAMESPACE"
       exit
