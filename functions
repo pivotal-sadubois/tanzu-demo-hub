@@ -4528,7 +4528,7 @@ InstallMetallLB() {
 echo "ret:$ret"
   
     if [ $ret -ne 0 ]; then
-      echo "ERROR: failed to install bitnami/contour"
+      echo "ERROR: failed to install bitnami/metallb"
       echo "       => helm install metallb metallb/metallb -f /tmp/values.yaml -n $NAMESPACE"
       exit 1
     fi
@@ -4588,6 +4588,7 @@ InstallContour() {
     #helm install ingress bitnami/contour -n $NAMESPACE --version 3.3.1 > /dev/null 2>&1
     #helm install ingress bitnami/contour -n $NAMESPACE --version 3.3.1 
     helm install -f /tmp/contour_values.yaml ingress bitnami/contour -n $NAMESPACE --version $HELM_CONTOUR_VERSION > /dev/null 2>&1
+    helm install -f /tmp/contour_values.yaml ingress bitnami/contour -n $NAMESPACE --version $HELM_CONTOUR_VERSION 
     if [ $? -ne 0 ]; then
       echo "ERROR: failed to install bitnami/contour"
       echo "       => helm install -f /tmp/contour_values.yaml ingress bitnami/contour -n $NAMESPACE --version $HELM_CONTOUR_VERSION"
