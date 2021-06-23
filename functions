@@ -6318,10 +6318,11 @@ patchServiceAccount() {
   NAMESPACE=$2
 
   messagePrint " ▪ Patch Docker RateLimit in ServiceAccount"  "$NAMESPACE/$SERVICE_ACCOUNT"
+  kubectl -n $NAMESPACE delete secret tdh-docker-repo >/dev/null 2>&1
   kubectl -n $NAMESPACE create secret docker-registry tdh-docker-repo \
           --docker-server $TDH_REGISTRY_DOCKER_NAME \
           --docker-username $TDH_REGISTRY_DOCKER_USER \
-          --docker-password $TDH_REGISTRY_DOCKER_PASS
+          --docker-password $TDH_REGISTRY_DOCKER_PASS >/dev/null 2>&1
 
   kubectl patch serviceaccount default -p '{"imagePullSecrets": [{"name": "tdh-docker-repo"}]}' -n $NAMESPACE > /dev/null 2>&1; ret=$?
   if [ $ret -ne 0 ]; then
