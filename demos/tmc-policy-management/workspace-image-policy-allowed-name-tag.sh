@@ -23,6 +23,10 @@ else
   echo "ERROR: can ont find ${TANZU_DEMO_HUB}/functions"; exit 1
 fi
 
+if [ -f $HOME/.tanzu-demo-hub.cfg ]; then 
+  . $HOME/.tanzu-demo-hub.cfg
+fi
+
 # Created by /usr/local/bin/figlet
 clear
 echo '                                                                                      '
@@ -147,10 +151,10 @@ execCmd "tmc cluster namespace create -c $TDH_CLUSTER_NAME -m $TDH_MANAGEMENT_CL
 execCmd "tmc cluster namespace --cluster-name $TDH_CLUSTER_NAME -m $TDH_MANAGEMENT_CLUSTER -p $TDH_PROVISONER_NAME --workspace-name $WORKSPACE_PROD list"
 execCmd "kubectl get ns"
 
+DOCKER_IMAGE=hashicorp/http-echo
 prtHead "Show available Tags from Docker Images ($DOCKER_IMAGE) on registry.hub.docker.com"
 execCmd "wget -q https://registry.hub.docker.com/v1/repositories/hashicorp/http-echo/tags -O - | jq -r '.[].name'"
 
-DOCKER_IMAGE=hashicorp/http-echo
 prtHead "Get Docker Image ($DOCKER_IMAGE:latest) and push it to the Harbor Registry"
 execCmd "docker pull $DOCKER_IMAGE:latest"
 slntCmd "docker tag $DOCKER_IMAGE:latest $TDH_HARBOR_REGISTRY_DNS_HARBOR/library/$DOCKER_IMAGE:latest"
@@ -175,7 +179,7 @@ execCmd "tmc workspace image-policy create -r allowed-name-tag --workspace-name 
 
 sleep 150
 execCmd "kubectl get vmware-system-tmc-allowed-images-v1.constraints.gatekeeper.sh"
-execCmd "kubectl describe vmware-system-tmc-allowed-images-v1.constraints.gatekeeper.sh"
+execCmd "kubectl describe vmware-system-tmc-allowed-images-v1.constraints.gatekeeper.sh tmc.wsp.demo-apps-test.tdh-allowed-name-tag-http-echo"
 
 prtHead "Deploy Container (http-echo:latest) to kubernetes namespace: $NAMESPACE_TEST"
 execCmd "kubectl -n $NAMESPACE_TEST run http-echo --image=$TDH_HARBOR_REGISTRY_DNS_HARBOR/library/http-echo:latest -- -text=\"http-echo version: latest\""
@@ -186,7 +190,7 @@ execCmd "tmc workspace image-policy create -r allowed-name-tag --workspace-name 
 
 sleep 150
 execCmd "kubectl get vmware-system-tmc-allowed-images-v1.constraints.gatekeeper.sh"
-execCmd "kubectl describe vmware-system-tmc-allowed-images-v1.constraints.gatekeeper.sh"
+execCmd "kubectl describe vmware-system-tmc-allowed-images-v1.constraints.gatekeeper.sh tmc.wsp.demo-apps-prod.tdh-allowed-name-tag-production"
 
 prtHead "Deploy Container (http-echo:latest) to kubernetes namespace: $NAMESPACE_PROD"
 execCmd "kubectl -n $NAMESPACE_PROD run http-echo --image=$TDH_HARBOR_REGISTRY_DNS_HARBOR/library/http-echo:latest -- -text=\"http-echo version: latest\""

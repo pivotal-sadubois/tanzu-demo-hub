@@ -23,6 +23,10 @@ else
   echo "ERROR: can ont find ${TANZU_DEMO_HUB}/functions"; exit 1
 fi
 
+if [ -f $HOME/.tanzu-demo-hub.cfg ]; then 
+  . $HOME/.tanzu-demo-hub.cfg
+fi
+
 # Created by /usr/local/bin/figlet
 clear
 echo '                                                                                      '
