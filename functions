@@ -4617,10 +4617,10 @@ InstallContour() {
   # --- VERIFY DNS DOMAIN ---
   verifyHostedZone ${TDH_ENVNAME}.$AWS_HOSTED_DNS_DOMAIN
 
-echo "TDH_INFRASTRUCTURE:$TDH_INFRASTRUCTURE"
   # --- SET DNS RECORD ---
-  if [ "$TDH_INFRASTRUCTURE" == "minikube" ]; then 
+  if [ "$TDH_INFRASTRUCTURE" == "minikube" -o "$TDH_INFRASTRUCTURE" == "vSphere" ]; then 
     ipa=$(kubectl describe svc ingress-contour-envoy --namespace ingress-contour | grep Ingress | awk '{print $3}')
+echo "gaga IPA:$ipa"
     setDNSrecord "$ipa" "${TDH_ENVNAME}" "${AWS_HOSTED_DNS_DOMAIN}" "*.apps-contour" "A"
   else
     ipa=$(kubectl describe svc ingress-contour-envoy --namespace ingress-contour | grep Ingress | awk '{print $3}')
@@ -4631,7 +4631,6 @@ echo "TDH_INFRASTRUCTURE:$TDH_INFRASTRUCTURE"
       exit
     fi
 
-echo "gaga IPA:$ipa"
     setDNSalias "$ipa" "${TDH_ENVNAME}" "${AWS_HOSTED_DNS_DOMAIN}" "*.apps-contour" "A"
   fi
 
