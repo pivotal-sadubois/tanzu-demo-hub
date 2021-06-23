@@ -2954,11 +2954,16 @@ setDNSalias() {
 
   AWS_LB_NAME=$(aws elb --region $AWS_REGION describe-load-balancers | \
                 jq -r --arg n $TKG_IPADRESS '.LoadBalancerDescriptions[] | select(.DNSName == $n).LoadBalancerName')
+echo "AWS_LB_NAME:$AWS_LB_NAME"
   AWS_LB_ZONE=$(aws elb --region $AWS_REGION describe-load-balancers | \
                 jq -r --arg n $TKG_IPADRESS '.LoadBalancerDescriptions[] | select(.DNSName == $n).CanonicalHostedZoneNameID')
 
   ZONE_ID=$(aws route53 list-hosted-zones-by-name --dns-name ${DNS_PREFIX}.${DNS_SUFFIX} | jq -r '.HostedZones[0].Id')
   ZONE_ID_STR=$(echo "${ZONE_ID}" | awk -F'/' '{ print $NF }')
+
+echo "AWS_LB_ZONE:$AWS_LB_ZONE"
+echo "ZONE_ID:$ZONE_ID"
+echo "ZONE_ID_STR:$ZONE_ID_STR"
 
   if [ "${ZONE_ID}" != "" ]; then
     ZONE="${HOSTNAME}.${DNS_PREFIX}.${DNS_SUFFIX}"
