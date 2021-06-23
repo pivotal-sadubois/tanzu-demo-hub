@@ -4658,7 +4658,10 @@ createClusterIssuer() {
   fi
 
   # --- NOT CERTIFICATE CLEANUP ALL AND START OVER ---
+echo pppp1
   stt=$(kubectl get certificate $TDH_TLS_CERT -o json 2>/dev/null | jq -r '.status.conditions[] | select(.type == "Ready").status')
+echo "stt:$stt"
+echo pppp2
   if [ "${stt}" == "" -o "${stt}" == "False" ]; then
     messageTitle "Cleaning up Let's Enscript objects"
     kubectl delete clusterissuer,order,challenge,certificate --all > /dev/null 2>&1
