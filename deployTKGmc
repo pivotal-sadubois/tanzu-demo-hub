@@ -942,10 +942,10 @@ if [ ! -f /tdh_tools_docker_container  ]; then
        -v /tmp:/tmp:rw -v /tmp/docker:$HOME/.docker:rw -v $HOME/.mc:$HOME/.mc:rw -v $HOME/.tanzu:$HOME/.tanzu:rw \
        -v $HOME/.kube-tkg:$HOME/.kube-tkg:rw -v $HOME/.kube:$HOME/.kube:rw -v $HOME/.govmomi:$HOME/.govmomi:rw \
        -v $HOME/.ssh:$HOME/.ssh:rw \
-       -e "KUBECONFIG=$HOME/.kube/config" --hostname tdh-tools tdh-tools:latest $TDHPATH/$CMD_EXEC $CMD_ARGS
+       -e "KUBECONFIG=$HOME/.kube/config" --hostname tdh-tools tdh-tools:latest $TDHPATH/$CMD_EXEC $CMD_ARGS; ret=$?
 
     # --- FINISH CURRENT SESSION AS WE RUN AS CONTAINER ---
-    exit 0
+    exit $ret
   else
     # --- VERYFY ACCESS TO CLOUD ---
     checkTDHenvironment    
