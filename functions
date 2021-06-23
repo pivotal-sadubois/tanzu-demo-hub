@@ -2952,8 +2952,11 @@ setDNSalias() {
   HOSTNAME="$4"
   TYPE="$5"
 
+#gaga
   AWS_LB_NAME=$(aws elb --region $AWS_REGION describe-load-balancers | \
                 jq -r --arg n $TKG_IPADRESS '.LoadBalancerDescriptions[] | select(.DNSName == $n).LoadBalancerName')
+echo "TKG_IPADRESS:$TKG_IPADRESS"
+echo "AWS_REGION:$AWS_REGION"
 echo "AWS_LB_NAME:$AWS_LB_NAME"
   AWS_LB_ZONE=$(aws elb --region $AWS_REGION describe-load-balancers | \
                 jq -r --arg n $TKG_IPADRESS '.LoadBalancerDescriptions[] | select(.DNSName == $n).CanonicalHostedZoneNameID')
@@ -4627,6 +4630,7 @@ InstallContour() {
       exit
     fi
 
+echo "gaga IPA:$ipa"
     setDNSalias "$ipa" "${TDH_ENVNAME}" "${AWS_HOSTED_DNS_DOMAIN}" "*.apps-contour" "A"
   fi
 
