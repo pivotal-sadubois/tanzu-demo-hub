@@ -3998,90 +3998,93 @@ installTanzuDataPostgres() {
     return
   fi
 
-  # --- DOWNLOAD BUILD_SERVICE BINARIES ---
-  TBS_FILE="/tmp/postgres-for-kubernetes-v$TDH_SERVICE_TANZU_DATA_POSTGRES_VERSION.tar.gz"
-  TBS_TAR_FILE="/tmp/postgres-for-kubernetes-v$TDH_SERVICE_TANZU_DATA_POSTGRES_VERSION.tar"
+  cnt=$(helm list --all-namespaces -q | egrep -c "^postgres-operator")
+  if [ $cnt -eq 0 ]; then
+    # --- DOWNLOAD POSTGRES BINARIES ---
+    TBS_FILE="/tmp/postgres-for-kubernetes-v$TDH_SERVICE_TANZU_DATA_POSTGRES_VERSION.tar.gz"
+    TBS_TAR_FILE="/tmp/postgres-for-kubernetes-v$TDH_SERVICE_TANZU_DATA_POSTGRES_VERSION.tar"
 
-  rm -f $TBS_FILE $TBS_TAR_FILE
+    rm -f $TBS_FILE $TBS_TAR_FILE
 
-  downloadFromPivnet tanzu-sql-postgres $TDH_SERVICE_TANZU_DATA_POSTGRES_VERSION "$TDH_SERVICE_TANZU_DATA_POSTGRES_VERSION" "Postgres for VMware Tanzu v$TDH_SERVICE_TANZU_DATA_POSTGRES_VERSION"
-  #https://network.pivotal.io/api/v2/products/tanzu-sql-postgres/releases/769686/product_files/819245/download
+    downloadFromPivnet tanzu-sql-postgres $TDH_SERVICE_TANZU_DATA_POSTGRES_VERSION "$TDH_SERVICE_TANZU_DATA_POSTGRES_VERSION" "Postgres for VMware Tanzu v$TDH_SERVICE_TANZU_DATA_POSTGRES_VERSION"
+    #https://network.pivotal.io/api/v2/products/tanzu-sql-postgres/releases/769686/product_files/819245/download
 
-  [ -d /tmp/postgres-for-kubernetes ] && rm -rf /tmp/postgres-for-kubernetes
-  [ -f $TBS_TAR_FILE ] && rm -f $TBS_TAR_FILE
-  mkdir -p /tmp/postgres-for-kubernetes
-  [ -f $TBS_FILE ] && gunzip $TBS_FILE
-  if [ -f $TBS_TAR_FILE ]; then
-    tar xf $TBS_TAR_FILE -C /tmp/postgres-for-kubernetes
-  else
-    echo "ERROR: can not find file $TBS_TAR_FILE"; exit 1
-  fi
-
-  if [ "$TDH_SERVICE_REGISTRY_HARBOR" == "true" ]; then
-    DNS_HARBOR=$(getConfigMap tanzu-demo-hub TDH_HARBOR_REGISTRY_DNS_HARBOR)
-    TDH_HARBOR_REGISTRY_DNS_HARBOR=$(getConfigMap tanzu-demo-hub TDH_HARBOR_REGISTRY_DNS_HARBOR)
-    TDH_HARBOR_REGISTRY_ADMIN_PASSWORD=$(getConfigMap tanzu-demo-hub TDH_HARBOR_REGISTRY_ADMIN_PASSWORD)
-    messagePrint "Verify Harbor Registry Access" "$TDH_HARBOR_REGISTRY_DNS_HARBOR"
-   
-    cnt=0; ret=1
-    while [ $ret -ne 0 -a $cnt -lt 5 ]; do
-      docker login $TDH_HARBOR_REGISTRY_DNS_HARBOR -u admin -p $TDH_HARBOR_REGISTRY_ADMIN_PASSWORD > /dev/null 2>&1; ret=$?
-      sleep 10
-      let cnt=cnt+1
-    done
-
-    if [ $ret -ne 0 ]; then
-      echo "ERROR: Docker login does not work 1"
-      echo "       => docker login $TDH_HARBOR_REGISTRY_DNS_HARBOR -u admin -p $TDH_HARBOR_REGISTRY_ADMIN_PASSWORD"; exit 1
+    [ -d /tmp/postgres-for-kubernetes ] && rm -rf /tmp/postgres-for-kubernetes
+    [ -f $TBS_TAR_FILE ] && rm -f $TBS_TAR_FILE
+    mkdir -p /tmp/postgres-for-kubernetes
+    [ -f $TBS_FILE ] && gunzip $TBS_FILE
+    if [ -f $TBS_TAR_FILE ]; then
+      tar xf $TBS_TAR_FILE -C /tmp/postgres-for-kubernetes
+    else
+      echo "ERROR: can not find file $TBS_TAR_FILE"; exit 1
     fi
 
-    cnt=$(helm list -q | egrep -c "^postgres-operator") 
-    if [ $cnt -eq 0 ]; then
-      messageTitle "Installing Postgres Operator"
-
-      # --- CREATE NAMESPACE ---
-      #kubectl create namespace $NAMESPACE > /dev/null 2>&1
-
-      # --- INSTALL CONTOUR INGRESS ---
-      POSTGRES_INSTALL_PATH="/tmp/postgres-for-kubernetes/postgres-for-kubernetes-v$TDH_SERVICE_TANZU_DATA_POSTGRES_VERSION"
-      REGISTRY="harbor.apps-contour.local.pcfsdu.com/library"
-
-      docker load -i ${POSTGRES_INSTALL_PATH}/images/postgres-instance  > /dev/null 2>&1
-      docker load -i ${POSTGRES_INSTALL_PATH}/images/postgres-operator  > /dev/null 2>&1
-
-      messagePrint " ▪ Reocate Images (postgres-instance) to Harbor" "$REGISTRY/postgres-instance"
-
-      INSTANCE_IMAGE_NAME="${REGISTRY}/postgres-instance:$(cat $POSTGRES_INSTALL_PATH/images/postgres-instance-tag)"
-      docker tag $(cat $POSTGRES_INSTALL_PATH/images/postgres-instance-id) ${INSTANCE_IMAGE_NAME}  > /dev/null 2>&1
-      docker push ${INSTANCE_IMAGE_NAME}  > /dev/null 2>&1
-
-      messagePrint " ▪ Reocate Images (postgres-operator) to Harbor" "$REGISTRY/postgres-operator"
-      OPERATOR_IMAGE_NAME="${REGISTRY}/postgres-operator:$(cat $POSTGRES_INSTALL_PATH/images/postgres-operator-tag)"
-      docker tag $(cat $POSTGRES_INSTALL_PATH/images/postgres-operator-id) ${OPERATOR_IMAGE_NAME}  > /dev/null 2>&1
-      docker push ${OPERATOR_IMAGE_NAME}  > /dev/null 2>&1
-
-      # --- CLEANUP DOCKER IMAGES ---
-      #for n in $(docker images | egrep "postgres-(operator|instance) " | awk '{ print $3 }'); do
-      #  docker image rm $n -f > /dev/null 2>&1
-      #done
-
-      messagePrint "Customize Postgres Helm Chart Values" "/tmp/values-overrides.yaml"
-      sed -e "s+operatorImageRepository: postgres-operator+operatorImageRepository: $REGISTRY/postgres-operator+g" \
-          -e "s+postgresImageRepository: postgres-instance+postgresImageRepository: $REGISTRY/postgres-instance+g" \
-          ${POSTGRES_INSTALL_PATH}/operator/values.yaml > /tmp/values-overrides.yaml
-      if [ "${DEBUG}" == "1" ]; then
-        echo "-----------------------------------------------------------------------------------------------------------"
-        cat /tmp/values-overrides.yaml
-        echo "-----------------------------------------------------------------------------------------------------------"
+    if [ "$TDH_SERVICE_REGISTRY_HARBOR" == "true" ]; then
+      DNS_HARBOR=$(getConfigMap tanzu-demo-hub TDH_HARBOR_REGISTRY_DNS_HARBOR)
+      TDH_HARBOR_REGISTRY_DNS_HARBOR=$(getConfigMap tanzu-demo-hub TDH_HARBOR_REGISTRY_DNS_HARBOR)
+      TDH_HARBOR_REGISTRY_ADMIN_PASSWORD=$(getConfigMap tanzu-demo-hub TDH_HARBOR_REGISTRY_ADMIN_PASSWORD)
+      messagePrint "Verify Harbor Registry Access" "$TDH_HARBOR_REGISTRY_DNS_HARBOR"
+     
+      cnt=0; ret=1
+      while [ $ret -ne 0 -a $cnt -lt 5 ]; do
+        docker login $TDH_HARBOR_REGISTRY_DNS_HARBOR -u admin -p $TDH_HARBOR_REGISTRY_ADMIN_PASSWORD > /dev/null 2>&1; ret=$?
+        sleep 10
+        let cnt=cnt+1
+      done
+  
+      if [ $ret -ne 0 ]; then
+        echo "ERROR: Docker login does not work 1"
+        echo "       => docker login $TDH_HARBOR_REGISTRY_DNS_HARBOR -u admin -p $TDH_HARBOR_REGISTRY_ADMIN_PASSWORD"; exit 1
       fi
+  
+      cnt=$(helm list --all-namespaces -q | egrep -c "^postgres-operator") 
+      if [ $cnt -eq 0 ]; then
+        messageTitle "Installing Postgres Operator"
+  
+        # --- CREATE NAMESPACE ---
+        #kubectl create namespace $NAMESPACE > /dev/null 2>&1
+  
+        # --- INSTALL CONTOUR INGRESS ---
+        POSTGRES_INSTALL_PATH="/tmp/postgres-for-kubernetes/postgres-for-kubernetes-v$TDH_SERVICE_TANZU_DATA_POSTGRES_VERSION"
+        REGISTRY="harbor.apps-contour.local.pcfsdu.com/library"
+  
+        docker load -i ${POSTGRES_INSTALL_PATH}/images/postgres-instance  > /dev/null 2>&1
+        docker load -i ${POSTGRES_INSTALL_PATH}/images/postgres-operator  > /dev/null 2>&1
+  
+        messagePrint " ▪ Reocate Images (postgres-instance) to Harbor" "$REGISTRY/postgres-instance"
+  
+        INSTANCE_IMAGE_NAME="${REGISTRY}/postgres-instance:$(cat $POSTGRES_INSTALL_PATH/images/postgres-instance-tag)"
+        docker tag $(cat $POSTGRES_INSTALL_PATH/images/postgres-instance-id) ${INSTANCE_IMAGE_NAME}  > /dev/null 2>&1
+        docker push ${INSTANCE_IMAGE_NAME}  > /dev/null 2>&1
+  
+        messagePrint " ▪ Reocate Images (postgres-operator) to Harbor" "$REGISTRY/postgres-operator"
+        OPERATOR_IMAGE_NAME="${REGISTRY}/postgres-operator:$(cat $POSTGRES_INSTALL_PATH/images/postgres-operator-tag)"
+        docker tag $(cat $POSTGRES_INSTALL_PATH/images/postgres-operator-id) ${OPERATOR_IMAGE_NAME}  > /dev/null 2>&1
+        docker push ${OPERATOR_IMAGE_NAME}  > /dev/null 2>&1
+  
+        # --- CLEANUP DOCKER IMAGES ---
+        #for n in $(docker images | egrep "postgres-(operator|instance) " | awk '{ print $3 }'); do
+        #  docker image rm $n -f > /dev/null 2>&1
+        #done
+  
+        messagePrint "Customize Postgres Helm Chart Values" "/tmp/values-overrides.yaml"
+        sed -e "s+operatorImageRepository: postgres-operator+operatorImageRepository: $REGISTRY/postgres-operator+g" \
+            -e "s+postgresImageRepository: postgres-instance+postgresImageRepository: $REGISTRY/postgres-instance+g" \
+            ${POSTGRES_INSTALL_PATH}/operator/values.yaml > /tmp/values-overrides.yaml
+        if [ "${DEBUG}" == "1" ]; then
+          echo "-----------------------------------------------------------------------------------------------------------"
+          cat /tmp/values-overrides.yaml
+          echo "-----------------------------------------------------------------------------------------------------------"
+        fi
 
-      messagePrint " ▪ Deploy the Postgres operator" "postgres-operator"
-      #helm install postgres-operator -n $NAMESPACE -f /tmp/values-overrides.yaml ${POSTGRES_INSTALL_PATH}/operator/ > /dev/null 2>&1
-      helm install postgres-operator -f /tmp/values-overrides.yaml ${POSTGRES_INSTALL_PATH}/operator/ > /dev/null 2>&1
-      if [ $? -ne 0 ]; then
-        echo "ERROR: Failed to deploy Postgres Helm Chart"
-        echo "       => helm install postgres-operator -n $NAMESPACE -f /tmp/values-overrides.yaml ${POSTGRES_INSTALL_PATH}/operator/"
-        exit 1
+        messagePrint " ▪ Deploy the Postgres operator" "postgres-operator"
+        #helm install postgres-operator -n $NAMESPACE -f /tmp/values-overrides.yaml ${POSTGRES_INSTALL_PATH}/operator/ > /dev/null 2>&1
+        helm install postgres-operator -f /tmp/values-overrides.yaml ${POSTGRES_INSTALL_PATH}/operator/ > /dev/null 2>&1
+        if [ $? -ne 0 ]; then
+          echo "ERROR: Failed to deploy Postgres Helm Chart"
+          echo "       => helm install postgres-operator -n $NAMESPACE -f /tmp/values-overrides.yaml ${POSTGRES_INSTALL_PATH}/operator/"
+          exit 1
+        fi
       fi
     fi
   fi
