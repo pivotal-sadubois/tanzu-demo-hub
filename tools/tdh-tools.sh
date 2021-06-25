@@ -49,6 +49,12 @@ echo ""
 
 #docker rmi tdh-tools:latest > /dev/null 2>&1
 
+checkExecutionLock tdh-tools
+if [ $? -ne 0 ]; then 
+  echo "ERROR: $0 is already running, plese stop it first"
+  exit 1
+fi
+
 if [ $ROOT_SHELL -eq 0 ]; then 
   docker run -it --rm --name tdh-tools -v /var/run/docker.sock:/var/run/docker.sock tdh-tools:latest  chmod 666 /var/run/docker.sock > /dev/null 2>&1
   docker run -u $(id -u):$(id -g) -it --rm --name tdh-tools \

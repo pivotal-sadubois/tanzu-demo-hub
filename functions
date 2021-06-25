@@ -6366,5 +6366,23 @@ patchServiceAccount() {
   fi
 } 
 
+checkExecutionLock() {
+  LOCK_APP=$1
+  LOCK_FILE=/var/tmp/${LOCK_APP}.lock
+
+  if [ -f $LOCK_FILE ]; then
+    read pid < $LOCK_FILE
+    ps -p $pid > /dev/null 2>&1
+    if [ $? -eq 0 ]; then
+      return 1
+    else
+      echo $$ > $LOCK_FILE
+      return 0
+    fi
+  else
+    echo $$ > $LOCK_FILE
+    return 0
+  fi
+}
 
 
