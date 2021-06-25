@@ -4113,8 +4113,11 @@ installTanzuDataPostgres() {
   #messagePrint " ▪ Helm Chart Status"              "$stt"
   #messagePrint " ▪ Helm Chart Installed/Updated"   "$dat"
 
-  uodateConfigMap tanzu-demo-hub TDH_SERVICE_TANZU_DATA_POSTGRES          "true"
-  uodateConfigMap tanzu-demo-hub TDH_SERVICE_TANZU_DATA_POSTGRES_VERSION  $TDH_SERVICE_TANZU_DATA_POSTGRES_VERSION
+  CURRENT_DATE=$(date "+%Y-%m-%d %M:%H:%S")
+  uodateConfigMap tanzu-demo-hub TDH_SERVICE_TANZU_DATA_POSTGRES                "true"
+  uodateConfigMap tanzu-demo-hub TDH_SERVICE_TANZU_DATA_POSTGRES_VERSION        $TDH_SERVICE_TANZU_DATA_POSTGRES_VERSION
+  uodateConfigMap tanzu-demo-hub TDH_SERVICE_TANZU_DATA_POSTGRES_INSTALLED      "$CURRENT_DATE"
+  uodateConfigMap tanzu-demo-hub TDH_SERVICE_TANZU_DATA_POSTGRES_VALIDATED      "$CURRENT_DATE"
 } 
 
 installBuildService() {
@@ -4124,17 +4127,23 @@ installBuildService() {
   fi
 
   if [ "$TDH_SERVICE_BUILD_SERVICE_VERSION" == "" ]; then
-    echo "ERROR: Envuronment Variable (TDH_SERVICE_BUILD_SERVICE_VERSION) not found in"
+    echo "ERROR: Environment Variable (TDH_SERVICE_BUILD_SERVICE_VERSION) not found in"
     echo "       in the deployment file: ${TDHPATH}/deployments/${K8S_DEPLOYMENT}"
     exit 1
   fi
 
-echo "XXXXX START-BUILD-SERVICE"
-  # --- VERIFY IF BUILDSERVICE IS INSTALLED ---
-  kubectl get ns build-service > /dev/null 2>&1; ret=$?
-  kp clusterbuilder list > /dev/null 2>&1; stt=$?
+  # --- GET BUILD_SERVICE INFORMATION ---
+  TDH_SERVICE_BUILD_SERVICE_INSTALLED=$(getConfigMap tanzu-demo-hub TDH_SERVICE_BUILD_SERVICE_INSTALLED)
+  TDH_SERVICE_BUILD_SERVICE_VERIFIED=$(getConfigMap tanzu-demo-hub TDH_SERVICE_BUILD_SERVICE_VERIFIED)
 
-  if [ $stt -ne 0 -o $ret -ne 0 ]; then
+  # --- VERIFY IF BUILDSERVICE IS INSTALLED ---
+  if [ "$TDH_SERVICE_BUILD_SERVICE_INSTALLED" == "" ]; then 
+    messageTitle "Installing Tanzu Build Service"
+
+    #kubectl get ns build-service > /dev/null 2>&1; ret=$?
+    #kp clusterbuilder list > /dev/null 2>&1; stt=$?
+    #if [ $stt -ne 0 -o $ret -ne 0 ]; then
+
     # --- DOWNLOAD BUILD_SERVICE BINARIES ---
     downloadFromPivnet build-service $TDH_SERVICE_BUILD_SERVICE_VERSION "$TDH_SERVICE_BUILD_SERVICE_VERSION" "build-service-$TDH_SERVICE_BUILD_SERVICE_VERSION.tar"
   
@@ -4239,7 +4248,6 @@ echo "XXXXX START-BUILD-SERVICE"
       if [ "$stt" != "Succeeded" ]; then
         kapp delete -a tanzu-build-service -y >/dev/null 2>&1
 
-        messageTitle "Installing Tanzu Build Service"
         messagePrint " ▪ Install Build Service (kapp)" "`date`"
         echo "-----------------------------------------------------------------------------------------------------------"
         echo " WARNING: This process may take up to 2h for the deployment, Please run kapp manually to get more info"
@@ -4302,8 +4310,22 @@ echo "XXXXX START-BUILD-SERVICE"
         exit 1
       fi
     fi
+
+    CURRENT_DATE=$(date "+%Y-%m-%d %M:%H:%S") 
+    uodateConfigMap tanzu-demo-hub TDH_SERVICE_BUILD_SERVICE            "true"
+    uodateConfigMap tanzu-demo-hub TDH_SERVICE_BUILD_SERVICE_VERSION    $TDH_SERVICE_BUILD_SERVICE_VERSION
+    uodateConfigMap tanzu-demo-hub TDH_SERVICE_BUILD_SERVICE_INSTALLED  "$CURRENT_DATE"
+    uodateConfigMap tanzu-demo-hub TDH_REGISTRY_VMWARE_NAME             $TDH_REGISTRY_VMWARE_NAME
+    uodateConfigMap tanzu-demo-hub TDH_REGISTRY_VMWARE_USER             $TDH_REGISTRY_VMWARE_USER
+    uodateConfigMap tanzu-demo-hub TDH_REGISTRY_VMWARE_PASS             $TDH_REGISTRY_VMWARE_PASS
+    uodateConfigMap tanzu-demo-hub TDH_REGISTRY_DOCKER_NAME             $TDH_REGISTRY_DOCKER_NAME
+    uodateConfigMap tanzu-demo-hub TDH_REGISTRY_DOCKER_USER             $TDH_REGISTRY_DOCKER_USER
+    uodateConfigMap tanzu-demo-hub TDH_REGISTRY_DOCKER_PASS             $TDH_REGISTRY_DOCKER_PASS
+    uodateConfigMap tanzu-demo-hub TDH_GITHUB_USER                      $TDH_GITHUB_USER
+    uodateConfigMap tanzu-demo-hub TDH_GITHUB_PASS                      $TDH_GITHUB_PASS
   fi
 
+  messageTitle "Verify Tanzu Build Service"
   kp clusterbuilder list > /dev/null 2>&1
   [ $? -eq 0 ] && stt="successfuly installed" || stt="installed failed"
   if [ $DEBUG -eq 1 ]; then
@@ -4315,16 +4337,8 @@ echo "XXXXX START-BUILD-SERVICE"
     messagePrint " ▪ Verify Dependency Descriptors" "$stt"
   fi
 
-  uodateConfigMap tanzu-demo-hub TDH_SERVICE_BUILD_SERVICE          "true"
-  uodateConfigMap tanzu-demo-hub TDH_SERVICE_BUILD_SERVICE_VERSION  $TDH_SERVICE_BUILD_SERVICE_VERSION
-  uodateConfigMap tanzu-demo-hub TDH_REGISTRY_VMWARE_NAME           $TDH_REGISTRY_VMWARE_NAME
-  uodateConfigMap tanzu-demo-hub TDH_REGISTRY_VMWARE_USER           $TDH_REGISTRY_VMWARE_USER
-  uodateConfigMap tanzu-demo-hub TDH_REGISTRY_VMWARE_PASS           $TDH_REGISTRY_VMWARE_PASS
-  uodateConfigMap tanzu-demo-hub TDH_REGISTRY_DOCKER_NAME           $TDH_REGISTRY_DOCKER_NAME
-  uodateConfigMap tanzu-demo-hub TDH_REGISTRY_DOCKER_USER           $TDH_REGISTRY_DOCKER_USER
-  uodateConfigMap tanzu-demo-hub TDH_REGISTRY_DOCKER_PASS           $TDH_REGISTRY_DOCKER_PASS
-  uodateConfigMap tanzu-demo-hub TDH_GITHUB_USER                    $TDH_GITHUB_USER
-  uodateConfigMap tanzu-demo-hub TDH_GITHUB_PASS                    $TDH_GITHUB_PASS
+  CURRENT_DATE=$(date "+%Y-%m-%d %M:%H:%S")
+  uodateConfigMap tanzu-demo-hub TDH_SERVICE_BUILD_SERVICE_VALIDATED  "$CURRENT_DATE"
 }
 
 downloadFromPivnet() {
@@ -4594,10 +4608,9 @@ InstallContour() {
     echo "    - tdh-docker-repo"                       >> /tmp/contour_values.yaml
 
 
-    #helm install ingress bitnami/contour -n $NAMESPACE --version 3.3.1 > /dev/null 2>&1
-    #helm install ingress bitnami/contour -n $NAMESPACE --version 3.3.1 
+echo "gaga HELM_CONTOUR_VERSION:$HELM_CONTOUR_VERSION"
     helm install -f /tmp/contour_values.yaml ingress bitnami/contour -n $NAMESPACE --version $HELM_CONTOUR_VERSION > /dev/null 2>&1
-    helm install -f /tmp/contour_values.yaml ingress bitnami/contour -n $NAMESPACE --version $HELM_CONTOUR_VERSION 
+    #helm install -f /tmp/contour_values.yaml ingress bitnami/contour -n $NAMESPACE --version $HELM_CONTOUR_VERSION 
     if [ $? -ne 0 ]; then
       echo "ERROR: failed to install bitnami/contour"
       echo "       => helm install -f /tmp/contour_values.yaml ingress bitnami/contour -n $NAMESPACE --version $HELM_CONTOUR_VERSION"
