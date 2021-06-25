@@ -1134,6 +1134,9 @@ checkTMCintegration() {
         kubectl create ns $NAMESPACE > /dev/null 2>&1
         helm uninstall wavefront -n $NAMESPACE > /dev/null 2>&1
 
+        # --- GRACE TIME ---
+        sleep 300 
+
         ret=1; cnt=0
         while [ $ret -ne 0 -a $cnt -lt 5 ]; do
           helm install wavefront wavefront/wavefront \
@@ -4601,14 +4604,11 @@ InstallContour() {
     HELM_CONTOUR_VERSION=$(helm search repo bitnami/contour | tail -1 | awk '{ print $2 }') 
     messagePrint " ▪ Install Contour Helm Chart Version" "$HELM_CONTOUR_VERSION"
 
-#gaga
     echo "global:"                                     >  /tmp/contour_values.yaml
     echo "  imageRegistry: docker.io"                  >> /tmp/contour_values.yaml
     echo "  imagePullSecrets:"                         >> /tmp/contour_values.yaml
     echo "    - tdh-docker-repo"                       >> /tmp/contour_values.yaml
 
-
-echo "gaga HELM_CONTOUR_VERSION:$HELM_CONTOUR_VERSION"
     helm install -f /tmp/contour_values.yaml ingress bitnami/contour -n $NAMESPACE --version $HELM_CONTOUR_VERSION > /dev/null 2>&1
     #helm install -f /tmp/contour_values.yaml ingress bitnami/contour -n $NAMESPACE --version $HELM_CONTOUR_VERSION 
     if [ $? -ne 0 ]; then
