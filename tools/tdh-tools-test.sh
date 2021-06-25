@@ -1,9 +1,9 @@
 #!/bin/bash
 # ############################################################################################
-# File: ........: tdh-tools-run.sh
+# File: ........: tdh-tools-test.sh
 # Language .....: bash
 # Author .......: Sacha Dubois, VMware
-# Description ..: Tanzu Demo Hub - Deploy K8S Cluster
+# Description ..: Tanzu Demo Hub - TDH Tools Container (Test)
 # ############################################################################################
 
 export TANZU_DEMO_HUB=$(cd "$(pwd)/$(dirname $0)/../"; pwd)
