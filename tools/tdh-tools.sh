@@ -9,6 +9,7 @@
 export TANZU_DEMO_HUB=$(cd "$(pwd)/$(dirname $0)/../"; pwd)
 export TDHPATH=$(cd "$(pwd)/$(dirname $0)/../"; pwd)
 export ROOT_SHELL=0
+export COMMAND=bash
 
 . $TANZU_DEMO_HUB/functions
 
@@ -20,6 +21,7 @@ usage() {
   echo "                   --help      # Show this info"
   echo "                   --root      # Get a Root Shell"
   echo "                   --debug     # Show Debugging information"
+  echo "                   --cmd       # Execute a command"
   exit 
 }
 
@@ -33,6 +35,7 @@ while [ "$1" != "" ]; do
     --usage)  usage;;
     --help)   usage;;
     --root)   ROOT_SHELL=1;;
+    --cmd)    COMMAND=$2;;
     --debug)  DEBUG=1;;
   esac
   shift
@@ -53,7 +56,7 @@ if [ $ROOT_SHELL -eq 0 ]; then
      -v /var/run/docker.sock:/var/run/docker.sock -v $HOME/.cache:$HOME/.cache:rw -v $HOME/.config:$HOME/.config:rw \
      -v $HOME/.aws:$HOME/.aws:rw -v $HOME/.vmware-cna-saas:$HOME/.vmware-cna-saas:rw -v $HOME/.azure:$HOME/.azure:rw \
      -v /tmp:/tmp:rw -v /tmp/docker:$HOME/.docker:rw -v $HOME/.mc:$HOME/.mc:rw -v $HOME/.tanzu:$HOME/.tanzu:rw \
-     -e "KUBECONFIG=$HOME/.kube/config" --hostname tdh-tools tdh-tools:latest bash
+     -e "KUBECONFIG=$HOME/.kube/config" --hostname tdh-tools tdh-tools:latest $COMMAND
 else
   docker run -it --rm --name tdh-tools -v /var/run/docker.sock:/var/run/docker.sock tdh-tools:latest  chmod 666 /var/run/docker.sock > /dev/null 2>&1
   docker run -it --rm --name tdh-tools \
@@ -61,7 +64,7 @@ else
      -v /var/run/docker.sock:/var/run/docker.sock -v $HOME/.cache:$HOME/.cache:rw -v $HOME/.config:$HOME/.config:rw \
      -v $HOME/.aws:$HOME/.aws:rw \
      -v /tmp:/tmp:rw -v /tmp/docker:$HOME/.docker:rw -v $HOME/.mc:$HOME/.mc:rw \
-     -e "KUBECONFIG=$HOME/.kube/config" --hostname tdh-tools tdh-tools:latest bash
+     -e "KUBECONFIG=$HOME/.kube/config" --hostname tdh-tools tdh-tools:latest $COMMAND
 fi
 
 exit
