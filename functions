@@ -1117,7 +1117,11 @@ checkTMCintegration() {
   TMC_INTEGRATION=$1
 
   TDH_CLUSTER_NAME=$(getConfigMap tanzu-demo-hub TDH_CLUSTER_NAME)
-#hallo
+  TMC_MANAGEMENT_CLUSTER=$(tmc cluster list --name $TDH_CLUSTER_NAME -o json | jq -r '.clusters[].fullName.managementClusterName')
+  TMC_PROVISIONER_NAME=$(tmc cluster list --name $TDH_CLUSTER_NAME -o json | jq -r '.clusters[].fullName.provisionerName')
+
+echo "=> TMC_MANAGEMENT_CLUSTER:$TMC_MANAGEMENT_CLUSTER"
+echo "=> TMC_PROVISIONER_NAME:$TMC_PROVISIONER_NAME"
 
   if [ "${TMC_INTEGRATION}" == "TO" ]; then
     if [ "${TDH_SERVICE_TANZU_OBSERVABILITY}" == "true" ]; then
@@ -1162,7 +1166,7 @@ checkTMCintegration() {
         messagePrint " ▪ Verify Wavefront Helm Chart"  "installed"      
       fi
 
-      cnt=$(tmc cluster integration list --cluster-name $TDH_CLUSTER_NAME -m $TDH_MANAGEMENT_CLUSTER \
+      cnt=$(tmc cluster integration list --cluster-name $TDH_CLUSTER_NAME -m $TMC_MANAGEMENT_CLUSTER \
             -p $TMC_PROVISIONER_NAME --name tanzu-observability-saas | egrep -c "tanzu-observability-saas") 
       if [ $cnt -eq 0 ]; then 
         TANZU_OBSERVABILITY=/tmp/tanzu_observability.yaml; rm -f $TANZU_OBSERVABILITY
@@ -1170,7 +1174,7 @@ checkTMCintegration() {
         echo "{"                                                                     >> $TANZU_OBSERVABILITY
         echo "    \"full_name\": {"                                                  >> $TANZU_OBSERVABILITY
         echo "        \"provisionerName\": \"$TMC_PROVISIONER_NAME\","               >> $TANZU_OBSERVABILITY
-        echo "        \"managementClusterName\": \"$TDH_MANAGEMENT_CLUSTER\","       >> $TANZU_OBSERVABILITY
+        echo "        \"managementClusterName\": \"$TMC_MANAGEMENT_CLUSTER\","       >> $TANZU_OBSERVABILITY
         echo "        \"clusterName\": \"$TDH_CLUSTER_NAME\","                       >> $TANZU_OBSERVABILITY
         echo "        \"name\": \"tanzu-observability-saas\""                        >> $TANZU_OBSERVABILITY
         echo "    },"                                                                >> $TANZU_OBSERVABILITY
@@ -1216,8 +1220,8 @@ checkTMCintegration() {
         if [ $cnt -eq 0 ]; then
           ret=1; cnt=0
           while [ $ret -ne 0 -a $cnt -lt 5 ]; do
-          tmc cluster dataprotection create -c $TDH_CLUSTER_NAME -m $TDH_MANAGEMENT_CLUSTER -p $TMC_PROVISIONER_NAME \
-              --backup-location-names $TDH_TANZU_DATA_PROTECTION_BACKUP_LOCATION > /dev/null 2>&1; ret=?
+          tmc cluster dataprotection create -c $TDH_CLUSTER_NAME -m $TMC_MANAGEMENT_CLUSTER -p $TMC_PROVISIONER_NAME \
+              --backup-location-names $TDH_TANZU_DATA_PROTECTION_BACKUP_LOCATION > /dev/null 2>&1; ret=$?
             [ $ret -eq 0 ] && break
             let cnt=cnt+1
             sleep 30
@@ -1225,7 +1229,7 @@ checkTMCintegration() {
 
           if [ $? -ne 0 ]; then
             echo "ERROR: failed to enable dataprotection for cluster $TDH_CLUSTER_NAME"
-            echo "       => tmc cluster dataprotection create -c $TDH_CLUSTER_NAME -m $TDH_MANAGEMENT_CLUSTER \\"
+            echo "       => tmc cluster dataprotection create -c $TDH_CLUSTER_NAME -m $TMC_MANAGEMENT_CLUSTER \\"
             echo "            -p $TMC_PROVISIONER_NAME --backup-location-names $TDH_TANZU_DATA_PROTECTION_BACKUP_LOCATION"
             exit 1
           fi
@@ -1244,13 +1248,13 @@ checkTMCintegration() {
       sleep 60
 
       # --- CONFIGURE FULL BACKUP ---
-      cnt=$(tmc cluster dataprotection backup list --cluster-name $TDH_CLUSTER_NAME -p $TMC_PROVISIONER_NAME -m $TDH_MANAGEMENT_CLUSTER  --name "full-backup" | egrep -c " full-backup ")
+      cnt=$(tmc cluster dataprotection backup list --cluster-name $TDH_CLUSTER_NAME -p $TMC_PROVISIONER_NAME -m $TMC_MANAGEMENT_CLUSTER  --name "full-backup" | egrep -c " full-backup ")
       if [ $cnt -eq 0 ]; then 
         messagePrint " ▪ Configure Full Backup (full-backup) configuration"            "enabled"
 
         ret=1; cnt=0
         while [ $ret -ne 0 -a $cnt -lt 5 ]; do
-          tmc cluster dataprotection backup create -c $TDH_CLUSTER_NAME -p $TMC_PROVISIONER_NAME -m $TDH_MANAGEMENT_CLUSTER \
+          tmc cluster dataprotection backup create -c $TDH_CLUSTER_NAME -p $TMC_PROVISIONER_NAME -m $TMC_MANAGEMENT_CLUSTER \
             --name "full-backup" --backup-location-name $TDH_TANZU_DATA_PROTECTION_BACKUP_LOCATION > /dev/null 2>&1; ret=$?
           [ $ret -eq 0 ] && break
           let cnt=cnt+1
@@ -1260,7 +1264,7 @@ checkTMCintegration() {
         if [ $ret -ne 0 ]; then
           echo "ERROR: failed to configure a full-backup"
           echo "       => tmc cluster dataprotection backup create -c $TDH_CLUSTER_NAME -p $TMC_PROVISIONER_NAME \\"
-          echo "            -m $TDH_MANAGEMENT_CLUSTER --name \"full-backup\" --backup-location-name $TDH_TANZU_DATA_PROTECTION_BACKUP_LOCATION"
+          echo "            -m $TMC_MANAGEMENT_CLUSTER --name \"full-backup\" --backup-location-name $TDH_TANZU_DATA_PROTECTION_BACKUP_LOCATION"
           exit 1
         fi
       else
@@ -1288,27 +1292,27 @@ scanCluster() {
   [ "$TYPE" == "CONFORMANCE" ] && NAME=conformance
 
   # --- VERIFY ACRIVE SCANNS ---
-  cnt=$(tmc cluster inspection scan list --cluster-name $TDH_CLUSTER_NAME -p $TMC_PROVISIONER_NAME -m $TDH_MANAGEMENT_CLUSTER -o json | \
+  cnt=$(tmc cluster inspection scan list --cluster-name $TDH_CLUSTER_NAME -p $TMC_PROVISIONER_NAME -m $TMC_MANAGEMENT_CLUSTER -o json | \
      jq -r '.scans[].status.phase' | grep -v "COMPLETE" | wc -l | sed 's/  *//g')
   while [ $cnt -ne 0 ]; do
-    cnt=$(tmc cluster inspection scan list --cluster-name $TDH_CLUSTER_NAME -p $TMC_PROVISIONER_NAME -m $TDH_MANAGEMENT_CLUSTER -o json | \
+    cnt=$(tmc cluster inspection scan list --cluster-name $TDH_CLUSTER_NAME -p $TMC_PROVISIONER_NAME -m $TMC_MANAGEMENT_CLUSTER -o json | \
       jq -r '.scans[].status.phase' | grep -v "COMPLETE" | wc -l | sed 's/  *//g')
     sleep 10
   done
 
-  stt=$(tmc cluster inspection scan list --cluster-name $TDH_CLUSTER_NAME -p $TMC_PROVISIONER_NAME -m $TDH_MANAGEMENT_CLUSTER -o json | \
+  stt=$(tmc cluster inspection scan list --cluster-name $TDH_CLUSTER_NAME -p $TMC_PROVISIONER_NAME -m $TMC_MANAGEMENT_CLUSTER -o json | \
     jq -r --arg key $NAME '.scans[].status.report.info | select(.scanType == $key).result' | tail -1)
   if [ "$stt" == "" ]; then 
     messagePrint " ▪ Scan Cluster ($TDH_CLUSTER_NAME) with $TYPE"       "scanning"
-    tmc cluster inspection scan create -c $TDH_CLUSTER_NAME -p $TMC_PROVISIONER_NAME -m $TDH_MANAGEMENT_CLUSTER --inspection-type $TYPE > /dev/null 2>&1
+    tmc cluster inspection scan create -c $TDH_CLUSTER_NAME -p $TMC_PROVISIONER_NAME -m $TMC_MANAGEMENT_CLUSTER --inspection-type $TYPE > /dev/null 2>&1
     if [ $? -ne 0 ]; then 
       echo "ERROR: failed to scan cluster $TDH_CLUSTER_NAME"
       echo "       => tmc cluster inspection scan create -c $TDH_CLUSTER_NAME -p $TMC_PROVISIONER_NAME \\"
-      echo "             -m $TDH_MANAGEMENT_CLUSTER --inspection-type $TYPE"
+      echo "             -m $TMC_MANAGEMENT_CLUSTER --inspection-type $TYPE"
       exit 1
     fi
   else
-    dat=$(tmc cluster inspection scan list --cluster-name $TDH_CLUSTER_NAME -p $TMC_PROVISIONER_NAME -m $TDH_MANAGEMENT_CLUSTER -o json | \
+    dat=$(tmc cluster inspection scan list --cluster-name $TDH_CLUSTER_NAME -p $TMC_PROVISIONER_NAME -m $TMC_MANAGEMENT_CLUSTER -o json | \
       jq -r --arg key $NAME '.scans[].status.report.info | select(.scanType == $key).runDatetime' | sort -n | tail -1)
     messagePrint " ▪ Cluster Scan ($TDH_CLUSTER_NAME) with $TYPE completed"       "$dat"
   fi
@@ -4549,8 +4553,13 @@ InstallMetallLB() {
     echo "     addresses:"                             >> $HELM_VALUES
     echo "     - $TDH_TKGWC_LB_ADDRESS"    >> $HELM_VALUES
 
-    helm install metallb metallb/metallb -f /tmp/values.yaml -n $NAMESPACE > /dev/null 2>&1; ret=$?
-echo "ret:$ret"
+    cnt=0; ret=1
+    while [ $ret -ne 0 -a $cnt -lt 5 ]; do
+      helm install metallb metallb/metallb -f /tmp/values.yaml -n $NAMESPACE > /dev/null 2>&1; ret=$?
+      [ $ret -eq 0 ] && break
+      let cnt=cnt+1
+      sleep 30
+    done
   
     if [ $ret -ne 0 ]; then
       echo "ERROR: failed to install bitnami/metallb"
@@ -4642,9 +4651,7 @@ InstallContour() {
   # --- SET DNS RECORD ---
   if [ "$TDH_INFRASTRUCTURE" == "minikube" -o "$TDH_INFRASTRUCTURE" == "vSphere" ]; then 
     ipa=$(kubectl describe svc ingress-contour-envoy --namespace ingress-contour | grep Ingress | awk '{print $3}')
-echo gagag1111
     setDNSrecord "$ipa" "${TDH_ENVNAME}" "${AWS_HOSTED_DNS_DOMAIN}" "*.apps-contour" "A"
-echo gagag2222
   else
     ipa=$(kubectl describe svc ingress-contour-envoy --namespace ingress-contour | grep Ingress | awk '{print $3}')
     if [ "$ipa" == "" ]; then 
@@ -6383,6 +6390,32 @@ checkExecutionLock() {
     echo $$ > $LOCK_FILE
     return 0
   fi
+}
+
+setK8sEnvironment() {
+  CLUSTER=$1
+
+  messagePrint " ▪ Set Kubernetes Cluster"               "$CLUSTER"
+  kubectl config set-cluster $CLUSTER > /dev/null 2>&1
+  if [ $? -ne 0 ]; then 
+    echo "ERROR: failed to set cluster $CLUSTER"
+    echo "       => kubectl config set-cluster $CLUSTER"
+    exit 1
+  fi
+
+  CONTEXT=$(kubectl config get-contexts | grep " $CLUSTER " | sed 's/*//g' | awk '{ print $1 }')
+  messagePrint " ▪ Set Kubernetes Context"               "$CONTEXT"
+  kubectl config use-context $CONTEXT > /dev/null 2>&1
+  if [ $? -ne 0 ]; then
+    echo "ERROR: failed to set cluster context"
+    echo "       => kubectl config use-context $CONTEXT"
+    exit 1
+  fi
+
+  messagePrint " ▪ Set Kubernetes clusterrolebinding"    "tanzu-demo-hub-privileged-cluster-role-binding"
+  kubectl create clusterrolebinding tanzu-demo-hub-privileged-cluster-role-binding \
+          --clusterrole=vmware-system-tmc-psp-privileged --group=system:authenticated > /dev/null 2>&1
+
 }
 
 
