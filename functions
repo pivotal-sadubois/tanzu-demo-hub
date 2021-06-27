@@ -4142,6 +4142,14 @@ installBuildService() {
   TDH_SERVICE_BUILD_SERVICE_INSTALLED=$(getConfigMap tanzu-demo-hub TDH_SERVICE_BUILD_SERVICE_INSTALLED)
   TDH_SERVICE_BUILD_SERVICE_VERIFIED=$(getConfigMap tanzu-demo-hub TDH_SERVICE_BUILD_SERVICE_VERIFIED)
 
+  # --- VERIFY INSTALLATION ---
+  kp clusterbuilder list > /dev/null 2>&1
+  if [ $? -ne 0 ]; then 
+    # --- NOT WORKING, SO CLEAN IT UP FIRST ---
+    kubectl delete ns build-service > /dev/null 2>&1
+    export TDH_SERVICE_BUILD_SERVICE_INSTALLED=""
+  fi
+
   # --- VERIFY IF BUILDSERVICE IS INSTALLED ---
   if [ "$TDH_SERVICE_BUILD_SERVICE_INSTALLED" == "" ]; then 
     messageTitle "Installing Tanzu Build Service"
@@ -4333,7 +4341,7 @@ installBuildService() {
 
   messageTitle "Verify Tanzu Build Service"
   kp clusterbuilder list > /dev/null 2>&1
-  [ $? -eq 0 ] && stt="successfuly installed" || stt="installed failed"
+  [ $? -eq 0 ] && stt="successfuly installed" || stt="installed/failed"
   if [ $DEBUG -eq 1 ]; then
     messagePrint " ▪ Verify Dependency Descriptors" "$stt"
     messageLine
@@ -5767,41 +5775,55 @@ cleanAWSenv() {
 }
 
 cleanKubeconfig() {
+  if [ "$1" == "" ]; then 
+    CONFIG="$HOME/.kube/config"
+  else
+    CONFIG="$1"
+  fi
+
   messageTitle "Cleaning Up kubectl config"
 
-  for cluster in $(kubectl config get-clusters | sed '1d' | egrep "^tdh|^tkg-mc"); do
-    ctx=$(kubectl config view -o json | jq -r --arg key $cluster '.contexts[] | select(.context.cluster == $key).name')
-    usr=$(kubectl config view -o json | jq -r --arg key $cluster '.contexts[] | select(.context.cluster == $key).context.user')
+  for cluster in $(kubectl --kubeconfig=$CONFIG config get-clusters | sed '1d' | egrep "^tdh|^tkg-mc"); do
+    ctx=$(kubectl --kubeconfig=$CONFIG config view -o json | jq -r --arg key $cluster '.contexts[] | select(.context.cluster == $key).name')
+    usr=$(kubectl --kubeconfig=$CONFIG config view -o json | jq -r --arg key $cluster '.contexts[] | select(.context.cluster == $key).context.user')
     cnt=$(echo $cluster | grep -c minikube)
     if [ $cnt -gt 0 ]; then 
       if [ ! -d ~/.minikube/profiles/${cluster} ]; then
         messagePrint " ▪ Cleaning up k8s cluster ($cluster)" "Context: $ctx, User: $usr"
-        kubectl config unset clusters.${cluster} > /dev/null 2>&1
-        kubectl config unset contexts.${cluster} > /dev/null 2>&1
-        kubectl config unset users.${cluster} > /dev/null 2>&1
+        kubectl --kubeconfig=$CONFIG config unset clusters.${cluster} > /dev/null 2>&1
+        kubectl --kubeconfig=$CONFIG config unset contexts.${cluster} > /dev/null 2>&1
+        kubectl --kubeconfig=$CONFIG config unset users.${cluster} > /dev/null 2>&1
       fi
     else
-      kubectl config use-context $ctx > /dev/null
-      kubectl get ns > /dev/null 2>&1
-      if [ $? -gt 0 ]; then
+      if [ "$ctx" != "" ]; then
+        kubectl config use-context $ctx > /dev/null
+        kubectl config use-context $ctx > /dev/null
+        kubectl get ns > /dev/null 2>&1
+        if [ $? -gt 0 ]; then
+          messagePrint " ▪ Cleaning up k8s cluster ($cluster)" "Context: $ctx, User: $usr"
+          kubectl --kubeconfig=$CONFIG config unset clusters.${cluster} > /dev/null 2>&1
+          kubectl --kubeconfig=$CONFIG config unset contexts.${cluster} > /dev/null 2>&1
+          kubectl --kubeconfig=$CONFIG config unset users.${cluster} > /dev/null 2>&1
+        fi
+      else
         messagePrint " ▪ Cleaning up k8s cluster ($cluster)" "Context: $ctx, User: $usr"
-        kubectl config unset clusters.${cluster} > /dev/null 2>&1
-        kubectl config unset contexts.${cluster} > /dev/null 2>&1
-        kubectl config unset users.${cluster} > /dev/null 2>&1
+        kubectl --kubeconfig=$CONFIG config unset clusters.${cluster} > /dev/null 2>&1
+        kubectl --kubeconfig=$CONFIG config unset contexts.${cluster} > /dev/null 2>&1
+        kubectl --kubeconfig=$CONFIG config unset users.${cluster} > /dev/null 2>&1
       fi
     fi
   done
 
   # --- CLEANUP CONTEXTS WITHOUT CLUSTERS ---
-  for ctx in $(kubectl config view -o json | jq -r '.contexts[].name' 2>/dev/null); do
-    cls=$(kubectl config view -o json | jq -r --arg key $ctx '.contexts[] | select(.name == $key).context.cluster')
-    usr=$(kubectl config view -o json | jq -r --arg key $ctx '.contexts[] | select(.name == $key).context.user')
+  for ctx in $(kubectl --kubeconfig=$CONFIG config view -o json | jq -r '.contexts[].name' 2>/dev/null); do
+    cls=$(kubectl --kubeconfig=$CONFIG config view -o json | jq -r --arg key $ctx '.contexts[] | select(.name == $key).context.cluster')
+    usr=$(kubectl --kubeconfig=$CONFIG config view -o json | jq -r --arg key $ctx '.contexts[] | select(.name == $key).context.user')
 
-    ret=$(kubectl config view -o json | jq -r --arg key $cls '.clusters[] | select(.name == $key).name')
+    ret=$(kubectl --kubeconfig=$CONFIG config view -o json | jq -r --arg key $cls '.clusters[] | select(.name == $key).name')
     if [ "$ret" == "" ]; then 
       messagePrint " ▪ Cleaning up unused k8s Context" "$ctx, User: $usr"
-      kubectl config unset contexts.${ctx} > /dev/null 2>&1
-      kubectl config unset users.${usr} > /dev/null 2>&1
+      kubectl --kubeconfig=$CONFIG config unset contexts.${ctx} > /dev/null 2>&1
+      kubectl --kubeconfig=$CONFIG config unset users.${usr} > /dev/null 2>&1
     fi
 
   done
