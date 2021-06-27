@@ -1120,9 +1120,6 @@ checkTMCintegration() {
   TMC_MANAGEMENT_CLUSTER=$(tmc cluster list --name $TDH_CLUSTER_NAME -o json | jq -r '.clusters[].fullName.managementClusterName')
   TMC_PROVISIONER_NAME=$(tmc cluster list --name $TDH_CLUSTER_NAME -o json | jq -r '.clusters[].fullName.provisionerName')
 
-echo "=> TMC_MANAGEMENT_CLUSTER:$TMC_MANAGEMENT_CLUSTER"
-echo "=> TMC_PROVISIONER_NAME:$TMC_PROVISIONER_NAME"
-
   if [ "${TMC_INTEGRATION}" == "TO" ]; then
     if [ "${TDH_SERVICE_TANZU_OBSERVABILITY}" == "true" ]; then
       messageTitle "Tanzu Observability Integration into TMC"
@@ -1149,7 +1146,7 @@ echo "=> TMC_PROVISIONER_NAME:$TMC_PROVISIONER_NAME"
               --set clusterName=$TDH_CLUSTER_NAME --namespace wavefront > /dev/null 2>&1; ret=$?
           [ $ret -eq 0 ] && break
           let cnt=cnt+1
-          sleep 30
+          sleep 60
         done
 
         if [ $ret -ne 0 ]; then
@@ -4311,6 +4308,7 @@ installBuildService() {
           messageLine
         else
           kp import -f /tmp/descriptor-$TDH_SERVICE_BUILD_SERVICE_DEPENDANCIES.yaml > /dev/null 2>&1; ret=$?
+          kp import -f /tmp/descriptor-$TDH_SERVICE_BUILD_SERVICE_DEPENDANCIES.yaml; ret=$?
         fi
   
         [ $ret -eq 0 ] && break
