@@ -1191,7 +1191,7 @@ checkTMCintegration() {
           echo "       => tmc cluster integration create -f $TANZU_OBSERVABILITY"
           exit 1
         else
-          messagePrint " ▪  Setup Cluster Integration for ($TDH_CLUSTER_NAME)"  "configured"      
+          messagePrint " ▪ Setup Cluster Integration for ($TDH_CLUSTER_NAME)"  "configured"      
           rm -f $TANZU_OBSERVABILITY
         fi
       else
