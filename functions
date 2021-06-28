@@ -3829,7 +3829,7 @@ installSpringCloudGateway() {
   fi
 
   #########################################################################################################################
-  ################################# TANZU BUILD SERVICE (TBS) - ON HARBOR REGISTRY ########################################
+  ######################################## INSTALL SPRING CLOUD GATEWAY ###################################################
   #########################################################################################################################
 
   if [ "$TDH_SERVICE_REGISTRY_HARBOR" == "true" ]; then
@@ -4022,7 +4022,7 @@ installTanzuDataPostgres() {
       DNS_HARBOR=$(getConfigMap tanzu-demo-hub TDH_HARBOR_REGISTRY_DNS_HARBOR)
       TDH_HARBOR_REGISTRY_DNS_HARBOR=$(getConfigMap tanzu-demo-hub TDH_HARBOR_REGISTRY_DNS_HARBOR)
       TDH_HARBOR_REGISTRY_ADMIN_PASSWORD=$(getConfigMap tanzu-demo-hub TDH_HARBOR_REGISTRY_ADMIN_PASSWORD)
-      messagePrint "Verify Harbor Registry Access" "$TDH_HARBOR_REGISTRY_DNS_HARBOR"
+      messagePrint " ▪ Verify Harbor Registry Access" "$TDH_HARBOR_REGISTRY_DNS_HARBOR"
      
       cnt=0; ret=1
       while [ $ret -ne 0 -a $cnt -lt 5 ]; do
@@ -4224,10 +4224,7 @@ installBuildService() {
       TDH_HARBOR_REGISTRY_DNS_HARBOR=$(getConfigMap tanzu-demo-hub TDH_HARBOR_REGISTRY_DNS_HARBOR)
       TDH_HARBOR_REGISTRY_ADMIN_PASSWORD=$(getConfigMap tanzu-demo-hub TDH_HARBOR_REGISTRY_ADMIN_PASSWORD)
   
-      messageTitle "Verify Harbor Registry Access"
-      messagePrint " ▪ Registry URL"                "$TDH_HARBOR_REGISTRY_DNS_HARBOR"
-      messagePrint " ▪ Registry User"               "admin"
-      messagePrint " ▪ Registry Password"           "$(maskPassword \"$TDH_HARBOR_REGISTRY_ADMIN_PASSWORD\")"
+      messagePrint " ▪ Verify Harbor Registry Access" "$TDH_HARBOR_REGISTRY_DNS_HARBOR"
   
       cnt=0; ret=1
       while [ $ret -ne 0 -a $cnt -lt 5 ]; do
@@ -4255,11 +4252,7 @@ installBuildService() {
       if [ "$stt" != "Succeeded" ]; then
         kapp delete -a tanzu-build-service -y >/dev/null 2>&1
 
-        messagePrint " ▪ Install Build Service (kapp)" "`date`"
-        echo "-----------------------------------------------------------------------------------------------------------"
-        echo " WARNING: This process may take up to 2h for the deployment, Please run kapp manually to get more info"
-        echo "          => kapp inspect -a tanzu-build-service --column Namespace,name,reconcile_state | grep -v ok"
-        echo "-----------------------------------------------------------------------------------------------------------"
+        messagePrint " ▪ Deploy Build Service (kapp)" "/tmp/build-service/values.yaml"
           ytt -f /tmp/build-service/values.yaml \
               -f /tmp/build-service/manifests/ \
               -f $TDHPATH/certificates/ca.pem \
@@ -4274,7 +4267,6 @@ installBuildService() {
           cnt=$(kapp inspect -a tanzu-build-service --json | jq -r '.Tables[].Rows[].reconcile_state' | grep -vc "ok")
           sleep 360
         done
-        messagePrint " ▪ Install Build Service completed" "`date`"
       else
         messageTitle "Verify Tanzu Build Service"
         messagePrint " ▪ Veriify Build Service (kapp)" "tanzu-build-service"
@@ -4299,12 +4291,18 @@ installBuildService() {
       cnt=0; ret=1
       while [ $ret -ne 0 -a $cnt -lt 5 ]; do
         if [ $DEBUG -eq 1 ]; then
+          echo "   ------------------------------------------------------------------------------------------------------------------------"
+          echo "   WARNING: The Import of the Dependancy Descritions process may take up to 60min, depending on the speed of your registry"
+          echo "   ------------------------------------------------------------------------------------------------------------------------"
           messageLine
           kp import -f /tmp/descriptor-$TDH_SERVICE_BUILD_SERVICE_DEPENDANCIES.yaml; ret=$?
           messageLine
         else
-          #kp import -f /tmp/descriptor-$TDH_SERVICE_BUILD_SERVICE_DEPENDANCIES.yaml > /dev/null 2>&1; ret=$?
-          kp import -f /tmp/descriptor-$TDH_SERVICE_BUILD_SERVICE_DEPENDANCIES.yaml; ret=$?
+          echo "   ------------------------------------------------------------------------------------------------------------------------"
+          echo "   WARNING: The Import of the Dependancy Descritions process may take up to 60min, follow its status on a spererate window"
+          echo "            => tail -f /tmp/kp.log"
+          echo "   ------------------------------------------------------------------------------------------------------------------------"
+          kp import -f /tmp/descriptor-$TDH_SERVICE_BUILD_SERVICE_DEPENDANCIES.yaml > /tmp/kp.log 2>&1; ret=$?
         fi
   
         [ $ret -eq 0 ] && break
@@ -4381,18 +4379,14 @@ downloadFromPivnet() {
        awk -F'/' '{ print $NF }')
 
   if [ ! -f /tmp/$file ]; then
-    messageTitle "Download ($PRODUCT_SLUG) from PIVNET"
-    messagePrint " ▪ Product Name:" "$PRODUCT_SLUG"
-    messagePrint " ▪ Product Slug:" "$SLUG_VER"
-    messagePrint " ▪ Product FileID:" "$fid"
-    messagePrint " ▪ Download Location:" "/tmp/$file"
+    messagePrint " ▪ Download ($PRODUCT_SLUG) from PIVNET" "$RODUCT_SLUG"
+    messagePrint "   Product Slug:" "$SLUG_VER"
+    messagePrint "   Download Location:" "/tmp/$file"
     pivnetAPIdownload $PCF_PIVNET_TOKEN $PRODUCT_SLUG $pid $fid $file
   else
-    messageTitle "Verify PIVNET Download ($PRODUCT_SLUG)"
-    messagePrint " ▪ Product Name:" "$PRODUCT_SLUG"
-    messagePrint " ▪ Product Slug:" "$SLUG_VER"
-    messagePrint " ▪ Product FileID:" "$fid"
-    messagePrint " ▪ Download Location:" "/tmp/$file"
+    messageTitle " ▪ Verify PIVNET Download ($PRODUCT_SLUG)" "$PRODUCT_SLUG"
+    messagePrint "   Product Slug:" "$SLUG_VER"
+    messagePrint "   Download Location:" "/tmp/$file"
   fi
 }
 
