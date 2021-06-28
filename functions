@@ -4535,6 +4535,11 @@ InstallMetallLB() {
   cnt=$(helm list -q -n $NAMESPACE | egrep -c "^metallb")
   if [ $cnt -eq 0 ]; then
     messageTitle "Installing MetallLB Loadbalancer"
+    
+    helm repo add metallb https://metallb.github.io/metallb > /dev/null 2>&1
+    if [ $? -ne 0 ]; then
+      echo "ERROR: failed to add helm registry https://metallb.github.io/metallb"; exit 1
+    fi
 
     kubectl get namespace $NAMESPACE > /dev/null 2>&1
     if [ $? -ne 0 ]; then 
@@ -4561,15 +4566,15 @@ InstallMetallLB() {
 
     cnt=0; ret=1
     while [ $ret -ne 0 -a $cnt -lt 5 ]; do
-      helm install metallb metallb/metallb -f /tmp/values.yaml -n $NAMESPACE > /dev/null 2>&1; ret=$?
+      helm install metallb metallb/metallb -f $HELM_VALUES -n $NAMESPACE > /dev/null 2>&1; ret=$?
       [ $ret -eq 0 ] && break
       let cnt=cnt+1
       sleep 30
     done
   
     if [ $ret -ne 0 ]; then
-      echo "ERROR: failed to install bitnami/metallb"
-      echo "       => helm install metallb metallb/metallb -f /tmp/values.yaml -n $NAMESPACE"
+      echo "ERROR: failed to install metallb/metallb"
+      echo "       => helm install metallb metallb/metallb -f $HELM_VALUES -n $NAMESPACE"
       exit 1
     fi
 
