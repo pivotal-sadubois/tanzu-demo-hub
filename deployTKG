@@ -13,6 +13,7 @@ export NATIVE=0
 export TDH_TKGWC_K8S_VERSION=""
 export CMD_EXEC=$(basename $0)
 export CMD_ARGS=$*
+export TDH_TANZU_MISSION_CONTROL_REGISTRATION=true
 
 . $TANZU_DEMO_HUB/functions
 
@@ -309,6 +310,8 @@ if [ "$TDH_DEPLOYMENT_CLUSTER_PLAN" == "dev" ]; then
   if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "vSphere" ]; then
     echo "VSPHERE_CONTROL_PLANE_ENDPOINT: $TDH_TKGWC_CPIP_ADDRESS" >> $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml
   fi
+
+  echo "WORKER_MACHINE_COUNT: $TDH_TKGWC_WORKERNODES" >> $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml
 else
   cat $HOME/.tanzu/tkg/clusterconfigs/${TDH_TKGMC_NAME}-wc-dev.yaml $HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.yaml | \
      egrep -v "^#|VSPHERE_CONTROL_PLANE_ENDPOINT" | sed -e '/^$/d' > $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml
@@ -317,6 +320,8 @@ else
   if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "vSphere" ]; then
     echo "VSPHERE_CONTROL_PLANE_ENDPOINT: $TDH_TKGWC_CPIP_ADDRESS" >> $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml
   fi
+
+  echo "WORKER_MACHINE_COUNT: $TDH_TKGWC_WORKERNODES" >> $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml
 fi
 
 messageTitle "Tanzu Kubernetes Grid Deployment"
@@ -339,21 +344,19 @@ if [ $ret -ne 0 ]; then
   echo "=> tanzu cluster create $TDH_TKGWC_NAME -f $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml --tkr $TDH_TKGWC_K8S_VERSION" 
   tanzu cluster create $TDH_TKGWC_NAME -f $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml --tkr $TDH_TKGWC_K8S_VERSION
   echo "-----------------------------------------------------------------------------------------------------------"
-
-  # --- GET CREDENTIALS ---
-  tanzu cluster kubeconfig get $TDH_TKGWC_NAME --admin > /dev/null 2>&1
 fi
 
-messagePrint " ▪ Set Kubernetes Context"               "${TDH_TKGWC_NAME}-admin@$TDH_TKGWC_NAME"
-#tanzu cluster get $TDH_TKGWC_NAME
-kubectl config use-context ${TDH_TKGWC_NAME}-admin@$TDH_TKGWC_NAME > /dev/null 2>&1
+# --- GET CREDENTIALS AND SET ENVIRONMENT ---
+tanzu cluster kubeconfig get $TDH_TKGWC_NAME --admin > /dev/null 2>&1
 
-messagePrint " ▪ Set Kubernetes clusterrolebinding"    "tanzu-demo-hub-privileged-cluster-role-binding"
-kubectl create clusterrolebinding tanzu-demo-hub-privileged-cluster-role-binding \
-        --clusterrole=vmware-system-tmc-psp-privileged --group=system:authenticated > /dev/null 2>&1
+# --- CLEANUP KUNECONFIG ---
+cleanKubeconfig
+setK8sEnvironment $TDH_TKGWC_NAME
 
-
+export TDH_TKGWC_CONTEXT=$(kubectl config current-context)
 export TDH_ENVNAME=$TDH_TKGMC_ENVNAME
+export TMC_PROVISIONER_NAME="attached"
+export TDH_MANAGEMENT_CLUSTER=$TDH_TKGMC_NAME
 
 uodateConfigMap tanzu-demo-hub TDH_DOMAIN                         $AWS_HOSTED_DNS_DOMAIN
 uodateConfigMap tanzu-demo-hub TDH_ENVNAME                        $TDH_TKGMC_ENVNAME
@@ -362,11 +365,8 @@ uodateConfigMap tanzu-demo-hub TDH_MANAGED_BY_TMC                 "false"
 
 uodateConfigMap tanzu-demo-hub TDH_CLUSTER_NAME                   "$TDH_TKGWC_NAME"
 uodateConfigMap tanzu-demo-hub TDH_MANAGEMENT_CLUSTER             "$TDH_TKGMC_NAME"
-uodateConfigMap tanzu-demo-hub TDH_PROVISONER_NAME                "ukn"
+uodateConfigMap tanzu-demo-hub TDH_PROVISONER_NAME                "$TMC_PROVISIONER_NAME"
 uodateConfigMap tanzu-demo-hub TDH_MISSION_CONTROL_ACCOUNT_NAME   "ukn"
-
-# --- WHERE SOULD I PLACE THAT DAMMN VARIABLE - sdubois 
-#echo "VSPHERE_TKGM_LOADBALANCER_IPPOOL:$VSPHERE_TKGM_LOADBALANCER_IPPOOL"
 
 if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "vSphere" ]; then
   InstallMetallLB
@@ -385,28 +385,69 @@ installTanzuDataPostgres
 installMinio
 
 if [ "$TDH_TANZU_MISSION_CONTROL_REGISTRATION" == "true" ]; then
-  cnt=$(tmc cluster list --name $TDH_MINIKUBE_PROFILE 2>/dev/null | grep -c $TDH_MINIKUBE_PROFILE)
-  if [ $cnt -eq 0 ]; then
-    tmc cluster attach --name $TDH_MINIKUBE_PROFILE --kubeconfig /Users/sdu/.kube/config -p attached -m attached > /dev/null 2>&1; ret=$?
-    if [ $ret -ne 0 ]; then
-      tmc cluster delete $TDH_MINIKUBE_PROFILE -p attached -m attached > /dev/null 2>&1
-
-      # --- WAIT FOR THE CLUSTER TO BE DELETED ---
-      cnt=1
-      while [ $cnt -ne 0 ]; do
-        cnt=$(tmc cluster list --name $TDH_MINIKUBE_PROFILE 2>/dev/null | grep -c $TDH_MINIKUBE_PROFILE)
-        sleep 20
-      done
-
-      tmc cluster attach --name $TDH_MINIKUBE_PROFILE --kubeconfig /Users/sdu/.kube/config -p attached -m attached > /dev/null 2>&1; ret=$?
+  cnt=$(tmc cluster list --name $TDH_TKGWC_NAME 2>/dev/null | grep -c $TDH_TKGWC_NAME)
+  if [ $cnt -gt 0 ]; then
+    stt=$(tmc cluster list --name $TDH_TKGWC_NAME -o json | jq -r '.clusters[].status.conditions."Agent-READY".status')
+    if [ "$stt" != "TRUE" ]; then 
+      #tmc cluster reattach --name $TDH_TKGWC_NAME -p tanzu-demo-hub -m $TDH_TKGMC_NAME > /dev/null 2>&1; ret=$?
+      tmc cluster reattach --name $TDH_TKGWC_NAME -p attached -m attached > /dev/null 2>&1; ret=$?
       if [ $ret -ne 0 ]; then
-        echo "ERROR: TMC failed to attach cluster"
-        echo "       => tmc cluster reattach --name $TDH_MINIKUBE_PROFILE --kubeconfig /Users/sdu/.kube/config -p attached -m attached "
-        exit
+        MGMT=$(tmc cluster list --name $TDH_TKGWC_NAME | grep $TDH_TKGWC_NAME | awk '{ print $2 }')
+        PROV=$(tmc cluster list --name $TDH_TKGWC_NAME | grep $TDH_TKGWC_NAME | awk '{ print $3 }')
+        tmc cluster delete $TDH_TKGWC_NAME -p $PROV -m $MGMT -f > /dev/null 2>&1; ret=$?
+        if [ $ret -ne 0 ]; then
+          echo "ERROR: TMC failed to attach cluster"
+          echo "       => tmc cluster delete $TDH_TKGWC_NAME -p tanzu-demo-hub -m $TDH_TKGMC_NAME"
+          exit 1
+        fi
+
+        # --- WAIT FOR THE CLUSTER TO BE DELETED ---
+        cnt=1
+        while [ $cnt -ne 0 ]; do
+          cnt=$(tmc cluster list --name $TDH_TKGWC_NAME 2>/dev/null | grep -c $TDH_TKGWC_NAME)
+          sleep 20
+        done
+
+        cnt=0
       fi
     fi
   fi
+
+  if [ $cnt -eq 0 ]; then
+    tmc cluster attach --name $TDH_TKGWC_NAME --kubeconfig $HOME/.kube/config -p tanzu-demo-hub \
+          -m $TDH_TKGMC_NAME -g tanzu-demo-hub > /dev/null 2>&1; ret=$?
+    if [ $ret -ne 0 ]; then
+      echo "ERROR: TMC failed to attach cluster"
+      echo "       => tmc cluster reattach --name $TDH_TKGWC_NAME --kubeconfig $HOME/.kube/config -p tanzu-demo-hub -m $TDH_TKGMC_NAME "
+      exit 1
+    fi
+  fi
 fi
+
+# --- NO CONNECTION FROM A PEZ-INTERNAL CLUSTER ---
+if [ "${TDH_TKGMC_INFRASTRUCTURE}" != "vSphere1" ]; then
+  checkTMCintegration      TO    ## Tanzu Observability (Wavefront)
+  checkTMCintegration      TDP   ## Tanzu Data Protection
+  checkTMCintegration      TCI   ## Tanzu Cluster Inspection
+fi
+
+
+echo "-----------------------------------------------------------------------------------------------------------"
+echo "Tanzu Kubernetes Grid Cluster ($TDH_TKGWC_NAME) build completed"
+echo "-----------------------------------------------------------------------------------------------------------"
+echo "1.) Set KUBECONFIG and set the cluster context"
+echo "    => kubectl config set-cluster ${TDH_TKGWC_NAME}"
+echo "    => kubectl config use-context ${TDH_TKGWC_CONTEXT}"
+echo "    => kubectl config get-contexts"
+echo "2.) Relaxing Pod Security in cluster ($TDH_TKGWC_NAME)"
+echo "    # Allow Privileged Pods for the Cluster"
+echo "    => kubectl create clusterrolebinding tanzu-demo-hub-privileged-cluster-role-binding \\"
+echo "        --clusterrole=vmware-system-tmc-psp-privileged --group=system:authenticated"
+echo "    # Allow Privileged Pods for a Namespace (my-namespace)"
+echo "    => kubectl create rolebinding tanzu-demo-hub-privileged-my-namespace-role-binding \\"
+echo "        --clusterrole=vmware-system-tmc-psp-privileged --group=system:authenticated -n my-namespace"
+echo "3.) Delete Cluster if not used anymore"
+echo "    => tanzu cluster delete $TDH_TKGWC_NAME"
 
 
 exit
