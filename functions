@@ -1139,7 +1139,8 @@ checkTMCintegration() {
 
         # --- GRACE TIME ---
         ret=1; cnt=0
-        while [ $ret -ne 0 -a $cnt -lt 5 ]; do
+        while [ $ret -ne 0 -a $cnt -lt 50 ]; do
+date
           helm install wavefront wavefront/wavefront \
               --set wavefront.url=$TDH_TANZU_OBSERVABILITY_URL \
               --set wavefront.token=$TDH_TANZU_OBSERVABILITY_API_TOKEN \
