@@ -5008,6 +5008,7 @@ InstallHarborRegistry() {
     messagePrint " ▪ Create Namespace" "$NAMESPACE"
     kubectl create ns $NAMESPACE > /dev/null 2>&1
     helm uninstall harbor -n $NAMESPACE > /dev/null 2>&1
+    patchServiceAccount default $NAMESPACE
 
     messagePrint " ▪ Create Docker secret"  "tdh-docker-repo"
     kubectl -n $NAMESPACE create secret docker-registry tdh-docker-repo \
