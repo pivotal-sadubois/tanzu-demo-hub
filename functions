@@ -189,8 +189,11 @@ messagePrint() {
   _cnt=$(echo "${_msg}" | wc -c | sed 's/ //g')
   _dat=$(date "+%Y%m%d-%H:%M:%S")
 
+  ttt=$(echo "$_msg" | egrep -c "^   ") 
+  if [ $ttt -eq 1 ]; then MAX=58; else MAX=60; fi
+
   _str=""
-  while [ $_cnt -lt 60 ]; do
+  while [ $_cnt -lt $MAX ]; do
     _str="${_str}."
     let _cnt=_cnt+1
   done
