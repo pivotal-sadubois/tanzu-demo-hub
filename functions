@@ -1135,10 +1135,9 @@ checkTMCintegration() {
         # --- INSTALL WAVEFRONT HELM CHART ---
         kubectl create ns $NAMESPACE > /dev/null 2>&1
         helm uninstall wavefront -n $NAMESPACE > /dev/null 2>&1
+        patchServiceAccount default $NAMESPACE
 
         # --- GRACE TIME ---
-        sleep 300 
-
         ret=1; cnt=0
         while [ $ret -ne 0 -a $cnt -lt 5 ]; do
           helm install wavefront wavefront/wavefront \
