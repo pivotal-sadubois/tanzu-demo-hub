@@ -4561,7 +4561,7 @@ InstallMetallLB() {
 
     cnt=0; ret=1
     while [ $ret -ne 0 -a $cnt -lt 5 ]; do
-      helm install metallb metallb/metallb -f /tmp/values.yaml -n $NAMESPACE > /dev/null 2>&1; ret=$?
+      helm install metallb metallb/metallb -f $HELM_VALUES -n $NAMESPACE > /dev/null 2>&1; ret=$?
       [ $ret -eq 0 ] && break
       let cnt=cnt+1
       sleep 30
@@ -4569,7 +4569,7 @@ InstallMetallLB() {
   
     if [ $ret -ne 0 ]; then
       echo "ERROR: failed to install bitnami/metallb"
-      echo "       => helm install metallb metallb/metallb -f /tmp/values.yaml -n $NAMESPACE"
+      echo "       => helm install metallb metallb/metallb -f $HELM_VALUES -n $NAMESPACE"
       exit 1
     fi
 
