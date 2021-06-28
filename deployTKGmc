@@ -1295,7 +1295,11 @@ else
     if [ $cnt -eq 0 ]; then
       $SCP_COMMAND ${SSH_USER}@${SSH_HOST}:$SSH_HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.kubeconfig ~/.tanzu-demo-hub/config > /dev/null 2>&1
       $SCP_COMMAND ${SSH_USER}@${SSH_HOST}:$SSH_HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.yaml ~/.tanzu-demo-hub/config > /dev/null 2>&1
-  
+
+      # --- UNCOMMENT FOR DEBUGGING ---
+      #echo "tanzu login --kubeconfig ~/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.kubeconfig \
+      #  --name $TDH_TKGMC_NAME --server $TDH_TKGMC_NAME --context ${TDH_TKGMC_NAME}-admin@$TDH_TKGMC_NAME"
+
       tanzu login --kubeconfig ~/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.kubeconfig  --name $TDH_TKGMC_NAME --server $TDH_TKGMC_NAME \
          --context ${TDH_TKGMC_NAME}-admin@$TDH_TKGMC_NAME > /dev/null 2>&1
       tanzu management-cluster get > /dev/null 2>&1
@@ -1371,6 +1375,9 @@ else
       let cnt=cnt+1
     done
   fi
+
+  # --- CLEANUP OLD MANAGEMENT CLUSTERS ---
+  #cleanKubeconfig $HOME/.tanzu/config.yaml  => cleanManagementCluster
 
   messageTitle "Create the TKG Management Cluster deployment File"
   messagePrint " ▪ Deployment File"        "$HOME/.tanzu-demo-hub/config/tkgmc-${TDH_TKGMC_NAME}.yaml"
