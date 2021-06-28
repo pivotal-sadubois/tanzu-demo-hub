@@ -4135,7 +4135,7 @@ installBuildService() {
   # --- VERIFY INSTALLATION ---
   kp clusterbuilder list > /dev/null 2>&1; ret=$?
   cnt=$(kp clusterbuilder list | grep -c false) 
-  if [ $? -ne 0 -o $cnt -ne 0 ]; then 
+  if [ $ret -ne 0 -o $cnt -ne 0 ]; then 
     # --- NOT WORKING, SO CLEAN IT UP FIRST ---
     kp clusterbuilder delete
     kubectl delete ns build-service > /dev/null 2>&1
