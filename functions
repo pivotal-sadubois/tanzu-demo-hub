@@ -2293,9 +2293,7 @@ createTKGMCcluster() {
     fi
   fi
 
-echo 111111111111111111111
   if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "Azure" ]; then
-echo 22222222222222222222
     messageTitle "Creating TKG Managment Cluster"
     messagePrint " ▪ Cluster Name"                "$TDH_TKGMC_NAME"
     messagePrint " ▪ Configuration File"          "$TKG_TEMPLATE"
@@ -2375,9 +2373,6 @@ echo 22222222222222222222
     if [ "$TDH_TKGMC_IDENTITY_MANAGEMENT_TYPE" == "none" ]; then
       echo "IDENTITY_MANAGEMENT_TYPE: none"                                              >> $TKG_TEMPLATE
     fi
-
-echo "44444444444444444444444 TKG_TEMPLATE:$TKG_TEMPLATE"
-ls -la TKG_TEMPLATE
 
     #MPDE=azure
 
