@@ -1,6 +1,6 @@
 #!/bin/bash
 # ############################################################################################
-# File: ........: deployTKG
+# File: ........: deployTKG 
 # Language .....: bash
 # Author .......: Sacha Dubois, VMware
 # Description ..: Tanzu Demo Hub - Deploy TKG Workload Cluster
