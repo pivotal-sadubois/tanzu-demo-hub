@@ -1128,13 +1128,12 @@ checkTMCintegration() {
       NAMESPACE=wavefront
       kubectl get ns $NAMESPACE > /dev/null 2>&1
       if [ $? -ne 0 ]; then
-
         # --- VERIFY SERVICE CONFIGURATION ---
         checkKubernetesServices tanzu_observability
 
         # --- INSTALL WAVEFRONT HELM CHART ---
-        kubectl create ns $NAMESPACE > /dev/null 2>&1
         helm uninstall wavefront -n $NAMESPACE > /dev/null 2>&1
+        kubectl create ns $NAMESPACE > /dev/null 2>&1
         patchServiceAccount default $NAMESPACE
 
         # --- GRACE TIME ---
@@ -3932,18 +3931,17 @@ installMinio() {
   ACCESS_KEY=$(kubectl get secret --namespace default tdh-minio -o jsonpath="{.data.access-key}" | base64 --decode)
   SECRET_KEY=$(kubectl get secret --namespace default tdh-minio -o jsonpath="{.data.secret-key}" | base64 --decode)
 
-  messageTitle "Verify Minio S3"
-  messagePrint " ▪ Helm Chart"                     "$crt"
-  messagePrint " ▪ Helm Chart Name"                "minio"
-  messagePrint " ▪ Helm Chart Version"             "$ver"
-  messagePrint " ▪ Helm Chart Status"              "$stt"
-  messagePrint " ▪ Helm Chart Installed/Updated"   "$dat"
-  messagePrint " ▪ Minio Internal Name"            "tdh-minio.default.svc.cluster.local"
-  messagePrint " ▪ Minio Management Portal"        "https://minio.$DOMAIN"
-  messagePrint " ▪ Minio Access Key"               "$ACCESS_KEY"
-  messagePrint " ▪ Minio Secret Key"               "$SECRET_KEY"
+  messagePrint " ▪ Verify Minio S3"                "$crt"
+  messagePrint "   Helm Chart Name"                "minio"
+  messagePrint "   Helm Chart Version"             "$ver"
+  messagePrint "   Helm Chart Status"              "$stt"
+  messagePrint "   Helm Chart Installed/Updated"   "$dat"
+  messagePrint "   Minio Internal Name"            "tdh-minio.default.svc.cluster.local"
+  messagePrint "   Minio Management Portal"        "https://minio.$DOMAIN"
+  messagePrint "   Minio Access Key"               "$ACCESS_KEY"
+  messagePrint "   Minio Secret Key"               "$SECRET_KEY"
 
-  echo "-----------------------------------------------------------------------------------------------------------"
+  echo "   -----------------------------------------------------------------------------------------------------------"
   messageTitle " Test Minio S3 Access: (https://docs.min.io/docs/minio-client-complete-guide)"
 
   if [ ! -f /usr/local/bin/mc ]; then
@@ -3961,7 +3959,7 @@ installMinio() {
 
   echo "   => mc alias set minio https://minio.$DOMAIN $ACCESS_KEY $SECRET_KEY"
   echo "   => mc ls minio"
-  echo "-----------------------------------------------------------------------------------------------------------"
+  echo "   -----------------------------------------------------------------------------------------------------------"
   
   # --- WAIT FOR HARBOR TO COME ONLINE ---
   ret=1; cnt=0
@@ -4066,7 +4064,7 @@ installTanzuDataPostgres() {
         #  docker image rm $n -f > /dev/null 2>&1
         #done
   
-        messagePrint "Customize Postgres Helm Chart Values" "/tmp/values-overrides.yaml"
+        messagePrint " ▪ Customize Postgres Helm Chart Values" "/tmp/values-overrides.yaml"
         sed -e "s+operatorImageRepository: postgres-operator+operatorImageRepository: $REGISTRY/postgres-operator+g" \
             -e "s+postgresImageRepository: postgres-instance+postgresImageRepository: $REGISTRY/postgres-instance+g" \
             ${POSTGRES_INSTALL_PATH}/operator/values.yaml > /tmp/values-overrides.yaml
@@ -4093,12 +4091,11 @@ installTanzuDataPostgres() {
   stt=$(helm ls -o json | jq -r --arg chart "postgres-operator" '.[] | select(.name == $chart).status')
   dat=$(helm ls -o json | jq -r --arg chart "postgres-operator" '.[] | select(.name == $chart).updated')
     
-  messageTitle "Verify Postgres Operator"  
-  messagePrint " ▪ Helm Chart"                     "$crt"
-  messagePrint " ▪ Helm Chart Name"                "postgres-operator"
-  messagePrint " ▪ Helm Chart Version"             "$ver"
-  messagePrint " ▪ Helm Chart Status"              "$stt"
-  messagePrint " ▪ Helm Chart Installed/Updated"   "$dat"
+  messagePrint " ▪ Verify Postgres Operator" "$crt"
+  messagePrint "   Helm Chart Name"                "postgres-operator"
+  messagePrint "   Helm Chart Version"             "$ver"
+  messagePrint "   Helm Chart Status"              "$stt"
+  messagePrint "   Helm Chart Installed/Updated"   "$dat"
 
   #ver=$(helm ls -o json | jq -r --arg chart "tdh-pgadmin" '.[] | select(.name == $chart).app_version')
   #crt=$(helm ls -o json | jq -r --arg chart "tdh-pgadmin" '.[] | select(.name == $chart).chart')
@@ -4136,9 +4133,11 @@ installBuildService() {
   TDH_SERVICE_BUILD_SERVICE_VERIFIED=$(getConfigMap tanzu-demo-hub TDH_SERVICE_BUILD_SERVICE_VERIFIED)
 
   # --- VERIFY INSTALLATION ---
-  kp clusterbuilder list > /dev/null 2>&1
-  if [ $? -ne 0 ]; then 
+  kp clusterbuilder list > /dev/null 2>&1; ret=$?
+  cnt=$(kp clusterbuilder list | grep -c false) 
+  if [ $? -ne 0 -o $cnt -ne 0 ]; then 
     # --- NOT WORKING, SO CLEAN IT UP FIRST ---
+    kp clusterbuilder delete
     kubectl delete ns build-service > /dev/null 2>&1
     export TDH_SERVICE_BUILD_SERVICE_INSTALLED=""
   fi
