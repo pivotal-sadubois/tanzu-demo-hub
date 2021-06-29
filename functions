@@ -189,8 +189,11 @@ messagePrint() {
   _cnt=$(echo "${_msg}" | wc -c | sed 's/ //g')
   _dat=$(date "+%Y%m%d-%H:%M:%S")
 
+  ttt=$(echo "$_msg" | egrep -c "^   ") 
+  if [ $ttt -eq 1 ]; then MAX=62; else MAX=64; fi
+
   _str=""
-  while [ $_cnt -lt 60 ]; do
+  while [ $_cnt -lt $MAX ]; do
     _str="${_str}."
     let _cnt=_cnt+1
   done
@@ -1128,13 +1131,12 @@ checkTMCintegration() {
       NAMESPACE=wavefront
       kubectl get ns $NAMESPACE > /dev/null 2>&1
       if [ $? -ne 0 ]; then
-
         # --- VERIFY SERVICE CONFIGURATION ---
         checkKubernetesServices tanzu_observability
 
         # --- INSTALL WAVEFRONT HELM CHART ---
-        kubectl create ns $NAMESPACE > /dev/null 2>&1
         helm uninstall wavefront -n $NAMESPACE > /dev/null 2>&1
+        kubectl create ns $NAMESPACE > /dev/null 2>&1
         patchServiceAccount default $NAMESPACE
 
         # --- GRACE TIME ---
@@ -3892,10 +3894,10 @@ installMinio() {
   TDH_ENVNAME=$(getConfigMap tanzu-demo-hub TDH_ENVNAME)
   DOMAIN=$(getConfigMap tanzu-demo-hub TDH_INGRESS_CONTOUR_LB_DOMAIN)
 
-#gaga
+  messageTitle "Minio S3 Object Storage"
   cnt=$(helm list -q | egrep -c "^tdh-minio")
   if [ $cnt -eq 0 ]; then
-    messageTitle "Installing Minio"
+    messagePrint " ▪ Installing Minio" "bitnami/minio"
     HELM_VALUES=/tmp/helm_values.yaml
     echo ""                                                                                                                     >  $HELM_VALUES
     echo "ingress:"                                                                                                             >> $HELM_VALUES
@@ -3932,36 +3934,35 @@ installMinio() {
   ACCESS_KEY=$(kubectl get secret --namespace default tdh-minio -o jsonpath="{.data.access-key}" | base64 --decode)
   SECRET_KEY=$(kubectl get secret --namespace default tdh-minio -o jsonpath="{.data.secret-key}" | base64 --decode)
 
-  messageTitle "Verify Minio S3"
-  messagePrint " ▪ Helm Chart"                     "$crt"
-  messagePrint " ▪ Helm Chart Name"                "minio"
-  messagePrint " ▪ Helm Chart Version"             "$ver"
-  messagePrint " ▪ Helm Chart Status"              "$stt"
-  messagePrint " ▪ Helm Chart Installed/Updated"   "$dat"
-  messagePrint " ▪ Minio Internal Name"            "tdh-minio.default.svc.cluster.local"
-  messagePrint " ▪ Minio Management Portal"        "https://minio.$DOMAIN"
-  messagePrint " ▪ Minio Access Key"               "$ACCESS_KEY"
-  messagePrint " ▪ Minio Secret Key"               "$SECRET_KEY"
+  messagePrint " ▪ Verify Minio S3"                "$crt"
+  messagePrint "   Helm Chart Name"                "minio"
+  messagePrint "   Helm Chart Version"             "$ver"
+  messagePrint "   Helm Chart Status"              "$stt"
+  messagePrint "   Helm Chart Installed/Updated"   "$dat"
+  messagePrint "   Minio Internal Name"            "tdh-minio.default.svc.cluster.local"
+  messagePrint "   Minio Management Portal"        "https://minio.$DOMAIN"
+  messagePrint "   Minio Access Key"               "$ACCESS_KEY"
+  messagePrint "   Minio Secret Key"               "$SECRET_KEY"
 
-  echo "-----------------------------------------------------------------------------------------------------------"
-  messageTitle " Test Minio S3 Access: (https://docs.min.io/docs/minio-client-complete-guide)"
+  echo "   -----------------------------------------------------------------------------------------------------------"
+  messageTitle "   Test Minio S3 Access: (https://docs.min.io/docs/minio-client-complete-guide)"
 
   if [ ! -f /usr/local/bin/mc ]; then
     if [ $(uname) == "Darwin" ]; then 
-      echo " MacOS installation"
-      echo "   => brew install minio/stable/mc"
+      echo "   MacOS installation"
+      echo "     => brew install minio/stable/mc"
       echo ""
     else
-      echo " Linux installation"
-      echo "   => wget https://dl.minio.io/client/mc/release/linux-amd64/mc"
-      echo "   => mv mc /usr/local/bin/mc && chmod a+x /usr/local/bin/mc"
+      echo "   Linux installation"
+      echo "     => wget https://dl.minio.io/client/mc/release/linux-amd64/mc"
+      echo "     => mv mc /usr/local/bin/mc && chmod a+x /usr/local/bin/mc"
       echo ""
     fi
   fi
 
-  echo "   => mc alias set minio https://minio.$DOMAIN $ACCESS_KEY $SECRET_KEY"
-  echo "   => mc ls minio"
-  echo "-----------------------------------------------------------------------------------------------------------"
+  echo "     => mc alias set minio https://minio.$DOMAIN $ACCESS_KEY $SECRET_KEY"
+  echo "     => mc ls minio"
+  echo "   -----------------------------------------------------------------------------------------------------------"
   
   # --- WAIT FOR HARBOR TO COME ONLINE ---
   ret=1; cnt=0
@@ -4000,8 +4001,8 @@ installTanzuDataPostgres() {
   cnt=$(helm list --all-namespaces -q | egrep -c "^postgres-operator")
   if [ $cnt -eq 0 ]; then
     # --- DOWNLOAD POSTGRES BINARIES ---
-    TBS_FILE="/tmp/postgres-for-kubernetes-v$TDH_SERVICE_TANZU_DATA_POSTGRES_VERSION.tar.gz"
-    TBS_TAR_FILE="/tmp/postgres-for-kubernetes-v$TDH_SERVICE_TANZU_DATA_POSTGRES_VERSION.tar"
+    TBS_FILE="/tmp/postgres-for-kubernetes-v${TDH_SERVICE_TANZU_DATA_POSTGRES_VERSION}.tar.gz"
+    TBS_TAR_FILE="/tmp/postgres-for-kubernetes-v${TDH_SERVICE_TANZU_DATA_POSTGRES_VERSION}.tar"
 
     rm -f $TBS_FILE $TBS_TAR_FILE
 
@@ -4036,9 +4037,10 @@ installTanzuDataPostgres() {
         echo "       => docker login $TDH_HARBOR_REGISTRY_DNS_HARBOR -u admin -p $TDH_HARBOR_REGISTRY_ADMIN_PASSWORD"; exit 1
       fi
   
+      messageTitle "Tanzu Postgres Operator"
       cnt=$(helm list --all-namespaces -q | egrep -c "^postgres-operator") 
       if [ $cnt -eq 0 ]; then
-        messageTitle "Installing Postgres Operator"
+        messagePrint " ▪ Install Postgres Operator" "$TDH_SERVICE_TANZU_DATA_POSTGRES_VERSION"
   
         # --- CREATE NAMESPACE ---
         #kubectl create namespace $NAMESPACE > /dev/null 2>&1
@@ -4050,7 +4052,7 @@ installTanzuDataPostgres() {
         docker load -i ${POSTGRES_INSTALL_PATH}/images/postgres-instance  > /dev/null 2>&1
         docker load -i ${POSTGRES_INSTALL_PATH}/images/postgres-operator  > /dev/null 2>&1
   
-        messagePrint " ▪ Reocate Images (postgres-instance) to Harbor" "$REGISTRY/postgres-instance"
+        messagePrint " ▪ Relocate Images (postgres-instance) to Harbor" "$REGISTRY/postgres-instance"
   
         INSTANCE_IMAGE_NAME="${REGISTRY}/postgres-instance:$(cat $POSTGRES_INSTALL_PATH/images/postgres-instance-tag)"
         docker tag $(cat $POSTGRES_INSTALL_PATH/images/postgres-instance-id) ${INSTANCE_IMAGE_NAME}  > /dev/null 2>&1
@@ -4066,7 +4068,7 @@ installTanzuDataPostgres() {
         #  docker image rm $n -f > /dev/null 2>&1
         #done
   
-        messagePrint "Customize Postgres Helm Chart Values" "/tmp/values-overrides.yaml"
+        messagePrint " ▪ Customize Postgres Helm Chart Values" "/tmp/values-overrides.yaml"
         sed -e "s+operatorImageRepository: postgres-operator+operatorImageRepository: $REGISTRY/postgres-operator+g" \
             -e "s+postgresImageRepository: postgres-instance+postgresImageRepository: $REGISTRY/postgres-instance+g" \
             ${POSTGRES_INSTALL_PATH}/operator/values.yaml > /tmp/values-overrides.yaml
@@ -4093,12 +4095,11 @@ installTanzuDataPostgres() {
   stt=$(helm ls -o json | jq -r --arg chart "postgres-operator" '.[] | select(.name == $chart).status')
   dat=$(helm ls -o json | jq -r --arg chart "postgres-operator" '.[] | select(.name == $chart).updated')
     
-  messageTitle "Verify Postgres Operator"  
-  messagePrint " ▪ Helm Chart"                     "$crt"
-  messagePrint " ▪ Helm Chart Name"                "postgres-operator"
-  messagePrint " ▪ Helm Chart Version"             "$ver"
-  messagePrint " ▪ Helm Chart Status"              "$stt"
-  messagePrint " ▪ Helm Chart Installed/Updated"   "$dat"
+  messagePrint " ▪ Verify Postgres Operator" "$crt"
+  messagePrint "   Helm Chart Name"                "postgres-operator"
+  messagePrint "   Helm Chart Version"             "$ver"
+  messagePrint "   Helm Chart Status"              "$stt"
+  messagePrint "   Helm Chart Installed/Updated"   "$dat"
 
   #ver=$(helm ls -o json | jq -r --arg chart "tdh-pgadmin" '.[] | select(.name == $chart).app_version')
   #crt=$(helm ls -o json | jq -r --arg chart "tdh-pgadmin" '.[] | select(.name == $chart).chart')
@@ -4136,16 +4137,19 @@ installBuildService() {
   TDH_SERVICE_BUILD_SERVICE_VERIFIED=$(getConfigMap tanzu-demo-hub TDH_SERVICE_BUILD_SERVICE_VERIFIED)
 
   # --- VERIFY INSTALLATION ---
-  kp clusterbuilder list > /dev/null 2>&1
-  if [ $? -ne 0 ]; then 
+  kp clusterbuilder list > /dev/null 2>&1; ret=$?
+  cnt=$(kp clusterbuilder list | grep -c false) 
+  if [ $ret -ne 0 -o $cnt -ne 0 ]; then 
     # --- NOT WORKING, SO CLEAN IT UP FIRST ---
+    kp clusterbuilder delete
     kubectl delete ns build-service > /dev/null 2>&1
     export TDH_SERVICE_BUILD_SERVICE_INSTALLED=""
   fi
 
   # --- VERIFY IF BUILDSERVICE IS INSTALLED ---
+  messageTitle "Tanzu Build Service"
   if [ "$TDH_SERVICE_BUILD_SERVICE_INSTALLED" == "" ]; then 
-    messageTitle "Installing Tanzu Build Service"
+    messagePrint " ▪ Installing Tanzu Build Service" "$TDH_SERVICE_BUILD_SERVICE_VERSION"
 
     #kubectl get ns build-service > /dev/null 2>&1; ret=$?
     #kp clusterbuilder list > /dev/null 2>&1; stt=$?
@@ -4331,7 +4335,7 @@ installBuildService() {
     uodateConfigMap tanzu-demo-hub TDH_GITHUB_PASS                      $TDH_GITHUB_PASS
   fi
 
-  messageTitle "Verify Tanzu Build Service"
+  messagePrint " ▪ Verify Tanzu Build Service" "$TDH_SERVICE_BUILD_SERVICE_VERSION"
   kp clusterbuilder list > /dev/null 2>&1
   [ $? -eq 0 ] && stt="successfuly installed" || stt="installed/failed"
   if [ $DEBUG -eq 1 ]; then
