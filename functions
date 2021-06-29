@@ -2086,6 +2086,8 @@ createTKGMCcluster() {
   TKG_TEMPLATE=${HOME}/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.yaml; rm -f $TKG_TEMPLATE
   TKG_KUBECONFIG=${HOME}/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.kubeconfig; rm -f $TKG_KUBECONFIG
 
+  cleanKindCluster
+
   if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "vSphere" ]; then
     messageTitle "Creating TKG Managment Cluster"
     messagePrint " ▪ Cluster Name"                  "$TDH_TKGMC_NAME"
@@ -6513,6 +6515,24 @@ setK8sEnvironment() {
   kubectl create clusterrolebinding tanzu-demo-hub-privileged-cluster-role-binding \
           --clusterrole=vmware-system-tmc-psp-privileged --group=system:authenticated > /dev/null 2>&1
 
+}
+
+cleanKindCluster() {
+  cnt=$(kind get clusters | wc -l | awk '{ print $1 }') 
+  if [ $cnt -gt 0 ]; then
+    messageTitle "CleaningUp Kubernetes Kind Clusters"
+
+    for n in $(kind get clusters 2>/dev/null); do
+      messagePrint " ▪ Deleting Kind Cluster"               "$n"
+      kind delete clusters $n > /dev/null 2>&1
+      if [ $? -ne 0 ]; then
+        echo "ERROR: failed to delete kind cluster $n"
+        echo "       => kind delete clusters $n"
+        exit 1
+      fi
+
+    done
+  fi
 }
 
 
