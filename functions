@@ -4179,7 +4179,7 @@ installTanzuDataPostgres() {
 
         # patch serviceaccounts default and postgres-operator-service-account in the default namespace
         patchServiceAccount default default
-        patchServiceAccount postgres-operator-service-account
+        patchServiceAccount postgres-operator-service-account default
 
       fi
     fi
