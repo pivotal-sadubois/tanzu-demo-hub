@@ -79,6 +79,8 @@ execCmd() {
 }
 
 checkIdentityProvider() {
+echo "gaga IDENTITY_MANAGEMENT_TYPE:$IDENTITY_MANAGEMENT_TYPE"
+
   [ "${IDENTITY_MANAGEMENT_TYPE}" == "none" ] && return
   missing_variables=0
   if [ "${IDENTITY_MANAGEMENT_TYPE}" == "ldap" ]; then
