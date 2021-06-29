@@ -4159,8 +4159,8 @@ installTanzuDataPostgres() {
         #done
   
         messagePrint " ▪ Customize Postgres Helm Chart Values" "/tmp/values-overrides.yaml"
-        sed -e "s+operatorImageRepository: postgres-operator+operatorImageRepository: $TDH_HARBOR_REGISTRY_DNS_HARBOR/postgres-operator+g" \
-            -e "s+postgresImageRepository: postgres-instance+postgresImageRepository: $TDH_HARBOR_REGISTRY_DNS_HARBOR/postgres-instance+g" \
+        sed -e "s+operatorImageRepository: postgres-operator+operatorImageRepository: $TDH_HARBOR_REGISTRY_DNS_HARBOR/library/postgres-operator+g" \
+            -e "s+postgresImageRepository: postgres-instance+postgresImageRepository: $TDH_HARBOR_REGISTRY_DNS_HARBOR/library/postgres-instance+g" \
             ${POSTGRES_INSTALL_PATH}/operator/values.yaml > /tmp/values-overrides.yaml
         if [ "${DEBUG}" == "1" ]; then
           echo "-----------------------------------------------------------------------------------------------------------"
