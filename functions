@@ -79,11 +79,9 @@ execCmd() {
 }
 
 checkIdentityProvider() {
-echo "gaga IDENTITY_MANAGEMENT_TYPE:$IDENTITY_MANAGEMENT_TYPE"
-
-  [ "${IDENTITY_MANAGEMENT_TYPE}" == "none" ] && return
+  [ "${TDH_TKGMC_IDENTITY_MANAGEMENT_TYPE}" == "none" ] && return
   missing_variables=0
-  if [ "${IDENTITY_MANAGEMENT_TYPE}" == "ldap" ]; then
+  if [ "${TDH_TKGMC_IDENTITY_MANAGEMENT_TYPE}" == "ldap" ]; then
     if [ "${LDAP_DOMAIN}" == "" ]; then
 
       missing_variables=1
@@ -105,7 +103,7 @@ echo "gaga IDENTITY_MANAGEMENT_TYPE:$IDENTITY_MANAGEMENT_TYPE"
     fi
   fi
 
-  if [ "${IDENTITY_MANAGEMENT_TYPE}" == "oidc" ]; then
+  if [ "${TDH_TKGMC_IDENTITY_MANAGEMENT_TYPE}" == "oidc" ]; then
     if [ "${TDH_OKTA_SECRET_ID}" == "" -o "${TDH_OKTA_USERNAME_CLAIM}" == "" -o "${TDH_OKTA_CLIENT_SECRET}" == "" -o \
          "${TDH_OKTA_URL}" == "" -o "${TDH_OKTA_SCOPES}" == "" -o "${TDH_OKTA_GROUP_CLAIM}" == "" ]; then
 
