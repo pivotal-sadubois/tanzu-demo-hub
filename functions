@@ -1223,6 +1223,8 @@ checkTMCintegration() {
         helm uninstall wavefront -n $NAMESPACE > /dev/null 2>&1
         kubectl create ns $NAMESPACE > /dev/null 2>&1
         patchServiceAccount default $NAMESPACE
+        # kubectl patch serviceaccount wavefront-collector  -p '{"imagePullSecrets": [{"name": "tdh-docker-repo"}]}' -n -n wavefront
+        patchServiceAccount wavefront-collector $NAMESPACE
 
         # --- GRACE TIME ---
         ret=1; cnt=0
