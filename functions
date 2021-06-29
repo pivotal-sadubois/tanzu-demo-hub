@@ -4255,7 +4255,7 @@ installBuildService() {
         messagePrint " ▪ Deploy Build Service (kapp)" "/tmp/build-service/values.yaml"
           ytt -f /tmp/build-service/values.yaml \
               -f /tmp/build-service/manifests/ \
-              -f $TDHPATH/certificates/ca.pem \
+              -f $HOME/.tanzu-demo-hub/certificates/ca.pem \
               -v docker_repository="$DNS_HARBOR/library/build-service" \
               -v docker_username="admin" \
               -v docker_password="$TDH_HARBOR_REGISTRY_ADMIN_PASSWORD" 2>/dev/null \
