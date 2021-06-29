@@ -78,6 +78,85 @@ execCmd() {
   if [ $? -ne 0 ]; then exit 1; fi
 }
 
+checkIdentityProvider() {
+  [ "${TDH_TKGMC_IDENTITY_MANAGEMENT_TYPE}" == "none" ] && return
+  missing_variables=0
+  if [ "${TDH_TKGMC_IDENTITY_MANAGEMENT_TYPE}" == "ldap" ]; then
+    if [ "${LDAP_DOMAIN}" == "" ]; then
+
+      missing_variables=1
+      echo ""
+      echo "  MISSING ENVIRONMENT-VARIABES    DESCRIPTION        "
+      echo "  -------------------------------------------------------------------------------------------------------------------------------------------------------"
+ 
+      if [ "${LDAP_DOMAIN}" == "" ]; then
+        echo "  LDAP_DOMAIN                       (required) LDAP Domain"
+      fi
+    else
+      echo "LDAP Identitiy Management (IdM)"
+      messagePrint " ▪ LDAP Domain"                        "$LDAP_DOMAIN"
+      messagePrint " ▪ LDAP User Serach Name"              "userPrincipalName"
+      messagePrint " ▪ LDAP Host"                          "jump.${TDH_TKGMC_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}"
+      messagePrint " ▪ LDAP Group Search Name Attribute"   "cn"
+      messagePrint " ▪ LDAP Group Search User Attribute"   "DN"
+      messagePrint " ▪ LDAP Search Username"               "userPrincipalName"
+    fi
+  fi
+
+  if [ "${TDH_TKGMC_IDENTITY_MANAGEMENT_TYPE}" == "oidc" ]; then
+    if [ "${TDH_OKTA_SECRET_ID}" == "" -o "${TDH_OKTA_USERNAME_CLAIM}" == "" -o "${TDH_OKTA_CLIENT_SECRET}" == "" -o \
+         "${TDH_OKTA_URL}" == "" -o "${TDH_OKTA_SCOPES}" == "" -o "${TDH_OKTA_GROUP_CLAIM}" == "" ]; then
+
+      missing_variables=1
+      echo ""
+      echo "  MISSING ENVIRONMENT-VARIABES    DESCRIPTION        "
+      echo "  -------------------------------------------------------------------------------------------------------------------------------------------------------"
+  
+      if [ "${TDH_OKTA_SECRET_ID}" == "" ]; then
+        echo "  TDH_OKTA_SECRET_ID               (required) OKTA SecretId"
+      fi
+  
+      if [ "${TDH_OKTA_CLIENT_SECRET}" == "" ]; then
+        echo "  TDH_OKTA_CLIENT_SECRET           (required) OKTA Client Secret"
+      fi
+  
+      if [ "${TDH_OKTA_URL}" == "" ]; then
+        echo "  TDH_OKTA_URL                     (required) OKTA URL"
+      fi
+  
+      if [ "${TDH_OKTA_SCOPES}" == "" ]; then
+        echo "  TDH_OKTA_SCOPES                  (required) OKTA Scopes"
+      fi
+  
+      if [ "${TDH_OKTA_GROUP_CLAIM}" == "" ]; then
+        echo "  TDH_OKTA_GROUP_CLAIM             (required) OKTA Group Claim"
+      fi
+  
+      if [ "${TDH_OKTA_USERNAME_CLAIM}" == "" ]; then
+        echo "  TDH_OKTA_USERNAME_CLAIM          (required) OKTA Username Claim"
+      fi
+    else
+      echo "OIDC Identitiy Management (IdM)"
+      messagePrint " ▪ OKTA SecretId"                $(maskPassword "$TDH_OKTA_SECRET_ID")
+      messagePrint " ▪ OKTA Client Secret"           $(maskPassword "$TDH_OKTA_CLIENT_SECRET")
+      messagePrint " ▪ OKTA URL"                     "$TDH_OKTA_URL"
+      messagePrint " ▪ OKTA Scopes"                  "$TDH_OKTA_SCOPES"
+      messagePrint " ▪ OKTA Group Claim"             "$TDH_OKTA_GROUP_CLAIM"
+      messagePrint " ▪ OKTA Username Claim"          "$TDH_OKTA_USERNAME_CLAIM"
+    fi
+  fi
+
+  if [ ${missing_variables} -eq 1 ]; then
+    echo "  -------------------------------------------------------------------------------------------------------------------------------------------------------"
+    echo "  IMPORTANT: Please set the missing environment variables either in your shell or in the tanzu-demo-hub"
+    echo "             configuration file ~/.tanzu-demo-hub.cfg and set all variables with the 'export' notation"
+    echo "             export TMC_SERVICE_TOKEN='xxxxxxxxxxxx'"
+    echo "  -------------------------------------------------------------------------------------------------------------------------------------------------------"
+    exit 1
+  fi
+}
+
+
 tmcCheckLogin() {
   [ "${TDH_TANZU_MISSION_CONTROL_REGISTRATION}" == "false" ] && return
   missing_variables=0
@@ -2013,6 +2092,8 @@ createTKGMCcluster() {
   TKG_TEMPLATE=${HOME}/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.yaml; rm -f $TKG_TEMPLATE
   TKG_KUBECONFIG=${HOME}/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.kubeconfig; rm -f $TKG_KUBECONFIG
 
+  cleanKindCluster
+
   if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "vSphere" ]; then
     messageTitle "Creating TKG Managment Cluster"
     messagePrint " ▪ Cluster Name"                  "$TDH_TKGMC_NAME"
@@ -2080,11 +2161,9 @@ createTKGMCcluster() {
       echo "IDENTITY_MANAGEMENT_TYPE: ldap"                                             >> $TKG_TEMPLATE
       echo "LDAP_GROUP_SEARCH_BASE_DN: ${LDAP_DOMAIN}"                                  >> $TKG_TEMPLATE
       echo "LDAP_HOST: jump.${TDH_TKGMC_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}"              >> $TKG_TEMPLATE
-      echo "INFRASTRUCTURE_PROVIDER: azure"                                             >> $TKG_TEMPLATE
       echo "LDAP_GROUP_SEARCH_NAME_ATTRIBUTE: cn"                                       >> $TKG_TEMPLATE
       echo "LDAP_GROUP_SEARCH_USER_ATTRIBUTE: DN"                                       >> $TKG_TEMPLATE
       echo "LDAP_USER_SEARCH_USERNAME: userPrincipalName"                               >> $TKG_TEMPLATE
-      echo "SERVICE_CIDR: 100.64.0.0/13"                                                >> $TKG_TEMPLATE
       echo "TKG_HTTP_PROXY_ENABLED: \"false\""                                          >> $TKG_TEMPLATE
     fi
 
@@ -2118,7 +2197,8 @@ createTKGMCcluster() {
         tanzu management-cluster create --file $TKG_TEMPLATE -v 0 --log-file=/tmp/$TDH_TKGMC_NAME.log > /dev/null 2>&1; ret=$?
       fi
 
-      if [ ${ret} -ne 0 ]; then
+      cnt=$(tanzu management-cluster get | grep -c Error)
+      if [ ${ret} -ne 0 -o ${cnt} -gt 0 ]; then
         echo "ERROR: failed to create TKG Management Cluster"
         echo "       => tanzu management-cluster create --file $TKG_TEMPLATE -v 0 --log-file=/tmp/$TDH_TKGMC_NAME.log"
         echo "-------------------------------------------------------------------------------------------------------------------------------------------------------"
@@ -2127,7 +2207,7 @@ createTKGMCcluster() {
 
         exit 1
       fi
-
+      
       messagePrint " ▪ Management Cluster Creating Completed"    "/tmp/$TDH_TKGMC_NAME.log"
     fi
 
@@ -2229,11 +2309,9 @@ createTKGMCcluster() {
       echo "IDENTITY_MANAGEMENT_TYPE: ldap"                                             >> $TKG_TEMPLATE
       echo "LDAP_GROUP_SEARCH_BASE_DN: ${LDAP_DOMAIN}"                                  >> $TKG_TEMPLATE
       echo "LDAP_HOST: jump.${TDH_TKGMC_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}"              >> $TKG_TEMPLATE
-      echo "INFRASTRUCTURE_PROVIDER: azure"                                             >> $TKG_TEMPLATE
       echo "LDAP_GROUP_SEARCH_NAME_ATTRIBUTE: cn"                                       >> $TKG_TEMPLATE
       echo "LDAP_GROUP_SEARCH_USER_ATTRIBUTE: DN"                                       >> $TKG_TEMPLATE
       echo "LDAP_USER_SEARCH_USERNAME: userPrincipalName"                               >> $TKG_TEMPLATE
-      echo "SERVICE_CIDR: 100.64.0.0/13"                                                >> $TKG_TEMPLATE
       echo "TKG_HTTP_PROXY_ENABLED: \"false\""                                          >> $TKG_TEMPLATE
     fi
 
@@ -2274,7 +2352,8 @@ createTKGMCcluster() {
         tanzu management-cluster create --file $TKG_TEMPLATE -v 0 --log-file=/tmp/$TDH_TKGMC_NAME.log > /dev/null 2>&1; ret=$?
       fi
 
-      if [ ${ret} -ne 0 ]; then
+      cnt=$(tanzu management-cluster get 2>/dev/null | grep -c Error)
+      if [ ${ret} -ne 0 -o ${cnt} -gt 0 ]; then
         echo "ERROR: failed to create TKG Management Cluster"
         echo "       => tanzu management-cluster create --file $TKG_TEMPLATE -v 0 --log-file=/tmp/$TDH_TKGMC_NAME.log"
         echo "-------------------------------------------------------------------------------------------------------------------------------------------------------"
@@ -2400,6 +2479,8 @@ createTKGMCcluster() {
 
       messagePrint " ▪ Management Cluster Creating"        "This may take up to 15min ..."
 
+#gaga
+echo "tanzu management-cluster create --file $TKG_TEMPLATE --log-file=/tmp/$TDH_TKGMC_NAME.log"
       if [ $DEBUG -gt 0 ]; then
         echo "-------------------------------------------------------------------------------------------------------------------------------------------------------"
         tanzu management-cluster create --file $TKG_TEMPLATE -v 0 --log-file=/tmp/$TDH_TKGMC_NAME.log; ret=$?
@@ -2408,7 +2489,8 @@ createTKGMCcluster() {
         tanzu management-cluster create --file $TKG_TEMPLATE -v 0 --log-file=/tmp/$TDH_TKGMC_NAME.log > /dev/null 2>&1; ret=$?
       fi
 
-      if [ ${ret} -ne 0 ]; then
+      cnt=$(tanzu management-cluster get 2>/dev/null | grep -c Error)
+      if [ ${ret} -ne 0 -o ${cnt} -gt 0 ]; then
         echo "ERROR: failed to create TKG Management Cluster"
         echo "       => tanzu management-cluster create --file $TKG_TEMPLATE -v 0 --log-file=/tmp/$TDH_TKGMC_NAME.log"
         echo "-------------------------------------------------------------------------------------------------------------------------------------------------------"
@@ -6442,6 +6524,24 @@ setK8sEnvironment() {
   kubectl create clusterrolebinding tanzu-demo-hub-privileged-cluster-role-binding \
           --clusterrole=vmware-system-tmc-psp-privileged --group=system:authenticated > /dev/null 2>&1
 
+}
+
+cleanKindCluster() {
+  cnt=$(kind get clusters 2>/dev/null | wc -l | awk '{ print $1 }') 
+  if [ $cnt -gt 0 ]; then
+    messageTitle "CleaningUp Kubernetes Kind Clusters"
+
+    for n in $(kind get clusters 2>/dev/null); do
+      messagePrint " ▪ Deleting Kind Cluster"               "$n"
+      kind delete clusters $n > /dev/null 2>&1
+      if [ $? -ne 0 ]; then
+        echo "ERROR: failed to delete kind cluster $n"
+        echo "       => kind delete clusters $n"
+        exit 1
+      fi
+
+    done
+  fi
 }
 
 
