@@ -4747,8 +4747,6 @@ InstallContour() {
 
   # --- VERIFY DNS DOMAIN ---
   verifyHostedZone ${TDH_ENVNAME}.$AWS_HOSTED_DNS_DOMAIN
-echo "ZONE: ${TDH_ENVNAME}.$AWS_HOSTED_DNS_DOMAIN"
-echo "TDH_ENVNAME:$TDH_ENVNAME"
 
   ipa=""; cnt=0
   while [ "$ipa" == "" -a $cnt -lt 15 ]; do
@@ -4766,7 +4764,7 @@ echo "TDH_ENVNAME:$TDH_ENVNAME"
   fi
 
   # --- SET DNS RECORD ---
-  if [ "$TDH_INFRASTRUCTURE" == "minikube" -o "$TDH_INFRASTRUCTURE" == "vSphere" ]; then 
+  if [ "$TDH_INFRASTRUCTURE" == "minikube" -o "$TDH_INFRASTRUCTURE" == "vSphere" -o "$TDH_INFRASTRUCTURE" == "azure" ]; then 
     setDNSrecord "$ipa" "${TDH_ENVNAME}" "${AWS_HOSTED_DNS_DOMAIN}" "*.apps-contour" "A"
   else
     setDNSalias "$ipa" "${TDH_ENVNAME}" "${AWS_HOSTED_DNS_DOMAIN}" "*.apps-contour" "A"
