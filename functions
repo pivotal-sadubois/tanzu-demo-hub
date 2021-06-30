@@ -4125,7 +4125,14 @@ installBuildService() {
   cnt=$(kp clusterbuilder list | grep -c false) 
   if [ $ret -ne 0 -o $cnt -ne 0 ]; then 
     # --- NOT WORKING, SO CLEAN IT UP FIRST ---
-    kp clusterbuilder delete
+    for n in $(kp clusterbuilder list | awk '{ print $1 }'); do
+      echo "kp clusterbuilder delete $n"
+      kp clusterbuilder delete $n > /dev/null 2>&1
+      if [ $ret -ne 0 ]; then 
+        echo "ERROR: failed to delete clusterbuilder"
+        echo "       => kp clusterbuilder delete $n"
+      fi
+    done
     kubectl delete ns build-service > /dev/null 2>&1
     export TDH_SERVICE_BUILD_SERVICE_INSTALLED=""
   fi
