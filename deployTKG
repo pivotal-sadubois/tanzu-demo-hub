@@ -302,14 +302,6 @@ if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "vSphere" ]; then
   #TDH_TKGWC_NAME_TAG
 fi
 
-# --- SET DEFAULT VALUES ---
-[ "$TDH_TKGWC_CONTROL_PLANE_MEM_MIB" == "" ] && TDH_TKGWC_CONTROL_PLANE_MEM_MIB=8192
-[ "$TDH_TKGWC_CONTROL_PLANE_NUM_CPUS" == "" ] && TDH_TKGWC_CONTROL_PLANE_NUM_CPUS=4
-[ "$TDH_TKGWC_CONTROL_PLANE_DISK_GIB" == "" ] && TDH_TKGWC_CONTROL_PLANE_DISK_GIB=40
-[ "$TDH_TKGWC_WORKER_DISK_GIB" == "" ] && TDH_TKGWC_WORKER_DISK_GIB=40
-[ "$TDH_TKGWC_WORKER_MEM_MIB" == "" ] && TDH_TKGWC_WORKER_MEM_MIB=8192
-[ "$TDH_TKGWC_WORKER_NUM_CPUS" == "" ] && TDH_TKGWC_WORKER_NUM_CPUS=2
-
 if [ "$TDH_DEPLOYMENT_CLUSTER_PLAN" == "dev" ]; then 
 #  cat $HOME/.tanzu/tkg/clusterconfigs/${TDH_TKGMC_NAME}-wc-dev.yaml $HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.yaml | \
 #     egrep -v "^#|VSPHERE_CONTROL_PLANE_ENDPOINT" | sed -e '/^$/d' > $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml
@@ -348,7 +340,7 @@ if [ "$TDH_DEPLOYMENT_CLUSTER_PLAN" == "dev" ]; then
     echo "VSPHERE_WORKER_MEM_MIB: \"$TDH_TKGWC_WORKER_MEM_MIB\""                  >> $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml
     echo "VSPHERE_WORKER_NUM_CPUS: \"$TDH_TKGWC_WORKER_NUM_CPUS\""                >> $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml
 
-    echo "VSPHERE_CONTROL_PLANE_ENDPOINT: $TDH_TKGWC_CPIP_ADDRESS" >> $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml
+    echo "VSPHERE_CONTROL_PLANE_ENDPOINT: $TDH_TKGWC_CPIP_ADDRESS"                >> $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml
   fi
 else
   cat $HOME/.tanzu/tkg/clusterconfigs/${TDH_TKGMC_NAME}-wc-dev.yaml $HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.yaml | \
