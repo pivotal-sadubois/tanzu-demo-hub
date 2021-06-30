@@ -1,0 +1,548 @@
+#!/bin/bash
+# ############################################################################################
+# File: ........: deployTKG 
+# Language .....: bash
+# Author .......: Sacha Dubois, VMware
+# Description ..: Tanzu Demo Hub - Deploy TKG Workload Cluster
+# ############################################################################################
+
+export TANZU_DEMO_HUB=$(cd "$(pwd)/$(dirname $0)"; pwd)
+export TDHPATH=$(cd "$(pwd)/$(dirname $0)"; pwd)
+export DEBUG=0
+export NATIVE=0
+export TDH_TKGWC_K8S_VERSION=""
+export CMD_EXEC=$(basename $0)
+export CMD_ARGS=$*
+export TDH_TANZU_MISSION_CONTROL_REGISTRATION=true
+
+. $TANZU_DEMO_HUB/functions
+
+usage() {
+  echo ""
+  echo "USAGE: $0 [options] -m <mgmt-cluster> -d <deployment> -n <cluster-name> [-k <kubernetes-version>] [--debug]"
+  echo "            Options:  -n  <cluster-name>        # Should reflect the environment and its purpose. Make sure"
+  echo "                                                # to add your user name, to prevent conflicts in TMC"
+  echo "                                                # ie. tdh-sdubois-azure or tdh-sdubois-aws-01"
+  echo ""
+  echo "                      -tag <name-tag>           # Cluster NameTag ie. TKG_CLUSTER_01 or TKG_CLUSTER_02"
+  echo "                      -k  <controlplane-ip>     # default (latest)"
+  echo "                                                # use 'tanzu kubernetes-release get' to see available"
+  echo ""
+  echo "                      --debug                   # default (disabled)"
+  echo "                      --native                  # Use 'native' installed tools instead of the tdh-tools container"
+  echo ""
+}
+
+listClusterConfig() {
+  echo
+  printf "%-31s %-5s %-15s %-20s %-5s %s\n" "DEPLOYMENT" "PLAN" "DESCRIPTION" 
+  echo "-----------------------------------------------------------------------------------------------------------"
+
+  for deployment in $(ls -1 ${TDHPATH}/deployments/tkg-*.cfg | grep -v "tkgmc-"); do
+    TDH_DEPLOYMENT_DESCRIPTION=$(egrep "^TDH_DEPLOYMENT_DESCRIPTION=" $deployment | awk -F'=' '{ print $2 }' | sed 's/"//g')
+    TDH_DEPLOYMENT_CLUSTER_PLAN=$(egrep "^TDH_DEPLOYMENT_CLUSTER_PLAN=" $deployment | awk -F'=' '{ print $2 }')
+
+    dep=$(basename $deployment)
+
+    printf "%-31s %-5s %-15s %-20s %-5s %s\n" $dep "$TDH_DEPLOYMENT_CLUSTER_PLAN" "$TDH_DEPLOYMENT_DESCRIPTION"
+  done
+
+  echo "-----------------------------------------------------------------------------------------------------------"
+}
+
+listDeployments() {
+  echo
+  printf "%-31s %-7s %-28s %s\n" "CONFIURATION" "CLOUD" "MANAGEMENT-CLUSTER" "STATUS"
+  echo "-----------------------------------------------------------------------------------------------------------"
+
+  cnt=$(ls -1 ${HOME}/.tanzu-demo-hub/config/tkgmc-*.cfg 2>/dev/null | wc -l | sed 's/  *//g')
+  if [ $cnt -eq 0 ]; then
+    echo "No TKG Management Cluster has been deployed, Please use ./deployTKGmc"
+  else
+    for deployment in $(ls -1 ${HOME}/.tanzu-demo-hub/config/tkgmc-*.cfg 2>/dev/null); do
+      TDH_TKGMC_NAME=$(egrep "^TDH_TKGMC_NAME=" $deployment | awk -F'=' '{ print $2 }')
+      TDH_TKGMC_CONFIG=$(egrep "^TDH_TKGMC_CONFIG=" $deployment | awk -F'=' '{ print $2 }')
+      TDH_TKGMC_INFRASTRUCTURE=$(egrep "^TDH_TKGMC_INFRASTRUCTURE=" $deployment | awk -F'=' '{ print $2 }')
+      TDH_TKGMC_KUBECONFIG=$(egrep "^TDH_TKGMC_KUBECONFIG=" $deployment | awk -F'=' '{ print $2 }')
+
+      if [ "$TDH_TKGMC_INFRASTRUCTURE" == "Azure" ]; then
+        TDH_REGION=$(egrep "^AZURE_LOCATION:" ${HOME}/.tanzu-demo-hub/config/$TDH_TKGMC_CONFIG | awk '{ print $2 }')
+      fi
+
+      if [ "$TDH_TKGMC_INFRASTRUCTURE" == "AWS" ]; then
+        TDH_REGION=$(egrep "^AWS_REGION:" ${HOME}/.tanzu-demo-hub/config/$TDH_TKGMC_CONFIG | awk '{ print $2 }')
+      fi
+
+      # --- VERIFY MANAGEMENT CLUSTER ---
+      if [ "$TDH_TKGMC_INFRASTRUCTURE" == "AWS" -o "$TDH_TKGMC_INFRASTRUCTURE" == "Azure" ]; then
+        kubectl get cluster --kubeconfig ${HOME}/.tanzu-demo-hub/config/${TDH_TKGMC_KUBECONFIG} --request-timeout 1 > /dev/null 2>&1
+        if [ $? -ne 0 ]; then smc="unavailable"; else smc="active"; fi
+
+        cnt=$(kubectl config get-clusters | egrep -c "^$TDH_TKGMC_NAME")
+        if [ $cnt -eq 0 ]; then stt="not-deployed"; else stt="deployed/$smc"; fi
+      else
+        cnt=$(tanzu config server list |  egrep -c " $TDH_TKGMC_NAME ")
+        if [ $cnt -gt 0 ]; then
+          smc="active"
+          ctx=$(tanzu config server list |  egrep " $TDH_TKGMC_NAME " | awk '{ print $NF }')
+          kubectl config use-context $ctx > /dev/null 2>&1
+          if [ $? -ne 0 ]; then stt="not-deployed"; else stt="deployed/$smc"; fi
+        else
+          smc="unavailable"
+        fi
+      fi
+
+      dep=$(echo $deployment | awk -F'/' '{ print $NF }')
+
+      printf "%-31s %-7s %-28s %-22s %-18s %s\n" $dep $TDH_TKGMC_INFRASTRUCTURE $TDH_TKGMC_NAME "$stt"
+    done
+  fi
+
+  echo "-----------------------------------------------------------------------------------------------------------"
+}
+
+listDeployments_old() {
+  echo
+  printf "%-31s %-7s %-15s %-22s %-5s %s\n" "TKG-MANAGEMENT-CLUSTER" "CLOUD" "REGION" "STATUS"
+  echo "-----------------------------------------------------------------------------------------------------------"
+
+  cnt=$(ls -1 ${HOME}/.tanzu-demo-hub/config/tkgmc-*.cfg 2>/dev/null | wc -l | sed 's/  *//g')
+  if [ $cnt -eq 0 ]; then 
+    echo "No TKG Management Cluster has been deployed, Please use ./deployTKGmc"
+  else
+    for deployment in $(ls -1 ${HOME}/.tanzu-demo-hub/config/tkgmc-*.cfg 2>/dev/null); do
+      TDH_TKGMC_NAME=$(egrep "^TDH_TKGMC_NAME=" $deployment | awk -F'=' '{ print $2 }') 
+      TDH_TKGMC_CONFIG=$(egrep "^TDH_TKGMC_CONFIG=" $deployment | awk -F'=' '{ print $2 }') 
+      TDH_TKGMC_INFRASTRUCTURE=$(egrep "^TDH_TKGMC_INFRASTRUCTURE=" $deployment | awk -F'=' '{ print $2 }')
+      TDH_TKGMC_KUBECONFIG=$(egrep "^TDH_TKGMC_KUBECONFIG=" $deployment | awk -F'=' '{ print $2 }')
+
+      if [ "$TDH_TKGMC_INFRASTRUCTURE" == "Azure" ]; then
+        TDH_REGION=$(egrep "^AZURE_LOCATION:" ${HOME}/.tanzu-demo-hub/config/$TDH_TKGMC_CONFIG | awk '{ print $2 }')
+      fi
+
+      if [ "$TDH_TKGMC_INFRASTRUCTURE" == "AWS" ]; then 
+        TDH_REGION=$(egrep "^AWS_REGION:" ${HOME}/.tanzu-demo-hub/config/$TDH_TKGMC_CONFIG | awk '{ print $2 }')
+      fi
+
+      # --- VERIFY MANAGEMENT CLUSTER ---
+      kubectl get cluster --kubeconfig ${HOME}/.tanzu-demo-hub/config/${TDH_TKGMC_KUBECONFIG} > /dev/null 2>&1
+      if [ $? -ne 0 ]; then smc="unavailable"; else smc="active"; fi
+      
+      cnt=$(kubectl config get-clusters | egrep -c "^$TDH_TKGMC_NAME") 
+      if [ $cnt -eq 0 ]; then stt="not-deployed"; else stt="deployed/$smc"; fi
+  
+      printf "%-31s %-7s %-15s %-22s %-5s %s\n" $TDH_TKGMC_NAME $TDH_TKGMC_INFRASTRUCTURE $TDH_REGION "$stt"
+    done
+  fi
+
+  echo "-----------------------------------------------------------------------------------------------------------"
+}
+
+while [ "$1" != "" ]; do
+  case $1 in
+    -d)   TKG_DEPLOYMENT=$2;;
+    -m)   TDH_TKGMC_NAME=$2;;
+    -n)   TDH_TKGWC_NAME=$2;;
+    -k)   TDH_TKGWC_K8S_VERSION=$2;;
+    -tag) TDH_TKGWC_NAME_TAG=$2;;
+    --debug)       DEBUG=1;;
+    --native)      NATIVE=1;;
+  esac
+  shift
+done
+
+
+if [ "${TKG_DEPLOYMENT}" == "" -o "${TDH_TKGMC_NAME}" == "" -o "${TDH_TKGWC_NAME}" == "" ]; then
+  if [ "${TKG_DEPLOYMENT}" == "" ]; then 
+    listDeployments
+  fi
+
+  if [ "${TKG_WC_CLUSTER}" == "" ]; then 
+    listClusterConfig
+  fi
+  usage; exit 0
+fi
+
+# --- VERIFY DEPLOYMENT ---
+TKG_DEPLOYMENT_CONFIG=$(echo $TKG_DEPLOYMENT | sed 's/cfg/yaml/g')
+if [ ! -f ${TDHPATH}/deployments/${TKG_DEPLOYMENT} ]; then
+  echo "ERROR: Deployment file $TKG_DEPLOYMENT can not be found in ${TDHPATH}/deployments"
+  exit 1
+else
+  . ${TDHPATH}/deployments/${TKG_DEPLOYMENT}
+fi
+
+if [ ! -f ${TDHPATH}/deployments/${TKG_DEPLOYMENT} ]; then
+  echo "ERROR: The Deployment deployments/$TKG_DEPLOYMENT does not have a releated $TKG_DEPLOYMENT file"
+  echo "       Please take deployments/tkg-tanzu-demo-hub.yaml as a template."
+  exit 1
+fi
+
+# --- CHECK ENVIRONMENT VARIABLES ---
+if [ -f ~/.tanzu-demo-hub.cfg ]; then
+  . ~/.tanzu-demo-hub.cfg
+fi
+
+# --- SOURCE MANAGEMENT CLUSTER VARIABLES ---
+if [ -f $HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.cfg ]; then
+  . $HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.cfg
+fi
+
+if [ "$TDH_DEPLOYMENT_CLUSTER_PLAN" == "dev" ]; then
+  TDH_TKGMC_CONFIG=$TDH_TKGMC_WC_CONFIG_DEV
+else
+  TDH_TKGMC_CONFIG=$TDH_TKGMC_WC_CONFIG_PROD
+fi
+
+# --- DIRTY FIX ---
+export TDH_INFRASTRUCTURE=$TDH_TKGMC_INFRASTRUCTURE
+export TDH_DEPLOYMENT_ENV_NAME=$TDH_INFRASTRUCTURE
+export TDH_TLS_CERT=tanzu-demo-hub
+export TDH_TLS_SECRET=${TDH_TLS_CERT}-tls
+export TDH_TLS_ISSUER_NAME=letsencrypt-staging
+export TDH_TLS_ISSUER_CONFIG=/tmp/issuer-dns-manager1.yaml
+
+if [ ! -f /tdh_tools_docker_container  ]; then
+  echo ""
+  echo "Tanzu Demo Hub - Deploy TKG Workload Cluster"
+  echo "by Sacha Dubois, VMware Inc,"
+  echo "-----------------------------------------------------------------------------------------------------------"
+
+  # --- VERIFY TOOLS AND ACCESS ---
+  checkCLIcommands BASIC
+
+  if [ $NATIVE -eq 0 ]; then
+    tdh_tools_build
+
+    messagePrint " ▪ Running TDH Tools Docker Container" "tdh-tools:latest $TDHPATH/$CMD_EXEC $CMD_ARGS"
+
+    cid=$(docker ps -a | grep tdh-tools:latest | awk '{ print $1 }')
+    [ "$cid" != "" ] && for n in $cid; do docker rm $n -f > /dev/null 2>&1; done
+
+    mkdir -p $HOME/.mc $HOME/.cache $HOME/.config $HOME/.local
+    mkdir -p /tmp/docker && chmod a+w /tmp/docker
+    docker run -it --rm --name tdh-tools -v /var/run/docker.sock:/var/run/docker.sock tdh-tools:latest  chmod 666 /var/run/docker.sock > /dev/null 2>&1
+    #docker run -u $(id -u):$(id -g) --group-add 0 -it --rm --name tdh-tools \
+    #   -e "KUBECONFIG=$HOME/.kube/config" --hostname tdh-tools tdh-tools:latest $TDHPATH/$CMD_EXEC $CMD_ARGS
+    docker run -u $(id -u):$(id -g) -it --rm --name tdh-tools \
+       -v $HOME:$HOME:ro -v $HOME/.local:$HOME/.local:rw -v $HOME/.tanzu-demo-hub:$HOME/.tanzu-demo-hub:rw \
+       -v /var/run/docker.sock:/var/run/docker.sock -v $HOME/.cache:$HOME/.cache:rw -v $HOME/.config:$HOME/.config:rw \
+       -v $HOME/.aws:$HOME/.aws:rw -v $HOME/.vmware-cna-saas:$HOME/.vmware-cna-saas:rw -v $HOME/.azure:$HOME/.azure:rw \
+       -v /tmp:/tmp:rw -v /tmp/docker:$HOME/.docker:rw -v $HOME/.mc:$HOME/.mc:rw -v $HOME/.tanzu:$HOME/.tanzu:rw \
+       -v $HOME/.kube-tkg:$HOME/.kube-tkg:rw -v $HOME/.kube:$HOME/.kube:rw \
+       -e "KUBECONFIG=$HOME/.kube/config" --hostname tdh-tools tdh-tools:latest $TDHPATH/$CMD_EXEC $CMD_ARGS; ret=$?
+
+    # --- FINISH CURRENT SESSION AS WE RUN AS CONTAINER ---
+    exit $ret
+  else
+    # --- VERYFY ACCESS TO CLOUD ---
+    checkTDHenvironment
+
+    # --- VERIFY TOOLS AND ACCESS ---
+    checkCloudCLI
+    checkCLIcommands TOOLS
+    checkCLIcommands TKG
+    checkCLIcommands TANZU
+    checkCLIcommands TMC
+  fi
+fi
+
+if [ "$TDH_TKGWC_K8S_VERSION" != "" ]; then 
+  tanzu kubernetes-release get 2323 | sed '1d'
+  cnt=$(tanzu kubernetes-release get $TDH_TKGWC_K8S_VERSION | sed '1d' | wc -l | sed 's/  *//g') 
+  if [ $cnt -eq 0 ]; then 
+    cnt=$(tanzu kubernetes-release get | grep -c " $TDH_TKGWC_K8S_VERSION ")
+    if [ $cnt -gt 0 ]; then 
+      echo "ERROR: Kubernetes Version ($TDH_TKGWC_K8S_VERSION) not found, Please take the 'NAME'"
+      echo "       instead of the 'VERSION'."
+      echo "       => tanzu kubernetes-release get"
+      echo ""
+      tanzu kubernetes-release get
+      echo "-----------------------------------------------------------------------------------------------------------"
+      exit
+    else
+      echo "ERROR: Kubernetes Version ($TDH_TKGWC_K8S_VERSION) not found, Please choose one from"
+      echo "       the 'NAME' Column."
+      echo "       => tanzu kubernetes-release get"
+      echo ""
+      tanzu kubernetes-release get
+      echo "-----------------------------------------------------------------------------------------------------------"
+      exit
+    fi
+  fi
+else
+  TDH_TKGWC_K8S_VERSION=$(tanzu kubernetes-release get | tail -1 | awk '{ print $1 }')
+fi
+
+# --- GET TDH_TKGWC_CPIP_ADDRESS FROM NAME TAG ---
+if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "vSphere" ]; then
+  if [ "$TDH_TKGWC_NAME_TAG" == "TKG_CLUSTER_01" -o "$TDH_TKGWC_NAME_TAG" == "TKG_CLUSTER_02" -o \
+       "$TDH_TKGWC_NAME_TAG" == "TKG_CLUSTER_03" ]; then
+
+    if [ "$TDH_TKGWC_NAME_TAG" == "TKG_CLUSTER_01" ]; then 
+      TDH_TKGWC_CPIP_ADDRESS=$VSPHERE_TKGM_WKLD_CLUSTER01_CONTROL_PLANE
+      TDH_TKGWC_LB_ADDRESS=$VSPHERE_TKGM_WKLD_CLUSTER01_LOADBALANCER_POOL
+    fi
+
+    if [ "$TDH_TKGWC_NAME_TAG" == "TKG_CLUSTER_02" ]; then 
+      TDH_TKGWC_CPIP_ADDRESS=$VSPHERE_TKGM_WKLD_CLUSTER02_CONTROL_PLANE
+      TDH_TKGWC_LB_ADDRESS=$VSPHERE_TKGM_WKLD_CLUSTER03_LOADBALANCER_POOL
+    fi
+
+    if [ "$TDH_TKGWC_NAME_TAG" == "TKG_CLUSTER_04" ]; then 
+      TDH_TKGWC_CPIP_ADDRESS=$VSPHERE_TKGM_WKLD_CLUSTER04_CONTROL_PLANE
+      TDH_TKGWC_LB_ADDRESS=$VSPHERE_TKGM_WKLD_CLUSTER04_LOADBALANCER_POOL
+    fi
+  else
+    echo "ERROR: Option -tag should be either: TKG_CLUSTER_01, TKG_CLUSTER_02 or TKG_CLUSTER_03"
+    usage; exit 0
+  fi
+
+  #TDH_TKGWC_CPIP_ADDRESS
+  #TDH_TKGWC_NAME_TAG
+fi
+
+<<<<<<< HEAD
+=======
+if [ "$TDH_DEPLOYMENT_CLUSTER_PLAN" == "dev" ]; then 
+#  cat $HOME/.tanzu/tkg/clusterconfigs/${TDH_TKGMC_NAME}-wc-dev.yaml $HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.yaml | \
+#     egrep -v "^#|VSPHERE_CONTROL_PLANE_ENDPOINT" | sed -e '/^$/d' > $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml
+#
+#  echo "CLUSTER_NAME: $TDH_TKGWC_NAME" >> $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml
+#  if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "vSphere" ]; then
+#    echo "VSPHERE_CONTROL_PLANE_ENDPOINT: $TDH_TKGWC_CPIP_ADDRESS" >> $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml
+#  fi
+#
+#  echo "WORKER_MACHINE_COUNT: $TDH_TKGWC_WORKERNODES" >> $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml
+#
+#  cat $HOME/.tanzu/tkg/clusterconfigs/${TDH_TKGMC_NAME}-wc-dev.yaml egrep -v "^#|VSPHERE_CONTROL_PLANE_ENDPOINT" | sed -e '/^$/d' > $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml
+
+  # --- GENERATE WORKLOAD CLUSTER CONFIG FILE ---
+  egrep -v "^#|VSPHERE_CONTROL_PLANE_ENDPOINT" $HOME/.tanzu/tkg/clusterconfigs/${TDH_TKGMC_NAME}-wc-dev.yaml | \
+  sed -e '/^$/d'                                      >  $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml
+  echo "CLUSTER_NAME: $TDH_TKGWC_NAME"                >> $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml
+  echo "WORKER_MACHINE_COUNT: $TDH_TKGWC_WORKERNODES" >> $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml
+  echo "CNI: antrea"                                  >> $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml
+
+  # --- TKG ON VSPHERE RELEATED CONFIG ---
+  if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "vSphere" ]; then
+    # --- SET DEFAULT VALUES ---
+    [ "$TDH_TKGWC_CONTROL_PLANE_MEM_MIB" == "" ] && TDH_TKGWC_CONTROL_PLANE_MEM_MIB=8192
+    [ "$TDH_TKGWC_CONTROL_PLANE_NUM_CPUS" == "" ] && TDH_TKGWC_CONTROL_PLANE_NUM_CPUS=4
+    [ "$TDH_TKGWC_CONTROL_PLANE_DISK_GIB" == "" ] && TDH_TKGWC_CONTROL_PLANE_DISK_GIB=40
+    [ "$TDH_TKGWC_WORKER_DISK_GIB" == "" ] && TDH_TKGWC_WORKER_DISK_GIB=40
+    [ "$TDH_TKGWC_WORKER_MEM_MIB" == "" ] && TDH_TKGWC_WORKER_MEM_MIB=8192
+    [ "$TDH_TKGWC_WORKER_NUM_CPUS" == "" ] && TDH_TKGWC_WORKER_NUM_CPUS=2
+
+    # --- RESOURCE DEFINITIONS ---
+    echo "VSPHERE_CONTROL_PLANE_DISK_GIB: \"$TDH_TKGWC_CONTROL_PLANE_DISK_GIB\""  >> $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml 
+    echo "VSPHERE_CONTROL_PLANE_MEM_MIB: \"$TDH_TKGWC_CONTROL_PLANE_MEM_MIB\""     >> $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml
+    echo "VSPHERE_CONTROL_PLANE_NUM_CPUS: \"$TDH_TKGWC_CONTROL_PLANE_NUM_CPUS\""  >> $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml
+    echo "VSPHERE_WORKER_DISK_GIB: \"$TDH_TKGWC_WORKER_DISK_GIB\""                >> $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml
+    echo "VSPHERE_WORKER_MEM_MIB: \"$TDH_TKGWC_WORKER_MEM_MIB\""                  >> $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml
+    echo "VSPHERE_WORKER_NUM_CPUS: \"$TDH_TKGWC_WORKER_NUM_CPUS\""                >> $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml
+
+    echo "VSPHERE_CONTROL_PLANE_ENDPOINT: $TDH_TKGWC_CPIP_ADDRESS"                >> $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml
+  fi
+else
+  cat $HOME/.tanzu/tkg/clusterconfigs/${TDH_TKGMC_NAME}-wc-dev.yaml $HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.yaml | \
+     egrep -v "^#|VSPHERE_CONTROL_PLANE_ENDPOINT" | sed -e '/^$/d' > $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml
+
+  echo "CLUSTER_NAME: $TDH_TKGWC_NAME" >> $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml
+  if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "vSphere" ]; then
+    echo "VSPHERE_CONTROL_PLANE_ENDPOINT: $TDH_TKGWC_CPIP_ADDRESS" >> $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml
+  fi
+
+  echo "WORKER_MACHINE_COUNT: $TDH_TKGWC_WORKERNODES" >> $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml
+fi
+
+echo "$HOME/.tanzu/tkg/clusterconfigs/${TDH_TKGMC_NAME}-wc-dev.yaml"
+echo "$HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.yaml"
+echo "$HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml"
+
+>>>>>>> 18ff10e01b5c1412ff3498f02a2e58b4d8856865
+messageTitle "Tanzu Kubernetes Grid Deployment"
+messagePrint " ▪ Management Cluster Name"               "$TDH_TKGMC_NAME"
+messagePrint " ▪ Management Cluster Configuration"      "deployments/${TDH_TKGMC_NAME}.cfg"
+messagePrint " ▪ Deployment Configuration"              "deployments/$TKG_DEPLOYMENT"
+messagePrint " ▪ Workload Cluster Name"                 "$TDH_TKGWC_NAME"
+messagePrint " ▪ Workload Cluster Cloud Config"         "$HOME/.tanzu/tkg/clusterconfigs/$TDH_TKGMC_CONFIG"
+messagePrint " ▪ Workload Cluster Configuration"        "deployments/$TKG_DEPLOYMENT"
+messagePrint " ▪ Workload Cluster consolidated Config"  "$HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml"
+
+[ "$TDH_DEPLOYMENT_CLUSTER_PLAN" == "dev" ] && DEP_SOURCE=$HOME/.tanzu/tkg/clusterconfigs/${TDH_TKGMC_NAME}-wc-dev.yaml
+[ "$TDH_DEPLOYMENT_CLUSTER_PLAN" == "dev" ] && DEP_SOURCE=$HOME/.tanzu/tkg/clusterconfigs/${TDH_TKGMC_NAME}-wc-prod.yaml
+  
+# --- GENERATE WORKLOAD CLUSTER CONFIG FILE ---
+CLUSTER_CONFIG_FILE=$HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml
+
+egrep -v "^#|ENDPOINT" $DEP_SOURCE | sed -e '/^$/d'                               >  $CLUSTER_CONFIG_FILE
+echo "CLUSTER_NAME: $TDH_TKGWC_NAME"                                              >> $CLUSTER_CONFIG_FILE
+echo "WORKER_MACHINE_COUNT: $TDH_TKGWC_WORKERNODES"                               >> $CLUSTER_CONFIG_FILE
+echo "CNI: antrea"                                                                >> $CLUSTER_CONFIG_FILE
+
+# --- TKG ON VSPHERE RELEATED CONFIG ---
+if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "vSphere" ]; then
+  # --- SET DEFAULT VALUES ---
+  [ "$TDH_TKGWC_CONTROL_PLANE_MEM_MIB" == "" ] && TDH_TKGWC_CONTROL_PLANE_MEM_MIB=8192
+  [ "$TDH_TKGWC_CONTROL_PLANE_NUM_CPUS" == "" ] && TDH_TKGWC_CONTROL_PLANE_NUM_CPUS=4
+  [ "$TDH_TKGWC_CONTROL_PLANE_DISK_GIB" == "" ] && TDH_TKGWC_CONTROL_PLANE_DISK_GIB=40
+  [ "$TDH_TKGWC_WORKER_DISK_GIB" == "" ] && TDH_TKGWC_WORKER_DISK_GIB=40
+  [ "$TDH_TKGWC_WORKER_MEM_MIB" == "" ] && TDH_TKGWC_WORKER_MEM_MIB=8192
+  [ "$TDH_TKGWC_WORKER_NUM_CPUS" == "" ] && TDH_TKGWC_WORKER_NUM_CPUS=2
+
+  messagePrint " ▪ Control Plane Machine CPU"     "$TDH_TKGWC_CONTROL_PLANE_NUM_CPUS"
+  messagePrint " ▪ Control Plane Machine Memory"  "$TDH_TKGWC_CONTROL_PLANE_MEM_MIB"
+  messagePrint " ▪ Control Plane Machine Disk"    "$TDH_TKGWC_CONTROL_PLANE_DISK_GIB"
+  messagePrint " ▪ Worker Node Machine CPU"       "$TDH_TKGWC_WORKER_NUM_CPUS"
+  messagePrint " ▪ Worker Node Machine Memory"    "$TDH_TKGWC_WORKER_MEM_MIB"
+  messagePrint " ▪ Worker Node Machine Disk"      "$TDH_TKGWC_WORKER_DISK_GIB"
+
+  # --- RESOURCE DEFINITIONS ---
+  echo "VSPHERE_CONTROL_PLANE_DISK_GIB: \"$TDH_TKGWC_CONTROL_PLANE_DISK_GIB\""    >> $CLUSTER_CONFIG_FILE
+  echo "VSPHERE_CONTROL_PLANE_MEM_MIB: \"TDH_TKGWC_CONTROL_PLANE_MEM_MIB\""       >> $CLUSTER_CONFIG_FILE
+  echo "VSPHERE_CONTROL_PLANE_NUM_CPUS: \"$TDH_TKGWC_CONTROL_PLANE_NUM_CPUS\""    >> $CLUSTER_CONFIG_FILE
+  echo "VSPHERE_WORKER_DISK_GIB: \"$TDH_TKGWC_WORKER_DISK_GIB\""                  >> $CLUSTER_CONFIG_FILE
+  echo "VSPHERE_WORKER_MEM_MIB: \"$TDH_TKGWC_WORKER_MEM_MIB\""                    >> $CLUSTER_CONFIG_FILE
+  echo "VSPHERE_WORKER_NUM_CPUS: \"$TDH_TKGWC_WORKER_NUM_CPUS\""                  >> $CLUSTER_CONFIG_FILE
+
+  echo "VSPHERE_CONTROL_PLANE_ENDPOINT: $TDH_TKGWC_CPIP_ADDRESS"                  >> $CLUSTER_CONFIG_FILE
+fi
+
+if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "Azure" ]; then
+  # --- SET DEFAULT VALUES ---
+  [ "$TDH_TKGWC_CONTROL_PLANE_MACHINE_TYPE" == "" ] && TDH_TKGWC_CONTROL_PLANE_MACHINE_TYPE=Standard_D3_v2
+  [ "$TDH_TKGWC_MACHINE_TYPE" == "" ] && TDH_TKGWC_MACHINE_TYPE=Standard_D2_v4
+
+  messagePrint " ▪ Control Plane Machine Type"    "$TDH_TKGWC_CONTROL_PLANE_MACHINE_TYPE"
+  messagePrint " ▪ Worker Node Machine Type"      "$TDH_TKGWC_MACHINE_TYPE"
+
+  echo "AZURE_CONTROL_PLANE_MACHINE_TYPE: $TDH_TKGWC_CONTROL_PLANE_MACHINE_TYPE"  >> $CLUSTER_CONFIG_FILE
+  echo "AZURE_NODE_MACHINE_TYPE: $TDH_TKGWC_MACHINE_TYPE"                         >> $CLUSTER_CONFIG_FILE
+fi
+
+if [ $DEBUG -gt 0 ]; then 
+  echo "-----------------------------------------------------------------------------------------------------------"
+  cat $HOME/.tanzu/tkg/clusterconfigs/$TDH_TKGMC_CONFIG deployments/$TKG_DEPLOYMENT | egrep -v "^#" | sed -e '/^$/d'
+fi
+
+echo "tanzu cluster create $TDH_TKGWC_NAME -f $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml --tkr $TDH_TKGWC_K8S_VERSION"
+tanzu cluster get $TDH_TKGWC_NAME >/dev/null 2>&1; ret=$?
+if [ $ret -ne 0 ]; then  
+  echo "-----------------------------------------------------------------------------------------------------------"
+  echo "=> tanzu cluster create $TDH_TKGWC_NAME -f $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml --tkr $TDH_TKGWC_K8S_VERSION" 
+  tanzu cluster create $TDH_TKGWC_NAME -f $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml --tkr $TDH_TKGWC_K8S_VERSION
+  echo "-----------------------------------------------------------------------------------------------------------"
+fi
+
+# --- GET CREDENTIALS AND SET ENVIRONMENT ---
+tanzu cluster kubeconfig get $TDH_TKGWC_NAME --admin > /dev/null 2>&1
+
+
+echo "kubectl create deployment echoserver --image=datamanos/echoserver --port=8080"
+echo "kubectl expose deployment echoserver --port=8080 --type LoadBalancer"
+echo "kubectl get svc"
+
+# --- CLEANUP KUNECONFIG ---
+cleanKubeconfig
+setK8sEnvironment $TDH_TKGWC_NAME
+
+export TDH_TKGWC_CONTEXT=$(kubectl config current-context)
+export TDH_ENVNAME=$TDH_TKGMC_ENVNAME
+export TMC_PROVISIONER_NAME="attached"
+export TDH_MANAGEMENT_CLUSTER=$TDH_TKGMC_NAME
+
+uodateConfigMap tanzu-demo-hub TDH_DOMAIN                         $AWS_HOSTED_DNS_DOMAIN
+uodateConfigMap tanzu-demo-hub TDH_ENVNAME                        $TDH_TKGMC_ENVNAME
+uodateConfigMap tanzu-demo-hub TDH_DEPLOYMENT_TYPE                "tkg"
+uodateConfigMap tanzu-demo-hub TDH_MANAGED_BY_TMC                 "false"
+
+uodateConfigMap tanzu-demo-hub TDH_CLUSTER_NAME                   "$TDH_TKGWC_NAME"
+uodateConfigMap tanzu-demo-hub TDH_MANAGEMENT_CLUSTER             "$TDH_TKGMC_NAME"
+uodateConfigMap tanzu-demo-hub TDH_PROVISONER_NAME                "$TMC_PROVISIONER_NAME"
+uodateConfigMap tanzu-demo-hub TDH_MISSION_CONTROL_ACCOUNT_NAME   "ukn"
+
+if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "vSphere" ]; then
+  InstallMetallLB
+fi
+
+# --- INSTALL K8 SERVICES ---
+InstallCertManager
+InstallContour
+
+createClusterIssuer
+InstallHarborRegistry
+getRootCA tanzu-demo-hub-tls
+installBuildService
+installTanzuDataPostgres
+#installSpringCloudGateway
+installMinio
+
+if [ "$TDH_TANZU_MISSION_CONTROL_REGISTRATION" == "true" ]; then
+  cnt=$(tmc cluster list --name $TDH_TKGWC_NAME 2>/dev/null | grep -c $TDH_TKGWC_NAME)
+  if [ $cnt -gt 0 ]; then
+    stt=$(tmc cluster list --name $TDH_TKGWC_NAME -o json | jq -r '.clusters[].status.conditions."Agent-READY".status')
+    if [ "$stt" != "TRUE" ]; then 
+      #tmc cluster reattach --name $TDH_TKGWC_NAME -p tanzu-demo-hub -m $TDH_TKGMC_NAME > /dev/null 2>&1; ret=$?
+      tmc cluster reattach --name $TDH_TKGWC_NAME -p attached -m attached > /dev/null 2>&1; ret=$?
+      if [ $ret -ne 0 ]; then
+        MGMT=$(tmc cluster list --name $TDH_TKGWC_NAME | grep $TDH_TKGWC_NAME | awk '{ print $2 }')
+        PROV=$(tmc cluster list --name $TDH_TKGWC_NAME | grep $TDH_TKGWC_NAME | awk '{ print $3 }')
+        tmc cluster delete $TDH_TKGWC_NAME -p $PROV -m $MGMT -f > /dev/null 2>&1; ret=$?
+        if [ $ret -ne 0 ]; then
+          echo "ERROR: TMC failed to attach cluster"
+          echo "       => tmc cluster delete $TDH_TKGWC_NAME -p tanzu-demo-hub -m $TDH_TKGMC_NAME"
+          exit 1
+        fi
+
+        # --- WAIT FOR THE CLUSTER TO BE DELETED ---
+        cnt=1
+        while [ $cnt -ne 0 ]; do
+          cnt=$(tmc cluster list --name $TDH_TKGWC_NAME 2>/dev/null | grep -c $TDH_TKGWC_NAME)
+          sleep 20
+        done
+
+        cnt=0
+      fi
+    fi
+  fi
+
+  if [ $cnt -eq 0 ]; then
+    tmc cluster attach --name $TDH_TKGWC_NAME --kubeconfig $HOME/.kube/config -p tanzu-demo-hub \
+          -m $TDH_TKGMC_NAME -g tanzu-demo-hub > /dev/null 2>&1; ret=$?
+    if [ $ret -ne 0 ]; then
+      echo "ERROR: TMC failed to attach cluster"
+      echo "       => tmc cluster reattach --name $TDH_TKGWC_NAME --kubeconfig $HOME/.kube/config -p tanzu-demo-hub -m $TDH_TKGMC_NAME "
+      exit 1
+    fi
+  fi
+fi
+
+# --- NO CONNECTION FROM A PEZ-INTERNAL CLUSTER ---
+if [ "${TDH_TKGMC_INFRASTRUCTURE}" != "vSphere1" ]; then
+  checkTMCintegration      TO    ## Tanzu Observability (Wavefront)
+  checkTMCintegration      TDP   ## Tanzu Data Protection
+  checkTMCintegration      TCI   ## Tanzu Cluster Inspection
+fi
+
+
+echo "-----------------------------------------------------------------------------------------------------------"
+echo "Tanzu Kubernetes Grid Cluster ($TDH_TKGWC_NAME) build completed"
+echo "-----------------------------------------------------------------------------------------------------------"
+echo "1.) Set KUBECONFIG and set the cluster context"
+echo "    => kubectl config set-cluster ${TDH_TKGWC_NAME}"
+echo "    => kubectl config use-context ${TDH_TKGWC_CONTEXT}"
+echo "    => kubectl config get-contexts"
+echo "2.) Relaxing Pod Security in cluster ($TDH_TKGWC_NAME)"
+echo "    # Allow Privileged Pods for the Cluster"
+echo "    => kubectl create clusterrolebinding tanzu-demo-hub-privileged-cluster-role-binding \\"
+echo "        --clusterrole=vmware-system-tmc-psp-privileged --group=system:authenticated"
+echo "    # Allow Privileged Pods for a Namespace (my-namespace)"
+echo "    => kubectl create rolebinding tanzu-demo-hub-privileged-my-namespace-role-binding \\"
+echo "        --clusterrole=vmware-system-tmc-psp-privileged --group=system:authenticated -n my-namespace"
+echo "3.) Delete Cluster if not used anymore"
+echo "    => tanzu cluster delete $TDH_TKGWC_NAME"
+
+
+exit
+
