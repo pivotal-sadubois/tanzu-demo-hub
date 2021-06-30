@@ -4159,10 +4159,9 @@ installBuildService() {
     checkKubernetesServices registry_docker
     checkKubernetesServices github
   
-    messageTitle "Verify VMware Registry Access" 
-    messagePrint " ▪ Registry URL"                "$TDH_REGISTRY_VMWARE_NAME"
-    messagePrint " ▪ Registry User"               "$TDH_REGISTRY_VMWARE_USER"
-    messagePrint " ▪ Registry Password"           "$(maskPassword \"$TDH_REGISTRY_VMWARE_PASS\")"
+    messagePrint " ▪ Verify VMware Registry Access" "$TDH_REGISTRY_VMWARE_NAME"
+    messagePrint "   Registry User"                 "$TDH_REGISTRY_VMWARE_USER"
+    messagePrint "   Registry Password"             "$(maskPassword \"$TDH_REGISTRY_VMWARE_PASS\")"
   
     cnt=0; ret=1
     while [ $ret -ne 0 -a $cnt -lt 5 ]; do
@@ -4220,6 +4219,8 @@ installBuildService() {
       TDH_HARBOR_REGISTRY_ADMIN_PASSWORD=$(getConfigMap tanzu-demo-hub TDH_HARBOR_REGISTRY_ADMIN_PASSWORD)
   
       messagePrint " ▪ Verify Harbor Registry Access" "$TDH_HARBOR_REGISTRY_DNS_HARBOR"
+      messagePrint "   Registry User"                 "admin"
+      messagePrint "   Registry Password"             "$(maskPassword \"$TDH_HARBOR_REGISTRY_ADMIN_PASSWORD\")"
   
       cnt=0; ret=1
       while [ $ret -ne 0 -a $cnt -lt 5 ]; do
@@ -4376,7 +4377,7 @@ downloadFromPivnet() {
     messagePrint "   Download Location:" "/tmp/$file"
     pivnetAPIdownload $PCF_PIVNET_TOKEN $PRODUCT_SLUG $pid $fid $file
   else
-    messageTitle " ▪ Verify PIVNET Download ($PRODUCT_SLUG)" "$PRODUCT_SLUG"
+    messagePrint " ▪ Verify PIVNET Download ($PRODUCT_SLUG)" "$PRODUCT_SLUG"
     messagePrint "   Product Slug:" "$SLUG_VER"
     messagePrint "   Download Location:" "/tmp/$file"
   fi
