@@ -4763,10 +4763,13 @@ InstallContour() {
     exit 1
   fi
 
+echo "TDH_INFRASTRUCTURE:$TDH_INFRASTRUCTURE"
   # --- SET DNS RECORD ---
   if [ "$TDH_INFRASTRUCTURE" == "minikube" -o "$TDH_INFRASTRUCTURE" == "vSphere" -o "$TDH_INFRASTRUCTURE" == "azure" ]; then 
+echo gaga1
     setDNSrecord "$ipa" "${TDH_ENVNAME}" "${AWS_HOSTED_DNS_DOMAIN}" "*.apps-contour" "A"
   else
+echo gaga2
     setDNSalias "$ipa" "${TDH_ENVNAME}" "${AWS_HOSTED_DNS_DOMAIN}" "*.apps-contour" "A"
   fi
 
