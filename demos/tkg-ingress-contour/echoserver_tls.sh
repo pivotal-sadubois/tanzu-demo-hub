@@ -133,10 +133,6 @@ echo "     # --- Context Based Routing"
 echo "     => curl https://echoserver.${DOMAIN}/foo"
 echo "     => curl https://echoserver.${DOMAIN}/bar"
 echo ""
-echo "     # --- Domain Based Routing"
-echo "     => curl https://echoserver1.$DOMAIN"
-echo "     => curl https://echoserver2.$DOMAIN"
-echo ""
 
 exit
 
