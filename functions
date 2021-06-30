@@ -2393,12 +2393,18 @@ createTKGMCcluster() {
   fi
 
   if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "Azure" ]; then
+    # --- SET DEFAULT VALUES ---
+    [ "$TDH_TKGMC_CONTROL_PLANE_MACHINE_TYPE" == "" ] && TDH_TKGMC_CONTROL_PLANE_MACHINE_TYPE=Standard_D3_v2
+    [ "$TDH_TKGMC_MACHINE_TYPE" == "" ] && TDH_TKGMC_MACHINE_TYPE=Standard_D2_v4
+
     messageTitle "Creating TKG Managment Cluster"
     messagePrint " ▪ Cluster Name"                  "$TDH_TKGMC_NAME"
     messagePrint " ▪ Configuration File"            "\${HOME}/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.yaml"
     messagePrint " ▪ Cluster CIDR"                  "$TDH_TKGMC_CLUSTER_CIDR"
     messagePrint " ▪ Service CIDR"                  "$TDH_TKGMC_SERVICE_CIDR"
     messagePrint " ▪ Health Check Enabled"          "$TDH_TKGMC_MACHINE_HEALTH_CHECK_ENABLED"
+    messagePrint " ▪ Control Plane Machine Type"    "$TDH_TKGMC_CONTROL_PLANE_MACHINE_TYPE"
+    messagePrint " ▪ Worker Node Machine Type"      "$TDH_TKGMC_MACHINE_TYPE"
 
     [ -f ${HOME}/.tkg/config.yaml ] && rm -f ${HOME}/.tkg/config.yaml
     tkg get mc > /dev/null 2>&1
@@ -4597,8 +4603,14 @@ InstallContour() {
     echo "  imagePullSecrets:"                         >> /tmp/contour_values.yaml
     echo "    - tdh-docker-repo"                       >> /tmp/contour_values.yaml
 
-    helm install -f /tmp/contour_values.yaml ingress bitnami/contour -n $NAMESPACE --version $HELM_CONTOUR_VERSION > /dev/null 2>&1
-    #helm install -f /tmp/contour_values.yaml ingress bitnami/contour -n $NAMESPACE --version $HELM_CONTOUR_VERSION 
+    cnt=0; ret=1
+    while [ $ret -ne 0 -a $cnt -lt 5 ]; do
+      helm install -f /tmp/contour_values.yaml ingress bitnami/contour -n $NAMESPACE --version $HELM_CONTOUR_VERSION > /dev/null 2>&1; ret=$?
+      [ $ret -eq 0 ] && break
+      let cnt=cnt+1
+      sleep 30
+    done
+
     if [ $? -ne 0 ]; then
       echo "ERROR: failed to install bitnami/contour"
       echo "       => helm install -f /tmp/contour_values.yaml ingress bitnami/contour -n $NAMESPACE --version $HELM_CONTOUR_VERSION"
@@ -4916,7 +4928,14 @@ InstallCertManager() {
     #helm install cert-manager jetstack/cert-manager --namespace cert-manager \
     #   --version v1.0.2 --set installCRDs=true > /dev/null 2>&1
 
-    helm install cert-manager jetstack/cert-manager -n cert-manager --version v1.1.0 --set installCRDs=true > /dev/null 2>&1
+    cnt=0; ret=1
+    while [ $ret -ne 0 -a $cnt -lt 5 ]; do
+      helm install cert-manager jetstack/cert-manager -n cert-manager --version v1.1.0 --set installCRDs=true > /dev/null 2>&1; ret=$?
+      [ $ret -eq 0 ] && break
+      let cnt=cnt+1
+      sleep 30
+    done
+
     if [ $? -ne 0 ]; then
       echo "ERROR: failed to install jetstack/cert-manager "
       echo "       => helm install cert-manager jetstack/cert-manager --namespace cert-manager \\"
@@ -5052,7 +5071,15 @@ InstallHarborRegistry() {
 #gaga1
     messagePrint " ▪ Install Harbor Helm Chart"           "bitnami/contour"
     messagePrint " ▪ Install Harbor Helm Chart Version"   "$HELM_HARBOR_VERSION"
-    helm install harbor bitnami/harbor -f $HARBOR_VALUES --version HELM_HARBOR_VERSION -n $NAMESPACE > /dev/null 2>&1
+
+    cnt=0; ret=1
+    while [ $ret -ne 0 -a $cnt -lt 5 ]; do
+      helm install harbor bitnami/harbor -f $HARBOR_VALUES --version HELM_HARBOR_VERSION -n $NAMESPACE > /dev/null 2>&1; ret=$?
+      [ $ret -eq 0 ] && break
+      let cnt=cnt+1
+      sleep 30
+    done
+
     if [ $? -ne 0 ]; then
       echo "ERROR: failed to install bitnami/harbor"
       echo "       => helm install harbor bitnami/harbor -f $HARBOR_VALUES --version $HELM_HARBOR_VERSION -n $NAMESPACE"
