@@ -4748,26 +4748,25 @@ InstallContour() {
   # --- VERIFY DNS DOMAIN ---
   verifyHostedZone ${TDH_ENVNAME}.$AWS_HOSTED_DNS_DOMAIN
 
+  ipa=""; cnt=0
+  while [ "$ipa" == "" -a $cnt -lt 5 ]; do
+    ipa=$(kubectl describe svc ingress-contour-envoy --namespace ingress-contour | grep Ingress | awk '{print $3}')
+    [ "$ipa" == "" ] && break
+    let cnt=cnt+1
+    sleep 30
+  done
+
+  if [ "$ipa" == "" ]; then
+    echo "ERROR: Failed to gather IP Adress of the ingress-contour-envoy service in namespace ingress-contour"
+    echo "       Please check manually:"
+    echo "       => kubectl get svc --namespace ingress-contour"
+    exit 1
+  fi
+
   # --- SET DNS RECORD ---
   if [ "$TDH_INFRASTRUCTURE" == "minikube" -o "$TDH_INFRASTRUCTURE" == "vSphere" ]; then 
-    ipa=$(kubectl describe svc ingress-contour-envoy --namespace ingress-contour | grep Ingress | awk '{print $3}')
     setDNSrecord "$ipa" "${TDH_ENVNAME}" "${AWS_HOSTED_DNS_DOMAIN}" "*.apps-contour" "A"
   else
-    ipa=""; cnt=0
-    while [ "$ipa" == "" -a $cnt -lt 5 ]; do
-      ipa=$(kubectl describe svc ingress-contour-envoy --namespace ingress-contour | grep Ingress | awk '{print $3}')
-      [ "$ipa" == "" ] && break
-      let cnt=cnt+1
-      sleep 30
-    done
-
-    if [ "$ipa" == "" ]; then 
-      echo "ERROR: Failed to gather IP Adress of the ingress-contour-envoy service in namespace ingress-contour"
-      echo "       Please check manually:"
-      echo "       => kubectl get svc --namespace ingress-contour"
-      exit 1
-    fi
-
     setDNSalias "$ipa" "${TDH_ENVNAME}" "${AWS_HOSTED_DNS_DOMAIN}" "*.apps-contour" "A"
   fi
 
