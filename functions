@@ -4747,11 +4747,11 @@ InstallContour() {
 
   # --- VERIFY DNS DOMAIN ---
   verifyHostedZone ${TDH_ENVNAME}.$AWS_HOSTED_DNS_DOMAIN
+echo "ZONE: ${TDH_ENVNAME}.$AWS_HOSTED_DNS_DOMAIN"
+echo "TDH_ENVNAME:$TDH_ENVNAME"
 
   ipa=""; cnt=0
   while [ "$ipa" == "" -a $cnt -lt 15 ]; do
-#gaga
-date
     ipa=$(kubectl describe svc ingress-contour-envoy --namespace ingress-contour | grep Ingress | awk '{print $3}')
     [ "$ipa" != "" ] && break
     let cnt=cnt+1
