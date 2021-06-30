@@ -302,16 +302,54 @@ if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "vSphere" ]; then
   #TDH_TKGWC_NAME_TAG
 fi
 
-if [ "$TDH_DEPLOYMENT_CLUSTER_PLAN" == "dev" ]; then 
-  cat $HOME/.tanzu/tkg/clusterconfigs/${TDH_TKGMC_NAME}-wc-dev.yaml $HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.yaml | \
-     egrep -v "^#|VSPHERE_CONTROL_PLANE_ENDPOINT" | sed -e '/^$/d' > $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml
+# --- SET DEFAULT VALUES ---
+[ "$TDH_TKGWC_CONTROL_PLANE_MEM_MIB" == "" ] && TDH_TKGWC_CONTROL_PLANE_MEM_MIB=8192
+[ "$TDH_TKGWC_CONTROL_PLANE_NUM_CPUS" == "" ] && TDH_TKGWC_CONTROL_PLANE_NUM_CPUS=4
+[ "$TDH_TKGWC_CONTROL_PLANE_DISK_GIB" == "" ] && TDH_TKGWC_CONTROL_PLANE_DISK_GIB=40
+[ "$TDH_TKGWC_WORKER_DISK_GIB" == "" ] && TDH_TKGWC_WORKER_DISK_GIB=40
+[ "$TDH_TKGWC_WORKER_MEM_MIB" == "" ] && TDH_TKGWC_WORKER_MEM_MIB=8192
+[ "$TDH_TKGWC_WORKER_NUM_CPUS" == "" ] && TDH_TKGWC_WORKER_NUM_CPUS=2
 
-  echo "CLUSTER_NAME: $TDH_TKGWC_NAME" >> $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml
+if [ "$TDH_DEPLOYMENT_CLUSTER_PLAN" == "dev" ]; then 
+#  cat $HOME/.tanzu/tkg/clusterconfigs/${TDH_TKGMC_NAME}-wc-dev.yaml $HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.yaml | \
+#     egrep -v "^#|VSPHERE_CONTROL_PLANE_ENDPOINT" | sed -e '/^$/d' > $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml
+#
+#  echo "CLUSTER_NAME: $TDH_TKGWC_NAME" >> $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml
+#  if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "vSphere" ]; then
+#    echo "VSPHERE_CONTROL_PLANE_ENDPOINT: $TDH_TKGWC_CPIP_ADDRESS" >> $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml
+#  fi
+#
+#  echo "WORKER_MACHINE_COUNT: $TDH_TKGWC_WORKERNODES" >> $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml
+#
+#  cat $HOME/.tanzu/tkg/clusterconfigs/${TDH_TKGMC_NAME}-wc-dev.yaml egrep -v "^#|VSPHERE_CONTROL_PLANE_ENDPOINT" | sed -e '/^$/d' > $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml
+
+  # --- GENERATE WORKLOAD CLUSTER CONFIG FILE ---
+  egrep -v "^#|VSPHERE_CONTROL_PLANE_ENDPOINT" $HOME/.tanzu/tkg/clusterconfigs/${TDH_TKGMC_NAME}-wc-dev.yaml | \
+  sed -e '/^$/d'                                      >  $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml
+  echo "CLUSTER_NAME: $TDH_TKGWC_NAME"                >> $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml
+  echo "WORKER_MACHINE_COUNT: $TDH_TKGWC_WORKERNODES" >> $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml
+  echo "CNI: antrea"                                  >> $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml
+
+  # --- TKG ON VSPHERE RELEATED CONFIG ---
   if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "vSphere" ]; then
+    # --- SET DEFAULT VALUES ---
+    [ "$TDH_TKGWC_CONTROL_PLANE_MEM_MIB" == "" ] && TDH_TKGWC_CONTROL_PLANE_MEM_MIB=8192
+    [ "$TDH_TKGWC_CONTROL_PLANE_NUM_CPUS" == "" ] && TDH_TKGWC_CONTROL_PLANE_NUM_CPUS=4
+    [ "$TDH_TKGWC_CONTROL_PLANE_DISK_GIB" == "" ] && TDH_TKGWC_CONTROL_PLANE_DISK_GIB=40
+    [ "$TDH_TKGWC_WORKER_DISK_GIB" == "" ] && TDH_TKGWC_WORKER_DISK_GIB=40
+    [ "$TDH_TKGWC_WORKER_MEM_MIB" == "" ] && TDH_TKGWC_WORKER_MEM_MIB=8192
+    [ "$TDH_TKGWC_WORKER_NUM_CPUS" == "" ] && TDH_TKGWC_WORKER_NUM_CPUS=2
+
+    # --- RESOURCE DEFINITIONS ---
+    echo "VSPHERE_CONTROL_PLANE_DISK_GIB: \"$TDH_TKGWC_CONTROL_PLANE_DISK_GIB\""  >> $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml 
+    echo "VSPHERE_CONTROL_PLANE_MEM_MIB: \"TDH_TKGWC_CONTROL_PLANE_MEM_MIB\""     >> $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml
+    echo "VSPHERE_CONTROL_PLANE_NUM_CPUS: \"$TDH_TKGWC_CONTROL_PLANE_NUM_CPUS\""  >> $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml
+    echo "VSPHERE_WORKER_DISK_GIB: \"$TDH_TKGWC_WORKER_DISK_GIB\""                >> $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml
+    echo "VSPHERE_WORKER_MEM_MIB: \"$TDH_TKGWC_WORKER_MEM_MIB\""                  >> $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml
+    echo "VSPHERE_WORKER_NUM_CPUS: \"$TDH_TKGWC_WORKER_NUM_CPUS\""                >> $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml
+
     echo "VSPHERE_CONTROL_PLANE_ENDPOINT: $TDH_TKGWC_CPIP_ADDRESS" >> $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml
   fi
-
-  echo "WORKER_MACHINE_COUNT: $TDH_TKGWC_WORKERNODES" >> $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml
 else
   cat $HOME/.tanzu/tkg/clusterconfigs/${TDH_TKGMC_NAME}-wc-dev.yaml $HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.yaml | \
      egrep -v "^#|VSPHERE_CONTROL_PLANE_ENDPOINT" | sed -e '/^$/d' > $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml
@@ -323,6 +361,10 @@ else
 
   echo "WORKER_MACHINE_COUNT: $TDH_TKGWC_WORKERNODES" >> $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml
 fi
+
+echo "$HOME/.tanzu/tkg/clusterconfigs/${TDH_TKGMC_NAME}-wc-dev.yaml"
+echo "$HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.yaml"
+echo "$HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml"
 
 messageTitle "Tanzu Kubernetes Grid Deployment"
 messagePrint " ▪ Management Cluster Name"               "$TDH_TKGMC_NAME"
@@ -338,6 +380,7 @@ if [ $DEBUG -gt 0 ]; then
   cat $HOME/.tanzu/tkg/clusterconfigs/$TDH_TKGMC_CONFIG deployments/$TKG_DEPLOYMENT | egrep -v "^#" | sed -e '/^$/d'
 fi
 
+echo "tanzu cluster create $TDH_TKGWC_NAME -f $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml --tkr $TDH_TKGWC_K8S_VERSION"
 tanzu cluster get $TDH_TKGWC_NAME >/dev/null 2>&1; ret=$?
 if [ $ret -ne 0 ]; then  
   echo "-----------------------------------------------------------------------------------------------------------"
@@ -348,6 +391,11 @@ fi
 
 # --- GET CREDENTIALS AND SET ENVIRONMENT ---
 tanzu cluster kubeconfig get $TDH_TKGWC_NAME --admin > /dev/null 2>&1
+
+
+echo "kubectl create deployment echoserver --image=datamanos/echoserver --port=8080"
+echo "kubectl expose deployment echoserver --port=8080 --type LoadBalancer"
+echo "kubectl get svc"
 
 # --- CLEANUP KUNECONFIG ---
 cleanKubeconfig
