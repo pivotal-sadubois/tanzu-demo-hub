@@ -4707,13 +4707,13 @@ createClusterIssuer() {
     messagePrint " ▪ LetsEnscript DNSZone"             "*.apps-nginx.${TDH_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}"
 
     if [ "${AWS_CERT_ACCESS_KEY}" == "" -o "${AWS_CERT_SECRET_KEY}" == "" ]; then
-      messagePrint " ▪ LetsEnscript using AWS Route53 AccessKey" "AWS_ACCESS_KEY"
-      messagePrint " ▪ LetsEnscript using AWS Route53 SecretKey" "AWS_ACCESS_KEY"
+      messagePrint " ▪ LetsEnscript using AWS Route53 AccessKey" $(maskPassword "$AWS_ACCESS_KEY")
+      messagePrint " ▪ LetsEnscript using AWS Route53 SecretKey" $(maskPassword "$AWS_SECRET_KEY")
       export AWS_CERT_ACCESS_KEY=$AWS_ACCESS_KEY
       export AWS_CERT_SECRET_KEY=$AWS_SECRET_KEY
     else
-      messagePrint " ▪ LetsEnscript using AWS Route53 AccessKey" "AWS_CERT_ACCESS_KEY"
-      messagePrint " ▪ LetsEnscript using AWS Route53 SecretKey" "AWS_CERT_SECRET_KEY"
+      messagePrint " ▪ LetsEnscript using AWS Route53 AccessKey" $(maskPassword "$AWS_CERT_ACCESS_KEY")
+      messagePrint " ▪ LetsEnscript using AWS Route53 SecretKey" $(maskPassword "$AWS_CERT_SECRET_KEY")
     fi
 
     TDH_TLS_ISSUER_FILE=/tmp/$TDH_TLS_ISSUER_NAME
