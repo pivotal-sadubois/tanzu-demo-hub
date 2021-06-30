@@ -4281,7 +4281,7 @@ installBuildService() {
       echo "            => tail -100f /tmp/kp.log"
       echo "   ------------------------------------------------------------------------------------------------------------------------"
       cnt=0; ret=1
-      while [ $ret -ne 0 -a $cnt -lt 5 ]; do
+      while [ $ret -ne 0 -a $cnt -lt 50 ]; do
         if [ $DEBUG -eq 1 ]; then
           messageLine
           kp import -f /tmp/descriptor-$TDH_SERVICE_BUILD_SERVICE_DEPENDANCIES.yaml; ret=$?
