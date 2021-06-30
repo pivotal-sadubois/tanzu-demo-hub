@@ -5086,17 +5086,18 @@ InstallHarborRegistry() {
   HARBOR_HOSTNAME="harbor.apps-contour.$TDH_ENVNAME.$AWS_HOSTED_DNS_DOMAIN"
   NOTARY_HOSTNAME="notary.apps-contour.$TDH_ENVNAME.$AWS_HOSTED_DNS_DOMAIN"
 
+  messageTitle "Harbor Reistry"
   kubectl get ns $NAMESPACE > /dev/null 2>&1
   if [ $? -ne 0 ]; then
-    messageTitle "Install Harbor Reistry"
 
     # --- VERIFY SERVICE CONFIGURATION ---
     checkKubernetesServices harbor
 
-    messagePrint " ▪ Harbor Registry Server"               "harbor.apps-contour.$TDH_ENVNAME.$AWS_HOSTED_DNS_DOMAIN"
-    messagePrint " ▪ Harbor Notary Server "                "notary.apps-contour.$TDH_ENVNAME.$AWS_HOSTED_DNS_DOMAIN"
-    messagePrint " ▪ Harbor Admin Password"                $(maskPassword "$TDH_HARBOR_ADMIN_PASSWORD")
-    messagePrint " ▪ Harbor TLS Staging Cert"              "$TDH_HARBOR_STAGING_TLS_CERT"
+    messagePrint " ▪ Install Harbor Reistry" "bitnami/harbor"
+    messagePrint "   Harbor Registry Server"               "harbor.apps-contour.$TDH_ENVNAME.$AWS_HOSTED_DNS_DOMAIN"
+    messagePrint "   Harbor Notary Server "                "notary.apps-contour.$TDH_ENVNAME.$AWS_HOSTED_DNS_DOMAIN"
+    messagePrint "   Harbor Admin Password"                $(maskPassword "$TDH_HARBOR_ADMIN_PASSWORD")
+    messagePrint "   Harbor TLS Staging Cert"              "$TDH_HARBOR_STAGING_TLS_CERT"
 
     # --- INSTALL CONTOUR INGRESS ---
     messagePrint " ▪ Create Namespace" "$NAMESPACE"
@@ -5161,10 +5162,20 @@ InstallHarborRegistry() {
     echo "      accessMode: ReadWriteOnce"                                                                                      >> $HARBOR_VALUES
     echo "      size: 50Gi"                                                                                                     >> $HARBOR_VALUES
 
-    helm install harbor bitnami/harbor -f $HARBOR_VALUES --version 9.2.2 -n $NAMESPACE > /dev/null 2>&1
+    HELM_HARBOR_VERSION=$(helm search repo bitnami/harbor | tail -1 | awk '{ print $2 }')
+
+    echo "global:"                                     >  /tmp/contour_values.yaml
+    echo "  imageRegistry: docker.io"                  >> /tmp/contour_values.yaml
+    echo "  imagePullSecrets:"                         >> /tmp/contour_values.yaml
+    echo "    - tdh-docker-repo"                       >> /tmp/contour_values.yaml
+
+#gaga1
+    messagePrint " ▪ Install Harbor Helm Chart"           "bitnami/contour"
+    messagePrint " ▪ Install Harbor Helm Chart Version"   "$HELM_HARBOR_VERSION"
+    helm install harbor bitnami/harbor -f $HARBOR_VALUES --version HELM_HARBOR_VERSION -n $NAMESPACE > /dev/null 2>&1
     if [ $? -ne 0 ]; then
       echo "ERROR: failed to install bitnami/harbor"
-      echo "       => helm install harbor bitnami/harbor -f $HARBOR_VALUES --version 9.2.2 -n $NAMESPACE"
+      echo "       => helm install harbor bitnami/harbor -f $HARBOR_VALUES --version $HELM_HARBOR_VERSION -n $NAMESPACE"
       exit 1
     fi
 
@@ -5196,12 +5207,12 @@ InstallHarborRegistry() {
   stt=$(helm -n $NAMESPACE ls -o json | jq -r '.[].status')
   dat=$(helm -n $NAMESPACE ls -o json | jq -r '.[].updated')
 
-  messageTitle "Verify Harbor Reistry"
-  messagePrint " ▪ Harbor Reistry Namespace:"         "$NAMESPACE"
-  messagePrint " ▪ Harbor Reistry Helm Chart:"        "$crt"
-  messagePrint " ▪ Harbor Reistry Version:"           "$ver"
-  messagePrint " ▪ Harbor Reistry Status:"            "$stt"
-  messagePrint " ▪ Harbor Reistry Installed/Updated:" "$dat"
+  messagePrint " ▪ Verify Harbor Reistry"             "bitnami/harbor"
+  messagePrint "   Harbor Reistry Namespace:"         "$NAMESPACE"
+  messagePrint "   Harbor Reistry Helm Chart:"        "$crt"
+  messagePrint "   Harbor Reistry Version:"           "$ver"
+  messagePrint "   Harbor Reistry Status:"            "$stt"
+  messagePrint "   Harbor Reistry Installed/Updated:" "$dat"
 
   # --- STORE SETTINGS IN CONFIGMAP ---
   uodateConfigMap tanzu-demo-hub TDH_HARBOR_REGISTRY_ENABLED        "true"
