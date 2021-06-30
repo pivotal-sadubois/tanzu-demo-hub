@@ -5093,8 +5093,8 @@ InstallHarborRegistry() {
     # --- VERIFY SERVICE CONFIGURATION ---
     checkKubernetesServices harbor
 
-    messagePrint " ▪ Harbor Registry/Notary Server"        "harbor.apps-contour.$TDH_ENVNAME.$AWS_HOSTED_DNS_DOMAIN"
-    messagePrint "  "                                      "notary.apps-contour.$TDH_ENVNAME.$AWS_HOSTED_DNS_DOMAIN"
+    messagePrint " ▪ Harbor Registry Server"               "harbor.apps-contour.$TDH_ENVNAME.$AWS_HOSTED_DNS_DOMAIN"
+    messagePrint " ▪ Harbor Notary Server "                "notary.apps-contour.$TDH_ENVNAME.$AWS_HOSTED_DNS_DOMAIN"
     messagePrint " ▪ Harbor Admin Password"                $(maskPassword "$TDH_HARBOR_ADMIN_PASSWORD")
     messagePrint " ▪ Harbor TLS Staging Cert"              "$TDH_HARBOR_STAGING_TLS_CERT"
 
