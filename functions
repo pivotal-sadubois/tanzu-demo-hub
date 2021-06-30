@@ -5068,13 +5068,12 @@ InstallHarborRegistry() {
     echo "  imagePullSecrets:"                         >> /tmp/contour_values.yaml
     echo "    - tdh-docker-repo"                       >> /tmp/contour_values.yaml
 
-#gaga1
     messagePrint " ▪ Install Harbor Helm Chart"           "bitnami/contour"
     messagePrint " ▪ Install Harbor Helm Chart Version"   "$HELM_HARBOR_VERSION"
 
     cnt=0; ret=1
     while [ $ret -ne 0 -a $cnt -lt 5 ]; do
-      helm install harbor bitnami/harbor -f $HARBOR_VALUES --version HELM_HARBOR_VERSION -n $NAMESPACE > /dev/null 2>&1; ret=$?
+      helm install harbor bitnami/harbor -f $HARBOR_VALUES --version $HELM_HARBOR_VERSION -n $NAMESPACE > /dev/null 2>&1; ret=$?
       [ $ret -eq 0 ] && break
       let cnt=cnt+1
       sleep 30
