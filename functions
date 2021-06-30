@@ -1214,9 +1214,17 @@ checkTMCintegration() {
         checkKubernetesServices tanzu_observability
 
         # --- INSTALL WAVEFRONT HELM CHART ---
+        helm repo add wavefront https://wavefronthq.github.io/helm/ > /dev/null 2>&1
+        if [ $? -ne 0 ]; then
+          echo "ERROR: failed to add helm registry https://wavefronthq.github.io/helm/"; exit 1
+        fi
+        helm repo update > /dev/null 2>&1
+
         helm uninstall wavefront -n $NAMESPACE > /dev/null 2>&1
         kubectl create ns $NAMESPACE > /dev/null 2>&1
         patchServiceAccount default $NAMESPACE
+        # kubectl patch serviceaccount wavefront-collector  -p '{"imagePullSecrets": [{"name": "tdh-docker-repo"}]}' -n -n wavefront
+        patchServiceAccount wavefront-collector $NAMESPACE
 
         # --- GRACE TIME ---
         ret=1; cnt=0
@@ -4102,7 +4110,7 @@ installTanzuDataPostgres() {
     fi
 
     if [ "$TDH_SERVICE_REGISTRY_HARBOR" == "true" ]; then
-      DNS_HARBOR=$(getConfigMap tanzu-demo-hub TDH_HARBOR_REGISTRY_DNS_HARBOR)
+      # DNS_HARBOR=$(getConfigMap tanzu-demo-hub TDH_HARBOR_REGISTRY_DNS_HARBOR)
       TDH_HARBOR_REGISTRY_DNS_HARBOR=$(getConfigMap tanzu-demo-hub TDH_HARBOR_REGISTRY_DNS_HARBOR)
       TDH_HARBOR_REGISTRY_ADMIN_PASSWORD=$(getConfigMap tanzu-demo-hub TDH_HARBOR_REGISTRY_ADMIN_PASSWORD)
       messagePrint " ▪ Verify Harbor Registry Access" "$TDH_HARBOR_REGISTRY_DNS_HARBOR"
@@ -4127,21 +4135,21 @@ installTanzuDataPostgres() {
         # --- CREATE NAMESPACE ---
         #kubectl create namespace $NAMESPACE > /dev/null 2>&1
   
-        # --- INSTALL CONTOUR INGRESS ---
+        # --- INSTALL POSTGRES ---
         POSTGRES_INSTALL_PATH="/tmp/postgres-for-kubernetes/postgres-for-kubernetes-v$TDH_SERVICE_TANZU_DATA_POSTGRES_VERSION"
-        REGISTRY="harbor.apps-contour.local.pcfsdu.com/library"
+        # REGISTRY="harbor.apps-contour.local.pcfsdu.com/library"
   
         docker load -i ${POSTGRES_INSTALL_PATH}/images/postgres-instance  > /dev/null 2>&1
         docker load -i ${POSTGRES_INSTALL_PATH}/images/postgres-operator  > /dev/null 2>&1
   
         messagePrint " ▪ Relocate Images (postgres-instance) to Harbor" "$REGISTRY/postgres-instance"
   
-        INSTANCE_IMAGE_NAME="${REGISTRY}/postgres-instance:$(cat $POSTGRES_INSTALL_PATH/images/postgres-instance-tag)"
+        INSTANCE_IMAGE_NAME="${TDH_HARBOR_REGISTRY_DNS_HARBOR}/library/postgres-instance:$(cat $POSTGRES_INSTALL_PATH/images/postgres-instance-tag)"
         docker tag $(cat $POSTGRES_INSTALL_PATH/images/postgres-instance-id) ${INSTANCE_IMAGE_NAME}  > /dev/null 2>&1
         docker push ${INSTANCE_IMAGE_NAME}  > /dev/null 2>&1
   
-        messagePrint " ▪ Reocate Images (postgres-operator) to Harbor" "$REGISTRY/postgres-operator"
-        OPERATOR_IMAGE_NAME="${REGISTRY}/postgres-operator:$(cat $POSTGRES_INSTALL_PATH/images/postgres-operator-tag)"
+        messagePrint " ▪ Reocate Images (postgres-operator) to Harbor" "$TDH_HARBOR_REGISTRY_DNS_HARBOR/postgres-operator"
+        OPERATOR_IMAGE_NAME="${TDH_HARBOR_REGISTRY_DNS_HARBOR}/library/postgres-operator:$(cat $POSTGRES_INSTALL_PATH/images/postgres-operator-tag)"
         docker tag $(cat $POSTGRES_INSTALL_PATH/images/postgres-operator-id) ${OPERATOR_IMAGE_NAME}  > /dev/null 2>&1
         docker push ${OPERATOR_IMAGE_NAME}  > /dev/null 2>&1
   
@@ -4151,8 +4159,8 @@ installTanzuDataPostgres() {
         #done
   
         messagePrint " ▪ Customize Postgres Helm Chart Values" "/tmp/values-overrides.yaml"
-        sed -e "s+operatorImageRepository: postgres-operator+operatorImageRepository: $REGISTRY/postgres-operator+g" \
-            -e "s+postgresImageRepository: postgres-instance+postgresImageRepository: $REGISTRY/postgres-instance+g" \
+        sed -e "s+operatorImageRepository: postgres-operator+operatorImageRepository: $TDH_HARBOR_REGISTRY_DNS_HARBOR/library/postgres-operator+g" \
+            -e "s+postgresImageRepository: postgres-instance+postgresImageRepository: $TDH_HARBOR_REGISTRY_DNS_HARBOR/library/postgres-instance+g" \
             ${POSTGRES_INSTALL_PATH}/operator/values.yaml > /tmp/values-overrides.yaml
         if [ "${DEBUG}" == "1" ]; then
           echo "-----------------------------------------------------------------------------------------------------------"
@@ -4168,6 +4176,11 @@ installTanzuDataPostgres() {
           echo "       => helm install postgres-operator -n $NAMESPACE -f /tmp/values-overrides.yaml ${POSTGRES_INSTALL_PATH}/operator/"
           exit 1
         fi
+
+        # patch serviceaccounts default and postgres-operator-service-account in the default namespace
+        patchServiceAccount default default
+        patchServiceAccount postgres-operator-service-account default
+
       fi
     fi
   fi
