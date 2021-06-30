@@ -5052,7 +5052,7 @@ InstallHarborRegistry() {
 #gaga1
     messagePrint " ▪ Install Harbor Helm Chart"           "bitnami/contour"
     messagePrint " ▪ Install Harbor Helm Chart Version"   "$HELM_HARBOR_VERSION"
-    helm install harbor bitnami/harbor -f $HARBOR_VALUES --version HELM_HARBOR_VERSION -n $NAMESPACE > /dev/null 2>&1
+    helm install harbor bitnami/harbor -f $HARBOR_VALUES --version $HELM_HARBOR_VERSION -n $NAMESPACE > /dev/null 2>&1
     if [ $? -ne 0 ]; then
       echo "ERROR: failed to install bitnami/harbor"
       echo "       => helm install harbor bitnami/harbor -f $HARBOR_VALUES --version $HELM_HARBOR_VERSION -n $NAMESPACE"
