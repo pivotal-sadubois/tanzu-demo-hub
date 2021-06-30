@@ -4122,10 +4122,10 @@ installBuildService() {
 
   # --- VERIFY INSTALLATION ---
   kp clusterbuilder list > /dev/null 2>&1; ret=$?
-  cnt=$(kp clusterbuilder list | grep -c false) 
+  cnt=$(kp clusterbuilder list 2>/dev/null | grep -c false) 
   if [ $ret -ne 0 -o $cnt -ne 0 ]; then 
     # --- NOT WORKING, SO CLEAN IT UP FIRST ---
-    for n in $(kp clusterbuilder list | awk '{ print $1 }'); do
+    for n in $(kp clusterbuilder list 2>/dev/null | awk '{ print $1 }'); do
       echo "kp clusterbuilder delete $n"
       kp clusterbuilder delete $n > /dev/null 2>&1
       if [ $ret -ne 0 ]; then 
