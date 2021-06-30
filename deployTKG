@@ -302,62 +302,6 @@ if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "vSphere" ]; then
   #TDH_TKGWC_NAME_TAG
 fi
 
-if [ "$TDH_DEPLOYMENT_CLUSTER_PLAN" == "dev" ]; then 
-#  cat $HOME/.tanzu/tkg/clusterconfigs/${TDH_TKGMC_NAME}-wc-dev.yaml $HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.yaml | \
-#     egrep -v "^#|VSPHERE_CONTROL_PLANE_ENDPOINT" | sed -e '/^$/d' > $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml
-#
-#  echo "CLUSTER_NAME: $TDH_TKGWC_NAME" >> $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml
-#  if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "vSphere" ]; then
-#    echo "VSPHERE_CONTROL_PLANE_ENDPOINT: $TDH_TKGWC_CPIP_ADDRESS" >> $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml
-#  fi
-#
-#  echo "WORKER_MACHINE_COUNT: $TDH_TKGWC_WORKERNODES" >> $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml
-#
-#  cat $HOME/.tanzu/tkg/clusterconfigs/${TDH_TKGMC_NAME}-wc-dev.yaml egrep -v "^#|VSPHERE_CONTROL_PLANE_ENDPOINT" | sed -e '/^$/d' > $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml
-
-  # --- GENERATE WORKLOAD CLUSTER CONFIG FILE ---
-  egrep -v "^#|VSPHERE_CONTROL_PLANE_ENDPOINT" $HOME/.tanzu/tkg/clusterconfigs/${TDH_TKGMC_NAME}-wc-dev.yaml | \
-  sed -e '/^$/d'                                      >  $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml
-  echo "CLUSTER_NAME: $TDH_TKGWC_NAME"                >> $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml
-  echo "WORKER_MACHINE_COUNT: $TDH_TKGWC_WORKERNODES" >> $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml
-  echo "CNI: antrea"                                  >> $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml
-
-  # --- TKG ON VSPHERE RELEATED CONFIG ---
-  if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "vSphere" ]; then
-    # --- SET DEFAULT VALUES ---
-    [ "$TDH_TKGWC_CONTROL_PLANE_MEM_MIB" == "" ] && TDH_TKGWC_CONTROL_PLANE_MEM_MIB=8192
-    [ "$TDH_TKGWC_CONTROL_PLANE_NUM_CPUS" == "" ] && TDH_TKGWC_CONTROL_PLANE_NUM_CPUS=4
-    [ "$TDH_TKGWC_CONTROL_PLANE_DISK_GIB" == "" ] && TDH_TKGWC_CONTROL_PLANE_DISK_GIB=40
-    [ "$TDH_TKGWC_WORKER_DISK_GIB" == "" ] && TDH_TKGWC_WORKER_DISK_GIB=40
-    [ "$TDH_TKGWC_WORKER_MEM_MIB" == "" ] && TDH_TKGWC_WORKER_MEM_MIB=8192
-    [ "$TDH_TKGWC_WORKER_NUM_CPUS" == "" ] && TDH_TKGWC_WORKER_NUM_CPUS=2
-
-    # --- RESOURCE DEFINITIONS ---
-    echo "VSPHERE_CONTROL_PLANE_DISK_GIB: \"$TDH_TKGWC_CONTROL_PLANE_DISK_GIB\""  >> $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml 
-    echo "VSPHERE_CONTROL_PLANE_MEM_MIB: \"TDH_TKGWC_CONTROL_PLANE_MEM_MIB\""     >> $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml
-    echo "VSPHERE_CONTROL_PLANE_NUM_CPUS: \"$TDH_TKGWC_CONTROL_PLANE_NUM_CPUS\""  >> $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml
-    echo "VSPHERE_WORKER_DISK_GIB: \"$TDH_TKGWC_WORKER_DISK_GIB\""                >> $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml
-    echo "VSPHERE_WORKER_MEM_MIB: \"$TDH_TKGWC_WORKER_MEM_MIB\""                  >> $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml
-    echo "VSPHERE_WORKER_NUM_CPUS: \"$TDH_TKGWC_WORKER_NUM_CPUS\""                >> $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml
-
-    echo "VSPHERE_CONTROL_PLANE_ENDPOINT: $TDH_TKGWC_CPIP_ADDRESS"                >> $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml
-  fi
-else
-  cat $HOME/.tanzu/tkg/clusterconfigs/${TDH_TKGMC_NAME}-wc-dev.yaml $HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.yaml | \
-     egrep -v "^#|VSPHERE_CONTROL_PLANE_ENDPOINT" | sed -e '/^$/d' > $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml
-
-  echo "CLUSTER_NAME: $TDH_TKGWC_NAME" >> $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml
-  if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "vSphere" ]; then
-    echo "VSPHERE_CONTROL_PLANE_ENDPOINT: $TDH_TKGWC_CPIP_ADDRESS" >> $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml
-  fi
-
-  echo "WORKER_MACHINE_COUNT: $TDH_TKGWC_WORKERNODES" >> $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml
-fi
-
-echo "$HOME/.tanzu/tkg/clusterconfigs/${TDH_TKGMC_NAME}-wc-dev.yaml"
-echo "$HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.yaml"
-echo "$HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml"
-
 messageTitle "Tanzu Kubernetes Grid Deployment"
 messagePrint " ▪ Management Cluster Name"               "$TDH_TKGMC_NAME"
 messagePrint " ▪ Management Cluster Configuration"      "deployments/${TDH_TKGMC_NAME}.cfg"
@@ -366,6 +310,57 @@ messagePrint " ▪ Workload Cluster Name"                 "$TDH_TKGWC_NAME"
 messagePrint " ▪ Workload Cluster Cloud Config"         "$HOME/.tanzu/tkg/clusterconfigs/$TDH_TKGMC_CONFIG"
 messagePrint " ▪ Workload Cluster Configuration"        "deployments/$TKG_DEPLOYMENT"
 messagePrint " ▪ Workload Cluster consolidated Config"  "$HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml"
+
+[ "$TDH_DEPLOYMENT_CLUSTER_PLAN" == "dev" ] && DEP_SOURCE=$HOME/.tanzu/tkg/clusterconfigs/${TDH_TKGMC_NAME}-wc-dev.yaml
+[ "$TDH_DEPLOYMENT_CLUSTER_PLAN" == "dev" ] && DEP_SOURCE=$HOME/.tanzu/tkg/clusterconfigs/${TDH_TKGMC_NAME}-wc-prod.yaml
+  
+# --- GENERATE WORKLOAD CLUSTER CONFIG FILE ---
+CLUSTER_CONFIG_FILE=$HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml
+
+egrep -v "^#|ENDPOINT" $DEP_SOURCE | sed -e '/^$/d'                               >  $CLUSTER_CONFIG_FILE
+echo "CLUSTER_NAME: $TDH_TKGWC_NAME"                                              >> $CLUSTER_CONFIG_FILE
+echo "WORKER_MACHINE_COUNT: $TDH_TKGWC_WORKERNODES"                               >> $CLUSTER_CONFIG_FILE
+echo "CNI: antrea"                                                                >> $CLUSTER_CONFIG_FILE
+
+# --- TKG ON VSPHERE RELEATED CONFIG ---
+if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "vSphere" ]; then
+  # --- SET DEFAULT VALUES ---
+  [ "$TDH_TKGWC_CONTROL_PLANE_MEM_MIB" == "" ] && TDH_TKGWC_CONTROL_PLANE_MEM_MIB=8192
+  [ "$TDH_TKGWC_CONTROL_PLANE_NUM_CPUS" == "" ] && TDH_TKGWC_CONTROL_PLANE_NUM_CPUS=4
+  [ "$TDH_TKGWC_CONTROL_PLANE_DISK_GIB" == "" ] && TDH_TKGWC_CONTROL_PLANE_DISK_GIB=40
+  [ "$TDH_TKGWC_WORKER_DISK_GIB" == "" ] && TDH_TKGWC_WORKER_DISK_GIB=40
+  [ "$TDH_TKGWC_WORKER_MEM_MIB" == "" ] && TDH_TKGWC_WORKER_MEM_MIB=8192
+  [ "$TDH_TKGWC_WORKER_NUM_CPUS" == "" ] && TDH_TKGWC_WORKER_NUM_CPUS=2
+
+  messagePrint " ▪ Control Plane Machine CPU"     "$TDH_TKGWC_CONTROL_PLANE_NUM_CPUS"
+  messagePrint " ▪ Control Plane Machine Memory"  "$TDH_TKGWC_CONTROL_PLANE_MEM_MIB"
+  messagePrint " ▪ Control Plane Machine Disk"    "$TDH_TKGWC_CONTROL_PLANE_DISK_GIB"
+  messagePrint " ▪ Worker Node Machine CPU"       "$TDH_TKGWC_WORKER_NUM_CPUS"
+  messagePrint " ▪ Worker Node Machine Memory"    "$TDH_TKGWC_WORKER_MEM_MIB"
+  messagePrint " ▪ Worker Node Machine Disk"      "$TDH_TKGWC_WORKER_DISK_GIB"
+
+  # --- RESOURCE DEFINITIONS ---
+  echo "VSPHERE_CONTROL_PLANE_DISK_GIB: \"$TDH_TKGWC_CONTROL_PLANE_DISK_GIB\""    >> $CLUSTER_CONFIG_FILE
+  echo "VSPHERE_CONTROL_PLANE_MEM_MIB: \"TDH_TKGWC_CONTROL_PLANE_MEM_MIB\""       >> $CLUSTER_CONFIG_FILE
+  echo "VSPHERE_CONTROL_PLANE_NUM_CPUS: \"$TDH_TKGWC_CONTROL_PLANE_NUM_CPUS\""    >> $CLUSTER_CONFIG_FILE
+  echo "VSPHERE_WORKER_DISK_GIB: \"$TDH_TKGWC_WORKER_DISK_GIB\""                  >> $CLUSTER_CONFIG_FILE
+  echo "VSPHERE_WORKER_MEM_MIB: \"$TDH_TKGWC_WORKER_MEM_MIB\""                    >> $CLUSTER_CONFIG_FILE
+  echo "VSPHERE_WORKER_NUM_CPUS: \"$TDH_TKGWC_WORKER_NUM_CPUS\""                  >> $CLUSTER_CONFIG_FILE
+
+  echo "VSPHERE_CONTROL_PLANE_ENDPOINT: $TDH_TKGWC_CPIP_ADDRESS"                  >> $CLUSTER_CONFIG_FILE
+fi
+
+if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "Azure" ]; then
+  # --- SET DEFAULT VALUES ---
+  [ "$TDH_TKGWC_CONTROL_PLANE_MACHINE_TYPE" == "" ] && TDH_TKGWC_CONTROL_PLANE_MACHINE_TYPE=Standard_D3_v2
+  [ "$TDH_TKGWC_MACHINE_TYPE" == "" ] && TDH_TKGWC_MACHINE_TYPE=Standard_D2_v4
+
+  messagePrint " ▪ Control Plane Machine Type"    "$TDH_TKGWC_CONTROL_PLANE_MACHINE_TYPE"
+  messagePrint " ▪ Worker Node Machine Type"      "$TDH_TKGWC_MACHINE_TYPE"
+
+  echo "AZURE_CONTROL_PLANE_MACHINE_TYPE: $TDH_TKGWC_CONTROL_PLANE_MACHINE_TYPE"  >> $CLUSTER_CONFIG_FILE
+  echo "AZURE_NODE_MACHINE_TYPE: $TDH_TKGWC_MACHINE_TYPE"                         >> $CLUSTER_CONFIG_FILE
+fi
 
 if [ $DEBUG -gt 0 ]; then 
   echo "-----------------------------------------------------------------------------------------------------------"
