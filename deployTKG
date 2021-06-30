@@ -352,8 +352,8 @@ fi
 
 if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "Azure" ]; then
   # --- SET DEFAULT VALUES ---
-  [ "$TDH_TKGWC_CONTROL_PLANE_MACHINE_TYPE" == "" ] && TDH_TKGWC_CONTROL_PLANE_MACHINE_TYPE=Standard_D3_v2
-  [ "$TDH_TKGWC_MACHINE_TYPE" == "" ] && TDH_TKGWC_MACHINE_TYPE=Standard_D2_v4
+  [ "$TDH_TKGWC_CONTROL_PLANE_MACHINE_TYPE" == "" ] && TDH_TKGWC_CONTROL_PLANE_MACHINE_TYPE=Standard_D4s_v3
+  [ "$TDH_TKGWC_MACHINE_TYPE" == "" ] && TDH_TKGWC_MACHINE_TYPE=Standard_D4s_v3
 
   messagePrint " ▪ Control Plane Machine Type"    "$TDH_TKGWC_CONTROL_PLANE_MACHINE_TYPE"
   messagePrint " ▪ Worker Node Machine Type"      "$TDH_TKGWC_MACHINE_TYPE"
