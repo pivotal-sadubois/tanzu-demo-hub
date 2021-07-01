@@ -31,7 +31,7 @@ while [ "$1" != "" ]; do
     --usage)  usage;;
     --help)   usage;;
     --root)   ROOT_SHELL=1;;
-    --cmd)    COMMAND=$2;;
+    --cmd)    COMMAND="$2";;
     --debug)  DEBUG=1;;
     --silent) SILENT=1;;
   esac

@@ -5973,6 +5973,7 @@ selfTestInit() {
 # ------------------------------------------------------------------------------------------
 selfTestStep() {
   CMD="$1"
+  [ "$NATIVE" == "" ] && NATIVE=0
   _msg="$SELF_TEST_NAME"
   _cnt=$(echo "${_msg}" | wc -c | sed 's/ //g')
   _dat=$(date "+%Y%m%d-%H:%M:%S")
@@ -5985,7 +5986,12 @@ selfTestStep() {
 
   #[ $(uname) == "Linux" ] &&
 
-  eval $CMD >> /tmp/selffTest.log 2>&1; ret=$?
+  if [ "$NATIVE" -eq 0 ]; then
+    echo "$CMD" > /tmp/exec && chmod 777 /tmp/exec
+    tools/tdh-tools.sh --silent --cmd "bash /tmp/exec" >> /tmp/selffTest.log 2>&1; ret=$?
+  else
+    eval $CMD >> /tmp/selffTest.log 2>&1; ret=$?
+  fi
 
   _num=$(printf "[%02d/%02d]\n" $_stp $_tot)
 
