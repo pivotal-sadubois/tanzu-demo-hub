@@ -10,6 +10,7 @@ export TANZU_DEMO_HUB=$(cd "$(pwd)/$(dirname $0)/../"; pwd)
 export TDHPATH=$(cd "$(pwd)/$(dirname $0)/../"; pwd)
 export ROOT_SHELL=0
 export COMMAND=bash
+export SILENT=0
 
 . $TANZU_DEMO_HUB/functions
 
@@ -25,11 +26,6 @@ usage() {
   exit 
 }
 
-echo ""
-echo "Tanzu Demo Hub - TDH Tools Docker Container"
-echo "by Sacha Dubois, VMware Inc,"
-echo "-----------------------------------------------------------------------------------------------------------"
-
 while [ "$1" != "" ]; do
   case $1 in
     --usage)  usage;;
@@ -37,19 +33,28 @@ while [ "$1" != "" ]; do
     --root)   ROOT_SHELL=1;;
     --cmd)    COMMAND=$2;;
     --debug)  DEBUG=1;;
+    --silent) SILENT=1;;
   esac
   shift
 done
 
-tdh_tools_build
-
 mkdir -p $HOME/.mc $HOME/.cache $HOME/.config $HOME/.local
 mkdir -p /tmp/docker && chmod a+w /tmp/docker
-echo ""
 
-#docker rmi tdh-tools:latest > /dev/null 2>&1
+if [ $SILENT -eq 1 ]; then 
+  tdh_tools_build > /dev/null 2>&1
+  checkExecutionLock tdh-tools > /dev/null 2>&1
+else
+  echo ""
+  echo "Tanzu Demo Hub - TDH Tools Docker Container"
+  echo "by Sacha Dubois, VMware Inc,"
+  echo "-----------------------------------------------------------------------------------------------------------"
+  echo ""
 
-checkExecutionLock tdh-tools
+  tdh_tools_build
+  checkExecutionLock tdh-tools
+fi
+
 if [ $? -ne 0 ]; then 
   echo "ERROR: $0 is already running, plese stop it first"
   exit 1
