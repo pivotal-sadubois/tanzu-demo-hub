@@ -1229,7 +1229,6 @@ checkTMCintegration() {
         # --- GRACE TIME ---
         ret=1; cnt=0
         while [ $ret -ne 0 -a $cnt -lt 50 ]; do
-date
           helm install wavefront wavefront/wavefront \
               --set wavefront.url=$TDH_TANZU_OBSERVABILITY_URL \
               --set wavefront.token=$TDH_TANZU_OBSERVABILITY_API_TOKEN \
@@ -1277,9 +1276,10 @@ date
 
         tmc cluster integration create -f $TANZU_OBSERVABILITY > /dev/null 2>&1
         if [ $? -ne 0 ]; then 
+          messageLine
           echo "ERROR: failed to add integration"
           echo "       => tmc cluster integration create -f $TANZU_OBSERVABILITY"
-          exit 1
+          messageLine
         else
           messagePrint " ▪ Setup Cluster Integration for ($TDH_CLUSTER_NAME)"  "configured"      
           rm -f $TANZU_OBSERVABILITY
@@ -1315,10 +1315,11 @@ date
           done
 
           if [ $? -ne 0 ]; then
+            messageLine
             echo "ERROR: failed to enable dataprotection for cluster $TDH_CLUSTER_NAME"
             echo "       => tmc cluster dataprotection create -c $TDH_CLUSTER_NAME -m $TMC_MANAGEMENT_CLUSTER \\"
             echo "            -p $TMC_PROVISIONER_NAME --backup-location-names $TDH_TANZU_DATA_PROTECTION_BACKUP_LOCATION"
-            exit 1
+            messageLine
           fi
         fi
 
@@ -1349,10 +1350,11 @@ date
         done
 
         if [ $ret -ne 0 ]; then
+          messageLine
           echo "ERROR: failed to configure a full-backup"
           echo "       => tmc cluster dataprotection backup create -c $TDH_CLUSTER_NAME -p $TMC_PROVISIONER_NAME \\"
           echo "            -m $TMC_MANAGEMENT_CLUSTER --name \"full-backup\" --backup-location-name $TDH_TANZU_DATA_PROTECTION_BACKUP_LOCATION"
-          exit 1
+          messageLine
         fi
       else
         messagePrint " ▪ Verify Full Backup (full-backup) configuration"            "enabled"
@@ -1393,10 +1395,11 @@ scanCluster() {
     messagePrint " ▪ Scan Cluster ($TDH_CLUSTER_NAME) with $TYPE"       "scanning"
     tmc cluster inspection scan create -c $TDH_CLUSTER_NAME -p $TMC_PROVISIONER_NAME -m $TMC_MANAGEMENT_CLUSTER --inspection-type $TYPE > /dev/null 2>&1
     if [ $? -ne 0 ]; then 
+      messageLine
       echo "ERROR: failed to scan cluster $TDH_CLUSTER_NAME"
       echo "       => tmc cluster inspection scan create -c $TDH_CLUSTER_NAME -p $TMC_PROVISIONER_NAME \\"
       echo "             -m $TMC_MANAGEMENT_CLUSTER --inspection-type $TYPE"
-      exit 1
+      messageLine
     fi
   else
     dat=$(tmc cluster inspection scan list --cluster-name $TDH_CLUSTER_NAME -p $TMC_PROVISIONER_NAME -m $TMC_MANAGEMENT_CLUSTER -o json | \
@@ -5982,7 +5985,7 @@ selfTestStep() {
 
   #[ $(uname) == "Linux" ] &&
 
-  eval $CMD > /tmp/selffTest.log 2>&1; ret=$?
+  eval $CMD >> /tmp/selffTest.log 2>&1; ret=$?
 
   _num=$(printf "[%02d/%02d]\n" $_stp $_tot)
 
