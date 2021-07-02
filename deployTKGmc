@@ -972,6 +972,7 @@ checkCloudAccess
 checkKeyPairs
 #checkTKGdownloads
 tmcCheckLogin
+checkIdentityProvider
 
 # --- CREATE TKG CLUSTER AND JUMP SERVER
 createJumpHost
@@ -1257,8 +1258,16 @@ else
   
         if [ "$stt" != "true" ]; then 
           messagePrint " ▪ Accepting Image Terms for image ($img)" "$img"
-          az vm image terms accept --urn $img > /dev/null 2>&1
-          if [ $? -ne 0 ]; then 
+
+          cnt=0; ret=1
+          while [ $ret -ne 0 -a $cnt -lt 5 ]; do
+            az vm image terms accept --urn $img > /dev/null 2>&1; ret=$?
+            [ $ret -eq 0 ] && break
+            let cnt=cnt+1
+            sleep 30
+          done
+
+          if [ $ret -ne 0 ]; then 
             echo "ERROR: failed to accept image terms, please try manually"
             echo "       => az vm image terms accept --urn $img:latest"
             exit
