@@ -1268,7 +1268,7 @@ else
           done
 
           if [ $ret -ne 0 ]; then 
-            echo "ERROR: failed to accept image terms, please try manually"
+            echo "ERROR: failed to accept image terms after $cnt tries, please try manually"
             echo "       => az vm image terms accept --urn $img:latest"
             exit
           fi
