@@ -1306,7 +1306,7 @@ checkTMCintegration() {
         cnt=$(tmc cluster dataprotection backuplocation list --cluster-name $TDH_CLUSTER_NAME | grep -c " $TDH_CLUSTER_NAME ") 
         if [ $cnt -eq 0 ]; then
           ret=1; cnt=0
-          while [ $ret -ne 0 -a $cnt -lt 5 ]; do
+          while [ $ret -ne 0 -a $cnt -lt 50 ]; do
           tmc cluster dataprotection create -c $TDH_CLUSTER_NAME -m $TMC_MANAGEMENT_CLUSTER -p $TMC_PROVISIONER_NAME \
               --backup-location-names $TDH_TANZU_DATA_PROTECTION_BACKUP_LOCATION > /dev/null 2>&1; ret=$?
             [ $ret -eq 0 ] && break
