@@ -1904,9 +1904,21 @@ configureJumpHost() {
     sleep 30
   done
 
+  echo "ERROR: failed to copy tar file"
+  if [ "$NATIVE" == "0" ]; then
+    echo "       => tools/tdh-tools.sh"
+    echo "          tdh-tools:/$ $SCP_COMMAND /tmp/tdh-home.tar ${SSH_USER}@${SSH_HOST}:$SSH_HOME"
+    echo "          tdh-tools:/$ exit"
+  else
+    echo "       => $SCP_COMMAND /tmp/tdh-home.tar ${SSH_USER}@${SSH_HOST}:$SSH_HOME"
+  fi
+
+echo "SSH_COMMAND:$SSH_COMMAND"
   stt=""; cnt=0
   while [ "${stt}" != "true" -a $cnt -lt 5 ]; do
-    stt=($SSH_COMMAND -n "[ -f \$HOME/tdh-home.tar ] && cd \$HOME && tar xf tdh-home.tar && echo true")
+echo "$SSH_COMMAND -n \"tar xf tdh-home.tar && echo true\""
+    stt=($SSH_COMMAND -n "tar xf tdh-home.tar && echo true")
+echo "11 STT:$stt"
     [ "$stt" == "true" ] && break
     let cnt=cnt+1
     sleep 30
