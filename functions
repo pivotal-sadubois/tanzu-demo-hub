@@ -1894,8 +1894,7 @@ configureJumpHost() {
   fi
 
   # --- COPY THE AWS DIRECTORY ---
-  (cd $HOME && tar cf /tmp/tdh-home.tar ~/.aws ~/.azure ~/.tanzu-demo-hub ~/.tanzu-demo-hub.cfg) 
-  ls -la /tmp/tdh-home.tar
+  (cd $HOME && tar cf /tmp/tdh-home.tar .aws .azure .tanzu-demo-hub .tanzu-demo-hub.cfg > /dev/null 2>&1) 
 
   ret=1; cnt=0
   while [ $ret -ne 0 -a $cnt -lt 5 ]; do
@@ -1905,7 +1904,13 @@ configureJumpHost() {
     sleep 30
   done
 
-  stt=($SSH_COMMAND -n "[ -f \$HOME/tdh-home.tar ] && cd \$HOME && tar xf tdh-home.tar && echo true")
+  stt=""; cnt=0
+  while [ "${stt}" != "true" -a $cnt -lt 5 ]; then
+    stt=($SSH_COMMAND -n "[ -f \$HOME/tdh-home.tar ] && cd \$HOME && tar xf tdh-home.tar && echo true")
+    [ "$stt" == "true" ] && break
+    let cnt=cnt+1
+    sleep 30
+  done
 
   #$SCP_COMMAND -r ~/.aws ${SSH_USER}@${SSH_HOST}:$SSH_HOME > /dev/null 2>&1
   #$SCP_COMMAND -r ~/.azure ${SSH_USER}@${SSH_HOST}:$SSH_HOME > /dev/null 2>&1
