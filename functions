@@ -1894,10 +1894,23 @@ configureJumpHost() {
   fi
 
   # --- COPY THE AWS DIRECTORY ---
-  $SCP_COMMAND -r ~/.aws ${SSH_USER}@${SSH_HOST}:$SSH_HOME > /dev/null 2>&1
-  $SCP_COMMAND -r ~/.azure ${SSH_USER}@${SSH_HOST}:$SSH_HOME > /dev/null 2>&1
-  $SCP_COMMAND -r ~/.tanzu-demo-hub ${SSH_USER}@${SSH_HOST}:$SSH_HOME > /dev/null 2>&1
-  $SCP_COMMAND -r ~/.tanzu-demo-hub.cfg ${SSH_USER}@${SSH_HOST}:$SSH_HOME > /dev/null 2>&1
+  (cd $HOME && tar cf /tmp/tdh-home.tar ~/.aws ~/.azure ~/.tanzu-demo-hub ~/.tanzu-demo-hub.cfg) 
+  ls -la /tmp/tdh-home.tar
+
+  ret=1; cnt=0
+  while [ $ret -ne 0 -a $cnt -lt 5 ]; do
+    $SCP_COMMAND /tmp/tdh-home.tar ${SSH_USER}@${SSH_HOST}:$SSH_HOME > /dev/null 2>&1; ret=$?
+    [ $ret -eq 0 ] && break
+    let cnt=cnt+1
+    sleep 30
+  done
+
+  stt=($SSH_COMMAND -n "[ -f \$HOME/tdh-home.tar ] && cd \$HOME && tar xf tdh-home.tar && echo true")
+
+  #$SCP_COMMAND -r ~/.aws ${SSH_USER}@${SSH_HOST}:$SSH_HOME > /dev/null 2>&1
+  #$SCP_COMMAND -r ~/.azure ${SSH_USER}@${SSH_HOST}:$SSH_HOME > /dev/null 2>&1
+  #$SCP_COMMAND -r ~/.tanzu-demo-hub ${SSH_USER}@${SSH_HOST}:$SSH_HOME > /dev/null 2>&1
+  #$SCP_COMMAND -r ~/.tanzu-demo-hub.cfg ${SSH_USER}@${SSH_HOST}:$SSH_HOME > /dev/null 2>&1
 
 echo gaga11122
 exit
