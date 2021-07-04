@@ -1905,7 +1905,7 @@ configureJumpHost() {
   done
 
   stt=""; cnt=0
-  while [ "${stt}" != "true" -a $cnt -lt 5 ]; then
+  while [ "${stt}" != "true" -a $cnt -lt 5 ]; do
     stt=($SSH_COMMAND -n "[ -f \$HOME/tdh-home.tar ] && cd \$HOME && tar xf tdh-home.tar && echo true")
     [ "$stt" == "true" ] && break
     let cnt=cnt+1
