@@ -1923,8 +1923,6 @@ configureJumpHost() {
     sleep 30
   done
 
-exit
-
   # --- COPY SOFTWARE ---
   stt=$($SSH_COMMAND -n "[ -d /home/ubuntu/tanzu-demo-hub/software ] && echo true")
   if [ "${stt}" == "" ]; then
