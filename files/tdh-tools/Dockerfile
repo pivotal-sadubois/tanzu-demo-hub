@@ -1,6 +1,6 @@
 # ############################################################################################
 # File: ........: files/tdh-tools/Dockerfile   
-# Language .....: docker
+# Language .....: docker 
 # Author .......: Sacha Dubois, VMware
 # Description ..: Tanzu Demo Hub - Dockerfile for tdh-tools container
 # ############################################################################################

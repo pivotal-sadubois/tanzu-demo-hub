@@ -68,6 +68,7 @@ if [ $ROOT_SHELL -eq 0 ]; then
      -v $HOME/.aws:$HOME/.aws:rw -v $HOME/.vmware-cna-saas:$HOME/.vmware-cna-saas:rw -v $HOME/.azure:$HOME/.azure:rw \
      -v /tmp:/tmp:rw -v /tmp/docker:$HOME/.docker:rw -v $HOME/.mc:$HOME/.mc:rw -v $HOME/.tanzu:$HOME/.tanzu:rw \
      -v $HOME/.kube-tkg:$HOME/.kube-tkg:rw -v $HOME/.kube:$HOME/.kube:rw -v $HOME/.govmomi:$HOME/.govmomi:rw \
+     -v $HOME/.ssh:$HOME/.ssh:rw -v $HOME/.terraform:$HOME/.terraform:rw \
      -e "KUBECONFIG=$HOME/.kube/config" --hostname tdh-tools tdh-tools:latest $COMMAND
 else
   docker run -it --rm --name tdh-tools -v /var/run/docker.sock:/var/run/docker.sock tdh-tools:latest  chmod 666 /var/run/docker.sock > /dev/null 2>&1
@@ -77,7 +78,7 @@ else
      -v $HOME/.aws:$HOME/.aws:rw -v $HOME/.vmware-cna-saas:$HOME/.vmware-cna-saas:rw -v $HOME/.azure:$HOME/.azure:rw \
      -v /tmp:/tmp:rw -v /tmp/docker:$HOME/.docker:rw -v $HOME/.mc:$HOME/.mc:rw -v $HOME/.tanzu:$HOME/.tanzu:rw \
      -v $HOME/.kube-tkg:$HOME/.kube-tkg:rw -v $HOME/.kube:$HOME/.kube:rw -v $HOME/.govmomi:$HOME/.govmomi:rw \
-     -v $HOME/.ssh:$HOME/.ssh:rw \
+     -v $HOME/.ssh:$HOME/.ssh:rw -v $HOME/.terraform:$HOME/.terraform:rw \
      -e "KUBECONFIG=$HOME/.kube/config" --hostname tdh-tools tdh-tools:latest $COMMAND
 fi
 
