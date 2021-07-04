@@ -1928,9 +1928,14 @@ configureJumpHost() {
       [ $ret -ne 0 ] && sleep 10
     done
 
-#xxxxxxxxxx
-    $SSH_COMMAND -n "[ -d $SSH_HOME/tanzu-demo-hub ] && chmod a+x ${TDHHOME}/scripts/InstallTKGutilities.sh && \
-        sudo ${TDHHOME}/scripts/InstallTKGutilities.sh \"$SSH_HOME/tanzu-demo-hub\" \"$TDH_TKGMC_INFRASTRUCTURE\" $DEBUG"; ret=$?
+    ret=1; cnt=0
+    while [ $ret -ne 0 -a $cnt -lt 5 ]; do
+      $SSH_COMMAND -n "[ -d $SSH_HOME/tanzu-demo-hub ] && chmod a+x ${TDHHOME}/scripts/InstallTKGutilities.sh && \
+          sudo ${TDHHOME}/scripts/InstallTKGutilities.sh \"$SSH_HOME/tanzu-demo-hub\" \"$TDH_TKGMC_INFRASTRUCTURE\" $DEBUG"; ret=$?
+      [ $ret -eq 0 ] && break
+      let cnt=cnt+1
+      sleep 30
+    done
 
     if [ ${ret} -ne 0 ]; then
       echo "ERROR: Failed to install TKG Utilities (InstallTKGutilities.sh) on Jump Host"
