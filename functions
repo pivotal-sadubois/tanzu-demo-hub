@@ -1240,10 +1240,18 @@ checkTMCintegration() {
 
         if [ $ret -ne 0 ]; then
           echo "ERROR: failed to install wavefront Helm Chart"
-          echo "       => helm install wavefront wavefront/wavefront \\"
-          echo "           --set wavefront.url=$TDH_TANZU_OBSERVABILITY_URL \\"
-          echo "           --set wavefront.token=$TDH_TANZU_OBSERVABILITY_API_TOKEN \\"
-          echo "           --set clusterName=$TDH_CLUSTER_NAME --namespace wavefront"
+          if [ "$NATIVE" == "0" ]; then
+            echo "       => tools/tdh-tools.sh"
+            echo "          tdh-tools:/$ helm install wavefront wavefront/wavefront \\"
+            echo "           --set wavefront.url=$TDH_TANZU_OBSERVABILITY_URL \\"
+            echo "           --set wavefront.token=$TDH_TANZU_OBSERVABILITY_API_TOKEN \\"
+            echo "           --set clusterName=$TDH_CLUSTER_NAME --namespace wavefront"
+          else
+            echo "       => helm install wavefront wavefront/wavefront \\"
+            echo "           --set wavefront.url=$TDH_TANZU_OBSERVABILITY_URL \\"
+            echo "           --set wavefront.token=$TDH_TANZU_OBSERVABILITY_API_TOKEN \\"
+            echo "           --set clusterName=$TDH_CLUSTER_NAME --namespace wavefront"
+          fi
           exit 1
         else
           messagePrint " ▪ Install Wavefront Helm Chart"  "installed"      
@@ -1278,7 +1286,13 @@ checkTMCintegration() {
         if [ $? -ne 0 ]; then 
           messageLine
           echo "ERROR: failed to add integration"
-          echo "       => tmc cluster integration create -f $TANZU_OBSERVABILITY"
+          if [ "$NATIVE" == "0" ]; then 
+            echo "       => tools/tdh-tools.sh"
+            echo "          tdh-tools:/$ tmc cluster integration create -f $TANZU_OBSERVABILITY"
+            echo "          tdh-tools:/$ exit"
+          else
+            echo "       => tmc cluster integration create -f $TANZU_OBSERVABILITY"
+          fi
           messageLine
         else
           messagePrint " ▪ Setup Cluster Integration for ($TDH_CLUSTER_NAME)"  "configured"      
