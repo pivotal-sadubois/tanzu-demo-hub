@@ -191,8 +191,13 @@ if [ "$DEPLOY_TKG_CLEAN" -eq 1 ]; then
   fi
 
   if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "AWS" ]; then
-    TDH_TERRAFORM_TFVARS=~/.tanzu-demo-hub/terraform/terraform_${TDH_TKGMC_ENVNAME}.tfvars
-    TDH_TERRAFORM_TFSTATE=~/.tanzu-demo-hub/terraform/terraform_${TDH_TKGMC_ENVNAME}.tfstate
+    TERRAFORM_PATH=$HONE/.tanzu-demo-hub/terraform
+    if [ -d $TERRAFORM_PATH ]; then 
+      cp -r ${TDHPATH}/terraform $HONE/.tanzu-demo-hub
+    fi
+
+    TDH_TERRAFORM_TFVARS=$TERRAFORM_PATH/terraform_${TDH_TKGMC_ENVNAME}.tfvars
+    TDH_TERRAFORM_TFSTATE=$TERRAFORM_PATH/terraform_${TDH_TKGMC_ENVNAME}.tfstate
 
     messageTitle "Deleting Jump Host (jump-${TDH_TKGMC_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN})"
     if [ $DEBUG -gt 0 ]; then
@@ -206,7 +211,7 @@ if [ "$DEPLOY_TKG_CLEAN" -eq 1 ]; then
 
     if [ $ret -ne 0 ]; then
       echo "ERROR: terraform destroy failed"
-      echo "       => terraform -chdir=${TDHPATH}/terraform/aws destroy -state=$TDH_TERRAFORM_TFSTATE \\"
+      echo "       => terraform -chdir=${TERRAFORM_PATH}/aws destroy -state=$TDH_TERRAFORM_TFSTATE \\"
       echo "                    -var-file=$TDH_TERRAFORM_TFVARS -auto-approve"
       exit
     fi
@@ -348,21 +353,25 @@ configureLetsEnscript() {
 }
 
 createJumpHost() {
+#gaga
   if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "AWS" ]; then
+    messageTitle "AWS Jump-Server ($JUMP_HOST)"
+
+    TERRAFORM_PATH=$HONE/.tanzu-demo-hub/terraform
+    if [ -d $TERRAFORM_PATH ]; then
+      cp -r ${TDHPATH}/terraform $HONE/.tanzu-demo-hub
+    fi
+
     JUMP_HOST="jump-${TDH_TKGMC_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}"
-    TDH_TERRAFORM_TFVARS=~/.tanzu-demo-hub/terraform/terraform_${TDH_TKGMC_ENVNAME}.tfvars
-    TDH_TERRAFORM_TFSTATE=~/.tanzu-demo-hub/terraform/terraform_${TDH_TKGMC_ENVNAME}.tfstate
+    TDH_TERRAFORM_TFVARS=$TERRAFORM_PATH/terraform_${TDH_TKGMC_ENVNAME}.tfvars
+    TDH_TERRAFORM_TFSTATE=$TERRAFORM_PATH/terraform_${TDH_TKGMC_ENVNAME}.tfstate
+    TDH_TERRAFORM_STATE=$TERRAFORM_PATH/terraform_${TDH_TKGMC_ENVNAME}.state
     KEY_NAME=tanzu-demo-hub
 
-    messagePrint "Creating AWS Jump-Server" "$KEY_NAME"
     ins=$(aws ec2 --region=$AWS_REGION describe-instances --filters "Name=instance-state-name,Values=pending,running,stopped" \
          Name=tag:Owner,Values="tdh-${TDH_TKGMC_ENVNAME}" | jq -r ".Reservations[].Instances[].InstanceId" | head -1)
     if [ "${ins}" == "" ]; then
-      mkdir -p ~/.tanzu-demo-hub/terraform > /dev/null 2>&1
-      TDH_TERRAFORM_TFVARS=~/.tanzu-demo-hub/terraform/terraform_${TDH_TKGMC_ENVNAME}.tfvars
-      TDH_TERRAFORM_TFSTATE=~/.tanzu-demo-hub/terraform/terraform_${TDH_TKGMC_ENVNAME}.tfstate
-
-      messagePrint " - Cleaning up leftover terraform deployments" "${TDHPATH}/terraform/aws"
+      messagePrint " ▪ Cleaning up leftover terraform deployments" "${TERRAFORM_PATH}"
       echo "aws_region = \"$AWS_REGION\""                          >  $TDH_TERRAFORM_TFVARS
       echo "owner = \"tdh-$TDH_TKGMC_ENVNAME\""                    >> $TDH_TERRAFORM_TFVARS
       echo "aws_region_az = \"$az\""                               >> $TDH_TERRAFORM_TFVARS
@@ -374,18 +383,25 @@ createJumpHost() {
 	then
 	  if [ $DEBUG -gt 0 ]; then
 	    echo "--------------------------------------------------------------------------------------------------------------"
-	    terraform -chdir=${TDHPATH}/terraform/aws destroy -state=$TDH_TERRAFORM_TFSTATE \
+	    terraform -chdir=${TERRAFORM_PATH}/aws destroy -state=$TDH_TERRAFORM_TFSTATE \
 		      -var-file=$TDH_TERRAFORM_TFVARS -auto-approve; ret=$? 
 	    echo "--------------------------------------------------------------------------------------------------------------"
 	  else
-	    terraform -chdir=${TDHPATH}/terraform/aws destroy -state=$TDH_TERRAFORM_TFSTATE \
+	    terraform -chdir=${TERRAFORM_PATH}/aws destroy -state=$TDH_TERRAFORM_TFSTATE \
 		      -var-file=$TDH_TERRAFORM_TFVARS -auto-approve > /dev/null 2>&1; ret=$? 
 	  fi
 
 	  if [ $ret -ne 0 ]; then
 	    echo "ERROR: terraform destroy failed"
-	    echo "       => terraform -chdir=${TDHPATH}/terraform/aws destroy -state=$TDH_TERRAFORM_TFSTATE \\"
-	    echo "                    -var-file=$TDH_TERRAFORM_TFVARS -auto-approve"
+            if [ "$NATIVE" == "0" ]; then
+              echo "       => tools/tdh-tools.sh"
+              echo "          tdh-tools:/$ terraform -chdir=${TERRAFORM_PATH}/aws destroy -state=$TDH_TERRAFORM_TFSTATE \\"
+	      echo "                                 -var-file=$TDH_TERRAFORM_TFVARS -auto-approve"
+              echo "          tdh-tools:/$ exit"
+            else
+	      echo "       => terraform -chdir=${TERRAFORM_PATH}/aws destroy -state=$TDH_TERRAFORM_TFSTATE \\"
+	      echo "                    -var-file=$TDH_TERRAFORM_TFVARS -auto-approve"
+            fi
 	    exit
 	  fi
 	fi
@@ -402,81 +418,107 @@ createJumpHost() {
         chmod 600 ~/.tanzu-demo-hub/KeyPair-${KEY_NAME}-${AWS_REGION}.pem
         if [ $? -ne 0 ]; then
           echo "ERROR: Creating Key Pairs failed"
-          echo "       => aws ec2 --region=$AWS_REGION create-key-pair --key-name ${KEY_NAME}  \\"
-          echo "                  --query 'KeyMaterial' --output text > ~/.tanzu-demo-hub/KeyPair-${KEY_NAME}-${AWS_REGION}.pem"; exit 1
+          if [ "$NATIVE" == "0" ]; then
+            echo "       => tools/tdh-tools.sh"
+            echo "          tdh-tools:/$ aws ec2 --region=$AWS_REGION create-key-pair --key-name ${KEY_NAME}  \\"
+            echo "                         --query 'KeyMaterial' --output text > ~/.tanzu-demo-hub/KeyPair-${KEY_NAME}-${AWS_REGION}.pem"
+            echo "          tdh-tools:/$ exit"
+          else
+            echo "       => aws ec2 --region=$AWS_REGION create-key-pair --key-name ${KEY_NAME}  \\"
+            echo "                  --query 'KeyMaterial' --output text > ~/.tanzu-demo-hub/KeyPair-${KEY_NAME}-${AWS_REGION}.pem"
+          fi
+
+          exit 1
         fi
       else
         messagePrint " ▪ Key Pair exists on AWS" "${KEY_NAME}"
       fi
 
-      messagePrint "Deploy vSphere Jump-Server with (terraforms)" "$JUMP_HOST"
-      messagePrint " ▪ Creating Variable file" "/tmp/terraform.tfvars"
+      messagePrint " ▪ Deploy vSphere Jump-Server with (terraforms)" "$JUMP_HOST"
+      messagePrint " ▪ Creating Variable file" "${TERRAFORM_PATH}/terraform.tfvars"
 
-      az=$(echo $AWS_PRIMARY_AZ | sed 's/^.*\(.\)$/\1/g') 
-      if [ "$az" != "a" -a "$az" != "b" -a "$az" != "c" ]; then 
+      availability_zone=$(echo $AWS_PRIMARY_AZ | sed 's/^.*\(.\)$/\1/g') 
+      if [ "$availability_zone" != "a" -a "$availability_zone" != "b" -a "$availability_zone" != "c" ]; then 
         echo "ERROR: Availability Zone of an AWS Region should be 'a', 'b' or 'c'"
-        echo "       => aws ec2 --region=eu-west-3 describe-availability-zones --output text"
-        exit
+        if [ "$NATIVE" == "0" ]; then
+          echo "       => tools/tdh-tools.sh"
+          echo "          tdh-tools:/$ aws ec2 --region=$AWS_REGION describe-availability-zones --output text"
+          echo "          tdh-tools:/$ exit"
+        else
+          echo "       => aws ec2 --region=$AWS_REGION describe-availability-zones --output text"
+        fi
+
+        exit 1
       fi
 
       echo "aws_region = \"$AWS_REGION\""                          >  $TDH_TERRAFORM_TFVARS
       echo "owner = \"tdh-$TDH_TKGMC_ENVNAME\""                    >> $TDH_TERRAFORM_TFVARS
-      echo "aws_region_az = \"$az\""                               >> $TDH_TERRAFORM_TFVARS
+      echo "aws_region_az = \"$availability_zone\""                >> $TDH_TERRAFORM_TFVARS
       echo "key_pair = \"$KEY_NAME\""                              >> $TDH_TERRAFORM_TFVARS
 
       if [ -x /usr/local/bin/terraform ]; then
         if [ $DEBUG -gt 0 ]; then 
           echo "--------------------------------------------------------------------------------------------------------------"
-          echo "=> terraform -chdir=${TDHPATH}/terraform/aws init"
+          echo "=> terraform -chdir=${TERRAFORM_PATH}/aws init"
           echo "--------------------------------------------------------------------------------------------------------------"
-          terraform -chdir=${TDHPATH}/terraform/aws init; ret=$?
+          #terraform -chdir=${TERRAFORM_PATH}/aws init; ret=$?
+          (cd ${TERRAFORM_PATH}/aws && terraform init); ret=$?
         else
-          messagePrint " ▪ Terraform (init)" "${TDHPATH}/terraform/aws"
-          terraform -chdir=${TDHPATH}/terraform/aws init > /dev/null 2>&1; ret=$?
+          messagePrint " ▪ Terraform (init)" "${TERRAFORM_PATH}/aws"
+          #terraform -chdir=${TERRAFORM_PATH}/aws init > /dev/null 2>&1; ret=$?
+          (cd ${TERRAFORM_PATH}/aws && terraform init > /dev/null 2>&1); ret=$?
         fi
 
         if [ $ret -ne 0 ]; then 
           echo "ERROR: terraform init failed"
-          echo "       => terraform -chdir=${TDHPATH}/terraform/aws init"
+          if [ "$NATIVE" == "0" ]; then
+            echo "       => tools/tdh-tools.sh"
+            echo "          tdh-tools:/$ cd ${TERRAFORM_PATH}/terraform/aws && terraform init"
+            echo "          tdh-tools:/$ exit"
+          else
+            #echo "       => terraform -chdir=${TERRAFORM_PATH}/aws init"
+            echo "       => cd ${TERRAFORM_PATH}/aws && terraform init"
+          fi
           exit
         fi
 
         if [ $DEBUG -gt 0 ]; then
           echo "--------------------------------------------------------------------------------------------------------------"
-          echo "=> terraform -chdir=${TDHPATH}/terraform/aws plan -var-file=$TDH_TERRAFORM_TFVARS \
-                    -out jump -state=/tmp/terraform.state"
+          echo "=> terraform -chdir=${TERRAFORM_PATH}/aws plan -var-file=$TDH_TERRAFORM_TFVARS \
+                    -out jump -state=$TDH_TERRAFORM_TFSTATE"
+pppppppp
           echo "--------------------------------------------------------------------------------------------------------------"
-          terraform -chdir=${TDHPATH}/terraform/aws plan -var-file=$TDH_TERRAFORM_TFVARS \
+          terraform -chdir=${TERRAFORM_PATH}/aws plan -var-file=$TDH_TERRAFORM_TFVARS \
                     -out "jump-$TDH_TKGMC_ENVNAME" -state=$TDH_TERRAFORM_TFSTATE; ret=$?
-        else
+        else0
           messagePrint " ▪ Terraform (plan)" "${TDHPATH}/terraform/aws"
-          terraform -chdir=${TDHPATH}/terraform/aws plan -var-file=$TDH_TERRAFORM_TFVARS \
+          terraform -chdir=${TERRAFORM_PATH}/aws plan -var-file=$TDH_TERRAFORM_TFVARS \
                     -out "jump-$TDH_TKGMC_ENVNAME" -state=$TDH_TERRAFORM_TFSTATE > /dev/null 2>&1; ret=$?
         fi
 
         if [ $ret -ne 0 ]; then 
           echo "ERROR: terraform plan failed"
-          echo "       => terraform -chdir=${TDHPATH}/terraform/aws plan -var-file=$TDH_TERRAFORM_TFVARS \\"
+          echo "       => terraform -chdir=${TERRAFORM_PATH}/aws plan -var-file=$TDH_TERRAFORM_TFVARS \\"
           echo "                    -out "jump-$TDH_TKGMC_ENVNAME" -state=$TDH_TERRAFORM_TFSTATE"
           exit
         fi
 
         if [ $DEBUG -gt 0 ]; then
           echo "--------------------------------------------------------------------------------------------------------------"
-          echo "=> terraform -chdir=${TDHPATH}/terraform apply -state=$TDH_TERRAFORM_TFSTATE \"jump-$TDH_TKGMC_ENVNAME\""
-          terraform -chdir=${TDHPATH}/terraform/aws apply -state=$TDH_TERRAFORM_TFSTATE "jump-$TDH_TKGMC_ENVNAME"; ret=$?
+          echo "=> terraform -chdir=${TERRAFORM_PATH}/terraform apply -state=$TDH_TERRAFORM_TFSTATE \"jump-$TDH_TKGMC_ENVNAME\""
+          terraform -chdir=${TERRAFORM_PATH}/aws apply -state=$TDH_TERRAFORM_TFSTATE "jump-$TDH_TKGMC_ENVNAME"; ret=$?
         else
-          messagePrint " ▪ Terraform (apply)" "${TDHPATH}/terraform/aws"
-          terraform -chdir=${TDHPATH}/terraform/aws apply -state=$TDH_TERRAFORM_TFSTATE "jump-$TDH_TKGMC_ENVNAME" > /dev/null 2>&1; ret=$?
+          messagePrint " ▪ Terraform (apply)" "${TERRAFORM_PATH}/aws"
+          terraform -chdir=${TERRAFORM_PATH}/aws apply -state=$TDH_TERRAFORM_TFSTATE "jump-$TDH_TKGMC_ENVNAME" > /dev/null 2>&1; ret=$?
         fi
 
         if [ $ret -ne 0 ]; then
           echo "ERROR: terraform apply failed"
-          echo "       => terraform -chdir=${TDHPATH}/terraform/aws apply -state=$TDH_TERRAFORM_TFSTATE \"jump-$TDH_TKGMC_ENVNAME\""
+          echo "       => terraform -chdir=${TERRAFORM_PATH}/aws apply -state=$TDH_TERRAFORM_TFSTATE \"jump-$TDH_TKGMC_ENVNAME\""
           exit
         fi
 
-        #terraform -chdir=/Users/sdu/workspace/tanzu-demo-hub/terraform/aws destroy -state=$TDH_TERRAFORM_TFSTATE -var-file=$TDH_TERRAFORM_TFVARS -auto-approve
+        #terraform -chdir=$TERRAFORM_PATH/aws destroy -state=$TDH_TERRAFORM_TFSTATE -var-file=$TDH_TERRAFORM_TFVARS -auto-approve
       else
         echo "ERROR: HashiCorp terraform has not been installed, download it from https://www.terraform.io"
         echo "       and install it in /usr/local/bin/terraform"; exit 0
@@ -521,7 +563,6 @@ createJumpHost() {
 
       messagePrint " ▪ Updating Zone Record for (jump.$TDH_TKGMC_ENVNAME.$AWS_HOSTED_DNS_DOMAIN)" "$pip"
       route53setDNSrecord "$pip" "jump.$TDH_TKGMC_ENVNAME.$AWS_HOSTED_DNS_DOMAIN" "$TDH_TKGMC_ENVNAME.$AWS_HOSTED_DNS_DOMAIN"
-#uuuuuuuuuuuuuuu
     fi
 
     ins=$(aws ec2 --region=$AWS_REGION describe-instances --filters "Name=instance-state-name,Values=pending,running,stopped" \
@@ -941,7 +982,7 @@ if [ ! -f /tdh_tools_docker_container  ]; then
        -v $HOME/.aws:$HOME/.aws:rw -v $HOME/.vmware-cna-saas:$HOME/.vmware-cna-saas:rw -v $HOME/.azure:$HOME/.azure:rw \
        -v /tmp:/tmp:rw -v /tmp/docker:$HOME/.docker:rw -v $HOME/.mc:$HOME/.mc:rw -v $HOME/.tanzu:$HOME/.tanzu:rw \
        -v $HOME/.kube-tkg:$HOME/.kube-tkg:rw -v $HOME/.kube:$HOME/.kube:rw -v $HOME/.govmomi:$HOME/.govmomi:rw \
-       -v $HOME/.ssh:$HOME/.ssh:rw \
+       -v $HOME/.ssh:$HOME/.ssh:rw -v $HOME/.terraform:$HOME/.terraform:rw \
        -e "KUBECONFIG=$HOME/.kube/config" --hostname tdh-tools tdh-tools:latest $TDHPATH/$CMD_EXEC $CMD_ARGS; ret=$?
 
     # --- FINISH CURRENT SESSION AS WE RUN AS CONTAINER ---
