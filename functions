@@ -1904,13 +1904,15 @@ configureJumpHost() {
     sleep 30
   done
 
-  echo "ERROR: failed to copy tar file"
-  if [ "$NATIVE" == "0" ]; then
-    echo "       => tools/tdh-tools.sh"
-    echo "          tdh-tools:/$ $SCP_COMMAND /tmp/tdh-home.tar ${SSH_USER}@${SSH_HOST}:$SSH_HOME"
-    echo "          tdh-tools:/$ exit"
-  else
-    echo "       => $SCP_COMMAND /tmp/tdh-home.tar ${SSH_USER}@${SSH_HOST}:$SSH_HOME"
+  if [ $ret -ne 0 ]; then 
+    echo "ERROR: failed to copy tar file"
+    if [ "$NATIVE" == "0" ]; then
+      echo "       => tools/tdh-tools.sh"
+      echo "          tdh-tools:/$ $SCP_COMMAND /tmp/tdh-home.tar ${SSH_USER}@${SSH_HOST}:$SSH_HOME"
+      echo "          tdh-tools:/$ exit"
+    else
+      echo "       => $SCP_COMMAND /tmp/tdh-home.tar ${SSH_USER}@${SSH_HOST}:$SSH_HOME"
+    fi
   fi
 
   stt=""; cnt=0
@@ -1921,12 +1923,6 @@ configureJumpHost() {
     sleep 30
   done
 
-  #$SCP_COMMAND -r ~/.aws ${SSH_USER}@${SSH_HOST}:$SSH_HOME > /dev/null 2>&1
-  #$SCP_COMMAND -r ~/.azure ${SSH_USER}@${SSH_HOST}:$SSH_HOME > /dev/null 2>&1
-  #$SCP_COMMAND -r ~/.tanzu-demo-hub ${SSH_USER}@${SSH_HOST}:$SSH_HOME > /dev/null 2>&1
-  #$SCP_COMMAND -r ~/.tanzu-demo-hub.cfg ${SSH_USER}@${SSH_HOST}:$SSH_HOME > /dev/null 2>&1
-
-echo gaga11122
 exit
 
   # --- COPY SOFTWARE ---
