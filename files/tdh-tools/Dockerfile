@@ -5,7 +5,7 @@
 # Description ..: Tanzu Demo Hub - Dockerfile for tdh-tools container
 # ############################################################################################
 
-FROM ubuntu:20.04
+FROM ubuntu:20.04 
 MAINTAINER Sacha Dubois <sdubois@vmware.com>
 ENV TZ="Europe/Zurich"
 ARG UID GID USER TZ HOME VMWUSER VMWPASS TANZU_CLI START 
@@ -15,6 +15,7 @@ ADD kubectl         /usr/local/bin
 ADD kp              /usr/local/bin
 ADD mc              /usr/local/bin
 ADD tmc             /usr/local/bin
+ADD terraform-bin   /usr/local/bin/terraform
 ADD govc            /usr/local/bin
 ADD kubectl-vsphere /usr/local/bin
 ADD kubectl         /usr/local/bin
