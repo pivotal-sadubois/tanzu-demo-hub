@@ -1331,8 +1331,15 @@ checkTMCintegration() {
           if [ $? -ne 0 ]; then
             messageLine
             echo "ERROR: failed to enable dataprotection for cluster $TDH_CLUSTER_NAME"
-            echo "       => tmc cluster dataprotection create -c $TDH_CLUSTER_NAME -m $TMC_MANAGEMENT_CLUSTER \\"
-            echo "            -p $TMC_PROVISIONER_NAME --backup-location-names $TDH_TANZU_DATA_PROTECTION_BACKUP_LOCATION"
+            if [ "$NATIVE" == "0" ]; then
+              echo "       => tools/tdh-tools.sh"
+              echo "          tdh-tools:/$ tmc cluster dataprotection create -c $TDH_CLUSTER_NAME -m $TMC_MANAGEMENT_CLUSTER \\"
+              echo "                          -p $TMC_PROVISIONER_NAME --backup-location-names $TDH_TANZU_DATA_PROTECTION_BACKUP_LOCATION"
+              echo "          tdh-tools:/$ exit"
+            else
+              echo "       => tmc cluster dataprotection create -c $TDH_CLUSTER_NAME -m $TMC_MANAGEMENT_CLUSTER \\"
+              echo "            -p $TMC_PROVISIONER_NAME --backup-location-names $TDH_TANZU_DATA_PROTECTION_BACKUP_LOCATION"
+            fi
             messageLine
           fi
         fi
@@ -1366,8 +1373,15 @@ checkTMCintegration() {
         if [ $ret -ne 0 ]; then
           messageLine
           echo "ERROR: failed to configure a full-backup"
-          echo "       => tmc cluster dataprotection backup create -c $TDH_CLUSTER_NAME -p $TMC_PROVISIONER_NAME \\"
-          echo "            -m $TMC_MANAGEMENT_CLUSTER --name \"full-backup\" --backup-location-name $TDH_TANZU_DATA_PROTECTION_BACKUP_LOCATION"
+          if [ "$NATIVE" == "0" ]; then
+            echo "       => tools/tdh-tools.sh"
+            echo "          tdh-tools:/$ tmc cluster dataprotection backup create -c $TDH_CLUSTER_NAME -p $TMC_PROVISIONER_NAME \\"
+            echo "                          -m $TMC_MANAGEMENT_CLUSTER --name \"full-backup\" --backup-location-name $TDH_TANZU_DATA_PROTECTION_BACKUP_LOCATION"
+            echo "          tdh-tools:/$ exit"
+          else
+            echo "       => tmc cluster dataprotection backup create -c $TDH_CLUSTER_NAME -p $TMC_PROVISIONER_NAME \\"
+            echo "            -m $TMC_MANAGEMENT_CLUSTER --name \"full-backup\" --backup-location-name $TDH_TANZU_DATA_PROTECTION_BACKUP_LOCATION"
+          fi
           messageLine
         fi
       else
@@ -1411,8 +1425,15 @@ scanCluster() {
     if [ $? -ne 0 ]; then 
       messageLine
       echo "ERROR: failed to scan cluster $TDH_CLUSTER_NAME"
-      echo "       => tmc cluster inspection scan create -c $TDH_CLUSTER_NAME -p $TMC_PROVISIONER_NAME \\"
-      echo "             -m $TMC_MANAGEMENT_CLUSTER --inspection-type $TYPE"
+      if [ "$NATIVE" == "0" ]; then
+        echo "       => tools/tdh-tools.sh"
+        echo "          tdh-tools:/$ tmc cluster inspection scan create -c $TDH_CLUSTER_NAME -p $TMC_PROVISIONER_NAME \\"
+        echo "                         -m $TMC_MANAGEMENT_CLUSTER --inspection-type $TYPE"
+        echo "          tdh-tools:/$ exit"
+      else
+        echo "       => tmc cluster inspection scan create -c $TDH_CLUSTER_NAME -p $TMC_PROVISIONER_NAME \\"
+        echo "             -m $TMC_MANAGEMENT_CLUSTER --inspection-type $TYPE"
+      fi
       messageLine
     fi
   else
@@ -1458,7 +1479,13 @@ checkTMCAccess() {
       # --- CHECK IF AWS CLI IS CONFIGURED ---
       if [ ! -d ~/.aws -o -d ~/.aws/credentials ]; then
         echo "ERROR: AWS CLI is not configured yet, please run aws configure"
-        echo "       => aws configure"
+        if [ "$NATIVE" == "0" ]; then
+          echo "       => tools/tdh-tools.sh"
+          echo "          tdh-tools:/$ aws configure"
+          echo "          tdh-tools:/$ exit"
+        else
+          echo "       => aws configure"
+        fi
         exit 1
       fi
     fi
@@ -1534,7 +1561,13 @@ checkTDHAccess() {
     # --- CHECK IF AWS CLI IS CONFIGURED ---
     if [ ! -d ~/.aws -o -d ~/.aws/credentials ]; then
       echo "ERROR: AWS CLI is not configured yet, please run aws configure"
-      echo "       => aws configure"
+      if [ "$NATIVE" == "0" ]; then
+        echo "       => tools/tdh-tools.sh"
+        echo "          tdh-tools:/$ aws configure"
+        echo "          tdh-tools:/$ exit"
+      else
+        echo "       => aws configure"
+      fi
       exit 1
     fi
 
@@ -2005,8 +2038,15 @@ route53createHostedZone() {
        --hosted-zone-config Comment="Managed by tanzu-demo-hub" > /dev/null 2>&1
   if [ $? -ne 0 ]; then
       echo "ERROR: failed to create AWS Route53 zone $ZONE_ID"
-      echo "       => aws route53 create-hosted-zone --name $zone --caller-reference \"$(date)\" \\"
-      echo "          --hosted-zone-config Comment=\"command-line version\""
+      if [ "$NATIVE" == "0" ]; then
+        echo "       => tools/tdh-tools.sh"
+        echo "          tdh-tools:/$ aws route53 create-hosted-zone --name $zone --caller-reference \"$(date)\" \\"
+        echo "                         --hosted-zone-config Comment=\"command-line version\""
+        echo "          tdh-tools:/$ exit"
+      else
+        echo "       => aws route53 create-hosted-zone --name $zone --caller-reference \"$(date)\" \\"
+        echo "          --hosted-zone-config Comment=\"command-line version\""
+      fi
       exit 1
   fi
 
@@ -2033,8 +2073,6 @@ route53setNSrecord () {
   DNS1=$(echo $dns | awk '{ print $1 }')
   DNS2=$(echo $dns | awk '{ print $2 }')
   DNS3=$(echo $dns | awk '{ print $3 }')
-  DNS4=$(echo $dns | awk '{ print $4 }')
-
   TMPROUTE53=/tmp/$$_tmp_route53.json
   echo "{"                                                   >  $TMPROUTE53
   echo "  \"Comment\": \"CREATE/DELETE/UPSERT a record \","  >> $TMPROUTE53
@@ -2056,9 +2094,16 @@ route53setNSrecord () {
   aws route53 change-resource-record-sets --hosted-zone-id $ZONE_ID \
       --change-batch file://${TMPROUTE53} > /dev/null 2>&1
   if [ $? -ne 0 ]; then
-    echo "4ERROR: failed to set DNS for $hnm"
-    echo "       => aws route53 change-resource-record-sets --hosted-zone-id \"${ZONE_ID}\" \\"
-    echo "              --change-batch file://${TMPROUTE53}"
+    echo "ERROR: failed to set DNS for $hnm"
+    if [ "$NATIVE" == "0" ]; then
+      echo "       => tools/tdh-tools.sh"
+      echo "          tdh-tools:/$ aws route53 change-resource-record-sets --hosted-zone-id \"${ZONE_ID}\" \\"
+      echo "                           --change-batch file://${TMPROUTE53}"
+      echo "          tdh-tools:/$ exit"
+    else
+      echo "       => aws route53 change-resource-record-sets --hosted-zone-id \"${ZONE_ID}\" \\"
+      echo "              --change-batch file://${TMPROUTE53}"
+    fi
     cat /tmp/$$_zone_record
     exit 1
   fi
@@ -2083,7 +2128,13 @@ route53deleteHostedZone() {
   aws route53 delete-hosted-zone --id $ZONE_ID >/dev/null 2>&1
   if [ $? -ne 0 ]; then
     echo "ERROR: failed to delete AWS Route53 zone $ZONE_ID"
-    echo "       => aws route53 delete-hosted-zone --id $ZONE_ID"
+    if [ "$NATIVE" == "0" ]; then
+      echo "       => tools/tdh-tools.sh"
+      echo "          tdh-tools:/$ aws route53 delete-hosted-zone --id $ZONE_ID"
+      echo "          tdh-tools:/$ exit"
+    else
+      echo "       => aws route53 delete-hosted-zone --id $ZONE_ID"
+    fi
     #exit 1
   fi
 }
@@ -2112,7 +2163,13 @@ route53setDNSrecord() {
   ZONE_ID_STR=$(echo "${ZONE_ID}" | awk -F'/' '{ print $NF }')
   if [ "${ZONE_ID}" == "" ]; then
     echo "ERROR: ZoneID for domain $dom can not be optained, please veriofy manually"
-    echo "       aws route53 list-hosted-zones-by-name --dns-name ${dom}"
+    if [ "$NATIVE" == "0" ]; then
+      echo "       => tools/tdh-tools.sh"
+      echo "          tdh-tools:/$ aws route53 list-hosted-zones-by-name --dns-name ${dom}"
+      echo "          tdh-tools:/$ exit"
+    else
+      echo "       => aws route53 list-hosted-zones-by-name --dns-name ${dom}"
+    fi
     exit 1
   fi
 
@@ -2133,7 +2190,13 @@ EOF
    aws route53 change-resource-record-sets --hosted-zone-id "${ZONE_ID}" --change-batch file:///tmp/$$_zone_record > /dev/null 2>&1
    if [ $? -ne 0 ]; then
      echo "5ERROR: failed to set DNS for $hnm"
-     echo "       => aws route53 change-resource-record-sets --hosted-zone-id "${ZONE_ID}" --change-batch file:///tmp/$$_zone_record"
+     if [ "$NATIVE" == "0" ]; then
+       echo "       => tools/tdh-tools.sh"
+       echo "          tdh-tools:/$ aws route53 change-resource-record-sets --hosted-zone-id "${ZONE_ID}" --change-batch file:///tmp/$$_zone_record"
+       echo "          tdh-tools:/$ exit"
+     else
+       echo "       => aws route53 change-resource-record-sets --hosted-zone-id "${ZONE_ID}" --change-batch file:///tmp/$$_zone_record"
+     fi
      cat /tmp/$$_zone_record
      exit 1
    fi
@@ -2262,7 +2325,13 @@ createTKGMCcluster() {
       cnt=$(tanzu management-cluster get | grep -c Error)
       if [ ${ret} -ne 0 -o ${cnt} -gt 0 ]; then
         echo "ERROR: failed to create TKG Management Cluster"
-        echo "       => tanzu management-cluster create --file $TKG_TEMPLATE -v 0 --log-file=/tmp/$TDH_TKGMC_NAME.log"
+        if [ "$NATIVE" == "0" ]; then
+          echo "       => tools/tdh-tools.sh"
+          echo "          tdh-tools:/$ tanzu management-cluster create --file $TKG_TEMPLATE -v 0 --log-file=/tmp/$TDH_TKGMC_NAME.log"
+          echo "          tdh-tools:/$ exit"
+        else
+          echo "       => tanzu management-cluster create --file $TKG_TEMPLATE -v 0 --log-file=/tmp/$TDH_TKGMC_NAME.log"
+        fi
         echo "-------------------------------------------------------------------------------------------------------------------------------------------------------"
         cat /tmp/$TDH_TKGMC_NAME.log
         echo "-------------------------------------------------------------------------------------------------------------------------------------------------------"
@@ -2282,7 +2351,13 @@ createTKGMCcluster() {
       tanzu management-cluster kubeconfig get --admin --export-file=${TKG_KUBECONFIG} > /dev/null 2>&1; ret=$?
       if [ $ret -ne 0 ]; then
         echo "ERROR: failed to generate kubeconfig:"
-        echo "       => tanzu management-cluster kubeconfig get --admin --export-file=${TKG_KUBECONFIG}"
+        if [ "$NATIVE" == "0" ]; then
+          echo "       => tools/tdh-tools.sh"
+          echo "          tdh-tools:/$ tanzu management-cluster kubeconfig get --admin --export-file=${TKG_KUBECONFIG}"
+          echo "          tdh-tools:/$ exit"
+        else
+          echo "       => tanzu management-cluster kubeconfig get --admin --export-file=${TKG_KUBECONFIG}"
+        fi
         messageLine
         tanzu management-cluster kubeconfig get --admin --export-file=${TKG_KUBECONFIG}
         messageLine
@@ -2418,7 +2493,13 @@ createTKGMCcluster() {
       cnt=$(tanzu management-cluster get 2>/dev/null | grep -c Error)
       if [ ${ret} -ne 0 -o ${cnt} -gt 0 ]; then
         echo "ERROR: failed to create TKG Management Cluster"
-        echo "       => tanzu management-cluster create --file $TKG_TEMPLATE -v 0 --log-file=/tmp/$TDH_TKGMC_NAME.log"
+        if [ "$NATIVE" == "0" ]; then
+          echo "       => tools/tdh-tools.sh"
+          echo "          tdh-tools:/$ tanzu management-cluster create --file $TKG_TEMPLATE -v 0 --log-file=/tmp/$TDH_TKGMC_NAME.log"
+          echo "          tdh-tools:/$ exit"
+        else
+          echo "       => tanzu management-cluster create --file $TKG_TEMPLATE -v 0 --log-file=/tmp/$TDH_TKGMC_NAME.log"
+        fi
         echo "-------------------------------------------------------------------------------------------------------------------------------------------------------"
         cat /tmp/$TDH_TKGMC_NAME.log
         echo "-------------------------------------------------------------------------------------------------------------------------------------------------------"
@@ -2435,7 +2516,13 @@ createTKGMCcluster() {
       tanzu management-cluster kubeconfig get --admin --export-file=${TKG_KUBECONFIG} > /dev/null 2>&1; ret=$?
       if [ $ret -ne 0 ]; then
         echo "ERROR: failed to generate kubeconfig:"
-        echo "       => tanzu management-cluster kubeconfig get --admin --export-file=${TKG_KUBECONFIG}"
+        if [ "$NATIVE" == "0" ]; then
+          echo "       => tools/tdh-tools.sh"
+          echo "          tdh-tools:/$ tanzu management-cluster kubeconfig get --admin --export-file=${TKG_KUBECONFIG}"
+          echo "          tdh-tools:/$ exit"
+        else
+          echo "       => tanzu management-cluster kubeconfig get --admin --export-file=${TKG_KUBECONFIG}"
+        fi
         messageLine
         tanzu management-cluster kubeconfig get --admin --export-file=${TKG_KUBECONFIG} 
         messageLine
@@ -2467,7 +2554,13 @@ createTKGMCcluster() {
     az ad app list --display-name "TanzuDemoHub" > /dev/null 2>&1
     if [ $? -ne 0 ]; then 
       echo "ERROR: failed to list apps"
-      echo "       => az ad app list --display-name \"TanzuDemoHub\""
+      if [ "$NATIVE" == "0" ]; then
+        echo "       => tools/tdh-tools.sh"
+        echo "          tdh-tools:/$ az ad app list --display-name \"TanzuDemoHub\""
+        echo "          tdh-tools:/$ exit"
+      else
+        echo "       => az ad app list --display-name \"TanzuDemoHub\""
+      fi
       exit 1
     fi
     AZURE_SSH_PUBLIC_KEY_B64=$(cat ~/.tanzu-demo-hub/KeyPair-Azure.pub | base64 -w 10000)
@@ -2557,7 +2650,13 @@ createTKGMCcluster() {
       cnt=$(tanzu management-cluster get 2>/dev/null | grep -c Error)
       if [ ${ret} -ne 0 -o ${cnt} -gt 0 ]; then
         echo "ERROR: failed to create TKG Management Cluster"
-        echo "       => tanzu management-cluster create --file $TKG_TEMPLATE -v 0 --log-file=/tmp/$TDH_TKGMC_NAME.log"
+        if [ "$NATIVE" == "0" ]; then
+          echo "       => tools/tdh-tools.sh"
+          echo "          tdh-tools:/$ tanzu management-cluster create --file $TKG_TEMPLATE -v 0 --log-file=/tmp/$TDH_TKGMC_NAME.log"
+          echo "          tdh-tools:/$ exit"
+        else
+          echo "       => tanzu management-cluster create --file $TKG_TEMPLATE -v 0 --log-file=/tmp/$TDH_TKGMC_NAME.log"
+        fi
         echo "-------------------------------------------------------------------------------------------------------------------------------------------------------"
         cat /tmp/$TDH_TKGMC_NAME.log
         echo "-------------------------------------------------------------------------------------------------------------------------------------------------------"
@@ -2573,7 +2672,13 @@ createTKGMCcluster() {
       tanzu management-cluster kubeconfig get --admin --export-file=${TKG_KUBECONFIG} > /dev/null 2>&1; ret=$?
       if [ ${ret} -ne 0 ]; then
         echo "ERROR: failed to export kubeconfig"
-        echo "       => tanzu management-cluster kubeconfig get --admin --export-file=${TKG_KUBECONFIG}"
+        if [ "$NATIVE" == "0" ]; then
+          echo "       => tools/tdh-tools.sh"
+          echo "          tdh-tools:/$ tanzu management-cluster kubeconfig get --admin --export-file=${TKG_KUBECONFIG}"
+          echo "          tdh-tools:/$ exit"
+        else
+          echo "       => tanzu management-cluster kubeconfig get --admin --export-file=${TKG_KUBECONFIG}"
+        fi
         exit 1
       fi
     fi
@@ -2691,9 +2796,16 @@ setTKGclusterDNS() {
       aws route53 change-resource-record-sets --hosted-zone-id $ZONE_ID \
           --change-batch file://${TMPROUTE53} > /dev/null 2>&1
       if [ $? -ne 0 ]; then
-        echo "1ERROR: failed to set DNS for $hnm"
-        echo "       => aws route53 change-resource-record-sets --hosted-zone-id \"${ZONE_ID}\" \\"
-        echo "              --change-batch file://${TMPROUTE53}"
+        echo "ERROR: failed to set DNS for $hnm"
+        if [ "$NATIVE" == "0" ]; then
+          echo "       => tools/tdh-tools.sh"
+          echo "          tdh-tools:/$ aws route53 change-resource-record-sets --hosted-zone-id \"${ZONE_ID}\" \\"
+          echo "                          --change-batch file://${TMPROUTE53}"
+          echo "          tdh-tools:/$ exit"
+        else
+          echo "       => aws route53 change-resource-record-sets --hosted-zone-id \"${ZONE_ID}\" \\"
+          echo "              --change-batch file://${TMPROUTE53}"
+        fi
         cat $TMPROUTE53
         exit 1
       fi
@@ -2741,9 +2853,15 @@ echo "TDH_TKGMC_INFRASTRUCTURE:$TDH_TKGMC_INFRASTRUCTURE"
         aws route53 change-resource-record-sets --hosted-zone-id $ZONE_ID \
             --change-batch file://${TMPROUTE53} > /dev/null 2>&1
         if [ $? -ne 0 ]; then
-          echo "2ERROR: failed to set DNS for $hnm"
-          echo "       => aws route53 change-resource-record-sets --hosted-zone-id \"${ZONE_ID}\" \\"
-          echo "              --change-batch file://${TMPROUTE53}"
+          echo "ERROR: failed to set DNS for $hnm"
+            echo "       => tools/tdh-tools.sh"
+            echo "          tdh-tools:/$ aws route53 change-resource-record-sets --hosted-zone-id \"${ZONE_ID}\" \\"
+            echo "                        --change-batch file://${TMPROUTE53}"
+            echo "          tdh-tools:/$ exit"
+          else
+            echo "       => aws route53 change-resource-record-sets --hosted-zone-id \"${ZONE_ID}\" \\"
+            echo "              --change-batch file://${TMPROUTE53}"
+          fi
           cat $TMPROUTE53
           exit 1
         fi
@@ -2763,8 +2881,15 @@ verifyTLScertificate() {
   if [ "$dif" == "" ]; then dif=0; fi
   if [ $dif -ne 2 ]; then
     echo "ERROR: Certificate modulus of $TLS_CERTIFICATE does not match with the private_key $TLS_PRIVATE_KEY"
-    echo "       => openssl x509 -in $TLS_CERTIFICATE -noout -modulus"
-    echo "       => openssl rsa -in $TLS_PRIVATE_KEY -noout -modulus"
+    if [ "$NATIVE" == "0" ]; then
+      echo "       => tools/tdh-tools.sh"
+      echo "          tdh-tools:/$ openssl x509 -in $TLS_CERTIFICATE -noout -modulus"
+      echo "          tdh-tools:/$ openssl rsa -in $TLS_PRIVATE_KEY -noout -modulus"
+      echo "          tdh-tools:/$ exit"
+    else
+      echo "       => openssl x509 -in $TLS_CERTIFICATE -noout -modulus"
+      echo "       => openssl rsa -in $TLS_PRIVATE_KEY -noout -modulus"
+    fi
     exit 1
   fi
 
@@ -3021,8 +3146,15 @@ setDNSalias() {
         --change-batch file://${TMPROUTE53} > /dev/null 2>&1
     if [ $? -ne 0 ]; then
       echo "9ERROR: failed to set DNS for $hnm"
-      echo "       => aws route53 change-resource-record-sets --hosted-zone-id \"${ZONE_ID}\" \\"
-      echo "              --change-batch file://${TMPROUTE53}"
+      if [ "$NATIVE" == "0" ]; then
+        echo "       => tools/tdh-tools.sh"  
+        echo "          tdh-tools:/$ aws route53 change-resource-record-sets --hosted-zone-id \"${ZONE_ID}\" \\"
+        echo "                         --change-batch file://${TMPROUTE53}"
+        echo "          tdh-tools:/$ exit"
+      else
+        echo "       => aws route53 change-resource-record-sets --hosted-zone-id \"${ZONE_ID}\" \\"
+        echo "              --change-batch file://${TMPROUTE53}"
+      fi
       cat $TMPROUTE53
       exit 1
     fi
@@ -3066,8 +3198,16 @@ setDNSrecord() {
         --change-batch file://${TMPROUTE53} > /dev/null 2>&1
     if [ $? -ne 0 ]; then
       echo "3ERROR: failed to set DNS for $hnm"
-      echo "       => aws route53 change-resource-record-sets --hosted-zone-id \"${ZONE_ID}\" \\"
-      echo "              --change-batch file://${TMPROUTE53}"
+      if [ "$NATIVE" == "0" ]; then
+        echo "       => tools/tdh-tools.sh"   
+        echo "          tdh-tools:/$ aws route53 change-resource-record-sets --hosted-zone-id \"${ZONE_ID}\" \\"
+        echo "                        --change-batch file://${TMPROUTE53}"
+        echo "          tdh-tools:/$ exit"
+      else
+        echo "       => aws route53 change-resource-record-sets --hosted-zone-id \"${ZONE_ID}\" \\"
+        echo "              --change-batch file://${TMPROUTE53}"
+      fi
+
       cat $TMPROUTE53
       exit 1
     fi
@@ -3229,7 +3369,15 @@ VerifyServiceDependancies() {
 
     helm repo add bitnami https://charts.bitnami.com/bitnami > /dev/null 2>&1
     if [ $? -ne 0 ]; then
-      echo "ERROR: failed to add helm registry https://charts.bitnami.com/bitnami"; exit 1
+      echo "ERROR: failed to add helm registry https://charts.bitnami.com/bitnami"
+      if [ "$NATIVE" == "0" ]; then
+        echo "       => tools/tdh-tools.sh" 
+        echo "          tdh-tools:/$ helm repo add bitnami https://charts.bitnami.com/bitnami"
+        echo "          tdh-tools:/$ exit"
+      else
+        echo "       => helm repo add bitnami https://charts.bitnami.com/bitnami"
+      fi
+      exit 1
     fi
 
     messagePrint " ▪ Install Cert Manager" "bitnami/nginx-ingress-controller"
@@ -3241,7 +3389,13 @@ VerifyServiceDependancies() {
       helm install $HELM_CHART -n $INGRESS_NAMESPACE > /dev/null 2>&1
       if [ $? -ne 0 ]; then
         echo "ERROR: Failed to install $HELM_CHART"
-        echo "       => helm install stable $HELM_CHART -n $INGRESS_NAMESPACE"
+        if [ "$NATIVE" == "0" ]; then
+          echo "       => tools/tdh-tools.sh"    
+          echo "          tdh-tools:/$ helm install stable $HELM_CHART -n $INGRESS_NAMESPACE"
+          echo "          tdh-tools:/$ exit"
+        else
+          echo "       => helm install stable $HELM_CHART -n $INGRESS_NAMESPACE"
+        fi
       fi
     fi
 
@@ -3253,7 +3407,16 @@ VerifyServiceDependancies() {
 
     helm repo add bitnami https://charts.bitnami.com/bitnami > /dev/null 2>&1
     if [ $? -ne 0 ]; then
-      echo "ERROR: failed to add helm registry https://charts.bitnami.com/bitnami"; exit 1
+      echo "ERROR: failed to add helm registry https://charts.bitnami.com/bitnami"
+      if [ "$NATIVE" == "0" ]; then
+        echo "       => tools/tdh-tools.sh" 
+        echo "          tdh-tools:/$ helm repo add bitnami https://charts.bitnami.com/bitnami"
+        echo "          tdh-tools:/$ exit"
+      else
+        echo "       => helm repo add bitnami https://charts.bitnami.com/bitnami"
+      fi
+
+      exit 1
     fi
 
     messagePrint " ▪ Install Ingress Controller" "$HELM_CHART"
@@ -3265,7 +3428,15 @@ VerifyServiceDependancies() {
       helm install bitnami bitnami/nginx-ingress-controller -n $INGRESS_NAMESPACE > /dev/null 2>&1
       if [ $? -ne 0 ]; then
         echo "ERROR: Failed to install $HELM_CHART"
-        echo "       => helm install stable $HELM_CHART"
+        if [ "$NATIVE" == "0" ]; then
+          echo "       => tools/tdh-tools.sh"  
+          echo "          tdh-tools:/$ helm install stable $HELM_CHART"
+          echo "          tdh-tools:/$ exit"
+        else
+          echo "       => helm install stable $HELM_CHART"
+        fi
+
+        exit 1
       fi
     fi
 
@@ -3282,7 +3453,13 @@ VerifyServiceDependancies() {
       setTKGclusterDNS "$TDH_TKGWC_NAME" "${ipa}" "nginx"
     else
       echo "ERROR: Unable to get LoadBalancer IP-Adress of the Ingress"
-      echo "       => kubectl get svc envoy -n tanzu-system-ingress"
+      if [ "$NATIVE" == "0" ]; then
+        echo "       => tools/tdh-tools.sh" 
+        echo "          tdh-tools:/$ kubectl get svc envoy -n tanzu-system-ingress"
+        echo "          tdh-tools:/$ exit"
+      else
+        echo "       => kubectl get svc envoy -n tanzu-system-ingress"
+      fi
       exit 1
     fi
   fi
@@ -3298,7 +3475,15 @@ VerifyServiceDependancies() {
 
     helm repo add bitnami https://charts.bitnami.com/bitnami > /dev/null 2>&1
     if [ $? -ne 0 ]; then
-      echo "ERROR: failed to add helm registry https://charts.bitnami.com/bitnami"; exit 1
+      if [ "$NATIVE" == "0" ]; then
+        echo "       => tools/tdh-tools.sh"
+        echo "          tdh-tools:/$ helm repo add bitnami https://charts.bitnami.com/bitnami"
+        echo "          tdh-tools:/$ exit"
+      else
+        echo "       => helm repo add bitnami https://charts.bitnami.com/bitnami"
+      fi
+
+      exit 1
     fi
 
     stt=$(helm list -n $INGRESS_NAMESPACE -o json | jq -r --arg key "contour-3" '.[] | select(.chart | contains($key)).status')
@@ -3307,7 +3492,13 @@ VerifyServiceDependancies() {
       helm install bitnami $HELM_CHART -n $INGRESS_NAMESPACE > /dev/null 2>&1
       if [ $? -ne 0 ]; then
         echo "ERROR: Failed to install $HELM_CHART"
-        echo "       => helm install stable $HELM_CHART"
+        if [ "$NATIVE" == "0" ]; then
+          echo "       => tools/tdh-tools.sh"
+          echo "          tdh-tools:/$ helm install stable $HELM_CHART"
+          echo "          tdh-tools:/$ exit"
+        else
+          echo "       => helm install stable $HELM_CHART"
+        fi
       fi
     fi
   fi
@@ -3346,7 +3537,13 @@ uodateConfigMap() {
   kubectl create configmap $CONFIG_MAP --from-env-file=/tmp/$CONFIG_MAP --dry-run=client -o yaml | kubectl apply -f - > /dev/null 2>&1
   if [ $? -ne 0 ]; then
     echo "ERROR: updating config map $CONFIG_MAP"
-    echo "       => kubectl create configmap $CONFIG_MAP --from-env-file=/tmp/$CONFIG_MAP --dry-run=client -o yaml | kubectl apply -f -"
+    if [ "$NATIVE" == "0" ]; then
+      echo "       => tools/tdh-tools.sh"   
+      echo "          tdh-tools:/$ kubectl create configmap $CONFIG_MAP --from-env-file=/tmp/$CONFIG_MAP --dry-run=client -o yaml | kubectl apply -f -"
+      echo "          tdh-tools:/$ exit"
+    else
+      echo "       => kubectl create configmap $CONFIG_MAP --from-env-file=/tmp/$CONFIG_MAP --dry-run=client -o yaml | kubectl apply -f -"
+    fi
     exit 1
   fi  
 }
