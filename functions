@@ -2291,7 +2291,6 @@ createTKGMCcluster() {
     fi
   fi
 
-#gaga1
   if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "AWS" ]; then
     messageTitle "Creating TKG Managment Cluster"
     messagePrint " ▪ Cluster Name"                  "$TDH_TKGMC_NAME"
@@ -2407,10 +2406,6 @@ createTKGMCcluster() {
       rm -f ~/.tanzu/config.yaml /tmp/$TDH_TKGMC_NAME.log
 
       messagePrint " ▪ Management Cluster Creating"        "This may take up to 15min ..."
-
-echo "tanzu management-cluster create --file $TKG_TEMPLATE -v 0"
-#gaga1
-exit
 
       if [ $DEBUG -gt 0 ]; then
         echo "-------------------------------------------------------------------------------------------------------------------------------------------------------"
@@ -2551,8 +2546,6 @@ exit
 
       messagePrint " ▪ Management Cluster Creating"        "This may take up to 15min ..."
 
-#gaga
-echo "tanzu management-cluster create --file $TKG_TEMPLATE --log-file=/tmp/$TDH_TKGMC_NAME.log"
       if [ $DEBUG -gt 0 ]; then
         echo "-------------------------------------------------------------------------------------------------------------------------------------------------------"
         tanzu management-cluster create --file $TKG_TEMPLATE -v 0 --log-file=/tmp/$TDH_TKGMC_NAME.log; ret=$?
