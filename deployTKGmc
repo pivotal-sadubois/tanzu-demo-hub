@@ -667,7 +667,6 @@ createJumpHost() {
     verify_datacenter
   fi
 
-echo "gaga TDH_DEPLOYMENT_ENV_NAME:$TDH_DEPLOYMENT_ENV_NAME"
   if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "vSphere" -a "$TDH_TKGMC_CREATE_JUMPHOST" == "true" ]; then
     VSPHERE_JUMPHOST_NAME=jump.$VSPHERE_DNS_DOMAIN
 
