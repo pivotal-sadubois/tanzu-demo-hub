@@ -1417,10 +1417,10 @@ echo "az vm image terms accept --urn $img"
     stt=$(tmc managementcluster get $TDH_TKGMC_NAME -o json 2>/dev/null | jq -r '.status.conditions.READY.status') 
     if [ "$stt" == "FALSE" ]; then 
       messagePrint " ▪ TMC ReRegister Cluster"             "$TDH_TKGMC_NAME"
-      tmc managementcluster reregister $TDH_TKGMC_NAME -o /tmp/k8s-register-manifest.yaml > /dev/null 2>&1
-      if [ $? -eq 0 ]; then
-        kubectl apply -f /tmp/k8s-register-manifest.yaml
-        if [ $? -eq 0 ]; then
+      tmc managementcluster reregister $TDH_TKGMC_NAME -o /tmp/k8s-register-manifest.yaml > /dev/null 2>&1; ret=$?
+      if [ $ret -eq 0 ]; then
+        kubectl apply -f /tmp/k8s-register-manifest.yaml > /dev/null 2>&1; ret=$?
+        if [ $ret -eq 0 ]; then
           messagePrint " ▪ TMC ReRegister Cluster failed, deregister"             "$TDH_TKGMC_NAME"
           tmc managementcluster deregister $TDH_TKGMC_NAME > /dev/null 2>&1
         fi
@@ -1578,21 +1578,44 @@ echo "az vm image terms accept --urn $img"
     echo "        LoadBalancer IP Pool ..............................: $VSPHERE_TKGM_WKLD_CLUSTER03_LOADBALANCER_POOL"
     echo ""
 
-    echo "    => export CLUSTER_NAME=<cluster_name>                   ## Workload Cluster Name"
-    echo "    => export VSPHERE_CONTROL_PLANE_ENDPOINT=<ip-address>   ## Control Plane IP Adress for the worklaod Cluster"
-    echo "    => tanzu cluster create -f \$HOME/.tanzu/tkg/clusterconfigs/${TDH_TKGMC_NAME}-wc-dev.yaml --tkr v1.20.4---vmware.3-tkg.1"
-    echo "    => tanzu cluster create -f \$HOME/.tanzu/tkg/clusterconfigs/${TDH_TKGMC_NAME}-wc-prod.yaml"
-    echo "    => tanzu cluster kubeconfig get \$CLUSTER_NAME --admin"
-    echo "    => kubectl config use-context \${CLUSTER_NAME}-admin@\$CLUSTER_NAME"
-    echo "    => tanzu cluster list --include-management-cluster"
-    echo "    => tanzu cluster delete \$CLUSTER_NAME -y"
+    if [ "$NATIVE" == "0" ]; then
+      echo "    => tools/tdh-tools.sh"
+      echo "       tdh-tools:/$ export CLUSTER_NAME=<cluster_name>                   ## Workload Cluster Name"
+      echo "       tdh-tools:/$ export VSPHERE_CONTROL_PLANE_ENDPOINT=<ip-address>   ## Control Plane IP Adress for the worklaod Cluster"
+      echo "       tdh-tools:/$ tanzu cluster create -f \$HOME/.tanzu/tkg/clusterconfigs/${TDH_TKGMC_NAME}-wc-dev.yaml --tkr v1.20.4---vmware.3-tkg.1"
+      echo "       tdh-tools:/$ tanzu cluster create -f \$HOME/.tanzu/tkg/clusterconfigs/${TDH_TKGMC_NAME}-wc-prod.yaml"
+      echo "       tdh-tools:/$ tanzu cluster kubeconfig get \$CLUSTER_NAME --admin"
+      echo "       tdh-tools:/$ kubectl config use-context \${CLUSTER_NAME}-admin@\$CLUSTER_NAME"
+      echo "       tdh-tools:/$ tanzu cluster list --include-management-cluster"
+      echo "       tdh-tools:/$ tanzu cluster delete \$CLUSTER_NAME -y"
+      echo "       tdh-tools:/$ exit"
+    else
+      echo "    => export CLUSTER_NAME=<cluster_name>                   ## Workload Cluster Name"
+      echo "    => export VSPHERE_CONTROL_PLANE_ENDPOINT=<ip-address>   ## Control Plane IP Adress for the worklaod Cluster"
+      echo "    => tanzu cluster create -f \$HOME/.tanzu/tkg/clusterconfigs/${TDH_TKGMC_NAME}-wc-dev.yaml --tkr v1.20.4---vmware.3-tkg.1"
+      echo "    => tanzu cluster create -f \$HOME/.tanzu/tkg/clusterconfigs/${TDH_TKGMC_NAME}-wc-prod.yaml"
+      echo "    => tanzu cluster kubeconfig get \$CLUSTER_NAME --admin"
+      echo "    => kubectl config use-context \${CLUSTER_NAME}-admin@\$CLUSTER_NAME"
+      echo "    => tanzu cluster list --include-management-cluster"
+      echo "    => tanzu cluster delete \$CLUSTER_NAME -y"
+    fi
   else
     printf "\e[1m2.) Ceeate TKG Workload Cluster\e[0m\n"
-    echo "    => tanzu kubernetes-release get"
-    echo "    => tanzu cluster create -f \$HOME/.tanzu/tkg/clusterconfigs/${TDH_TKGMC_NAME}-wc-dev.yaml  <cluster-name> -tkr v1.18.17---vmware.2-tkg.1"
-    echo "    => tanzu cluster create -f \$HOME/.tanzu/tkg/clusterconfigs/${TDH_TKGMC_NAME}-wc-prod.yaml <cluster-name>"
-    echo "    => tanzu cluster kubeconfig get <cluster-name> --admin"
-    echo "    => tanzu cluster list --include-management-cluster"
+    if [ "$NATIVE" == "0" ]; then
+      echo "    => tools/tdh-tools.sh"
+      echo "       tdh-tools:/$ tanzu kubernetes-release get"
+      echo "       tdh-tools:/$ tanzu cluster create -f \$HOME/.tanzu/tkg/clusterconfigs/${TDH_TKGMC_NAME}-wc-dev.yaml  <cluster-name> -tkr v1.18.17---vmware.2-tkg.1"
+      echo "       tdh-tools:/$ tanzu cluster create -f \$HOME/.tanzu/tkg/clusterconfigs/${TDH_TKGMC_NAME}-wc-prod.yaml <cluster-name>"
+      echo "       tdh-tools:/$ tanzu cluster kubeconfig get <cluster-name> --admin"
+      echo "       tdh-tools:/$ tanzu cluster list --include-management-cluster"
+      echo "       tdh-tools:/$ exit"
+    else
+      echo "    => tanzu kubernetes-release get"
+      echo "    => tanzu cluster create -f \$HOME/.tanzu/tkg/clusterconfigs/${TDH_TKGMC_NAME}-wc-dev.yaml  <cluster-name> -tkr v1.18.17---vmware.2-tkg.1"
+      echo "    => tanzu cluster create -f \$HOME/.tanzu/tkg/clusterconfigs/${TDH_TKGMC_NAME}-wc-prod.yaml <cluster-name>"
+      echo "    => tanzu cluster kubeconfig get <cluster-name> --admin"
+      echo "    => tanzu cluster list --include-management-cluster"
+    fi
   fi
 
   printf "\e[1m2.) Ceeate Tanzu Demo Hub (TDH) Workload Cluster with services (TBS, Harbor, Ingres etc.)\e[0m\n"
@@ -1604,8 +1627,16 @@ echo "az vm image terms accept --urn $img"
     echo "    => ./deployTKG -m $TDH_TKGMC_NAME -d tkg-tanzu-demo-hub.cfg -n tdh-$CLOUD-$TDH_USER -k \"v1.17.16---vmware.2-tkg.1\""
   fi
 
-  printf "\e[1m3.) Delete the Management Cluster\e[0m\n"
-  echo "    => tanzu management-cluster delete $TDH_TKGMC_NAME-$TDH_USER -y"
+  printf "\e[1m3.) Delete the Management Cluster (Local or on the Jump host)\e[0m\n"
+  if [ "$NATIVE" == "0" ]; then
+    echo "    => tools/tdh-tools.sh"
+    echo "       tdh-tools:/$ tanzu management-cluster delete $TDH_TKGMC_NAME -y"
+    echo "       tdh-tools:/$ exit"
+    echo "    => $SSH_DISPLAY"
+    echo "       tanzu management-cluster delete $TDH_TKGMC_NAME -y"
+  else
+    echo "    => tanzu management-cluster delete $TDH_TKGMC_NAME -y"
+  fi
   printf "\e[1m4.) Login to Jump Server: $JUMP_HOST (only if required)\e[0m\n"
   echo "    => $SSH_DISPLAY"
   echo ""
