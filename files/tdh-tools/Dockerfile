@@ -1,6 +1,6 @@
 # ############################################################################################
 # File: ........: files/tdh-tools/Dockerfile   
-# Language .....: docker
+# Language .....: docker 
 # Author .......: Sacha Dubois, VMware
 # Description ..: Tanzu Demo Hub - Dockerfile for tdh-tools container
 # ############################################################################################
@@ -15,7 +15,8 @@ ADD kubectl         /usr/local/bin
 ADD kp              /usr/local/bin
 ADD mc              /usr/local/bin
 ADD tmc             /usr/local/bin
-ADD terraform-bin   /usr/local/bin/terraform
+#ADD terraform-bin   /usr/local/bin/terraform
+ADD kind            /usr/local/bin
 ADD govc            /usr/local/bin
 ADD kubectl-vsphere /usr/local/bin
 ADD kubectl         /usr/local/bin
@@ -44,6 +45,11 @@ RUN apt-get update -qq && apt-get install -qqy \
     gnupg \
     iptables
 RUN apt-get clean 
+
+# --- INSTALL TERRAFORM ---
+RUN curl -fsSL https://apt.releases.hashicorp.com/gpg | apt-key add -
+RUN apt-add-repository "deb [arch=amd64] https://apt.releases.hashicorp.com $(lsb_release -cs) main"
+RUN apt-get update && apt-get install terraform -y
 
 # --- INSTALL DOCKER ---
 RUN curl -sSL https://get.docker.com/ | sh
