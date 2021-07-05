@@ -2408,9 +2408,9 @@ createTKGMCcluster() {
       messagePrint " ▪ Management Cluster Creating"        "This may take up to 15min ..."
 
       if [ $DEBUG -gt 0 ]; then
-        echo "-------------------------------------------------------------------------------------------------------------------------------------------------------"
+        messageLine
         tanzu management-cluster create --file $TKG_TEMPLATE -v 0 --log-file=/tmp/$TDH_TKGMC_NAME.log; ret=$?
-        echo "-------------------------------------------------------------------------------------------------------------------------------------------------------"
+        messageLine
       else
         tanzu management-cluster create --file $TKG_TEMPLATE -v 0 --log-file=/tmp/$TDH_TKGMC_NAME.log > /dev/null 2>&1; ret=$?
       fi
