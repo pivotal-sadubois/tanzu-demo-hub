@@ -2822,8 +2822,6 @@ setTKGclusterDNS() {
         jq -r '.LoadBalancerDescriptions[0].CanonicalHostedZoneNameID')
     ZONE_ID=$(aws route53 list-hosted-zones-by-name --dns-name ${DNS_PREFIX}.${DNS_SUFFIX} | jq -r '.HostedZones[0].Id')
   
-echo "TDH_TKGMC_INFRASTRUCTURE:$TDH_TKGMC_INFRASTRUCTURE"
-#jjjjjjjjjjjjjjjjjjj
     ALIAS=$(aws route53 list-resource-record-sets --hosted-zone-id $ZONE_ID \
             --query "ResourceRecordSets[?contains(Name, '${TKG_INGRESS}-${TKG_CLUSTER}.${DNS_PREFIX}.${DNS_SUFFIX}')].AliasTarget.DNSName" | \
             jq -r '.[]' | sed -e 's/dualstack\.//g' -e 's/\.$//g' )
@@ -2854,6 +2852,7 @@ echo "TDH_TKGMC_INFRASTRUCTURE:$TDH_TKGMC_INFRASTRUCTURE"
             --change-batch file://${TMPROUTE53} > /dev/null 2>&1
         if [ $? -ne 0 ]; then
           echo "ERROR: failed to set DNS for $hnm"
+          if [ "$NATIVE" == "0" ]; then
             echo "       => tools/tdh-tools.sh"
             echo "          tdh-tools:/$ aws route53 change-resource-record-sets --hosted-zone-id \"${ZONE_ID}\" \\"
             echo "                        --change-batch file://${TMPROUTE53}"
