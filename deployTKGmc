@@ -18,7 +18,7 @@ export CMD_ARGS=$*
 
 usage() {
   echo "USAGE: $0 [oprions] <deployment>"
-  echo "            --clean                  # Clean previous installation and stop the jump server"
+  echo "            --delete                 # Delete Management Cluster and Jump Server"
   echo "            --debug                  # default (disabled)"
   echo "            --native                 # Use 'native' installed tools instead of the tdh-tools container"
 }
@@ -134,12 +134,10 @@ listClusters() {
 
 while [ "$1" != "" ]; do
   case $1 in
-    -c)      DEPLOY_TKG_CLEAN=1;;
-    --clean) DEPLOY_TKG_CLEAN=1;;
-    -d)      DEBUG=1;;
-    --debug) DEBUG=1;;
+    --delete)      DEPLOY_TKG_CLEAN=1;;
+    --debug)       DEBUG=1;;
     --native)      NATIVE=1;;
-    *)       DEPLOY_TKG_TEMPLATE=$1;;
+    *)             DEPLOY_TKG_TEMPLATE=$1;;
   esac
   shift
 done
@@ -373,7 +371,6 @@ configureLetsEnscript() {
 }
 
 createJumpHost() {
-#gaga
   if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "AWS" ]; then
     JUMP_HOST="jump-${TDH_TKGMC_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}"
     messageTitle "AWS Jump-Server ($JUMP_HOST)"
@@ -729,7 +726,6 @@ createJumpHost() {
         echo "=> terraform -chdir=${TERRAFORM_PATH} init"
         echo "--------------------------------------------------------------------------------------------------------------"
         terraform -chdir=${TERRAFORM_PATH} init
-echo "gaga terraform -chdir=${TERRAFORM_PATH} init"
   
         echo "--------------------------------------------------------------------------------------------------------------"
         echo "=> terraform -chdir=${TDHPATH}/terraform plan -var-file=/tmp/terraform.tfvars -out jump -state=/tmp/terraform.state"
@@ -1395,12 +1391,15 @@ echo "az vm image terms accept --urn $img"
 
       tanzu login --kubeconfig ~/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.kubeconfig  --name $TDH_TKGMC_NAME --server $TDH_TKGMC_NAME \
          --context ${TDH_TKGMC_NAME}-admin@$TDH_TKGMC_NAME > /dev/null 2>&1
+      tanzu login --server $TDH_TKGMC_NAME > /dev/null 2>&1
       tanzu management-cluster get > /dev/null 2>&1
       if [ $? -ne 0 ]; then
         echo "ERROR: failed to login to TKG Management Cluster: ${TDH_TKGMC_NAME}.kubeconfig"
         echo "       => tanzu login --kubeconfig ~/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.kubeconfig  \\"
         echo "            --name $TDH_TKGMC_NAME --server $TDH_TKGMC_NAME \\"
         echo "            --context ${TDH_TKGMC_NAME}-admin@$TDH_TKGMC_NAME"
+        echo "       => tanzu login --server $TDH_TKGMC_NAME"
+        echo "       => tanzu management-cluster get"
         exit
       fi
     fi
