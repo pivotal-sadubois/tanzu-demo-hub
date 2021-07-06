@@ -2073,6 +2073,7 @@ route53setNSrecord () {
   DNS1=$(echo $dns | awk '{ print $1 }')
   DNS2=$(echo $dns | awk '{ print $2 }')
   DNS3=$(echo $dns | awk '{ print $3 }')
+  DNS4=$(echo $dns | awk '{ print $4 }')
   TMPROUTE53=/tmp/$$_tmp_route53.json
   echo "{"                                                   >  $TMPROUTE53
   echo "  \"Comment\": \"CREATE/DELETE/UPSERT a record \","  >> $TMPROUTE53
@@ -2094,7 +2095,7 @@ route53setNSrecord () {
   aws route53 change-resource-record-sets --hosted-zone-id $ZONE_ID \
       --change-batch file://${TMPROUTE53} > /dev/null 2>&1
   if [ $? -ne 0 ]; then
-    echo "ERROR: failed to set DNS for $hnm"
+    echo "4ERROR: failed to set DNS for $hnm"
     if [ "$NATIVE" == "0" ]; then
       echo "       => tools/tdh-tools.sh"
       echo "          tdh-tools:/$ aws route53 change-resource-record-sets --hosted-zone-id \"${ZONE_ID}\" \\"
@@ -2796,7 +2797,7 @@ setTKGclusterDNS() {
       aws route53 change-resource-record-sets --hosted-zone-id $ZONE_ID \
           --change-batch file://${TMPROUTE53} > /dev/null 2>&1
       if [ $? -ne 0 ]; then
-        echo "ERROR: failed to set DNS for $hnm"
+        echo "1ERROR: failed to set DNS for $hnm"
         if [ "$NATIVE" == "0" ]; then
           echo "       => tools/tdh-tools.sh"
           echo "          tdh-tools:/$ aws route53 change-resource-record-sets --hosted-zone-id \"${ZONE_ID}\" \\"
@@ -2851,7 +2852,7 @@ setTKGclusterDNS() {
         aws route53 change-resource-record-sets --hosted-zone-id $ZONE_ID \
             --change-batch file://${TMPROUTE53} > /dev/null 2>&1
         if [ $? -ne 0 ]; then
-          echo "ERROR: failed to set DNS for $hnm"
+          echo "2ERROR: failed to set DNS for $hnm"
           if [ "$NATIVE" == "0" ]; then
             echo "       => tools/tdh-tools.sh"
             echo "          tdh-tools:/$ aws route53 change-resource-record-sets --hosted-zone-id \"${ZONE_ID}\" \\"
