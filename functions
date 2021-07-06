@@ -4107,7 +4107,6 @@ installSpringCloudGateway() {
     fi
   fi
 } 
-#hhhhhhhhhhhhhhhh
 
 installMinio() {
   if [ "$TDH_SERVICE_MINIO" != "true" ]; then
@@ -4224,6 +4223,7 @@ installTanzuDataPostgres() {
     return
   fi
 
+  messageTitle "VMware Tanzu Postgres"
   cnt=$(helm list --all-namespaces -q | egrep -c "^postgres-operator")
   if [ $cnt -eq 0 ]; then
     # --- DOWNLOAD POSTGRES BINARIES ---
@@ -4619,13 +4619,13 @@ downloadFromPivnet() {
        awk -F'/' '{ print $NF }')
 
   if [ ! -f /tmp/$file ]; then
-    messagePrint " ▪ Download ($PRODUCT_SLUG) from PIVNET" "$RODUCT_SLUG"
-    messagePrint "   Product Slug:" "$SLUG_VER"
+    messagePrint " ▪ Download from PIVNET" "$PRODUCT_SLUG"
+    messagePrint "   Product Version" "$SLUG_VER"
     messagePrint "   Download Location:" "/tmp/$file"
     pivnetAPIdownload $PCF_PIVNET_TOKEN $PRODUCT_SLUG $pid $fid $file
   else
-    messagePrint " ▪ Verify PIVNET Download ($PRODUCT_SLUG)" "$PRODUCT_SLUG"
-    messagePrint "   Product Slug:" "$SLUG_VER"
+    messagePrint " ▪ Verify PIVNET Download" "$PRODUCT_SLUG"
+    messagePrint "   Product Version:" "$SLUG_VER"
     messagePrint "   Download Location:" "/tmp/$file"
   fi
 }
