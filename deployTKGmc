@@ -223,7 +223,7 @@ echo "XXX $TDH_TKGMC_NAME-$TDH_USER"
                             -var-file=$TDH_TERRAFORM_TFVARS -auto-approve; ret=$?
         messageLine
       else
-        terraform -chdir=${TDHPATH}/terraform/aws destroy -state=$TDH_TERRAFORM_TFSTATE \
+        terraform -chdir=${TERRAFORM_PATH} destroy -state=$TDH_TERRAFORM_TFSTATE \
                             -var-file=$TDH_TERRAFORM_TFVARS -auto-approve > /dev/null 2>&1; ret=$?
       fi
       [ $ret -eq 0 ] && break
