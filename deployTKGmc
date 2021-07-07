@@ -164,7 +164,7 @@ fi
 export TDH_DEPLOYMENT_ENV_NAME=$TDH_TKGMC_INFRASTRUCTURE
 export TKG_CONFIG=~/.tanzu-demo-hub/$TDH_TKGMC_CONFIG
 
-if [ "$DEPLOY_TKG_CLEAN" -eq 1 ]; then 
+cleanupEnvironment() {
   # --- CHECK FOR WORKLOAD CLUSTERS ---
   cnt=$(tanzu cluster list 2>/dev/null | sed '1d' | wc -l | sed 's/  *//g') 
   if [ $cnt -gt 0 ]; then
@@ -177,14 +177,30 @@ if [ "$DEPLOY_TKG_CLEAN" -eq 1 ]; then
     exit 1
   fi
 
+  cleanKindCluster
+
+echo "XXX $TDH_TKGMC_NAME-$TDH_USER"
   cnt=$(tanzu cluster list --include-management-cluster 2>/dev/null | grep -c " $TDH_TKGMC_NAME-$TDH_USER") 
   if [ $cnt -gt 0 ]; then 
     messageTitle "Deleting Management Cluster ($TDH_TKGMC_NAME-$TDH_USER)"
     if [ $DEBUG -gt 0 ]; then
-      tanzu management-cluster delete ${TDH_TKGMC_NAME}-$TDH_USER -y
+      tanzu management-cluster delete ${TDH_TKGMC_NAME}-$TDH_USER -y; ret=$?
       messageLine
     else
-      tanzu management-cluster delete ${TDH_TKGMC_NAME}-$TDH_USER -y > /dev/null 2>&1
+      tanzu management-cluster delete ${TDH_TKGMC_NAME}-$TDH_USER -y > /dev/null 2>&1; ret=$?
+    fi
+    
+    if [ $ret -ne 0 ]; then 
+      echo "ERROR: failed to delete management cluster ($TDH_TKGMC_NAME-$TDH_USER)"
+      if [ "$NATIVE" == "0" ]; then
+        echo "    => tools/tdh-tools.sh"
+        echo "       tdh-tools:/$ tanzu management-cluster delete $TDH_TKGMC_NAME-$TDH_USER -y"
+        echo "       tdh-tools:/$ exit"
+      else
+        echo "    => tanzu management-cluster delete $TDH_TKGMC_NAME-$TDH_USER -y"
+      fi
+  
+      exit 1
     fi
   fi
 
@@ -199,25 +215,38 @@ if [ "$DEPLOY_TKG_CLEAN" -eq 1 ]; then
     TDH_TERRAFORM_TFSTATE=$TERRAFORM_PATH/terraform_${TDH_TKGMC_ENVNAME}.tfstate
 
     messageTitle "Deleting Jump Host (jump-${TDH_TKGMC_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN})"
-    if [ $DEBUG -gt 0 ]; then
-      terraform -chdir=${TERRAFORM_PATH} destroy -state=$TDH_TERRAFORM_TFSTATE \
-                          -var-file=$TDH_TERRAFORM_TFVARS -auto-approve; ret=$?
-      messageLine
-    else
-      terraform -chdir=${TDHPATH}/terraform/aws destroy -state=$TDH_TERRAFORM_TFSTATE \
-                          -var-file=$TDH_TERRAFORM_TFVARS -auto-approve > /dev/null 2>&1; ret=$?
-    fi
+     
+    cnt=0; ret=1
+    while [ $ret -ne 0 -a $cnt -lt 5 ]; do
+      if [ $DEBUG -gt 0 ]; then
+        terraform -chdir=${TERRAFORM_PATH} destroy -state=$TDH_TERRAFORM_TFSTATE \
+                            -var-file=$TDH_TERRAFORM_TFVARS -auto-approve; ret=$?
+        messageLine
+      else
+        terraform -chdir=${TDHPATH}/terraform/aws destroy -state=$TDH_TERRAFORM_TFSTATE \
+                            -var-file=$TDH_TERRAFORM_TFVARS -auto-approve > /dev/null 2>&1; ret=$?
+      fi
+      [ $ret -eq 0 ] && break
+      let cnt=cnt+1
+      sleep 60
+    done
 
     if [ $ret -ne 0 ]; then
       echo "ERROR: terraform destroy failed"
-      echo "       => terraform -chdir=${TERRAFORM_PATH} destroy -state=$TDH_TERRAFORM_TFSTATE \\"
-      echo "                    -var-file=$TDH_TERRAFORM_TFVARS -auto-approve"
-      exit
+      if [ "$NATIVE" == "0" ]; then
+        echo "    => tools/tdh-tools.sh"
+        echo "       tdh-tools:/$ terraform -chdir=${TERRAFORM_PATH} destroy -state=$TDH_TERRAFORM_TFSTATE \\"
+        echo "                       -var-file=$TDH_TERRAFORM_TFVARS -auto-approve"
+        echo "       tdh-tools:/$ exit"
+      else
+        echo "       => terraform -chdir=${TERRAFORM_PATH} destroy -state=$TDH_TERRAFORM_TFSTATE \\"
+        echo "                    -var-file=$TDH_TERRAFORM_TFVARS -auto-approve"
+      fi
+
+      exit 1
     fi
   fi
-
-  exit
-fi
+}
 
 checkKeyPairs() {
   messageTitle "SSH Key Pairs"
@@ -1036,6 +1065,12 @@ if [ ! -f /tdh_tools_docker_container  ]; then
     checkCLIcommands TMC
     checkCLIcommands VSPHERE
   fi
+fi
+
+if [ "$DEPLOY_TKG_CLEAN" -eq 1 ]; then
+  cleanupEnvironment
+
+  exit 0
 fi
 
 # --- INSTALL TANZU PLUGINS ---
