@@ -28,9 +28,9 @@ The Tanzu Demo Hub initiative is to build a environment to run predefined and te
 
 *Supported Environments*
 - [Tanzu-Demo-Hub on Minikube](#tanzu-demo-hub-on-minikube)
-- Tanzu-Demo-Hub on vSphere (#tanzu-demo-hub-on-vsphere)
-- Tanzu-Demo-Hub on AWS (#tanzu-demo-hub-on-aws)
-- Tanzu-Demo-Hub on Azure (#tanzu-demo-hub-on-azure)
+- [Tanzu-Demo-Hub on vSphere](#tanzu-demo-hub-on-vsphere)
+- [Tanzu-Demo-Hub on AWS](#tanzu-demo-hub-on-aws)
+- [Tanzu-Demo-Hub on Azure](#tanzu-demo-hub-on-azure)
 
 *Requirements*
 - AWS Route53 Domain (https://aws.amazon.com/route53)
