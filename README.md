@@ -160,6 +160,17 @@ VSPHERE_TKGM_WKLD_CLUSTER02_LOADBALANCER_POOL=${VSPHERE_TKGM_SUBNET}.125-${VSPHE
 VSPHERE_TKGM_WKLD_CLUSTER03_CONTROL_PLANE=${VSPHERE_TKGM_SUBNET}.131
 VSPHERE_TKGM_WKLD_CLUSTER03_LOADBALANCER_POOL=${VSPHERE_TKGM_SUBNET}.135-${VSPHERE_TKGM_SUBNET}.139
 ```
+The following variables are required to access AWS Route53 to manage your DNS Domain and create Let's Enscript certificates used in the Tanzu Demo Hub demo's
+```
+#########################################################################################################################
+############################################### AWS CREDENTIALS #########################################################
+#########################################################################################################################
+
+export AWS_ACCESS_KEY="XXXXXXXXXXXXXXXXXXXX"                        
+export AWS_SECRET_KEY="XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"    
+export AWS_REGION="eu-central-1"
+export AWS_HOSTED_DNS_DOMAIN="mydomain.com"  # YOUR PERSONAL DNS DOMAIN HOSTED ON ROUTE53
+```
 
 
 
