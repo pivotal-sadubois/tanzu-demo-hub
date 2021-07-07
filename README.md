@@ -36,6 +36,20 @@ The Tanzu Demo Hub initiative is to build a environment to run predefined and te
 - AWS Route53 Domain (https://aws.amazon.com/route53)
 
 # Tanzu-Demo-Hub on Minikube
+As mentioned in the title Minikub is the base for the installation. Download [Minikube](https://kubernetes.io/de/docs/tasks/tools/install-minikube/ "Download Minikube") the Hypervisor VirtualBox is required. 
+
+*Tanzu Demo Hub Configuration ($HOME/.tanzu-demo-hub.cfg)*
+```
+##########################################################################################################
+########################## AWS CREDENTIALS AND ROUTE53 DOMAIN CONFIGURATION  #############################
+##########################################################################################################
+
+export AWS_ACCESS_KEY="XXXXXXXXXXXXXXXXXXXX"
+export AWS_SECRET_KEY="XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+export AWS_REGION="eu-central-1"
+export AWS_HOSTED_DNS_DOMAIN="mydomain.com"  # YOUR PERSONAL DNS DOMAIN HOSTED ON ROUTE53
+```
+
 ```
 $ ./deployMiniKube 
 
@@ -48,32 +62,9 @@ minikube-tanzu-demo-hub.cfg      minikube  tanzu-demo-hub  n/a                  
 
 USAGE: ./deployMiniKube [options] -d <deployment> [--clean|--debug]
 Sachas-MacBook-Pro:tanzu-demo-hub sdu$ 
-
-$ ./deployMiniKube -d minikube-tanzu-demo-hub.cfg
-
 ```
 
-# Tanzu-Demo-Hub on Azure
-```
-$ ./deployTKGmc
-CONFIURATION                   CLOUD   DOMAIN  MGMT-CLUSTER                   PLAN  CONFIGURATION
------------------------------------------------------------------------------------------------------------
-tkgmc-aws-dev.cfg              AWS     awstkg  tkgmc-aws-<TDH_USER>           dev   tkgmc-aws.yaml
-tkgmc-aws-prod.cfg             AWS     awstkg  tkgmc-aws-dev-<TDH_USER>       prod  tkgmc-aws-dev.yaml
-tkgmc-azure-dev.cfg            Azure   aztkg   tkgmc-azure-<TDH_USER>         dev   tkgmc-azure.yaml
-tkgmc-azure-prod.cfg           Azure   aztkg   tkgmc-azure-<TDH_USER>         prod  tkgmc-azure.yaml
-tkgmc-dev-vsphere-macbook.cfg  vSphere vstkg   tkg-mc-vsphere-dev-<TDH_USER>  dev   tkgmc-dev-vsphere-macbook.yaml
-tkgmc-vsphere-dev.cfg          vSphere vstkg   tkg-mc-vsphere-dev-<TDH_USER>  dev   tkgmc-dev-vsphere-macbook.yaml
-tkgmc-vsphere-tkgm-dev.cfg     vSphere vstkg   tkgmc-vsphere-<TDH_USER>       dev   tkgmc-vsphere-tkgm.yaml
------------------------------------------------------------------------------------------------------------
-USAGE: ./deployTKGmc [oprions] <deployment>
-            --delete                 # Delete Management Cluster and Jump Server
-            --debug                  # default (disabled)
-            --native                 # Use 'native' installed tools instead of the tdh-tools container
-
-./deployTKGmc tkgmc-vsphere-tkgm-dev.cfg
-```
-
+The Tanzu Demo Hub can be deployed with different deployment configurations. As default and a requirement to run the Tanzu Demo Hub Demos the (minikube-tanzu-demo-hub.cfg) is required to be used. Later this deployemnt can be modified and adjusted for you needs.
 ```
 $ ./deployMiniKube -d minikube-tanzu-demo-hub.cfg
 
@@ -88,11 +79,11 @@ Verify MetalLB Loadbalancer
  ▪ Metallb LoadBalancer Status ...............................: active
  ▪ Metallb LoadBalancer IP-Pool ..............................: 192.168.64.100-192.168.64.120
 Supporting services access (Pivotal Network, AWS Route53)
- ▪ Pivotal Network Token .....................................: 1edb78016b054bbaab960b3007a77b12-r
+ ▪ Pivotal Network Token .....................................: XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX-r
  ▪ Tanzu Demo Hube User ......................................: sadubois
  ▪ AWS Route53 Hosted DNS Domain .............................: pcfsdu.com
  ▪ AWS Route53 Hosted DNS SubDomain ..........................: 
- ▪ AWS Route53 ZoneID ........................................: Z1X9T7571BMHB5
+ ▪ AWS Route53 ZoneID ........................................: XXXXXXXXXXXXXX
 Cleaning Up kubectl config
 MiniKube Status and Configuration
  ▪ MiniKube Profile ..........................................: tdh-minikube-sadubois
@@ -213,13 +204,115 @@ tkgmc-vsphere-tkgm-dev.cfg     vSphere vstkg   tkgmc-vsphere-<TDH_USER>       de
 -----------------------------------------------------------------------------------------------------------
 USAGE: ./deployTKGmc [oprions] <deployment>
             --delete                 # Delete Management Cluster and Jump Server
-            --debug                  # default (disabled)  
+            --debug                  # default (disabled)
             --native                 # Use 'native' installed tools instead of the tdh-tools container
 
+```
+The Tanzu Demo Hub can be deployed with different deployment configurations. There are two precomfigured deployment files tkgmc-vsphere-tkgm-dev.cfg and tkgmc-vsphere-tkgm-prod.cfg which only differs in single node control-plance (dev) and a redundant (AZ Aware) Control Plance (prod).
+```
 ./deployTKGmc tkgmc-vsphere-tkgm-dev.cfg
+$ ./deployTKGmc tkgmc-vsphere-tkgm-dev.cfg 
+
+Tanzu Demo Hub - Deploy TKG Management Cluster
+by Sacha Dubois, VMware Inc,
+----------------------------------------------------------------------------------------------------------------------------------------------
+TDH Tools Docker Container (tdh-tools)
+ ▪ Dockerfile Checksum (files/tdh-tools/Dockerfile) ......: 7796
+ ▪ Docker Image (tdh-tools) Checksum .....................: 7796 => No Rebuild required
+ ▪ Running TDH Tools Docker Container ....................: tdh-tools:latest /Users/sdu/workspace/tanzu-demo-hub/deployTKGmc tkgmc-vsphere-tkgm-dev.cfg
+Cleaning Up kubectl config
+Supporting services access (Pivotal Network, AWS Route53)
+ ▪ Pivotal Network Token .................................: XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX-r
+ ▪ Tanzu Demo Hube User ..................................: sadubois
+ ▪ AWS Route53 Hosted DNS Domain .........................: pcfsdu.com
+ ▪ AWS Route53 Hosted DNS SubDomain ......................: vstkg
+ ▪ AWS Route53 ZoneID ....................................: XXXXXXXXXXXXXX
+vSphere Access Credentials
+ ▪ vCenter Server Name ...................................: vcsa-01.haas-505.pez.vmware.com
+ ▪ vCenter Admin User ....................................: administrator@vsphere.local
+ ▪ vCenter Admin Password ................................: XXXXXXXXXXXXXXXXXXX
+ ▪ TKG Management Cluster IP .............................: 10.212.153.105
+ ▪ Jump Host Name ........................................: ubuntu-505.haas-505.pez.vmware.com
+ ▪ Jump Host User ........................................: ubuntu
+ ▪ SSH Private Key .......................................: /Users/sdu/.tanzu-demo-hub/KeyPair-PEZ-private.pem
+ ▪ SSH Public Key ........................................: /Users/sdu/.tanzu-demo-hub/KeyPair-PEZ-public.pem
+ ▪ TKG Management Custer Control Plane ...................: 10.212.153.105
+ ▪ TKG Workload Cluster 01 ...............................: NAME_TAG: TKG_CLUSTER_01
+ ▪     Cluster Control Plane .............................: 10.212.153.111
+ ▪     LoadBalancer IP Pool ..............................: 10.212.153.115-10.212.153.119
+ ▪ TKG Workload Cluster 02 ...............................: NAME_TAG: TKG_CLUSTER_02
+ ▪     Cluster Control Plane .............................: 10.212.153.121
+ ▪     LoadBalancer IP Pool ..............................: 10.212.153.125-10.212.153.129
+ ▪ TKG Workload Cluster 03 ...............................: NAME_TAG: TKG_CLUSTER_03
+ ▪     Cluster Control Plane .............................: 10.212.153.131
+ ▪     LoadBalancer IP Pool ..............................: 10.212.153.135-10.212.153.139
+Verify vSphere Jump-Server (ubuntu-505.haas-505.pez.vmware.com)
+ ▪ Wait for SSH to be ready ..............................: < 3m
+Verify SuDO Access ubuntu-505.haas-505.pez.vmware.com
+ ▪ SSH Command ...........................................: ubuntu-505.haas-505.pez.vmware.com
+----------------------------------------------------------------------------------------------------------------------------------------------
+ssh -i /Users/sdu/.tanzu-demo-hub/KeyPair-PEZ-private.pem ubuntu@ubuntu-505.haas-505.pez.vmware.com
+----------------------------------------------------------------------------------------------------------------------------------------------
+Configure Jump Server: ubuntu-505.haas-505.pez.vmware.com
+ ▪ Clone TDH GIT Repository ..............................: https://github.com/pivotal-sadubois/tanzu-demo-hub.git
+ ▪ Verify SuDO Access for user ...........................: /etc/sudoers.d/ubuntu
+Install Certificate for domain (vstkg.pcfsdu.com)
+Validate Certificates for domain (vstkg.pcfsdu.com)
+ ▪ Certificate Expiratation Data: ........................: Sep 12 05:46:27 2021 GMT
+Verify Software Downloads from http://my.vmware.com
+Uploading OVS Images to vSphere
+Create the TKG Management Cluster deployment File
+ ▪ Deployment File .......................................: /Users/sdu/.tanzu-demo-hub/config/tkgmc-tkgmc-vsphere-tkgm-sadubois.yaml
+ ▪ Management Cluster ....................................: tkgmc-vsphere-tkgm-sadubois
+ ▪ Cloud Infrastructure ..................................: vSphere
+Create config file for TKG Workload Clusters
+ ▪ Deployment File (dev) .................................: ~/.tanzu/tkg/clusterconfigs/tkgmc-vsphere-tkgm-sadubois-wc-dev.yaml
+ ▪ Deployment File (prod) ................................: ~/.tanzu/tkg/clusterconfigs/tkgmc-vsphere-tkgm-sadubois-wc-prod.yaml
+-----------------------------------------------------------------------------------------------------------
+  NAME                         TYPE               ENDPOINT  PATH                                                                      CONTEXT                                                        
+  tkgmc-vsphere-tkgm-sadubois  managementcluster            /Users/sdu/.tanzu-demo-hub/config/tkgmc-vsphere-tkgm-sadubois.kubeconfig  tkgmc-vsphere-tkgm-sadubois-admin@tkgmc-vsphere-tkgm-sadubois  
+  tkgmc-azure-sadubois         managementcluster            /Users/sdu/.tanzu-demo-hub/config/tkgmc-azure-sadubois.kubeconfig         tkgmc-azure-sadubois-admin@tkgmc-azure-sadubois                
+  tkg-mc                       managementcluster            /tmp/sacha.yaml                                                           tkg-mc-admin@tkg-mc                                            
+-----------------------------------------------------------------------------------------------------------
+1.) Check Management Cluster Status (On local workstation or on the jump server)
+    => tanzu management-cluster get
+    => kubectl config set-cluster tkgmc-vsphere-tkgm-sadubois                           # Set k8s Context to mc Cluster
+    => kubectl config set-context tkgmc-vsphere-tkgm-sadubois-admin@tkgmc-vsphere-tkgm-sadubois # Set k8s Context to mc Cluster
+    => kubectl get cluster --all-namespaces                                             # Set k8s Context to the TKG Management Cluster
+    => kubectl get kubeadmcontrolplane,machine,machinedeployment --all-namespaces       # To verify the first control plane is up
+    => tanzu login --server tkgmc-vsphere-tkgm-sadubois                                 # Show Tanzu Management Cluster
+    => tanzu management-cluster get                                                     # Show Tanzu Management Cluster
+2.) Ceeate TKG Workload Cluster
+    TKG Workload Cluster 01 ...............................: NAME_TAG: TKG_CLUSTER_01
+        Cluster Control Plane .............................: 10.212.153.111
+        LoadBalancer IP Pool ..............................: 10.212.153.115-10.212.153.119
+    TKG Workload Cluster 02 ...............................: NAME_TAG: TKG_CLUSTER_02
+        Cluster Control Plane .............................: 10.212.153.121
+        LoadBalancer IP Pool ..............................: 10.212.153.125-10.212.153.129
+    TKG Workload Cluster 03 ...............................: NAME_TAG: TKG_CLUSTER_03
+        Cluster Control Plane .............................: 10.212.153.131
+        LoadBalancer IP Pool ..............................: 10.212.153.135-10.212.153.139
+
+    => export CLUSTER_NAME=<cluster_name>                   ## Workload Cluster Name
+    => export VSPHERE_CONTROL_PLANE_ENDPOINT=<ip-address>   ## Control Plane IP Adress for the worklaod Cluster
+    => tanzu cluster create -f $HOME/.tanzu/tkg/clusterconfigs/tkgmc-vsphere-tkgm-sadubois-wc-dev.yaml --tkr v1.20.4---vmware.3-tkg.1
+    => tanzu cluster create -f $HOME/.tanzu/tkg/clusterconfigs/tkgmc-vsphere-tkgm-sadubois-wc-prod.yaml
+    => tanzu cluster kubeconfig get $CLUSTER_NAME --admin
+    => kubectl config use-context ${CLUSTER_NAME}-admin@$CLUSTER_NAME
+    => tanzu cluster list --include-management-cluster
+    => tanzu cluster delete $CLUSTER_NAME -y
+2.) Ceeate Tanzu Demo Hub (TDH) Workload Cluster with services (TBS, Harbor, Ingres etc.)
+    => ./deployTKG -m tkgmc-vsphere-tkgm-sadubois -d tkg-tanzu-demo-hub.cfg -n tdh-vsphere-sadubois -tag TKG_CLUSTER_01
+    => ./deployTKG -m tkgmc-vsphere-tkgm-sadubois -d tkg-tanzu-demo-hub.cfg -n tdh-vsphere-sadubois -tag TKG_CLUSTER_02 -k "v1.17.16---vmware.2-tkg.1"
+3.) Delete the Management Cluster
+    => tanzu management-cluster delete tkgmc-vsphere-tkgm-sadubois-sadubois -y
+4.) Login to Jump Server: ubuntu-505.haas-505.pez.vmware.com (only if required)
+    => ssh -i /Users/sdu/.tanzu-demo-hub/KeyPair-PEZ-private.pem ubuntu@ubuntu-505.haas-505.pez.vmware.com
+
 
 ```
-# Tanzu-Demo-Hub on AWS
+
+# Tanzu-Demo-Hub on Azure
 ```
 $ ./deployTKGmc
 CONFIURATION                   CLOUD   DOMAIN  MGMT-CLUSTER                   PLAN  CONFIGURATION
@@ -236,10 +329,8 @@ USAGE: ./deployTKGmc [oprions] <deployment>
             --delete                 # Delete Management Cluster and Jump Server
             --debug                  # default (disabled)  
             --native                 # Use 'native' installed tools instead of the tdh-tools container
-
-./deployTKGmc tkgmc-aws-dev.cfg
-
 ```
+
 ```
 $ ./deployTKGmc tkgmc-azure-dev.cfg
 
@@ -252,19 +343,19 @@ TDH Tools Docker Container (tdh-tools)
  ▪ Running TDH Tools Docker Container ....................: tdh-tools:latest /Users/sdu/workspace/tanzu-demo-hub/deployTKGmc tkgmc-azure-dev.cfg
 Cleaning Up kubectl config
 Supporting services access (Pivotal Network, AWS Route53)
- ▪ Pivotal Network Token .................................: 1edb78016b054bbaab960b3007a77b12-r
+ ▪ Pivotal Network Token .................................: XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX-r
  ▪ Tanzu Demo Hube User ..................................: sadubois
  ▪ AWS Route53 Hosted DNS Domain .........................: pcfsdu.com
  ▪ AWS Route53 Hosted DNS SubDomain ......................: aztkg
- ▪ AWS Route53 ZoneID ....................................: Z1X9T7571BMHB5
+ ▪ AWS Route53 ZoneID ....................................: XXXXXXXXXXXXXX
 Azure Access Credentials
  ▪ Azure SubscriptionId ..................................: XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX
  ▪ Azure TennantId .......................................: XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX
  ▪ Azure Region ..........................................: westeurope
 Verify Azure Application (TanzuDemoHub)
- ▪ Application ID ........................................: c26c9d99-646b-415a-83ca-17fb53827960
+ ▪ Application ID ........................................: XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX
  ▪ Application Display Name ..............................: TanzuDemoHub
- ▪ ServicePrincipal ......................................: dac5e6d7-65a9-4402-add7-905f3c8a3e15
+ ▪ ServicePrincipal ......................................: XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX
  ▪ Role Binding ..........................................: Owner
 Verifing Azure Jump-Server (jump-aztkg.pcfsdu.com)
  ▪ SSH Command ...........................................: jump-aztkg.pcfsdu.com
@@ -325,6 +416,183 @@ Create config file for TKG Workload Clusters
     => tanzu management-cluster delete tkgmc-azure-sadubois-sadubois -y
 4.) Login to Jump Server: jump-aztkg.pcfsdu.com (only if required)
     => ssh -o StrictHostKeyChecking=no -o RequestTTY=yes -o ServerAliveInterval=240 -i /Users/sdu/.tanzu-demo-hub/KeyPair-Azure.pem ubuntu@52.166.176.113
+```
+
+# Tanzu-Demo-Hub on AWS
+```
+$ ./deployTKGmc
+CONFIURATION                   CLOUD   DOMAIN  MGMT-CLUSTER                   PLAN  CONFIGURATION
+-----------------------------------------------------------------------------------------------------------
+tkgmc-aws-dev.cfg              AWS     awstkg  tkgmc-aws-<TDH_USER>           dev   tkgmc-aws.yaml
+tkgmc-aws-prod.cfg             AWS     awstkg  tkgmc-aws-dev-<TDH_USER>       prod  tkgmc-aws-dev.yaml
+tkgmc-azure-dev.cfg            Azure   aztkg   tkgmc-azure-<TDH_USER>         dev   tkgmc-azure.yaml
+tkgmc-azure-prod.cfg           Azure   aztkg   tkgmc-azure-<TDH_USER>         prod  tkgmc-azure.yaml
+tkgmc-dev-vsphere-macbook.cfg  vSphere vstkg   tkg-mc-vsphere-dev-<TDH_USER>  dev   tkgmc-dev-vsphere-macbook.yaml
+tkgmc-vsphere-dev.cfg          vSphere vstkg   tkg-mc-vsphere-dev-<TDH_USER>  dev   tkgmc-dev-vsphere-macbook.yaml
+tkgmc-vsphere-tkgm-dev.cfg     vSphere vstkg   tkgmc-vsphere-<TDH_USER>       dev   tkgmc-vsphere-tkgm.yaml
+-----------------------------------------------------------------------------------------------------------
+USAGE: ./deployTKGmc [oprions] <deployment>
+            --delete                 # Delete Management Cluster and Jump Server
+            --debug                  # default (disabled)  
+            --native                 # Use 'native' installed tools instead of the tdh-tools container
+```
+
+```
+$ ./deployTKGmc tkgmc-aws-dev.cfg 
+
+Tanzu Demo Hub - Deploy TKG Management Cluster
+by Sacha Dubois, VMware Inc,
+----------------------------------------------------------------------------------------------------------------------------------------------
+TDH Tools Docker Container (tdh-tools)
+ ▪ Dockerfile Checksum (files/tdh-tools/Dockerfile) ..........: 3776
+ ▪ Docker Image (tdh-tools) Checksum .........................: 3776 => No Rebuild required
+ ▪ Running TDH Tools Docker Container ........................: tdh-tools:latest /Users/sdu/workspace/tanzu-demo-hub/deployTKGmc tkgmc-aws-dev.cfg
+Cleaning Up kubectl config
+Supporting services access (Pivotal Network, AWS Route53)
+ ▪ Pivotal Network Token .....................................: XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX-r
+ ▪ Tanzu Demo Hube User ......................................: sadubois
+ ▪ AWS Route53 Hosted DNS Domain .............................: pcfsdu.com
+ ▪ AWS Route53 Hosted DNS SubDomain ..........................: awstkg
+ ▪ AWS Route53 ZoneID ........................................: XXXXXXXXXXXXXX
+AWS Access Credentials
+ ▪ AWS AccwssKey .............................................: XXXXXXXXXXXXXXXXXXXX
+ ▪ AWS SecretKey .............................................: XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+ ▪ AWS Region ................................................: eu-central-1
+ ▪ AWS Primary Availability Zone .............................: eu-central-1a
+SSH Key Pairs
+ ▪ KeyPair Name ..............................................: tanzu-demo-hub
+ ▪ KeyPair File ..............................................: /Users/sdu/.tanzu-demo-hub/KeyPair-tanzu-demo-hub-eu-central-1.pem
+ ▪ Verify KeyPair Fingerpring ................................: XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX
+OIDC Identitiy Management (IdM)
+ ▪ OKTA SecretId .............................................: XXXXXXXXXXXXXXXXXXXXX
+ ▪ OKTA Client Secret ........................................: XXXXXXXXXXXXXXXXXXXXXXX-XXXXXXXXXXXXXXXX
+ ▪ OKTA URL ..................................................: https://vmware-tdh.okta.com
+ ▪ OKTA Scopes ...............................................: openid,groups,email
+ ▪ OKTA Group Claim ..........................................: groups
+ ▪ OKTA Username Claim .......................................: code
+AWS Jump-Server (jump-awstkg.pcfsdu.com)
+ ▪ Cleaning up leftover terraform deployments ................: /Users/sdu/.tanzu-demo-hub/terraform/aws
+ ▪ Deploy vSphere Jump-Server with (terraforms) ..............: jump-awstkg.pcfsdu.com
+ ▪ Creating Variable file ....................................: /Users/sdu/.tanzu-demo-hub/terraform/aws/terraform.tfvars
+ ▪ Terraform (init) ..........................................: /Users/sdu/.tanzu-demo-hub/terraform/aws
+ ▪ Terraform (plan) ..........................................: /Users/sdu/.tanzu-demo-hub/terraform/aws
+ ▪ Terraform (apply) .........................................: /Users/sdu/.tanzu-demo-hub/terraform/aws
+ ▪ DNS Zone (pcfsdu.com: .....................................: zone managed by route53
+ ▪ Updating Zone Record for (jump-awstkg.pcfsdu.com) .........: 18.193.88.227
+ ▪ Updating Zone Record for (jump-awstkg.pcfsdu.com) .........: 18.193.88.227
+ ▪ Updating Zone Record for (jump.awstkg.pcfsdu.com) .........: 18.193.88.227
+Verify AWS Jump-Server
+ ▪ AWS Instance ID ...........................................: i-XXXXXXXXXXXXXXXXX
+ ▪ Jump Server Hostname ......................................: jump-awstkg.pcfsdu.com
+ ▪ Jump Server Status ........................................: running
+ ▪ Jump Server IP Address ....................................: 18.193.88.227
+ ▪ Destroy Command ...........................................: terraform destroy
+----------------------------------------------------------------------------------------------------------------------------------------------
+terraform -chdir=/Users/sdu/.tanzu-demo-hub/terraform/aws destroy \
+          -state=/Users/sdu/.tanzu-demo-hub/terraform/aws/terraform_awstkg.tfstate \
+          -var-file=/Users/sdu/.tanzu-demo-hub/terraform/aws/terraform_awstkg.tfvars -auto-approve
+----------------------------------------------------------------------------------------------------------------------------------------------
+ ▪ Wait for SSH to be ready ..................................: < 5m
+ ▪ SSH Command ...............................................: jump-awstkg.pcfsdu.com
+----------------------------------------------------------------------------------------------------------------------------------------------
+ssh -i /Users/sdu/.tanzu-demo-hub/KeyPair-tanzu-demo-hub-eu-central-1.pem ubuntu@jump-awstkg.pcfsdu.com
+----------------------------------------------------------------------------------------------------------------------------------------------
+Configure Jump Server: jump-awstkg.pcfsdu.com
+ ▪ Clone TDH GIT Repository ..................................: https://github.com/pivotal-sadubois/tanzu-demo-hub.git
+ ▪ Verify SuDO Access for user ...............................: /etc/sudoers.d/ubuntu
+Install CLI Utilities (aws,az,gcp,bosh,pivnet,cf,om,jq) on Jump Host (jump.awstkg.pcfsdu.com)
+ ▪ Verify Package (snapd) ....................................: 2.48.3+18.04
+ ▪ Verify Package (curl) .....................................: 7.58.0-2ubuntu3.13
+ ▪ Install Package (docker) ..................................: installing
+ ▪ Install Package (azure-cli) ...............................: installing
+core 16-2.51.1 from Canonical* installed
+snap "core" has no updates available
+certbot 1.17.0 from Certbot Project (certbot-eff*) installed
+ - Install Certbot Plugin ......................................: certbot-dns-route53
+ ▪ Install Package (zip) .....................................: installing
+ ▪ Install Package (certbot-dns-route53) .....................: installing
+   ---------------------------------------------------------------------------------------------------------------
+   Certbot Plugins:  apache        Apache Web Server plugin
+                     dns-route53   Obtain certificates using a DNS TXT record (if you are using AWS
+                     nginx         Nginx Web Server plugin
+                     standalone    Spin up a temporary webserver
+                     webroot       Place files in webroot directory
+   ---------------------------------------------------------------------------------------------------------------
+ ▪ Verify Package (zip) ......................................: 3.0-11build1
+ ▪ Install Package (awscli) ..................................: installing
+ ▪ Install Package (jq) ......................................: installing
+=> Installing Pivnet
+ ▪ Install Package (helm) ....................................: installing
+ ▪ Install Package (ntp) .....................................: installing
+ ▪ Rebooting Jump Server .....................................: wait for services comming up ...
+Install TKG Utilities (tkg, ytt, kapp, kbld, kubectl, kind) on Jump Host (jump.awstkg.pcfsdu.com)
+ ▪ Login to Docker Registry ..................................: docker.io
+ ▪ Docker Ratelimit: .........................................: 200;w=21600
+ ▪ Docker Ratelimit Remaining: ...............................: 200;w=21600
+docker login docker.io -u sadubois -p 000Penwin 
+ ▪ Install Package (vmw-cli) .................................: installing
+ ▪ Install Tanzu CLI .........................................: installing
+chown: cannot access '/home/ubuntu/.docker': No such file or directory
+ ▪ Install Kind Cluster ......................................: installing
+ ▪ Install Package (kubeadm) .................................: installing
+ ▪ Upgrading Packages ........................................: apt upgrade -y
+Install Certificate for domain (awstkg.pcfsdu.com)
+Validate Certificates for domain (awstkg.pcfsdu.com)
+ ▪ Certificate Expiratation Data: ............................: Oct  2 22:15:37 2021 GMT
+Creating TKG Managment Cluster
+ ▪ Cluster Name ..............................................: tkgmc-aws-sadubois
+ ▪ Configuration File ........................................: ${HOME}/.tanzu-demo-hub/config/tkgmc-aws-sadubois.yaml
+ ▪ Cluster CIDR ..............................................: 100.96.0.0/11
+ ▪ Service CIDR ..............................................: 100.64.0.0/13
+ ▪ Health Check Enabled ......................................: true
+ ▪ Management Cluster Creating ...............................: This may take up to 15min ...
+ ▪ Management Cluster Creating Completed .....................: /tmp/tkgmc-aws-sadubois.log
+Cleaning Up kubectl config
+Cleaning up old kubeconfig definitions
+ ▪ TMC ReRegister Cluster ....................................: tkgmc-aws-sadubois
+ ▪ TMC ReRegister Cluster failed, deregister .................: tkgmc-aws-sadubois
+ ▪ TMC Register Cluster ......................................: tkgmc-aws-sadubois
+ ▪ Install TMC Agent in Namespace ............................: vmware-system-tmc
+Create the TKG Management Cluster deployment File
+ ▪ Deployment File ...........................................: /Users/sdu/.tanzu-demo-hub/config/tkgmc-tkgmc-aws-sadubois.yaml
+ ▪ Management Cluster ........................................: tkgmc-aws-sadubois
+ ▪ Cloud Infrastructure ......................................: AWS
+Create config file for TKG Workload Clusters
+ ▪ Deployment File (dev) .....................................: ~/.tanzu/tkg/clusterconfigs/tkgmc-aws-sadubois-wc-dev.yaml
+ ▪ Deployment File (prod) ....................................: ~/.tanzu/tkg/clusterconfigs/tkgmc-aws-sadubois-wc-prod.yaml
+-----------------------------------------------------------------------------------------------------------
+  NAME                      TYPE               ENDPOINT  PATH                                                                   CONTEXT                                                  
+  tkgmc-aws-sadubois        managementcluster            /Users/sdu/.tanzu-demo-hub/config/tkgmc-aws-sadubois.kubeconfig        tkgmc-aws-sadubois-admin@tkgmc-aws-sadubois              
+  tkgmc-azure-sadubois      managementcluster            /Users/sdu/.tanzu-demo-hub/config/tkgmc-azure-sadubois.kubeconfig      tkgmc-azure-sadubois-admin@tkgmc-azure-sadubois          
+  tkgmc-azure-dev-sadubois  managementcluster            /Users/sdu/.tanzu-demo-hub/config/tkgmc-azure-dev-sadubois.kubeconfig  tkgmc-azure-dev-sadubois-admin@tkgmc-azure-dev-sadubois  
+-----------------------------------------------------------------------------------------------------------
+1.) Check Management Cluster Status (On local workstation or on the jump server)
+    => tanzu management-cluster get
+    => kubectl config set-cluster tkgmc-aws-sadubois                                    # Set k8s Context to mc Cluster
+    => kubectl config set-context tkgmc-aws-sadubois-admin@tkgmc-aws-sadubois           # Set k8s Context to mc Cluster
+    => kubectl get cluster --all-namespaces                                             # Set k8s Context to the TKG Management Cluster
+    => kubectl get kubeadmcontrolplane,machine,machinedeployment --all-namespaces       # To verify the first control plane is up
+    => tanzu login --server tkgmc-aws-sadubois                                          # Show Tanzu Management Cluster
+    => tanzu management-cluster get                                                     # Show Tanzu Management Cluster
+2.) Ceeate TKG Workload Cluster
+    => tools/tdh-tools.sh
+       tdh-tools:/$ tanzu kubernetes-release get
+       tdh-tools:/$ tanzu cluster create -f $HOME/.tanzu/tkg/clusterconfigs/tkgmc-aws-sadubois-wc-dev.yaml  <cluster-name> -tkr v1.18.17---vmware.2-tkg.1
+       tdh-tools:/$ tanzu cluster create -f $HOME/.tanzu/tkg/clusterconfigs/tkgmc-aws-sadubois-wc-prod.yaml <cluster-name>
+       tdh-tools:/$ tanzu cluster kubeconfig get <cluster-name> --admin
+       tdh-tools:/$ tanzu cluster list --include-management-cluster
+       tdh-tools:/$ exit
+2.) Ceeate Tanzu Demo Hub (TDH) Workload Cluster with services (TBS, Harbor, Ingres etc.)
+    => ./deployTKG -m tkgmc-aws-sadubois -d tkg-tanzu-demo-hub.cfg -n tdh-aws-sadubois
+    => ./deployTKG -m tkgmc-aws-sadubois -d tkg-tanzu-demo-hub.cfg -n tdh-aws-sadubois -k "v1.17.16---vmware.2-tkg.1"
+3.) Delete the Management Cluster (Local or on the Jump host)
+    => tools/tdh-tools.sh
+       tdh-tools:/$ tanzu management-cluster delete tkgmc-aws-sadubois -y
+       tdh-tools:/$ exit
+    => ssh -i /Users/sdu/.tanzu-demo-hub/KeyPair-tanzu-demo-hub-eu-central-1.pem ubuntu@jump-awstkg.pcfsdu.com
+       tanzu management-cluster delete tkgmc-aws-sadubois -y
+4.) Login to Jump Server: jump-awstkg.pcfsdu.com (only if required)
+    => ssh -i /Users/sdu/.tanzu-demo-hub/KeyPair-tanzu-demo-hub-eu-central-1.pem ubuntu@jump-awstkg.pcfsdu.com
 ```
 
 # Tanzu-Demo-Hub on vSphere
