@@ -130,7 +130,7 @@ This option will install a TKG Management Server (TKGm) on vSphere. Only the dep
 - TBS PetClinic Demo
 - Tanzu Data Postgres
 
-![PEZ](https://github.com/pivotal-sadubois/tanzu-demo-hub/blob/main/files/PEZ.jpg)
+![PEZ](https://github.com/pivotal-sadubois/tanzu-demo-hub/blob/main/files/PEZ.png)
 Fill the following values 
 
 ```
