@@ -122,16 +122,15 @@ USAGE: ./deployTKGmc [oprions] <deployment>
 This option will install a TKG Management Server (TKGm) on vSphere. Only the deployment on [VMware PEZ Cloud Service](https://pez-portal.int-apps.pcfone.io/ "VMware PEZ Cloud") is currently supported. The support for other vSphere envuronments is planned to a later time. 
 
 ## Deployment on VMware PEZ Cloud
+The VMware PEZ Cloud is ideal for a TKG deployment as all compontents such as Jump Server, DHCP enabled networks etc. has been preconfigured for use. From the list of different deployment options choose the 'IaaS Only - vSphere (7.0 U2)' option. 
 
-
-*Prebuild Demos*
-- Kubernetes Pod Security
-- TMC Policies
-- TBS PetClinic Demo
-- Tanzu Data Postgres
+*Deployment Requirements*
+- PEZ Environment - IaaS Only - vSphere (7.0 U2)
+- AWS Route53 Domain (ie. pcfsdu.com)
+- Macbook with Docker Desktop enabled
 
 ![PEZ](https://github.com/pivotal-sadubois/tanzu-demo-hub/blob/main/files/PEZ.png)
-Fill the following values 
+Take the values provided from the VMware PEZ Cloud environment details page and add them to your local ~/.tanzu-demo-hub.cfg configuration file. If it does not yet exist, please create it.
 
 ```
 # --- VSPHERE ENVIRONMENT PEZ (TKGm) ---
@@ -152,7 +151,7 @@ VSPHERE_TKGM_VMFOLDER="/Datacenter/vm"
 VSPHERE_TKGM_SUBNET=10.212.153
 VSPHERE_TKGM_CONTROL_PLANE_ENDPOINT=${VSPHERE_TKGM_SUBNET}.105
 VSPHERE_TKGM_WORKLOAD_CLUSTER_IP_LIST="${VSPHERE_TKGM_SUBNET}.111 ${VSPHERE_TKGM_SUBNET}.112 ${VSPHERE_TKGM_SUBNET}.113 ${VSPHERE_TKGM_SUBNET}.114"
-VSPHERE_TKGM_LOADBALANCER_IPPOOL="10.212.153.150-10.212.153.160"
+VSPHERE_TKGM_LOADBALANCER_IPPOOL="${VSPHERE_TKGM_SUBNET}.${VSPHERE_TKGM_SUBNET}.160"
 VSPHERE_TKGM_MGMT_CLUSTER_CONTROL_PLANE=${VSPHERE_TKGM_SUBNET}.105
 VSPHERE_TKGM_WKLD_CLUSTER01_CONTROL_PLANE=${VSPHERE_TKGM_SUBNET}.111
 VSPHERE_TKGM_WKLD_CLUSTER01_LOADBALANCER_POOL=${VSPHERE_TKGM_SUBNET}.115-${VSPHERE_TKGM_SUBNET}.119
