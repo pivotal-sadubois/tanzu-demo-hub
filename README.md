@@ -132,6 +132,7 @@ The VMware PEZ Cloud is ideal for a TKG deployment as all compontents such as Ju
 ![PEZ](https://github.com/pivotal-sadubois/tanzu-demo-hub/blob/main/files/PEZ.png)
 Take the values provided from the VMware PEZ Cloud environment details page and add them to your local ~/.tanzu-demo-hub.cfg configuration file. If it does not yet exist, please create it.
 
+*Deployment Requirements*
 ```
 ##########################################################################################################
 ##################################### VSPHERE ENVIRONMENT PEZ (TKGm) #####################################
