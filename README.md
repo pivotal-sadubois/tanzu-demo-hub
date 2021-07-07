@@ -119,14 +119,49 @@ USAGE: ./deployTKGmc [oprions] <deployment>
 ```
 
 # Tanzu-Demo-Hub on vSphere
-This option will install a TKG Management Server (TKGm) on vSphere. Only the deployment on 'VMware PEZ Cloud Service' [VMware PEZ Cloud Service](https://pez-portal.int-apps.pcfone.io/ "Google's Homepage") is currently supported and 
+This option will install a TKG Management Server (TKGm) on vSphere. Only the deployment on [VMware PEZ Cloud Service](https://pez-portal.int-apps.pcfone.io/ "VMware PEZ Cloud") is currently supported. The support for other vSphere envuronments is planned to a later time. 
 
-## Requiremtents
+## Deployment on VMware PEZ Cloud
+
+
 *Prebuild Demos*
 - Kubernetes Pod Security
 - TMC Policies
 - TBS PetClinic Demo
 - Tanzu Data Postgres
+
+![PEZ](https://github.com/pivotal-sadubois/tanzu-demo-hub/blob/main/files/PEZ.jpg)
+Fill the following values 
+
+```
+# --- VSPHERE ENVIRONMENT PEZ (TKGm) ---
+VSPHERE_TKGM_DNS_DOMAIN=haas-505.pez.vmware.com
+VSPHERE_TKGM_VCENTER_SERVER=vcsa-01.haas-505.pez.vmware.com
+VSPHERE_TKGM_VCENTER_ADMIN=administrator@vsphere.local
+VSPHERE_TKGM_VCENTER_PASSWORD=3Ezfgpmr47LI5aEisK!
+VSPHERE_TKGM_JUMPHOST_NAME=ubuntu-505.haas-505.pez.vmware.com
+VSPHERE_TKGM_JUMPHOST_USER=ubuntu
+VSPHERE_TKGM_JUMPHOST_PASSWORD=3Ezfgpmr47LI5aEisK!
+VSPHERE_TKGM_SSH_PRIVATE_KEY_FILE=$HOME/.tanzu-demo-hub/KeyPair-PEZ-private.pem
+VSPHERE_TKGM_SSH_PUBLIC_KEY_FILE=$HOME/.tanzu-demo-hub/KeyPair-PEZ-public.pem
+VSPHERE_TKGM_DATASTORE=LUN01
+VSPHERE_TKGM_DATACENTER=Datacenter
+VSPHERE_TKGM_CLUSTER=Cluster
+VSPHERE_TKGM_NETWORK="Extra"
+VSPHERE_TKGM_VMFOLDER="/Datacenter/vm"
+VSPHERE_TKGM_SUBNET=10.212.153
+VSPHERE_TKGM_CONTROL_PLANE_ENDPOINT=${VSPHERE_TKGM_SUBNET}.105
+VSPHERE_TKGM_WORKLOAD_CLUSTER_IP_LIST="${VSPHERE_TKGM_SUBNET}.111 ${VSPHERE_TKGM_SUBNET}.112 ${VSPHERE_TKGM_SUBNET}.113 ${VSPHERE_TKGM_SUBNET}.114"
+VSPHERE_TKGM_LOADBALANCER_IPPOOL="10.212.153.150-10.212.153.160"
+VSPHERE_TKGM_MGMT_CLUSTER_CONTROL_PLANE=${VSPHERE_TKGM_SUBNET}.105
+VSPHERE_TKGM_WKLD_CLUSTER01_CONTROL_PLANE=${VSPHERE_TKGM_SUBNET}.111
+VSPHERE_TKGM_WKLD_CLUSTER01_LOADBALANCER_POOL=${VSPHERE_TKGM_SUBNET}.115-${VSPHERE_TKGM_SUBNET}.119
+VSPHERE_TKGM_WKLD_CLUSTER02_CONTROL_PLANE=${VSPHERE_TKGM_SUBNET}.121
+VSPHERE_TKGM_WKLD_CLUSTER02_LOADBALANCER_POOL=${VSPHERE_TKGM_SUBNET}.125-${VSPHERE_TKGM_SUBNET}.129
+VSPHERE_TKGM_WKLD_CLUSTER03_CONTROL_PLANE=${VSPHERE_TKGM_SUBNET}.131
+VSPHERE_TKGM_WKLD_CLUSTER03_LOADBALANCER_POOL=${VSPHERE_TKGM_SUBNET}.135-${VSPHERE_TKGM_SUBNET}.139
+```
+
 
 
 ```
