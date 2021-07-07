@@ -130,9 +130,9 @@ The VMware PEZ Cloud is ideal for a TKG deployment as all compontents such as Ju
 - Macbook with Docker Desktop enabled
 
 ![PEZ](https://github.com/pivotal-sadubois/tanzu-demo-hub/blob/main/files/PEZ.png)
-Take the values provided from the VMware PEZ Cloud environment details page and add them to your local ~/.tanzu-demo-hub.cfg configuration file. If it does not yet exist, please create it.
+Take the values provided from the VMware PEZ Cloud environment details page and add them to your local $HOME/tanzu-demo-hub.cfg configuration file. If it does not yet exist, please create it.
 
-*Deployment Requirements*
+*Tanzu Demo Hub Configuration ($HOME/.tanzu-demo-hub.cfg)*
 ```
 ##########################################################################################################
 ##################################### VSPHERE ENVIRONMENT PEZ (TKGm) #####################################
