@@ -133,7 +133,10 @@ The VMware PEZ Cloud is ideal for a TKG deployment as all compontents such as Ju
 Take the values provided from the VMware PEZ Cloud environment details page and add them to your local ~/.tanzu-demo-hub.cfg configuration file. If it does not yet exist, please create it.
 
 ```
-# --- VSPHERE ENVIRONMENT PEZ (TKGm) ---
+##########################################################################################################
+##################################### VSPHERE ENVIRONMENT PEZ (TKGm) #####################################
+##########################################################################################################
+
 VSPHERE_TKGM_DNS_DOMAIN=haas-505.pez.vmware.com
 VSPHERE_TKGM_VCENTER_SERVER=vcsa-01.haas-505.pez.vmware.com
 VSPHERE_TKGM_VCENTER_ADMIN=administrator@vsphere.local
@@ -162,9 +165,9 @@ VSPHERE_TKGM_WKLD_CLUSTER03_LOADBALANCER_POOL=${VSPHERE_TKGM_SUBNET}.135-${VSPHE
 ```
 The following variables are required to access AWS Route53 to manage your DNS Domain and create Let's Enscript certificates used in the Tanzu Demo Hub demo's
 ```
-#########################################################################################################################
-############################################### AWS CREDENTIALS #########################################################
-#########################################################################################################################
+##########################################################################################################
+########################## AWS CREDENTIALS AND ROUTE53 DOMAIN CONFIGURATION  #############################
+##########################################################################################################
 
 export AWS_ACCESS_KEY="XXXXXXXXXXXXXXXXXXXX"                        
 export AWS_SECRET_KEY="XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"    
