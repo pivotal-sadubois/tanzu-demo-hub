@@ -773,6 +773,6 @@ USAGE: ./deployTKGmc [oprions] <deployment>
 
 ```
 
-#Required Services
-##GitHub Account SignUp
+# Required Services
+## GitHub Account SignUp
 
