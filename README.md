@@ -689,9 +689,9 @@ export AWS_HOSTED_DNS_DOMAIN="mydomain.com"  # YOUR PERSONAL DNS DOMAIN HOSTED O
 TDH Services such as Harbor, Tanzu Build Service or Tanzu Postgres etc. require accedd to depending services such as (GitHub, Docker, PivNET etc). You can use your existing credentials if you already have an account or you need to signup if you dont have one. 
 *Supported Environments*
 - [GitHub Account SignUp](https://github.com/signup?ref_cta=Sign+up&ref_loc=header+logged+out&ref_page=%2F&source=header-home)
-- [myVMware]($https://my.vmware.com/web/vmware/registration)
-- [VMware Container Registry](https://account.run.pivotal.io/z/uaa/sign-up)
-- [Docker Registry](https://hub.docker.com/signup)
+- [myVMware SignUp](https://my.vmware.com/web/vmware/registration)
+- [VMware Container Registry SignUp](https://account.run.pivotal.io/z/uaa/sign-up)
+- [Docker Registry SignUp](https://hub.docker.com/signup)
 ```
 #########################################################################################################################
 ###################################################### TDH SERVICES #####################################################
