@@ -190,6 +190,40 @@ Tanzu Kubernetes Grid Cluster (tdh-minikube-sadubois) build completed
 ```
 
 # Tanzu-Demo-Hub on Azure
+The Tanzu Demo Hub in the Microsoft Azure Cloud is divided in two part, the installation of the Management Cluster which is done by the deployTKGmc utility and the deployment of the TKG Cluster and installation of the Kubernetes services such as (Harbor, Tanzu Build Serice, Tanzu Data Postgres etc.) will be installed with the deployTKG afterwards.
+
+*Tanzu Demo Hub Configuration ($HOME/.tanzu-demo-hub.cfg)*
+```
+#########################################################################################################################
+############################################### AZURE CREDENTIALS #######################################################
+#########################################################################################################################
+
+export AZURE_SUBSCRIPTION_ID="XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX"
+export AZURE_TENANT_ID="XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX"
+export AZURE_LOCATION="westeurope"
+```
+The following variables are required to access AWS Route53 to manage your DNS Domain and create Let's Enscript certificates used in the Tanzu Demo Hub demo's
+```
+##########################################################################################################
+########################## AWS CREDENTIALS AND ROUTE53 DOMAIN CONFIGURATION  #############################
+##########################################################################################################
+
+export AWS_ACCESS_KEY="XXXXXXXXXXXXXXXXXXXX"
+export AWS_SECRET_KEY="XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+export AWS_REGION="eu-central-1"
+export AWS_HOSTED_DNS_DOMAIN="mydomain.com"  # YOUR PERSONAL DNS DOMAIN HOSTED ON ROUTE53
+```
+If an integration into Tanzu Mission Control is planned (recommended) your TMC credentials needs to be specified also
+```
+#########################################################################################################################
+################################################## TMC CREDENTIALS ######################################################
+#########################################################################################################################
+
+export TMC_ACCOUNT_NAME_AWS=sadubois-aws
+export TMC_PROVISIONER_NAME=sadubois-aws
+export TMC_SSH_KEY_NAME_AWS=tanzu-demo-hub
+```
+
 ```
 $ ./deployTKGmc
 CONFIURATION                   CLOUD   DOMAIN  MGMT-CLUSTER                   PLAN  CONFIGURATION
@@ -651,6 +685,64 @@ export AWS_ACCESS_KEY="XXXXXXXXXXXXXXXXXXXX"
 export AWS_SECRET_KEY="XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"    
 export AWS_REGION="eu-central-1"
 export AWS_HOSTED_DNS_DOMAIN="mydomain.com"  # YOUR PERSONAL DNS DOMAIN HOSTED ON ROUTE53
+```
+TDH Services such as Harbor, Tanzu Build Service or Tanzu Postgres requires addotiona account setting and credentials that needs to be defined here as a prerequisite for the service installation. 
+```
+#########################################################################################################################
+###################################################### TDH SERVICES #####################################################
+#########################################################################################################################
+
+export TDH_USER=sadubois                                 ## TAKE YOUR PIVOTAL OR VMWARE USERID
+export TDH_MYVMWARE_USER='sadubois@pivotal.io'           ## YOUR MYVMWARE USER ACCOUNT
+export TDH_MYVMWARE_PASS='XXXXXXXXXX'                    ## YOUR MYVMWARE PASSWORD
+export TDH_REGISTRY_VMWARE_NAME=registry.pivotal.io      ## CAN BE OPTAINED AT: https://account.run.pivotal.io/z/uaa/sign-up
+export TDH_REGISTRY_VMWARE_USER=sadubois@pivotal.io
+export TDH_REGISTRY_VMWARE_PASS=XXXXXXXXX
+export TDH_REGISTRY_DOCKER_NAME=docker.io
+export TDH_REGISTRY_DOCKER_USER=<docker-uid>
+export TDH_REGISTRY_DOCKER_PASS=XXXXXXXXX
+export TDH_GITHUB_USER=<github-user>
+export TDH_GITHUB_PASS=XXXXXXXXXX
+export TDH_GITHUB_SSHKEY=~/.ssh/id_XXXXXXXX
+export TDH_HARBOR_ADMIN_PASSWORD=XXXXXXXXXXXX
+export PCF_PIVNET_TOKEN="XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX-r"
+```
+
+```
+#########################################################################################################################
+################################################ TANZU OBSERVABILITY ####################################################
+#########################################################################################################################
+
+export TDH_TANZU_OBSERVABILITY_API_TOKEN="XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX"
+export TDH_TANZU_OBSERVABILITY_URL="https://vmware.wavefront.com"
+export TDH_TANZU_DATA_PROTECTION_ARN="arn:aws:iam::XXXXXXXXXXXX:role/VMwareTMCProviderCredentialMgr"
+export TDH_TANZU_DATA_PROTECTION_BACKUP_LOCATION="sadubois-aws-dp"
+```
+If an integration into Tanzu Mission Control is planned (recommended) your TMC credentials needs to be specified also
+```
+#########################################################################################################################
+################################################## TMC CREDENTIALS ######################################################
+#########################################################################################################################
+
+export TMC_ACCOUNT_NAME_AWS=sadubois-aws
+export TMC_PROVISIONER_NAME=sadubois-aws
+export TMC_SSH_KEY_NAME_AWS=tanzu-demo-hub
+export TMC_SERVICE_TOKEN="45YWzUCd0ICo2ZKSKtJ9hEIlPuwWPma4C0d7RI2wS8y7AYE6H941as668Wqyi80F" #sadubois@pivoal.io
+export TMC_CONTEXT_NAME=vmware-cloud-tmc
+```
+Tanzu Kubernetes Grid recommends the integration in either LDAP or OIDC Idendity Provider. LDAP will be configured and installed on the Jump Server where 
+OIDC requires an external Identity Provider sich as OKTA. A free account can be optained under https://okta.com
+```
+#########################################################################################################################
+######################################### IDENTITY MANAGEMENT (OIDC/LDAP) ###############################################
+#########################################################################################################################
+
+export TDH_OKTA_SECRET_ID="=0oalw23ymlHT9IDAf5d6"
+export TDH_OKTA_CLIENT_SECRET="RcSa1fRp6yNNe6Blc7pykWe-bScqG4qPvDklbe_A"
+export TDH_OKTA_URL="https://vmware-tdh.okta.com"
+export TDH_OKTA_SCOPES="openid,groups,email"
+export TDH_OKTA_USERNAME_CLAIM="code"
+export TDH_OKTA_GROUP_CLAIM="groups" 
 ```
 
 
