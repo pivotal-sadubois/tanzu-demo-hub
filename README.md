@@ -686,26 +686,31 @@ export AWS_SECRET_KEY="XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 export AWS_REGION="eu-central-1"
 export AWS_HOSTED_DNS_DOMAIN="mydomain.com"  # YOUR PERSONAL DNS DOMAIN HOSTED ON ROUTE53
 ```
-TDH Services such as Harbor, Tanzu Build Service or Tanzu Postgres requires addotiona account setting and credentials that needs to be defined here as a prerequisite for the service installation. 
+TDH Services such as Harbor, Tanzu Build Service or Tanzu Postgres etc. require accedd to depending services such as (GitHub, Docker, PivNET etc). You can use your existing credentials if you already have an account or you need to signup if you dont have one. 
+*Supported Environments*
+- [GitHub Account SignUp](#github-account-signup)
+- [Tanzu-Demo-Hub on Minikube](#tanzu-demo-hub-on-minikube)
+- [Tanzu-Demo-Hub on Minikube](#tanzu-demo-hub-on-minikube)
+- [Tanzu-Demo-Hub on Minikube](#tanzu-demo-hub-on-minikube)
 ```
 #########################################################################################################################
 ###################################################### TDH SERVICES #####################################################
 #########################################################################################################################
 
 export TDH_USER=sadubois                                 ## TAKE YOUR PIVOTAL OR VMWARE USERID
-export TDH_MYVMWARE_USER='sadubois@pivotal.io'           ## YOUR MYVMWARE USER ACCOUNT
-export TDH_MYVMWARE_PASS='XXXXXXXXXX'                    ## YOUR MYVMWARE PASSWORD
-export TDH_REGISTRY_VMWARE_NAME=registry.pivotal.io      ## CAN BE OPTAINED AT: https://account.run.pivotal.io/z/uaa/sign-up
-export TDH_REGISTRY_VMWARE_USER=sadubois@pivotal.io
+export TDH_MYVMWARE_USER='sadubois@pivotal.io'           ## myVMware Account to download TKG Software Packages
+export TDH_MYVMWARE_PASS='XXXXXXXXXX'                    ## => SIGN-UP: https://my.vmware.com/web/vmware/registration
+export TDH_REGISTRY_VMWARE_NAME=registry.pivotal.io      ## VMware Container Registry (required for TBS and Harbor)
+export TDH_REGISTRY_VMWARE_USER=sadubois@pivotal.io      ## => SIGN-UP: https://account.run.pivotal.io/z/uaa/sign-up
 export TDH_REGISTRY_VMWARE_PASS=XXXXXXXXX
-export TDH_REGISTRY_DOCKER_NAME=docker.io
-export TDH_REGISTRY_DOCKER_USER=<docker-uid>
+export TDH_REGISTRY_DOCKER_NAME=docker.io                ## Docker Registry (required for TBS and Harbor)
+export TDH_REGISTRY_DOCKER_USER=<docker-uid>             ## => SIGN-UP: https://hub.docker.com/signup
 export TDH_REGISTRY_DOCKER_PASS=XXXXXXXXX
-export TDH_GITHUB_USER=<github-user>
+export TDH_GITHUB_USER=<github-user>                     ## Github Account (http://github.com)
 export TDH_GITHUB_PASS=XXXXXXXXXX
 export TDH_GITHUB_SSHKEY=~/.ssh/id_XXXXXXXX
 export TDH_HARBOR_ADMIN_PASSWORD=XXXXXXXXXXXX
-export PCF_PIVNET_TOKEN="XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX-r"
+export PCF_PIVNET_TOKEN="XXXXXXXXXXXXXXXXXXXXXXXXXXX-r"  ## Pivnet APi Token (https://network.pivotal.io)
 ```
 
 ```
@@ -768,4 +773,6 @@ USAGE: ./deployTKGmc [oprions] <deployment>
 
 ```
 
+#Required Services
+##GitHub Account SignUp
 
