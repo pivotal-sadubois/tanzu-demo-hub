@@ -43,6 +43,7 @@ RUN apt-get update -qq && apt-get install -qqy \
     lsb-core \
     lsb-release \
     gnupg \
+    apt-get install postgresql-client \
     iptables
 RUN apt-get clean 
 
