@@ -59,6 +59,8 @@ TDH Services such as Harbor, Tanzu Build Service or Tanzu Postgres etc. require 
 - [myVMware SignUp](https://my.vmware.com/web/vmware/registration)
 - [VMware Container Registry SignUp](https://account.run.pivotal.io/z/uaa/sign-up)
 - [Docker Registry SignUp](https://hub.docker.com/signup)
+- [Pivotal Network API Token](https://login.run.pivotal.io/login)
+- [VMware Cloud Credentials](https://console.cloud.vmware.com))
 ```
 #########################################################################################################################
 ###################################################### TDH SERVICES #####################################################
@@ -79,7 +81,7 @@ export TDH_GITHUB_SSHKEY=~/.ssh/id_XXXXXXXX
 export TDH_HARBOR_ADMIN_PASSWORD=XXXXXXXXXXXX
 export PCF_PIVNET_TOKEN="XXXXXXXXXXXXXXXXXXXXXXXXXXX-r"  ## Pivnet APi Token (https://network.pivotal.io)
 ```
-Your TKG Management and Workload cluster should be integrated into Tanzu Observability automaticly on creation, therefor its required that you provide TO access credentials as well
+The integration of Tanzu Mission Control and Tanzu Observability requires you to have a VMware Cloud Account in the tanzu-emeo (Organization ID: fea0ee4b-bbf6-4444-b1d6-e493597d46a4) as a prerequsisits. The Workload Cluster created will automaticly integrated into Tanzu Observability (TO) after creation, therefor its required that you provide TO access credentials as well. 
 ```
 #########################################################################################################################
 ################################################ TANZU OBSERVABILITY ####################################################
