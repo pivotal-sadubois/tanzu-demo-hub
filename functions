@@ -4366,13 +4366,18 @@ installBuildService() {
   TDH_SERVICE_BUILD_SERVICE_INSTALLED=$(getConfigMap tanzu-demo-hub TDH_SERVICE_BUILD_SERVICE_INSTALLED)
   TDH_SERVICE_BUILD_SERVICE_VERIFIED=$(getConfigMap tanzu-demo-hub TDH_SERVICE_BUILD_SERVICE_VERIFIED)
 
+  # --- VERIFY IF BUILDSERVICE IS INSTALLED ---
+  messageTitle "Tanzu Build Service"
+
   # --- VERIFY INSTALLATION ---
   kp clusterbuilder list > /dev/null 2>&1; ret=$?
   cnt=$(kp clusterbuilder list 2>/dev/null | grep -c false) 
   if [ $ret -ne 0 -o $cnt -ne 0 ]; then 
+    messagePrint " ▪ Clusterbuilders not working" "cleaning up and reinstall build-service"
+
     # --- NOT WORKING, SO CLEAN IT UP FIRST ---
-    for n in $(kp clusterbuilder list 2>/dev/null | awk '{ print $1 }'); do
-      echo "kp clusterbuilder delete $n"
+    for n in $(kp clusterbuilder list 2>/dev/null | grep -v NAME | awk '{ print $1 }'); do
+      #echo "kp clusterbuilder delete $n"
       kp clusterbuilder delete $n > /dev/null 2>&1
       if [ $ret -ne 0 ]; then 
         echo "ERROR: failed to delete clusterbuilder"
@@ -4383,8 +4388,6 @@ installBuildService() {
     export TDH_SERVICE_BUILD_SERVICE_INSTALLED=""
   fi
 
-  # --- VERIFY IF BUILDSERVICE IS INSTALLED ---
-  messageTitle "Tanzu Build Service"
   if [ "$TDH_SERVICE_BUILD_SERVICE_INSTALLED" == "" ]; then 
     messagePrint " ▪ Installing Tanzu Build Service" "$TDH_SERVICE_BUILD_SERVICE_VERSION"
 
