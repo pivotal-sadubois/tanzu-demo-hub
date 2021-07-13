@@ -34,6 +34,10 @@ The Tanzu Demo Hub initiative is to build a environment to run predefined and te
 
 *Requirements*
 - AWS Route53 Domain (https://aws.amazon.com/route53)
+- Docker.io Account (https://docker.io)
+- myVMware Account (https://myvmware.com)
+- Pivotal Network Account (https://network.pivotal.io)
+- GitHub Account (https://github.com)
 
 # Tanzu-Demo-Hub on Minikube
 As mentioned in the title Minikub is the base for the installation. Download [Minikube](https://kubernetes.io/de/docs/tasks/tools/install-minikube/ "Download Minikube") the Hypervisor VirtualBox is required. 
@@ -49,6 +53,56 @@ export AWS_SECRET_KEY="XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 export AWS_REGION="eu-central-1"
 export AWS_HOSTED_DNS_DOMAIN="mydomain.com"  # YOUR PERSONAL DNS DOMAIN HOSTED ON ROUTE53
 ```
+TDH Services such as Harbor, Tanzu Build Service or Tanzu Postgres etc. require accedd to depending services such as (GitHub, Docker, PivNET etc). You can use your existing credentials if you already have an account or you need to signup if you dont have one.
+*Supported Environments*
+- [GitHub Account SignUp](https://github.com/signup?ref_cta=Sign+up&ref_loc=header+logged+out&ref_page=%2F&source=header-home)
+- [myVMware SignUp](https://my.vmware.com/web/vmware/registration)
+- [VMware Container Registry SignUp](https://account.run.pivotal.io/z/uaa/sign-up)
+- [Docker Registry SignUp](https://hub.docker.com/signup)
+```
+#########################################################################################################################
+###################################################### TDH SERVICES #####################################################
+#########################################################################################################################
+
+export TDH_USER=sadubois                                 ## TAKE YOUR PIVOTAL OR VMWARE USERID
+export TDH_MYVMWARE_USER='sadubois@pivotal.io'           ## myVMware Account to download TKG Software Packages
+export TDH_MYVMWARE_PASS='XXXXXXXXXX'                    ## => SIGN-UP: https://my.vmware.com/web/vmware/registration
+export TDH_REGISTRY_VMWARE_NAME=registry.pivotal.io      ## VMware Container Registry (required for TBS and Harbor)
+export TDH_REGISTRY_VMWARE_USER=sadubois@pivotal.io      ## => SIGN-UP: https://account.run.pivotal.io/z/uaa/sign-up
+export TDH_REGISTRY_VMWARE_PASS=XXXXXXXXX
+export TDH_REGISTRY_DOCKER_NAME=docker.io                ## Docker Registry (required for TBS and Harbor)
+export TDH_REGISTRY_DOCKER_USER=<docker-uid>             ## => SIGN-UP: https://hub.docker.com/signup
+export TDH_REGISTRY_DOCKER_PASS=XXXXXXXXX
+export TDH_GITHUB_USER=<github-user>                     ## Github Account (http://github.com)
+export TDH_GITHUB_PASS=XXXXXXXXXX
+export TDH_GITHUB_SSHKEY=~/.ssh/id_XXXXXXXX
+export TDH_HARBOR_ADMIN_PASSWORD=XXXXXXXXXXXX
+export PCF_PIVNET_TOKEN="XXXXXXXXXXXXXXXXXXXXXXXXXXX-r"  ## Pivnet APi Token (https://network.pivotal.io)
+```
+Your TKG Management and Workload cluster should be integrated into Tanzu Observability automaticly on creation, therefor its required that you provide TO access credentials as well
+```
+#########################################################################################################################
+################################################ TANZU OBSERVABILITY ####################################################
+#########################################################################################################################
+
+export TDH_TANZU_OBSERVABILITY_API_TOKEN="XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX"
+export TDH_TANZU_OBSERVABILITY_URL="https://vmware.wavefront.com"
+export TDH_TANZU_DATA_PROTECTION_ARN="arn:aws:iam::XXXXXXXXXXXX:role/VMwareTMCProviderCredentialMgr"
+export TDH_TANZU_DATA_PROTECTION_BACKUP_LOCATION="sadubois-aws-dp"
+```
+If an integration into Tanzu Mission Control is planned (recommended) your TMC credentials needs to be specified also
+```
+#########################################################################################################################
+################################################## TMC CREDENTIALS ######################################################
+#########################################################################################################################
+
+export TMC_ACCOUNT_NAME_AWS=sadubois-aws
+export TMC_PROVISIONER_NAME=sadubois-aws
+export TMC_SSH_KEY_NAME_AWS=tanzu-demo-hub
+export TMC_SERVICE_TOKEN="45YWzUCd0ICo2ZKSKtJ9hEIlPuwWPma4C0d7RI2wS8y7AYE6H941as668Wqyi80F" #sadubois@pivoal.io
+export TMC_CONTEXT_NAME=vmware-cloud-tmc
+```
+
 
 ```
 $ ./deployMiniKube 
@@ -712,7 +766,7 @@ export TDH_GITHUB_SSHKEY=~/.ssh/id_XXXXXXXX
 export TDH_HARBOR_ADMIN_PASSWORD=XXXXXXXXXXXX
 export PCF_PIVNET_TOKEN="XXXXXXXXXXXXXXXXXXXXXXXXXXX-r"  ## Pivnet APi Token (https://network.pivotal.io)
 ```
-
+Your TKG Management and Workload cluster should be integrated into Tanzu Observability automaticly on creation, therefor its required that you provide TO access credentials as well
 ```
 #########################################################################################################################
 ################################################ TANZU OBSERVABILITY ####################################################
