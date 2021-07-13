@@ -4391,17 +4391,12 @@ installBuildService() {
   if [ "$TDH_SERVICE_BUILD_SERVICE_INSTALLED" == "" ]; then 
     messagePrint " ▪ Installing Tanzu Build Service" "$TDH_SERVICE_BUILD_SERVICE_VERSION"
 
-    #kubectl get ns build-service > /dev/null 2>&1; ret=$?
-    #kp clusterbuilder list > /dev/null 2>&1; stt=$?
-    #if [ $stt -ne 0 -o $ret -ne 0 ]; then
-
     # --- DOWNLOAD BUILD_SERVICE BINARIES ---
-    downloadFromPivnet build-service $TDH_SERVICE_BUILD_SERVICE_VERSION "$TDH_SERVICE_BUILD_SERVICE_VERSION" "build-service-$TDH_SERVICE_BUILD_SERVICE_VERSION.tar"
-  
-    TBS_FILE="/tmp/build-service-$TDH_SERVICE_BUILD_SERVICE_VERSION.tar"
-    [ -d /tmp/build-service ] && rm -rf /tmp/build-service
-    mkdir /tmp/build-service
-    tar xf $TBS_FILE -C /tmp/build-service
+    #downloadFromPivnet build-service $TDH_SERVICE_BUILD_SERVICE_VERSION "$TDH_SERVICE_BUILD_SERVICE_VERSION" "build-service-$TDH_SERVICE_BUILD_SERVICE_VERSION.tar"
+    #TBS_FILE="/tmp/build-service-$TDH_SERVICE_BUILD_SERVICE_VERSION.tar"
+    #[ -d /tmp/build-service ] && rm -rf /tmp/build-service
+    #mkdir /tmp/build-service
+    #tar xf $TBS_FILE -C /tmp/build-service
   
     # --- VERIFY SERVICE CONFIGURATION ---
     checkKubernetesServices registry_vmware
@@ -4482,81 +4477,59 @@ installBuildService() {
         echo "ERROR: Docker login does not work 1'"
         echo "       => docker login $TDH_HARBOR_REGISTRY_DNS_HARBOR -u admin -p $TDH_HARBOR_REGISTRY_ADMIN_PASSWORD"; exit 1
       fi
-  
+
       messagePrint " ▪ Relocate the images" "$TDH_REGISTRY_VMWARE_NAME/library/build-service"
-      kbld relocate -f /tmp/build-service/images.lock --lock-output /tmp/build-service/images-relocated.lock \
-           --repository $DNS_HARBOR/library/build-service > /dev/null 2>&1
-      if [ $? -ne 0 ]; then
+      imgpkg copy -b "registry.pivotal.io/build-service/bundle:$TDH_SERVICE_BUILD_SERVICE_VERSION" --to-repo $DNS_HARBOR/library/build-service > /dev/null 2>&1; ret=$?
+      if [ $ret -ne 0 ]; then
         echo "ERROR: Image Relocation faied"
-        echo "       => kbld relocate -f /tmp/build-service/images.lock --lock-output /tmp/build-service/images-relocated.lock \\"
-        echo "          --repository $DNS_HARBOR/library/build-service"; exit 1
+        echo "       => imgpkg copy -b \"registry.pivotal.io/build-service/bundle:$TDH_SERVICE_BUILD_SERVICE_VERSION\" --to-repo $DNS_HARBOR/library/build-service"
+      fi
+
+      messagePrint " ▪ Pull the Tanzu Build Service bundle image locally" "$TDH_REGISTRY_VMWARE_NAME/library/build-service"
+      rm -rf /tmp/bundle
+      imgpkg pull -b "$DNS_HARBOR/library/build-service:$TDH_SERVICE_BUILD_SERVICE_VERSION" -o /tmp/bundle > /dev/null 2>&1; ret=$?
+      if [ $ret -ne 0 ]; then
+        echo "ERROR: Image Relocation faied"
+        echo "       => imgpkg pull -b \"$DNS_HARBOR/library/build-service\" -o /tmp/bundle"
       fi
 
       # --- DEPLOY KAPP ---
+      cnt=$(kapp inspect -a tanzu-build-service 2>/dev/null | grep -c "0 resources")
       stt=$(kapp inspect -a tanzu-build-service 2>/dev/null | tail -1)
-      if [ "$stt" != "Succeeded" ]; then
+      if [ "$stt" != "Succeeded" -o $cnt -eq 1 ]; then
         kapp delete -a tanzu-build-service -y >/dev/null 2>&1
-
-        messagePrint " ▪ Deploy Build Service (kapp)" "/tmp/build-service/values.yaml"
-          ytt -f /tmp/build-service/values.yaml \
-              -f /tmp/build-service/manifests/ \
+        messagePrint " ▪ Deploy Build Service (kapp)" "/tmp/bundle/values.yaml"
+          ytt -f /tmp/bundle/values.yaml \
+              -f /tmp/bundle/config/ \
               -f $HOME/.tanzu-demo-hub/certificates/ca.pem \
+              -v tanzunet_username="$TDH_REGISTRY_VMWARE_USER" \
+              -v tanzunet_password="$TDH_REGISTRY_VMWARE_PASS" \
               -v docker_repository="$DNS_HARBOR/library/build-service" \
               -v docker_username="admin" \
               -v docker_password="$TDH_HARBOR_REGISTRY_ADMIN_PASSWORD" 2>/dev/null \
-              | kbld -f /tmp/build-service/images-relocated.lock -f- 2>/dev/null \
+              | kbld -f /tmp/bundle/.imgpkg/images.yml -f- 2>/dev/null \
               | kapp deploy -a tanzu-build-service -f- -y > /dev/null 2>&1; ret=$?
-    
-        cnt=$(kapp inspect -a tanzu-build-service --json | jq -r '.Tables[].Rows[].reconcile_state' | grep -vc "ok")
-        while [ $cnt -ne 0 ]; do
+
           cnt=$(kapp inspect -a tanzu-build-service --json | jq -r '.Tables[].Rows[].reconcile_state' | grep -vc "ok")
-          sleep 360
-        done
-      else
+          while [ $cnt -ne 0 ]; do
+            cnt=$(kapp inspect -a tanzu-build-service --json | jq -r '.Tables[].Rows[].reconcile_state' | grep -vc "ok")
+            sleep 360
+          done
+       else
         messageTitle "Verify Tanzu Build Service"
         messagePrint " ▪ Veriify Build Service (kapp)" "tanzu-build-service"
       fi
-    fi
 
-    # --- DOWNLOAD KP UTILITY ---
-    if [ ! -f /usr/local/bin/kp ]; then 
-      downloadFromPivnet build-service $TDH_SERVICE_BUILD_SERVICE_VERSION $TDH_SERVICE_BUILD_SERVICE_KP "kp-darwin"
-  
-      echo "INFO: Please copy the file /tmp/kp-darwin-$TDH_SERVICE_BUILD_SERVICE_KP /usr/local/bin"
-      echo "      => sudo mv /tmp/kp-darwin-$TDH_SERVICE_BUILD_SERVICE_KP /usr/local/bin"
-      echo "      => sudo chmod a+x /usr/local/bin/kp"
-    fi
-  
-    kp clusterbuilder list > /dev/null 2>&1
-    if [ $? -ne 0 ]; then 
-      # --- DOWNLOAD BUILD_SERVICE DEPENDANCIES ---
-      downloadFromPivnet tbs-dependencies $TDH_SERVICE_BUILD_SERVICE_DEPENDANCIES $TDH_SERVICE_BUILD_SERVICE_DEPENDANCIES "descriptor-$TDH_SERVICE_BUILD_SERVICE_DEPENDANCIES.yaml"
-  
-      messagePrint " ▪ Import Dependency Descriptors" "/tmp/descriptor-$TDH_SERVICE_BUILD_SERVICE_DEPENDANCIES.yaml"
-      echo "   ------------------------------------------------------------------------------------------------------------------------"
-      echo "   WARNING: The Import of the Dependancy Descritions process may take up to 60min, follow its status on a spererate window"
-      echo "            => tail -100f /tmp/kp.log"
-      echo "   ------------------------------------------------------------------------------------------------------------------------"
-      cnt=0; ret=1
-      while [ $ret -ne 0 -a $cnt -lt 50 ]; do
-        if [ $DEBUG -eq 1 ]; then
-          messageLine
-          kp import -f /tmp/descriptor-$TDH_SERVICE_BUILD_SERVICE_DEPENDANCIES.yaml; ret=$?
-          messageLine
-        else
-          kp import -f /tmp/descriptor-$TDH_SERVICE_BUILD_SERVICE_DEPENDANCIES.yaml > /tmp/kp.log 2>&1; ret=$?
-        fi
-  
-        [ $ret -eq 0 ] && break
-        sleep 60
-        let cnt=cnt+1
-      done
-  
-      if [ $ret -ne 0 ]; then
-        echo "ERROR: failed to import descriptor-$TDH_SERVICE_BUILD_SERVICE_DEPENDANCIES.yaml after $cnt tries"
-        echo "       => kp import -f /tmp/descriptor-$TDH_SERVICE_BUILD_SERVICE_DEPENDANCIES.yaml"
-        exit 1
-      fi
+      stt=$(kubectl get TanzuNetDependencyUpdaters dependency-updater -n build-service | egrep "^dependency-updater" | awk '{ print $3 }')
+      ver=$(kubectl get TanzuNetDependencyUpdaters dependency-updater -n build-service | egrep "^dependency-updater" | awk '{ print $2 }')
+      messagePrint " ▪ Verify Dependancy Updater (dependency-updater)" "build-service/dependency-updater"
+      messagePrint "   Dependancy Version"         "$ver"
+      messagePrint "   Dependancy Statuws"         "$stt"
+
+      messagePrint " ▪ Verify the cluster builders" "base, default, full and tiny"
+      messageLine
+      kp clusterbuilder list
+      messageLine
     fi
 
     CURRENT_DATE=$(date "+%Y-%m-%d %M:%H:%S") 

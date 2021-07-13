@@ -222,15 +222,11 @@ installTanzuDataPostgres
 #installSpringCloudGateway
 installMinio
 
-echo "gaga1"
 if [ "$TDH_TANZU_MISSION_CONTROL_REGISTRATION" == "true" ]; then 
   cnt=$(tmc cluster list --name $TDH_MINIKUBE_PROFILE 2>/dev/null | grep -c $TDH_MINIKUBE_PROFILE)
-echo "gaga2 CNT:$cnt"
   if [ $cnt -eq 0 ]; then
-echo "tmc cluster attach --name $TDH_MINIKUBE_PROFILE --kubeconfig /Users/sdu/.kube/config -p attached -m attached "
     tmc cluster attach --name $TDH_MINIKUBE_PROFILE --kubeconfig /Users/sdu/.kube/config -p attached -m attached > /dev/null 2>&1; ret=$?
     if [ $ret -ne 0 ]; then 
-echo "gagag3"
       tmc cluster delete $TDH_MINIKUBE_PROFILE -p attached -m attached > /dev/null 2>&1
   
       # --- WAIT FOR THE CLUSTER TO BE DELETED ---
