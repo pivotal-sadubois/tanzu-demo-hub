@@ -6279,6 +6279,8 @@ tdh_tools_build() {
   verify_docker
   checkTDHenvironment
 
+  [ -f files/tdh-tools/tdh-tools.cfg ] && . files/tdh-tools/tdh-tools.cfg
+
   TDH_DOCKER_FILES=/tmp/tdh-tools
   mkdir -p $TDH_DOCKER_FILES
   cp files/tdh-tools/Dockerfile           $TDH_DOCKER_FILES
@@ -6297,6 +6299,9 @@ tdh_tools_build() {
   [ "$TDH_SERVICE_BUILD_SERVICE_VERSION" == "" ] && TDH_SERVICE_BUILD_SERVICE_VERSION=1.2.1
   [ "$TDH_SERVICE_BUILD_SERVICE_KP" == "" ] && TDH_SERVICE_BUILD_SERVICE_KP=0.3.0
   [ "$TDH_SERVICE_BUILD_SERVICE_DEPENDANCIES" == "" ] && TDH_SERVICE_BUILD_SERVICE_DEPENDANCIES=0.3.0
+  [ "$TKG_TANZU_KUBERNETES_GRID" == "" ] && TKG_TANZU_KUBERNETES_GRID=1.3.1
+
+  messageTitle "TDH Tools Docker Container (tdh-tools)"
 
   # --- DOWNLOAD BUILD_SERVICE BINARIES ---
   if [ ! -f $TDH_DOCKER_FILES/kp-linux-${TDH_SERVICE_BUILD_SERVICE_KP} ]; then 
@@ -6307,17 +6312,17 @@ tdh_tools_build() {
       cp $TDH_DOCKER_FILES/kp-linux-${TDH_SERVICE_BUILD_SERVICE_KP} $TDH_DOCKER_FILES/kp && chmod a+x $TDH_DOCKER_FILES/kp
     fi
 
-    # --- REBUILD REQUIRED BECAUSE OF SOFTWARE CHANGE ---
-    REBUILD_REQUIRED_SOFTWARE=1
+    REBUILD_REQUIRED_SOFTWARE=1       ## REBUILD REQUIRED BECAUSE OF SOFTWARE CHANGE 
   fi
 
-  messageTitle "TDH Tools Docker Container (tdh-tools)"
   if [ ! -x $TDH_DOCKER_FILES/kubectl-vsphere ]; then
     cp $TDHPATH/software/vsphere-plugin-Linux.zip /tmp
     unzip -d /tmp /tmp/vsphere-plugin-Linux.zip > /dev/null 2>&1
     chmod a+x /tmp/bin/kubectl-vsphere /tmp/bin/kubectl
     mv /tmp/bin/kubectl-vsphere $TDH_DOCKER_FILES
     mv /tmp/bin/kubectl $TDH_DOCKER_FILES
+
+    REBUILD_REQUIRED_SOFTWARE=1       ## REBUILD REQUIRED BECAUSE OF SOFTWARE CHANGE 
   fi
 
   mkdir -p $TDH_DOCKER_FILES
@@ -6368,22 +6373,16 @@ tdh_tools_build() {
     REBUILD_REQUIRED=1
   fi
 
-  [ $REBUILD_REQUIRED_SOFTWARE -gt 0 ] && REBUILD_REQUIRED=1
-
   if [ ! -x $TDH_DOCKER_FILES/mc ]; then
     wget https://dl.min.io/client/mc/release/linux-amd64/mc > /dev/null 2>&1
     mv mc $TDH_DOCKER_FILES
     chmod a+x $TDH_DOCKER_FILES/mc
   fi
 
-  if [ $REBUILD_REQUIRED -gt 0 ]; then 
-    if [ ! -f $TDH_DOCKER_FILES/kubectl ]; then
-      curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
-      chmod a+x kubectl
-      mv kubectl $TDH_DOCKER_FILES/kubectl
-    fi
-  
-    if [ ! -f $TDH_DOCKER_FILES/tanzu-cli-bundle* ]; then
+  # --- DOWNLOAD CARVEL TOOLS ---
+  if [ ! -d $TDH_DOCKER_FILES/cli-${TKG_TANZU_KUBERNETES_GRID} ]; then
+    TANZU_CLI_BUINDLE=$TDH_DOCKER_FILES/tanzu-cli-bundle-v${TKG_TANZU_KUBERNETES_GRID}-linux-amd64.tar
+    if [ ! -f $TANZU_CLI_BUINDLE ]; then
       . ~/.tanzu-demo-hub.cfg
 
       VMWCLI=/tmp/vmw-cli
@@ -6396,14 +6395,24 @@ tdh_tools_build() {
           echo "       => docker run apnex/vmw-cli shell > /tmp/vmw-cli"
           exit 1
         fi
-      
+
         chmod 755 $VMWCLI
       fi
 
       export VMWUSER="$TDH_MYVMWARE_USER"
       export VMWPASS="$TDH_MYVMWARE_PASS"
       $VMWCLI ls vmware_tanzu_kubernetes_grid > /dev/null 2>&1
-    
+
+      cnt=$($VMWCLI ls vmware_tanzu_kubernetes_grid 2>/dev/null | egrep "^tanzu-cli-bundle" | grep -c "$TKG_TANZU_KUBERNETES_GRID")
+      if [ $cnt -eq 0 ]; then 
+        echo "ERROR: failed to download tanzu-cli-bundle version: $TKG_TANZU_KUBERNETES_GRID from myVMware.com. This version does not" 
+        echo "       seam to be available anymore"
+        messageLine
+        $VMWCLI ls vmware_tanzu_kubernetes_grid | egrep "^tanzu-cli-bundle" 
+        messageLine
+        exit 1
+      fi
+
       cnt=0
       vmwfile=$($VMWCLI ls vmware_tanzu_kubernetes_grid 2>/dev/null | egrep "^tanzu-cli-bundle" | grep linux | tail -1 | awk '{ print $1 }')
       while [ "$vmwfile" == "" -a $cnt -lt 5 ]; do
@@ -6411,9 +6420,20 @@ tdh_tools_build() {
         let cnt=cnt+1
         sleep 10
       done
-  
+
+      if [ "tanzu-cli-bundle-v${TKG_TANZU_KUBERNETES_GRID}-linux-amd64.tar" != "$vmwfile" ]; then 
+        echo "ERROR: $vmwfile from myVMware.com differs from the requested version $TKG_TANZU_KUBERNETES_GRID"
+        echo "       You may want to change the version TKG_TANZU_KUBERNETES_GRID=$TKG_TANZU_KUBERNETES_GRID in"
+        echo "       the files/tdh-tools/tdh-tools.cfg configuration file. Please see the available versions here:"
+
+        messageLine
+        $VMWCLI ls vmware_tanzu_kubernetes_grid | egrep "^tanzu-cli-bundle"
+        messageLine
+        exit 1
+      fi
+
       messagePrint " ▪ Downloading Tanzu CLI Bundle" "$TDH_DOCKER_FILES/$vmwfile"
-  
+
       if [ "$vmwfile" == "" ]; then
         echo "ERROR: failed to download $vmwfile"
         echo "       => export VMWUSER=\"$TDH_MYVMWARE_USER\""
@@ -6428,7 +6448,7 @@ tdh_tools_build() {
           let cnt=cnt+1
           sleep 30
         done
-    
+
         if [ ! -f $vmwfile ]; then
           echo "ERROR: failed to download $vmwfile"
           echo "       => export VMWUSER=\"$TDH_MYVMWARE_USER\""
@@ -6440,14 +6460,30 @@ tdh_tools_build() {
           mv $vmwfile $TDH_DOCKER_FILES
         fi
       fi
-    else
-      vmwfile=$(ls -1 $TDH_DOCKER_FILES/tanzu-cli-bundle* 2>/dev/null | awk -F'/' '{ print $NF }' | head -1)
     fi
 
-    if [ ! -d $TDH_DOCKER_FILES/cli  ]; then 
-      cd $TDH_DOCKER_FILES && tar xf $vmwfile
+    if [ ! -d $TDH_DOCKER_FILES/cli-$TKG_TANZU_KUBERNETES_GRID  ]; then
+      rm -f ${TDH_DOCKER_FILES}/cli
+      tar xf $TANZU_CLI_BUINDLE && mv cli ${TDH_DOCKER_FILES}/cli-$TKG_TANZU_KUBERNETES_GRID
+      cd $TDH_DOCKER_FILES && ln -s  cli-$TKG_TANZU_KUBERNETES_GRID cli
     fi
 
+    REBUILD_REQUIRED_SOFTWARE=1       ## REBUILD REQUIRED BECAUSE OF SOFTWARE CHANGE
+  fi
+
+  if [ $REBUILD_REQUIRED_SOFTWARE -gt 0 ]; then 
+    messagePrint " ▪ Software Updates (files/tdh-tools/tdh-tools.cfg) )"  "=> Rebuild required"
+
+    REBUILD_REQUIRED=1
+  fi
+
+  if [ $REBUILD_REQUIRED -gt 0 ]; then 
+    if [ ! -f $TDH_DOCKER_FILES/kubectl ]; then
+      curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+      chmod a+x kubectl
+      mv kubectl $TDH_DOCKER_FILES/kubectl
+    fi
+  
     # --- CLEANUP SOME DISK SPACE ---
     messagePrint " ▪ Cleanup unsued Docker images" "docker system prune, docker container prune"
     docker rmi $(docker images -q) > /dev/null 2>&1
