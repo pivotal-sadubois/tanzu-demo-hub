@@ -4548,12 +4548,12 @@ installBuildService() {
         fi
   
         [ $ret -eq 0 ] && break
-        sleep 30
+        sleep 60
         let cnt=cnt+1
       done
   
       if [ $ret -ne 0 ]; then
-        echo "ERROR: failed to import descriptor-$TDH_SERVICE_BUILD_SERVICE_DEPENDANCIES.yaml"
+        echo "ERROR: failed to import descriptor-$TDH_SERVICE_BUILD_SERVICE_DEPENDANCIES.yaml after $cnt tries"
         echo "       => kp import -f /tmp/descriptor-$TDH_SERVICE_BUILD_SERVICE_DEPENDANCIES.yaml"
         exit 1
       fi
@@ -6275,6 +6275,7 @@ verify_docker() {
 
 tdh_tools_build() {
   REBUILD_REQUIRED=0
+  REBUILD_REQUIRED_SOFTWARE=0
   verify_docker
   checkTDHenvironment
 
@@ -6290,13 +6291,24 @@ tdh_tools_build() {
   DOCKER_IMAGE_CHKSUM=$(docker images | egrep "^tdh-tools" | grep "CHKSUM" | grep "$DOCKER_IMAGE_LATEST_ID" | awk '{ print $2 }' | sed 's/CHKSUM-//g')
 
   # --- SET CORRECT PERMISSONS ---
-  chmod a+x $TDH_DOCKER_FILES/tmc
+  [ -f $TDH_DOCKER_FILES/tmc ] && chmod a+x $TDH_DOCKER_FILES/tmc
+
+  # --- SET DEFAULT VALUES ---
+  [ "$TDH_SERVICE_BUILD_SERVICE_VERSION" == "" ] && TDH_SERVICE_BUILD_SERVICE_VERSION=1.2.1
+  [ "$TDH_SERVICE_BUILD_SERVICE_KP" == "" ] && TDH_SERVICE_BUILD_SERVICE_KP=0.3.0
+  [ "$TDH_SERVICE_BUILD_SERVICE_DEPENDANCIES" == "" ] && TDH_SERVICE_BUILD_SERVICE_DEPENDANCIES=0.3.0
 
   # --- DOWNLOAD BUILD_SERVICE BINARIES ---
-  if [ ! -f $TDH_DOCKER_FILES/kp ]; then 
-    TDH_SERVICE_BUILD_SERVICE_VERSION=1.1.4
-    downloadFromPivnet build-service $TDH_SERVICE_BUILD_SERVICE_VERSION "0.2.0" "kp-linux" 
-    [ -f /tmp/kp-linux-0.2.0 ] && mv /tmp/kp-linux-0.2.0 $TDH_DOCKER_FILES/kp && chmod a+x $TDH_DOCKER_FILES/kp
+  if [ ! -f $TDH_DOCKER_FILES/kp-linux-${TDH_SERVICE_BUILD_SERVICE_KP} ]; then 
+    TDH_SERVICE_BUILD_SERVICE_VERSION=1.2.1
+    downloadFromPivnet build-service $TDH_SERVICE_BUILD_SERVICE_VERSION "$TDH_SERVICE_BUILD_SERVICE_KP" "kp-linux" 
+    if [ -f /tmp/kp-linux-${TDH_SERVICE_BUILD_SERVICE_KP} ]; then 
+      mv /tmp/kp-linux-$TDH_SERVICE_BUILD_SERVICE_KP $TDH_DOCKER_FILES 
+      cp $TDH_DOCKER_FILES/kp-linux-${TDH_SERVICE_BUILD_SERVICE_KP} $TDH_DOCKER_FILES/kp && chmod a+x $TDH_DOCKER_FILES/kp
+    fi
+
+    # --- REBUILD REQUIRED BECAUSE OF SOFTWARE CHANGE ---
+    REBUILD_REQUIRED_SOFTWARE=1
   fi
 
   messageTitle "TDH Tools Docker Container (tdh-tools)"
@@ -6355,6 +6367,8 @@ tdh_tools_build() {
     messagePrint " ▪ Docker Image (tdh-tools:latest) Not available"       "Initial Build"
     REBUILD_REQUIRED=1
   fi
+
+  [ $REBUILD_REQUIRED_SOFTWARE -gt 0 ] && REBUILD_REQUIRED=1
 
   if [ ! -x $TDH_DOCKER_FILES/mc ]; then
     wget https://dl.min.io/client/mc/release/linux-amd64/mc > /dev/null 2>&1
@@ -6754,4 +6768,39 @@ cleanKindCluster() {
   fi
 }
 
-
+runTDHtools() {
+  if [ ! -f /tdh_tools_docker_container  ]; then
+  
+    # --- VERIFY TOOLS AND ACCESS ---
+    verify_docker
+    checkCLIcommands        BASIC
+    checkKubernetesServices registry_docker
+  
+    if [ $NATIVE -eq 0 ]; then
+      tdh_tools_build
+  
+      messagePrint " ▪ Running TDH Tools Docker Container" "tdh-tools:latest $TDHPATH/$CMD_EXEC $CMD_ARGS"
+  
+      cid=$(docker ps -a | grep tdh-tools:latest | awk '{ print $1 }')
+      [ "$cid" != "" ] && for n in $cid; do docker rm $n -f > /dev/null 2>&1; done
+  
+      mkdir -p $HOME/.mc $HOME/.cache $HOME/.config $HOME/.local
+      mkdir -p /tmp/docker && chmod a+w /tmp/docker
+      docker run -it --rm --name tdh-tools -v /var/run/docker.sock:/var/run/docker.sock tdh-tools:latest chmod 666 /var/run/docker.sock > /dev/null 2>&1
+      docker run -u $(id -u):$(id -g) --group-add 0 -it --rm --name tdh-tools --network=host \
+         -v $HOME:$HOME:ro -v $HOME/.local:$HOME/.local:rw -v $HOME/.tanzu-demo-hub:$HOME/.tanzu-demo-hub:rw \
+         -v /var/run/docker.sock:/var/run/docker.sock:rw -v $HOME/.cache:$HOME/.cache:rw -v $HOME/.config:$HOME/.config:rw \
+         -v $HOME/.aws:$HOME/.aws:rw -v $HOME/.vmware-cna-saas:$HOME/.vmware-cna-saas:rw -v $HOME/.azure:$HOME/.azure:rw \
+         -v /tmp:/tmp:rw -v /tmp/docker:$HOME/.docker:rw -v $HOME/.mc:$HOME/.mc:rw -v $HOME/.tanzu:$HOME/.tanzu:rw \
+         -v $HOME/.kube-tkg:$HOME/.kube-tkg:rw -v $HOME/.kube:$HOME/.kube:rw -v $HOME/.govmomi:$HOME/.govmomi:rw \
+         -v $HOME/.ssh:$HOME/.ssh:rw -v $HOME/.terraform:$HOME/.terraform:rw \
+         -e "KUBECONFIG=$HOME/.kube/config" --hostname tdh-tools tdh-tools:latest $TDHPATH/$CMD_EXEC $CMD_ARGS; ret=$?
+  
+      # --- FINISH CURRENT SESSION AS WE RUN AS CONTAINER ---
+      exit $ret
+    else
+      # --- VERYFY ACCESS TO CLOUD ---
+      checkTDHenvironment
+    fi
+  fi
+}
