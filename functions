@@ -55,8 +55,8 @@ execCat() {
   echo -e "     => cat $1\c"; read x
   echo "     -------------------------------------------------------------------------------------------------------------------------------------------------------"
 
-  if [ -f /usr/local/bin/bat ]; then
-    /usr/local/bin/bat -p --color always $1 | sed 's/^/     /g'
+  if [ -f /usr/local/bin/bat -o /usr/bin/bat ]; then
+    bat -p --color always $1 | sed 's/^/     /g'
   else
     cat $1
   fi
@@ -69,14 +69,33 @@ execCmd() {
   bold=$(tput bold)
   normal=$(tput sgr0)
 
+  if [ "$(uname)" == "Darwin" ]; then SED=gsed; else SED=sed; fi
+
   echo -e "     => ${bold}$1${normal}\c"; read x
   echo "     -------------------------------------------------------------------------------------------------------------------------------------------------------"
-  eval "$1" 2>&1 | gsed -e 's/^/     /g' 
-  #$1 | sed -e '/^$/d' -e 's/^/     /g'
+  eval "$1" 2>&1 | $SED -e 's/^/     /g' 
   echo "     -------------------------------------------------------------------------------------------------------------------------------------------------------"
   echo ""
-  if [ $? -ne 0 ]; then exit 1; fi
 }
+
+loopCmd() {
+  bold=$(tput bold)
+  normal=$(tput sgr0)
+
+  if [ "$(uname)" == "Darwin" ]; then SED=gsed; else SED=sed; fi
+
+  echo -e "     => ${bold}$1${normal}\c"; read x
+  echo "     -------------------------------------------------------------------------------------------------------------------------------------------------------"
+  
+  ret=1
+  while [ $ret -ne 0 ]; do
+    eval "$1" 2>&1; ret=$? | $SED -e 's/^/     /g'; ret=$?
+  done
+
+  echo "     -------------------------------------------------------------------------------------------------------------------------------------------------------"
+  echo ""
+}
+
 
 checkIdentityProvider() {
   [ "${TDH_TKGMC_IDENTITY_MANAGEMENT_TYPE}" == "none" ] && return
@@ -3625,6 +3644,44 @@ checkCLIcommands() {
     done
   fi
 
+  if [ "$cat" == "TANZU_DATA" ]; then
+    CLI_COMMANDS="/usr/local/bin/mc:brew:minio/stable/mc /usr/local/bin/psql:brew:libpq /usr/local/bin/s3cmd:brew:s3cmd"
+
+    # --- INSTALL BREW INSTALLABLE TOOLS ---
+    for arg in $CLI_COMMANDS; do
+      cmd=$(echo $arg | awk -F: '{ print $1 }')
+      sys=$(echo $arg | awk -F: '{ print $2 }')
+      pkg=$(echo $arg | awk -F: '{ print $3 }')
+
+      if [ $sys == "brew" ]; then
+        if [ ! -x $cmd ]; then
+          echo "ERROR: $cmd not installed, please install with brew"
+          echo "       => brew install $pkg"
+          exit 1
+        fi
+      fi
+    done
+  fi
+
+  if [ "$cat" == "DEMO_TOOLS" ]; then
+    CLI_COMMANDS="/usr/local/bin/gsed:brew:gnu-sed /usr/local/bin/bat:brew:bat"
+
+    # --- INSTALL BREW INSTALLABLE TOOLS ---
+    for arg in $CLI_COMMANDS; do
+      cmd=$(echo $arg | awk -F: '{ print $1 }')
+      sys=$(echo $arg | awk -F: '{ print $2 }')
+      pkg=$(echo $arg | awk -F: '{ print $3 }')
+
+      if [ $sys == "brew" ]; then
+        if [ ! -x $cmd ]; then
+          echo "ERROR: $cmd not installed, please install with brew"
+          echo "       => brew install $pkg"
+          exit 1
+        fi
+      fi
+    done
+  fi
+
   if [ "$cat" == "BASIC" ]; then
     CLI_COMMANDS="/usr/local/bin/jq:brew:jq /usr/local/bin/wget:brew:wget"
 
@@ -4155,8 +4212,8 @@ installMinio() {
   crt=$(helm ls -o json | jq -r --arg chart "tdh-minio" '.[] | select(.name == $chart).chart')
   stt=$(helm ls -o json | jq -r --arg chart "tdh-minio" '.[] | select(.name == $chart).status')
   dat=$(helm ls -o json | jq -r --arg chart "tdh-minio" '.[] | select(.name == $chart).updated')
-  ACCESS_KEY=$(kubectl get secret --namespace default tdh-minio -o jsonpath="{.data.access-key}" | base64 --decode)
-  SECRET_KEY=$(kubectl get secret --namespace default tdh-minio -o jsonpath="{.data.secret-key}" | base64 --decode)
+  ACCESS_KEY=$(kubectl get secret --namespace default tdh-minio -o jsonpath="{.data.access-key}" | base64 -d)
+  SECRET_KEY=$(kubectl get secret --namespace default tdh-minio -o jsonpath="{.data.secret-key}" | base64 -d)
 
   messagePrint " ▪ Verify Minio S3"                "$crt"
   messagePrint "   Helm Chart Name"                "minio"
@@ -6777,19 +6834,9 @@ cleanKindCluster() {
   fi
 }
 
-runTDHtools() {
+runTDHtoolsDemos() {
   if [ ! -f /tdh_tools_docker_container  ]; then
-  
-    # --- VERIFY TOOLS AND ACCESS ---
-    verify_docker
-    checkCLIcommands        BASIC
-    checkKubernetesServices registry_docker
-  
     if [ $NATIVE -eq 0 ]; then
-      tdh_tools_build
-  
-      messagePrint " ▪ Running TDH Tools Docker Container" "tdh-tools:latest $TDHPATH/$CMD_EXEC $CMD_ARGS"
-  
       cid=$(docker ps -a | grep tdh-tools:latest | awk '{ print $1 }')
       [ "$cid" != "" ] && for n in $cid; do docker rm $n -f > /dev/null 2>&1; done
   
@@ -6802,14 +6849,35 @@ runTDHtools() {
          -v $HOME/.aws:$HOME/.aws:rw -v $HOME/.vmware-cna-saas:$HOME/.vmware-cna-saas:rw -v $HOME/.azure:$HOME/.azure:rw \
          -v /tmp:/tmp:rw -v /tmp/docker:$HOME/.docker:rw -v $HOME/.mc:$HOME/.mc:rw -v $HOME/.tanzu:$HOME/.tanzu:rw \
          -v $HOME/.kube-tkg:$HOME/.kube-tkg:rw -v $HOME/.kube:$HOME/.kube:rw -v $HOME/.govmomi:$HOME/.govmomi:rw \
-         -v $HOME/.ssh:$HOME/.ssh:rw -v $HOME/.terraform:$HOME/.terraform:rw \
-         -e "KUBECONFIG=$HOME/.kube/config" --hostname tdh-tools tdh-tools:latest $TDHPATH/$CMD_EXEC $CMD_ARGS; ret=$?
+         -v $HOME/.ssh:$HOME/.ssh:rw -v $HOME/.terraform:$HOME/.terraform:rw -v $HOME/.gradle:$HOME/.gradle:rw \
+         -v $HOME/.s3cfg:$HOME/.s3cfg:rw \
+         -e "KUBECONFIG=$HOME/.kube/config" --hostname tdh-tools tdh-tools:latest $TDHDEMO/$CMD_EXEC $CMD_ARGS; ret=$?
   
       # --- FINISH CURRENT SESSION AS WE RUN AS CONTAINER ---
       exit $ret
-    else
-      # --- VERYFY ACCESS TO CLOUD ---
-      checkTDHenvironment
     fi
+  else
+    cd $TDHDEMO
   fi
+}
+
+usage_tdh_demo() {
+  echo ""
+  echo "USAGE: $0 [options]" 
+  echo "                     --native   ## RUN's on Local host instead of the tdh-tools container"
+  echo "                     --help     ## Show this information"
+  echo ""
+  exit 1
+}
+
+checkCLIarguments() {
+  while [ "$1" != "" ]; do
+    case $1 in
+      --native)      NATIVE=1;;
+      --usage)       usage_tdh_demo;;
+      --help)        usage_tdh_demo;;
+      -h)            usage_tdh_demo;;
+    esac
+    shift
+  done
 }

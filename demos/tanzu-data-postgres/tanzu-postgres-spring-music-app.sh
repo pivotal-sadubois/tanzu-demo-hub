@@ -7,16 +7,25 @@
 # Description ..: Deploy the TKG Management Cluster on Azure
 # ============================================================================================
 
+export TDH_DEMO_DIR="tanzu-data-postgres"
+export TDHHOME=$(echo -e "$(pwd)\n$(dirname $0)" | grep "tanzu-demo-hub" | head -1 | sed "s+\(^.*tanzu-demo-hub\).*+\1+g")
+export TDHDEMO=$TDHHOME/demos/$TDH_DEMO_DIR
 export NAMESPACE="tanzu-data-postgres-demo"
-export TANZU_DEMO_HUB=$(cd "$(pwd)/$(dirname $0)/../../"; pwd)
-export TDHPATH=$(cd "$(pwd)/$(dirname $0)/../../"; pwd)
-export TDHDEMO=${TDHPATH}/demos/$NAMESPACE
 
-if [ -f $TANZU_DEMO_HUB/functions ]; then
-  . $TANZU_DEMO_HUB/functions
+# --- SETTING FOR TDH-TOOLS ---
+export NATIVE=0                ## NATIVE=1 r(un on local host), NATIVE=0 (run within docker)
+export START_COMMAND="$*"
+export CMD_EXEC=$(basename $0)
+export CMD_ARGS=$*
+
+if [ -f $TDHHOME/functions ]; then
+  . $TDHHOME/functions
 else
-  echo "ERROR: can ont find ${TANZU_DEMO_HUB}/functions"; exit 1
+  echo "ERROR: can ont find ${TDHHOME}/functions"; exit 1
 fi
+
+# --- VERIFY COMMAND LINE ARGUMENTS ---
+checkCLIarguments $*
 
 # Created by /usr/local/bin/figlet
 clear
@@ -40,6 +49,9 @@ echo '                                  by Sacha Dubois, VMware Inc             
 echo '          ----------------------------------------------------------------------------'
 echo '                                                                                      '
 
+# --- RUN SCRIPT INSIDE TDH-TOOLS OR NATIVE ON LOCAL HOST ---
+runTDHtoolsDemos
+
 kubectl get configmap tanzu-demo-hub > /dev/null 2>&1
 if [ $? -ne 0 ]; then 
   echo "ERROR: Configmap tanzu-demo-hub does not exist"; exit
@@ -49,23 +61,11 @@ fi
 TDH_LB_CONTOUR=$(getConfigMap tanzu-demo-hub TDH_INGRESS_CONTOUR_LB_DOMAIN)
 DOMAIN=${TDH_LB_CONTOUR}
 
-if [ ! -x "/usr/local/bin/docker" ]; then 
-  echo "ERROR: Docker binaries are not installed"
-  echo "       => brew install docker"
-  exit 1
-fi
-
-if [ ! -x "/usr/local/bin/psql" ]; then
-  echo "ERROR: Postgres binaries are not installed"
-  echo "       => brew install postgresql"
-  exit 1
-fi
-
-docker ps > /dev/null 2>&1
-if [ $? -ne 0 ]; then 
-  echo "ERROR: docker daemaon is not running, please start docker desktop on your local machine"
-  exit
-fi
+# --- VERIFY TOOLS AND ACCESS ---
+verify_docker
+checkCLIcommands        BASIC
+checkCLIcommands        DEMO_TOOLS
+checkCLIcommands        TANZU_DATA
 
 # --- HARBOR CONFIG ---
 TDH_HARBOR_REGISTRY_DNS_HARBOR=$(getConfigMap tanzu-demo-hub TDH_HARBOR_REGISTRY_DNS_HARBOR)
@@ -114,7 +114,7 @@ rm -rf $DOCKER_BUILD_DIR
 cat sample-app/spring-music.yaml | sed -e "s/DB_INSTANCE/$INSTANCE/g" -e "s/DOMAIN/$DOMAIN/g" > /tmp/spring-music.yaml 
 
 prtHead "Building the Spring Music Demo App"
-prtRead "     => https://github.com/cloudfoundry-samples/spring-music"
+prtText "=> https://github.com/cloudfoundry-samples/spring-music"
 lineFed
 
 prtHead "Create temporary Docker Build directory ($DOCKER_BUILD_DIR)"
@@ -136,6 +136,7 @@ execCmd "docker push $TDH_HARBOR_REGISTRY_DNS_HARBOR/library/spring-music:latest
 prtHead "Deploy the app defined in the spring-music.yaml"
 execCat "$DOCKER_BUILD_DIR/spring-music.yaml"
 execCmd "kubectl -n $NAMESPACE create -f /tmp/spring-music.yaml"
+sleep 15
 
 prtHead "List the deployments, pods, and services in the Kubernetes cluster"
 execCmd "kubectl -n $NAMESPACE get deployments"

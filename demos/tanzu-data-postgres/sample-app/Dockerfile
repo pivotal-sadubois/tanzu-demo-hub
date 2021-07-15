@@ -2,13 +2,14 @@ FROM openjdk:8-jdk as build
 
 ENV GRADLE_HOME /opt/gradle
 ENV GRADLE_VERSION 5.6
+ENV GRADLE_VERSION 7.1.1
 
 RUN set -o errexit -o nounset \
 	&& echo "Downloading Gradle" \
-	&& wget --output-document=gradle.zip "https://services.gradle.org/distributions/gradle-${GRADLE_VERSION}-bin.zip" \
+	&& wget -q --output-document=gradle.zip "https://services.gradle.org/distributions/gradle-${GRADLE_VERSION}-bin.zip" \
   \
   && echo "Installing Gradle" \
-	&& unzip gradle.zip \
+	&& unzip -q gradle.zip \
 	&& rm gradle.zip \
 	&& mv "gradle-${GRADLE_VERSION}" "${GRADLE_HOME}/" \
 	&& ln --symbolic "${GRADLE_HOME}/bin/gradle" /usr/bin/gradle \
@@ -20,9 +21,10 @@ RUN set -o errexit -o nounset \
 	&& chown --recursive gradle:gradle /home/gradle
 
 RUN set -o errexit -o nounset \
-  && wget https://github.com/cloudfoundry-samples/spring-music/archive/master.zip \
-  && unzip master.zip \
+  && wget -q https://github.com/cloudfoundry-samples/spring-music/archive/master.zip \
+  && unzip -q master.zip \
   && cd spring-music-master \
+  && echo "Gradle Build Spring Music Applicaiton" \
   && gradle clean assemble
 
 # Using openjdk:8 due to https://github.com/cloudfoundry-samples/spring-music/issues/38

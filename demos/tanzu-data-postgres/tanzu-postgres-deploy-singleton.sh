@@ -9,18 +9,23 @@
 
 export TDH_DEMO_DIR="tanzu-data-postgres"
 export TDHHOME=$(echo -e "$(pwd)\n$(dirname $0)" | grep "tanzu-demo-hub" | head -1 | sed "s+\(^.*tanzu-demo-hub\).*+\1+g")
-export TDHDEMO=$(echo -e "$(pwd)\n$(dirname $0)" | grep "tanzu-demo-hub" | head -1 | sed "s+\(^.*$TDH_DEMO_DIR\).*+\1+g") 
+export TDHDEMO=$TDHHOME/demos/$TDH_DEMO_DIR
 export NAMESPACE="tanzu-data-postgres-demo"
 
-CAPACITY_MEMORY="800Mi"
-CAPACITY_DISK="5G"
-CAPACITY_CPU="0.2"
+# --- SETTING FOR TDH-TOOLS ---
+export NATIVE=0                ## NATIVE=1 r(un on local host), NATIVE=0 (run within docker)
+export START_COMMAND="$*"
+export CMD_EXEC=$(basename $0)
+export CMD_ARGS=$*
 
 if [ -f $TDHHOME/functions ]; then
   . $TDHHOME/functions
 else
   echo "ERROR: can ont find ${TDHHOME}/functions"; exit 1
 fi
+
+# --- VERIFY COMMAND LINE ARGUMENTS ---
+checkCLIarguments $*
 
 # Created by /usr/local/bin/figlet
 clear
@@ -44,14 +49,17 @@ echo '                                  by Sacha Dubois, VMware Inc             
 echo '          ----------------------------------------------------------------------------'
 echo '                                                                                      '
 
+# --- RUN SCRIPT INSIDE TDH-TOOLS OR NATIVE ON LOCAL HOST ---
+runTDHtoolsDemos
+
 kubectl get configmap tanzu-demo-hub > /dev/null 2>&1
 if [ $? -ne 0 ]; then 
   echo "ERROR: Configmap tanzu-demo-hub does not exist"; exit
 fi
 
 # --- VERIFY SERVICES ---
-#verifyRequiredServices TDH_SERVICE_TANZU_DATA_POSTGRES "Tanzu Data Postgres"
-#verifyRequiredServices TDH_SERVICE_MINIO               "Minio S3 Srorage"
+verifyRequiredServices TDH_SERVICE_TANZU_DATA_POSTGRES "Tanzu Data Postgres"
+verifyRequiredServices TDH_SERVICE_MINIO               "Minio S3 Srorage"
 
 TDH_DOMAIN=$(getConfigMap tanzu-demo-hub TDH_DOMAIN)
 TDH_ENVNAME=$(getConfigMap tanzu-demo-hub TDH_ENVNAME)
@@ -63,24 +71,16 @@ TDH_SERVICE_MINIO_ACCESS_KEY=$(getConfigMap tanzu-demo-hub TDH_SERVICE_MINIO_ACC
 TDH_SERVICE_MINIO_SECRET_KEY=$(getConfigMap tanzu-demo-hub TDH_SERVICE_MINIO_SECRET_KEY)
 DOMAIN=${TDH_LB_CONTOUR}
 
-if [ ! -x "/usr/local/bin/docker" ]; then 
-  echo "ERROR: Docker binaries are not installed"
-  echo "       => brew install docker"
-  exit 1
-fi
+# --- VERIFY TOOLS AND ACCESS ---
+verify_docker
+checkCLIcommands        BASIC
+checkCLIcommands        DEMO_TOOLS
+checkCLIcommands        TANZU_DATA
 
-if [ ! -x "/usr/local/bin/psql" ]; then
-  echo "ERROR: Postgres binaries are not installed"
-  echo "       => brew install postgresql"
-  exit 1
-fi
-
-if [ ! -x "/usr/local/bin/mc" ]; then
-  echo "ERROR: Minio Client binaries are not installed"
-  echo "       => brew install minio/stable/mc"
-  exit 1
-fi
-
+# --- POSTGRES DATABASE AND DEMO SETTINGS ---
+CAPACITY_MEMORY="800Mi"
+CAPACITY_DISK="5G"
+CAPACITY_CPU="0.2"
 INSTANCE=tdh-postgres-singleton
 DBNAME=tdh-postgres-db
 
@@ -120,18 +120,18 @@ execCmd "kubectl -n $NAMESPACE get pvc"
 prtText "Show the generated secret objects"
 execCmd "kubectl -n $NAMESPACE get secrets"
 
-dbname=$(kubectl -n $NAMESPACE get secrets $INSTANCE-db-secret -o jsonpath='{.data.dbname}' | base64 -D)
-dbuser=$(kubectl -n $NAMESPACE get secrets $INSTANCE-db-secret -o jsonpath='{.data.username}' | base64 -D)
-dbpass=$(kubectl -n $NAMESPACE get secrets $INSTANCE-db-secret -o jsonpath='{.data.password}' | base64 -D)
+dbname=$(kubectl -n $NAMESPACE get secrets $INSTANCE-db-secret -o jsonpath='{.data.dbname}' | base64 -d)
+dbuser=$(kubectl -n $NAMESPACE get secrets $INSTANCE-db-secret -o jsonpath='{.data.username}' | base64 -d)
+dbpass=$(kubectl -n $NAMESPACE get secrets $INSTANCE-db-secret -o jsonpath='{.data.password}' | base64 -d)
 dbhost=$(kubectl -n $NAMESPACE get service $INSTANCE -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
 dbport=$(kubectl -n $NAMESPACE get service $INSTANCE -o jsonpath='{.spec.ports[0].port}')
 
 prtHead "Access the database with (psql) from outside"
-slntCmd "dbname=\$(kubectl -n $NAMESPACE get secrets $INSTANCE-db-secret -o jsonpath='{.data.dbname}' | base64 -D)"
+slntCmd "dbname=\$(kubectl -n $NAMESPACE get secrets $INSTANCE-db-secret -o jsonpath='{.data.dbname}' | base64 -d)"
 echo -e "        dbname=$dbname\n"
-slntCmd "dbuser=\$(kubectl -n $NAMESPACE get secrets $INSTANCE-db-secret -o jsonpath='{.data.username}' | base64 -D)"
+slntCmd "dbuser=\$(kubectl -n $NAMESPACE get secrets $INSTANCE-db-secret -o jsonpath='{.data.username}' | base64 -d)"
 echo -e "        dbuser=$dbuser\n"
-slntCmd "dbpass=\$(kubectl -n $NAMESPACE get secrets $INSTANCE-db-secret -o jsonpath='{.data.password}' | base64 -D)"
+slntCmd "dbpass=\$(kubectl -n $NAMESPACE get secrets $INSTANCE-db-secret -o jsonpath='{.data.password}' | base64 -d)"
 echo -e "        dbpass=$dbpass\n"
 slntCmd "dbhost=\$(kubectl -n $NAMESPACE get service $INSTANCE -o jsonpath='{.status.loadBalancer.ingress[0].ip}')"
 echo -e "        dbhost=$dbhost\n"

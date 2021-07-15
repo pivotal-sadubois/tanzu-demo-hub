@@ -61,29 +61,11 @@ TDH_SERVICE_MINIO_ACCESS_KEY=$(getConfigMap tanzu-demo-hub TDH_SERVICE_MINIO_ACC
 TDH_SERVICE_MINIO_SECRET_KEY=$(getConfigMap tanzu-demo-hub TDH_SERVICE_MINIO_SECRET_KEY)
 DOMAIN=${TDH_LB_CONTOUR}
 
-if [ ! -x "/usr/local/bin/docker" ]; then 
-  echo "ERROR: Docker binaries are not installed"
-  echo "       => brew install docker"
-  exit 1
-fi
-
-if [ ! -x "/usr/local/bin/psql" ]; then
-  echo "ERROR: Postgres binaries are not installed"
-  echo "       => brew install postgresql"
-  exit 1
-fi
-
-if [ ! -x "/usr/local/bin/mc" ]; then
-  echo "ERROR: Minio Client binaries are not installed"
-  echo "       => brew install minio/stable/mc"
-  exit 1
-fi
-
-if [ ! -x "/usr/local/bin/s3cmd" ]; then 
-  echo "ERROR: s3cmd binaries are not installed"
-  echo "       => brew install s3cmd"
-  exit 1
-fi
+# --- VERIFY TOOLS AND ACCESS ---
+verify_docker
+checkCLIcommands        BASIC
+checkCLIcommands        DEMO_TOOLS
+checkCLIcommands        TANZU_DATA
 
 kubectl -n tanzu-data-postgres-demo get pod tdh-postgres-singleton-0 > /dev/null 2>&1; db_singleton=$?
 kubectl -n tanzu-data-postgres-demo get pod tdh-postgres-ha-0 > /dev/null 2>&1; db_ha=$?
@@ -99,9 +81,9 @@ else
   DBNAME=tdh-postgres-db
 fi
 
-dbname=$(kubectl -n $NAMESPACE get secrets $INSTANCE-db-secret -o jsonpath='{.data.dbname}' | base64 -D)
-dbuser=$(kubectl -n $NAMESPACE get secrets $INSTANCE-db-secret -o jsonpath='{.data.username}' | base64 -D)
-dbpass=$(kubectl -n $NAMESPACE get secrets $INSTANCE-db-secret -o jsonpath='{.data.password}' | base64 -D)
+dbname=$(kubectl -n $NAMESPACE get secrets $INSTANCE-db-secret -o jsonpath='{.data.dbname}' | base64 -d)
+dbuser=$(kubectl -n $NAMESPACE get secrets $INSTANCE-db-secret -o jsonpath='{.data.username}' | base64 -d)
+dbpass=$(kubectl -n $NAMESPACE get secrets $INSTANCE-db-secret -o jsonpath='{.data.password}' | base64 -d)
 dbhost=$(kubectl -n $NAMESPACE get service $INSTANCE -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
 dbport=$(kubectl -n $NAMESPACE get service $INSTANCE -o jsonpath='{.spec.ports[0].port}')
 
