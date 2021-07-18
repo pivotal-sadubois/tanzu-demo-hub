@@ -37,7 +37,6 @@ Build Spring Petclinic Application from Git  a Single instance Database
 Deploy a Single instance Database (tanzu-postgres-deploy-singleton)
 This demo is demonstrating the deployment of single instance PostgreSQL database on Kubernetes with the Postgres Operator. During the installation an Minio S3 datasore will be created to host the backup data (demonstrated in a seperated demo) and the PostgreSQL Tools (pgAdmin4) will be installed for the administration. 
 
-#https://asciinema.org/a/426014
 [![asciicast](https://asciinema.org/a/426014.png)](https://asciinema.org/a/426014)
 
 Run the demo as interactice session, the commands are real and executed on your Kubernetes Cluster
