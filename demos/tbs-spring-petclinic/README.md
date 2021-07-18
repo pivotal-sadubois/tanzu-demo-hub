@@ -3,7 +3,7 @@
 This demo package is to illustrate the capabilities of the **VMware Tanzu SQL with PostgreSQL for Kubernetes** and the Postgres operator. The individual demos gides trough the live cycle of a database deployment containing *deployment, backup/restore, upgdrading and integration into an application*. Some of the demos requires to be used in order as they are depending on heach other (see more in the requirements section in the demo description). 
 
 *Featuring Demos*
-- [Build and deploy Spring Petclinic Application with the Harbor Registry](#build-and-deploy-spring-petclinic-application-with-the-harbor-registry)
+- [Build & deploy Spring Petclinic App on Harbor](#build-&-deploy-spring-petclinic-app-on-harbor)
 - [Deploy a High Available Database](#deploy-a-high-available-database)
 - [Generate database load with pgbench](#generate-database-load-with-pgbench)
 - [Create a Database Backup with pgbackrest](#create-a-database-backup-with-pgbackrest)
@@ -31,13 +31,13 @@ Testing Demo (tanzu-data-postgres)
  - Tanzu Data for Postgres - Cleaning up Demo Environment in Namespace tanzu-data-postgres-demo : completed
 ```
 
-## Build and deploy Spring Petclinic Application with the Harbor Registry
+## Build & deploy Spring Petclinic App on Harbor
 
 Build Spring Petclinic Application from Git  a Single instance Database
 Deploy a Single instance Database (tanzu-postgres-deploy-singleton)
 This demo is demonstrating the deployment of single instance PostgreSQL database on Kubernetes with the Postgres Operator. During the installation an Minio S3 datasore will be created to host the backup data (demonstrated in a seperated demo) and the PostgreSQL Tools (pgAdmin4) will be installed for the administration. 
 
-[![asciicast](https://asciinema.org/a/426010.png)](https://asciinema.org/a/426010)
+[![asciicast](https://asciinema.org/a/426014.png)](https://asciinema.org/a/426014)
 
 Run the demo as interactice session, the commands are real and executed on your Kubernetes Cluster
 ```
