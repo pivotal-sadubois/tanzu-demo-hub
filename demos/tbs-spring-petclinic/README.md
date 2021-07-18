@@ -3,8 +3,8 @@
 This demo package is to illustrate the capabilities of the **VMware Tanzu SQL with PostgreSQL for Kubernetes** and the Postgres operator. The individual demos gides trough the live cycle of a database deployment containing *deployment, backup/restore, upgdrading and integration into an application*. Some of the demos requires to be used in order as they are depending on heach other (see more in the requirements section in the demo description). 
 
 *Featuring Demos*
-- [Build and deploy Spring Petclinic App on Harbor](#build-anddeploy-spring-petclinic-app-on-harbor)
-- [Build and deploy Spring Petclinic App on docker.io](#build-anddeploy-spring-petclinic-app-on-docker.io)
+- [Build and deploy Spring Petclinic App on Harbor](#build-and-deploy-spring-petclinic-app-on-harbor)
+- [Build and deploy Spring Petclinic App on docker.io](#build-and-deploy-spring-petclinic-app-on-docker.io)
 
 *Requirements:* This demo is part of the Tanzu Demo Hub platform and requires a Kubernetes cluster deployd with either (deployMinikube, deployTMC or deployTKG). 
 
