@@ -2,6 +2,8 @@
 
 Consistently create production-ready container images that run on Kubernetes and across clouds. Automate source-to-container workflows across all your development frameworks. This demo shows the capabilities for the Tanzu Build Service with an example of the Spring Petclinic Application. 
 
+![Spring Petclinic](/files/petclinic.png)
+
 *Featuring Demos*
 - [Build and deploy Spring Petclinic App on Harbor](#build-and-deploy-spring-petclinic-app-on-harbor)
 - [Build and deploy Spring Petclinic App on docker.io](#build-and-deploy-spring-petclinic-app-on-docker.io)
