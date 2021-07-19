@@ -1,6 +1,6 @@
-# Tanzu Demo Hub - VMware Tanzu SQL with PostgreSQL
+# Tanzu Demo Hub - VMware Tanzu Build Service
 
-This demo package is to illustrate the capabilities of the **VMware Tanzu SQL with PostgreSQL for Kubernetes** and the Postgres operator. The individual demos gides trough the live cycle of a database deployment containing *deployment, backup/restore, upgdrading and integration into an application*. Some of the demos requires to be used in order as they are depending on heach other (see more in the requirements section in the demo description). 
+Consistently create production-ready container images that run on Kubernetes and across clouds. Automate source-to-container workflows across all your development frameworks. This demo shows the capabilities for the Tanzu Build Service with an example of the Spring Petclinic Application. 
 
 *Featuring Demos*
 - [Build and deploy Spring Petclinic App on Harbor](#build-and-deploy-spring-petclinic-app-on-harbor)
@@ -16,8 +16,8 @@ Tanzu Demo Hub - Demo Self Testing Suite
 by Sacha Dubois, VMware Inc,
 -----------------------------------------------------------------------------------------------------------
 Testing Demo (tanzu-data-postgres)
- - Tanzu Data for Postgres - Deploy a Single Instance Database .................................: completed
- - Tanzu Data for Postgres - Load Generation on the Database ...................................: completed
+ - Tanzu Build Service (TBS) - Build and deploy Spring Petclinic App on Harbor .................: completed
+ - Tanzu Build Service (TBS) - Build and deploy Spring Petclinic App on Docker.io ..............: completed
 ```
 
 ## Build and deploy Spring Petclinic App on Harbor
