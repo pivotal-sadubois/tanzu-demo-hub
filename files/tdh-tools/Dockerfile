@@ -32,25 +32,51 @@ RUN usermod -a -G docker $USER
 RUN usermod -a -G daemon $USER
 RUN usermod -a -G root $USER
 
-# --- INSTALL REQUIRED UBUNTU PACKAGES ---
+# --- INSTALL REQUIRED UBUNTU PACKAGES --- 
 RUN apt-get update -qq && apt-get install -qqy \
     apt-transport-https \
     ca-certificates \
     curl \
     wget \
+    openjdk-11-jdk \
     lxc \
     software-properties-common \
     lsb-core \
     lsb-release \
     gnupg \
-    apt-get install postgresql-client \
+    sed \
+    maven \
+    zip \
+    s3cmd \
+    postgresql-client \
     iptables
 RUN apt-get clean 
+
+# --- INSTALL GRADLE ---
+ENV GRADLE_VERSION=7.1.1
+ENV PATH=$PATH:/opt/gradle/gradle-$GRADLE_VERSION/bin
+RUN wget https://services.gradle.org/distributions/gradle-$GRADLE_VERSION-bin.zip -P /tmp
+RUN mkdir -p /opt/gradle && unzip -d /opt/gradle /tmp/gradle-$GRADLE_VERSION-bin.zip
+#RUN ln -s /opt/gradle/gradle-$GRADLE_VERSION/bin /usr/local/bin/gradle 
+
+# --- INSTALL GOLANG ---
+RUN add-apt-repository ppa:longsleep/golang-backports
+RUN apt-get install -qqy golang-go
+
+#RUN wget -c https://dl.google.com/go/go1.14.2.linux-amd64.tar.gz -O - | tar -xz -C /usr/local
+#$ sudo add-apt-repository ppa:longsleep/golang-backports
+#$ sudo apt update
+#$ sudo apt install golang-go
 
 # --- INSTALL TERRAFORM ---
 RUN curl -fsSL https://apt.releases.hashicorp.com/gpg | apt-key add -
 RUN apt-add-repository "deb [arch=amd64] https://apt.releases.hashicorp.com $(lsb_release -cs) main"
 RUN apt-get update && apt-get install terraform -y
+
+# --- INSTALL BAT ----
+RUN curl -s  https://api.github.com/repos/sharkdp/bat/releases/latest |grep browser_download_url |  cut -d '"' -f 4 | grep 'amd64.deb' | grep -v musl | wget -i -
+RUN dpkg -i bat_*_amd64.deb
+RUN apt-get install -qqy bat
 
 # --- INSTALL DOCKER ---
 RUN curl -sSL https://get.docker.com/ | sh
@@ -88,7 +114,5 @@ RUN mv /tanzu/cli/vendir-linux* /usr/local/bin/vendir && chmod a+x /usr/local/bi
 # --- DIRTY FIX TO GET LATEST TOOLS (https://github.com/vmware-tanzu/carvel) ---
 RUN curl -sL https://github.com/vmware-tanzu/carvel-imgpkg/releases/download/v0.13.0/imgpkg-linux-amd64 -o /tanzu/cli/imgpkg-linux-amd64
 RUN mv /tanzu/cli/imgpkg-linux-amd64 /usr/local/bin/imgpkg && chmod a+x /usr/local/bin/imgpkg
-
-
 
 
