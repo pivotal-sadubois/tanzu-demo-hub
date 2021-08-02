@@ -206,6 +206,9 @@ if [ $? -ne 0 ]; then
   exit 1
 fi
 
+uodateConfigMap tanzu-demo-hub TDH_CLUSTER_NAME         $TDH_MINIKUBE_PROFILE
+uodateConfigMap tanzu-demo-hub TDH_MANAGEMENT_CLUSTER   attached
+uodateConfigMap tanzu-demo-hub TDH_PROVISONER_NAME      attached
 uodateConfigMap tanzu-demo-hub TDH_DOMAIN               $AWS_HOSTED_DNS_DOMAIN 
 uodateConfigMap tanzu-demo-hub TDH_ENVNAME              $TDH_ENVNAME
 uodateConfigMap tanzu-demo-hub TDH_DEPLOYMENT_TYPE      "minikube" 
@@ -259,6 +262,13 @@ if [ "$TDH_TANZU_MISSION_CONTROL_REGISTRATION" == "true" ]; then
       exit
     fi
   fi
+fi
+
+# --- NO CONNECTION FROM A PEZ-INTERNAL CLUSTER ---
+if [ "${TDH_TKGMC_INFRASTRUCTURE}" != "vSphere1" ]; then
+  checkTMCintegration      TO    ## Tanzu Observability (Wavefront)
+  checkTMCintegration      TDP   ## Tanzu Data Protection
+  checkTMCintegration      TCI   ## Tanzu Cluster Inspection
 fi
 
 echo ""

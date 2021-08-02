@@ -175,7 +175,6 @@ checkIdentityProvider() {
   fi
 }
 
-
 tmcCheckLogin() {
   [ "${TDH_TANZU_MISSION_CONTROL_REGISTRATION}" == "false" ] && return
   missing_variables=0
@@ -1491,6 +1490,7 @@ checkTMCAccess() {
         echo "                                       eu-north-1a, eu-north-1b, eu-north-1c"
       fi
     else
+      [ "$AWS_HOSTED_DNS_DOMAIN" == "" ] && AWS_HOSTED_DNS_DOMAIN=$TDH_ENVNAME
       messageTitle "Supporting services access (Pivotal Network, AWS Route53)"
       messagePrint " ▪ Pivotal Network Token"           "$PCF_PIVNET_TOKEN"
       messagePrint " ▪ AWS Route53 Hosted DNS Domain"   "$AWS_HOSTED_DNS_DOMAIN"
@@ -1562,6 +1562,7 @@ checkTDHAccess() {
       echo "                                   => (usually you VMware User Name without @vmware.com)"
     fi
   else
+    [ "$AWS_HOSTED_DNS_DOMAIN" == "" ] && AWS_HOSTED_DNS_DOMAIN=$TDH_ENVNAME
     messageTitle "Supporting services access (Pivotal Network, AWS Route53)"
     messagePrint " ▪ Pivotal Network Token"            "$PCF_PIVNET_TOKEN"
     messagePrint " ▪ Tanzu Demo Hube User"             "$TDH_USER"
@@ -4245,21 +4246,25 @@ installMinio() {
   echo "     => mc ls minio"
   echo "   -----------------------------------------------------------------------------------------------------------"
   
-  # --- WAIT FOR HARBOR TO COME ONLINE ---
-  ret=1; cnt=0
-  while [ $ret -ne 0 -a $cnt -le 5 ]; do
-    mc alias set minio https://minio.$DOMAIN $ACCESS_KEY $SECRET_KEY > /dev/null 2>&1; ret=$?
-    sleep 60
-    let cnt=cnt+1
-  done
-
-  if [ $ret -ne 0 ]; then
-    echo "ERROR: Unable to configure Minio Client (mc)"
-    echo "       => mc alias set minio https://minio.$DOMAIN $ACCESS_KEY $SECRET_KEY"
-    echo "try latter manually"
+  mc alias list minio > /dev/null 2>&1; ret=$?
+  if [ $? -ne 0 ]; then
+    # --- WAIT FOR HARBOR TO COME ONLINE ---
+    ret=1; cnt=0
+    while [ $ret -ne 0 -a $cnt -le 5 ]; do
+      mc alias set minio https://minio.$DOMAIN $ACCESS_KEY $SECRET_KEY > /dev/null 2>&1; ret=$?
+      [ $ret -eq 0 ] && break
+      sleep 60
+      let cnt=cnt+1
+    done
+  
+    if [ $ret -ne 0 ]; then
+      echo "ERROR: Unable to configure Minio Client (mc)"
+      echo "       => mc alias set minio https://minio.$DOMAIN $ACCESS_KEY $SECRET_KEY"
+      echo "try latter manually"
+    fi
+  
+    #mc mb minio/tdh-postgres-backup > /dev/null 2>&1
   fi
-
-  #mc mb minio/tdh-postgres-backup > /dev/null 2>&1
 
   # --- STORE SETTINGS IN CONFIGMAP ---
   uodateConfigMap tanzu-demo-hub TDH_SERVICE_MINIO                "true"
@@ -4441,7 +4446,9 @@ installBuildService() {
         echo "       => kp clusterbuilder delete $n"
       fi
     done
-    kubectl delete ns build-service > /dev/null 2>&1
+
+    kapp delete -a tanzu-build-service -y > /dev/null 2>&1
+    kubectl delete ns build-service kpack > /dev/null 2>&1
     export TDH_SERVICE_BUILD_SERVICE_INSTALLED=""
   fi
 
@@ -4475,18 +4482,32 @@ installBuildService() {
       echo "ERROR: Docker login does not work"
       echo "       => docker login $TDH_REGISTRY_VMWARE_NAME -u $TDH_REGISTRY_VMWARE_USER -p $TDH_REGISTRY_VMWARE_PASS"; exit 1
     fi
+
+    if [ "$TDH_SERVICE_REGISTRY_DOCKER" == "true" -a "$TDH_SERVICE_REGISTRY_HARBOR" == "true" ]; then
+      echo "ERROR: The Tanzu Build service can be installed with one registry only. Please set only ONE of the two variables to 'true'"
+      echo "       => TDH_SERVICE_REGISTRY_DOCKER=\"<true|false>\""
+      echo "       => TDH_SERVICE_REGISTRY_HARBOR=\"<true|false>\""
+      exit 1
+    fi
   
     #########################################################################################################################
     ################################# TANZU BUILD SERVICE (TBS) - ON DOCKER REGISTRY ########################################
     #########################################################################################################################
-  
-    if [ "$TDH_SERVICE_REGISTRY_DOCKER" == "true1" ]; then
-      DNS_DOCKER=$(getConfigMap tanzu-demo-hub TDH_REGISTRY_DOCKER_NAME)
-      TDH_REGISTRY_DOCKER_NAME=$(getConfigMap tanzu-demo-hub TDH_REGISTRY_DOCKER_NAME)
-      TDH_REGISTRY_DOCKER_PASS=$(getConfigMap tanzu-demo-hub TDH_REGISTRY_DOCKER_PASS)
+    # kp secret create with --registry index.docker.io generates invalid secret #155
+    # https://githubmemory.com/repo/vmware-tanzu/kpack-cli/issues/155
+
+echo "TDH_SERVICE_REGISTRY_DOCKER:$TDH_SERVICE_REGISTRY_DOCKER"
+echo "TDH_SERVICE_REGISTRY_HARBOR:$TDH_SERVICE_REGISTRY_HARBOR"
+    if [ "$TDH_SERVICE_REGISTRY_DOCKER" == "true" ]; then
+      #DNS_DOCKER=$(getConfigMap tanzu-demo-hub TDH_REGISTRY_DOCKER_NAME)
+      #TDH_REGISTRY_DOCKER_NAME=$(getConfigMap tanzu-demo-hub TDH_REGISTRY_DOCKER_NAME)
+      #TDH_REGISTRY_DOCKER_USER=$(getConfigMap tanzu-demo-hub TDH_REGISTRY_DOCKER_USER)
+      #TDH_REGISTRY_DOCKER_PASS=$(getConfigMap tanzu-demo-hub TDH_REGISTRY_DOCKER_PASS)
+
+      TDH_REGISTRY_DOCKER_NAME=docker.io
   
       # --- TESTING REGISTRY ---
-      messagePrint "Verify Docker Registry Access" "$TDH_REGISTRY_DOCKER_NAME"
+      messagePrint " ▪ Verify Docker Registry Access" "$TDH_REGISTRY_DOCKER_NAME"
   
       cnt=0; ret=1
       while [ $ret -ne 0 -a $cnt -lt 5 ]; do
@@ -4501,12 +4522,46 @@ installBuildService() {
       fi
   
       messagePrint " ▪ Relocate images to" "$TDH_REGISTRY_DOCKER_NAME/$TDH_REGISTRY_DOCKER_USER/build-service"
-      kbld relocate -f /tmp/build-service/images.lock --lock-output /tmp/build-service/images-relocated.lock \
-           --repository $TDH_REGISTRY_DOCKER_NAME/$TDH_REGISTRY_DOCKER_USER/build-service > /dev/null 2>&1
+      imgpkg copy -b "registry.pivotal.io/build-service/bundle:$TDH_SERVICE_BUILD_SERVICE_VERSION" --to-repo $TDH_REGISTRY_DOCKER_USER/build-service > /dev/null 2>&1
       if [ $? -ne 0 ]; then
         echo "ERROR: Image Relocation faied"
         echo "       => kbld relocate -f /tmp/build-service/images.lock --lock-output /tmp/build-service/images-relocated.lock \\"
-        echo "          --repository $TDH_REGISTRY_DOCKER_NAME/$TDH_REGISTRY_DOCKER_USER/build-service"; exit 1
+        echo "          --repository $TDH_REGISTRY_DOCKER_USER/tanzu-build-service"; exit 1
+      fi
+
+      messagePrint " ▪ Pull the Tanzu Build Service bundle image locally" "$TDH_REGISTRY_VMWARE_NAME/library/build-service"
+      rm -rf /tmp/bundle
+      imgpkg pull -b "$TDH_REGISTRY_DOCKER_USER/build-service:$TDH_SERVICE_BUILD_SERVICE_VERSION" -o /tmp/bundle > /dev/null 2>&1; ret=$?
+      if [ $ret -ne 0 ]; then
+        echo "ERROR: Image Relocation faied"
+        echo "       => imgpkg pull -b \"$TDH_REGISTRY_DOCKER_USER/build-service\" -o /tmp/bundle"
+      fi
+
+      # --- DEPLOY KAPP ---
+      cnt=$(kapp inspect -a tanzu-build-service 2>/dev/null | grep -c "0 resources")
+      stt=$(kapp inspect -a tanzu-build-service 2>/dev/null | tail -1)
+      if [ "$stt" != "Succeeded" -o $cnt -eq 1 ]; then
+        kapp delete -a tanzu-build-service -y >/dev/null 2>&1
+        messagePrint " ▪ Deploy Build Service (kapp)" "/tmp/bundle/values.yaml"
+        echo "   -----------------------------------------------------------------------------------------------------------"
+        echo "   WARNING: This process may take up to 2h. You can run 'kapp inspect -a tanzu-build-service' to see progress "
+        echo "   -----------------------------------------------------------------------------------------------------------"
+
+        ytt -f /tmp/bundle/values.yaml \
+            -f /tmp/bundle/config/ \
+            -v tanzunet_username="$TDH_REGISTRY_VMWARE_USER" \
+            -v tanzunet_password="$TDH_REGISTRY_VMWARE_PASS" \
+            -v docker_repository="$TDH_REGISTRY_DOCKER_USER" \
+            -v docker_username="$TDH_REGISTRY_DOCKER_USER" \
+            -v docker_password="$TDH_REGISTRY_DOCKER_PASS" 2>/dev/null \
+            | kbld -f /tmp/bundle/.imgpkg/images.yml -f- 2>/dev/null \
+            | kapp deploy -a tanzu-build-service -f- -y > /tmp/kapp.log 2>&1; ret=$?
+
+        cnt=$(kapp inspect -a tanzu-build-service --json | jq -r '.Tables[].Rows[].reconcile_state' | grep -vc "ok")
+        while [ $cnt -ne 0 ]; do
+          cnt=$(kapp inspect -a tanzu-build-service --json | jq -r '.Tables[].Rows[].reconcile_state' | grep -vc "ok")
+          sleep 360
+        done
       fi
     fi
   
@@ -4556,23 +4611,27 @@ installBuildService() {
       if [ "$stt" != "Succeeded" -o $cnt -eq 1 ]; then
         kapp delete -a tanzu-build-service -y >/dev/null 2>&1
         messagePrint " ▪ Deploy Build Service (kapp)" "/tmp/bundle/values.yaml"
-          ytt -f /tmp/bundle/values.yaml \
-              -f /tmp/bundle/config/ \
-              -f $HOME/.tanzu-demo-hub/certificates/ca.pem \
-              -v tanzunet_username="$TDH_REGISTRY_VMWARE_USER" \
-              -v tanzunet_password="$TDH_REGISTRY_VMWARE_PASS" \
-              -v docker_repository="$DNS_HARBOR/library/build-service" \
-              -v docker_username="admin" \
-              -v docker_password="$TDH_HARBOR_REGISTRY_ADMIN_PASSWORD" 2>/dev/null \
-              | kbld -f /tmp/bundle/.imgpkg/images.yml -f- 2>/dev/null \
-              | kapp deploy -a tanzu-build-service -f- -y > /dev/null 2>&1; ret=$?
+        echo "   -----------------------------------------------------------------------------------------------------------"
+        echo "   WARNING: This process may take up to 2h. You can run 'kapp inspect -a tanzu-build-service' to see progress "
+        echo "   -----------------------------------------------------------------------------------------------------------"
 
+        ytt -f /tmp/bundle/values.yaml \
+            -f /tmp/bundle/config/ \
+            -f $HOME/.tanzu-demo-hub/certificates/ca.pem \
+            -v tanzunet_username="$TDH_REGISTRY_VMWARE_USER" \
+            -v tanzunet_password="$TDH_REGISTRY_VMWARE_PASS" \
+            -v docker_repository="$DNS_HARBOR/library/build-service" \
+            -v docker_username="admin" \
+            -v docker_password="$TDH_HARBOR_REGISTRY_ADMIN_PASSWORD" 2>/dev/null \
+            | kbld -f /tmp/bundle/.imgpkg/images.yml -f- 2>/dev/null \
+            | kapp deploy -a tanzu-build-service -f- -y > /tmp/kapp.log 2>&1; ret=$?
+
+        cnt=$(kapp inspect -a tanzu-build-service --json | jq -r '.Tables[].Rows[].reconcile_state' | grep -vc "ok")
+        while [ $cnt -ne 0 ]; do
           cnt=$(kapp inspect -a tanzu-build-service --json | jq -r '.Tables[].Rows[].reconcile_state' | grep -vc "ok")
-          while [ $cnt -ne 0 ]; do
-            cnt=$(kapp inspect -a tanzu-build-service --json | jq -r '.Tables[].Rows[].reconcile_state' | grep -vc "ok")
-            sleep 360
-          done
-       else
+          sleep 360
+        done
+      else
         messageTitle "Verify Tanzu Build Service"
         messagePrint " ▪ Veriify Build Service (kapp)" "tanzu-build-service"
       fi
@@ -4593,6 +4652,8 @@ installBuildService() {
     uodateConfigMap tanzu-demo-hub TDH_SERVICE_BUILD_SERVICE            "true"
     uodateConfigMap tanzu-demo-hub TDH_SERVICE_BUILD_SERVICE_VERSION    $TDH_SERVICE_BUILD_SERVICE_VERSION
     uodateConfigMap tanzu-demo-hub TDH_SERVICE_BUILD_SERVICE_INSTALLED  "$CURRENT_DATE"
+    uodateConfigMap tanzu-demo-hub TDH_SERVICE_REGISTRY_DOCKER          $TDH_SERVICE_REGISTRY_DOCKER
+    uodateConfigMap tanzu-demo-hub TDH_SERVICE_REGISTRY_HARBOR          $TDH_SERVICE_REGISTRY_HARBOR
     uodateConfigMap tanzu-demo-hub TDH_REGISTRY_VMWARE_NAME             $TDH_REGISTRY_VMWARE_NAME
     uodateConfigMap tanzu-demo-hub TDH_REGISTRY_VMWARE_USER             $TDH_REGISTRY_VMWARE_USER
     uodateConfigMap tanzu-demo-hub TDH_REGISTRY_VMWARE_PASS             $TDH_REGISTRY_VMWARE_PASS
@@ -5303,7 +5364,6 @@ InstallHarborRegistry() {
 
     HARBOR_VALUES=/tmp/harbor_values.yaml
     echo "harborAdminPassword: $TDH_HARBOR_ADMIN_PASSWORD"                                                                      >  $HARBOR_VALUES
-    echo ""                                                                                                                     >> $HARBOR_VALUES
 
     echo ""                                                                                                                     >> $HARBOR_VALUES
     echo "global:"                                                                                                              >> $HARBOR_VALUES
@@ -5334,6 +5394,7 @@ InstallHarborRegistry() {
     echo "    ingress.kubernetes.io/force-ssl-redirect: \"true\"   # force https, even if http is requested"                    >> $HARBOR_VALUES
     echo "    kubernetes.io/ingress.class: contour                 # using Contour for ingress"                                 >> $HARBOR_VALUES
 
+    # https://github.com/goharbor/harbor-helm/blob/master/values.yaml
     echo "externalURL: https://harbor.apps-contour.$TDH_ENVNAME.$AWS_HOSTED_DNS_DOMAIN"                                         >> $HARBOR_VALUES
     echo ""                                                                                                                     >> $HARBOR_VALUES
     echo "portal:"                                                                                                              >> $HARBOR_VALUES
@@ -5347,13 +5408,23 @@ InstallHarborRegistry() {
     echo "    registry:"                                                                                                        >> $HARBOR_VALUES
     echo "      accessMode: ReadWriteOnce"                                                                                      >> $HARBOR_VALUES
     echo "      size: 50Gi"                                                                                                     >> $HARBOR_VALUES
+    echo "    chartmuseum:"                                                                                                     >> $HARBOR_VALUES
+    echo "      accessMode: ReadWriteOnce"                                                                                      >> $HARBOR_VALUES
+    echo "      size: 5Gi"                                                                                                      >> $HARBOR_VALUES
+    echo "    jobservice:"                                                                                                      >> $HARBOR_VALUES
+    echo "      accessMode: ReadWriteOnce"                                                                                      >> $HARBOR_VALUES
+    echo "      size: 5Gi"                                                                                                      >> $HARBOR_VALUES
+    echo "    database:"                                                                                                        >> $HARBOR_VALUES
+    echo "      accessMode: ReadWriteOnce"                                                                                      >> $HARBOR_VALUES
+    echo "      size: 50Gi"                                                                                                     >> $HARBOR_VALUES
+    echo "    redis:"                                                                                                           >> $HARBOR_VALUES
+    echo "      accessMode: ReadWriteOnce"                                                                                      >> $HARBOR_VALUES
+    echo "      size: 50Gi"                                                                                                     >> $HARBOR_VALUES
+    echo "    trivy:"                                                                                                           >> $HARBOR_VALUES
+    echo "      accessMode: ReadWriteOnce"                                                                                      >> $HARBOR_VALUES
+    echo "      size: 10Gi"                                                                                                     >> $HARBOR_VALUES
 
     HELM_HARBOR_VERSION=$(helm search repo bitnami/harbor | tail -1 | awk '{ print $2 }')
-
-    echo "global:"                                     >  /tmp/contour_values.yaml
-    echo "  imageRegistry: docker.io"                  >> /tmp/contour_values.yaml
-    echo "  imagePullSecrets:"                         >> /tmp/contour_values.yaml
-    echo "    - tdh-docker-repo"                       >> /tmp/contour_values.yaml
 
     messagePrint " ▪ Install Harbor Helm Chart"           "bitnami/contour"
     messagePrint " ▪ Install Harbor Helm Chart Version"   "$HELM_HARBOR_VERSION"
@@ -6839,11 +6910,15 @@ runTDHtoolsDemos() {
     if [ $NATIVE -eq 0 ]; then
       cid=$(docker ps -a | grep tdh-tools:latest | awk '{ print $1 }')
       [ "$cid" != "" ] && for n in $cid; do docker rm $n -f > /dev/null 2>&1; done
+
+      # --- DUMP ENVIRONMENT VARIABLES ---
+      env | grep TDH > /tmp/tdh.env
+
   
       mkdir -p $HOME/.mc $HOME/.cache $HOME/.config $HOME/.local
       mkdir -p /tmp/docker && chmod a+w /tmp/docker
       docker run -it --rm --name tdh-tools -v /var/run/docker.sock:/var/run/docker.sock tdh-tools:latest chmod 666 /var/run/docker.sock > /dev/null 2>&1
-      docker run -u $(id -u):$(id -g) --group-add 0 -it --rm --name tdh-tools --network=host \
+      docker run -u $(id -u):$(id -g) --group-add 0 -it --rm --name tdh-tools --network=host --env-file /tmp/tdh.env \
          -v $HOME:$HOME:ro -v $HOME/.local:$HOME/.local:rw -v $HOME/.tanzu-demo-hub:$HOME/.tanzu-demo-hub:rw \
          -v /var/run/docker.sock:/var/run/docker.sock:rw -v $HOME/.cache:$HOME/.cache:rw -v $HOME/.config:$HOME/.config:rw \
          -v $HOME/.aws:$HOME/.aws:rw -v $HOME/.vmware-cna-saas:$HOME/.vmware-cna-saas:rw -v $HOME/.azure:$HOME/.azure:rw \
@@ -6881,3 +6956,36 @@ checkCLIarguments() {
     shift
   done
 }
+
+#createStorageClaim  registry-harbor redis-data-harbor-redis 100Gi ReadWriteOnce
+createStorageClaim() {
+  NAMESPACE=$1
+  CLAIMNAME=$2
+  SIZE=$3
+  MODE=$4
+
+  TMP_CLAIN=/tmp/storage_claim.yaml
+
+  echo "apiVersion: v1"                             >  $TMP_CLAIN
+  echo "kind: PersistentVolumeClaim"                >> $TMP_CLAIN
+  echo "metadata:"                                  >> $TMP_CLAIN
+  echo "  labels:"                                  >> $TMP_CLAIN
+  echo "    app: redis"                             >> $TMP_CLAIN
+  echo "    component: master"                      >> $TMP_CLAIN
+  echo "    heritage: Helm"                         >> $TMP_CLAIN
+  echo "    release: harbor"                        >> $TMP_CLAIN
+  echo "    role: master"                           >> $TMP_CLAIN
+  echo "  name: $CLAIMNAME"                         >> $TMP_CLAIN
+  echo "spec:"                                      >> $TMP_CLAIN
+  echo "  accessModes:"                             >> $TMP_CLAIN
+  echo "  - $MODE"                                  >> $TMP_CLAIN
+  echo "  resources:   "                            >> $TMP_CLAIN
+  echo "    requests:"                              >> $TMP_CLAIN
+  echo "      storage: $SIZE"                       >> $TMP_CLAIN
+  echo "  storageClassName: standard"               >> $TMP_CLAIN
+  echo "  volumeMode: Filesystem"                   >> $TMP_CLAIN
+
+  kubectl create -f $TMP_CLAIN -n $NAMESPACE
+}
+
+
