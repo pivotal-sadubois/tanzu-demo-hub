@@ -1,7 +1,8 @@
 # create-sg.tf
  
 data "http" "myip" {
-  url = "http://ipv4.icanhazip.com"
+  # url = "http://ipv4.icanhazip.com"
+  url = "http://checkip.amazonaws.com/"
 }
 
 resource "aws_security_group" "sg" {
