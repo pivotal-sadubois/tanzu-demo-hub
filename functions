@@ -4524,16 +4524,16 @@ echo "TDH_SERVICE_REGISTRY_HARBOR:$TDH_SERVICE_REGISTRY_HARBOR"
       messagePrint " ▪ Relocate images to" "$TDH_REGISTRY_DOCKER_NAME/$TDH_REGISTRY_DOCKER_USER/build-service"
       imgpkg copy -b "registry.pivotal.io/build-service/bundle:$TDH_SERVICE_BUILD_SERVICE_VERSION" --to-repo $TDH_REGISTRY_DOCKER_USER/build-service > /dev/null 2>&1
       if [ $? -ne 0 ]; then
-        echo "ERROR: Image Relocation faied"
-        echo "       => kbld relocate -f /tmp/build-service/images.lock --lock-output /tmp/build-service/images-relocated.lock \\"
-        echo "          --repository $TDH_REGISTRY_DOCKER_USER/tanzu-build-service"; exit 1
+        echo "ERROR: Image Relocation failed"
+        echo "       => imgpkg copy -b registry.pivotal.io/build-service/bundle:$TDH_SERVICE_BUILD_SERVICE_VERSION \\"
+        echo "          --to-repo $TDH_REGISTRY_DOCKER_USER/build-service"; exit 1
       fi
 
       messagePrint " ▪ Pull the Tanzu Build Service bundle image locally" "$TDH_REGISTRY_VMWARE_NAME/library/build-service"
       rm -rf /tmp/bundle
       imgpkg pull -b "$TDH_REGISTRY_DOCKER_USER/build-service:$TDH_SERVICE_BUILD_SERVICE_VERSION" -o /tmp/bundle > /dev/null 2>&1; ret=$?
       if [ $ret -ne 0 ]; then
-        echo "ERROR: Image Relocation faied"
+        echo "ERROR: Image Relocation failed"
         echo "       => imgpkg pull -b \"$TDH_REGISTRY_DOCKER_USER/build-service\" -o /tmp/bundle"
       fi
 
@@ -4593,7 +4593,7 @@ echo "TDH_SERVICE_REGISTRY_HARBOR:$TDH_SERVICE_REGISTRY_HARBOR"
       messagePrint " ▪ Relocate the images" "$TDH_REGISTRY_VMWARE_NAME/library/build-service"
       imgpkg copy -b "registry.pivotal.io/build-service/bundle:$TDH_SERVICE_BUILD_SERVICE_VERSION" --to-repo $DNS_HARBOR/library/build-service > /dev/null 2>&1; ret=$?
       if [ $ret -ne 0 ]; then
-        echo "ERROR: Image Relocation faied"
+        echo "ERROR: Image Relocation failed"
         echo "       => imgpkg copy -b \"registry.pivotal.io/build-service/bundle:$TDH_SERVICE_BUILD_SERVICE_VERSION\" --to-repo $DNS_HARBOR/library/build-service"
       fi
 
@@ -4601,7 +4601,7 @@ echo "TDH_SERVICE_REGISTRY_HARBOR:$TDH_SERVICE_REGISTRY_HARBOR"
       rm -rf /tmp/bundle
       imgpkg pull -b "$DNS_HARBOR/library/build-service:$TDH_SERVICE_BUILD_SERVICE_VERSION" -o /tmp/bundle > /dev/null 2>&1; ret=$?
       if [ $ret -ne 0 ]; then
-        echo "ERROR: Image Relocation faied"
+        echo "ERROR: Image Relocation failed"
         echo "       => imgpkg pull -b \"$DNS_HARBOR/library/build-service\" -o /tmp/bundle"
       fi
 
