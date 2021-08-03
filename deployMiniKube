@@ -224,6 +224,7 @@ installBuildService
 installTanzuDataPostgres
 #installSpringCloudGateway
 installMinio
+installKubeapps
 
 if [ "$TDH_TANZU_MISSION_CONTROL_REGISTRATION" == "true" ]; then 
   cnt=$(tmc cluster list --name $TDH_MINIKUBE_PROFILE 2>/dev/null | grep -c $TDH_MINIKUBE_PROFILE)
@@ -271,7 +272,6 @@ if [ "${TDH_TKGMC_INFRASTRUCTURE}" != "vSphere1" ]; then
   checkTMCintegration      TCI   ## Tanzu Cluster Inspection
 fi
 
-echo ""
 echo ""
 echo "-----------------------------------------------------------------------------------------------------------"
 echo "Tanzu Kubernetes Grid Cluster ($TDH_MINIKUBE_PROFILE) build completed"

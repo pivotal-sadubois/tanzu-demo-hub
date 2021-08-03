@@ -4165,6 +4165,94 @@ installSpringCloudGateway() {
   fi
 } 
 
+installKubeapps() {
+  if [ "$TDH_SERVICE_KUBEAPPS" != "true" ]; then
+    uodateConfigMap tanzu-demo-hub TDH_SERVICE_KUBEAPPS        "false"
+    helm uninstall kubeapps > /dev/null 2>&1
+    return
+  fi
+
+  TDH_DOMAIN=$(getConfigMap tanzu-demo-hub TDH_DOMAIN)
+  TDH_ENVNAME=$(getConfigMap tanzu-demo-hub TDH_ENVNAME)
+  DOMAIN=$(getConfigMap tanzu-demo-hub TDH_INGRESS_CONTOUR_LB_DOMAIN)
+  NAMESPACE=kubeapps
+
+  messageTitle "Application Dashboard for Kubernetes (Kupeapps)"
+  cnt=$(helm list -q | egrep -c "^kubeapps")
+  if [ $cnt -eq 0 ]; then
+    messagePrint " ▪ Add the Bintnami Repository"   "https://charts.bitnami.com/bitnami"
+    helm repo add bitnami https://charts.bitnami.com/bitnami > /dev/null 2>&1
+    helm repo update > /dev/null 2>&1
+
+    # --- CREATE NAMESPACE ---
+    messagePrint " ▪ Create Namespace" "kubeapps"
+    kubectl create namespace $NAMESPACE > /dev/null 2>&1
+
+    # --- COPY SECRET TO NAMESPACE ---
+    messagePrint " ▪ Copy TLS Secret" "tanzu-demo-hub-tls"
+    kubectl get secret tanzu-demo-hub-tls --namespace=default  -oyaml | grep -v '^\s*namespace:\s' | \
+    kubectl apply --namespace=$NAMESPACE -f - > /dev/null 2>&1
+
+    HELM_VALUES=/tmp/helm_kubeapps_values.yaml
+
+    echo "global:"                                                                                                              >  $HELM_VALUES
+    echo "  imageRegistry: docker.io"                                                                                           >> $HELM_VALUES
+    echo "  imagePullSecrets:"                                                                                                  >> $HELM_VALUES
+    echo "    - tdh-docker-repo"                                                                                                >> $HELM_VALUES
+    echo ""                                                                                                                     >> $HELM_VALUES
+    echo "ingress:"                                                                                                             >> $HELM_VALUES
+    echo "  enabled: true"                                                                                                      >> $HELM_VALUES
+    echo "  certManager: false"                                                                                                 >> $HELM_VALUES
+    echo "  annotations:"                                                                                                       >> $HELM_VALUES
+    echo "    kubernetes.io/ingress.class: contour"                                                                             >> $HELM_VALUES
+    echo "    ingress.kubernetes.io/force-ssl-redirect: \"true\""                                                               >> $HELM_VALUES
+    echo "  path: /"                                                                                                            >> $HELM_VALUES
+    echo "  hostname: kubeapps.$DOMAIN"                                                                                         >> $HELM_VALUES
+    echo "  tls: true"                                                                                                          >> $HELM_VALUES
+    echo "  extraTls:"                                                                                                          >> $HELM_VALUES
+    echo "  - hosts:"                                                                                                           >> $HELM_VALUES
+    echo "      - kubeaps.$DOMAIN"                                                                                              >> $HELM_VALUES
+    echo "    secretName: tanzu-demo-hub-tls"                                                                                   >> $HELM_VALUES
+
+#    # https://liveandletlearn.net/post/kubeapps-on-tkg-management-cluster/
+#    echo "# Setup the oauth2-proxy running on the frontend to handle the OIDC authentication"                                   >> $HELM_VALUES
+#    echo "authProxy:"                                                                                                           >> $HELM_VALUES
+#    echo "  enabled: true"                                                                                                      >> $HELM_VALUES
+#    echo "  provider: oidc"                                                                                                     >> $HELM_VALUES
+#    echo "  clientID: kubeapps-oauth2-proxy"                                                                                    >> $HELM_VALUES
+#    echo "  clientSecret: KUBEAPPS_CLIENT_SECRET"                                                                               >> $HELM_VALUES
+#    echo "  cookieSecret: KUBEAPPS_COOKIE_SECRET"                                                                               >> $HELM_VALUES
+#    echo "  additionalFlags:"                                                                                                   >> $HELM_VALUES
+#    echo "    - --oidc-issuer-url=https://DEX_SVC_LB_HOSTNAME"                                                                  >> $HELM_VALUES
+#    echo "    - --scope=openid email groups audience:server:client_id:my-oidc-cluster audience:server:client_id:second-oidc-cluster" >> $HELM_VALUES
+#    echo "    - --ssl-insecure-skip-verify=true"                                                                                     >> $HELM_VALUES
+#    echo "    - --cookie-secure=false"                                                                                               >> $HELM_VALUES
+
+    messagePrint " ▪ Deploy the Kubeapps Helm Chart" "kubeapps"
+    helm install kubeapps --namespace $NAMESPACE bitnami/kubeapps -f $HELM_VALUES > /dev/null 2>&1
+    if [ $? -ne 0 ]; then
+      echo "ERROR: Failed to deploy Kubeapps Helm Chart"
+      echo "       => helm install kubeapps --namespace $NAMESPACE bitnami/kubeapps -f $HELM_VALUES"
+      exit 1
+    fi
+
+    messagePrint " ▪ Create Serviceaccount"              "kubeapps-operator"
+    kubectl delete --namespace default serviceaccount kubeapps-operator > /dev/null 2>&1
+    kubectl create --namespace default serviceaccount kubeapps-operator > /dev/null 2>&1
+
+    messagePrint " ▪ Create Cluster Role Binding"        "default:kubeapps-operator"
+    kubectl delete clusterrolebinding kubeapps-operator > /dev/null 2>&1
+    kubectl create clusterrolebinding kubeapps-operator --clusterrole=cluster-admin --serviceaccount=default:kubeapps-operator
+
+    messagePrint " ▪ Kubeapps Dashboard deployed"        "https://kubeapps.$DOMAIN"
+
+    messageLine
+    echo "Kubeapps Token: "
+    kubectl get secret $(kubectl get serviceaccount kubeapps-operator -o jsonpath='{range .secrets[*]}{.name}{"\n"}{end}' | grep kubeapps-operator-token) -o jsonpath='{.data.token}' -o go-template='{{.data.token | base64decode}}' && echo
+    messageLine
+  fi
+}
+
 installMinio() {
   if [ "$TDH_SERVICE_MINIO" != "true" ]; then
     uodateConfigMap tanzu-demo-hub TDH_SERVICE_MINIO        "false"
