@@ -4211,7 +4211,7 @@ installKubeapps() {
     echo "  tls: true"                                                                                                          >> $HELM_VALUES
     echo "  extraTls:"                                                                                                          >> $HELM_VALUES
     echo "  - hosts:"                                                                                                           >> $HELM_VALUES
-    echo "      - kubeaps.$DOMAIN"                                                                                              >> $HELM_VALUES
+    echo "      - kubeapps.$DOMAIN"                                                                                             >> $HELM_VALUES
     echo "    secretName: tanzu-demo-hub-tls"                                                                                   >> $HELM_VALUES
 
 #    # https://liveandletlearn.net/post/kubeapps-on-tkg-management-cluster/
