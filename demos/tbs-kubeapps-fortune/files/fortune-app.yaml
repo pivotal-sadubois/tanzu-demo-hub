@@ -1,0 +1,48 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: fortune-service
+  namespace: NAMESPACE
+  labels:
+    app: fortune-service
+spec:
+  ports:
+  - port: 80
+    targetPort: 8080
+    name: boot
+  selector:
+    app: fortune-app
+  type: ClusterIP
+  selector:
+    app: fortune-app
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fortune-app
+  namespace: NAMESPACE
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: fortune-app
+  template:
+    metadata:
+      name: fortune-app
+      labels:
+        app: fortune-app
+      annotations:
+        prometheus.io/path: '/actuator/prometheus'
+        prometheus.io/port: '8080'
+        prometheus.io/scrape: 'true'
+    spec:
+      containers:
+      - image: FORTUNE_DOCKER_IMAGE
+        name: fortune-app
+        ports:
+        - containerPort: 8080
+          protocol: TCP
+        env:
+        - name: SPRING_REDIS_HOST
+          value: "fortune-redis-master.default.svc.cluster.local"
