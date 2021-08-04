@@ -8,6 +8,10 @@
 
 alias cat='/usr/local/bin/bat -p'
 
+function ctrl_c() {
+  echo "** Trapped CTRL-C"
+}
+
 waitCmd() {
   read
 }
@@ -23,7 +27,6 @@ prtRead() {
 }
 
 prtText() {
-  if [ "${tocindex}" == "" ]; then tocindex=1; else let tocindex=tocindex+1; fi
   printf "%2s   %s\n" "" "$1"
 }
 
@@ -7006,7 +7009,7 @@ runTDHtoolsDemos() {
       mkdir -p $HOME/.mc $HOME/.cache $HOME/.config $HOME/.local
       mkdir -p /tmp/docker && chmod a+w /tmp/docker
       docker run -it --rm --name tdh-tools -v /var/run/docker.sock:/var/run/docker.sock tdh-tools:latest chmod 666 /var/run/docker.sock > /dev/null 2>&1
-      docker run -u $(id -u):$(id -g) --group-add 0 -it --rm --name tdh-tools --network=host --env-file /tmp/tdh.env \
+      docker run -u $(id -u):$(id -g) --group-add 0 -it --init --rm --name tdh-tools --network=host --env-file /tmp/tdh.env \
          -v $HOME:$HOME:ro -v $HOME/.local:$HOME/.local:rw -v $HOME/.tanzu-demo-hub:$HOME/.tanzu-demo-hub:rw \
          -v /var/run/docker.sock:/var/run/docker.sock:rw -v $HOME/.cache:$HOME/.cache:rw -v $HOME/.config:$HOME/.config:rw \
          -v $HOME/.aws:$HOME/.aws:rw -v $HOME/.vmware-cna-saas:$HOME/.vmware-cna-saas:rw -v $HOME/.azure:$HOME/.azure:rw \
@@ -7020,6 +7023,9 @@ runTDHtoolsDemos() {
       exit $ret
     fi
   else
+    # trap ctrl-c and call ctrl_c()
+    #trap ctrl_c INT
+
     cd $TDHDEMO
   fi
 }
