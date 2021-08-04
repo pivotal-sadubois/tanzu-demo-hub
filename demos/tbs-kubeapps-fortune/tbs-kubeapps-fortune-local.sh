@@ -143,7 +143,7 @@ if [ "$TDH_SERVICE_REGISTRY_HARBOR" == "true" ]; then
   kp secret delete secret-registry-vmware > /dev/null 2>&1
   kp secret delete secret-registry-harbor > /dev/null 2>&1
   kp secret delete secret-repo-git > /dev/null 2>&1
-  kp image delete spring-petclinic > /dev/null 2>&1
+  kp image delete $TBS_SOURCE_APP > /dev/null 2>&1
   pkill com.docker.cli
   kubectl delete namespace $NAMESPACE > /dev/null 2>&1
 
@@ -185,6 +185,7 @@ if [ "$TDH_SERVICE_REGISTRY_DOCKER" == "true" ]; then
     echo "       => TDH_REGISTRY_DOCKER_PASS  ## docker.io Password"
     exit 1
   else
+    docker login docker.io -u $TDH_REGISTRY_DOCKER_USER -p $TDH_REGISTRY_DOCKER_PASS > /dev/null 2>&1; ret=$?
     docker login $TDH_REGISTRY_DOCKER_NAME -u $TDH_REGISTRY_DOCKER_USER -p $TDH_REGISTRY_DOCKER_PASS > /dev/null 2>&1; ret=$?
     if [ $ret -ne 0 ]; then
       echo "ERROR: failed to login to registry"
@@ -211,7 +212,7 @@ if [ "$TDH_SERVICE_REGISTRY_DOCKER" == "true" ]; then
   sleep 15
 
   prtHead "Create TBS Image ($TBS_SOURCE_APP)"
-  cnt=$(kp image list | egrep -c "^fortune") 
+  cnt=$(kp image list 2>/dev/null | egrep -c "^fortune") 
   if [ $cnt -eq 0 ]; then 
     execCmd "kp image create $TBS_SOURCE_APP --tag $TDH_REGISTRY_DOCKER_NAME/$TDH_REGISTRY_DOCKER_USER/$TBS_SOURCE_APP --local-path=$TBS_SOURCE_DIR"
   else
@@ -239,7 +240,7 @@ echo
 prtHead "Install Redis through kubeapps"
 prtText "  a.) Open Kubeapps (https://kubeapps.$DOMAIN) in a browser Window."
 prtText "       => Login with API Token (see above)" 
-prtText "  b.) In 'Current Contexts' (top-right-corner) change the Namespace to tbs-tac-fortune"
+prtText "  b.) In 'Current Contexts' (top-right-corner) change the Namespace to tbs-kubeapps-fortune"
 prtText "  c.) Press 'deploy', search for 'Redis' and press 'deploy' again"
 prtText "        - Name: fortune"
 prtText "        - Redis architecture: replication"
@@ -317,6 +318,8 @@ prtHead "Open WebBrowser and verify the deployment"
 echo "     => https://fortune.${DOMAIN}"
 echo ""
 echo "     presse 'return' to continue when ready"; read x
+
+exit
 
 ##################################################################################################################################
 ############################################ CHANGE PETCLINIC CODE AND REDEPLOY ##################################################
