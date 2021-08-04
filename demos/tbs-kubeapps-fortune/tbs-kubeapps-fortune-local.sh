@@ -7,10 +7,10 @@
 # Description ..: Tanzu Build Service (TBS) Demo with the  Spring Petclinic Application
 # ============================================================================================
 
-export TDH_DEMO_DIR="tbs-tac-fortune"
+export TDH_DEMO_DIR="tbs-kubeapps-fortune"
 export TDHHOME=$(echo -e "$(pwd)\n$(dirname $0)" | grep "tanzu-demo-hub" | head -1 | sed "s+\(^.*tanzu-demo-hub\).*+\1+g")
 export TDHDEMO=$TDHHOME/demos/$TDH_DEMO_DIR
-export NAMESPACE="tbs-tac-fortune"
+export NAMESPACE="tbs-kubeapps-fortune"
 
 # --- SETTING FOR TDH-TOOLS ---
 export NATIVE=0                ## NATIVE=1 r(un on local host), NATIVE=0 (run within docker)
@@ -44,7 +44,7 @@ echo '               |____/ \___|_|    \_/ |_|\___\___| |____/ \___|_| |_| |_|\_
 echo '                                                                                      '
 echo '          ----------------------------------------------------------------------------'
 echo '                        Demonstration for VMware Tanzu Build Service (TBS)            '
-echo '                                   by Sacha Dubois, VMware Inc                        '
+echo '                            by Sacha Dubois / Steve Schmidt, VMware Inc               '
 echo '          ----------------------------------------------------------------------------'
 echo '                                                                                      '
 
@@ -78,8 +78,6 @@ checkCLIcommands        BASIC
 checkCLIcommands        DEMO_TOOLS
 checkCLIcommands        TANZU_DATA
 
-if [ 1 -eq 2 ]; then 
-
 # --- READ ENVIRONMET VARIABLES ---
 [ -f $HOME/.tanzu-demo-hub.cfg ] && . $HOME/.tanzu-demo-hub.cfg
 
@@ -112,6 +110,8 @@ fi
 TBS_SOURCE_APP=fortune
 TBS_SOURCE_DIR=/tmp/$TBS_SOURCE_APP
 TBS_GIT_REPO=https://github.com/parth-pandit/fortune-demo
+
+if [ 1 -eq 1 ]; then 
 
 #################################################################################################################################
 ############################################# CLONE THE GIT REPRO ###############################################################
@@ -250,11 +250,6 @@ prtText "        - Number of Replicas: 1"
 prtText "        - Master and Replica: 2 GB Persistent Volume Size"
 prtText "        - Enable Init Container: true"
 
-#execCmd "kubectl create namespace $NAMESPACE"
-
-
-echo xxx
-exit
 ##################################################################################################################################
 ######################################### DEPLOY PETCLINIC CONTAINER ON KUBERNETES ###############################################
 ##################################################################################################################################
@@ -278,6 +273,23 @@ if [ "${TLS_CERTIFICATE}" == "" -o "${TLS_PRIVATE_KEY}" == "" ]; then
 #  verifyTLScertificate $TLS_CERTIFICATE $TLS_PRIVATE_KEY
 fi
 
+prtHead "Create seperate namespace to host the Ingress Demo"
+execCmd "kubectl create namespace $NAMESPACE"
+
+if [ "$TDH_SERVICE_REGISTRY_DOCKER" == "true" ]; then
+  IMAGE_PATH="$TDH_REGISTRY_DOCKER_NAME/$TDH_REGISTRY_DOCKER_USER/$TBS_SOURCE_APP:latest"
+else
+  IMAGE_PATH="$TDH_HARBOR_REGISTRY_DNS_HARBOR/library/$TBS_SOURCE_APP:latest"
+fi
+
+prtHead "Create deployment for the fortune app"
+cat files/fortune-app.yaml | sed -e "s+FORTUNE_DOCKER_IMAGE+$IMAGE_PATH+g" -e "s/NAMESPACE/$NAMESPACE/g" > $TBS_SOURCE_DIR/fortune-app.yaml
+execCmd "kubectl create -f $TBS_SOURCE_DIR/fortune-app.yaml"
+execCmd "kubectl get pods,svc -n $NAMESPACE"
+
+prtHead "Wait for the deployment rollout (deployment/fortune-app) to be compleed"
+execCmd "kubectl -n $NAMESPACE rollout status -w  deployment/fortune-app"
+
 # --- CONVERT CERTS TO BASE64 ---
 if [ "$(uname)" == "Darwin" ]; then
   cert=$(base64 $TLS_CERTIFICATE)
@@ -287,44 +299,22 @@ else
   pkey=$(base64 --wrap=10000 $TLS_PRIVATE_KEY)
 fi
 
-# --- GENERATE INGRES FILES ---
-cat files/https-secret.yaml | sed -e "s/NAMESPACE/$NAMESPACE/g" > /tmp/https-secret.yaml
-echo "  tls.crt: \"$cert\"" >> /tmp/https-secret.yaml
-echo "  tls.key: \"$pkey\"" >> /tmp/https-secret.yaml
-
-# --- PREPARATION ---
-cat files/https-ingress.yaml | sed -e "s/DNS_DOMAIN/$DOMAIN/g" -e "s/NAMESPACE/$NAMESPACE/g" > /tmp/https-ingress.yaml
-
-prtHead "Create seperate namespace to host the Ingress Demo"
-execCmd "kubectl create namespace $NAMESPACE"
-
-prtHead "Create deployment for the ingress tesing app"
-if [ "$TDH_SERVICE_REGISTRY_DOCKER" == "true" ]; then
-  execCmd "kubectl create deployment petclinic --image=$TDH_REGISTRY_DOCKER_NAME/$TDH_REGISTRY_DOCKER_USER/$TBS_SOURCE_APP:latest --port=8080 -n $NAMESPACE"
-  execCmd "kubectl get pods -n $NAMESPACE"
-else
-  execCmd "kubectl create deployment petclinic --image=$TDH_HARBOR_REGISTRY_DNS_HARBOR/library/spring-petclinic:latest --port=8080 -n $NAMESPACE"
-  execCmd "kubectl get pods -n $NAMESPACE"
-fi
-
-prtHead "Wait for the deployment rollout (deployment/petclinic) to be compleed"
-execCmd "kubectl -n $NAMESPACE rollout status -w  deployment/petclinic"
-
-prtHead "Expose the petclinic service of type ClusterIP" 
-execCmd "kubectl expose deployment petclinic --port=8080 -n $NAMESPACE"
-execCmd "kubectl get svc,pods -n $NAMESPACE"
+cat files/https-secret.yaml | sed -e "s/NAMESPACE/$NAMESPACE/g" > $TBS_SOURCE_DIR/https-secret.yaml
+echo "  tls.crt: \"$cert\"" >> $TBS_SOURCE_DIR/https-secret.yaml
+echo "  tls.key: \"$pkey\"" >> $TBS_SOURCE_DIR/https-secret.yaml
 
 prtHead "Create a secret with the certificates of domain $DOMAIN"
-execCat "/tmp/https-secret.yaml"
-execCmd "kubectl create -f /tmp/https-secret.yaml -n $NAMESPACE"
+execCat "$TBS_SOURCE_DIR/https-secret.yaml"
+execCmd "kubectl create -f $TBS_SOURCE_DIR/https-secret.yaml -n $NAMESPACE"
 
 prtHead "Create the ingress route with context based routing"
-execCat "/tmp/https-ingress.yaml"
-execCmd "kubectl create -f /tmp/https-ingress.yaml -n $NAMESPACE"
+cat files/https-ingress.yaml | sed -e "s/DNS_DOMAIN/$DOMAIN/g" -e "s/NAMESPACE/$NAMESPACE/g" > $TBS_SOURCE_DIR/https-ingress.yaml
+execCat "$TBS_SOURCE_DIR/https-ingress.yaml"
+execCmd "kubectl create -f $TBS_SOURCE_DIR/https-ingress.yaml -n $NAMESPACE"
 execCmd "kubectl get ingress,svc,pods -n $NAMESPACE"
 
 prtHead "Open WebBrowser and verify the deployment"
-echo "     => https://petclinic.${DOMAIN}"
+echo "     => https://fortune.${DOMAIN}"
 echo ""
 echo "     presse 'return' to continue when ready"; read x
 
