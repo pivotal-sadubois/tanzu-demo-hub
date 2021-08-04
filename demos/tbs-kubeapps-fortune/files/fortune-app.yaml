@@ -45,4 +45,4 @@ spec:
           protocol: TCP
         env:
         - name: SPRING_REDIS_HOST
-          value: "fortune-redis-master.default.svc.cluster.local"
+          value: "fortune-redis-master.NAMESPACE.svc.cluster.local"
