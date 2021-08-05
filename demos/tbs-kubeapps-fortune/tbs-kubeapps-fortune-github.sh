@@ -1,6 +1,6 @@
 #!/bin/bash
 # ============================================================================================
-# File: ........: tbs-kubeapps-fortune-local.sh
+# File: ........: tbs-kubeapps-fortune-github.sh
 # Language .....: bash
 # Author .......: Sacha Dubois, VMware
 # --------------------------------------------------------------------------------------------
@@ -81,6 +81,15 @@ checkCLIcommands        TANZU_DATA
 # --- READ ENVIRONMET VARIABLES ---
 [ -f $HOME/.tanzu-demo-hub.cfg ] && . $HOME/.tanzu-demo-hub.cfg
 
+if [ "${TDH_TBS_DEMO_FORTUNE_GIT}" == "" ]; then
+  echo "  --------------------------------------------------------------------------------------------------------------"
+  echo "  IMPORTANT: Please clone the Git Repo: https://github.com/parth-pandit/fortune-demo"
+  echo "             into your GitHub account and the TDH_TBS_DEMO_FORTUNE_GIT with repository in ~/.tanzu-demo-hub.cfg"
+  echo "             => export TDH_TBS_DEMO_FORTUNE_GIT=https://github.com/<git-repository>.git"
+  echo "  --------------------------------------------------------------------------------------------------------------"
+  exit 1
+fi
+
 if [ "${TDH_GITHUB_SSHKEY}" == "" ]; then
   echo "  --------------------------------------------------------------------------------------------------------------"
   echo "  IMPORTANT: Please create a GITHUB Access ssh-key for your account at: https://github.com/settings/keys and"
@@ -108,7 +117,7 @@ TBS_GIT_REPO=https://github.com/parth-pandit/fortune-demo
 
 [ -d $TBS_SOURCE_DIR ] && rm -rf $TBS_SOURCE_DIR
 prtHead "Clone Git Repository ($TBS_GIT_REPO) to $TBS_SOURCE_DIR"
-execCmd "(cd /tmp; git clone $TBS_GIT_REPO $TBS_SOURCE_DIR)"
+execCmd "(cd /tmp; git clone $TDH_TBS_DEMO_FORTUNE_GIT $TBS_SOURCE_DIR)"
 execCmd "(cd $TBS_SOURCE_DIR && git config --list)"
 
 #################################################################################################################################
@@ -141,15 +150,17 @@ if [ "$TDH_SERVICE_REGISTRY_HARBOR" == "true" ]; then
   slntCmd "export REGISTRY_PASSWORD=$TDH_HARBOR_REGISTRY_ADMIN_PASSWORD"
   execCmd "kp secret create secret-registry-vmware --registry $TDH_HARBOR_REGISTRY_DNS_HARBOR --registry-user admin"
 
-  sleep 10
+  prtHead "Create Secret (secret-repo-git)"
+  execCmd "kp secret create secret-repo-git --git-url git@github.com --git-ssh-key $TDH_GITHUB_SSHKEY"
+  sleep 15
 
   prtHead "Create TBS Image ($TBS_SOURCE_APP)"
 
   cnt=$(kp image list | egrep -c "^fortune")
   if [ $cnt -eq 0 ]; then
-    execCmd "kp image create $TBS_SOURCE_APP --tag $TDH_HARBOR_REGISTRY_DNS_HARBOR/library/$TBS_SOURCE_APP --local-path=$TBS_SOURCE_DIR"
+    execCmd "kp image create $TBS_SOURCE_APP --tag $TDH_HARBOR_REGISTRY_DNS_HARBOR/library/$TBS_SOURCE_APP --git $TDH_TBS_DEMO_FORTUNE_GIT --git-revision master"
   else
-    execCmd "kp image create $TBS_SOURCE_APP --tag $TDH_HARBOR_REGISTRY_DNS_HARBOR/library/$TBS_SOURCE_APP --local-path=$TBS_SOURCE_DIR"
+    execCmd "kp image create $TBS_SOURCE_APP --tag $TDH_HARBOR_REGISTRY_DNS_HARBOR/library/$TBS_SOURCE_APP --git $TDH_TBS_DEMO_FORTUNE_GIT --git-revision master"
 
     prtHead "Patch TBS Image ($TBS_SOURCE_APP)"
     execCmd "kp image patch $TBS_SOURCE_APP"
@@ -157,6 +168,9 @@ if [ "$TDH_SERVICE_REGISTRY_HARBOR" == "true" ]; then
 
   prtHead "Show the Build Process ($TBS_SOURCE_APP)"
   execCmd "kp build logs $TBS_SOURCE_APP"
+
+  prtHead "Show the Build Process ($TBS_SOURCE_APP)"
+  execCmd "kp build list $TBS_SOURCE_APP"
 fi
 
 #################################################################################################################################
@@ -194,14 +208,16 @@ if [ "$TDH_SERVICE_REGISTRY_DOCKER" == "true" ]; then
   export DOCKER_PASSWORD=$TDH_REGISTRY_DOCKER_PASS
   execCmd "kp secret create secret-registry-docker --dockerhub $TDH_REGISTRY_DOCKER_USER"
 
-  sleep 10
+  prtHead "Create Secret (secret-repo-git)"
+  execCmd "kp secret create secret-repo-git --git-url git@github.com --git-ssh-key $TDH_GITHUB_SSHKEY"
+  sleep 15
 
   prtHead "Create TBS Image ($TBS_SOURCE_APP)"
   cnt=$(kp image list 2>/dev/null | egrep -c "^fortune") 
   if [ $cnt -eq 0 ]; then 
-    execCmd "kp image create $TBS_SOURCE_APP --tag $TDH_REGISTRY_DOCKER_NAME/$TDH_REGISTRY_DOCKER_USER/$TBS_SOURCE_APP --local-path=$TBS_SOURCE_DIR"
+    execCmd "kp image create $TBS_SOURCE_APP --tag $TDH_REGISTRY_DOCKER_NAME/$TDH_REGISTRY_DOCKER_USER/$TBS_SOURCE_APP --git $TDH_TBS_DEMO_FORTUNE_GIT --git-revision master"
   else
-    execCmd "kp image create $TBS_SOURCE_APP --tag $TDH_REGISTRY_DOCKER_NAME/$TDH_REGISTRY_DOCKER_USER/$TBS_SOURCE_APP --local-path=$TBS_SOURCE_DIR"
+    execCmd "kp image create $TBS_SOURCE_APP --tag $TDH_REGISTRY_DOCKER_NAME/$TDH_REGISTRY_DOCKER_USER/$TBS_SOURCE_APP --git $TDH_TBS_DEMO_FORTUNE_GIT --git-revision master"
 
     prtHead "Patch TBS Image ($TBS_SOURCE_APP)"
     execCmd "kp image patch $TBS_SOURCE_APP"
@@ -274,7 +290,7 @@ execCmd "kubectl get pods -n $NAMESPACE"
 execCmd "helm list -A"
 
 ##################################################################################################################################
-######################################### DEPLOY PETCLINIC CONTAINER ON KUBERNETES ###############################################
+######################################### DEPLOY APPLICATION CONTAINER ON KUBERNETES #############################################
 ##################################################################################################################################
 
 kubectl get secret tanzu-demo-hub-tls -o json | jq -r '.data."tls.crt"' | base64 -d > /tmp/tanzu-demo-hub-crt.pem
@@ -348,29 +364,34 @@ echo "     => vi src/main/resources/static/index.html                   # CHANGE
 echo "        <p>Find out what the future holds...</p>"                 # REPLACE THE TEXT WITH SOMETHING ELSE"
 echo "     => git add src/main/resources/static/index.html              # ADD FILE TO LOCAL GIT REPO"
 echo "     => git commit -m \"changed welcome message\"                   # COMIT THE CHANGE"
-#echo "     => git push"                                                 # PUSH TO GIT MASTER"
+echo "     => git push"                                                 # PUSH TO GIT MASTER"
 echo ""
 echo "     # --- MAKE THE CHANGE WITH INTELLIJ-IDE ---"
 echo "     => /Applications/IntelliJ\ IDEA\ CE.app/Contents/MacOS/idea  $TBS_SOURCE_DIR"
 echo "     => Edit: src/main/resources/static/index.html                # CHANGE-THE MESSAGE TEXT"
 echo "     => IntelliJ IDA -> GIT -> Commit                             # COMMIT CHANGE"
-#echo "     => IntelliJ IDA -> GIT -> Push                               # PUSH TO THE GIT REPOSITORY ON GITHUB"
+echo "     => IntelliJ IDA -> GIT -> Push                               # PUSH TO THE GIT REPOSITORY ON GITHUB"
 echo ""
 echo "     presse 'return' to continue when ready"; read x
 
-#prtHead "Verify Change on GitHub ($TDH_TBS_DEMO_PET_CLINIC_GIT)"
-#echo "     => Navigate to srv/main/resources/messages/messages.properties"
-#echo ""
-#echo "     presse 'return' to continue when ready"; read x
+prtHead "Verify Change on GitHub ($TDH_TBS_DEMO_FORTUNE_GIT)"
+echo "     => Navigate to src/main/resources/static/index.html"
+echo ""
+echo "     presse 'return' to continue when ready"; read x
 
-prtHead "Patch TBS Image ($TBS_SOURCE_APP)"
-execCmd "kp image patch $TBS_SOURCE_APP --local-path=$TBS_SOURCE_DIR"
+echo "     # --- VERIFY CHANGE ---"
+
+#prtHead "Patch TBS Image ($TBS_SOURCE_APP)"
+#execCmd "kp image patch $TBS_SOURCE_APP --local-path=$TBS_SOURCE_DIR"
 
 prtHead "Show the Build Process ($TBS_SOURCE_APP)"
 execCmd "kp build list $TBS_SOURCE_APP"
 
 prtHead "Show the Build Process ($TBS_SOURCE_APP)"
 execCmd "kp build logs $TBS_SOURCE_APP"
+
+prtHead "Show the Build Process ($TBS_SOURCE_APP)"
+execCmd "kp build list $TBS_SOURCE_APP"
 
 prtHead "Show the Build Process (${TBS_SOURCE_APP}-app)"
 execCmd "kubectl -n $NAMESPACE rollout restart deployment/${TBS_SOURCE_APP}-app"
