@@ -231,8 +231,8 @@ prtText "  => https://tac.bitnami.com/apps"
 prtText ""
 prtText "  presse 'return' to continue when ready"; read x
 
-prtHead "Manage Kubernetes applications with Kubeapp"
-prtText "Kubeapp manages applications comming from Bitnami Application Catalog or Tanzu Application Catalog (TAC)"
+prtHead "Manage Kubernetes applications with Kubeapps"
+prtText "Kubeapps manages applications comming from Bitnami Application Catalog or Tanzu Application Catalog (TAC)"
 prtText "  a.) Open Kubeapps (https://kubeapps.$DOMAIN) in a browser Window."
 prtText "       => Login with API Token (see below)" 
 prtText ""
@@ -372,13 +372,14 @@ execCmd "kp build list $TBS_SOURCE_APP"
 prtHead "Show the Build Process ($TBS_SOURCE_APP)"
 execCmd "kp build logs $TBS_SOURCE_APP"
 
-prtHead "Show the Build Process (${TBS_SOURCE_APP}-app)"
+prtHead "Rollout the new image"
 execCmd "kubectl -n $NAMESPACE rollout restart deployment/${TBS_SOURCE_APP}-app"
 
 prtHead "Wait for the deployment rollout (deployment/${TBS_SOURCE_APP}-app) to be compleed"
 execCmd "kubectl -n $NAMESPACE rollout status -w  deployment/${TBS_SOURCE_APP}-app"
 
 prtHead "Open WebBrowser and verify the deployment (clear the browser cache if changes are not shown)"
+prtText "                                          (with Chrome on Mac press Command+Shift+R to clear)"
 echo "     => https://${TBS_SOURCE_APP}.${DOMAIN}"
 echo ""
 echo "     presse 'return' to continue when ready"; read x
