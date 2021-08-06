@@ -145,7 +145,7 @@ if [ "$TDH_SERVICE_REGISTRY_HARBOR" == "true" ]; then
 
   prtHead "Create TBS Image ($TBS_SOURCE_APP)"
 
-  cnt=$(kp image list | egrep -c "^fortune")
+  cnt=$(kp image list 2>/dev/null | egrep -c "^fortune")
   if [ $cnt -eq 0 ]; then
     execCmd "kp image create $TBS_SOURCE_APP --tag $TDH_HARBOR_REGISTRY_DNS_HARBOR/library/$TBS_SOURCE_APP --local-path=$TBS_SOURCE_DIR"
   else
