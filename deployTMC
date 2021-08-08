@@ -284,16 +284,14 @@ kubectl create clusterrolebinding tanzu-demo-hub-privileged-cluster-role-binding
 uodateConfigMap tanzu-demo-hub TDH_DOMAIN               $AWS_HOSTED_DNS_DOMAIN
 
 uodateConfigMap tanzu-demo-hub TDH_ENVNAME              $TDH_ENVNAME
-uodateConfigMap tanzu-demo-hub TDH_DEPLOYMENT_TYPE      "minikube"
+uodateConfigMap tanzu-demo-hub TDH_DEPLOYMENT_TYPE      "tmc"
 uodateConfigMap tanzu-demo-hub TDH_MANAGED_BY_TMC       "true"
 
-uodateConfigMap tanzu-demo-hub TDH_CLUSTER_NAME                   "$TMC_CLUSTER_NAME"
-uodateConfigMap tanzu-demo-hub TDH_MANAGEMENT_CLUSTER             "$TMC_MANAGEMENT_CLUSTER"
-uodateConfigMap tanzu-demo-hub TDH_PROVISONER_NAME                "$TMC_PROVISIONER_NAME"
+uodateConfigMap tanzu-demo-hub TDH_CLUSTER_NAME                   "$TDH_CLUSTER_NAME"
+uodateConfigMap tanzu-demo-hub TDH_MANAGEMENT_CLUSTER             "$TDH_MANAGEMENT_CLUSTER"
+uodateConfigMap tanzu-demo-hub TDH_PROVISIONER_NAME               "$TDH_PROVISIONER_NAME"
 uodateConfigMap tanzu-demo-hub TDH_MISSION_CONTROL_ACCOUNT_NAME   "$TMC_ACCOUNT_NAME"
 
-echo "TDH_DEPLOYMENT_ENV_NAME:$TDH_DEPLOYMENT_ENV_NAME"
-echo "TDH_DEPLOYMENT_CLOUD:$TDH_DEPLOYMENT_CLOUD"
 InstallCertManager
 [ "${TDH_DEPLOYMENT_CLOUD}" != "vSphere" ] && InstallContour
 createClusterIssuer
@@ -303,19 +301,21 @@ installBuildService
 installTanzuDataPostgres
 #installSpringCloudGateway
 installMinio
+installKubeapps
+installJenkins
 
 checkTMCintegration      TO    ## Tanzu Observability (Wavefront)
 checkTMCintegration      TDP   ## Tanzu Data Protection
 checkTMCintegration      TCI   ## Tanzu Cluster Inspection
 
 echo "-----------------------------------------------------------------------------------------------------------"
-echo "Tanzu Kubernetes Grid Cluster ($TMC_CLUSTER_NAME) build completed"
+echo "Tanzu Kubernetes Grid Cluster ($TDH_CLUSTER_NAME) build completed"
 echo "-----------------------------------------------------------------------------------------------------------"
 echo "1.) Set KUBECONFIG and set the cluster context"
-echo "    => export KUBECONFIG=/tmp/${TMC_CLUSTER_NAME}.kubeconfig:~/.kube/config"
-echo "    => kubectl config use-context $TMC_CLUSTER_NAME"
+echo "    => export KUBECONFIG=/tmp/${TDH_CLUSTER_NAME}.kubeconfig:~/.kube/config"
+echo "    => kubectl config use-context $TDH_CLUSTER_NAME"
 echo "    => kubectl config get-contexts"
-echo "2.) Relaxing Pod Security in cluster ($TMC_CLUSTER_NAME)"
+echo "2.) Relaxing Pod Security in cluster ($TDH_CLUSTER_NAME)"
 echo "    # Allow Privileged Pods for the Cluster"
 echo "    => kubectl create clusterrolebinding tanzu-demo-hub-privileged-cluster-role-binding \\"
 echo "        --clusterrole=vmware-system-tmc-psp-privileged --group=system:authenticated"
@@ -323,7 +323,7 @@ echo "    # Allow Privileged Pods for a Namespace (my-namespace)"
 echo "    => kubectl create rolebinding tanzu-demo-hub-privileged-my-namespace-role-binding \\"
 echo "        --clusterrole=vmware-system-tmc-psp-privileged --group=system:authenticated -n my-namespace"
 echo "3.) Delete Cluster if not used anymore"
-echo "    => tmc cluster delete -m $TMC_MANAGEMENT_CLUSTER -p $TMC_PROVISIONER_NAME $TMC_CLUSTER_NAME"
+echo "    => tmc cluster delete -m $TDH_MANAGEMENT_CLUSTER -p $TDH_PROVISIONER_NAME $TDH_CLUSTER_NAME"
 
 #kubectl rollout restart deployment echoserver-1 -n contour-ingress-demo
 #kubectl get pods -n contour-ingress-demo

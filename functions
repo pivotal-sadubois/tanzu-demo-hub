@@ -280,7 +280,7 @@ pivnetAPIdownload() {
 
 
 messageLine() {
-  echo "----------------------------------------------------------------------------------------------------------------------------------------------"
+  echo "------------------------------------------------------------------------------------------------------------------------------------------------------------------"
 } 
 
 messagePrint() {
@@ -733,17 +733,6 @@ checkCloudAccess() {
       fi
 
       messagePrint " ▪ MiniKube ServerIP"               "$(minikube ip -p $TDH_MINIKUBE_PROFILE)"
-
-      cnt=$(tmc cluster list --name $TDH_MINIKUBE_PROFILE 2> /dev/null | egrep -c " $TDH_MINIKUBE_PROFILE ")
-      if [ $cnt -eq 0 ]; then 
-        messageTitle "Attach Minikube Cluster to TMC"
-        messagePrint " ▪ TMC Cluster Name"                "$TDH_MINIKUBE_PROFILE"
-        messagePrint " ▪ TMC Clustergroup"                "tanzu-demo-hub"
-        echo "  -------------------------------------------------------------------------------------------------------------------------------------------------------"
-        tmc cluster attach -n $TDH_MINIKUBE_PROFILE -g tanzu-demo-hub -p minikube
-        kubectl apply -f k8s-attach-manifest.yaml
-        echo "  -------------------------------------------------------------------------------------------------------------------------------------------------------"
-      fi
     fi
   fi
 
@@ -1220,9 +1209,11 @@ checkTDHenvironment() {
 checkTMCintegration() {
   TMC_INTEGRATION=$1
 
+  TDH_DEPLOYMENT_TYPE=$(getConfigMap tanzu-demo-hub TDH_DEPLOYMENT_TYPE)
   TDH_CLUSTER_NAME=$(getConfigMap tanzu-demo-hub TDH_CLUSTER_NAME)
-  TMC_MANAGEMENT_CLUSTER=$(tmc cluster list --name $TDH_CLUSTER_NAME -o json | jq -r '.clusters[].fullName.managementClusterName')
-  TMC_PROVISIONER_NAME=$(tmc cluster list --name $TDH_CLUSTER_NAME -o json | jq -r '.clusters[].fullName.provisionerName')
+  TDH_CLUSTER_GROUP=$(getConfigMap tanzu-demo-hub TDH_CLUSTER_GROUP)
+  TDH_MANAGEMENT_CLUSTER=$(getConfigMap tanzu-demo-hub TDH_MANAGEMENT_CLUSTER)
+  TDH_PROVISIONER_NAME=$(getConfigMap tanzu-demo-hub TDH_PROVISIONER_NAME)
 
   if [ "${TMC_INTEGRATION}" == "TO" ]; then
     if [ "${TDH_SERVICE_TANZU_OBSERVABILITY}" == "true" ]; then
@@ -1281,15 +1272,15 @@ checkTMCintegration() {
         messagePrint " ▪ Verify Wavefront Helm Chart"  "installed"      
       fi
 
-      cnt=$(tmc cluster integration list --cluster-name $TDH_CLUSTER_NAME -m $TMC_MANAGEMENT_CLUSTER \
-            -p $TMC_PROVISIONER_NAME --name tanzu-observability-saas | egrep -c "tanzu-observability-saas") 
+      cnt=$(tmc cluster integration list --cluster-name $TDH_CLUSTER_NAME -m $TDH_MANAGEMENT_CLUSTER  \
+            -p $TDH_PROVISIONER_NAME --name tanzu-observability-saas | egrep -c "tanzu-observability-saas") 
       if [ $cnt -eq 0 ]; then 
         TANZU_OBSERVABILITY=/tmp/tanzu_observability.yaml; rm -f $TANZU_OBSERVABILITY
         echo ""                                                                      >  $TANZU_OBSERVABILITY
         echo "{"                                                                     >> $TANZU_OBSERVABILITY
         echo "    \"full_name\": {"                                                  >> $TANZU_OBSERVABILITY
-        echo "        \"provisionerName\": \"$TMC_PROVISIONER_NAME\","               >> $TANZU_OBSERVABILITY
-        echo "        \"managementClusterName\": \"$TMC_MANAGEMENT_CLUSTER\","       >> $TANZU_OBSERVABILITY
+        echo "        \"provisionerName\": \"$TDH_PROVISIONER_NAME\","               >> $TANZU_OBSERVABILITY
+        echo "        \"managementClusterName\": \"$TDH_MANAGEMENT_CLUSTER\","       >> $TANZU_OBSERVABILITY
         echo "        \"clusterName\": \"$TDH_CLUSTER_NAME\","                       >> $TANZU_OBSERVABILITY
         echo "        \"name\": \"tanzu-observability-saas\""                        >> $TANZU_OBSERVABILITY
         echo "    },"                                                                >> $TANZU_OBSERVABILITY
@@ -1303,8 +1294,8 @@ checkTMCintegration() {
         echo "    }"                                                                 >> $TANZU_OBSERVABILITY
         echo "}"                                                                     >> $TANZU_OBSERVABILITY
 
-        tmc cluster integration create -f $TANZU_OBSERVABILITY > /dev/null 2>&1
-        if [ $? -ne 0 ]; then 
+        tmc cluster integration create -f $TANZU_OBSERVABILITY > /dev/null 2>&1; ret=$?
+        if [ $ret -ne 0 ]; then 
           messageLine
           echo "ERROR: failed to add integration"
           if [ "$NATIVE" == "0" ]; then 
@@ -1332,17 +1323,17 @@ checkTMCintegration() {
   if [ "${TMC_INTEGRATION}" == "TDP" ]; then
     if [ "${TDH_SERVICE_TANZU_DATA_PROTECTION}" == "true" ]; then
       messageTitle "Data Protection Integration into TMC"
-      cnt=$(tmc cluster dataprotection backuplocation list --cluster-name $TDH_CLUSTER_NAME 2>/dev/null | grep -c " $TDH_CLUSTER_NAME ")
+      cnt=$(tmc cluster dataprotection list --cluster-name $TDH_CLUSTER_NAME -p TDH_PROVISIONER_NAME -m $TDH_MANAGEMENT_CLUSTER 2>/dev/null | grep -c " $TDH_CLUSTER_NAME ")
       if [ $cnt -eq 0 ]; then
         # --- VERIFY SERVICE CONFIGURATION ---
         checkKubernetesServices tanzu_data_protection
 
         # --- VERIFY BACKUP LOCATION ---
-        cnt=$(tmc cluster dataprotection backuplocation list --cluster-name $TDH_CLUSTER_NAME | grep -c " $TDH_CLUSTER_NAME ") 
+        cnt=$(tmc cluster dataprotection backuplocation list --cluster-name $TDH_CLUSTER_NAME -p $TDH_PROVISIONER_NAME -m $TDH_MANAGEMENT_CLUSTER | grep -c " $TDH_CLUSTER_NAME ") 
         if [ $cnt -eq 0 ]; then
           ret=1; cnt=0
           while [ $ret -ne 0 -a $cnt -lt 50 ]; do
-          tmc cluster dataprotection create -c $TDH_CLUSTER_NAME -m $TMC_MANAGEMENT_CLUSTER -p $TMC_PROVISIONER_NAME \
+          tmc cluster dataprotection create -c $TDH_CLUSTER_NAME -m $TDH_MANAGEMENT_CLUSTER  -p $TDH_PROVISIONER_NAME \
               --backup-location-names $TDH_TANZU_DATA_PROTECTION_BACKUP_LOCATION > /dev/null 2>&1; ret=$?
             [ $ret -eq 0 ] && break
             let cnt=cnt+1
@@ -1354,12 +1345,12 @@ checkTMCintegration() {
             echo "ERROR: failed to enable dataprotection for cluster $TDH_CLUSTER_NAME"
             if [ "$NATIVE" == "0" ]; then
               echo "       => tools/tdh-tools.sh"
-              echo "          tdh-tools:/$ tmc cluster dataprotection create -c $TDH_CLUSTER_NAME -m $TMC_MANAGEMENT_CLUSTER \\"
-              echo "                          -p $TMC_PROVISIONER_NAME --backup-location-names $TDH_TANZU_DATA_PROTECTION_BACKUP_LOCATION"
+              echo "          tdh-tools:/$ tmc cluster dataprotection create -c $TDH_CLUSTER_NAME -m $TDH_MANAGEMENT_CLUSTER  \\"
+              echo "                          -p $TDH_PROVISIONER_NAME --backup-location-names $TDH_TANZU_DATA_PROTECTION_BACKUP_LOCATION"
               echo "          tdh-tools:/$ exit"
             else
-              echo "       => tmc cluster dataprotection create -c $TDH_CLUSTER_NAME -m $TMC_MANAGEMENT_CLUSTER \\"
-              echo "            -p $TMC_PROVISIONER_NAME --backup-location-names $TDH_TANZU_DATA_PROTECTION_BACKUP_LOCATION"
+              echo "       => tmc cluster dataprotection create -c $TDH_CLUSTER_NAME -m $TDH_MANAGEMENT_CLUSTER  \\"
+              echo "            -p $TDH_PROVISIONER_NAME --backup-location-names $TDH_TANZU_DATA_PROTECTION_BACKUP_LOCATION"
             fi
             messageLine
           fi
@@ -1369,22 +1360,30 @@ checkTMCintegration() {
         uodateConfigMap tanzu-demo-hub TDH_TANZU_DATA_PROTECTION_ARN               "$TDH_TANZU_DATA_PROTECTION_ARN"
         uodateConfigMap tanzu-demo-hub TDH_TANZU_DATA_PROTECTION_BACKUP_LOCATION   "$TDH_TANZU_DATA_PROTECTION_BACKUP_LOCATION"
         uodateConfigMap tanzu-demo-hub TDH_SERVICE_TANZU_DATA_PROTECTION           "true"
+
       else
         messagePrint " ▪ Verify DataProtection for Cluster ($TDH_CLUSTER_NAME)"    "enabled"
         messagePrint " ▪ Backuo Lockation"                                         "$TDH_TANZU_DATA_PROTECTION_BACKUP_LOCATION" 
         messagePrint " ▪ AWS CloudFormation ARN"                                   "$TDH_TANZU_DATA_PROTECTION_ARN" 
       fi
 
-      sleep 60
-
       # --- CONFIGURE FULL BACKUP ---
-      cnt=$(tmc cluster dataprotection backup list --cluster-name $TDH_CLUSTER_NAME -p $TMC_PROVISIONER_NAME -m $TMC_MANAGEMENT_CLUSTER  --name "full-backup" | egrep -c " full-backup ")
+      cnt=$(tmc cluster dataprotection backup list --cluster-name $TDH_CLUSTER_NAME -p $TDH_PROVISIONER_NAME -m $TDH_MANAGEMENT_CLUSTER --name "full-backup" | egrep -c " full-backup ")
+      if [ $cnt -gt 0 ]; then 
+        stt=$(tmc cluster dataprotection backup list --cluster-name $TDH_CLUSTER_NAME -p $TDH_PROVISIONER_NAME -m $TDH_MANAGEMENT_CLUSTER --name "full-backup" | egrep " full-backup " | awk '{ print $NF }')
+        if [ "$stt" != "COMPLETED" -a "$stt" != "INPROGRESS" ]; then 
+          # --- DELETE OLD BACKUP ---
+          tmc cluster dataprotection backup delete --cluster-name $TDH_CLUSTER_NAME -p $TDH_PROVISIONER_NAME -m $TDH_MANAGEMENT_CLUSTER "full-backup"  > /dev/null 2>&1
+          cnt=0
+        fi
+      fi
+
       if [ $cnt -eq 0 ]; then 
         messagePrint " ▪ Configure Full Backup (full-backup) configuration"            "enabled"
 
         ret=1; cnt=0
         while [ $ret -ne 0 -a $cnt -lt 5 ]; do
-          tmc cluster dataprotection backup create -c $TDH_CLUSTER_NAME -p $TMC_PROVISIONER_NAME -m $TMC_MANAGEMENT_CLUSTER \
+          tmc cluster dataprotection backup create -c $TDH_CLUSTER_NAME -p $TDH_PROVISIONER_NAME -m $TDH_MANAGEMENT_CLUSTER  \
             --name "full-backup" --backup-location-name $TDH_TANZU_DATA_PROTECTION_BACKUP_LOCATION > /dev/null 2>&1; ret=$?
           [ $ret -eq 0 ] && break
           let cnt=cnt+1
@@ -1396,12 +1395,12 @@ checkTMCintegration() {
           echo "ERROR: failed to configure a full-backup"
           if [ "$NATIVE" == "0" ]; then
             echo "       => tools/tdh-tools.sh"
-            echo "          tdh-tools:/$ tmc cluster dataprotection backup create -c $TDH_CLUSTER_NAME -p $TMC_PROVISIONER_NAME \\"
-            echo "                          -m $TMC_MANAGEMENT_CLUSTER --name \"full-backup\" --backup-location-name $TDH_TANZU_DATA_PROTECTION_BACKUP_LOCATION"
+            echo "          tdh-tools:/$ tmc cluster dataprotection backup create -c $TDH_CLUSTER_NAME -p $TDH_PROVISIONER_NAME \\"
+            echo "                          -m $TDH_MANAGEMENT_CLUSTER  --name \"full-backup\" --backup-location-name $TDH_TANZU_DATA_PROTECTION_BACKUP_LOCATION"
             echo "          tdh-tools:/$ exit"
           else
-            echo "       => tmc cluster dataprotection backup create -c $TDH_CLUSTER_NAME -p $TMC_PROVISIONER_NAME \\"
-            echo "            -m $TMC_MANAGEMENT_CLUSTER --name \"full-backup\" --backup-location-name $TDH_TANZU_DATA_PROTECTION_BACKUP_LOCATION"
+            echo "       => tmc cluster dataprotection backup create -c $TDH_CLUSTER_NAME -p $TDH_PROVISIONER_NAME \\"
+            echo "            -m $TDH_MANAGEMENT_CLUSTER  --name \"full-backup\" --backup-location-name $TDH_TANZU_DATA_PROTECTION_BACKUP_LOCATION"
           fi
           messageLine
         fi
@@ -1425,42 +1424,55 @@ checkTMCintegration() {
 scanCluster() {
   TYPE=$1
 
-  [ "$TYPE" == "LITE" ] && NAME=lite
-  [ "$TYPE" == "CIS" ]  && NAME=cis
-  [ "$TYPE" == "CONFORMANCE" ] && NAME=conformance
+  [ "$TYPE" == "LITE" ] && NAME=lite && TITLE="Lite Inspections"
+  [ "$TYPE" == "CIS" ]  && NAME=cis && TITLE="CIS Inspections"
+  [ "$TYPE" == "CONFORMANCE" ] && NAME=conformance && TITLE="Conformance Inspections"
 
-  # --- VERIFY ACRIVE SCANNS ---
-  cnt=$(tmc cluster inspection scan list --cluster-name $TDH_CLUSTER_NAME -p $TMC_PROVISIONER_NAME -m $TMC_MANAGEMENT_CLUSTER -o json | \
-     jq -r '.scans[].status.phase' | grep -v "COMPLETE" | wc -l | sed 's/  *//g')
-  while [ $cnt -ne 0 ]; do
-    cnt=$(tmc cluster inspection scan list --cluster-name $TDH_CLUSTER_NAME -p $TMC_PROVISIONER_NAME -m $TMC_MANAGEMENT_CLUSTER -o json | \
-      jq -r '.scans[].status.phase' | grep -v "COMPLETE" | wc -l | sed 's/  *//g')
-    sleep 10
-  done
+  completed=$(tmc cluster inspection scan list --cluster-name $TDH_CLUSTER_NAME -p $TDH_PROVISIONER_NAME -m $TDH_MANAGEMENT_CLUSTER -o json | \
+             jq -r '.scans[].status.report.info.scanType' | egrep -c "^$NAME")
 
-  stt=$(tmc cluster inspection scan list --cluster-name $TDH_CLUSTER_NAME -p $TMC_PROVISIONER_NAME -m $TMC_MANAGEMENT_CLUSTER -o json | \
-    jq -r --arg key $NAME '.scans[].status.report.info | select(.scanType == $key).result' | tail -1)
-  if [ "$stt" == "" ]; then 
-    messagePrint " ▪ Scan Cluster ($TDH_CLUSTER_NAME) with $TYPE"       "scanning"
-    tmc cluster inspection scan create -c $TDH_CLUSTER_NAME -p $TMC_PROVISIONER_NAME -m $TMC_MANAGEMENT_CLUSTER --inspection-type $TYPE > /dev/null 2>&1
-    if [ $? -ne 0 ]; then 
-      messageLine
-      echo "ERROR: failed to scan cluster $TDH_CLUSTER_NAME"
-      if [ "$NATIVE" == "0" ]; then
-        echo "       => tools/tdh-tools.sh"
-        echo "          tdh-tools:/$ tmc cluster inspection scan create -c $TDH_CLUSTER_NAME -p $TMC_PROVISIONER_NAME \\"
-        echo "                         -m $TMC_MANAGEMENT_CLUSTER --inspection-type $TYPE"
-        echo "          tdh-tools:/$ exit"
-      else
-        echo "       => tmc cluster inspection scan create -c $TDH_CLUSTER_NAME -p $TMC_PROVISIONER_NAME \\"
-        echo "             -m $TMC_MANAGEMENT_CLUSTER --inspection-type $TYPE"
+  if [ $completed -eq 0 ]; then 
+    # --- VERIFY ACRIVE SCANNS ---
+    cnt=$(tmc cluster inspection scan list --cluster-name $TDH_CLUSTER_NAME -p $TDH_PROVISIONER_NAME -m $TDH_MANAGEMENT_CLUSTER  -o json | \
+       jq -r '.scans[].status.phase' | grep -v "COMPLETE" | wc -l | sed 's/  *//g')
+    while [ $cnt -ne 0 ]; do
+      cnt=$(tmc cluster inspection scan list --cluster-name $TDH_CLUSTER_NAME -p $TDH_PROVISIONER_NAME -m $TDH_MANAGEMENT_CLUSTER  -o json | \
+        jq -r '.scans[].status.phase' | grep -v "COMPLETE" | wc -l | sed 's/  *//g')
+      sleep 10
+    done
+
+    stt=$(tmc cluster inspection scan list --cluster-name $TDH_CLUSTER_NAME -p $TDH_PROVISIONER_NAME -m $TDH_MANAGEMENT_CLUSTER  -o json | \
+      jq -r --arg key $NAME '.scans[].status.report.info | select(.scanType == $key).result' | tail -1)
+    if [ "$stt" == "" ]; then 
+      messagePrint " ▪ Scan Cluster ($TDH_CLUSTER_NAME) with $TYPE"       "scanning"
+      tmc cluster inspection scan create -c $TDH_CLUSTER_NAME -p $TDH_PROVISIONER_NAME -m $TDH_MANAGEMENT_CLUSTER  --inspection-type $TYPE > /dev/null 2>&1
+      if [ $? -ne 0 ]; then 
+        messageLine
+        echo "ERROR: failed to scan cluster $TDH_CLUSTER_NAME"
+        if [ "$NATIVE" == "0" ]; then
+          echo "       => tools/tdh-tools.sh"
+          echo "          tdh-tools:/$ tmc cluster inspection scan create -c $TDH_CLUSTER_NAME -p $TDH_PROVISIONER_NAME \\"
+          echo "                         -m $TDH_MANAGEMENT_CLUSTER  --inspection-type $TYPE"
+          echo "          tdh-tools:/$ exit"
+        else
+          echo "       => tmc cluster inspection scan create -c $TDH_CLUSTER_NAME -p $TDH_PROVISIONER_NAME \\"
+          echo "             -m $TDH_MANAGEMENT_CLUSTER  --inspection-type $TYPE"
+        fi
+        messageLine
       fi
-      messageLine
+    else
+      dat=$(tmc cluster inspection scan list --cluster-name $TDH_CLUSTER_NAME -p $TDH_PROVISIONER_NAME -m $TDH_MANAGEMENT_CLUSTER  -o json | \
+        jq -r --arg key $NAME '.scans[].status.report.info | select(.scanType == $key).runDatetime' | sort -n | tail -1)
+      messagePrint " ▪ Cluster Scan ($TDH_CLUSTER_NAME) with $TYPE completed"       "$dat"
     fi
   else
-    dat=$(tmc cluster inspection scan list --cluster-name $TDH_CLUSTER_NAME -p $TMC_PROVISIONER_NAME -m $TMC_MANAGEMENT_CLUSTER -o json | \
-      jq -r --arg key $NAME '.scans[].status.report.info | select(.scanType == $key).runDatetime' | sort -n | tail -1)
-    messagePrint " ▪ Cluster Scan ($TDH_CLUSTER_NAME) with $TYPE completed"       "$dat"
+    stt=$(tmc cluster inspection scan list --cluster-name $TDH_CLUSTER_NAME -p $TDH_PROVISIONER_NAME -m $TDH_MANAGEMENT_CLUSTER  -o json | \
+        jq -r --arg key $NAME '.scans[].status.report.info | select(.scanType == $key).result' | tail -1)
+    scd=$(tmc cluster inspection scan list --cluster-name $TDH_CLUSTER_NAME -p $TDH_PROVISIONER_NAME -m $TDH_MANAGEMENT_CLUSTER  -o json | \
+        jq -r --arg key $NAME '.scans[].status.report.info | select(.scanType == $key).runDatetime' | tail -1)
+    [ "$stt" == "null" ] && stt="scanning"
+
+    messagePrint " ▪ Cluster (tdh-minikube-sadubois) Scanned with $NAME"   "$scd $stt"      
   fi
 }
 
@@ -1468,7 +1480,7 @@ checkTMCAccess() {
   missing_variables=0
 
   if [ "${TDH_DEPLOYMENT_CLOUD}" == "AWS" ]; then
-    if [ "${TDH_MANAGEMENT_CLUSTER}" == "" -o "${TMC_PROVISIONER_NAME}" == "" -o "${AWS_PRIMARY_AZ}" == "" ]; then
+    if [ "${TDH_MANAGEMENT_CLUSTER}" == "" -o "${TDH_PROVISIONER_NAME}" == "" -o "${AWS_PRIMARY_AZ}" == "" ]; then
       missing_variables=1
       echo ""
       echo "  2MISSING ENVIRONMENT-VARIABES    DESCRIPTION        "
@@ -1478,8 +1490,8 @@ checkTMCAccess() {
         echo "  TDH_MANAGEMENT_CLUSTER          (required) A Management Cluster deployed on AWS"
       fi
   
-      if [ "${TMC_PROVISIONER_NAME}" == "" ]; then
-        echo "  TMC_PROVISIONER_NAME            (required) The TMC Provisionert Name for AWS"
+      if [ "${TDH_PROVISIONER_NAME}" == "" ]; then
+        echo "  TDH_PROVISIONER_NAME            (required) The TMC Provisionert Name for AWS"
       fi
 
       if [ "${AWS_HOSTED_DNS_DOMAIN}" == "" ]; then
@@ -1493,10 +1505,10 @@ checkTMCAccess() {
         echo "                                       eu-north-1a, eu-north-1b, eu-north-1c"
       fi
     else
-      [ "$AWS_HOSTED_DNS_DOMAIN" == "" ] && AWS_HOSTED_DNS_DOMAIN=$TDH_ENVNAME
+      [ "$TDH_TKGMC_ENVNAME" == "" ] && TDH_TKGMC_ENVNAME=$TDH_ENVNAME
       messageTitle "Supporting services access (Pivotal Network, AWS Route53)"
-      messagePrint " ▪ Pivotal Network Token"           "$PCF_PIVNET_TOKEN"
-      messagePrint " ▪ AWS Route53 Hosted DNS Domain"   "$AWS_HOSTED_DNS_DOMAIN"
+      messagePrint " ▪ Pivotal Network Token"            "$PCF_PIVNET_TOKEN"
+      messagePrint " ▪ AWS Route53 Hosted DNS Domain"    "$TDH_TKGMC_ENVNAME.$AWS_HOSTED_DNS_DOMAIN"
 
       # --- CHECK IF AWS CLI IS CONFIGURED ---
       if [ ! -d ~/.aws -o -d ~/.aws/credentials ]; then
@@ -1565,12 +1577,11 @@ checkTDHAccess() {
       echo "                                   => (usually you VMware User Name without @vmware.com)"
     fi
   else
-    [ "$AWS_HOSTED_DNS_DOMAIN" == "" ] && AWS_HOSTED_DNS_DOMAIN=$TDH_ENVNAME
+    [ "$TDH_TKGMC_ENVNAME" == "" ] && TDH_TKGMC_ENVNAME=$TDH_ENVNAME
     messageTitle "Supporting services access (Pivotal Network, AWS Route53)"
     messagePrint " ▪ Pivotal Network Token"            "$PCF_PIVNET_TOKEN"
     messagePrint " ▪ Tanzu Demo Hube User"             "$TDH_USER"
-    messagePrint " ▪ AWS Route53 Hosted DNS Domain"    "$AWS_HOSTED_DNS_DOMAIN"
-    messagePrint " ▪ AWS Route53 Hosted DNS SubDomain" "$TDH_TKGMC_ENVNAME"
+    messagePrint " ▪ AWS Route53 Hosted DNS Domain"    "TDH_TKGMC_ENVNAME.$AWS_HOSTED_DNS_DOMAIN"
 
     # --- VERIFY PIVNET ACCESS ---
     pivnetAPI $PCF_PIVNET_TOKEN
@@ -3804,7 +3815,7 @@ checkTMCAccess() {
 
   if [ "${TDH_DEPLOYMENT_CLOUD}" == "vSphere" ]; then
     TMC_ACCOUNT_NAME=$TMC_ACCOUNT_NAME_AWS
-    TMC_CLUSTER_NAME="tdh-vsphere-${TDH_USER}"
+    TDH_CLUSTER_NAME="tdh-vsphere-${TDH_USER}"
 
     if [ "$TDH_SERVICE_TANZU_MISSION_CONTROL" == "true" ]; then 
      tmc clustergroup create -n tanzu-demo-hub -d "Tanzu Demo Hub by Sacha Dubois" > /dev/null 2>&1
@@ -3814,8 +3825,8 @@ checkTMCAccess() {
   if [ "${TDH_DEPLOYMENT_CLOUD}" == "AWS" ]; then
     TMC_ACCOUNT_NAME=$TMC_ACCOUNT_NAME_AWS
 
-    #if [ "${TDH_MANAGEMENT_CLUSTER}" == "" -o "${TMC_PROVISIONER_NAME}" == "" -o "${TMC_ACCOUNT_NAME_AWS}" == "" -o "${TMC_CLUSTER_GROUP}" == "" -o "${TMC_KUBERNETES_VERSION}" == "" ]; then
-    if [ "${TDH_MANAGEMENT_CLUSTER}" == "" -o "${TMC_PROVISIONER_NAME}" == "" -o "${TMC_ACCOUNT_NAME_AWS}" == "" -o "${TMC_CLUSTER_GROUP}" == "" ]; then
+    #if [ "${TDH_MANAGEMENT_CLUSTER}" == "" -o "${TDH_PROVISIONER_NAME}" == "" -o "${TMC_ACCOUNT_NAME_AWS}" == "" -o "${TDH_CLUSTER_GROUP}" == "" -o "${TMC_KUBERNETES_VERSION}" == "" ]; then
+    if [ "${TDH_MANAGEMENT_CLUSTER}" == "" -o "${TDH_PROVISIONER_NAME}" == "" -o "${TMC_ACCOUNT_NAME_AWS}" == "" -o "${TDH_CLUSTER_GROUP}" == "" ]; then
       missing_variables=1
       echo ""
       echo "  5MISSING ENVIRONMENT-VARIABES    DESCRIPTION        "
@@ -3825,8 +3836,8 @@ checkTMCAccess() {
       #  echo "  TMC_KUBERNETES_VERSION          (required) The Kubernetes version for the cluster e.g. 1.19.1-3-amazon2"
       #fi
 
-      if [ "${TMC_CLUSTER_GROUP}" == "" ]; then
-        echo "  TMC_CLUSTER_GROUP               (required) The name of the TMC Cluster Group"
+      if [ "${TDH_CLUSTER_GROUP}" == "" ]; then
+        echo "  TDH_CLUSTER_GROUP               (required) The name of the TMC Cluster Group"
       fi
 
       if [ "${TMC_ACCOUNT_NAME_AWS}" == "" ]; then
@@ -3837,25 +3848,25 @@ checkTMCAccess() {
         echo "  TDH_MANAGEMENT_CLUSTER          (required) The name of the TKGm Management Cluster"
       fi
 
-      if [ "${TMC_PROVISIONER_NAME}" == "" ]; then
-        echo "  TMC_PROVISIONER_NAME            (required) The TMC Provisioner name"
+      if [ "${TDH_PROVISIONER_NAME}" == "" ]; then
+        echo "  TDH_PROVISIONER_NAME            (required) The TMC Provisioner name"
       fi
 
       if [ "${TMC_SSH_KEY_NAME_AWS}" == "" ]; then
         echo "  TMC_SSH_KEY_NAME_AWS            (required) AWS SSH Key name for Region"
       fi
-      TMC_CLUSTER_NAME="tdh-aws-${TDH_USER}"
+      TDH_CLUSTER_NAMTDH_CLUSTER_NAME="tdh-aws-${TDH_USER}"
     else
-      TMC_CLUSTER_NAME="tdh-aws-${TDH_USER}"
+      TDH_CLUSTER_NAME="tdh-aws-${TDH_USER}"
 
       messageTitle "Tanzu Mission Control (TMC) - Config" 
       messagePrint " ▪ TMC User"                        "$TDH_USER"
-      messagePrint " ▪ TMC Cluster Group"               "$TMC_CLUSTER_GROUP"
-      messagePrint " ▪ TMC Cluster Name"                "$TMC_CLUSTER_NAME"
+      messagePrint " ▪ TMC Cluster Group"               "$TDH_CLUSTER_GROUP"
+      messagePrint " ▪ TMC Cluster Name"                "$TDH_CLUSTER_NAME"
       messagePrint " ▪ TMC Context Name"                "$TMC_CONTEXT_NAME"
       messagePrint " ▪ TMC AWS Account Name"            "$TMC_ACCOUNT_NAME_AWS"
       messagePrint " ▪ TMC Management Cluster"          "$TDH_MANAGEMENT_CLUSTER"
-      messagePrint " ▪ TMC Provisioner Name"            "$TMC_PROVISIONER_NAME"
+      messagePrint " ▪ TMC Provisioner Name"            "$TDH_PROVISIONER_NAME"
 
       # --- CHECK IF AWS CLI IS CONFIGURED ---
       if [ ! -d ~/.aws -o -d ~/.aws/credentials ]; then
@@ -3896,7 +3907,7 @@ checkTMCcontext() {
 tmcCreateCluster() {
   # steve: missing provisioner, returned sacha's cluster
   if [ "$TDH_DEPLOYMENT_CLOUD" == "AWS" ]; then 
-    stt=$(tmc cluster list -m $TDH_MANAGEMENT_CLUSTER -p $TMC_PROVISIONER_NAME --name $TMC_CLUSTER_NAME -o json 2>/dev/null | \
+    stt=$(tmc cluster list -m $TDH_MANAGEMENT_CLUSTER -p $TDH_PROVISIONER_NAME --name $TDH_CLUSTER_NAME -o json 2>/dev/null | \
           jq -r '.clusters[].status.phase' 2>/dev/null) 
 
     if [ "$stt" == "DELETING" ]; then                                         
@@ -3907,29 +3918,29 @@ tmcCreateCluster() {
       KUBERNETES_VERSION=$(for n in $TMC_K8S_VERSIONS; do echo v$n; done | egrep "$TDH_TKGWC_KUBERNETES" | tail -1 | sed 's/^v//g') 
 
       messageTitle "TMC Create Cluster"     
-      messagePrint " ▪ TMC Cluster Name"       "$TMC_CLUSTER_NAME"
-      messagePrint " ▪ TMC Cluster Group"      "$TMC_CLUSTER_GROUP"
+      messagePrint " ▪ TMC Cluster Name"       "$TDH_CLUSTER_NAME"
+      messagePrint " ▪ TMC Cluster Group"      "$TDH_CLUSTER_GROUP"
       messagePrint " ▪ TMC Template"           "$TMC_TKGWC_TEMPLATE"
-      messagePrint " ▪ Provisioner Name"       "$TMC_PROVISIONER_NAME"
+      messagePrint " ▪ Provisioner Name"       "$TDH_PROVISIONER_NAME"
       messagePrint " ▪ TKG Management Cluster" "$TDH_MANAGEMENT_CLUSTER"
       messagePrint " ▪ Account Name"           "$TMC_ACCOUNT_NAME"
       messagePrint " ▪ Kubernetes Version"     "$TDH_TKGWC_KUBERNETES"
       messagePrint " ▪ Kubernetes Image"         "$KUBERNETES_VERSION"
 
-      tmc cluster create -m $TDH_MANAGEMENT_CLUSTER -p $TMC_PROVISIONER_NAME \
+      tmc cluster create -m $TDH_MANAGEMENT_CLUSTER -p $TDH_PROVISIONER_NAME \
                          --ssh-key-name $TMC_SSH_KEY_NAME_AWS -c $TMC_ACCOUNT_NAME \
                          --worker-node-count $TDH_TKGWC_WORKERNODES \
-                         -r $AWS_REGION -n $TMC_CLUSTER_NAME \
-                         -g $TMC_CLUSTER_GROUP -t $TMC_TKGWC_TEMPLATE \
+                         -r $AWS_REGION -n $TDH_CLUSTER_NAME \
+                         -g $TDH_CLUSTER_GROUP -t $TMC_TKGWC_TEMPLATE \
                          --version $KUBERNETES_VERSION --availability-zone $AWS_PRIMARY_AZ
 
       if [ $? -ne 0 ]; then 
         echo "ERROR: failed to build TKG Cluster on AWS"
-        echo "       => tmc cluster create -m $TDH_MANAGEMENT_CLUSTER -p $TMC_PROVISIONER_NAME \\"
+        echo "       => tmc cluster create -m $TDH_MANAGEMENT_CLUSTER -p $TDH_PROVISIONER_NAME \\"
         echo "          --ssh-key-name $TMC_SSH_KEY_NAME_AWS -c $TMC_ACCOUNT_NAME \\"
         echo "          --worker-node-count $TDH_TKGWC_WORKERNODES \\"
-        echo "          -r $AWS_REGION -n $TMC_CLUSTER_NAME -q $TMC_TKGWC_WORKERNODES \\"
-        echo "          -g $TMC_CLUSTER_GROUP -t $TMC_TKGWC_TEMPLATE \\"
+        echo "          -r $AWS_REGION -n $TDH_CLUSTER_NAME -q $TMC_TKGWC_WORKERNODES \\"
+        echo "          -g $TDH_CLUSTER_GROUP -t $TMC_TKGWC_TEMPLATE \\"
         echo "          --version $KUBERNETES_VERSION --availability-zone $AWS_PRIMARY_AZ"
         exit 1
       fi
@@ -3937,33 +3948,32 @@ tmcCreateCluster() {
       messagePrint " ▪ Cluster Status"         "creating ...."
       stt=""
       while [ "$stt" != "READY" ]; do
-        stt=$(tmc cluster list -m $TDH_MANAGEMENT_CLUSTER --name $TMC_CLUSTER_NAME -o json 2>/dev/null | \
+        stt=$(tmc cluster list -m $TDH_MANAGEMENT_CLUSTER --name $TDH_CLUSTER_NAME -o json 2>/dev/null | \
               jq -r '.clusters[].status.phase' 2>/dev/null | head -1)
   
         sleep 10
       done
     fi
   else
-    TMC_PROVISIONER_NAME=tanzu-demo-hub
-    stt=$(tmc cluster list -m $TDH_MANAGEMENT_CLUSTER -p $TMC_PROVISIONER_NAME --name $TMC_CLUSTER_NAME -o json 2>/dev/null | \
+    TDH_PROVISIONER_NAME=tanzu-demo-hub
+    stt=$(tmc cluster list -m $TDH_MANAGEMENT_CLUSTER -p $TDH_PROVISIONER_NAME --name $TDH_CLUSTER_NAME -o json 2>/dev/null | \
           jq -r '.clusters[].status.phase' 2>/dev/null)
 
-echo "STT:$stt"
     if [ "$stt" == "DELETING" ]; then
        echo "ERROR: Cluster is currently on deleting, please try again later"; exit 1
     fi
 
     if [ "$stt" == "" -o "$stt" != "READY" ]; then
       KUBERNETES_VERSION=$(kubectl get tanzukubernetesreleases | egrep "^$TDH_TKGWC_KUBERNETES" | tail -1 | awk '{ print $2 }')
-      if [ "$KUBERNETES_VERSION" == "" ]; then TMC_CLUSTER_NAME
+      if [ "$KUBERNETES_VERSION" == "" ]; then TDH_CLUSTER_NAME
         echo "ERROR: No such kubernetes release ($TDH_TKGWC_KUBERNETES), try another one"
         echo "       => kubectl get tanzukubernetesreleases"
         exit 1
       fi
 
       messageTitle "TMC Create Cluster"
-      messagePrint " ▪ TKG Cluster Name"         "$TMC_CLUSTER_NAME"
-      messagePrint " ▪ TKG Cluster Group"        "$TMC_CLUSTER_GROUP"
+      messagePrint " ▪ TKG Cluster Name"         "$TDH_CLUSTER_NAME"
+      messagePrint " ▪ TKG Cluster Group"        "$TDH_CLUSTER_GROUP"
       messagePrint " ▪ TKG Template"             "tkgs"
       messagePrint " ▪ TKG Instance Type"        "$TDH_TKGWC_CONTROPLANE_TYPE"
       messagePrint " ▪ TKG Control Plane Nodes"  "$TDH_TKGWC_CONTROPLANE"
@@ -3973,7 +3983,7 @@ echo "STT:$stt"
       messagePrint " ▪ TKG Storage Class"        "$TDH_TKGWC_STORAGE_CLASS"
       messagePrint " ▪ TKG Service CIDR"         "$TDH_TKGMC_SERVICE_CIDR"
       messagePrint " ▪ TKG Cluster CIDR"         "$TDH_TKGMC_CLUSTER_CIDR"
-      messagePrint " ▪ Provisioner Name"         "$TMC_PROVISIONER_NAME"
+      messagePrint " ▪ Provisioner Name"         "$TDH_PROVISIONER_NAME"
       messagePrint " ▪ Kubernetes Version"       "$TDH_TKGWC_KUBERNETES"
       messagePrint " ▪ Kubernetes Image"         "$KUBERNETES_VERSION"
 
@@ -3981,29 +3991,29 @@ echo "STT:$stt"
       # https://docs.vmware.com/en/VMware-vSphere/7.0/vmware-vsphere-with-tanzu/GUID-292482C2-A5FA-44B5-B26E-F887A91BB19D.html
       # kubectl get tanzukubernetesreleases => v1.20.2+vmware.1-tkg.1.1d4f79a
 
-      tmc cluster create -t tkgs -m $TDH_MANAGEMENT_CLUSTER -p $TMC_PROVISIONER_NAME \
+      tmc cluster create -t tkgs -m $TDH_MANAGEMENT_CLUSTER -p $TDH_PROVISIONER_NAME \
                            --worker-instance-type $TDH_TKGWC_CONTROPLANE_TYPE \
                            --instance-type $TDH_TKGWC_CONTROPLANE_TYPE \
                            --pods-cidr-blocks "$TDH_TKGMC_SERVICE_CIDR" \
                            --service-cidr-blocks "$TDH_TKGMC_CLUSTER_CIDR" \
                            --worker-node-count $TDH_TKGWC_WORKERNODES \
                            --storage-class $TDH_TKGWC_STORAGE_CLASS \
-                           -g $TMC_CLUSTER_GROUP --version $KUBERNETES_VERSION -n $TMC_CLUSTER_NAME > /dev/null 2>&1
+                           -g $TDH_CLUSTER_GROUP --version $KUBERNETES_VERSION -n $TDH_CLUSTER_NAME > /dev/null 2>&1
       if [ $? -ne 0 ]; then
         echo "ERROR: failed to build Cluster on vSphere"
-        echo "       => tmc cluster create -t tkgs -m $TDH_MANAGEMENT_CLUSTER -p $TMC_PROVISIONER_NAME \\"
-        echo "              -c $TMC_ACCOUNT_NAME  -n $TMC_CLUSTER_NAME -q $TMC_TKGWC_WORKERNODES \\"
+        echo "       => tmc cluster create -t tkgs -m $TDH_MANAGEMENT_CLUSTER -p $TDH_PROVISIONER_NAME \\"
+        echo "              -c $TMC_ACCOUNT_NAME  -n $TDH_CLUSTER_NAME -q $TMC_TKGWC_WORKERNODES \\"
         echo "              -y $TDH_TKGWC_CONTROPLANE_TYPE -q $TDH_TKGWC_WORKERNODES \\"
         echo "              --default-storage-class $TDH_TKGWC_STORAGE_CLASS \\"
         echo "              --worker-instance-type $TDH_TKGWC_CONTROPLANE_TYPE \\"
-        echo "              -g $TMC_CLUSTER_GROUP --version $KUBERNETES_VERSION"
+        echo "              -g $TDH_CLUSTER_GROUP --version $KUBERNETES_VERSION"
         exit 1
       fi
   
       messagePrint " ▪ Cluster Status"         "creating ...."
       stt=""
       while [ "$stt" != "READY" ]; do
-        stt=$(tmc cluster list -m $TDH_MANAGEMENT_CLUSTER --name $TMC_CLUSTER_NAME -o json 2>/dev/null | \
+        stt=$(tmc cluster list -m $TDH_MANAGEMENT_CLUSTER --name $TDH_CLUSTER_NAME -o json 2>/dev/null | \
               jq -r '.clusters[].status.phase' 2>/dev/null | head -1)
   
         sleep 10
@@ -4013,14 +4023,14 @@ echo "STT:$stt"
   fi
 
   messageTitle "TMC Verify Cluster"     
-  messagePrint " ▪ Cluster Name"           "$TMC_CLUSTER_NAME"
+  messagePrint " ▪ Cluster Name"           "$TDH_CLUSTER_NAME"
   messagePrint " ▪ TKG Management Cluster" "$TDH_MANAGEMENT_CLUSTER"
   messagePrint " ▪ Cluster Status"         "$stt"
-  messagePrint " ▪ Provisioner Name"       "$TMC_PROVISIONER_NAME"
+  messagePrint " ▪ Provisioner Name"       "$TDH_PROVISIONER_NAME"
   messagePrint " ▪ Account Name"           "$TMC_ACCOUNT_NAME"
   echo "----------------------------------------------------------------------------------------"
   echo " TO-DELETE-THE-CLUSTER"
-  echo " => tmc cluster delete -m $TDH_MANAGEMENT_CLUSTER -p $TMC_PROVISIONER_NAME $TMC_CLUSTER_NAME"
+  echo " => tmc cluster delete -m $TDH_MANAGEMENT_CLUSTER -p $TDH_PROVISIONER_NAME $TDH_CLUSTER_NAME"
   echo "----------------------------------------------------------------------------------------"
 }
 
@@ -4030,50 +4040,50 @@ alignStr() {
 
 getTDHClusterCredentials() {
   messageTitle "TMC Get TKG Cluster Credentials"
-  messagePrint " ▪ Cluster Name"           "$TMC_CLUSTER_NAME"
-  messagePrint " ▪ Kubeconfig File"        "/tmp/${TMC_CLUSTER_NAME}.kubeconfig"
-  messagePrint " ▪ Kubernetes Context"     "${TMC_CLUSTER_NAME}-admin@$TMC_CLUSTER_NAME"
+  messagePrint " ▪ Cluster Name"           "$TDH_CLUSTER_NAME"
+  messagePrint " ▪ Kubeconfig File"        "/tmp/${TDH_CLUSTER_NAME}.kubeconfig"
+  messagePrint " ▪ Kubernetes Context"     "${TDH_CLUSTER_NAME}-admin@$TDH_CLUSTER_NAME"
 
   ret=1; cnt=0
   while [ $ret -ne 0 -a $cnt -lt 10 ]; do
-    #tmc cluster auth kubeconfig get $TMC_CLUSTER_NAME -p $TMC_PROVISIONER_NAME -m $TDH_MANAGEMENT_CLUSTER > /dev/null 2>&1; ret=$?
-    tmc cluster auth admin-kubeconfig get $TMC_CLUSTER_NAME -p $TMC_PROVISIONER_NAME -m $TDH_MANAGEMENT_CLUSTER > /dev/null 2>&1; ret=$?
+    #tmc cluster auth kubeconfig get $TDH_CLUSTER_NAME -p $TDH_PROVISIONER_NAME -m $TDH_MANAGEMENT_CLUSTER > /dev/null 2>&1; ret=$?
+    tmc cluster auth admin-kubeconfig get $TDH_CLUSTER_NAME -p $TDH_PROVISIONER_NAME -m $TDH_MANAGEMENT_CLUSTER > /dev/null 2>&1; ret=$?
     sleep 60
     let cnt=cnt+1
   done
 
   if [ $ret -ne 0 ]; then 
     echo "ERROR: Failled to retrieve cluster credentials, aborting"
-    echo "       => tmc cluster auth admin-kubeconfig get $TMC_CLUSTER_NAME -p $TMC_PROVISIONER_NAME -m $TDH_MANAGEMENT_CLUSTER"
+    echo "       => tmc cluster auth admin-kubeconfig get $TDH_CLUSTER_NAME -p $TDH_PROVISIONER_NAME -m $TDH_MANAGEMENT_CLUSTER"
     exit 1
   fi
 
-  rm -f /tmp/${TMC_CLUSTER_NAME}.kubeconfig; touch /tmp/${TMC_CLUSTER_NAME}.kubeconfig
+  rm -f /tmp/${TDH_CLUSTER_NAME}.kubeconfig; touch /tmp/${TDH_CLUSTER_NAME}.kubeconfig
   ret=1; cnt=0
-  while [ ! -s /tmp/${TMC_CLUSTER_NAME}.kubeconfig -a $ret -ne 0 -a $cnt -lt 5 ]; do
-    tmc cluster auth admin-kubeconfig get $TMC_CLUSTER_NAME -p $TMC_PROVISIONER_NAME \
-        -m $TDH_MANAGEMENT_CLUSTER > /tmp/${TMC_CLUSTER_NAME}.kubeconfig 2>/dev/null; ret=$?
+  while [ ! -s /tmp/${TDH_CLUSTER_NAME}.kubeconfig -a $ret -ne 0 -a $cnt -lt 5 ]; do
+    tmc cluster auth admin-kubeconfig get $TDH_CLUSTER_NAME -p $TDH_PROVISIONER_NAME \
+        -m $TDH_MANAGEMENT_CLUSTER > /tmp/${TDH_CLUSTER_NAME}.kubeconfig 2>/dev/null; ret=$?
     sleep 60
     let cnt=cnt+1
   done
 
   if [ $ret -ne 0 ]; then
     echo "ERROR: Failled to retrieve cluster credentials, aborting"
-    echo "       => tmc cluster auth admin-kubeconfig get $TMC_CLUSTER_NAME -p $TMC_PROVISIONER_NAME -m $TDH_MANAGEMENT_CLUSTER"
+    echo "       => tmc cluster auth admin-kubeconfig get $TDH_CLUSTER_NAME -p $TDH_PROVISIONER_NAME -m $TDH_MANAGEMENT_CLUSTER"
     exit 1
   fi
  
-  chmod 600 /tmp/${TMC_CLUSTER_NAME}.kubeconfig
-  export KUBECONFIG=$HOME/.kube/config:/tmp/${TMC_CLUSTER_NAME}.kubeconfig
+  chmod 600 /tmp/${TDH_CLUSTER_NAME}.kubeconfig
+  export KUBECONFIG=$HOME/.kube/config:/tmp/${TDH_CLUSTER_NAME}.kubeconfig
   kubectl config view --flatten > ~/.kube/config.new
   mv ~/.kube/config ~/.kube/config.last
   mv ~/.kube/config.new ~/.kube/config
   chmod 600 ~/.kube/config
   unset KUBECONFIG
 
-  kubectl config use-context ${TMC_CLUSTER_NAME}-admin@$TMC_CLUSTER_NAME
+  kubectl config use-context ${TDH_CLUSTER_NAME}-admin@$TDH_CLUSTER_NAME
   #echo "----------------------------------------------------------------------------------------"
-  #echo "export KUBECONFIG=/tmp/${TMC_CLUSTER_NAME}.kubeconfig"
+  #echo "export KUBECONFIG=/tmp/${TDH_CLUSTER_NAME}.kubeconfig"
   #echo "kubectl config get-contexts"
   #echo "----------------------------------------------------------------------------------------"
 }
@@ -4166,7 +4176,93 @@ installSpringCloudGateway() {
       messageTitle "Verify Spring Cloud Gateway"
     fi
   fi
-} 
+}
+
+installJenkins() {
+  if [ "$TDH_SERVICE_JENKINS" != "true" ]; then
+    uodateConfigMap tanzu-demo-hub TDH_SERVICE_JENKINS        "false"
+    helm uninstall jenkins > /dev/null 2>&1
+    return
+  fi
+
+  TDH_DOMAIN=$(getConfigMap tanzu-demo-hub TDH_DOMAIN)
+  TDH_ENVNAME=$(getConfigMap tanzu-demo-hub TDH_ENVNAME)
+  DOMAIN=$(getConfigMap tanzu-demo-hub TDH_INGRESS_CONTOUR_LB_DOMAIN)
+  NAMESPACE=jenkins
+
+  messageTitle "Jenkins Automation Server"
+  cnt=$(helm list -q -n $NAMESPACE | egrep -c "^kubeapps")
+  if [ $cnt -eq 0 ]; then
+    messagePrint " ▪ Add the Bintnami Repository"   "https://charts.bitnami.com/bitnami"
+    helm repo add bitnami https://charts.bitnami.com/bitnami > /dev/null 2>&1
+    helm repo update > /dev/null 2>&1
+
+    # --- CREATE NAMESPACE ---
+    messagePrint " ▪ Create Namespace" "kubeapps"
+    kubectl create namespace $NAMESPACE > /dev/null 2>&1
+
+    # --- COPY SECRET TO NAMESPACE ---
+    messagePrint " ▪ Copy TLS Secret" "tanzu-demo-hub-tls"
+    kubectl get secret tanzu-demo-hub-tls --namespace=default  -oyaml | grep -v '^\s*namespace:\s' | \
+    kubectl apply --namespace=$NAMESPACE -f - > /dev/null 2>&1
+
+    HELM_VALUES=/tmp/helm_jenkins_values.yaml
+
+    echo "global:"                                                                                                              >  $HELM_VALUES
+    echo "  imageRegistry: docker.io"                                                                                           >> $HELM_VALUES
+    echo "  imagePullSecrets:"                                                                                                  >> $HELM_VALUES
+    echo "    - tdh-docker-repo"                                                                                                >> $HELM_VALUES
+    echo ""                                                                                                                     >> $HELM_VALUES
+    echo "service:"                                                                                                             >> $HELM_VALUES
+    echo "  type: ClusterIP"                                                                                                    >> $HELM_VALUES
+    echo ""                                                                                                                     >> $HELM_VALUES
+    echo "ingress:"                                                                                                             >> $HELM_VALUES
+    echo "  enabled: true"                                                                                                      >> $HELM_VALUES
+    echo "  certManager: false"                                                                                                 >> $HELM_VALUES
+    echo "  annotations:"                                                                                                       >> $HELM_VALUES
+    echo "    kubernetes.io/ingress.class: contour"                                                                             >> $HELM_VALUES
+    echo "    ingress.kubernetes.io/force-ssl-redirect: \"true\""                                                               >> $HELM_VALUES
+    echo "  path: /"                                                                                                            >> $HELM_VALUES
+    echo "  hostname: jenkins.$DOMAIN"                                                                                          >> $HELM_VALUES
+    echo "  tls: true"                                                                                                          >> $HELM_VALUES
+    echo "  extraTls:"                                                                                                          >> $HELM_VALUES
+    echo "  - hosts:"                                                                                                           >> $HELM_VALUES
+    echo "      - jenkins.$DOMAIN"                                                                                              >> $HELM_VALUES
+    echo "    secretName: tanzu-demo-hub-tls"                                                                                   >> $HELM_VALUES
+
+    messagePrint " ▪ Deploy the Kubeapps Helm Chart" "kubeapps"
+    #helm install jenkins --namespace $NAMESPACE bitnami/jenkins -f $HELM_VALUES > /dev/null 2>&1
+    helm install jenkins --namespace $NAMESPACE bitnami/jenkins -f $HELM_VALUES 
+    if [ $? -ne 0 ]; then
+      echo "ERROR: Failed to deploy Jenkins Helm Chart"
+      echo "       => helm install jenkins --namespace $NAMESPACE bitnami/jenkins -f $HELM_VALUES"
+      exit 1
+    fi
+
+    messagePrint " ▪ Kubeapps Dashboard deployed"        "https://jenkins.$DOMAIN"
+  fi
+
+  ver=$(helm ls -n $NAMESPACE -o json | jq -r --arg chart "jenkins" '.[] | select(.name == $chart).app_version')
+  crt=$(helm ls -n $NAMESPACE -o json | jq -r --arg chart "jenkins" '.[] | select(.name == $chart).chart')
+  stt=$(helm ls -n $NAMESPACE -o json | jq -r --arg chart "jenkins" '.[] | select(.name == $chart).status')
+  dat=$(helm ls -n $NAMESPACE -o json | jq -r --arg chart "jenkins" '.[] | select(.name == $chart).updated')
+
+  messagePrint " ▪ Verify Kubeapps"                "$crt"
+  messagePrint "   Helm Chart Name"                "minio"
+  messagePrint "   Helm Chart Version"             "$ver"
+  messagePrint "   Helm Chart Status"              "$stt"
+  messagePrint "   Helm Chart Installed/Updated"   "$dat"
+  messagePrint "   Kubeapps Internal Name"         "kubeapps.kubeapps.svc.cluster.local"
+  messagePrint "   Kubeapps Management Portal"     "https://kubeapps.$DOMAIN"
+
+  messageLine
+  echo "KUBEAPPS TOKEN: KUBEAPPS_TOKEN"
+  messageLine
+
+  # --- STORE SETTINGS IN CONFIGMAP ---
+  uodateConfigMap tanzu-demo-hub TDH_SERVICE_JENKINS             "true"
+
+}
 
 installKubeapps() {
   if [ "$TDH_SERVICE_KUBEAPPS" != "true" ]; then
@@ -4181,7 +4277,7 @@ installKubeapps() {
   NAMESPACE=kubeapps
 
   messageTitle "Application Dashboard for Kubernetes (Kupeapps)"
-  cnt=$(helm list -q | egrep -c "^kubeapps")
+  cnt=$(helm list -q -n $NAMESPACE | egrep -c "^kubeapps")
   if [ $cnt -eq 0 ]; then
     messagePrint " ▪ Add the Bintnami Repository"   "https://charts.bitnami.com/bitnami"
     helm repo add bitnami https://charts.bitnami.com/bitnami > /dev/null 2>&1
@@ -4248,12 +4344,31 @@ installKubeapps() {
     kubectl create clusterrolebinding kubeapps-operator --clusterrole=cluster-admin --serviceaccount=default:kubeapps-operator
 
     messagePrint " ▪ Kubeapps Dashboard deployed"        "https://kubeapps.$DOMAIN"
-
-    messageLine
-    echo "Kubeapps Token: "
-    kubectl get secret $(kubectl get serviceaccount kubeapps-operator -o jsonpath='{range .secrets[*]}{.name}{"\n"}{end}' | grep kubeapps-operator-token) -o jsonpath='{.data.token}' -o go-template='{{.data.token | base64decode}}' && echo
-    messageLine
   fi
+
+  ver=$(helm ls -n $NAMESPACE -o json | jq -r --arg chart "kubeapps" '.[] | select(.name == $chart).app_version')
+  crt=$(helm ls -n $NAMESPACE -o json | jq -r --arg chart "kubeapps" '.[] | select(.name == $chart).chart')
+  stt=$(helm ls -n $NAMESPACE -o json | jq -r --arg chart "kubeapps" '.[] | select(.name == $chart).status')
+  dat=$(helm ls -n $NAMESPACE -o json | jq -r --arg chart "kubeapps" '.[] | select(.name == $chart).updated')
+
+  secret_name=$(kubectl get serviceaccount kubeapps-operator -o jsonpath='{range .secrets[*]}{.name}{"\n"}{end}' | grep kubeapps-operator-token)
+  KUBEAPPS_TOKEN=$(kubectl get secret $secret_name -o jsonpath='{.data.token}' -o go-template='{{.data.token | base64decode}}')
+
+  messagePrint " ▪ Verify Kubeapps"                "$crt"
+  messagePrint "   Helm Chart Name"                "minio"
+  messagePrint "   Helm Chart Version"             "$ver"
+  messagePrint "   Helm Chart Status"              "$stt"
+  messagePrint "   Helm Chart Installed/Updated"   "$dat"
+  messagePrint "   Kubeapps Internal Name"         "kubeapps.kubeapps.svc.cluster.local"
+  messagePrint "   Kubeapps Management Portal"     "https://kubeapps.$DOMAIN"
+
+  messageLine
+  echo "KUBEAPP TOKEN: $KUBEAPPS_TOKEN"
+  messageLine
+
+  # --- STORE SETTINGS IN CONFIGMAP ---
+  uodateConfigMap tanzu-demo-hub TDH_SERVICE_KUBEAPPS             "true"
+  uodateConfigMap tanzu-demo-hub TDH_SERVICE_KUNEAPPS_TOKEN       "$KUBEAPPS_TOKEN"
 }
 
 installMinio() {
@@ -4504,6 +4619,7 @@ installTanzuDataPostgres() {
 } 
 
 installBuildService() {
+  tbs_cleanup=0
   if [ "$TDH_SERVICE_BUILD_SERVICE" != "true" ]; then
     uodateConfigMap tanzu-demo-hub TDH_SERVICE_BUILD_SERVICE        "false"
     return
@@ -4518,16 +4634,41 @@ installBuildService() {
   # --- GET BUILD_SERVICE INFORMATION ---
   TDH_SERVICE_BUILD_SERVICE_INSTALLED=$(getConfigMap tanzu-demo-hub TDH_SERVICE_BUILD_SERVICE_INSTALLED)
   TDH_SERVICE_BUILD_SERVICE_VERIFIED=$(getConfigMap tanzu-demo-hub TDH_SERVICE_BUILD_SERVICE_VERIFIED)
+  TDH_SERVICE_REGISTRY_DOCKER_LAST=$(getConfigMap tanzu-demo-hub TDH_SERVICE_REGISTRY_DOCKER)
+  TDH_SERVICE_REGISTRY_HARBOR_LAST=$(getConfigMap tanzu-demo-hub TDH_SERVICE_REGISTRY_HARBOR)
 
   # --- VERIFY IF BUILDSERVICE IS INSTALLED ---
   messageTitle "Tanzu Build Service"
+
+  if [ "$TDH_SERVICE_REGISTRY_HARBOR_LAST" == "true" -a "$TDH_SERVICE_REGISTRY_DOCKER" == "true" -o \
+       "$TDH_SERVICE_REGISTRY_DOCKER_LAST" == "true" -a "$TDH_SERVICE_REGISTRY_HARBOR" == "true" ]; then 
+
+    if [ "$TDH_SERVICE_REGISTRY_HARBOR_LAST" == "true" -a "$TDH_SERVICE_REGISTRY_DOCKER" == "true" ]; then 
+      messageLine
+      echo "INFO: Tanzu Build Service (TBS) has been deployed on the local Harbor Registry in the previous deployment."
+      echo "      but for this deployment Docker Hub has been configured. Therefore the build service will be reinstalled"
+      echo "      => TDH_SERVICE_REGISTRY_DOCKER=$TDH_SERVICE_REGISTRY_DOCKER"
+      messageLine
+    else
+      messageLine
+      echo "INFO: Tanzu Build Service (TBS) has been deployed on the DockerHub Registry in the previous deployment."
+      echo "      but for this deployment local Harbor Hub has been configured. Therefore the build service will be reinstalled"
+      echo "      => TDH_SERVICE_REGISTRY_HARBOR=$TDH_SERVICE_REGISTRY_HARBOR"
+      messageLine
+    fi
+    tbs_cleanup=1
+  fi
 
   # --- VERIFY INSTALLATION ---
   kp clusterbuilder list > /dev/null 2>&1; ret=$?
   cnt=$(kp clusterbuilder list 2>/dev/null | grep -c false) 
   if [ $ret -ne 0 -o $cnt -ne 0 ]; then 
     messagePrint " ▪ Clusterbuilders not working" "cleaning up and reinstall build-service"
+    tbs_cleanup=1
+  fi
 
+  # --- CLEANING UP BUILDSERVICE ---
+  if [ $tbs_cleanup -eq 1 ]; then 
     # --- NOT WORKING, SO CLEAN IT UP FIRST ---
     for n in $(kp clusterbuilder list 2>/dev/null | grep -v NAME | awk '{ print $1 }'); do
       #echo "kp clusterbuilder delete $n"
@@ -5424,14 +5565,14 @@ InstallHarborRegistry() {
   HARBOR_HOSTNAME="harbor.apps-contour.$TDH_ENVNAME.$AWS_HOSTED_DNS_DOMAIN"
   NOTARY_HOSTNAME="notary.apps-contour.$TDH_ENVNAME.$AWS_HOSTED_DNS_DOMAIN"
 
-  messageTitle "Harbor Reistry"
+  messageTitle "Harbor Registry"
   kubectl get ns $NAMESPACE > /dev/null 2>&1
   if [ $? -ne 0 ]; then
 
     # --- VERIFY SERVICE CONFIGURATION ---
     checkKubernetesServices harbor
 
-    messagePrint " ▪ Install Harbor Reistry" "bitnami/harbor"
+    messagePrint " ▪ Install Harbor Registry" "bitnami/harbor"
     messagePrint "   Harbor Registry Server"               "harbor.apps-contour.$TDH_ENVNAME.$AWS_HOSTED_DNS_DOMAIN"
     messagePrint "   Harbor Notary Server "                "notary.apps-contour.$TDH_ENVNAME.$AWS_HOSTED_DNS_DOMAIN"
     messagePrint "   Harbor Admin Password"                $(maskPassword "$TDH_HARBOR_ADMIN_PASSWORD")
@@ -5542,7 +5683,7 @@ InstallHarborRegistry() {
     done
 
     # --- WAIT FOR HARBOR TO COME ONLINE ---
-    messagePrint " ▪ Verify Harbor Reistry Access" "$HARBOR_HOSTNAME"
+    messagePrint " ▪ Verify Harbor Registry Access" "$HARBOR_HOSTNAME"
     ret=1; cnt=0
     while [ $ret -ne 0 -a $cnt -le 9 ]; do
       docker login $HARBOR_HOSTNAME -u admin -p $TDH_HARBOR_ADMIN_PASSWORD > /dev/null 2>&1; ret=$?
@@ -5562,12 +5703,12 @@ InstallHarborRegistry() {
   stt=$(helm -n $NAMESPACE ls -o json | jq -r '.[].status')
   dat=$(helm -n $NAMESPACE ls -o json | jq -r '.[].updated')
 
-  messagePrint " ▪ Verify Harbor Reistry"             "bitnami/harbor"
-  messagePrint "   Harbor Reistry Namespace:"         "$NAMESPACE"
-  messagePrint "   Harbor Reistry Helm Chart:"        "$crt"
-  messagePrint "   Harbor Reistry Version:"           "$ver"
-  messagePrint "   Harbor Reistry Status:"            "$stt"
-  messagePrint "   Harbor Reistry Installed/Updated:" "$dat"
+  messagePrint " ▪ Verify Harbor Registry"             "bitnami/harbor"
+  messagePrint "   Harbor Registry Namespace:"         "$NAMESPACE"
+  messagePrint "   Harbor Registry Helm Chart:"        "$crt"
+  messagePrint "   Harbor Registry Version:"           "$ver"
+  messagePrint "   Harbor Registry Status:"            "$stt"
+  messagePrint "   Harbor Registry Installed/Updated:" "$dat"
 
   # --- STORE SETTINGS IN CONFIGMAP ---
   uodateConfigMap tanzu-demo-hub TDH_HARBOR_REGISTRY_ENABLED        "true"
@@ -5584,7 +5725,7 @@ tdh_verifyTKGcluster() {
   messageTitle "TKG Cluster Information"
   messagePrint " ▪ Cluster Name"           "$TDH_CLUSTER_NAME"
   messagePrint " ▪ TKG Management Cluster" "$TDH_MANAGEMENT_CLUSTER"
-  messagePrint " ▪ Provisioner Name"       "$TDH_PROVISONER_NAME"
+  messagePrint " ▪ Provisioner Name"       "$TDH_PROVISIONER_NAME"
   messagePrint " ▪ Account Name"           "$TDH_MISSION_CONTROL_ACCOUNT_NAME"
   echo 
 
@@ -5599,8 +5740,8 @@ tdh_verifyTKGcluster() {
 
   if [ "${cluster_info}" == "y" -o "${cluster_info}" == "Y" ]; then
     prtHead "Show TDK Cluster infos ($TDH_CLUSTER_NAME)"
-    execCmd "tmc cluster list $TDH_CLUSTER_NAME -m $TDH_MANAGEMENT_CLUSTER -p $TDH_PROVISONER_NAME"
-    execCmd "tmc cluster get $TDH_CLUSTER_NAME -m $TDH_MANAGEMENT_CLUSTER -p $TDH_PROVISONER_NAME"
+    execCmd "tmc cluster list $TDH_CLUSTER_NAME -m $TDH_MANAGEMENT_CLUSTER -p $TDH_PROVISIONER_NAME"
+    execCmd "tmc cluster get $TDH_CLUSTER_NAME -m $TDH_MANAGEMENT_CLUSTER -p $TDH_PROVISIONER_NAME"
   fi
 }
 

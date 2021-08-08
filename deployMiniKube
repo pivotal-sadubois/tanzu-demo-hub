@@ -206,13 +206,22 @@ if [ $? -ne 0 ]; then
   exit 1
 fi
 
+# --- HARDCODED FOR MINIKUBE CLUSTER ---
+TDH_MANAGEMENT_CLUSTER=attached
+TDH_PROVISIONER_NAME=attached
+TDH_CLUSTER_GROUP=tanzu-demo-hub
+
 uodateConfigMap tanzu-demo-hub TDH_CLUSTER_NAME         $TDH_MINIKUBE_PROFILE
+uodateConfigMap tanzu-demo-hub TDH_CLUSTER_GROUP        $TDH_CLUSTER_GROUP
 uodateConfigMap tanzu-demo-hub TDH_MANAGEMENT_CLUSTER   attached
-uodateConfigMap tanzu-demo-hub TDH_PROVISONER_NAME      attached
+uodateConfigMap tanzu-demo-hub TDH_PROVISIONER_NAME     attached
 uodateConfigMap tanzu-demo-hub TDH_DOMAIN               $AWS_HOSTED_DNS_DOMAIN 
 uodateConfigMap tanzu-demo-hub TDH_ENVNAME              $TDH_ENVNAME
 uodateConfigMap tanzu-demo-hub TDH_DEPLOYMENT_TYPE      "minikube" 
 uodateConfigMap tanzu-demo-hub TDH_MANAGED_BY_TMC       "false" 
+
+# --- CLEANUP KUNECONFIG ---
+cleanKubeconfig
 
 # --- INSTALL K8 SERVICES ---
 InstallCertManager
@@ -227,11 +236,48 @@ installMinio
 installKubeapps
 
 if [ "$TDH_TANZU_MISSION_CONTROL_REGISTRATION" == "true" ]; then 
-  cnt=$(tmc cluster list --name $TDH_MINIKUBE_PROFILE 2>/dev/null | grep -c $TDH_MINIKUBE_PROFILE)
-  if [ $cnt -gt 0 ]; then
-    stt=$(tmc cluster list --name $TDH_MINIKUBE_PROFILE -o json | jq -r '.clusters[].status.conditions."Agent-READY".status')
+  cnt=$(tmc cluster list --name $TDH_MINIKUBE_PROFILE -p $TDH_PROVISIONER_NAME -m $TDH_MANAGEMENT_CLUSTER 2> /dev/null | egrep -c " $TDH_MINIKUBE_PROFILE ")
+  if [ $cnt -eq 0 ]; then
+    messageTitle "Attach Minikube Cluster to TMC"
+    messagePrint " ▪ TMC Cluster Name"                "$TDH_MINIKUBE_PROFILE"
+    messagePrint " ▪ TMC Cluster Group"               "$TDH_CLUSTER_GROUP"
+    messagePrint " ▪ TMC Managementcluster"           "$TDH_MANAGEMENT_CLUSTER"
+    messagePrint " ▪ TMC Provisioner Name"            "$TDH_PROVISIONER_NAME"
+
+    if [ $DEBUG -eq 0 ]; then 
+      (cd /tmp; tmc cluster attach -n $TDH_MINIKUBE_PROFILE -g $TDH_CLUSTER_GROUP -p TDH_PROVISIONER_NAME > /dev/null 2>&1)
+      kubectl apply -f /tmp/k8s-attach-manifest.yaml > /dev/null 2>&1
+    else
+      echo "  -------------------------------------------------------------------------------------------------------------------------------------------------------"
+      (cd /tmp; tmc cluster attach -n $TDH_MINIKUBE_PROFILE -g $TDH_CLUSTER_GROUP -p TDH_PROVISIONER_NAME)
+      kubectl apply -f /tmp/k8s-attach-manifest.yaml
+      echo "  -------------------------------------------------------------------------------------------------------------------------------------------------------"
+    fi
+
+    stt="null"; cnt=0
+    while [ "$stt" != "TRUE" -a $cnt -lt 5 ]; do
+      stt=$(tmc cluster list --name $TDH_MINIKUBE_PROFILE  -p $TDH_PROVISIONER_NAME -m $TDH_MANAGEMENT_CLUSTER -o json | \
+            jq -r '.clusters[].status.conditions."Agent-READY".status')
+      [ "$stt" == "TRUE" ] && break
+      sleep 60
+      let cnt=cnt+1
+    done
+
+    if [ "$stt" != "TRUE" ]; then 
+      echo "ERROR: TMC Integration failed, status is '$stt', please check manually"
+      echo "       => tmc cluster list --name $TDH_MINIKUBE_PROFILE  -p $TDH_PROVISIONER_NAME -m $TDH_MANAGEMENT_CLUSTER -o json"
+    fi
+  else
+    messageTitle "Verify TMC Integration"
+    messagePrint " ▪ TMC Cluster Name"                "$TDH_MINIKUBE_PROFILE"
+    messagePrint " ▪ TMC Cluster Group"               "$TDH_CLUSTER_GROUP"
+    messagePrint " ▪ TMC Managementcluster"           "$TDH_MANAGEMENT_CLUSTER"
+    messagePrint " ▪ TMC Provisioner Name"            "$TDH_PROVISIONER_NAME"
+
+    stt=$(tmc cluster list --name $TDH_MINIKUBE_PROFILE  -p $TDH_PROVISIONER_NAME -m $TDH_MANAGEMENT_CLUSTER -o json | \
+          jq -r '.clusters[].status.conditions."Agent-READY".status')
     if [ "$stt" != "TRUE" ]; then
-      tmc cluster reattach --name $TDH_MINIKUBE_PROFILE -p attached -m attached > /dev/null 2>&1; ret=$?
+      tmc cluster reattach --name $TDH_MINIKUBE_PROFILE -p $TDH_PROVISIONER_NAME -m $TDH_MANAGEMENT_CLUSTER -g $TDH_CLUSTER_GROUP > /dev/null 2>&1; ret=$?
       if [ $ret -ne 0 ]; then
         MGMT=$(tmc cluster list --name $TDH_MINIKUBE_PROFILE | grep $TDH_MINIKUBE_PROFILE | awk '{ print $2 }')
         PROV=$(tmc cluster list --name $TDH_MINIKUBE_PROFILE | grep $TDH_MINIKUBE_PROFILE | awk '{ print $3 }')
@@ -239,7 +285,7 @@ if [ "$TDH_TANZU_MISSION_CONTROL_REGISTRATION" == "true" ]; then
         tmc cluster delete $TDH_MINIKUBE_PROFILE -p $PROV -m $MGMT -f > /dev/null 2>&1; ret=$?
         if [ $ret -ne 0 ]; then
           echo "ERROR: TMC failed to attach cluster"
-          echo "       => tmc cluster delete $TDH_MINIKUBE_PROFILE -p tanzu-demo-hub -m $TDH_TKGMC_NAME"
+          echo "       => tmc cluster delete $TDH_MINIKUBE_PROFILE -p $TDH_PROVISIONER_NAME -m $TDH_TKGMC_NAME -g $TDH_CLUSTER_GROUP"
           exit 1
         fi
 
@@ -254,23 +300,11 @@ if [ "$TDH_TANZU_MISSION_CONTROL_REGISTRATION" == "true" ]; then
       fi  
     fi
   fi
-
-  if [ $cnt -eq 0 ]; then
-    tmc cluster attach --name $TDH_MINIKUBE_PROFILE --kubeconfig /Users/sdu/.kube/config -p attached -m attached > /dev/null 2>&1; ret=$?
-    if [ $ret -ne 0 ]; then
-      echo "ERROR: TMC failed to attach cluster"
-      echo "       => tmc cluster reattach --name $TDH_MINIKUBE_PROFILE --kubeconfig /Users/sdu/.kube/config -p attached -m attached "
-      exit
-    fi
-  fi
 fi
 
-# --- NO CONNECTION FROM A PEZ-INTERNAL CLUSTER ---
-if [ "${TDH_TKGMC_INFRASTRUCTURE}" != "vSphere1" ]; then
-  checkTMCintegration      TO    ## Tanzu Observability (Wavefront)
-  checkTMCintegration      TDP   ## Tanzu Data Protection
-  checkTMCintegration      TCI   ## Tanzu Cluster Inspection
-fi
+checkTMCintegration      TO    ## Tanzu Observability (Wavefront)
+checkTMCintegration      TDP   ## Tanzu Data Protection
+checkTMCintegration      TCI   ## Tanzu Cluster Inspection
 
 echo ""
 echo "-----------------------------------------------------------------------------------------------------------"
