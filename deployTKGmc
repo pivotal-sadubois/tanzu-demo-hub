@@ -407,8 +407,9 @@ createJumpHost() {
     TERRAFORM_PATH=$HOME/.tanzu-demo-hub/terraform/aws
     if [ ! -d $TERRAFORM_PATH ]; then
       mkdir -p $TERRAFORM_PATH
-      cp -r ${TDHPATH}/terraform/aws $HOME/.tanzu-demo-hub/terraform
     fi
+
+    cp -r ${TDHPATH}/terraform/aws $HOME/.tanzu-demo-hub/terraform
 
     TDH_TERRAFORM_TFVARS=${TERRAFORM_PATH}/terraform_${TDH_TKGMC_ENVNAME}.tfvars
     TDH_TERRAFORM_TFSTATE=${TERRAFORM_PATH}/terraform_${TDH_TKGMC_ENVNAME}.tfstate

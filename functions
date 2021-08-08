@@ -4191,7 +4191,7 @@ installJenkins() {
   NAMESPACE=jenkins
 
   messageTitle "Jenkins Automation Server"
-  cnt=$(helm list -q -n $NAMESPACE | egrep -c "^kubeapps")
+  cnt=$(helm list -q -n $NAMESPACE | egrep -c "^jenkins")
   if [ $cnt -eq 0 ]; then
     messagePrint " ▪ Add the Bintnami Repository"   "https://charts.bitnami.com/bitnami"
     helm repo add bitnami https://charts.bitnami.com/bitnami > /dev/null 2>&1
@@ -4240,6 +4240,19 @@ installJenkins() {
     fi
 
     messagePrint " ▪ Kubeapps Dashboard deployed"        "https://jenkins.$DOMAIN"
+
+    messagePrint " ▪ Create Cluster Role Binding"        "default:kubeapps-operator"
+    kubectl delete clusterrolebinding jenkins-tbs > /dev/null 2>&1
+    kubectl create clusterrolebinding jenkins-tbs --clusterrole=build-service-user-role --serviceaccount=default:jenkins-tbs > /dev/null 2>&1
+
+    messagePrint " ▪ Create Serviceaccount"              "kubeapps-operator"
+    kubectl delete serviceAccounts jenkins-tbs > /dev/null 2>&1
+    kubectl create serviceAccounts jenkins-tbs > /dev/null 2>&1
+
+#kubectl describe serviceAccounts jenkins-tbs
+#kubectl describe secrets <Mountable Secrete name>
+#kubectl config view --flatten --minify > cluster-cert.txt
+
   fi
 
   ver=$(helm ls -n $NAMESPACE -o json | jq -r --arg chart "jenkins" '.[] | select(.name == $chart).app_version')
@@ -4254,10 +4267,6 @@ installJenkins() {
   messagePrint "   Helm Chart Installed/Updated"   "$dat"
   messagePrint "   Kubeapps Internal Name"         "kubeapps.kubeapps.svc.cluster.local"
   messagePrint "   Kubeapps Management Portal"     "https://kubeapps.$DOMAIN"
-
-  messageLine
-  echo "KUBEAPPS TOKEN: KUBEAPPS_TOKEN"
-  messageLine
 
   # --- STORE SETTINGS IN CONFIGMAP ---
   uodateConfigMap tanzu-demo-hub TDH_SERVICE_JENKINS             "true"
