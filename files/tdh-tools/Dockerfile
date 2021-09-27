@@ -1,19 +1,21 @@
 # ############################################################################################
 # File: ........: files/tdh-tools/Dockerfile   
-# Language .....: docker 
+# Language .....: docker  
 # Author .......: Sacha Dubois, VMware
 # Description ..: Tanzu Demo Hub - Dockerfile for tdh-tools container
 # ############################################################################################
 
-FROM ubuntu:20.04 
+FROM ubuntu:20.04  
 MAINTAINER Sacha Dubois <sdubois@vmware.com>
 ENV TZ="Europe/Zurich"
 ARG UID GID USER TZ HOME VMWUSER VMWPASS TANZU_CLI START 
 #ADD $TANZU_CLI /tmp
 ADD cli             /tanzu/cli
+ADD argocd          /usr/local/bin
 ADD kubectl         /usr/local/bin
 ADD kp              /usr/local/bin
 ADD mc              /usr/local/bin
+ADD jenkins-cli.jar /usr/local
 ADD tmc             /usr/local/bin
 #ADD terraform-bin   /usr/local/bin/terraform
 ADD kind            /usr/local/bin
@@ -63,6 +65,18 @@ RUN mkdir -p /opt/gradle && unzip -d /opt/gradle /tmp/gradle-$GRADLE_VERSION-bin
 RUN add-apt-repository ppa:longsleep/golang-backports
 RUN apt-get install -qqy golang-go
 
+#RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | gpg --dearmor -o /usr/share/keyrings/githubcli-archive-keyring.gpg
+#RUN echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
+
+# --- INSTALL KUSTOMIZE 
+RUN curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh"  | bash
+RUN chmod a+x kustomize && mv kustomize /usr/bin
+
+# --- INSTALL GITHUB CLIENT ---
+RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | apt-key add -
+RUN apt-add-repository "deb [arch=amd64] https://cli.github.com/packages $(lsb_release -cs) main"
+RUN apt-get update && apt-get install gh -y
+
 #RUN wget -c https://dl.google.com/go/go1.14.2.linux-amd64.tar.gz -O - | tar -xz -C /usr/local
 #$ sudo add-apt-repository ppa:longsleep/golang-backports
 #$ sudo apt update
@@ -78,7 +92,7 @@ RUN curl -s  https://api.github.com/repos/sharkdp/bat/releases/latest |grep brow
 RUN dpkg -i bat_*_amd64.deb
 RUN apt-get install -qqy bat
 
-# --- INSTALL DOCKER ---
+# --- INSTALL DOCKER --- 
 RUN curl -sSL https://get.docker.com/ | sh
 ADD ./wrapdocker /usr/local/bin/wrapdocker
 RUN chmod g+x /usr/local/bin/wrapdocker 
