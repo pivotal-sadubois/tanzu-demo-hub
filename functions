@@ -48,15 +48,15 @@ fakeCmd() {
   normal=$(tput sgr0)
 
   echo -e "     => ${bold}$1${normal}\c"; read x
-  echo "     -------------------------------------------------------------------------------------------------------------------------------------------------------"
+  echo "     ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------"
   cat /tmp/log | sed -e 's/^/     /g'
-  echo "     -------------------------------------------------------------------------------------------------------------------------------------------------------"
+  echo "     ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------"
   echo ""
 }
 
 execCat() {
   echo -e "     => cat $1\c"; read x
-  echo "     -------------------------------------------------------------------------------------------------------------------------------------------------------"
+  echo "     ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------"
 
   if [ -f /usr/local/bin/bat -o /usr/bin/bat ]; then
     bat -p --color always $1 | sed 's/^/     /g'
@@ -64,7 +64,7 @@ execCat() {
     cat $1
   fi
 
-  echo "     -------------------------------------------------------------------------------------------------------------------------------------------------------"
+  echo "     ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------"
   echo ""
 }
 
@@ -75,9 +75,9 @@ execCmd() {
   if [ "$(uname)" == "Darwin" ]; then SED=gsed; else SED=sed; fi
 
   echo -e "     => ${bold}$1${normal}\c"; read x
-  echo "     -------------------------------------------------------------------------------------------------------------------------------------------------------"
-  eval "$1" 2>&1 | $SED -e 's/^/     /g' 
-  echo "     -------------------------------------------------------------------------------------------------------------------------------------------------------"
+  echo "     ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------"
+  eval "$1" 2>&1 | $SED '${/^$/d;}' | $SED 's/^/     /g' 
+  echo "     ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------"
   echo ""
 }
 
@@ -88,14 +88,14 @@ loopCmd() {
   if [ "$(uname)" == "Darwin" ]; then SED=gsed; else SED=sed; fi
 
   echo -e "     => ${bold}$1${normal}\c"; read x
-  echo "     -------------------------------------------------------------------------------------------------------------------------------------------------------"
+  echo "     ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------"
   
   ret=1
   while [ $ret -ne 0 ]; do
     eval "$1" 2>&1; ret=$? | $SED -e 's/^/     /g'; ret=$?
   done
 
-  echo "     -------------------------------------------------------------------------------------------------------------------------------------------------------"
+  echo "     ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------"
   echo ""
 }
 
@@ -215,9 +215,13 @@ tmcCheckLogin() {
       echo "          tdh-tools:/$ export TMC_API_TOKEN=$TMC_SERVICE_TOKEN"
       echo "          tdh-tools:/$ tmc login --name $TMC_CONTEXT_NAME --no-configure"
       echo "          tdh-tools:/$ exit"
+      echo "       => Verify you API token, mabe a new token is required"
+      echo "          TMC => My Account => API Token"
     else
       echo "       => export TMC_API_TOKEN=$TMC_SERVICE_TOKEN"
       echo "       => tmc login --name $TMC_CONTEXT_NAME --no-configure"
+      echo "       => Verify you API token, mabe a new token is required"
+      echo "          TMC => My Account => API Token"
     fi
   fi
 
@@ -598,7 +602,7 @@ checkKubernetesServices() {
     fi
 
     if [ "${service}" == "github" ]; then
-      if [ "${TDH_GITHUB_USER}" == "" -o "${TDH_GITHUB_PASS}" == "" ]; then
+      if [ "${TDH_GITHUB_USER}" == "" -o "${TDH_GITHUB_PASS}" == "" -o "${TDH_GITHUB_TOKEN}" == "" ]; then
         missing_variables=1
         echo ""
         echo "  4MISSING ENVIRONMENT-VARIABES    DESCRIPTION        "
@@ -609,7 +613,11 @@ checkKubernetesServices() {
         fi
 
         if [ "${TDH_GITHUB_PASS}" == "" ]; then
-          echo "  TDH_GITHUB_PASS                  (required) VMware Password"
+          echo "  TDH_GITHUB_PASS                  (required) Github Password"
+        fi
+
+        if [ "${TDH_GITHUB_TOKEN}" == "" ]; then
+          echo "  TDH_GITHUB_TOKEN                 (required) Github Access Token (https://github.com/settings/tokens)"
         fi
       fi
     fi
@@ -1273,7 +1281,7 @@ checkTMCintegration() {
       fi
 
       cnt=$(tmc cluster integration list --cluster-name $TDH_CLUSTER_NAME -m $TDH_MANAGEMENT_CLUSTER  \
-            -p $TDH_PROVISIONER_NAME --name tanzu-observability-saas | egrep -c "tanzu-observability-saas") 
+            -p $TDH_PROVISIONER_NAME --name tanzu-observability-saas 2>/dev/null | egrep -c "tanzu-observability-saas") 
       if [ $cnt -eq 0 ]; then 
         TANZU_OBSERVABILITY=/tmp/tanzu_observability.yaml; rm -f $TANZU_OBSERVABILITY
         echo ""                                                                      >  $TANZU_OBSERVABILITY
@@ -1368,7 +1376,7 @@ checkTMCintegration() {
       fi
 
       # --- CONFIGURE FULL BACKUP ---
-      cnt=$(tmc cluster dataprotection backup list --cluster-name $TDH_CLUSTER_NAME -p $TDH_PROVISIONER_NAME -m $TDH_MANAGEMENT_CLUSTER --name "full-backup" | egrep -c " full-backup ")
+      cnt=$(tmc cluster dataprotection backup list --cluster-name $TDH_CLUSTER_NAME -p $TDH_PROVISIONER_NAME -m $TDH_MANAGEMENT_CLUSTER --name "full-backup" 2>/dev/null | egrep -c " full-backup ")
       if [ $cnt -gt 0 ]; then 
         stt=$(tmc cluster dataprotection backup list --cluster-name $TDH_CLUSTER_NAME -p $TDH_PROVISIONER_NAME -m $TDH_MANAGEMENT_CLUSTER --name "full-backup" | egrep " full-backup " | awk '{ print $NF }')
         if [ "$stt" != "COMPLETED" -a "$stt" != "INPROGRESS" ]; then 
@@ -1581,7 +1589,7 @@ checkTDHAccess() {
     messageTitle "Supporting services access (Pivotal Network, AWS Route53)"
     messagePrint " ▪ Pivotal Network Token"            "$PCF_PIVNET_TOKEN"
     messagePrint " ▪ Tanzu Demo Hube User"             "$TDH_USER"
-    messagePrint " ▪ AWS Route53 Hosted DNS Domain"    "TDH_TKGMC_ENVNAME.$AWS_HOSTED_DNS_DOMAIN"
+    messagePrint " ▪ AWS Route53 Hosted DNS Domain"    "$TDH_TKGMC_ENVNAME.$AWS_HOSTED_DNS_DOMAIN"
 
     # --- VERIFY PIVNET ACCESS ---
     pivnetAPI $PCF_PIVNET_TOKEN
@@ -2486,6 +2494,21 @@ createTKGMCcluster() {
       echo "LDAP_GROUP_SEARCH_USER_ATTRIBUTE: DN"                                       >> $TKG_TEMPLATE
       echo "LDAP_USER_SEARCH_USERNAME: userPrincipalName"                               >> $TKG_TEMPLATE
       echo "TKG_HTTP_PROXY_ENABLED: \"false\""                                          >> $TKG_TEMPLATE
+
+#$ grep LDAP tkg-mgmt-cluster.yaml
+#LDAP_BIND_DN: cn=Administrator,cn=Users,dc=corp,dc=tanzu
+#LDAP_BIND_PASSWORD: <encoded:Vk13YXJlMSE=>
+#LDAP_GROUP_SEARCH_BASE_DN: cn=Users,dc=corp,dc=tanzu
+#LDAP_GROUP_SEARCH_FILTER: (objectClass=group)
+#LDAP_GROUP_SEARCH_GROUP_ATTRIBUTE: member
+#LDAP_GROUP_SEARCH_NAME_ATTRIBUTE: cn
+#LDAP_GROUP_SEARCH_USER_ATTRIBUTE: DN
+#LDAP_HOST: controlcenter.corp.tanzu:636
+#LDAP_ROOT_CA_DATA_B64: XXXXXXXXX
+#LDAP_USER_SEARCH_BASE_DN: cn=Users,dc=corp,dc=tanzu
+#LDAP_USER_SEARCH_FILTER: (objectClass=person)
+#LDAP_USER_SEARCH_NAME_ATTRIBUTE: sAMAccountName
+#LDAP_USER_SEARCH_USERNAME: sAMAccountName
     fi
 
     # --- OIDC IDENTITY PROVIDOR WITH (OKTA) ---
@@ -4104,6 +4127,8 @@ installSpringCloudGateway() {
     return
   fi
 
+  messageTitle "Spring Cloud Gateway"
+
   # --- DOWNLOAD BUILD_SERVICE BINARIES ---
   downloadFromPivnet spring-cloud-gateway-for-kubernetes $TDH_SERVICE_SPRING_CLOUD_GATEWAY_VERSION \
       "$TDH_SERVICE_SPRING_CLOUD_GATEWAY_VERSION" "Spring Cloud Gateway for Kubernetes Installer"
@@ -4113,7 +4138,7 @@ installSpringCloudGateway() {
   mkdir -p /tmp/spring-cloud-gateway
   tar xfz $TBS_FILE -C /tmp/spring-cloud-gateway
 
-  messagePrint "Verify VMware Registry Access" "$TDH_REGISTRY_VMWARE_NAME"
+  messagePrint " ▪ Verify VMware Registry Access" "$TDH_REGISTRY_VMWARE_NAME"
   cnt=0; ret=1
   while [ $ret -ne 0 -a $cnt -lt 5 ]; do
     docker login $TDH_REGISTRY_VMWARE_NAME -u $TDH_REGISTRY_VMWARE_USER -p $TDH_REGISTRY_VMWARE_PASS > /dev/null 2>&1; ret=$?
@@ -4122,7 +4147,7 @@ installSpringCloudGateway() {
   done
 
   if [ $ret -ne 0 ]; then
-    echo "ERROR: Docker login does not work"
+    echo "ERROR: Docker login does not work 3"
     echo "       => docker login $TDH_REGISTRY_VMWARE_NAME -u $TDH_REGISTRY_VMWARE_USER -p $TDH_REGISTRY_VMWARE_PASS"; exit 1
   fi
 
@@ -4144,15 +4169,12 @@ installSpringCloudGateway() {
     done
 
     if [ $ret -ne 0 ]; then
-      echo "ERROR: Docker login does not work 1"
+      echo "ERROR: Docker login does not work 11"
       echo "       => docker login $TDH_HARBOR_REGISTRY_DNS_HARBOR -u admin -p $TDH_HARBOR_REGISTRY_ADMIN_PASSWORD"; exit 1
     fi
 
     kubectl get ns $NAMESPACE > /dev/null 2>&1
     if [ $? -ne 0 ]; then
-      # --- INSTALL CONTOUR INGRESS ---
-      messageTitle "Installing Spring Cloud Gateway"
-
       messagePrint " ▪ Relocate the images" "$DNS_HARBOR/library/spring-cloud-gateway"
       cd /tmp/spring-cloud-gateway/spring-cloud-gateway-k8s-$TDH_SERVICE_SPRING_CLOUD_GATEWAY_VERSION
       scripts/relocate-images.sh $DNS_HARBOR/library/spring-cloud-gateway > /dev/null 2>&1
@@ -4178,6 +4200,106 @@ installSpringCloudGateway() {
   fi
 }
 
+installArgoCD() {
+  if [ "$TDH_SERVICE_ARGOCD" != "true" ]; then
+    uodateConfigMap tanzu-demo-hub TDH_SERVICE_ARGOCD        "false"
+    helm uninstall argo-cd > /dev/null 2>&1
+    return
+  fi
+
+  TDH_DOMAIN=$(getConfigMap tanzu-demo-hub TDH_DOMAIN)
+  TDH_ENVNAME=$(getConfigMap tanzu-demo-hub TDH_ENVNAME)
+  DOMAIN=$(getConfigMap tanzu-demo-hub TDH_INGRESS_CONTOUR_LB_DOMAIN)
+  NAMESPACE=argo-cd
+
+  messageTitle "ArgoCD Continuous Delivery for Kubernetes"
+  cnt=$(helm list -q -n $NAMESPACE | egrep -c "^argo-cd")
+  if [ $cnt -eq 0 ]; then
+    messagePrint " ▪ Add the Bintnami Repository"   "https://charts.bitnami.com/bitnami"
+    helm repo add bitnami https://charts.bitnami.com/bitnami > /dev/null 2>&1
+    helm repo update > /dev/null 2>&1
+
+    # --- CREATE NAMESPACE ---
+    messagePrint " ▪ Create Namespace" "$NAMESPACE"
+    kubectl create namespace $NAMESPACE > /dev/null 2>&1
+
+    # --- COPY SECRET TO NAMESPACE ---
+    messagePrint " ▪ Copy TLS Secret" "tanzu-demo-hub-tls"
+    kubectl get secret tanzu-demo-hub-tls --namespace=default  -oyaml | grep -v '^\s*namespace:\s' | \
+    kubectl apply --namespace=$NAMESPACE -f - > /dev/null 2>&1
+
+    HELM_VALUES=/tmp/helm_argocd_values.yaml
+
+    echo "global:"                                                                                                                >  $HELM_VALUES
+    echo "  imageRegistry: docker.io"                                                                                             >> $HELM_VALUES
+    echo "  imagePullSecrets:"                                                                                                    >> $HELM_VALUES
+    echo "    - tdh-docker-repo"                                                                                                  >> $HELM_VALUES
+    echo ""                                                                                                                       >> $HELM_VALUES
+    echo "config:"                                                                                                                >> $HELM_VALUES
+    echo "  secret:"                                                                                                              >> $HELM_VALUES
+    echo "    argocdServerAdminPassword: admin"                                                                                   >> $HELM_VALUES
+    echo ""                                                                                                                       >> $HELM_VALUES
+    echo "service:"                                                                                                               >> $HELM_VALUES
+    echo "  type: ClusterIP"                                                                                                      >> $HELM_VALUES
+    echo ""                                                                                                                       >> $HELM_VALUES
+    echo "server:"                                                                                                                >> $HELM_VALUES
+    echo "  insecure: true"                                                                                                       >> $HELM_VALUES
+    echo "  ingress:"                                                                                                             >> $HELM_VALUES
+    echo "    enabled: true"                                                                                                      >> $HELM_VALUES
+    echo "    certManager: false"                                                                                                 >> $HELM_VALUES
+    echo "    annotations:"                                                                                                       >> $HELM_VALUES
+    echo "      kubernetes.io/ingress.class: contour"                                                                             >> $HELM_VALUES
+    echo "      ingress.kubernetes.io/force-ssl-redirect: \"true\""                                                               >> $HELM_VALUES
+    echo "      ingress.kubernetes.io/ssl-passthrough: \"true\""                                                                  >> $HELM_VALUES
+    echo "    path: /"                                                                                                            >> $HELM_VALUES
+    echo "    hostname: argocd.$DOMAIN"                                                                                           >> $HELM_VALUES
+    echo "    tls: true"                                                                                                          >> $HELM_VALUES
+    echo "    extraTls:"                                                                                                          >> $HELM_VALUES
+    echo "    - hosts:"                                                                                                           >> $HELM_VALUES
+    echo "        - argocd.$DOMAIN"                                                                                               >> $HELM_VALUES
+    echo "      secretName: tanzu-demo-hub-tls"                                                                                   >> $HELM_VALUES
+
+    export TZ=UTC
+    messagePrint " ▪ Deploy the Kubeapps Helm Chart" "argo-cd"
+    #helm install argo-cd --namespace $NAMESPACE bitnami/argo-cd -f $HELM_VALUES --wait > /dev/null 2>&1
+    helm install argo-cd --namespace $NAMESPACE bitnami/argo-cd -f $HELM_VALUES --wait
+    if [ $? -ne 0 ]; then
+      echo "ERROR: Failed to deploy ArgoCD Helm Chart"
+      echo "       => helm install argo-cd --namespace $NAMESPACE bitnami/argo-cd -f $HELM_VALUES"
+      exit 1
+    fi
+
+    messagePrint " ▪ Kubeapps Dashboard deployed"        "https://argocd.$DOMAIN"
+
+    #messagePrint " ▪ Create Cluster Role Binding"        "default:kubeapps-operator"
+    #kubectl delete clusterrolebinding argocd > /dev/null 2>&1
+    #kubectl create clusterrolebinding argocd --clusterrole=admin --serviceaccount=default:argocd > /dev/null 2>&1
+
+    messagePrint " ▪ Create Serviceaccount"              "argocd"
+    kubectl delete serviceaccount argocd > /dev/null 2>&1
+    kubectl create serviceaccount argocd > /dev/null 2>&1
+
+echo "kubectl port-forward -n argo-cd svc/argo-cd-server 8443:443 2>&1 > /dev/null &"
+echo "argocd login 127.0.0.1:8443 --password admin --username admin --plaintext"
+  fi
+
+  ver=$(helm ls -n $NAMESPACE -o json | jq -r --arg chart "argo-cd" '.[] | select(.name == $chart).app_version')
+  crt=$(helm ls -n $NAMESPACE -o json | jq -r --arg chart "argo-cd" '.[] | select(.name == $chart).chart')
+  stt=$(helm ls -n $NAMESPACE -o json | jq -r --arg chart "argo-cd" '.[] | select(.name == $chart).status')
+  dat=$(helm ls -n $NAMESPACE -o json | jq -r --arg chart "argo-cd" '.[] | select(.name == $chart).updated')
+
+  messagePrint " ▪ Verify Kubeapps"                "$crt"
+  messagePrint "   Helm Chart Name"                "argo-cd"
+  messagePrint "   Helm Chart Version"             "$ver"
+  messagePrint "   Helm Chart Status"              "$stt"
+  messagePrint "   Helm Chart Installed/Updated"   "$dat"
+  messagePrint "   Kubeapps Internal Name"         "argocd.argo-cd.svc.cluster.local"
+  messagePrint "   Kubeapps Management Portal"     "https://argocd.$DOMAIN"
+
+  # --- STORE SETTINGS IN CONFIGMAP ---
+  uodateConfigMap tanzu-demo-hub TDH_SERVICE_ARGOCD             "true"
+}
+
 installJenkins() {
   if [ "$TDH_SERVICE_JENKINS" != "true" ]; then
     uodateConfigMap tanzu-demo-hub TDH_SERVICE_JENKINS        "false"
@@ -4198,7 +4320,7 @@ installJenkins() {
     helm repo update > /dev/null 2>&1
 
     # --- CREATE NAMESPACE ---
-    messagePrint " ▪ Create Namespace" "kubeapps"
+    messagePrint " ▪ Create Namespace" "$NAMESPACE"
     kubectl create namespace $NAMESPACE > /dev/null 2>&1
 
     # --- COPY SECRET TO NAMESPACE ---
@@ -4216,6 +4338,9 @@ installJenkins() {
     echo "service:"                                                                                                             >> $HELM_VALUES
     echo "  type: ClusterIP"                                                                                                    >> $HELM_VALUES
     echo ""                                                                                                                     >> $HELM_VALUES
+    echo "jenkinsUser: admin"                                                                                                   >> $HELM_VALUES
+    echo "jenkinsPassword: $TDH_HARBOR_ADMIN_PASSWORD"                                                                          >> $HELM_VALUES
+    echo ""                                                                                                                     >> $HELM_VALUES
     echo "ingress:"                                                                                                             >> $HELM_VALUES
     echo "  enabled: true"                                                                                                      >> $HELM_VALUES
     echo "  certManager: false"                                                                                                 >> $HELM_VALUES
@@ -4230,29 +4355,28 @@ installJenkins() {
     echo "      - jenkins.$DOMAIN"                                                                                              >> $HELM_VALUES
     echo "    secretName: tanzu-demo-hub-tls"                                                                                   >> $HELM_VALUES
 
-    messagePrint " ▪ Deploy the Kubeapps Helm Chart" "kubeapps"
-    #helm install jenkins --namespace $NAMESPACE bitnami/jenkins -f $HELM_VALUES > /dev/null 2>&1
-    helm install jenkins --namespace $NAMESPACE bitnami/jenkins -f $HELM_VALUES 
+    messagePrint " ▪ Deploy the Jenkins Helm Chart" "jenkins"
+    helm install jenkins --namespace $NAMESPACE bitnami/jenkins -f $HELM_VALUES --wait > /dev/null 2>&1
+    #helm install jenkins --namespace $NAMESPACE bitnami/jenkins -f $HELM_VALUES --wait  
     if [ $? -ne 0 ]; then
       echo "ERROR: Failed to deploy Jenkins Helm Chart"
       echo "       => helm install jenkins --namespace $NAMESPACE bitnami/jenkins -f $HELM_VALUES"
       exit 1
     fi
 
-    messagePrint " ▪ Kubeapps Dashboard deployed"        "https://jenkins.$DOMAIN"
+    #java -jar ~/Downloads/jenkins-cli.jar -s https://jenkins.apps-contour.local.pcfsdu.com/ -auth user:Idh5k5eZts 2>&1"
+    #curl -X GET https://jenkins.apps-contour.local.pcfsdu.com/job/sacha_xxx1/config.xml -u user:Idh5k5eZts -o mylocalconfig.xml
+
+    #java -jar ~/Downloads/jenkins-cli.jar -s https://jenkins.apps-contour.local.pcfsdu.com/ -auth user:Idh5k5eZts get-job sacha_xxx1 > template.xml
+    #java -jar ~/Downloads/jenkins-cli.jar -s https://jenkins.apps-contour.local.pcfsdu.com/ -auth user:Idh5k5eZts create-job sacha_xxx2 < template.xml
 
     messagePrint " ▪ Create Cluster Role Binding"        "default:kubeapps-operator"
     kubectl delete clusterrolebinding jenkins-tbs > /dev/null 2>&1
     kubectl create clusterrolebinding jenkins-tbs --clusterrole=build-service-user-role --serviceaccount=default:jenkins-tbs > /dev/null 2>&1
 
     messagePrint " ▪ Create Serviceaccount"              "kubeapps-operator"
-    kubectl delete serviceAccounts jenkins-tbs > /dev/null 2>&1
-    kubectl create serviceAccounts jenkins-tbs > /dev/null 2>&1
-
-#kubectl describe serviceAccounts jenkins-tbs
-#kubectl describe secrets <Mountable Secrete name>
-#kubectl config view --flatten --minify > cluster-cert.txt
-
+    kubectl delete serviceaccount jenkins-tbs > /dev/null 2>&1
+    kubectl create serviceaccount jenkins-tbs > /dev/null 2>&1
   fi
 
   ver=$(helm ls -n $NAMESPACE -o json | jq -r --arg chart "jenkins" '.[] | select(.name == $chart).app_version')
@@ -4260,13 +4384,24 @@ installJenkins() {
   stt=$(helm ls -n $NAMESPACE -o json | jq -r --arg chart "jenkins" '.[] | select(.name == $chart).status')
   dat=$(helm ls -n $NAMESPACE -o json | jq -r --arg chart "jenkins" '.[] | select(.name == $chart).updated')
 
-  messagePrint " ▪ Verify Kubeapps"                "$crt"
-  messagePrint "   Helm Chart Name"                "minio"
+  jenkins_pass=$(kubectl get secret --namespace jenkins jenkins -o jsonpath="{.data.jenkins-password}" | base64 --decode)
+  messagePrint " ▪ Verify Jenkins"                 "$crt"
+  messagePrint "   Helm Chart Name"                "jenkins"
   messagePrint "   Helm Chart Version"             "$ver"
   messagePrint "   Helm Chart Status"              "$stt"
   messagePrint "   Helm Chart Installed/Updated"   "$dat"
-  messagePrint "   Kubeapps Internal Name"         "kubeapps.kubeapps.svc.cluster.local"
-  messagePrint "   Kubeapps Management Portal"     "https://kubeapps.$DOMAIN"
+  messagePrint "   jenkins Internal Name"          "jenkins.jenkins.svc.cluster.local"
+  messagePrint "   jenkins Dashboard URL"          "https://jenkins.$DOMAIN"
+  messagePrint "   jenkins Dashboard Credentials"  "admin/$jenkins_pass"
+
+  echo "   ------------------------------------------------------------------------------------------------------------------------------------------------------------------"
+  echo "   Jenkins CLI:"
+  echo "   wget https://jenkins.$DOMAIN/jenkins/jnlpJars/jenkins-cli.jar -o /tmp/jenkins-cli.jar"
+  echo "   java -jar /tmp/jenkins-cli.jar -s https://jenkins.$DOMAIN -auth admin:$jenkins_pass"
+  echo "  ------------------------------------------------------------------------------------------------------------------------------------------------------------------"
+
+  #java -jar ~/Downloads/jenkins-cli.jar -s https://jenkins.apps-contour.local.pcfsdu.com/ -auth admin:Password12345 list-credentials-as-xml "system::system::jenkins"
+  #java -jar ~/Downloads/jenkins-cli.jar -s https://jenkins.apps-contour.local.pcfsdu.com/ -auth admin:Password12345 get-credentials-as-xml "system::system::jenkins" _ 0c60eb5e-310b-4f57-8f77-62acff64921f 
 
   # --- STORE SETTINGS IN CONFIGMAP ---
   uodateConfigMap tanzu-demo-hub TDH_SERVICE_JENKINS             "true"
@@ -4310,7 +4445,6 @@ installKubeapps() {
     echo ""                                                                                                                     >> $HELM_VALUES
     echo "ingress:"                                                                                                             >> $HELM_VALUES
     echo "  enabled: true"                                                                                                      >> $HELM_VALUES
-    echo "  certManager: false"                                                                                                 >> $HELM_VALUES
     echo "  annotations:"                                                                                                       >> $HELM_VALUES
     echo "    kubernetes.io/ingress.class: contour"                                                                             >> $HELM_VALUES
     echo "    ingress.kubernetes.io/force-ssl-redirect: \"true\""                                                               >> $HELM_VALUES
@@ -4337,8 +4471,15 @@ installKubeapps() {
 #    echo "    - --cookie-secure=false"                                                                                               >> $HELM_VALUES
 
     messagePrint " ▪ Deploy the Kubeapps Helm Chart" "kubeapps"
-    helm install kubeapps --namespace $NAMESPACE bitnami/kubeapps -f $HELM_VALUES > /dev/null 2>&1
-    if [ $? -ne 0 ]; then
+    cnt=0; ret=1
+    while [ $ret -ne 0 -a $cnt -lt 5 ]; do
+      helm install kubeapps --namespace $NAMESPACE bitnami/kubeapps -f $HELM_VALUES > /dev/null 2>&1; ret=$?
+      [ $ret -eq 0 ] && break
+      let cnt=cnt+1
+      sleep 30
+    done
+
+    if [ $ret -ne 0 ]; then
       echo "ERROR: Failed to deploy Kubeapps Helm Chart"
       echo "       => helm install kubeapps --namespace $NAMESPACE bitnami/kubeapps -f $HELM_VALUES"
       exit 1
@@ -4444,6 +4585,7 @@ installMinio() {
   echo "   -----------------------------------------------------------------------------------------------------------"
   messageTitle "   Test Minio S3 Access: (https://docs.min.io/docs/minio-client-complete-guide)"
 
+#gaga minio
   if [ ! -f /usr/local/bin/mc ]; then
     if [ $(uname) == "Darwin" ]; then 
       echo "   MacOS installation"
@@ -4491,6 +4633,7 @@ installMinio() {
 installTanzuDataPostgres() {
   NAMESPACE=postgres-operator
 
+#gaga
   if [ "$TDH_SERVICE_TANZU_DATA_POSTGRES" != "true" ]; then
     uodateConfigMap tanzu-demo-hub TDH_SERVICE_TANZU_DATA_POSTGRES        "false"
     kubectl delete -n $NAMESPACE > /dev/null 2>&1
@@ -4520,6 +4663,10 @@ installTanzuDataPostgres() {
     else
       echo "ERROR: can not find file $TBS_TAR_FILE"; exit 1
     fi
+
+    #########################################################################################################################
+    ########################################### INSTALL POSTGRES OPERATOR ###################################################
+    #########################################################################################################################
 
     if [ "$TDH_SERVICE_REGISTRY_HARBOR" == "true" ]; then
       # DNS_HARBOR=$(getConfigMap tanzu-demo-hub TDH_HARBOR_REGISTRY_DNS_HARBOR)
@@ -4720,7 +4867,7 @@ installBuildService() {
     done
   
     if [ $ret -ne 0 ]; then
-      echo "ERROR: Docker login does not work"
+      echo "ERROR: Docker login does not work 2"
       echo "       => docker login $TDH_REGISTRY_VMWARE_NAME -u $TDH_REGISTRY_VMWARE_USER -p $TDH_REGISTRY_VMWARE_PASS"; exit 1
     fi
 
@@ -4737,8 +4884,6 @@ installBuildService() {
     # kp secret create with --registry index.docker.io generates invalid secret #155
     # https://githubmemory.com/repo/vmware-tanzu/kpack-cli/issues/155
 
-echo "TDH_SERVICE_REGISTRY_DOCKER:$TDH_SERVICE_REGISTRY_DOCKER"
-echo "TDH_SERVICE_REGISTRY_HARBOR:$TDH_SERVICE_REGISTRY_HARBOR"
     if [ "$TDH_SERVICE_REGISTRY_DOCKER" == "true" ]; then
       #DNS_DOCKER=$(getConfigMap tanzu-demo-hub TDH_REGISTRY_DOCKER_NAME)
       #TDH_REGISTRY_DOCKER_NAME=$(getConfigMap tanzu-demo-hub TDH_REGISTRY_DOCKER_NAME)
@@ -4758,7 +4903,7 @@ echo "TDH_SERVICE_REGISTRY_HARBOR:$TDH_SERVICE_REGISTRY_HARBOR"
       done
   
       if [ $ret -ne 0 ]; then
-        echo "ERROR: Docker login does not work"
+        echo "ERROR: Docker login does not work 4"
         echo "       => docker login $TDH_REGISTRY_DOCKER_NAME -u $TDH_REGISTRY_DOCKER_USER -p $TDH_REGISTRY_DOCKER_PASS"; exit 1
       fi
   
@@ -4827,7 +4972,7 @@ echo "TDH_SERVICE_REGISTRY_HARBOR:$TDH_SERVICE_REGISTRY_HARBOR"
       done
 
       if [ $ret -ne 0 ]; then
-        echo "ERROR: Docker login does not work 1'"
+        echo "ERROR: Docker login does not work 5'"
         echo "       => docker login $TDH_HARBOR_REGISTRY_DNS_HARBOR -u admin -p $TDH_HARBOR_REGISTRY_ADMIN_PASSWORD"; exit 1
       fi
 
@@ -5563,8 +5708,8 @@ InstallCertManager() {
 }
 
 InstallHarborRegistry() {
-  if [ "$TDH_SERVICE_BUILD_SERVICE" != "true" ]; then
-    uodateConfigMap tanzu-demo-hub TDH_SERVICE_BUILD_SERVICE        "false"
+  if [ "$TDH_SERVICE_REGISTRY_HARBOR" != "true" ]; then
+    uodateConfigMap tanzu-demo-hub TDH_SERVICE_REGISTRY_HARBOR        "false"
     return
   fi
 
@@ -6628,6 +6773,7 @@ tdh_tools_build() {
   cp files/tdh-tools/Dockerfile           $TDH_DOCKER_FILES
   cp files/tdh-tools/wrapdocker           $TDH_DOCKER_FILES
   cp files/tdh-tools/tmc                  $TDH_DOCKER_FILES
+  cp files/tdh-tools/jenkins-cli.jar      $TDH_DOCKER_FILES
   cp files/tdh-tools/vmware-ovftool.tar   $TDH_DOCKER_FILES
   DOCKER_CHKSUM=$(sum $TDHPATH/files/tdh-tools/Dockerfile | awk '{ print $1 }')
   DOCKER_IMAGE_LATEST_ID=$(docker images | egrep "^tdh-tools" | grep "latest" | awk '{ print $3 }')
@@ -6645,7 +6791,7 @@ tdh_tools_build() {
 
   messageTitle "TDH Tools Docker Container (tdh-tools)"
 
-  # --- DOWNLOAD BUILD_SERVICE BINARIES ---
+  # --- DOW3LOAD BUILD_SERVICE BINARIES ---
   if [ ! -f $TDH_DOCKER_FILES/kp-linux-${TDH_SERVICE_BUILD_SERVICE_KP} ]; then 
     TDH_SERVICE_BUILD_SERVICE_VERSION=1.2.1
     downloadFromPivnet build-service $TDH_SERVICE_BUILD_SERVICE_VERSION "$TDH_SERVICE_BUILD_SERVICE_KP" "kp-linux" 
@@ -6669,6 +6815,12 @@ tdh_tools_build() {
 
   mkdir -p $TDH_DOCKER_FILES
   (cd $TDH_DOCKER_FILES; tar xf vmware-ovftool.tar)
+
+  if [ ! -s $TDH_DOCKER_FILES/argocd ]; then
+    #wget https://github.com/argoproj/argo-cd/releases/latest/download/argocd-util-linux-amd64  2>/dev/null 1>&2
+    wget https://github.com/argoproj/argo-cd/releases/download/v2.1.2/argocd-linux-amd64 2>/dev/null 1>&2
+    [ -f argocd-linux-amd64 ] && mv argocd-linux-amd64 $TDH_DOCKER_FILES/argocd && chmod +x $TDH_DOCKER_FILES/argocd
+  fi
 
   if [ ! -s $TDH_DOCKER_FILES/terraform-bin ]; then
     wget https://releases.hashicorp.com/terraform/0.12.31/terraform_0.12.31_linux_amd64.zip 2>/dev/null 1>&2
@@ -6717,13 +6869,13 @@ tdh_tools_build() {
 
   if [ ! -x $TDH_DOCKER_FILES/mc ]; then
     wget https://dl.min.io/client/mc/release/linux-amd64/mc > /dev/null 2>&1
-    mv mc $TDH_DOCKER_FILES
-    chmod a+x $TDH_DOCKER_FILES/mc
+    mv mc $TDH_DOCKER_FILES && chmod a+x $TDH_DOCKER_FILES/mc
   fi
 
   # --- DOWNLOAD CARVEL TOOLS ---
   if [ ! -d $TDH_DOCKER_FILES/cli-${TKG_TANZU_KUBERNETES_GRID} ]; then
     TANZU_CLI_BUINDLE=$TDH_DOCKER_FILES/tanzu-cli-bundle-v${TKG_TANZU_KUBERNETES_GRID}-linux-amd64.tar
+    TANZU_CLI_BUINDLE=/tmp/tanzu-cli-bundle-linux-amd64.tar
     if [ ! -f $TANZU_CLI_BUINDLE ]; then
       . ~/.tanzu-demo-hub.cfg
 
@@ -6763,16 +6915,18 @@ tdh_tools_build() {
         sleep 10
       done
 
-      if [ "tanzu-cli-bundle-v${TKG_TANZU_KUBERNETES_GRID}-linux-amd64.tar" != "$vmwfile" ]; then 
-        echo "ERROR: $vmwfile from myVMware.com differs from the requested version $TKG_TANZU_KUBERNETES_GRID"
-        echo "       You may want to change the version TKG_TANZU_KUBERNETES_GRID=$TKG_TANZU_KUBERNETES_GRID in"
-        echo "       the files/tdh-tools/tdh-tools.cfg configuration file. Please see the available versions here:"
-
-        messageLine
-        $VMWCLI ls vmware_tanzu_kubernetes_grid | egrep "^tanzu-cli-bundle"
-        messageLine
-        exit 1
-      fi
+echo "xxx tanzu-cli-bundle-v${TKG_TANZU_KUBERNETES_GRID}-linux-amd64.tar"
+echo "vmwfile:$vmwfile"
+#      if [ "tanzu-cli-bundle-v${TKG_TANZU_KUBERNETES_GRID}-linux-amd64.tar" != "$vmwfile" ]; then 
+#        echo "ERROR: $vmwfile from myVMware.com differs from the requested version $TKG_TANZU_KUBERNETES_GRID"
+#        echo "       You may want to change the version TKG_TANZU_KUBERNETES_GRID=$TKG_TANZU_KUBERNETES_GRID in"
+#        echo "       the files/tdh-tools/tdh-tools.cfg configuration file. Please see the available versions here:"
+#
+#        messageLine
+#        $VMWCLI ls vmware_tanzu_kubernetes_grid | egrep "^tanzu-cli-bundle"
+#        messageLine
+#        exit 1
+#      fi
 
       messagePrint " ▪ Downloading Tanzu CLI Bundle" "$TDH_DOCKER_FILES/$vmwfile"
 
@@ -6781,6 +6935,9 @@ tdh_tools_build() {
         echo "       => export VMWUSER=\"$TDH_MYVMWARE_USER\""
         echo "       => export VMWPASS=\"$TDH_MYVMWARE_PASS\""
         echo "       => $VMWCLI ls vmware_tanzu_kubernetes_grid"
+        echo ""
+        echo "INFO:  You may download tanzu-cli-bundle $TKG_TANZU_KUBERNETES_GRID manually from myVMware.com. an place it under:"
+        echo "       $TANZU_CLI_BUINDLE"
         exit 1
       else
         cnt=0
@@ -6797,6 +6954,9 @@ tdh_tools_build() {
           echo "       => export VMWPASS=\"$TDH_MYVMWARE_PASS\""
           echo "       => $VMWCLI ls vmware_tanzu_kubernetes_grid"
           echo "       => $VMWCLI cp $vmwfile"
+          echo ""
+          echo "INFO:  You may download tanzu-cli-bundle $TKG_TANZU_KUBERNETES_GRID manually from myVMware.com. an place it under:"
+          echo "       $TANZU_CLI_BUINDLE"
           exit 1
         else
           mv $vmwfile $TDH_DOCKER_FILES
@@ -7230,6 +7390,33 @@ createStorageClaim() {
   echo "  volumeMode: Filesystem"                   >> $TMP_CLAIN
 
   kubectl create -f $TMP_CLAIN -n $NAMESPACE
+}
+
+spaceFiller() {
+  FORMAT="%${1}s\\n"
+
+  printf $FORMAT ""
+} 
+
+centerText() {
+  LENGTH=$1
+  TEXT=$2
+
+  cnt=$(echo $TEXT | wc -c | sed 's/ *//g')
+  let cnt=cnt-1
+  let gap=(LENGTH-cnt)/2
+  let rnd=(LENGTH-cnt)%2
+
+  str="$(spaceFiller $gap)${TEXT}$(spaceFiller $gap)$(spaceFiller $rnd)"
+  echo "$str"
+}
+
+leftText() {
+  LENGTH=$1
+  TEXT=$2
+
+  str="%-${LENGTH}s"
+  printf "$str\n" $TEXT
 }
 
 

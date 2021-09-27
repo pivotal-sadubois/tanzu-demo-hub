@@ -26,6 +26,7 @@ usage() {
   echo "USAGE: $0 [options] -d <tmc-deployment>.cfg -c <tkg-configuration>.cfg [--debug]"
   echo "            Options:  -d <tmc-deployment.cfg>     # Tanzu Mission Control (TMC) Deployment Name"
   echo "                      -c <tkg-configuration.cfg>  # Tanzu Kubernetes Grid (TKG) Configuration"
+  echo "                      -e <sub-domain>             # DNS Subdomain (<xyz>.domainname>
   echo ""
   echo "                      --debug                     # default (disabled)"
   echo "                      --clean                     # cleanuo the deployment"
@@ -121,6 +122,7 @@ while [ "$1" != "" ]; do
   case $1 in
     -c)  TKG_DEPLOYMENT=$2;;
     -d)  TMC_DEPLOYMENT=$2;;
+    -e)  DNS_SUBDOMAIN=$2;;
     --clean) DEPLOY_TKG_CLEAN=1;;
     --debug) DEBUG=1;;
     --native)      NATIVE=1;;
@@ -155,6 +157,7 @@ fi
 if [ -f ${TDHPATH}/deployments/$TKG_DEPLOYMENT ]; then
   . ${TDHPATH}/deployments/$TKG_DEPLOYMENT
 fi
+
 
 cnt=$(egrep -c "^TDH_DEPLOYMENT_CLOUD=" $TMC_DEPLOYMENT_CONFIG)
 if [ $cnt -eq 0 ]; then
@@ -213,6 +216,10 @@ else
   fi
 fi
 
+if [ "$DNS_SUBDOMAIN" != "" ]; then 
+  TDH_ENVNAME=$DNS_SUBDOMAIN
+fi 
+
 export TDH_DEPLOYMENT_ENV_NAME=$TDH_INFRASTRUCTURE
 export TDH_TLS_CERT=tanzu-demo-hub
 export TDH_TLS_SECRET=${TDH_TLS_CERT}-tls
@@ -270,6 +277,7 @@ fi
 # --- CLEANUP KUNECONFIG ---
 cleanKubeconfig
 
+
 tmcCheckLogin
 checkTDHAccess
 checkTMCAccess
@@ -282,7 +290,6 @@ kubectl create clusterrolebinding tanzu-demo-hub-privileged-cluster-role-binding
         --clusterrole=vmware-system-tmc-psp-privileged --group=system:authenticated > /dev/null 2>&1
 
 uodateConfigMap tanzu-demo-hub TDH_DOMAIN               $AWS_HOSTED_DNS_DOMAIN
-
 uodateConfigMap tanzu-demo-hub TDH_ENVNAME              $TDH_ENVNAME
 uodateConfigMap tanzu-demo-hub TDH_DEPLOYMENT_TYPE      "tmc"
 uodateConfigMap tanzu-demo-hub TDH_MANAGED_BY_TMC       "true"
@@ -299,7 +306,7 @@ InstallHarborRegistry
 getRootCA tanzu-demo-hub-tls
 installBuildService
 installTanzuDataPostgres
-#installSpringCloudGateway
+installSpringCloudGateway
 installMinio
 installKubeapps
 installJenkins
