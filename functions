@@ -2609,6 +2609,9 @@ createTKGMCcluster() {
     tanzu management-cluster create > /dev/null 2>&1
     #cp ${HOME}/.tanzu/config.yaml $TKG_TEMPLATE
 
+    # ste 5. Oct 2021 - /home/ubuntu/.config/tanzu was owned by root:root, change it to ubuntu:ubuntu
+    sudo chown -R /home/ubuntu/.config ubuntu:ubuntu
+
     az ad app list --display-name "TanzuDemoHub" > /dev/null 2>&1
     if [ $? -ne 0 ]; then 
       echo "ERROR: failed to list apps"
