@@ -1376,8 +1376,8 @@ else
           cnt=0; ret=1
           while [ $ret -ne 0 -a $cnt -lt 5 ]; do
             #az vm image terms accept --urn $img > /dev/null 2>&1; ret=$?
-echo "az vm image terms accept --urn $img"
-            az vm image terms accept --urn $img; ret=$?
+echo "az vm image terms accept --urn $img:latest"
+            az vm image terms accept --urn $img:latest; ret=$?
             [ $ret -eq 0 ] && break
             let cnt=cnt+1
             sleep 30

@@ -260,7 +260,6 @@ pivnetAPIdownload() {
   PRODUCT_FILE=$4
   FILE_NAME="$5"
 
-
   token=$(curl -X POST https://network.pivotal.io/api/v2/authentication/access_tokens \
                -d "{\"refresh_token\":\"$REFRESH_TOKEN\"}" 2>/dev/null | jq -r '.access_token')
   if [ "${token}" == "" -o "${token}" == "null" ]; then return 1; fi
@@ -1663,6 +1662,7 @@ checkTDHAccess() {
 } 
 
 pivnetAPI() {
+echo arschloch 1>&2
   REFRESH_TOKEN="$1"
   token=$(curl -X POST https://network.pivotal.io/api/v2/authentication/access_tokens \
                -d "{\"refresh_token\":\"$REFRESH_TOKEN\"}" 2>/dev/null | jq -r '.access_token')
@@ -2609,6 +2609,9 @@ createTKGMCcluster() {
     tanzu management-cluster create > /dev/null 2>&1
     #cp ${HOME}/.tanzu/config.yaml $TKG_TEMPLATE
 
+    # ste 5. Oct 2021 - /home/ubuntu/.config/tanzu was owned by root:root, change it to ubuntu:ubuntu
+    sudo chown -R ubuntu:ubuntu /home/ubuntu/.config
+
     az ad app list --display-name "TanzuDemoHub" > /dev/null 2>&1
     if [ $? -ne 0 ]; then 
       echo "ERROR: failed to list apps"
@@ -2622,8 +2625,8 @@ createTKGMCcluster() {
       exit 1
     fi
     AZURE_SSH_PUBLIC_KEY_B64=$(cat ~/.tanzu-demo-hub/KeyPair-Azure.pub | base64 -w 10000)
-    AZURE_CLIENT_ID=$(az ad app list --display-name "TanzuDemoHub" | jq -r '.[].appId')
-    AZURE_CLIENT_SECRET="tanzu-demo-hub"
+    # ste 5. Oct 2021 - set in ~/.tanzu-demo-hub.cfg # AZURE_CLIENT_ID=$(az ad app list --display-name "TanzuDemoHub" | jq -r '.[].appId')
+    # ste 5. Oct 2021 - set in ~/.tanzu-demo-hub.cfg # AZURE_CLIENT_SECRET="tanzu-demo-hub"
 
     echo "CLUSTER_NAME: $TDH_TKGMC_NAME"                                              >> $TKG_TEMPLATE
     echo "AZURE_CLIENT_ID: $AZURE_CLIENT_ID"                                          >> $TKG_TEMPLATE
@@ -4584,7 +4587,6 @@ installMinio() {
   echo "   -----------------------------------------------------------------------------------------------------------"
   messageTitle "   Test Minio S3 Access: (https://docs.min.io/docs/minio-client-complete-guide)"
 
-#gaga minio
   if [ ! -f /usr/local/bin/mc ]; then
     if [ $(uname) == "Darwin" ]; then 
       echo "   MacOS installation"
@@ -4632,7 +4634,6 @@ installMinio() {
 installTanzuDataPostgres() {
   NAMESPACE=postgres-operator
 
-#gaga
   if [ "$TDH_SERVICE_TANZU_DATA_POSTGRES" != "true" ]; then
     uodateConfigMap tanzu-demo-hub TDH_SERVICE_TANZU_DATA_POSTGRES        "false"
     kubectl delete -n $NAMESPACE > /dev/null 2>&1
@@ -6808,7 +6809,7 @@ tdh_tools_build() {
 
   # --- DOW3LOAD BUILD_SERVICE BINARIES ---
   if [ ! -f $TDH_DOCKER_FILES/kp-linux-${TDH_SERVICE_BUILD_SERVICE_KP} ]; then 
-    TDH_SERVICE_BUILD_SERVICE_VERSION=1.2.1
+    TDH_SERVICE_BUILD_SERVICE_VERSION=$TDH_SERVICE_BUILD_SERVICE_VERSION
     downloadFromPivnet build-service $TDH_SERVICE_BUILD_SERVICE_VERSION "$TDH_SERVICE_BUILD_SERVICE_KP" "kp-linux" 
     if [ -f /tmp/kp-linux-${TDH_SERVICE_BUILD_SERVICE_KP} ]; then 
       mv /tmp/kp-linux-$TDH_SERVICE_BUILD_SERVICE_KP $TDH_DOCKER_FILES 
@@ -6890,7 +6891,7 @@ tdh_tools_build() {
   # --- DOWNLOAD CARVEL TOOLS ---
   if [ ! -d $TDH_DOCKER_FILES/cli-${TKG_TANZU_KUBERNETES_GRID} ]; then
     TANZU_CLI_BUINDLE=$TDH_DOCKER_FILES/tanzu-cli-bundle-v${TKG_TANZU_KUBERNETES_GRID}-linux-amd64.tar
-    TANZU_CLI_BUINDLE=/tmp/tanzu-cli-bundle-linux-amd64.tar
+    TANZU_CLI_BUINDLE=$TDH_DOCKER_FILES/tanzu-cli-bundle-linux-amd64.tar
     if [ ! -f $TANZU_CLI_BUINDLE ]; then
       . ~/.tanzu-demo-hub.cfg
 
@@ -6930,8 +6931,6 @@ tdh_tools_build() {
         sleep 10
       done
 
-echo "xxx tanzu-cli-bundle-v${TKG_TANZU_KUBERNETES_GRID}-linux-amd64.tar"
-echo "vmwfile:$vmwfile"
 #      if [ "tanzu-cli-bundle-v${TKG_TANZU_KUBERNETES_GRID}-linux-amd64.tar" != "$vmwfile" ]; then 
 #        echo "ERROR: $vmwfile from myVMware.com differs from the requested version $TKG_TANZU_KUBERNETES_GRID"
 #        echo "       You may want to change the version TKG_TANZU_KUBERNETES_GRID=$TKG_TANZU_KUBERNETES_GRID in"
@@ -6980,7 +6979,7 @@ echo "vmwfile:$vmwfile"
     fi
 
     if [ ! -d $TDH_DOCKER_FILES/cli-$TKG_TANZU_KUBERNETES_GRID  ]; then
-      rm -f ${TDH_DOCKER_FILES}/cli
+      rm -f ${TDH_DOCKER_FILES}/cli 
       tar xf $TANZU_CLI_BUINDLE && mv cli ${TDH_DOCKER_FILES}/cli-$TKG_TANZU_KUBERNETES_GRID
       cd $TDH_DOCKER_FILES && ln -s  cli-$TKG_TANZU_KUBERNETES_GRID cli
     fi
@@ -7025,7 +7024,6 @@ echo "vmwfile:$vmwfile"
       --build-arg GID=$(id -g) \
       --build-arg USER=$USER \
       --build-arg HOME=$HOME \
-      --build-arg TANZU_CLI=$vmwfile \
       --build-arg TANZU_DEMO_HUB=$TANZU_DEMO_HUB \
       --build-arg TDHPATH=$TDHPATH \
       --build-arg TZ=$(ls -l /etc/localtime | /usr/bin/cut -d '/' -f 8,9) .; ret=$?
@@ -7037,7 +7035,6 @@ echo "vmwfile:$vmwfile"
       echo "             --build-arg GID=$(id -g) \\"
       echo "             --build-arg USER=$USER \\"
       echo "             --build-arg HOME=$HOME \\"
-      echo "             --build-arg TANZU_CLI=$vmwfile \\"
       echo "             --build-arg TDHPATH=$TDHPATH \\"
       echo "             --build-arg TZ=$(ls -l /etc/localtime | /usr/bin/cut -d '/' -f 8,9) $TDH_DOCKER_FILES"
       exit 1
