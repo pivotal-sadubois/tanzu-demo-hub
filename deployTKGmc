@@ -1662,16 +1662,21 @@ echo "az vm image terms accept --urn $img"
     echo "    => ./deployTKG -m $TDH_TKGMC_NAME -d tkg-tanzu-demo-hub.cfg -n tdh-$CLOUD-$TDH_USER -k \"v1.17.16---vmware.2-tkg.1\""
   fi
 
-  printf "\e[1m3.) Delete the Management Cluster (Local or on the Jump host)\e[0m\n"
-  if [ "$NATIVE" == "0" ]; then
-    echo "    => tools/tdh-tools.sh"
-    echo "       tdh-tools:/$ tanzu management-cluster delete $TDH_TKGMC_NAME -y"
-    echo "       tdh-tools:/$ exit"
-    echo "    => $SSH_DISPLAY"
-    echo "       tanzu management-cluster delete $TDH_TKGMC_NAME -y"
-  else
-    echo "    => tanzu management-cluster delete $TDH_TKGMC_NAME -y"
-  fi
+#  printf "\e[1m3.) Delete the Management Cluster (Local or on the Jump host)\e[0m\n"
+#  if [ "$NATIVE" == "0" ]; then
+#    echo "    => tools/tdh-tools.sh"
+#    echo "       tdh-tools:/$ tanzu management-cluster delete $TDH_TKGMC_NAME -y"
+#    echo "       tdh-tools:/$ exit"
+#    echo "    => $SSH_DISPLAY"
+#    #echo "       tanzu management-cluster delete $TDH_TKGMC_NAME -y"
+#    echo "       deployTKGmc $DEPLOY_TKG_TEMPLATE --delete"
+#  else
+#    echo "    => tanzu management-cluster delete $TDH_TKGMC_NAME -y"
+#  fi
+
+  printf "\e[1m3.) Delete the Management Cluster\e[0m\n"
+  echo "    => deployTKGmc $DEPLOY_TKG_TEMPLATE --delete"
+
   printf "\e[1m4.) Login to Jump Server: $JUMP_HOST (only if required)\e[0m\n"
   echo "    => $SSH_DISPLAY"
   echo ""

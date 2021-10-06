@@ -3848,16 +3848,11 @@ checkTMCAccess() {
   if [ "${TDH_DEPLOYMENT_CLOUD}" == "AWS" ]; then
     TMC_ACCOUNT_NAME=$TMC_ACCOUNT_NAME_AWS
 
-    #if [ "${TDH_MANAGEMENT_CLUSTER}" == "" -o "${TDH_PROVISIONER_NAME}" == "" -o "${TMC_ACCOUNT_NAME_AWS}" == "" -o "${TDH_CLUSTER_GROUP}" == "" -o "${TMC_KUBERNETES_VERSION}" == "" ]; then
     if [ "${TDH_MANAGEMENT_CLUSTER}" == "" -o "${TDH_PROVISIONER_NAME}" == "" -o "${TMC_ACCOUNT_NAME_AWS}" == "" -o "${TDH_CLUSTER_GROUP}" == "" ]; then
       missing_variables=1
       echo ""
       echo "  5MISSING ENVIRONMENT-VARIABES    DESCRIPTION        "
       echo "  --------------------------------------------------------------------------------------------------------------"
-
-      #if [ "${TMC_KUBERNETES_VERSION}" == "" ]; then
-      #  echo "  TMC_KUBERNETES_VERSION          (required) The Kubernetes version for the cluster e.g. 1.19.1-3-amazon2"
-      #fi
 
       if [ "${TDH_CLUSTER_GROUP}" == "" ]; then
         echo "  TDH_CLUSTER_GROUP               (required) The name of the TMC Cluster Group"
@@ -3938,7 +3933,11 @@ tmcCreateCluster() {
     fi
 
     if [ "$stt" == "" -o "$stt" != "READY" ]; then
+echo "XXX TMC_K8S_VERSIONS:$TMC_K8S_VERSIONS"
+echo "XXX TDH_TKGWC_KUBERNETES:$TDH_TKGWC_KUBERNETES"
       KUBERNETES_VERSION=$(for n in $TMC_K8S_VERSIONS; do echo v$n; done | egrep "$TDH_TKGWC_KUBERNETES" | tail -1 | sed 's/^v//g') 
+
+echo "KUBERNETES_VERSION:$KUBERNETES_VERSION"
 
       messageTitle "TMC Create Cluster"     
       messagePrint " ▪ TMC Cluster Name"       "$TDH_CLUSTER_NAME"
@@ -3953,7 +3952,7 @@ tmcCreateCluster() {
       tmc cluster create -m $TDH_MANAGEMENT_CLUSTER -p $TDH_PROVISIONER_NAME \
                          --ssh-key-name $TMC_SSH_KEY_NAME_AWS -c $TMC_ACCOUNT_NAME \
                          --worker-node-count $TDH_TKGWC_WORKERNODES \
-                         -r $AWS_REGION -n $TDH_CLUSTER_NAME \
+                         -r $AWS_REGION -n $TDH_CLUSTER_NAME -y $TDH_TKGWC_WORKERNODES_TYPE \
                          -g $TDH_CLUSTER_GROUP -t $TMC_TKGWC_TEMPLATE \
                          --version $KUBERNETES_VERSION --availability-zone $AWS_PRIMARY_AZ
 
@@ -5329,8 +5328,22 @@ InstallContour() {
     fi
   
     messagePrint " ▪ Install Contour Helm Chart" "bitnami/contour"
-    HELM_CONTOUR_VERSION=$(helm search repo bitnami/contour | tail -1 | awk '{ print $2 }') 
+
+
+echo "TDH_SERVICE_INGRESS_CONTOUR_VERSION:$TDH_SERVICE_INGRESS_CONTOUR_VERSION"
+    if [ "$TDH_SERVICE_INGRESS_CONTOUR_VERSION" == "" -o "$TDH_SERVICE_INGRESS_CONTOUR_VERSION" == "latest" ]; then 
+echo gaga1
+      HELM_CONTOUR_VERSION=$(helm search repo bitnami/contour | tail -1 | awk '{ print $2 }') 
+    else
+echo gaga2
+      HELM_CONTOUR_VERSION=$TDH_SERVICE_INGRESS_CONTOUR_VERSION
+    fi
     messagePrint " ▪ Install Contour Helm Chart Version" "$HELM_CONTOUR_VERSION"
+
+    # 5.6.0 Issues with Spring Cloud Demo and Contour 1.18.1
+    # 5.5.3 Issues with Spring Cloud Demo and Contour 1.18.1
+    # 5.1.0 Works
+echo "XXX-2 HELM_CONTOUR_VERSION:$HELM_CONTOUR_VERSION"
 
     echo "global:"                                     >  /tmp/contour_values.yaml
     echo "  imageRegistry: docker.io"                  >> /tmp/contour_values.yaml
@@ -5410,6 +5423,8 @@ InstallContour() {
 createClusterIssuer() {
   #https://cert-manager.io/docs/tutorials/acme/dns-validation/
   NAMESPACE=cert-manager
+
+echo "XXX TDH_HARBOR_STAGING_TLS_CERT:$TDH_HARBOR_STAGING_TLS_CERT"
 
   if [ "${TDH_HARBOR_STAGING_TLS_CERT}" == "true" ]; then
     LETSENSCRIPT_SERVER="https://acme-staging-v02.api.letsencrypt.org/directory"
