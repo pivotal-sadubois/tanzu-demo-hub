@@ -1133,12 +1133,12 @@ checkCloudAccess() {
 
       #if [ "${AZURE_CLIENT_ID}" == "" ]; then
       #  echo "  AZURE_CLIENT_ID                 (required) has the format <xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx>"
-      #  echo "                                  => az ad sp create-for-rbac --name \"TanzuDemoHub\" ## appId"
+      #  echo "                                  => az ad sp create-for-rbac --name \"TanzuDemoHub-$TDH_USER\" ## appId"
       #fi
 
       #if [ "${AZURE_CLIENT_SECRET}" == "" ]; then
       #  echo "  AZURE_CLIENT_SECRET             (required) has the format <xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx>"
-      #  echo "                                  => az ad sp create-for-rbac --name \"TanzuDemoHub\" ## password"
+      #  echo "                                  => az ad sp create-for-rbac --name \"TanzuDemoHub-$TDH_USER\" ## password"
       #fi
 
       if [ "${AZURE_LOCATION}" == "" ]; then
@@ -2613,21 +2613,21 @@ createTKGMCcluster() {
     # ste 5. Oct 2021 - /home/ubuntu/.config/tanzu was owned by root:root, change it to ubuntu:ubuntu
     sudo chown -R ubuntu:ubuntu /home/ubuntu/.config
 
-    az ad app list --display-name "TanzuDemoHub" > /dev/null 2>&1
+    az ad app list --display-name "TanzuDemoHub-$TDH_USER" > /dev/null 2>&1
     if [ $? -ne 0 ]; then 
       echo "ERROR: failed to list apps"
       if [ "$NATIVE" == "0" ]; then
         echo "       => tools/tdh-tools.sh"
-        echo "          tdh-tools:/$ az ad app list --display-name \"TanzuDemoHub\""
+        echo "          tdh-tools:/$ az ad app list --display-name \"TanzuDemoHub-$TDH_USER\""
         echo "          tdh-tools:/$ exit"
       else
-        echo "       => az ad app list --display-name \"TanzuDemoHub\""
+        echo "       => az ad app list --display-name \"TanzuDemoHub-$TDH_USER\""
       fi
       exit 1
     fi
 
     AZURE_SSH_PUBLIC_KEY_B64=$(cat ~/.tanzu-demo-hub/KeyPair-Azure.pub | base64 -w 10000)
-    AZURE_CLIENT_ID=$(az ad app list --display-name "TanzuDemoHub" | jq -r '.[].appId')
+    AZURE_CLIENT_ID=$(az ad app list --display-name "TanzuDemoHub-$TDH_USER" | jq -r '.[].appId')
 
     echo "CLUSTER_NAME: $TDH_TKGMC_NAME"                                              >> $TKG_TEMPLATE
     echo "AZURE_CLIENT_ID: $AZURE_CLIENT_ID"                                          >> $TKG_TEMPLATE
