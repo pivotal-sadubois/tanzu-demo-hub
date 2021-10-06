@@ -1805,6 +1805,8 @@ createENVfile() {
   fi
 
   if [ "${TDH_DEPLOYMENT_CLOUD}" == "Azure" ]; then
+    appid=$(az ad app list --display-name "TanzuDemoHub-$TDH_USER" | jq -r '.[].appId')
+
     echo "AZURE_SUBSCRIPTION_ID=\"$AZURE_SUBSCRIPTION_ID\""                      >> $envFile
     echo "AZURE_TENANT_ID=\"$AZURE_TENANT_ID\""                                  >> $envFile
     echo "AZURE_CLIENT_ID=\"$AZURE_CLIENT_ID\""                                  >> $envFile
