@@ -8,8 +8,7 @@
 FROM ubuntu:20.04  
 MAINTAINER Sacha Dubois <sdubois@vmware.com>
 ENV TZ="Europe/Zurich"
-ARG UID GID USER TZ HOME VMWUSER VMWPASS TANZU_CLI START 
-#ADD $TANZU_CLI /tmp
+ARG UID GID USER TZ HOME VMWUSER VMWPASS START 
 ADD cli             /tanzu/cli
 ADD argocd          /usr/local/bin
 ADD kubectl         /usr/local/bin
@@ -28,7 +27,9 @@ RUN ln -s /usr/lib/vmware-ovftool/ovftool /usr/local/bin/ovftool
 # --- LOCAL TIME AND USER ---
 RUN touch /tdh_tools_docker_container 
 RUN ln -snf /usr/share/zoneinfo/${TZ} /etc/localtime && echo ${TZ} > /etc/timezone
-RUN useradd -u $UID -g $GID -d $HOME $USER 
+#RUN useradd -u $UID -g $GID -d $HOME $USER 
+RUN grep ":$GID:" /etc/group || groupadd -g $GID $USER^
+RUN useradd -u $UID -d $HOME $USER 
 RUN groupadd docker
 RUN usermod -a -G docker $USER
 RUN usermod -a -G daemon $USER
