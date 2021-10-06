@@ -1662,7 +1662,6 @@ checkTDHAccess() {
 } 
 
 pivnetAPI() {
-echo arschloch 1>&2
   REFRESH_TOKEN="$1"
   token=$(curl -X POST https://network.pivotal.io/api/v2/authentication/access_tokens \
                -d "{\"refresh_token\":\"$REFRESH_TOKEN\"}" 2>/dev/null | jq -r '.access_token')

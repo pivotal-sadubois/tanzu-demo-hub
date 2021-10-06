@@ -361,6 +361,7 @@ configureLetsEnscript() {
     typ=$(echo $domain | egrep -c "aztkg|awstkg|gcptkg|vstkg")
     if [ $typ -ne 0 ]; then
       messageTitle "Generate Certificate for TKG Domains ($domain)"
+echo "$SSH_COMMAND -n \"sudo certbot certonly --dns-route53 -d '*.$domain' -m sadubois@pivotal.io --agree-tos -n --expand\""
       $SSH_COMMAND -n "sudo certbot certonly --dns-route53 -d '*.$domain' -m sadubois@pivotal.io --agree-tos -n --expand"
       if [ $? -ne 0 ]; then
         echo "ERROR: failed to generate certificate. There are probably to many cert requests happends and a limit reached"
@@ -1376,8 +1377,7 @@ else
           cnt=0; ret=1
           while [ $ret -ne 0 -a $cnt -lt 5 ]; do
             #az vm image terms accept --urn $img > /dev/null 2>&1; ret=$?
-echo "az vm image terms accept --urn $img:latest"
-            az vm image terms accept --urn $img:latest; ret=$?
+            az vm image terms accept --urn $img:latest > /dev/null 2>&1; ret=$?
             [ $ret -eq 0 ] && break
             let cnt=cnt+1
             sleep 30
