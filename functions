@@ -2625,9 +2625,9 @@ createTKGMCcluster() {
       fi
       exit 1
     fi
+
     AZURE_SSH_PUBLIC_KEY_B64=$(cat ~/.tanzu-demo-hub/KeyPair-Azure.pub | base64 -w 10000)
-    # ste 5. Oct 2021 - set in ~/.tanzu-demo-hub.cfg # AZURE_CLIENT_ID=$(az ad app list --display-name "TanzuDemoHub" | jq -r '.[].appId')
-    # ste 5. Oct 2021 - set in ~/.tanzu-demo-hub.cfg # AZURE_CLIENT_SECRET="tanzu-demo-hub"
+    AZURE_CLIENT_ID=$(az ad app list --display-name "TanzuDemoHub" | jq -r '.[].appId')
 
     echo "CLUSTER_NAME: $TDH_TKGMC_NAME"                                              >> $TKG_TEMPLATE
     echo "AZURE_CLIENT_ID: $AZURE_CLIENT_ID"                                          >> $TKG_TEMPLATE
