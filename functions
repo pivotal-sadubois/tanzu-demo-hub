@@ -99,6 +99,74 @@ loopCmd() {
   echo ""
 }
 
+oktaVerifyAccount() {
+  # [ "${TDH_TKGMC_IDENTITY_MANAGEMENT_TYPE}" == "none" ] && return
+  
+  if [ "${TDH_OKTA_DOMAIN}" == "" -o "${TDH_OKTA_API_TOKEN}" == "" ]; then
+    missing_variables=1
+    echo ""
+    echo "  MISSING ENVIRONMENT-VARIABES    DESCRIPTION        "
+    echo "  -------------------------------------------------------------------------------------------------------------------------------------------------------"
+
+    if [ "${TDH_OKTA_DOMAIN}" == "" ]; then
+      echo "  TDH_OKTA_DOMAIN                  (required) OKTA Domain URL"
+    fi
+
+    if [ "${TDH_OKTA_API_TOKEN}" == "" ]; then
+      echo "  TDH_OKTA_API_TOKEN               (required) OKTA API Token"
+    fi
+  else
+    if [ "$TDH_INFO" == "true" ]; then
+      echo "LDAP Identitiy Management (IdM)"
+      messagePrint " ▪ OKTA Domain "                       "$TDH_OKTA_DOMAIN"
+      messagePrint " ▪ OKTA URL"                           "https://${TDH_OKTA_DOMAIN}"
+      messagePrint " ▪ OKTA Admin URL"                     "https://${TDH_OKTA_DOMAIN}-admin"
+      messagePrint " ▪ OKTA API Token"                     "$TDH_OKTA_API_TOKEN"
+    fi
+  fi
+
+  # --- VERIFY OKTA DOMAIN ---
+  issuer=$(curl ${TDH_OKTA_ADMIN_URL}/.well-known/openid-configuration 2>/dev/null | jq -r '.issuer' 2>/dev/null)
+  if [ "$issuer" != "https://${TDH_OKTA_DOMAIN}.okta.com" ]; then 
+    echo "ERROR: $TDH_OKTA_ADMIN_URL is not a valiad OKta Domain. Please verify or create a new one"
+    exit 1
+  fi
+
+  oktaAPI verify
+}
+
+oktaVerifyApp() {
+  # [ "${TDH_TKGMC_IDENTITY_MANAGEMENT_TYPE}" == "none" ] && return
+
+  if [ "${TDH_OKTA_SECRET_ID}" == "" -o "${TDH_OKTA_USERNAME_CLAIM}" == "" -o "${TDH_OKTA_CLIENT_SECRET}" == "" -o \
+       "${TDH_OKTA_URL}" == "" -o "${TDH_OKTA_SCOPES}" == "" -o "${TDH_OKTA_GROUP_CLAIM}" == "" ]; then
+
+    missing_variables=1
+    echo ""
+    echo "  MISSING ENVIRONMENT-VARIABES    DESCRIPTION        "
+    echo "  -------------------------------------------------------------------------------------------------------------------------------------------------------"
+
+    if [ "${TDH_OKTA_SECRET_ID}" == "" ]; then
+      echo "  TDH_OKTA_SECRET_ID               (required) OKTA SecretId"
+    fi
+
+    if [ "${TDH_OKTA_CLIENT_SECRET}" == "" ]; then
+      echo "  TDH_OKTA_CLIENT_SECRET           (required) OKTA Client Secret"
+    fi
+  else
+    echo "LDAP Identitiy Management (IdM)"
+    messagePrint " ▪ LDAP Domain"                        "$LDAP_DOMAIN"
+    messagePrint " ▪ LDAP User Serach Name"              "userPrincipalName"
+    messagePrint " ▪ LDAP Host"                          "jump.${TDH_TKGMC_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}"
+    messagePrint " ▪ LDAP Group Search Name Attribute"   "cn"
+    messagePrint " ▪ LDAP Group Search User Attribute"   "DN"
+    messagePrint " ▪ LDAP Search Username"               "userPrincipalName"
+  fi
+
+  curl https://dev-15903420.okta.com/.well-known/openid-configuration | jq
+}
+
+
 
 checkIdentityProvider() {
   [ "${TDH_TKGMC_IDENTITY_MANAGEMENT_TYPE}" == "none" ] && return
@@ -7432,4 +7500,80 @@ leftText() {
   printf "$str\n" $TEXT
 }
 
+oktaAPIdata() {
+  curl --location --request $1 "$2" \
+    --header 'Accept: application/json' \
+    --header 'Content-Type: application/json' \
+    --header "Authorization: SSWS $TDH_OKTA_API_TOKEN" \
+    --data "@$3" 2>/dev/null 
+}
+
+
+oktaAPI() {
+  MODE=$1
+
+echo "TDH_OKTA_API_TOKEN:$TDH_OKTA_API_TOKEN"
+
+  if [ "$MODE" == "app_delete" ]; then 
+    #curl --location -g --request DELETE 'https://dev-15903420.okta.com/api/v1/apps/{{appId}}?appId=0oa3xr89toegQVBJ7696' \
+    curl --location -g --request DELETE "https://dev-15903420.okta.com/api/v1/apps/$2" \
+    --header 'Accept: application/json' \
+    --header "Authorization: SSWS $TDH_OKTA_API_TOKEN" 
+  fi
+
+  # --- TEST LOGIN ---
+  if [ "$MODE" == "login" -o "$MODE" == "verify" ]; then 
+    err=$(curl --location --request GET "https://${TDH_OKTA_DOMAIN}.okta.com/api/v1/users?limit=25" \
+      --header 'Accept: application/json' \
+      --header 'Content-Type: application/json' \
+      --header "Authorization: SSWS $TDH_OKTA_API_TOKEN" 2>/dev/null | jq -r '.errorCode' 2>/dev/null)
+
+    if [ "$err" != "" ]; then 
+      echo "ERROR: Failed to login to Omta, please verify the credentials"
+      exit 1
+    fi
+  fi
+
+  # --- TEST LOGIN ---
+  if [ "$MODE" == "apps" -o "$MODE" == "apps" ]; then 
+    curl --location --request GET "https://${TDH_OKTA_DOMAIN}.okta.com/api/v1/apps?limit=25" \
+    --header 'Accept: application/json' \
+    --header 'Content-Type: application/json' \
+    --header "Authorization: SSWS $TDH_OKTA_API_TOKEN" 2>/dev/null 
+  fi
+
+  if [ "$MODE" == "create_app" ]; then 
+    curl --location --request POST "https://${TDH_OKTA_DOMAIN}.okta.com/api/v1/apps" \
+    --header 'Accept: application/json' \
+    --header 'Content-Type: application/json' \
+    --header "Authorization: SSWS $TDH_OKTA_API_TOKEN" \
+    --data-raw '{
+        "name": "oidc_client",
+        "label": "Sample Client2",
+        "signOnMode": "OPENID_CONNECT",
+        "credentials": {
+          "oauthClient": {
+            "token_endpoint_auth_method": "client_secret_post"
+          }
+        },
+        "settings": {
+          "oauthClient": {
+            "client_uri": "http://localhost:8080",
+            "logo_uri": "http://developer.okta.com/assets/images/logo-new.png",
+            "redirect_uris": [
+              "https://example.com/oauth2/callback",
+              "myapp://callback"
+            ],
+            "response_types": [
+              "code"
+            ],
+            "grant_types": [
+              "authorization_code"
+            ],
+            "application_type": "web"
+          }
+        }
+      }'
+  fi
+}
 
