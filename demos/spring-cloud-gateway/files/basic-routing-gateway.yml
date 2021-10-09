@@ -1,0 +1,4 @@
+apiVersion: "tanzu.vmware.com/v1"
+kind: SpringCloudGateway
+metadata:
+  name: basic-routing-gateway
