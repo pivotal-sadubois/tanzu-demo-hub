@@ -94,7 +94,6 @@ oktaCreatAnimalRescueApp() {
   AppName="Animal Rescue"
   UserGroup="Adopter"
 
-if [ 2 -eq 1 ]; then 
   # --- DEACTIVATE Anumal Resue App ---
   for appid in $(oktaAPI apps | jq -r --arg key "$AppName" '.[] | select(.status == "ACTIVE" and .label == $key).id'); do
     oktaAPI deactivate $appid
@@ -146,10 +145,6 @@ if [ 2 -eq 1 ]; then
 
   client_id=$(echo $client | awk '{ print $1 }')
   client_secret=$(echo $client | awk '{ print $2 }')
-else
-  client_id="0oa26303vaeGs0Y4F5d7"
-  client_secret="CEUACLq2B_bpe7OW1OVV8vXHTva_lvYRpf2isOIv"
-fi
 
   # --- CREATE GROUP ---
   groupId=$(oktaAPI groups | jq -r --arg key "$UserGroup" '.[] | select(.profile.name == $key).id')
