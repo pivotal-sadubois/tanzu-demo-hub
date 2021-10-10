@@ -1,0 +1,45 @@
+apiVersion: "tanzu.vmware.com/v1"
+kind: SpringCloudGateway
+metadata:
+  name: gateway-demo
+spec:
+  api:
+    serverUrl: http://animal-rescue.DNS_DOMAIN
+    title: "Animal Rescue"
+    description: "Sample application for Spring Cloud Gateway commercial product demos."
+    documentation: "https://github.com/spring-cloud-services-samples/animal-rescue/"
+    version: "1.0.0-K8s"
+    cors:
+      allowedOrigins:
+      - "http://api-portal.DNS_DOMAIN"
+  count: 2
+  sso:
+    secret: animal-rescue-sso
+    roles-attribute-name: "groups"
+
+---
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    ingress.kubernetes.io/force-ssl-redirect: "true"
+    kubernetes.io/ingress.class: contour
+  name: gateway-demo
+  labels:
+    app: gateway-demo
+spec:
+#  tls:
+#  - secretName: tls-secret
+#    hosts:
+#      - animal-rescue.DNS_DOMAIN
+  rules:
+  - host: animal-rescue.DNS_DOMAIN
+    http:
+      paths:
+      - backend:
+          service:
+            name: gateway-demo
+            port:
+              number: 80
+        pathType: ImplementationSpecific

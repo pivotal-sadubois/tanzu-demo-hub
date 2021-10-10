@@ -1,0 +1,22 @@
+---
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: TBS_SOURCE_APP-ingress
+  namespace: NAMESPACE
+  labels:
+    app: TBS_SOURCE_APP-app
+spec:
+  tls:
+  - secretName: https-secret
+    hosts:
+      - TBS_SOURCE_APP.DNS_DOMAIN
+  rules:
+  - host: TBS_SOURCE_APP.DNS_DOMAIN
+    http:
+      paths:
+      - path: /
+        backend:
+          #serviceName: TBS_SOURCE_APP-service
+          serviceName: my-gateway
+          servicePort: 80

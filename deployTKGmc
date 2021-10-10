@@ -361,6 +361,7 @@ configureLetsEnscript() {
     typ=$(echo $domain | egrep -c "aztkg|awstkg|gcptkg|vstkg")
     if [ $typ -ne 0 ]; then
       messageTitle "Generate Certificate for TKG Domains ($domain)"
+echo "$SSH_COMMAND -n \"sudo certbot certonly --dns-route53 -d '*.$domain' -m sadubois@pivotal.io --agree-tos -n --expand\""
       $SSH_COMMAND -n "sudo certbot certonly --dns-route53 -d '*.$domain' -m sadubois@pivotal.io --agree-tos -n --expand"
       if [ $? -ne 0 ]; then
         echo "ERROR: failed to generate certificate. There are probably to many cert requests happends and a limit reached"
@@ -795,43 +796,81 @@ createJumpHost() {
     fi
 
     # --- VERIFY / CREATE APPLICATION ID AND SERVICE PRINCIPLE ---
-    appid=$(az ad app list --display-name "TanzuDemoHub" | jq -r '.[].appId')
+    appid=$(az ad app list --display-name "TanzuDemoHub-$TDH_USER" | jq -r '.[].appId')
     if [ "$appid" == "" ]; then 
-      messageTitle "Register Azure Application (TanzuDemoHub)"
-      messagePrint " ▪ Register Azure ApplicationID" "TanzuDemoHub"
-      az ad app create --display-name TanzuDemoHub --key-type Password --password tanzu-demo-hub > /dev/null 2>&1
-      if [ $? -ne 0 ]; then 
-        echo "ERROR: failed to register app (TanzuDemoHub)"
-        echo "       => az ad app create --display-name TanzuDemoHub --key-type Password --password tanzu-demo-hub"
-        exit
-      fi
-     
-      messagePrint " ▪ Create ServicePrincipal for Application" "TanzuDemoHub"
-      appid=$(az ad app list --display-name "TanzuDemoHub" | jq -r '.[].appId')
-      az ad sp create --id $appid > /dev/null 2>&1
-      if [ $? -ne 0 ]; then 
-        echo "ERROR: failed to create ServicePrinicipal for app (TanzuDemoHub)"
-        echo "       => az ad sp create --id $appid"
-        exit
-      fi
+      messageTitle "Register Azure Application (TanzuDemoHub-$TDH_USER)"
+# => not needed anymore: az ad sp create-for-rbac --name "TanzuDemoHub-$TDH_USER)" does it all
+#      messagePrint " ▪ Register Azure ApplicationID" "TanzuDemoHub-$TDH_USER"
+#      #az ad app create --display-name TanzuDemoHub-$TDH_USER --key-type Password --password tanzu-demo-hub > /dev/null 2>&1
+#      az ad app create --display-name TanzuDemoHub-$TDH_USER --key-type Password --password tanzu-demo-hub 
+#      if [ $? -ne 0 ]; then 
+#        echo "ERROR: failed to register app (TanzuDemoHub-$TDH_USER)"
+#        echo "       => az ad app create --display-name TanzuDemoHub-$TDH_USER --key-type Password --password tanzu-demo-hub"
+#        exit
+#      fi
+#     
+#      messagePrint " ▪ Create ServicePrincipal for Application" "TanzuDemoHub-$TDH_USER"
+#      appid=$(az ad app list --display-name "TanzuDemoHub-$TDH_USER" | jq -r '.[].appId')
+#      az ad sp create --id $appid > /dev/null 2>&1
+#      if [ $? -ne 0 ]; then 
+#        echo "ERROR: failed to create ServicePrinicipal for app (TanzuDemoHub-$TDH_USER)"
+#        echo "       => az ad sp create --id $appid"
+#        exit
+#      fi
+#
+#      messagePrint " ▪ Create RoleBinding for Application (TanzuDemoHub-$TDH_USER)" "Owner"
+#      objid=$(az ad sp list --all --display-name TanzuDemoHub-$TDH_USER | jq -r '.[].objectId')
+#      #az role assignment create --subscription $AZURE_SUBSCRIPTION_ID --role owner \
+#      #    --assignee-principal-type ServicePrincipal --assignee-object-id $objid > /dev/null 2>&1
+#      az role assignment create --subscription $AZURE_SUBSCRIPTION_ID --role owner \
+#          --assignee-principal-type ServicePrincipal --assignee-object-id $objid 
+#      if [ $? -ne 0 ]; then
+#        echo "ERROR: failed to create RoleBinding for app (TanzuDemoHub-$TDH_USER)"
+#        echo "       => az role assignment create --subscription $AZURE_SUBSCRIPTION_ID --role owner \\"
+#        echo "          --assignee-principal-type ServicePrincipal --assignee-object-id $objid"
+#        exit
+#      fi
+#
+#docker run --rm --name azure-cli bitnami/azure-cli:latest login --service-principal --username $appid --password tanzu-demo-hub --tenant $AZURE_TENANT_ID > /dev/null 2>&1
 
-      messagePrint " ▪ Create RoleBinding for Application (TanzuDemoHub)" "Owner"
-      objid=$(az ad sp list --all --display-name TanzuDemoHub | jq -r '.[].objectId')
-      az role assignment create --subscription $AZURE_SUBSCRIPTION_ID --role owner \
-          --assignee-principal-type ServicePrincipal --assignee-object-id $objid > /dev/null 2>&1
-      if [ $? -ne 0 ]; then
-        echo "ERROR: failed to create RoleBinding for app (TanzuDemoHub)"
-        echo "       => az role assignment create --subscription $AZURE_SUBSCRIPTION_ID --role owner \\"
-        echo "          --assignee-principal-type ServicePrincipal --assignee-object-id $objid"
-        exit
+      AZURE_CLIENT_ID=$appid
+      AZURE_CLIENT_SECRET=$(az ad sp create-for-rbac --name "TanzuDemoHub-$TDH_USER" 2>/dev/null | jq -r '.password')
+
+      echo "INFO: Please set the new generated Azure Client Secret for the Azure ClientID (TanzuDemoHub-$TDH_USER)"
+      echo "      into your ~/.tanzu-demo-hub.cfg and restart $0"
+      echo "      => export AZURE_CLIENT_SECRET=\"$AZURE_CLIENT_SECRET\""
+      echo " "
+      exit 0
+    else
+      if [ "$AZURE_CLIENT_SECRET" == "" ]; then 
+        AZURE_CLIENT_ID=$appid
+        AZURE_CLIENT_SECRET=$(az ad sp create-for-rbac --name "TanzuDemoHub-$TDH_USER)" 2>/dev/null | jq -r '.password') 
+        echo "INFO: Please set the new generated Azure Client Secret for the Azure ClientID (TanzuDemoHub-$TDH_USER)"
+        echo "      into your ~/.tanzu-demo-hub.cfg and restart $0"
+        echo "      => export AZURE_CLIENT_SECRET=\"$AZURE_CLIENT_SECRET\""
+        echo " "
+        exit 0
+      else
+        docker run --rm --name azure-cli bitnami/azure-cli:latest login --service-principal --username $appid --password $AZURE_CLIENT_SECRET --tenant $AZURE_TENANT_ID > /dev/null 2>&1
+        if [ $? -ne 0 ]; then 
+          AZURE_CLIENT_ID=$appid
+          AZURE_CLIENT_SECRET=$(az ad sp create-for-rbac --name "TanzuDemoHub-$TDH_USER)" 2>/dev/null | jq -r '.password')
+          echo "INFO: The configured Azure Client Secret seams to be wrong or outdated, please set"
+          echo "      the new generated Azure Client Secret for the Azure ClientID (TanzuDemoHub-$TDH_USER)"
+          echo "      into your ~/.tanzu-demo-hub.cfg and restart $0"
+          echo "      => export AZURE_CLIENT_SECRET=\"$AZURE_CLIENT_SECRET\""
+          echo " "
+          exit 0
+        fi
       fi
     fi
 
-    appid=$(az ad app list --display-name "TanzuDemoHub" | jq -r '.[].appId')
-    objid=$(az ad sp list --all --display-name TanzuDemoHub | jq -r '.[].objectId')
-    messageTitle "Verify Azure Application (TanzuDemoHub)"
-    messagePrint " ▪ Application ID" "$appid"
-    messagePrint " ▪ Application Display Name" "TanzuDemoHub"
+    appid=$(az ad app list --display-name "TanzuDemoHub-$TDH_USER" | jq -r '.[].appId')
+    objid=$(az ad sp list --all --display-name TanzuDemoHub-$TDH_USER | jq -r '.[].objectId')
+    messageTitle "Verify Azure Application (TanzuDemoHub-$TDH_USER)"
+    messagePrint " ▪ Azure Client ID" "$appid"
+    messagePrint " ▪ Azure Client Secret" "verified"
+    messagePrint " ▪ Application Display Name" "TanzuDemoHub-$TDH_USER"
     messagePrint " ▪ ServicePrincipal" "$objid"
     messagePrint " ▪ Role Binding" "Owner"
 
@@ -1376,8 +1415,7 @@ else
           cnt=0; ret=1
           while [ $ret -ne 0 -a $cnt -lt 5 ]; do
             #az vm image terms accept --urn $img > /dev/null 2>&1; ret=$?
-echo "az vm image terms accept --urn $img:latest"
-            az vm image terms accept --urn $img:latest; ret=$?
+            az vm image terms accept --urn $img:latest > /dev/null 2>&1; ret=$?
             [ $ret -eq 0 ] && break
             let cnt=cnt+1
             sleep 30
@@ -1662,16 +1700,21 @@ echo "az vm image terms accept --urn $img:latest"
     echo "    => ./deployTKG -m $TDH_TKGMC_NAME -d tkg-tanzu-demo-hub.cfg -n tdh-$CLOUD-$TDH_USER -k \"v1.17.16---vmware.2-tkg.1\""
   fi
 
-  printf "\e[1m3.) Delete the Management Cluster (Local or on the Jump host)\e[0m\n"
-  if [ "$NATIVE" == "0" ]; then
-    echo "    => tools/tdh-tools.sh"
-    echo "       tdh-tools:/$ tanzu management-cluster delete $TDH_TKGMC_NAME -y"
-    echo "       tdh-tools:/$ exit"
-    echo "    => $SSH_DISPLAY"
-    echo "       tanzu management-cluster delete $TDH_TKGMC_NAME -y"
-  else
-    echo "    => tanzu management-cluster delete $TDH_TKGMC_NAME -y"
-  fi
+#  printf "\e[1m3.) Delete the Management Cluster (Local or on the Jump host)\e[0m\n"
+#  if [ "$NATIVE" == "0" ]; then
+#    echo "    => tools/tdh-tools.sh"
+#    echo "       tdh-tools:/$ tanzu management-cluster delete $TDH_TKGMC_NAME -y"
+#    echo "       tdh-tools:/$ exit"
+#    echo "    => $SSH_DISPLAY"
+#    #echo "       tanzu management-cluster delete $TDH_TKGMC_NAME -y"
+#    echo "       deployTKGmc $DEPLOY_TKG_TEMPLATE --delete"
+#  else
+#    echo "    => tanzu management-cluster delete $TDH_TKGMC_NAME -y"
+#  fi
+
+  printf "\e[1m3.) Delete the Management Cluster\e[0m\n"
+  echo "    => deployTKGmc $DEPLOY_TKG_TEMPLATE --delete"
+
   printf "\e[1m4.) Login to Jump Server: $JUMP_HOST (only if required)\e[0m\n"
   echo "    => $SSH_DISPLAY"
   echo ""
