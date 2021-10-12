@@ -231,9 +231,11 @@ InstallHarborRegistry
 getRootCA tanzu-demo-hub-tls
 installBuildService
 installTanzuDataPostgres
-#installSpringCloudGateway
+installSpringCloudGateway
 installMinio
 installKubeapps
+installJenkins
+installArgoCD
 
 if [ "$TDH_TANZU_MISSION_CONTROL_REGISTRATION" == "true" ]; then 
   cnt=$(tmc cluster list --name $TDH_MINIKUBE_PROFILE -p $TDH_PROVISIONER_NAME -m $TDH_MANAGEMENT_CLUSTER 2> /dev/null | egrep -c " $TDH_MINIKUBE_PROFILE ")
