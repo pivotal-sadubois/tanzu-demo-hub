@@ -283,7 +283,7 @@ tmcCheckLogin() {
   if [ $ret -ne 0 ]; then
     echo "ERROR: failed to login into TMC"
     if [ "$NATIVE" == "0" ]; then
-      echo "       => tools/tdh-tools.sh"
+      echo "       => tools/${TDH_TOOLS}.sh"
       echo "          tdh-tools:/$ export TMC_API_TOKEN=$TMC_SERVICE_TOKEN"
       echo "          tdh-tools:/$ tmc login --name $TMC_CONTEXT_NAME --no-configure"
       echo "          tdh-tools:/$ exit"
@@ -1332,7 +1332,7 @@ checkTMCintegration() {
         if [ $ret -ne 0 ]; then
           echo "ERROR: failed to install wavefront Helm Chart"
           if [ "$NATIVE" == "0" ]; then
-            echo "       => tools/tdh-tools.sh"
+            echo "       => tools/${TDH_TOOLS}.sh"
             echo "          tdh-tools:/$ helm install wavefront wavefront/wavefront \\"
             echo "           --set wavefront.url=$TDH_TANZU_OBSERVABILITY_URL \\"
             echo "           --set wavefront.token=$TDH_TANZU_OBSERVABILITY_API_TOKEN \\"
@@ -1378,7 +1378,7 @@ checkTMCintegration() {
           messageLine
           echo "ERROR: failed to add integration"
           if [ "$NATIVE" == "0" ]; then 
-            echo "       => tools/tdh-tools.sh"
+            echo "       => tools/${TDH_TOOLS}.sh"
             echo "          tdh-tools:/$ tmc cluster integration create -f $TANZU_OBSERVABILITY"
             echo "          tdh-tools:/$ exit"
           else
@@ -1423,7 +1423,7 @@ checkTMCintegration() {
             messageLine
             echo "ERROR: failed to enable dataprotection for cluster $TDH_CLUSTER_NAME"
             if [ "$NATIVE" == "0" ]; then
-              echo "       => tools/tdh-tools.sh"
+              echo "       => tools/${TDH_TOOLS}.sh"
               echo "          tdh-tools:/$ tmc cluster dataprotection create -c $TDH_CLUSTER_NAME -m $TDH_MANAGEMENT_CLUSTER  \\"
               echo "                          -p $TDH_PROVISIONER_NAME --backup-location-names $TDH_TANZU_DATA_PROTECTION_BACKUP_LOCATION"
               echo "          tdh-tools:/$ exit"
@@ -1473,7 +1473,7 @@ checkTMCintegration() {
           messageLine
           echo "ERROR: failed to configure a full-backup"
           if [ "$NATIVE" == "0" ]; then
-            echo "       => tools/tdh-tools.sh"
+            echo "       => tools/${TDH_TOOLS}.sh"
             echo "          tdh-tools:/$ tmc cluster dataprotection backup create -c $TDH_CLUSTER_NAME -p $TDH_PROVISIONER_NAME \\"
             echo "                          -m $TDH_MANAGEMENT_CLUSTER  --name \"full-backup\" --backup-location-name $TDH_TANZU_DATA_PROTECTION_BACKUP_LOCATION"
             echo "          tdh-tools:/$ exit"
@@ -1529,7 +1529,7 @@ scanCluster() {
         messageLine
         echo "ERROR: failed to scan cluster $TDH_CLUSTER_NAME"
         if [ "$NATIVE" == "0" ]; then
-          echo "       => tools/tdh-tools.sh"
+          echo "       => tools/${TDH_TOOLS}.sh"
           echo "          tdh-tools:/$ tmc cluster inspection scan create -c $TDH_CLUSTER_NAME -p $TDH_PROVISIONER_NAME \\"
           echo "                         -m $TDH_MANAGEMENT_CLUSTER  --inspection-type $TYPE"
           echo "          tdh-tools:/$ exit"
@@ -1593,7 +1593,7 @@ checkTMCAccess() {
       if [ ! -d ~/.aws -o -d ~/.aws/credentials ]; then
         echo "ERROR: AWS CLI is not configured yet, please run aws configure"
         if [ "$NATIVE" == "0" ]; then
-          echo "       => tools/tdh-tools.sh"
+          echo "       => tools/${TDH_TOOLS}.sh"
           echo "          tdh-tools:/$ aws configure"
           echo "          tdh-tools:/$ exit"
         else
@@ -1675,7 +1675,7 @@ checkTDHAccess() {
     if [ ! -d ~/.aws -o -d ~/.aws/credentials ]; then
       echo "ERROR: AWS CLI is not configured yet, please run aws configure"
       if [ "$NATIVE" == "0" ]; then
-        echo "       => tools/tdh-tools.sh"
+        echo "       => tools/${TDH_TOOLS}.sh"
         echo "          tdh-tools:/$ aws configure"
         echo "          tdh-tools:/$ exit"
       else
@@ -1691,7 +1691,7 @@ checkTDHAccess() {
         echo "ERROR: AWS_ACCESS_KEY and AWS_SECRET_KEY in ~/.tanzu-demo-hub.cfg do not match"
         echo "       with the aws credentials defined in $HOME/.aws/credentials. Please configure manually"
         if [ "$NATIVE" == "0" ]; then 
-          echo "       => tools/tdh-tools.sh"
+          echo "       => tools/${TDH_TOOLS}.sh"
           echo "          tdh-tools:/$ aws configure"
           echo "          tdh-tools:/$ exit"
         else
@@ -1702,7 +1702,7 @@ checkTDHAccess() {
     else
       echo "ERROR: AWS Credentials not configured on local system, Please configure manually"
       if [ "$NATIVE" == "0" ]; then
-        echo "       => tools/tdh-tools.sh"
+        echo "       => tools/${TDH_TOOLS}.sh"
         echo "          tdh-tools:/$ aws configure"
         echo "          tdh-tools:/$ exit 1"
       else
@@ -2055,7 +2055,7 @@ configureJumpHost() {
   if [ $ret -ne 0 ]; then 
     echo "ERROR: failed to copy tar file"
     if [ "$NATIVE" == "0" ]; then
-      echo "       => tools/tdh-tools.sh"
+      echo "       => tools/${TDH_TOOLS}.sh"
       echo "          tdh-tools:/$ $SCP_COMMAND /tmp/tdh-home.tar ${SSH_USER}@${SSH_HOST}:$SSH_HOME"
       echo "          tdh-tools:/$ exit"
     else
@@ -2154,7 +2154,7 @@ route53createHostedZone() {
   if [ $? -ne 0 ]; then
       echo "ERROR: failed to create AWS Route53 zone $ZONE_ID"
       if [ "$NATIVE" == "0" ]; then
-        echo "       => tools/tdh-tools.sh"
+        echo "       => tools/ols.sh"
         echo "          tdh-tools:/$ aws route53 create-hosted-zone --name $zone --caller-reference \"$(date)\" \\"
         echo "                         --hosted-zone-config Comment=\"command-line version\""
         echo "          tdh-tools:/$ exit"
@@ -2212,7 +2212,7 @@ route53setNSrecord () {
   if [ $? -ne 0 ]; then
     echo "4ERROR: failed to set DNS for $hnm"
     if [ "$NATIVE" == "0" ]; then
-      echo "       => tools/tdh-tools.sh"
+      echo "       => tools/${TDH_TOOLS}.sh"
       echo "          tdh-tools:/$ aws route53 change-resource-record-sets --hosted-zone-id \"${ZONE_ID}\" \\"
       echo "                           --change-batch file://${TMPROUTE53}"
       echo "          tdh-tools:/$ exit"
@@ -2245,7 +2245,7 @@ route53deleteHostedZone() {
   if [ $? -ne 0 ]; then
     echo "ERROR: failed to delete AWS Route53 zone $ZONE_ID"
     if [ "$NATIVE" == "0" ]; then
-      echo "       => tools/tdh-tools.sh"
+      echo "       => tools/${TDH_TOOLS}.sh"
       echo "          tdh-tools:/$ aws route53 delete-hosted-zone --id $ZONE_ID"
       echo "          tdh-tools:/$ exit"
     else
@@ -2280,7 +2280,7 @@ route53setDNSrecord() {
   if [ "${ZONE_ID}" == "" ]; then
     echo "ERROR: ZoneID for domain $dom can not be optained, please veriofy manually"
     if [ "$NATIVE" == "0" ]; then
-      echo "       => tools/tdh-tools.sh"
+      echo "       => tools/${TDH_TOOLS}.sh"
       echo "          tdh-tools:/$ aws route53 list-hosted-zones-by-name --dns-name ${dom}"
       echo "          tdh-tools:/$ exit"
     else
@@ -2307,7 +2307,7 @@ EOF
    if [ $? -ne 0 ]; then
      echo "5ERROR: failed to set DNS for $hnm"
      if [ "$NATIVE" == "0" ]; then
-       echo "       => tools/tdh-tools.sh"
+       echo "       => tools/${TDH_TOOLS}.sh"
        echo "          tdh-tools:/$ aws route53 change-resource-record-sets --hosted-zone-id "${ZONE_ID}" --change-batch file:///tmp/$$_zone_record"
        echo "          tdh-tools:/$ exit"
      else
@@ -2320,12 +2320,114 @@ EOF
 
 createTKGMCcluster() {
   unset TKG_CONFIG
-  TDH_TKGMC_NAME=${TDH_TKGMC_NAME}-${TDH_USER}
   [ ! -d ${HOME}/.tanzu-demo-hub/config ] && mkdir -p ${HOME}/.tanzu-demo-hub/config
   TKG_TEMPLATE=${HOME}/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.yaml; rm -f $TKG_TEMPLATE
   TKG_KUBECONFIG=${HOME}/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.kubeconfig; rm -f $TKG_KUBECONFIG
 
   cleanKindCluster
+
+  if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "docker" ]; then
+    echo "CLUSTER_NAME: $TDH_TKGMC_NAME"                                               >  $TKG_TEMPLATE
+    echo "CLUSTER_PLAN: \"dev\""                                                       >> $TKG_TEMPLATE
+    echo "CLUSTER_CIDR: 100.96.0.0/11"                                                 >> $TKG_TEMPLATE
+    echo "ENABLE_MHC: \"false\""                                                       >> $TKG_TEMPLATE
+    echo "IDENTITY_MANAGEMENT_TYPE: none"                                              >> $TKG_TEMPLATE
+    echo "INFRASTRUCTURE_PROVIDER: docker"                                             >> $TKG_TEMPLATE
+    echo "OS_ARCH: \"\""                                                               >> $TKG_TEMPLATE
+    echo "OS_NAME: \"\""                                                               >> $TKG_TEMPLATE
+    echo "OS_VERSION: \"\""                                                            >> $TKG_TEMPLATE
+    echo "SERVICE_CIDR: 100.64.0.0/13"                                                 >> $TKG_TEMPLATE
+    echo "TKG_HTTP_PROXY_ENABLED: \"false\""                                           >> $TKG_TEMPLATE
+
+    # --- LDAP IDENTITY PROVIDOR AVAILABLE ON THE JUMP SERVER ---
+    # https://docs.vmware.com/en/VMware-Tanzu-Kubernetes-Grid/1.3/vmware-tanzu-kubernetes-grid-13/GUID-mgmt-clusters-create-config-file.html#identity-mgmt
+    if [ "$TDH_TKGMC_IDENTITY_MANAGEMENT_TYPE" == "ldap" ]; then
+      echo "IDENTITY_MANAGEMENT_TYPE: ldap"                                                          >> $TKG_TEMPLATE
+      echo "LDAP_GROUP_SEARCH_BASE_DN: ${LDAP_DOMAIN}"                                               >> $TKG_TEMPLATE
+      echo "LDAP_HOST: jump.${TDH_TKGMC_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}"                           >> $TKG_TEMPLATE
+      echo "LDAP_GROUP_SEARCH_NAME_ATTRIBUTE: cn"                                                    >> $TKG_TEMPLATE
+      echo "LDAP_GROUP_SEARCH_USER_ATTRIBUTE: DN"                                                    >> $TKG_TEMPLATE
+      echo "LDAP_USER_SEARCH_USERNAME: userPrincipalName"                                            >> $TKG_TEMPLATE
+      echo "TKG_HTTP_PROXY_ENABLED: \"false\""                                                       >> $TKG_TEMPLATE
+    fi
+
+    # --- OIDC IDENTITY PROVIDOR WITH (OKTA) ---
+    if [ "$TDH_TKGMC_IDENTITY_MANAGEMENT_TYPE" == "oidc" ]; then
+      echo "IDENTITY_MANAGEMENT_TYPE: oidc"                                              >> $TKG_TEMPLATE
+      echo "OIDC_IDENTITY_PROVIDER_CLIENT_ID: \"$TDH_OKTA_SECRET_ID\""                   >> $TKG_TEMPLATE
+      echo "OIDC_IDENTITY_PROVIDER_CLIENT_SECRET: \"$TDH_OKTA_CLIENT_SECRET\""           >> $TKG_TEMPLATE
+      echo "OIDC_IDENTITY_PROVIDER_ISSUER_URL: \"$TDH_OKTA_URL\""                        >> $TKG_TEMPLATE
+      echo "OIDC_IDENTITY_PROVIDER_SCOPES: \"$TDH_OKTA_SCOPES\""                         >> $TKG_TEMPLATE
+      echo "OIDC_IDENTITY_PROVIDER_GROUPS_CLAIM:: \"$TDH_OKTA_GROUP_CLAIM\""             >> $TKG_TEMPLATE
+      echo "OIDC_IDENTITY_PROVIDER_USERNAME_CLAIM: \"$TDH_OKTA_USERNAME_CLAIM\""         >> $TKG_TEMPLATE
+    fi
+
+    if [ "$TDH_TKGMC_IDENTITY_MANAGEMENT_TYPE" == "none" ]; then
+      echo "IDENTITY_MANAGEMENT_TYPE: none"                                              >> $TKG_TEMPLATE
+    fi
+
+    cnt=$(tanzu management-cluster get 2>/dev/null | egrep -c " $TDH_TKGMC_NAME ")
+    if [ ${cnt} -eq 0 ]; then
+      # --- CLEANUP OLD CONFIG ---
+      export KUBECONFIG=~/.kube-tkg/config
+
+      kubectl config unset clusters.${TDH_TKGMC_NAME}.log > /dev/null 2>&1
+      kubectl config unset contexts.${TDH_TKGMC_NAME}-admin@${TDH_TKGMC_NAME} > /dev/null 2>&1
+      kubectl config unset users.${TDH_TKGMC_NAME}-admin > /dev/null 2>&1
+
+      # --- CLEAN OLD MANAGEMENT CLUSTER CONFIG ---
+      rm -f ~/.tanzu/config.yaml /tmp/$TDH_TKGMC_NAME.log
+
+      messagePrint " ▪ Management Cluster Creating"        "This may take up to 15min ..."
+
+      if [ $DEBUG -gt 0 ]; then
+        messageLine
+        tanzu management-cluster create --file $TKG_TEMPLATE -v 0 --log-file=/tmp/$TDH_TKGMC_NAME.log; ret=$?
+        messageLine
+      else
+        tanzu management-cluster create --file $TKG_TEMPLATE -v 0 --log-file=/tmp/$TDH_TKGMC_NAME.log > /dev/null 2>&1; ret=$?
+      fi
+
+      cnt=$(tanzu management-cluster get 2>/dev/null | grep -c Error)
+      if [ ${ret} -ne 0 -o ${cnt} -gt 0 ]; then
+        echo "ERROR: failed to create TKG Management Cluster"
+        if [ "$NATIVE" == "0" ]; then
+          echo "       => tools/${TDH_TOOLS}.sh"
+          echo "          tdh-tools:/$ tanzu management-cluster create --file $TKG_TEMPLATE -v 0 --log-file=/tmp/$TDH_TKGMC_NAME.log"
+          echo "          tdh-tools:/$ exit"
+        else
+          echo "       => tanzu management-cluster create --file $TKG_TEMPLATE -v 0 --log-file=/tmp/$TDH_TKGMC_NAME.log"
+        fi
+        echo "-------------------------------------------------------------------------------------------------------------------------------------------------------"
+        cat /tmp/$TDH_TKGMC_NAME.log
+        echo "-------------------------------------------------------------------------------------------------------------------------------------------------------"
+
+        exit 1
+      fi
+
+      messagePrint " ▪ Management Cluster Creating Completed"    "/tmp/$TDH_TKGMC_NAME.log"
+
+      tanzu management-cluster kubeconfig get --admin > /dev/null 2>&1
+      kubectl config set-cluster $TDH_TKGMC_NAME > /dev/null 2>&1
+      kubectl config use-context ${TDH_TKGMC_NAME}-admin@$TDH_TKGMC_NAME > /dev/null 2>&1
+      context=$(kubectl config view -o json | jq -r '.contexts[].name' 2>/dev/null)
+      tanzu management-cluster kubeconfig get --admin --export-file=${TKG_KUBECONFIG} > /dev/null 2>&1; ret=$?
+      if [ $ret -ne 0 ]; then
+        echo "ERROR: failed to generate kubeconfig:"
+        if [ "$NATIVE" == "0" ]; then
+          echo "       => tools/${TDH_TOOLS}.sh"
+          echo "          tdh-tools:/$ tanzu management-cluster kubeconfig get --admin --export-file=${TKG_KUBECONFIG}"
+          echo "          tdh-tools:/$ exit"
+        else
+          echo "       => tanzu management-cluster kubeconfig get --admin --export-file=${TKG_KUBECONFIG}"
+        fi
+        messageLine
+        tanzu management-cluster kubeconfig get --admin --export-file=${TKG_KUBECONFIG}
+        messageLine
+        exit 1
+      fi
+    fi
+  fi
 
   if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "vSphere" ]; then
     # --- SET DEFAULT VALUES ---
@@ -2442,7 +2544,7 @@ createTKGMCcluster() {
       if [ ${ret} -ne 0 -o ${cnt} -gt 0 ]; then
         echo "ERROR: failed to create TKG Management Cluster"
         if [ "$NATIVE" == "0" ]; then
-          echo "       => tools/tdh-tools.sh"
+          echo "       => tools/${TDH_TOOLS}.sh"
           echo "          tdh-tools:/$ tanzu management-cluster create --file $TKG_TEMPLATE -v 0 --log-file=/tmp/$TDH_TKGMC_NAME.log"
           echo "          tdh-tools:/$ exit"
         else
@@ -2468,7 +2570,7 @@ createTKGMCcluster() {
       if [ $ret -ne 0 ]; then
         echo "ERROR: failed to generate kubeconfig:"
         if [ "$NATIVE" == "0" ]; then
-          echo "       => tools/tdh-tools.sh"
+          echo "       => tools/${TDH_TOOLS}.sh"
           echo "          tdh-tools:/$ tanzu management-cluster kubeconfig get --admin --export-file=${TKG_KUBECONFIG}"
           echo "          tdh-tools:/$ exit"
         else
@@ -2625,7 +2727,7 @@ createTKGMCcluster() {
       if [ ${ret} -ne 0 -o ${cnt} -gt 0 ]; then
         echo "ERROR: failed to create TKG Management Cluster"
         if [ "$NATIVE" == "0" ]; then
-          echo "       => tools/tdh-tools.sh"
+          echo "       => tools/${TDH_TOOLS}.sh"
           echo "          tdh-tools:/$ tanzu management-cluster create --file $TKG_TEMPLATE -v 0 --log-file=/tmp/$TDH_TKGMC_NAME.log"
           echo "          tdh-tools:/$ exit"
         else
@@ -2648,7 +2750,7 @@ createTKGMCcluster() {
       if [ $ret -ne 0 ]; then
         echo "ERROR: failed to generate kubeconfig:"
         if [ "$NATIVE" == "0" ]; then
-          echo "       => tools/tdh-tools.sh"
+          echo "       => tools/${TDH_TOOLS}.sh"
           echo "          tdh-tools:/$ tanzu management-cluster kubeconfig get --admin --export-file=${TKG_KUBECONFIG}"
           echo "          tdh-tools:/$ exit"
         else
@@ -2689,7 +2791,7 @@ createTKGMCcluster() {
     if [ $? -ne 0 ]; then 
       echo "ERROR: failed to list apps"
       if [ "$NATIVE" == "0" ]; then
-        echo "       => tools/tdh-tools.sh"
+        echo "       => tools/${TDH_TOOLS}.sh"
         echo "          tdh-tools:/$ az ad app list --display-name \"TanzuDemoHub-$TDH_USER\""
         echo "          tdh-tools:/$ exit"
       else
@@ -2785,7 +2887,7 @@ createTKGMCcluster() {
       if [ ${ret} -ne 0 -o ${cnt} -gt 0 ]; then
         echo "ERROR: failed to create TKG Management Cluster"
         if [ "$NATIVE" == "0" ]; then
-          echo "       => tools/tdh-tools.sh"
+          echo "       => tools/${TDH_TOOLS}.sh"
           echo "          tdh-tools:/$ tanzu management-cluster create --file $TKG_TEMPLATE -v 0 --log-file=/tmp/$TDH_TKGMC_NAME.log"
           echo "          tdh-tools:/$ exit"
         else
@@ -2807,7 +2909,7 @@ createTKGMCcluster() {
       if [ ${ret} -ne 0 ]; then
         echo "ERROR: failed to export kubeconfig"
         if [ "$NATIVE" == "0" ]; then
-          echo "       => tools/tdh-tools.sh"
+          echo "       => tools/${TDH_TOOLS}.sh"
           echo "          tdh-tools:/$ tanzu management-cluster kubeconfig get --admin --export-file=${TKG_KUBECONFIG}"
           echo "          tdh-tools:/$ exit"
         else
@@ -2932,7 +3034,7 @@ setTKGclusterDNS() {
       if [ $? -ne 0 ]; then
         echo "1ERROR: failed to set DNS for $hnm"
         if [ "$NATIVE" == "0" ]; then
-          echo "       => tools/tdh-tools.sh"
+          echo "       => tools/${TDH_TOOLS}.sh"
           echo "          tdh-tools:/$ aws route53 change-resource-record-sets --hosted-zone-id \"${ZONE_ID}\" \\"
           echo "                          --change-batch file://${TMPROUTE53}"
           echo "          tdh-tools:/$ exit"
@@ -2987,7 +3089,7 @@ setTKGclusterDNS() {
         if [ $? -ne 0 ]; then
           echo "2ERROR: failed to set DNS for $hnm"
           if [ "$NATIVE" == "0" ]; then
-            echo "       => tools/tdh-tools.sh"
+            echo "       => tools/${TDH_TOOLS}.sh"
             echo "          tdh-tools:/$ aws route53 change-resource-record-sets --hosted-zone-id \"${ZONE_ID}\" \\"
             echo "                        --change-batch file://${TMPROUTE53}"
             echo "          tdh-tools:/$ exit"
@@ -3015,7 +3117,7 @@ verifyTLScertificate() {
   if [ $dif -ne 2 ]; then
     echo "ERROR: Certificate modulus of $TLS_CERTIFICATE does not match with the private_key $TLS_PRIVATE_KEY"
     if [ "$NATIVE" == "0" ]; then
-      echo "       => tools/tdh-tools.sh"
+      echo "       => tools/${TDH_TOOLS}.sh"
       echo "          tdh-tools:/$ openssl x509 -in $TLS_CERTIFICATE -noout -modulus"
       echo "          tdh-tools:/$ openssl rsa -in $TLS_PRIVATE_KEY -noout -modulus"
       echo "          tdh-tools:/$ exit"
@@ -3280,7 +3382,7 @@ setDNSalias() {
     if [ $? -ne 0 ]; then
       echo "9ERROR: failed to set DNS for $hnm"
       if [ "$NATIVE" == "0" ]; then
-        echo "       => tools/tdh-tools.sh"  
+        echo "       => tools/${TDH_TOOLS}.sh"  
         echo "          tdh-tools:/$ aws route53 change-resource-record-sets --hosted-zone-id \"${ZONE_ID}\" \\"
         echo "                         --change-batch file://${TMPROUTE53}"
         echo "          tdh-tools:/$ exit"
@@ -3332,7 +3434,7 @@ setDNSrecord() {
     if [ $? -ne 0 ]; then
       echo "3ERROR: failed to set DNS for $hnm"
       if [ "$NATIVE" == "0" ]; then
-        echo "       => tools/tdh-tools.sh"   
+        echo "       => tools/${TDH_TOOLS}.sh"   
         echo "          tdh-tools:/$ aws route53 change-resource-record-sets --hosted-zone-id \"${ZONE_ID}\" \\"
         echo "                        --change-batch file://${TMPROUTE53}"
         echo "          tdh-tools:/$ exit"
@@ -3504,7 +3606,7 @@ VerifyServiceDependancies() {
     if [ $? -ne 0 ]; then
       echo "ERROR: failed to add helm registry https://charts.bitnami.com/bitnami"
       if [ "$NATIVE" == "0" ]; then
-        echo "       => tools/tdh-tools.sh" 
+        echo "       => tools/${TDH_TOOLS}.sh" 
         echo "          tdh-tools:/$ helm repo add bitnami https://charts.bitnami.com/bitnami"
         echo "          tdh-tools:/$ exit"
       else
@@ -3523,7 +3625,7 @@ VerifyServiceDependancies() {
       if [ $? -ne 0 ]; then
         echo "ERROR: Failed to install $HELM_CHART"
         if [ "$NATIVE" == "0" ]; then
-          echo "       => tools/tdh-tools.sh"    
+          echo "       => tools/${TDH_TOOLS}.sh"    
           echo "          tdh-tools:/$ helm install stable $HELM_CHART -n $INGRESS_NAMESPACE"
           echo "          tdh-tools:/$ exit"
         else
@@ -3542,7 +3644,7 @@ VerifyServiceDependancies() {
     if [ $? -ne 0 ]; then
       echo "ERROR: failed to add helm registry https://charts.bitnami.com/bitnami"
       if [ "$NATIVE" == "0" ]; then
-        echo "       => tools/tdh-tools.sh" 
+        echo "       => tools/${TDH_TOOLS}.sh" 
         echo "          tdh-tools:/$ helm repo add bitnami https://charts.bitnami.com/bitnami"
         echo "          tdh-tools:/$ exit"
       else
@@ -3562,7 +3664,7 @@ VerifyServiceDependancies() {
       if [ $? -ne 0 ]; then
         echo "ERROR: Failed to install $HELM_CHART"
         if [ "$NATIVE" == "0" ]; then
-          echo "       => tools/tdh-tools.sh"  
+          echo "       => tools/${TDH_TOOLS}.sh"  
           echo "          tdh-tools:/$ helm install stable $HELM_CHART"
           echo "          tdh-tools:/$ exit"
         else
@@ -3587,7 +3689,7 @@ VerifyServiceDependancies() {
     else
       echo "ERROR: Unable to get LoadBalancer IP-Adress of the Ingress"
       if [ "$NATIVE" == "0" ]; then
-        echo "       => tools/tdh-tools.sh" 
+        echo "       => tools/${TDH_TOOLS}.sh" 
         echo "          tdh-tools:/$ kubectl get svc envoy -n tanzu-system-ingress"
         echo "          tdh-tools:/$ exit"
       else
@@ -3609,7 +3711,7 @@ VerifyServiceDependancies() {
     helm repo add bitnami https://charts.bitnami.com/bitnami > /dev/null 2>&1
     if [ $? -ne 0 ]; then
       if [ "$NATIVE" == "0" ]; then
-        echo "       => tools/tdh-tools.sh"
+        echo "       => tools/${TDH_TOOLS}.sh"
         echo "          tdh-tools:/$ helm repo add bitnami https://charts.bitnami.com/bitnami"
         echo "          tdh-tools:/$ exit"
       else
@@ -3626,7 +3728,7 @@ VerifyServiceDependancies() {
       if [ $? -ne 0 ]; then
         echo "ERROR: Failed to install $HELM_CHART"
         if [ "$NATIVE" == "0" ]; then
-          echo "       => tools/tdh-tools.sh"
+          echo "       => tools/${TDH_TOOLS}.sh"
           echo "          tdh-tools:/$ helm install stable $HELM_CHART"
           echo "          tdh-tools:/$ exit"
         else
@@ -3671,7 +3773,7 @@ uodateConfigMap() {
   if [ $? -ne 0 ]; then
     echo "ERROR: updating config map $CONFIG_MAP"
     if [ "$NATIVE" == "0" ]; then
-      echo "       => tools/tdh-tools.sh"   
+      echo "       => tools/${TDH_TOOLS}.sh"   
       echo "          tdh-tools:/$ kubectl create configmap $CONFIG_MAP --from-env-file=/tmp/$CONFIG_MAP --dry-run=client -o yaml | kubectl apply -f -"
       echo "          tdh-tools:/$ exit"
     else
@@ -3750,8 +3852,13 @@ checkCLIcommands() {
 
       if [ $sys == "brew" ]; then
         if [ ! -x $cmd ]; then
-          echo "ERROR: $cmd not installed, please install with brew"
-          echo "       => brew install $pkg"
+          if [ "$(uname)" == "Linux" ]; then
+            echo "ERROR: $cmd not installed, please install with apt"
+            echo "       => sudo apt install $pkg -y"
+          else
+            echo "ERROR: $cmd not installed, please install with brew"
+            echo "       => brew install $pkg"
+          fi
           exit 1
         fi
       fi
@@ -3759,7 +3866,8 @@ checkCLIcommands() {
   fi
 
   if [ "$cat" == "TANZU_DATA" ]; then
-    CLI_COMMANDS="/usr/local/bin/mc:brew:minio/stable/mc /usr/local/bin/psql:brew:libpq /usr/local/bin/s3cmd:brew:s3cmd"
+    [ "$(uname)" == "Linux" ] && CLI_COMMANDS="/usr/local/bin/mc:apt:minio/stable/mc /usr/local/bin/psql:apt:libpq /usr/local/bin/s3cmd:brew:s3cmd"
+    [ "$(uname)" == "Darwin" ] && CLI_COMMANDS="/usr/local/bin/mc:brew:minio/stable/mc /usr/local/bin/psql:brew:libpq /usr/local/bin/s3cmd:brew:s3cmd"
 
     # --- INSTALL BREW INSTALLABLE TOOLS ---
     for arg in $CLI_COMMANDS; do
@@ -3769,8 +3877,13 @@ checkCLIcommands() {
 
       if [ $sys == "brew" ]; then
         if [ ! -x $cmd ]; then
-          echo "ERROR: $cmd not installed, please install with brew"
-          echo "       => brew install $pkg"
+          if [ "$(uname)" == "Linux" ]; then
+            echo "ERROR: $cmd not installed, please install with apt"
+            echo "       => sudo apt install $pkg -y"
+          else
+            echo "ERROR: $cmd not installed, please install with brew"
+            echo "       => brew install $pkg"
+          fi
           exit 1
         fi
       fi
@@ -3788,8 +3901,13 @@ checkCLIcommands() {
 
       if [ $sys == "brew" ]; then
         if [ ! -x $cmd ]; then
-          echo "ERROR: $cmd not installed, please install with brew"
-          echo "       => brew install $pkg"
+          if [ "$(uname)" == "Linux" ]; then
+            echo "ERROR: $cmd not installed, please install with brew"
+            echo "       => sudo apt install $pkg -y"
+          else
+            echo "ERROR: $cmd not installed, please install with brew"
+            echo "       => brew install $pkg"
+          fi
           exit 1
         fi
       fi
@@ -3797,7 +3915,8 @@ checkCLIcommands() {
   fi
 
   if [ "$cat" == "BASIC" ]; then
-    CLI_COMMANDS="/usr/local/bin/jq:brew:jq /usr/local/bin/wget:brew:wget"
+    [ "$(uname)" == "Darwin" ] && CLI_COMMANDS="/usr/local/bin/jq:brew:jq /usr/local/bin/wget:brew:wget"
+    [ "$(uname)" == "Linux" ] && CLI_COMMANDS="/usr/bin/jq:apt:jq /usr/bin/wget:apt:wget"
 
     # --- INSTALL BREW INSTALLABLE TOOLS ---
     for arg in $CLI_COMMANDS; do
@@ -3807,8 +3926,13 @@ checkCLIcommands() {
 
       if [ $sys == "brew" ]; then
         if [ ! -x $cmd ]; then
-          echo "ERROR: $cmd not installed, please install with brew"
-          echo "       => brew install $pkg"
+          if [ "$(uname)" == "Linux" ]; then
+            echo "ERROR: $cmd not installed, please install it"
+            echo "       => sudo apt install $pkg -y"
+          else
+            echo "ERROR: $cmd not installed, please install it"
+            echo "       => brew install $pkg"
+          fi
           exit 1
         fi
       fi
@@ -3826,8 +3950,13 @@ checkCLIcommands() {
   
       if [ $sys == "brew" ]; then
         if [ ! -x $cmd ]; then
-          echo "ERROR: $cmd not installed, please install with brew"
-          echo "       => brew install $pkg"
+          if [ "$(uname)" == "Linux" ]; then
+            echo "ERROR: $cmd not installed, please install it"
+            echo "       => sudo apt install $pkg -y"
+          else
+            echo "ERROR: $cmd not installed, please install with brew"
+            echo "       => brew install $pkg"
+          fi
           exit 1
         fi
       fi
@@ -5404,12 +5533,9 @@ InstallContour() {
     messagePrint " ▪ Install Contour Helm Chart" "bitnami/contour"
 
 
-echo "TDH_SERVICE_INGRESS_CONTOUR_VERSION:$TDH_SERVICE_INGRESS_CONTOUR_VERSION"
     if [ "$TDH_SERVICE_INGRESS_CONTOUR_VERSION" == "" -o "$TDH_SERVICE_INGRESS_CONTOUR_VERSION" == "latest" ]; then 
-echo gaga1
       HELM_CONTOUR_VERSION=$(helm search repo bitnami/contour | tail -1 | awk '{ print $2 }') 
     else
-echo gaga2
       HELM_CONTOUR_VERSION=$TDH_SERVICE_INGRESS_CONTOUR_VERSION
     fi
     messagePrint " ▪ Install Contour Helm Chart Version" "$HELM_CONTOUR_VERSION"
@@ -5417,7 +5543,6 @@ echo gaga2
     # 5.6.0 Issues with Spring Cloud Demo and Contour 1.18.1
     # 5.5.3 Issues with Spring Cloud Demo and Contour 1.18.1
     # 5.1.0 Works
-echo "XXX-2 HELM_CONTOUR_VERSION:$HELM_CONTOUR_VERSION"
 
     echo "global:"                                     >  /tmp/contour_values.yaml
     echo "  imageRegistry: docker.io"                  >> /tmp/contour_values.yaml
@@ -6630,9 +6755,8 @@ cleanKubeconfig() {
     CONFIG="$1"
   fi
 
-  messageTitle "Cleaning Up kubectl config"
-
-  for cluster in $(kubectl --kubeconfig=$CONFIG config get-clusters | sed '1d' | egrep "^tdh|^tkg-mc"); do
+  messageTitle "Cleaning Up kubectl config ($CONFIG)"
+  for cluster in $(kubectl --kubeconfig=$CONFIG config get-clusters | sed '1d' | egrep "^tdh|^tkg-mc|^tce-mc^tdh-tce|^tcemc"); do
     ctx=$(kubectl --kubeconfig=$CONFIG config view -o json | jq -r --arg key $cluster '.contexts[] | select(.context.cluster == $key).name')
     usr=$(kubectl --kubeconfig=$CONFIG config view -o json | jq -r --arg key $cluster '.contexts[] | select(.context.cluster == $key).context.user')
     cnt=$(echo $cluster | grep -c minikube)
@@ -6645,11 +6769,12 @@ cleanKubeconfig() {
       fi
     else
       if [ "$ctx" != "" ]; then
-        kubectl config use-context $ctx > /dev/null
-        kubectl config use-context $ctx > /dev/null
+        kubectl config use-context $ctx > /dev/null 2>&1
+        kubectl config use-context $ctx > /dev/null 2>&1
         kubectl get ns > /dev/null 2>&1
         if [ $? -gt 0 ]; then
           messagePrint " ▪ Cleaning up k8s cluster ($cluster)" "Context: $ctx, User: $usr"
+
           kubectl --kubeconfig=$CONFIG config unset clusters.${cluster} > /dev/null 2>&1
           kubectl --kubeconfig=$CONFIG config unset contexts.${cluster} > /dev/null 2>&1
           kubectl --kubeconfig=$CONFIG config unset users.${cluster} > /dev/null 2>&1
@@ -6850,13 +6975,13 @@ verify_docker() {
 }
 
 tdh_tools_build() {
-#gaga
+  MODE=$1
   REBUILD_REQUIRED=0
   REBUILD_REQUIRED_SOFTWARE=0
   verify_docker
   checkTDHenvironment
 
-  if [ "$1" == "tce" ]; then 
+  if [ "$MODE" == "tce" ]; then 
     BUILD_MODE=tce
     TDH_TOOLS_DOCKERFILE=Dockerfile-tce
     TDH_TOOLS_IMAGE=tdh-tools-tce
@@ -6874,15 +6999,15 @@ tdh_tools_build() {
 
   TDH_DOCKER_FILES=/tmp/tdh-tools
   mkdir -p $TDH_DOCKER_FILES
-  cp files/tdh-tools/$TDH_TOOLS_DOCKERFILE           $TDH_DOCKER_FILES
-  cp files/tdh-tools/wrapdocker           $TDH_DOCKER_FILES
-  cp files/tdh-tools/tmc                  $TDH_DOCKER_FILES
-  cp files/tdh-tools/jenkins-cli.jar      $TDH_DOCKER_FILES
-  cp files/tdh-tools/vmware-ovftool.tar   $TDH_DOCKER_FILES
+  cp files/tdh-tools/$TDH_TOOLS_DOCKERFILE       $TDH_DOCKER_FILES/Dockerfile
+  cp files/tdh-tools/wrapdocker                  $TDH_DOCKER_FILES
+  cp files/tdh-tools/tmc                         $TDH_DOCKER_FILES
+  cp files/tdh-tools/jenkins-cli.jar             $TDH_DOCKER_FILES
+  cp files/tdh-tools/vmware-ovftool.tar          $TDH_DOCKER_FILES
   DOCKER_CHKSUM=$(sum $TDHPATH/files/tdh-tools/$TDH_TOOLS_DOCKERFILE | awk '{ print $1 }')
   DOCKER_IMAGE_LATEST_ID=$(docker images | egrep "^$TDH_TOOLS_IMAGE " | grep "latest" | awk '{ print $3 }')
   DOCKER_IMAGE_ID=$(docker images | egrep "^$TDH_TOOLS_IMAGE " | grep "CHKSUM" | grep "$DOCKER_IMAGE_LATEST_ID" | awk '{ print $3 }')
-  DOCKER_IMAGE_CHKSUM=$(docker images | egrep "^$TDH_TOOLS_IMAGE" | grep "CHKSUM" | grep "$DOCKER_IMAGE_LATEST_ID" | awk '{ print $2 }' | sed 's/CHKSUM-//g')
+  DOCKER_IMAGE_CHKSUM=$(docker images | egrep "^$TDH_TOOLS_IMAGE " | grep "CHKSUM" | grep "$DOCKER_IMAGE_LATEST_ID" | awk '{ print $2 }' | sed 's/CHKSUM-//g')
 
   # --- SET CORRECT PERMISSONS ---
   [ -f $TDH_DOCKER_FILES/tmc ] && chmod a+x $TDH_DOCKER_FILES/tmc
@@ -6954,14 +7079,19 @@ tdh_tools_build() {
 
   #messagePrint " ▪ Docker Image ($TDH_TOOLS_IMAGE) Name / ID"                  "$TDH_TOOLS_IMAGE:latest / $DOCKER_IMAGE_LATEST_ID"
 
-  cnt=$(docker images | egrep -c "^tdh-tools") 
+  cnt=$(docker images | egrep -c "^$TDH_TOOLS_IMAGE ") 
   if [ $cnt -gt 0 ]; then 
     if [ "$DOCKER_IMAGE_CHKSUM" == "$DOCKER_CHKSUM" ]; then 
       messagePrint " ▪ Dockerfile Checksum (files/tdh-tools/$TDH_TOOLS_DOCKERFILE)"  "$DOCKER_CHKSUM"
       messagePrint " ▪ Docker Image ($TDH_TOOLS_IMAGE) Checksum"                 "$DOCKER_IMAGE_CHKSUM => No Rebuild required"
     else
-      messagePrint " ▪ Dockerfile Checksum (files/tdh-tools/$TDH_TOOLS_DOCKERFILE)"  "$DOCKER_CHKSUM"
-      messagePrint " ▪ Docker Image ($TDH_TOOLS_IMAGE) Checksum"                 "$DOCKER_IMAGE_CHKSUM => Rebuild required"
+      if [ "$DOCKER_IMAGE_CHKSUM" == "" ]; then 
+        messagePrint " ▪ Dockerfile Checksum (files/tdh-tools/$TDH_TOOLS_DOCKERFILE)"  "$DOCKER_CHKSUM"
+        messagePrint " ▪ Docker Image ($TDH_TOOLS_IMAGE) Checksum"                     "container not builded yet"
+      else
+        messagePrint " ▪ Dockerfile Checksum (files/tdh-tools/$TDH_TOOLS_DOCKERFILE)"  "$DOCKER_CHKSUM"
+        messagePrint " ▪ Docker Image ($TDH_TOOLS_IMAGE) Checksum"                 "$DOCKER_IMAGE_CHKSUM => Rebuild required"
+      fi
       REBUILD_REQUIRED=1
 
       docker image rm $DOCKER_IMAGE_ID -f > /dev/null 2>&1
@@ -6985,6 +7115,10 @@ tdh_tools_build() {
       wget $TCE_DOWNLOAD_URL/${TCE_LINUX_PACKAGE}.tar.gz > /dev/null 2>&1
       tar xvfz ${TCE_LINUX_PACKAGE}.tar.gz > /dev/null 2>&1
       mv $TCE_LINUX_PACKAGE $TDH_DOCKER_FILES
+    fi
+
+    if [ ! -h $TDH_DOCKER_FILES/tce-linux-amd64 ]; then
+      ln -s $TCE_LINUX_PACKAGE $TDH_DOCKER_FILES/tce-linux-amd64
     fi
 
   else
@@ -7118,8 +7252,8 @@ tdh_tools_build() {
 #      --build-arg TDHPATH=$TDHPATH \
 #      --build-arg TZ=$(ls -l /etc/localtime | /usr/bin/cut -d '/' -f 8,9) $TDH_DOCKER_FILES > /dev/null 2>&1; ret=$?
 
-    messagePrint " ▪ Building TDH Tools docker container" "tdh-tools:CHKSUM-$DOCKER_CHKSUM"
-    cd $TDH_DOCKER_FILES && docker build -q -t tdh-tools:CHKSUM-$DOCKER_CHKSUM \
+    messagePrint " ▪ Building TDH Tools docker container" "$TDH_TOOLS_IMAGE:CHKSUM-$DOCKER_CHKSUM"
+    cd $TDH_DOCKER_FILES && docker build -q -t $TDH_TOOLS_IMAGE:CHKSUM-$DOCKER_CHKSUM \
       --build-arg UID=$(id -u) \
       --build-arg GID=$(id -g) \
       --build-arg USER=$USER \
@@ -7129,8 +7263,8 @@ tdh_tools_build() {
       --build-arg TZ=$(ls -l /etc/localtime | /usr/bin/cut -d '/' -f 8,9) .; ret=$?
   
     if [ $ret -ne 0 ]; then 
-      echo "ERROR: failed to create tdh-tools container"
-      echo "       => cd $TDH_DOCKER_FILES && docker build -q -t tdh-tools:CHKSUM-$DOCKER_CHKSUM \\"
+      echo "ERROR: failed to create $TDH_TOOLS_IMAGE container"
+      echo "       => cd $TDH_DOCKER_FILES && docker build -q -t $TDH_TOOLS_IMAGE:CHKSUM-$DOCKER_CHKSUM \\"
       echo "             --build-arg UID=$(id -u) \\"
       echo "             --build-arg GID=$(id -g) \\"
       echo "             --build-arg USER=$USER \\"
@@ -7140,8 +7274,8 @@ tdh_tools_build() {
       exit 1
     fi
   
-    messagePrint " ▪ Create Tag (latest) for  TDH Tools docker container" "tdh-tools:latest"
-    docker tag tdh-tools:CHKSUM-$DOCKER_CHKSUM tdh-tools:latest
+    messagePrint " ▪ Create Tag (latest) for  TDH Tools docker container" "$TDH_TOOLS_IMAGE:latest"
+    docker tag $TDH_TOOLS_IMAGE:CHKSUM-$DOCKER_CHKSUM $TDH_TOOLS_IMAGE:latest
   fi
 }
 
@@ -7431,7 +7565,7 @@ runTDHtoolsDemos() {
       mkdir -p $HOME/.mc $HOME/.cache $HOME/.config $HOME/.local
       mkdir -p /tmp/docker && chmod a+w /tmp/docker
       docker run -it --rm --name tdh-tools -v /var/run/docker.sock:/var/run/docker.sock tdh-tools:latest chmod 666 /var/run/docker.sock > /dev/null 2>&1
-      docker run -u $(id -u):$(id -g) --group-add 0 -it --init --rm --name tdh-tools --network=host --env-file /tmp/tdh.env \
+      docker run --network=host -u $(id -u):$(id -g) --group-add 0 -it --init --rm --name tdh-tools --network=host --env-file /tmp/tdh.env \
          -v $HOME:$HOME:ro -v $HOME/.local:$HOME/.local:rw -v $HOME/.tanzu-demo-hub:$HOME/.tanzu-demo-hub:rw \
          -v /var/run/docker.sock:/var/run/docker.sock:rw -v $HOME/.cache:$HOME/.cache:rw -v $HOME/.config:$HOME/.config:rw \
          -v $HOME/.aws:$HOME/.aws:rw -v $HOME/.vmware-cna-saas:$HOME/.vmware-cna-saas:rw -v $HOME/.azure:$HOME/.azure:rw \
