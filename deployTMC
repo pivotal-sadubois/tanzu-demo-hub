@@ -15,6 +15,7 @@ export TDH_DEPLOYMENT_CLOUD="AWS"
 export DEPLOY_PCF_DEPLOYMENT=aws_tkg_default.cfg
 export CMD_EXEC=$(basename $0)
 export CMD_ARGS=$*
+export TDH_TOOLS=tdh-tools
 
 unset TMC_MANAGEMENT_CLUSTER
 unset TMC_ACCOUNT_NAME  

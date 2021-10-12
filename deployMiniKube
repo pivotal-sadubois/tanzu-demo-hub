@@ -14,6 +14,7 @@ export START_COMMAND="$*"
 export K8S_CLEAN_DEPLOYMENT=false
 export CMD_EXEC=$(basename $0)
 export CMD_ARGS=$*
+export TDH_TOOLS=tdh-tools
 
 . $TANZU_DEMO_HUB/functions
 

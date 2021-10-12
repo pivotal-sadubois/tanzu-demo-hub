@@ -1,9 +1,9 @@
 #!/bin/bash
 # ############################################################################################
-# File: ........: deployTKG 
+# File: ........: deployTCE 
 # Language .....: bash
 # Author .......: Sacha Dubois, VMware
-# Description ..: Tanzu Demo Hub - Deploy TKG Workload Cluster
+# Description ..: Tanzu Demo Hub - Deploy TCE Workload Cluster
 # ############################################################################################
 
 export TANZU_DEMO_HUB=$(cd "$(pwd)/$(dirname $0)"; pwd)
@@ -14,7 +14,7 @@ export TDH_TKGWC_K8S_VERSION=""
 export CMD_EXEC=$(basename $0)
 export CMD_ARGS=$*
 export TDH_TANZU_MISSION_CONTROL_REGISTRATION=true
-export TDH_TOOLS=tdh-tools
+export TDH_TOOLS=tdh-tools-tce
 
 . $TANZU_DEMO_HUB/functions
 
@@ -30,7 +30,7 @@ usage() {
   echo "                                                # use 'tanzu kubernetes-release get' to see available"
   echo ""
   echo "                      --debug                   # default (disabled)"
-  echo "                      --native                  # Use 'native' installed tools instead of the tdh-tools container"
+  echo "                      --native                  # Use 'native' installed tools instead of the tdh-tools-tce container"
   echo ""
 }
 
@@ -215,23 +215,21 @@ if [ ! -f /tdh_tools_docker_container  ]; then
   if [ $NATIVE -eq 0 ]; then
     tdh_tools_build
 
-    messagePrint " ▪ Running TDH Tools Docker Container" "tdh-tools:latest $TDHPATH/$CMD_EXEC $CMD_ARGS"
+    messagePrint " ▪ Running TDH Tools Docker Container" "tdh-tools-tce:latest $TDHPATH/$CMD_EXEC $CMD_ARGS"
 
-    cid=$(docker ps -a | grep tdh-tools:latest | awk '{ print $1 }')
+    cid=$(docker ps -a | grep tdh-tools-tce:latest | awk '{ print $1 }')
     [ "$cid" != "" ] && for n in $cid; do docker rm $n -f > /dev/null 2>&1; done
 
     mkdir -p $HOME/.mc $HOME/.cache $HOME/.config $HOME/.local
     mkdir -p /tmp/docker && chmod a+w /tmp/docker
-    docker run -it --rm --name tdh-tools -v /var/run/docker.sock:/var/run/docker.sock tdh-tools:latest  chmod 666 /var/run/docker.sock > /dev/null 2>&1
-    #docker run -u $(id -u):$(id -g) --group-add 0 -it --rm --name tdh-tools \
-    #   -e "KUBECONFIG=$HOME/.kube/config" --hostname tdh-tools tdh-tools:latest $TDHPATH/$CMD_EXEC $CMD_ARGS
-    docker run -u $(id -u):$(id -g) -it --rm --name tdh-tools \
+    docker run -it --rm --name tdh-tools-tce -v /var/run/docker.sock:/var/run/docker.sock tdh-tools-tce:latest  chmod 666 /var/run/docker.sock > /dev/null 2>&1
+    docker run --network=host -u $(id -u):$(id -g) -it --rm --name tdh-tools-tce \
        -v $HOME:$HOME:ro -v $HOME/.local:$HOME/.local:rw -v $HOME/.tanzu-demo-hub:$HOME/.tanzu-demo-hub:rw \
        -v /var/run/docker.sock:/var/run/docker.sock -v $HOME/.cache:$HOME/.cache:rw -v $HOME/.config:$HOME/.config:rw \
        -v $HOME/.aws:$HOME/.aws:rw -v $HOME/.vmware-cna-saas:$HOME/.vmware-cna-saas:rw -v $HOME/.azure:$HOME/.azure:rw \
        -v /tmp:/tmp:rw -v /tmp/docker:$HOME/.docker:rw -v $HOME/.mc:$HOME/.mc:rw -v $HOME/.tanzu:$HOME/.tanzu:rw \
        -v $HOME/.kube-tkg:$HOME/.kube-tkg:rw -v $HOME/.kube:$HOME/.kube:rw \
-       -e "KUBECONFIG=$HOME/.kube/config" --hostname tdh-tools tdh-tools:latest $TDHPATH/$CMD_EXEC $CMD_ARGS; ret=$?
+       -e "KUBECONFIG=$HOME/.kube/config" --hostname tdh-tools tdh-tools-tce:latest $TDHPATH/$CMD_EXEC $CMD_ARGS; ret=$?
 
     # --- FINISH CURRENT SESSION AS WE RUN AS CONTAINER ---
     exit $ret
