@@ -213,7 +213,7 @@ if [ ! -f /tdh_tools_docker_container  ]; then
   checkCLIcommands BASIC
 
   if [ $NATIVE -eq 0 ]; then
-    tdh_tools_build
+    tdh_tools_build tce
 
     messagePrint " ▪ Running TDH Tools Docker Container" "tdh-tools-tce:latest $TDHPATH/$CMD_EXEC $CMD_ARGS"
 
