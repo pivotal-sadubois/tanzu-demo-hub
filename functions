@@ -5,7 +5,7 @@
 # Author .......: Sacha Dubois, VMware
 # Description ..: Tanzu Demo Hub - Cluster Installation
 # ############################################################################################
-
+  
 alias cat='/usr/local/bin/bat -p'
 
 function ctrl_c() {
@@ -5532,9 +5532,8 @@ InstallContour() {
   
     messagePrint " ▪ Install Contour Helm Chart" "bitnami/contour"
 
-
     if [ "$TDH_SERVICE_INGRESS_CONTOUR_VERSION" == "" -o "$TDH_SERVICE_INGRESS_CONTOUR_VERSION" == "latest" ]; then 
-      HELM_CONTOUR_VERSION=$(helm search repo bitnami/contour | tail -1 | awk '{ print $2 }') 
+      HELM_CONTOUR_VERSION=$(helm search repo bitnami/contour | egrep "^bitnami/contour " | tail -1 | awk '{ print $2 }') 
     else
       HELM_CONTOUR_VERSION=$TDH_SERVICE_INGRESS_CONTOUR_VERSION
     fi
