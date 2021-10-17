@@ -1666,7 +1666,7 @@ checkTDHAccess() {
     pivnetAPI $PCF_PIVNET_TOKEN
     if [ $? -ne 0 ]; then
       write_line
-      echo "ERROR: Pivnet Token: $PCF_PIVNET_TOKEN does not seam to be valit. Please greate a new one by"
+      echo "ERROR: Pivnet Token: $PCF_PIVNET_TOKEN does not seam to be valid. Please greate a new one by"
       echo "       login to http://network.pivotal.io => Your login Name => Edit Profile => UAA API TOKEN"
       exit 1
     fi
@@ -5464,6 +5464,8 @@ InstallMetallLB() {
 
     HELM_VALUES=/tmp/metallb_values.yaml
 
+    ipa=$(docker network inspect kind | jq -r '.[].IPAM.Config[].Subnet' | egrep "^[0-9]*\." | awk -F'.' '{ printf("%s.%s\n",$1,$2)}')
+
     echo "global:"                                     >  $HELM_VALUES
     echo "  imageRegistry: docker.io"                  >> $HELM_VALUES
     echo "  imagePullSecrets:"                         >> $HELM_VALUES
@@ -5473,7 +5475,7 @@ InstallMetallLB() {
     echo "   - name: default"                          >> $HELM_VALUES
     echo "     protocol: layer2"                       >> $HELM_VALUES
     echo "     addresses:"                             >> $HELM_VALUES
-    echo "     - $TDH_TKGWC_LB_ADDRESS"    >> $HELM_VALUES
+    echo "     - ${ipa}.255.1-${ipa}.255.254"          >> $HELM_VALUES
 
     cnt=0; ret=1
     while [ $ret -ne 0 -a $cnt -lt 5 ]; do
@@ -5534,7 +5536,7 @@ InstallContour() {
 
 
     if [ "$TDH_SERVICE_INGRESS_CONTOUR_VERSION" == "" -o "$TDH_SERVICE_INGRESS_CONTOUR_VERSION" == "latest" ]; then 
-      HELM_CONTOUR_VERSION=$(helm search repo bitnami/contour | tail -1 | awk '{ print $2 }') 
+      HELM_CONTOUR_VERSION=$(helm search repo bitnami/contour | egrep "^bitnami/contour " | tail -1 | awk '{ print $2 }')
     else
       HELM_CONTOUR_VERSION=$TDH_SERVICE_INGRESS_CONTOUR_VERSION
     fi
@@ -5588,7 +5590,7 @@ InstallContour() {
 
   ipa=""; cnt=0
   while [ "$ipa" == "" -a $cnt -lt 15 ]; do
-    ipa=$(kubectl describe svc ingress-contour-envoy --namespace ingress-contour | grep Ingress | awk '{print $3}')
+    ipa=$(kubectl describe svc ingress-contour-envoy --namespace $NAMESPACE | grep Ingress | awk '{print $3}')
     [ "$ipa" != "" ] && break
     let cnt=cnt+1
     sleep 30
@@ -5597,12 +5599,15 @@ InstallContour() {
   if [ "$ipa" == "" ]; then
     echo "ERROR: Failed to gather IP Adress of the ingress-contour-envoy service in namespace ingress-contour"
     echo "       Please check manually:"
-    echo "       => kubectl get svc --namespace ingress-contour"
+    echo "       => kubectl get svc --namespace $NAMESPACE"
     exit 1
   fi
 
+echo "TDH_INFRASTRUCTURE:$TDH_INFRASTRUCTURE"
   # --- SET DNS RECORD ---
-  if [ "$TDH_INFRASTRUCTURE" == "minikube" -o "$TDH_INFRASTRUCTURE" == "vSphere" -o "$TDH_INFRASTRUCTURE" == "Azure" ]; then 
+  if [ "$TDH_INFRASTRUCTURE" == "minikube" -o "$TDH_INFRASTRUCTURE" == "vSphere" -o "$TDH_INFRASTRUCTURE" == "Azure" -o "$TDH_INFRASTRUCTURE" == "docker" ]; then 
+echo gaga1
+echo setDNSrecord "$ipa" "${TDH_ENVNAME}" "${AWS_HOSTED_DNS_DOMAIN}" "*.apps-contour" "A"
     setDNSrecord "$ipa" "${TDH_ENVNAME}" "${AWS_HOSTED_DNS_DOMAIN}" "*.apps-contour" "A"
   else
     setDNSalias "$ipa" "${TDH_ENVNAME}" "${AWS_HOSTED_DNS_DOMAIN}" "*.apps-contour" "A"

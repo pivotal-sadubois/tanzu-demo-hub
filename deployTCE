@@ -39,7 +39,7 @@ listClusterConfig() {
   printf "%-31s %-5s %-15s %-20s %-5s %s\n" "DEPLOYMENT" "PLAN" "DESCRIPTION" 
   echo "-----------------------------------------------------------------------------------------------------------"
 
-  for deployment in $(ls -1 ${TDHPATH}/deployments/tkg-*.cfg | grep -v "tkgmc-"); do
+  for deployment in $(ls -1 ${TDHPATH}/deployments/tkg-*.cfg | grep -v "tcemc-"); do
     TDH_DEPLOYMENT_DESCRIPTION=$(egrep "^TDH_DEPLOYMENT_DESCRIPTION=" $deployment | awk -F'=' '{ print $2 }' | sed 's/"//g')
     TDH_DEPLOYMENT_CLUSTER_PLAN=$(egrep "^TDH_DEPLOYMENT_CLUSTER_PLAN=" $deployment | awk -F'=' '{ print $2 }')
 
@@ -56,11 +56,11 @@ listDeployments() {
   printf "%-31s %-7s %-28s %s\n" "CONFIURATION" "CLOUD" "MANAGEMENT-CLUSTER" "STATUS"
   echo "-----------------------------------------------------------------------------------------------------------"
 
-  cnt=$(ls -1 ${HOME}/.tanzu-demo-hub/config/tkgmc-*.cfg 2>/dev/null | wc -l | sed 's/  *//g')
+  cnt=$(ls -1 ${HOME}/.tanzu-demo-hub/config/tcemc-*.cfg 2>/dev/null | wc -l | sed 's/  *//g')
   if [ $cnt -eq 0 ]; then
     echo "No TKG Management Cluster has been deployed, Please use ./deployTKGmc"
   else
-    for deployment in $(ls -1 ${HOME}/.tanzu-demo-hub/config/tkgmc-*.cfg 2>/dev/null); do
+    for deployment in $(ls -1 ${HOME}/.tanzu-demo-hub/config/tcemc-*.cfg 2>/dev/null); do
       TDH_TKGMC_NAME=$(egrep "^TDH_TKGMC_NAME=" $deployment | awk -F'=' '{ print $2 }')
       TDH_TKGMC_CONFIG=$(egrep "^TDH_TKGMC_CONFIG=" $deployment | awk -F'=' '{ print $2 }')
       TDH_TKGMC_INFRASTRUCTURE=$(egrep "^TDH_TKGMC_INFRASTRUCTURE=" $deployment | awk -F'=' '{ print $2 }')
@@ -75,8 +75,8 @@ listDeployments() {
       fi
 
       # --- VERIFY MANAGEMENT CLUSTER ---
-      if [ "$TDH_TKGMC_INFRASTRUCTURE" == "AWS" -o "$TDH_TKGMC_INFRASTRUCTURE" == "Azure" ]; then
-        kubectl get cluster --kubeconfig ${HOME}/.tanzu-demo-hub/config/${TDH_TKGMC_KUBECONFIG} --request-timeout 1 > /dev/null 2>&1
+      if [ "$TDH_TKGMC_INFRASTRUCTURE" == "AWS" -o "$TDH_TKGMC_INFRASTRUCTURE" == "Azure" -o "$TDH_TKGMC_INFRASTRUCTURE" == "docker1" ]; then
+        kubectl get cluster --kubeconfig ${HOME}/.tanzu-demo-hub/config/${TDH_TKGMC_KUBECONFIG} -A --request-timeout 1 > /dev/null 2>&1
         if [ $? -ne 0 ]; then smc="unavailable"; else smc="active"; fi
 
         cnt=$(kubectl config get-clusters | egrep -c "^$TDH_TKGMC_NAME")
@@ -86,53 +86,16 @@ listDeployments() {
         if [ $cnt -gt 0 ]; then
           smc="active"
           ctx=$(tanzu config server list |  egrep " $TDH_TKGMC_NAME " | awk '{ print $NF }')
-          kubectl config use-context $ctx > /dev/null 2>&1
+          kubectl config use-context --kubeconfig ${HOME}/.tanzu-demo-hub/config/${TDH_TKGMC_KUBECONFIG} $ctx > /dev/null 2>&1
           if [ $? -ne 0 ]; then stt="not-deployed"; else stt="deployed/$smc"; fi
         else
-          smc="unavailable"
+          stt="unavailable"
         fi
       fi
 
       dep=$(echo $deployment | awk -F'/' '{ print $NF }')
 
       printf "%-31s %-7s %-28s %-22s %-18s %s\n" $dep $TDH_TKGMC_INFRASTRUCTURE $TDH_TKGMC_NAME "$stt"
-    done
-  fi
-
-  echo "-----------------------------------------------------------------------------------------------------------"
-}
-
-listDeployments_old() {
-  echo
-  printf "%-31s %-7s %-15s %-22s %-5s %s\n" "TKG-MANAGEMENT-CLUSTER" "CLOUD" "REGION" "STATUS"
-  echo "-----------------------------------------------------------------------------------------------------------"
-
-  cnt=$(ls -1 ${HOME}/.tanzu-demo-hub/config/tkgmc-*.cfg 2>/dev/null | wc -l | sed 's/  *//g')
-  if [ $cnt -eq 0 ]; then 
-    echo "No TKG Management Cluster has been deployed, Please use ./deployTKGmc"
-  else
-    for deployment in $(ls -1 ${HOME}/.tanzu-demo-hub/config/tkgmc-*.cfg 2>/dev/null); do
-      TDH_TKGMC_NAME=$(egrep "^TDH_TKGMC_NAME=" $deployment | awk -F'=' '{ print $2 }') 
-      TDH_TKGMC_CONFIG=$(egrep "^TDH_TKGMC_CONFIG=" $deployment | awk -F'=' '{ print $2 }') 
-      TDH_TKGMC_INFRASTRUCTURE=$(egrep "^TDH_TKGMC_INFRASTRUCTURE=" $deployment | awk -F'=' '{ print $2 }')
-      TDH_TKGMC_KUBECONFIG=$(egrep "^TDH_TKGMC_KUBECONFIG=" $deployment | awk -F'=' '{ print $2 }')
-
-      if [ "$TDH_TKGMC_INFRASTRUCTURE" == "Azure" ]; then
-        TDH_REGION=$(egrep "^AZURE_LOCATION:" ${HOME}/.tanzu-demo-hub/config/$TDH_TKGMC_CONFIG | awk '{ print $2 }')
-      fi
-
-      if [ "$TDH_TKGMC_INFRASTRUCTURE" == "AWS" ]; then 
-        TDH_REGION=$(egrep "^AWS_REGION:" ${HOME}/.tanzu-demo-hub/config/$TDH_TKGMC_CONFIG | awk '{ print $2 }')
-      fi
-
-      # --- VERIFY MANAGEMENT CLUSTER ---
-      kubectl get cluster --kubeconfig ${HOME}/.tanzu-demo-hub/config/${TDH_TKGMC_KUBECONFIG} > /dev/null 2>&1
-      if [ $? -ne 0 ]; then smc="unavailable"; else smc="active"; fi
-      
-      cnt=$(kubectl config get-clusters | egrep -c "^$TDH_TKGMC_NAME") 
-      if [ $cnt -eq 0 ]; then stt="not-deployed"; else stt="deployed/$smc"; fi
-  
-      printf "%-31s %-7s %-15s %-22s %-5s %s\n" $TDH_TKGMC_NAME $TDH_TKGMC_INFRASTRUCTURE $TDH_REGION "$stt"
     done
   fi
 
@@ -402,11 +365,8 @@ uodateConfigMap tanzu-demo-hub TDH_MANAGEMENT_CLUSTER             "$TDH_TKGMC_NA
 uodateConfigMap tanzu-demo-hub TDH_PROVISIONER_NAME               "$TMC_PROVISIONER_NAME"
 uodateConfigMap tanzu-demo-hub TDH_MISSION_CONTROL_ACCOUNT_NAME   "ukn"
 
-if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "vSphere" ]; then
-  InstallMetallLB
-fi
-
 # --- INSTALL K8 SERVICES ---
+InstallMetallLB
 InstallCertManager
 InstallContour
 
