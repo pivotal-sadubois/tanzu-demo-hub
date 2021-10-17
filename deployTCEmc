@@ -1441,9 +1441,11 @@ fi
     echo "    => ./deployTCE -m $TDH_TKGMC_NAME -d tkg-tanzu-demo-hub.cfg -n tdh-$CLOUD-$TDH_USER -tag TKG_CLUSTER_01"
     echo "    => ./deployTCE -m $TDH_TKGMC_NAME -d tkg-tanzu-demo-hub.cfg -n tdh-$CLOUD-$TDH_USER -tag TKG_CLUSTER_02 -k \"v1.17.16---vmware.2-tkg.1\""
   else
-    echo "    => ./deployTCE -m $TDH_TKGMC_NAME -d tkg-tanzu-demo-hub.cfg -n tdh-$CLOUD-$TDH_USER"
-    echo "    => ./deployTCE -m $TDH_TKGMC_NAME -d tkg-tanzu-demo-hub.cfg -n tdh-$CLOUD-$TDH_USER -k \"v1.17.16---vmware.2-tkg.1\""
+    echo "    => ./deployTCE -m $TDH_TKGMC_NAME -d tkg-tanzu-demo-hub.cfg -n tce-$CLOUD-$TDH_USER"
+    echo "    => ./deployTCE -m $TDH_TKGMC_NAME -d tkg-tanzu-demo-hub.cfg -n tce-$CLOUD-$TDH_USER -k \"v1.21.2+vmware.1\""
   fi
+
+#tanzu cluster create tce-docker-sadubois -f /home/tce/.tanzu-demo-hub/config/tce-docker-sadubois.yaml --tkr v1.21.2---vmware.1-tkg.1
 
   printf "\e[1m3.) Delete the TCE Management Cluster\e[0m\n"
   if [ "$NATIVE" == "0" ]; then
