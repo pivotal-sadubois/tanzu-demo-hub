@@ -1139,6 +1139,8 @@ configureLetsEnscript
 
 export TDH_TKGMC_NAME=${TDH_TKGMC_NAME}-${TDH_USER}
 
+echo "gaga deployTKGmc: TDH_TKGMC_NAME:$TDH_TKGMC_NAME"
+
 # --- UPLOAD OVA IMAGES TO VCENTER ---
 if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "vSphere" -a "${TDH_TKGMC_TKG_TYPE}" == "tkgs" ]; then
   #########################################################################################################################
@@ -1441,6 +1443,13 @@ else
         exit 1
       fi
     fi
+
+
+echo "TDH_TKGMC_NAME:$TDH_TKGMC_NAME"
+
+echo "tanzu-demo-hub/scripts/InstallTKGmc.sh \"$DEPLOY_TKG_TEMPLATE\" \"$TDH_TKGMC_NAME\" \"$DEBUG\""
+
+sleep 10000
 
     # --- CREATE MANAGEMENT CLUSTER ---
     [ ! -d ~/.tanzu-demo-hub/config ] && mkdir -p ~/.tanzu-demo-hub/config

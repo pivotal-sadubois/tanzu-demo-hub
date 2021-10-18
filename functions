@@ -2368,6 +2368,7 @@ echo "gaga createTKGMCcluster TDH_TKGMC_NAME:$TDH_TKGMC_NAME"
       echo "IDENTITY_MANAGEMENT_TYPE: none"                                              >> $TKG_TEMPLATE
     fi
 
+echo "0 TDH_TKGMC_NAME:$TDH_TKGMC_NAME"
     cnt=$(tanzu management-cluster get 2>/dev/null | egrep -c " $TDH_TKGMC_NAME ")
     if [ ${cnt} -eq 0 ]; then
       # --- CLEANUP OLD CONFIG ---
@@ -2382,7 +2383,7 @@ echo "gaga createTKGMCcluster TDH_TKGMC_NAME:$TDH_TKGMC_NAME"
 
       messagePrint " ▪ Management Cluster Creating"        "This may take up to 15min ..."
 
-echo "TDH_TKGMC_NAME:$TDH_TKGMC_NAME"
+echo "1 TDH_TKGMC_NAME:$TDH_TKGMC_NAME"
 echo "tanzu management-cluster create --file $TKG_TEMPLATE -v 0 --log-file=/tmp/$TDH_TKGMC_NAME.log"
 sleep 100000
 
