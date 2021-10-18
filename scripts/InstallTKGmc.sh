@@ -9,7 +9,7 @@
 export TANZU_DEMO_HUB=$(cd "$(pwd)/$(dirname $0)/.."; pwd)
 export TDHPATH=$(cd "$(pwd)/$(dirname $0)/.."; pwd)
 export DEPLOY_TKG_TEMPLATE=$1
-export TDH_TKGMC_NAME="$2"
+export TDH_TKGMC_NAME_TMP="$2"
 export DEBUG="$3"
 
 . $TANZU_DEMO_HUB/functions
@@ -36,6 +36,9 @@ if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "Azure" ]; then
   az vm image terms accept --publisher vmware-inc --offer tkg-capi --plan k8s-1dot19dot3-ubuntu-1804 --subscription $AZURE_SUBSCRIPTION_ID > /dev/null 2>&1
   az vm image terms accept --publisher vmware-inc --offer tkg-capi --plan k8s-1dot20dot4-ubuntu-2004 --subscription $AZURE_SUBSCRIPTION_ID > /dev/null 2>&1
 fi
+
+# --- RESET TDH_TKGMC_NAME ---
+export TDH_TKGMC_NAME="$TDH_TKGMC_NAME_TMP"
 
 #sshEnvironment > /dev/null 2>&1
 createTKGMCcluster $TDH_TKGMC_NAME
