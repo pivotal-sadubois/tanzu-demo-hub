@@ -38,7 +38,7 @@ if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "Azure" ]; then
 fi
 
 #sshEnvironment > /dev/null 2>&1
-createTKGMCcluster 
+createTKGMCcluster $TDH_TKGMC_NAME
 if [ $? -ne 0 ]; then exit 1; fi
 
 
