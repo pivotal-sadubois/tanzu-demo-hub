@@ -2319,19 +2319,13 @@ EOF
 }
 
 createTKGMCcluster() {
-echo "gaga0 TDH_TKGMC_NAME:$TDH_TKGMC_NAME $1"
-  [ "$1" != "" ] && TDH_TKGMC_NAME="$1"    ## CLUSTER_NAME SET BY (InstallTKGmc.sh)
-echo "gaga01 TDH_TKGMC_NAME:$TDH_TKGMC_NAME $1"
   unset TKG_CONFIG
+  [ "$1" != "" ] && TDH_TKGMC_NAME="$1"    ## CLUSTER_NAME SET BY (InstallTKGmc.sh)
   [ ! -d ${HOME}/.tanzu-demo-hub/config ] && mkdir -p ${HOME}/.tanzu-demo-hub/config
   TKG_TEMPLATE=${HOME}/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.yaml; rm -f $TKG_TEMPLATE
   TKG_KUBECONFIG=${HOME}/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.kubeconfig; rm -f $TKG_KUBECONFIG
 
-echo "gaga1 createTKGMCcluster TDH_TKGMC_NAME:$TDH_TKGMC_NAME"
-
   cleanKindCluster
-echo "gaga2 createTKGMCcluster TDH_TKGMC_NAME:$TDH_TKGMC_NAME"
-echo "gaga2 TDH_TKGMC_INFRASTRUCTURE:$TDH_TKGMC_INFRASTRUCTURE"
 
   if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "docker" ]; then
     echo "CLUSTER_NAME: $TDH_TKGMC_NAME"                                               >  $TKG_TEMPLATE
@@ -2771,14 +2765,10 @@ echo "gaga2 TDH_TKGMC_INFRASTRUCTURE:$TDH_TKGMC_INFRASTRUCTURE"
     fi
   fi
 
-echo "3 TDH_TKGMC_NAME:$TDH_TKGMC_NAME"
   if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "Azure" ]; then
     # --- SET DEFAULT VALUES ---
     [ "$TDH_TKGMC_CONTROL_PLANE_MACHINE_TYPE" == "" ] && TDH_TKGMC_CONTROL_PLANE_MACHINE_TYPE=Standard_D3_v2
     [ "$TDH_TKGMC_MACHINE_TYPE" == "" ] && TDH_TKGMC_MACHINE_TYPE=Standard_D2_v4
-
-echo "4 TDH_TKGMC_NAME:$TDH_TKGMC_NAME"
-echo "tanzu management-cluster create --file $TKG_TEMPLATE -v 0 --log-file=/tmp/$TDH_TKGMC_NAME.log"
 
     messageTitle "Creating TKG Managment Cluster"
     messagePrint " ▪ Cluster Name"                  "$TDH_TKGMC_NAME"
@@ -6833,6 +6823,7 @@ installSnap() {
   PKG=$1
   OPT=$2
 
+  snap refresh > /dev/null 2>&1
   snap list $PKG > /dev/null 2>&1
   if [ $? -ne 0 ]; then
     messagePrint " ▪ Install Package ($PKG)" "installing"
