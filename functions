@@ -7052,9 +7052,7 @@ tdh_tools_build() {
     REBUILD_REQUIRED_SOFTWARE=1       ## REBUILD REQUIRED BECAUSE OF SOFTWARE CHANGE 
   fi
 
-echo gaga1
   if [ ! -x $TDH_DOCKER_FILES/kubectl-vsphere ]; then
-echo "cp $TDHPATH/software/vsphere-plugin-Linux.zip /tmp"
     cp $TDHPATH/software/vsphere-plugin-Linux.zip /tmp
     unzip -d /tmp /tmp/vsphere-plugin-Linux.zip > /dev/null 2>&1
     chmod a+x /tmp/bin/kubectl-vsphere /tmp/bin/kubectl
