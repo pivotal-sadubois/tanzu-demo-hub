@@ -4333,71 +4333,73 @@ installSpringCloudGateway() {
   fi
 
   messageTitle "Spring Cloud Gateway"
-
-  # --- DOWNLOAD BUILD_SERVICE BINARIES ---
-  downloadFromPivnet spring-cloud-gateway-for-kubernetes $TDH_SERVICE_SPRING_CLOUD_GATEWAY_VERSION \
-      "$TDH_SERVICE_SPRING_CLOUD_GATEWAY_VERSION" "Spring Cloud Gateway for Kubernetes Installer"
-
-  TBS_FILE="/tmp/spring-cloud-gateway-k8s-$TDH_SERVICE_SPRING_CLOUD_GATEWAY_VERSION.tgz"
-  [ -d /tmp/spring-cloud-gateway ] && rm -rf /tmp/spring-cloud-gateway
-  mkdir -p /tmp/spring-cloud-gateway
-  tar xfz $TBS_FILE -C /tmp/spring-cloud-gateway
-
-  messagePrint " ▪ Verify VMware Registry Access" "$TDH_REGISTRY_VMWARE_NAME"
-  cnt=0; ret=1
-  while [ $ret -ne 0 -a $cnt -lt 5 ]; do
-    docker login $TDH_REGISTRY_VMWARE_NAME -u $TDH_REGISTRY_VMWARE_USER -p $TDH_REGISTRY_VMWARE_PASS > /dev/null 2>&1; ret=$?
-    sleep 60
-    let cnt=cnt+1
-  done
-
+  kubectl get ns $NAMESPACE > /dev/null 2>&1; ret=$?
   if [ $ret -ne 0 ]; then
-    echo "ERROR: Docker login does not work 3"
-    echo "       => docker login $TDH_REGISTRY_VMWARE_NAME -u $TDH_REGISTRY_VMWARE_USER -p $TDH_REGISTRY_VMWARE_PASS"; exit 1
-  fi
+    # --- DOWNLOAD BUILD_SERVICE BINARIES ---
+    downloadFromPivnet spring-cloud-gateway-for-kubernetes $TDH_SERVICE_SPRING_CLOUD_GATEWAY_VERSION \
+        "$TDH_SERVICE_SPRING_CLOUD_GATEWAY_VERSION" "Spring Cloud Gateway for Kubernetes Installer"
 
-  #########################################################################################################################
-  ######################################## INSTALL SPRING CLOUD GATEWAY ###################################################
-  #########################################################################################################################
+    TBS_FILE="/tmp/spring-cloud-gateway-k8s-$TDH_SERVICE_SPRING_CLOUD_GATEWAY_VERSION.tgz"
+    [ -d /tmp/spring-cloud-gateway ] && rm -rf /tmp/spring-cloud-gateway
+    mkdir -p /tmp/spring-cloud-gateway
+    tar xfz $TBS_FILE -C /tmp/spring-cloud-gateway
 
-  if [ "$TDH_SERVICE_REGISTRY_HARBOR" == "true" ]; then
-    DNS_HARBOR=$(getConfigMap tanzu-demo-hub TDH_HARBOR_REGISTRY_DNS_HARBOR)
-    TDH_HARBOR_REGISTRY_DNS_HARBOR=$(getConfigMap tanzu-demo-hub TDH_HARBOR_REGISTRY_DNS_HARBOR)
-    TDH_HARBOR_REGISTRY_ADMIN_PASSWORD=$(getConfigMap tanzu-demo-hub TDH_HARBOR_REGISTRY_ADMIN_PASSWORD)
-    messagePrint " ▪ Verify Harbor Registry Access" "$TDH_HARBOR_REGISTRY_DNS_HARBOR"
-
+    messagePrint " ▪ Verify VMware Registry Access" "$TDH_REGISTRY_VMWARE_NAME"
     cnt=0; ret=1
     while [ $ret -ne 0 -a $cnt -lt 5 ]; do
-      docker login $TDH_HARBOR_REGISTRY_DNS_HARBOR -u admin -p $TDH_HARBOR_REGISTRY_ADMIN_PASSWORD > /dev/null 2>&1; ret=$?
-      sleep 10
+      docker login $TDH_REGISTRY_VMWARE_NAME -u $TDH_REGISTRY_VMWARE_USER -p $TDH_REGISTRY_VMWARE_PASS > /dev/null 2>&1; ret=$?
+      sleep 60
       let cnt=cnt+1
     done
-
+  
     if [ $ret -ne 0 ]; then
-      echo "ERROR: Docker login does not work 11"
-      echo "       => docker login $TDH_HARBOR_REGISTRY_DNS_HARBOR -u admin -p $TDH_HARBOR_REGISTRY_ADMIN_PASSWORD"; exit 1
+      echo "ERROR: Docker login does not work 3"
+      echo "       => docker login $TDH_REGISTRY_VMWARE_NAME -u $TDH_REGISTRY_VMWARE_USER -p $TDH_REGISTRY_VMWARE_PASS"; exit 1
     fi
 
-    kubectl get ns $NAMESPACE > /dev/null 2>&1
-    if [ $? -ne 0 ]; then
-      messagePrint " ▪ Relocate the images" "$DNS_HARBOR/library/spring-cloud-gateway"
-      cd /tmp/spring-cloud-gateway/spring-cloud-gateway-k8s-$TDH_SERVICE_SPRING_CLOUD_GATEWAY_VERSION
-      scripts/relocate-images.sh $DNS_HARBOR/library/spring-cloud-gateway > /dev/null 2>&1
-      if [ $? -ne 0 ]; then
-        echo "ERROR: Image Relocation failed"
-        echo "       => cd /tmp/spring-cloud-gateway/spring-cloud-gateway-k8s-$TDH_SERVICE_SPRING_CLOUD_GATEWAY_VERSION"
-        echo "       => scripts/relocate-images.sh $DNS_HARBOR/library/spring-cloud-gateway" 
-      fi
+    #########################################################################################################################
+    ######################################## INSTALL SPRING CLOUD GATEWAY ###################################################
+    #########################################################################################################################
 
-      messagePrint " ▪ Deploy Spring Cloud Gateway" "$NAMESPACE"
-      echo "-----------------------------------------------------------------------------------------------------------"
-      cd /tmp/spring-cloud-gateway/spring-cloud-gateway-k8s-$TDH_SERVICE_SPRING_CLOUD_GATEWAY_VERSION
-      ./scripts/install-spring-cloud-gateway.sh
-      echo "-----------------------------------------------------------------------------------------------------------"
+    if [ "$TDH_SERVICE_REGISTRY_HARBOR" == "true" ]; then
+      DNS_HARBOR=$(getConfigMap tanzu-demo-hub TDH_HARBOR_REGISTRY_DNS_HARBOR)
+      TDH_HARBOR_REGISTRY_DNS_HARBOR=$(getConfigMap tanzu-demo-hub TDH_HARBOR_REGISTRY_DNS_HARBOR)
+      TDH_HARBOR_REGISTRY_ADMIN_PASSWORD=$(getConfigMap tanzu-demo-hub TDH_HARBOR_REGISTRY_ADMIN_PASSWORD)
+      messagePrint " ▪ Verify Harbor Registry Access" "$TDH_HARBOR_REGISTRY_DNS_HARBOR"
+  
+      cnt=0; ret=1
+      while [ $ret -ne 0 -a $cnt -lt 5 ]; do
+        docker login $TDH_HARBOR_REGISTRY_DNS_HARBOR -u admin -p $TDH_HARBOR_REGISTRY_ADMIN_PASSWORD > /dev/null 2>&1; ret=$?
+        sleep 10
+        let cnt=cnt+1
+      done
+  
+      if [ $ret -ne 0 ]; then
+        echo "ERROR: Docker login does not work 11"
+        echo "       => docker login $TDH_HARBOR_REGISTRY_DNS_HARBOR -u admin -p $TDH_HARBOR_REGISTRY_ADMIN_PASSWORD"; exit 1
+      fi
+  
+      kubectl get ns $NAMESPACE > /dev/null 2>&1
       if [ $? -ne 0 ]; then
-        echo "ERROR: Image Relocation failed"
-        echo "       => cd /tmp/spring-cloud-gateway/spring-cloud-gateway-k8s-$TDH_SERVICE_SPRING_CLOUD_GATEWAY_VERSION"
-        echo "       => ./scripts/install-spring-cloud-gateway.sh"
+        messagePrint " ▪ Relocate the images" "$DNS_HARBOR/library/spring-cloud-gateway"
+        cd /tmp/spring-cloud-gateway/spring-cloud-gateway-k8s-$TDH_SERVICE_SPRING_CLOUD_GATEWAY_VERSION
+        scripts/relocate-images.sh $DNS_HARBOR/library/spring-cloud-gateway > /dev/null 2>&1
+        if [ $? -ne 0 ]; then
+          echo "ERROR: Image Relocation failed"
+          echo "       => cd /tmp/spring-cloud-gateway/spring-cloud-gateway-k8s-$TDH_SERVICE_SPRING_CLOUD_GATEWAY_VERSION"
+          echo "       => scripts/relocate-images.sh $DNS_HARBOR/library/spring-cloud-gateway" 
+        fi
+
+        messagePrint " ▪ Deploy Spring Cloud Gateway" "$NAMESPACE"
+        echo "-----------------------------------------------------------------------------------------------------------"
+        cd /tmp/spring-cloud-gateway/spring-cloud-gateway-k8s-$TDH_SERVICE_SPRING_CLOUD_GATEWAY_VERSION
+        ./scripts/install-spring-cloud-gateway.sh
+        echo "-----------------------------------------------------------------------------------------------------------"
+        if [ $? -ne 0 ]; then
+          echo "ERROR: Image Relocation failed"
+          echo "       => cd /tmp/spring-cloud-gateway/spring-cloud-gateway-k8s-$TDH_SERVICE_SPRING_CLOUD_GATEWAY_VERSION"
+          echo "       => ./scripts/install-spring-cloud-gateway.sh"
+        fi
       fi
     else
       messageTitle "Verify Spring Cloud Gateway"
@@ -4470,15 +4472,11 @@ installArgoCD() {
     helm install argo-cd --namespace $NAMESPACE bitnami/argo-cd -f $HELM_VALUES --wait
     if [ $? -ne 0 ]; then
       echo "ERROR: Failed to deploy ArgoCD Helm Chart"
-      echo "       => helm install argo-cd --namespace $NAMESPACE bitnami/argo-cd -f $HELM_VALUES"
+      echo "       => helm install argo-cd --namespace $NAMESPACE bitnami/argo-cd -f $HELM_VALUES --wait"
       exit 1
     fi
 
     messagePrint " ▪ Kubeapps Dashboard deployed"        "https://argocd.$DOMAIN"
-
-    #messagePrint " ▪ Create Cluster Role Binding"        "default:kubeapps-operator"
-    #kubectl delete clusterrolebinding argocd > /dev/null 2>&1
-    #kubectl create clusterrolebinding argocd --clusterrole=admin --serviceaccount=default:argocd > /dev/null 2>&1
 
     messagePrint " ▪ Create Serviceaccount"              "argocd"
     kubectl delete serviceaccount argocd > /dev/null 2>&1
@@ -4565,7 +4563,7 @@ installJenkins() {
     #helm install jenkins --namespace $NAMESPACE bitnami/jenkins -f $HELM_VALUES --wait  
     if [ $? -ne 0 ]; then
       echo "ERROR: Failed to deploy Jenkins Helm Chart"
-      echo "       => helm install jenkins --namespace $NAMESPACE bitnami/jenkins -f $HELM_VALUES"
+      echo "       => helm install jenkins --namespace $NAMESPACE bitnami/jenkins -f $HELM_VALUES --wait"
       exit 1
     fi
 
@@ -4575,11 +4573,11 @@ installJenkins() {
     #java -jar ~/Downloads/jenkins-cli.jar -s https://jenkins.apps-contour.local.pcfsdu.com/ -auth user:Idh5k5eZts get-job sacha_xxx1 > template.xml
     #java -jar ~/Downloads/jenkins-cli.jar -s https://jenkins.apps-contour.local.pcfsdu.com/ -auth user:Idh5k5eZts create-job sacha_xxx2 < template.xml
 
-    messagePrint " ▪ Create Cluster Role Binding"        "default:kubeapps-operator"
+    messagePrint " ▪ Create Cluster Role Binding"        "default:jenkins-operator"
     kubectl delete clusterrolebinding jenkins-tbs > /dev/null 2>&1
     kubectl create clusterrolebinding jenkins-tbs --clusterrole=build-service-user-role --serviceaccount=default:jenkins-tbs > /dev/null 2>&1
 
-    messagePrint " ▪ Create Serviceaccount"              "kubeapps-operator"
+    messagePrint " ▪ Create Serviceaccount"              "jenkins-operator"
     kubectl delete serviceaccount jenkins-tbs > /dev/null 2>&1
     kubectl create serviceaccount jenkins-tbs > /dev/null 2>&1
   fi
@@ -4641,6 +4639,13 @@ installKubeapps() {
     kubectl get secret tanzu-demo-hub-tls --namespace=default  -oyaml | grep -v '^\s*namespace:\s' | \
     kubectl apply --namespace=$NAMESPACE -f - > /dev/null 2>&1
 
+    if [ "$TDH_SERVICE_KUBEAPPS_VERSION" == "" -o "$TDH_SERVICE_KUBEAPPS_VERSION" == "latest" ]; then
+      HELM_KUBEAPPS_VERSION=$(helm search repo bitnami/contour | egrep "^bitnami/contour " | tail -1 | awk '{ print $2 }')
+    else
+      HELM_KUBEAPPS_VERSION=$TDH_SERVICE_KUBEAPPS_VERSION
+    fi
+
+
     HELM_VALUES=/tmp/helm_kubeapps_values.yaml
 
     echo "global:"                                                                                                              >  $HELM_VALUES
@@ -4678,11 +4683,20 @@ installKubeapps() {
     messagePrint " ▪ Deploy the Kubeapps Helm Chart" "kubeapps"
     cnt=0; ret=1
     while [ $ret -ne 0 -a $cnt -lt 5 ]; do
-      helm install kubeapps --namespace $NAMESPACE bitnami/kubeapps -f $HELM_VALUES > /dev/null 2>&1; ret=$?
+      #helm install kubeapps --namespace $NAMESPACE bitnami/kubeapps -f $HELM_VALUES > /dev/null 2>&1; ret=$?
+      helm install kubeapps --namespace $NAMESPACE bitnami/kubeapps -f $HELM_VALUES; ret=$?
+
+echo "helm install kubeapps --namespace $NAMESPACE bitnami/kubeapps -f $HELM_VALUES --version $HELM_KUBEAPPS_VERSION"
+      #helm install kubeapps --namespace $NAMESPACE bitnami/kubeapps -f $HELM_VALUES --version $HELM_KUBEAPPS_VERSION > /dev/null 2>&1; ret=$?
+      helm install kubeapps --namespace $NAMESPACE bitnami/kubeapps -f $HELM_VALUES --version $HELM_KUBEAPPS_VERSION; ret=$?
+
+      $HELM_KUBEAPPS_VERSION
       [ $ret -eq 0 ] && break
       let cnt=cnt+1
       sleep 30
     done
+
+echo gagag0; sleep 10000
 
     if [ $ret -ne 0 ]; then
       echo "ERROR: Failed to deploy Kubeapps Helm Chart"
@@ -4691,12 +4705,12 @@ installKubeapps() {
     fi
 
     messagePrint " ▪ Create Serviceaccount"              "kubeapps-operator"
-    kubectl delete --namespace default serviceaccount kubeapps-operator > /dev/null 2>&1
-    kubectl create --namespace default serviceaccount kubeapps-operator > /dev/null 2>&1
+#    kubectl delete --namespace default serviceaccount kubeapps-operator > /dev/null 2>&1
+#    kubectl create --namespace default serviceaccount kubeapps-operator > /dev/null 2>&1
 
     messagePrint " ▪ Create Cluster Role Binding"        "default:kubeapps-operator"
-    kubectl delete clusterrolebinding kubeapps-operator > /dev/null 2>&1
-    kubectl create clusterrolebinding kubeapps-operator --clusterrole=cluster-admin --serviceaccount=default:kubeapps-operator
+#    kubectl delete clusterrolebinding kubeapps-operator > /dev/null 2>&1
+#    kubectl create clusterrolebinding kubeapps-operator --clusterrole=cluster-admin --serviceaccount=default:kubeapps-operator
 
     messagePrint " ▪ Kubeapps Dashboard deployed"        "https://kubeapps.$DOMAIN"
   fi
@@ -5534,6 +5548,7 @@ InstallContour() {
     fi
   
     messagePrint " ▪ Install Contour Helm Chart" "bitnami/contour"
+    helm repo update > /dev/null 2>&1
 
     if [ "$TDH_SERVICE_INGRESS_CONTOUR_VERSION" == "" -o "$TDH_SERVICE_INGRESS_CONTOUR_VERSION" == "latest" ]; then 
       HELM_CONTOUR_VERSION=$(helm search repo bitnami/contour | egrep "^bitnami/contour " | tail -1 | awk '{ print $2 }') 
@@ -6027,6 +6042,7 @@ InstallHarborRegistry() {
     echo "      accessMode: ReadWriteOnce"                                                                                      >> $HARBOR_VALUES
     echo "      size: 10Gi"                                                                                                     >> $HARBOR_VALUES
 
+    helm repo update > /dev/null 2>&1
     HELM_HARBOR_VERSION=$(helm search repo bitnami/harbor | tail -1 | awk '{ print $2 }')
 
     messagePrint " ▪ Install Harbor Helm Chart"           "bitnami/contour"
@@ -7036,7 +7052,9 @@ tdh_tools_build() {
     REBUILD_REQUIRED_SOFTWARE=1       ## REBUILD REQUIRED BECAUSE OF SOFTWARE CHANGE 
   fi
 
+echo gaga1
   if [ ! -x $TDH_DOCKER_FILES/kubectl-vsphere ]; then
+echo "cp $TDHPATH/software/vsphere-plugin-Linux.zip /tmp"
     cp $TDHPATH/software/vsphere-plugin-Linux.zip /tmp
     unzip -d /tmp /tmp/vsphere-plugin-Linux.zip > /dev/null 2>&1
     chmod a+x /tmp/bin/kubectl-vsphere /tmp/bin/kubectl
