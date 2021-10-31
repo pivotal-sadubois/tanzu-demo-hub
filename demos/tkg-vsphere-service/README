@@ -1,0 +1,16 @@
+##############################################################
+################# vSphere with Kubernetes Demo ###############
+##############################################################
+
+This demo has been tested on a PEZ environment:
+   TKGs - vSphere with Kubernetes 7.0 U2 (Nested env with 3 virtual ESX hypervisors on one host)
+
+# --- SET THE FOLLOWING ENVIRONMENT VARIABLES ACCORDING YOUR PEZ ENVIRONMENT ---
+export PEZ_SLOTID=490
+export VSPHERE_SERVER=pacific-vcsa.haas-${PEZ_SLOTID}.pez.vmware.com
+export VSPHERE_USER=administrator@vsphere.local
+export VSPHERE_PASS=<xyz>
+export VSPHERE_NAMESPACE=tanzu-demo
+export SUPERVISOR_CLUSTER=wcp.haas-${PEZ_SLOTID}.pez.vmware.com
+
+
