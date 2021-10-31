@@ -1,0 +1,32 @@
+apiVersion: run.tanzu.vmware.com/v1alpha1
+kind: TanzuKubernetesCluster
+metadata:
+  name: tkg-cluster-1
+  namespace: tanzu-demo
+spec:
+  distribution:
+    fullVersion: v1.20.9+vmware.1-tkg.1.a4cee5b
+    version: ""
+  settings:
+    network:
+      cni:
+        name: antrea
+      pods:
+        cidrBlocks:
+        - 172.20.0.0/16
+      serviceDomain: cluster.local
+      services:
+        cidrBlocks:
+        - 10.96.0.0/16
+    storage: {}
+  topology:
+    controlPlane:
+      class: guaranteed-small
+      count: 1
+      storageClass: pacific-gold-storage-policy
+    workers:
+      #class: best-effort-2xlarge
+      class: guaranteed-small
+      count: 1
+      storageClass: pacific-gold-storage-policy
+
