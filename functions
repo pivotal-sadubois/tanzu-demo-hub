@@ -4143,6 +4143,8 @@ echo "XXX TMC_K8S_VERSIONS:$TMC_K8S_VERSIONS"
 echo "XXX TDH_TKGWC_KUBERNETES:$TDH_TKGWC_KUBERNETES"
       KUBERNETES_VERSION=$(for n in $TMC_K8S_VERSIONS; do echo v$n; done | egrep "$TDH_TKGWC_KUBERNETES" | tail -1 | sed 's/^v//g') 
 
+      [ "$TMC_KUBERNETES_VERSION" != "" ] && KUBERNETES_VERSION=$TMC_KUBERNETES_VERSION
+
 echo "KUBERNETES_VERSION:$KUBERNETES_VERSION"
 
       messageTitle "TMC Create Cluster"     
@@ -4691,7 +4693,6 @@ echo "helm install kubeapps --namespace $NAMESPACE bitnami/kubeapps -f $HELM_VAL
       #helm install kubeapps --namespace $NAMESPACE bitnami/kubeapps -f $HELM_VALUES --version $HELM_KUBEAPPS_VERSION > /dev/null 2>&1; ret=$?
       helm install kubeapps --namespace $NAMESPACE bitnami/kubeapps -f $HELM_VALUES --version $HELM_KUBEAPPS_VERSION; ret=$?
 
-      $HELM_KUBEAPPS_VERSION
       [ $ret -eq 0 ] && break
       let cnt=cnt+1
       sleep 30
@@ -4704,12 +4705,12 @@ echo "helm install kubeapps --namespace $NAMESPACE bitnami/kubeapps -f $HELM_VAL
     fi
 
     messagePrint " ▪ Create Serviceaccount"              "kubeapps-operator"
-#    kubectl delete --namespace default serviceaccount kubeapps-operator > /dev/null 2>&1
-#    kubectl create --namespace default serviceaccount kubeapps-operator > /dev/null 2>&1
+    kubectl delete --namespace default serviceaccount kubeapps-operator > /dev/null 2>&1
+    kubectl create --namespace default serviceaccount kubeapps-operator > /dev/null 2>&1
 
     messagePrint " ▪ Create Cluster Role Binding"        "default:kubeapps-operator"
-#    kubectl delete clusterrolebinding kubeapps-operator > /dev/null 2>&1
-#    kubectl create clusterrolebinding kubeapps-operator --clusterrole=cluster-admin --serviceaccount=default:kubeapps-operator
+    kubectl delete clusterrolebinding kubeapps-operator > /dev/null 2>&1
+    kubectl create clusterrolebinding kubeapps-operator --clusterrole=cluster-admin --serviceaccount=default:kubeapps-operator
 
     messagePrint " ▪ Kubeapps Dashboard deployed"        "https://kubeapps.$DOMAIN"
   fi
@@ -5617,7 +5618,7 @@ InstallContour() {
     exit 1
   fi
 
-echo "TDH_INFRASTRUCTURE:$TDH_INFRASTRUCTURE"
+echo "TDH_INFRASTRUCTURE:$TDH_INFRASTRUCTURE IPA:$ipa TDH_ENVNAME:$TDH_ENVNAME"
   # --- SET DNS RECORD ---
   if [ "$TDH_INFRASTRUCTURE" == "minikube" -o "$TDH_INFRASTRUCTURE" == "vSphere" -o "$TDH_INFRASTRUCTURE" == "Azure" -o "$TDH_INFRASTRUCTURE" == "docker" ]; then 
     setDNSrecord "$ipa" "${TDH_ENVNAME}" "${AWS_HOSTED_DNS_DOMAIN}" "*.apps-contour" "A"
@@ -7584,7 +7585,7 @@ runTDHtoolsDemos() {
       mkdir -p $HOME/.mc $HOME/.cache $HOME/.config $HOME/.local
       mkdir -p /tmp/docker && chmod a+w /tmp/docker
       docker run -it --rm --name tdh-tools -v /var/run/docker.sock:/var/run/docker.sock tdh-tools:latest chmod 666 /var/run/docker.sock > /dev/null 2>&1
-      docker run --network=host -u $(id -u):$(id -g) --group-add 0 -it --init --rm --name tdh-tools --network=host --env-file /tmp/tdh.env \
+      docker run -u $(id -u):$(id -g) --group-add 0 -it --init --rm --name tdh-tools --network=host --env-file /tmp/tdh.env \
          -v $HOME:$HOME:ro -v $HOME/.local:$HOME/.local:rw -v $HOME/.tanzu-demo-hub:$HOME/.tanzu-demo-hub:rw \
          -v /var/run/docker.sock:/var/run/docker.sock:rw -v $HOME/.cache:$HOME/.cache:rw -v $HOME/.config:$HOME/.config:rw \
          -v $HOME/.aws:$HOME/.aws:rw -v $HOME/.vmware-cna-saas:$HOME/.vmware-cna-saas:rw -v $HOME/.azure:$HOME/.azure:rw \
