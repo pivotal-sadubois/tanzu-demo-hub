@@ -2326,6 +2326,7 @@ createTKGMCcluster() {
   TKG_KUBECONFIG=${HOME}/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.kubeconfig; rm -f $TKG_KUBECONFIG
 
   cleanKindCluster
+echo "AAAAAA1: TDH_TKGMC_NAME:$TDH_TKGMC_NAME"
 
   if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "docker" ]; then
     echo "CLUSTER_NAME: $TDH_TKGMC_NAME"                                               >  $TKG_TEMPLATE
@@ -2381,12 +2382,14 @@ createTKGMCcluster() {
 
       messagePrint " ▪ Management Cluster Creating"        "This may take up to 15min ..."
 
+echo "AAAAAA: TDH_TKGMC_NAME:$TDH_TKGMC_NAME"
+
       if [ $DEBUG -gt 0 ]; then
         messageLine
-        tanzu management-cluster create --file $TKG_TEMPLATE -v 0 --log-file=/tmp/$TDH_TKGMC_NAME.log; ret=$?
+        tanzu management-cluster create --file $TKG_TEMPLATE -v 0 --log-file=/tmp/${TDH_TKGMC_NAME}.log; ret=$?
         messageLine
       else
-        tanzu management-cluster create --file $TKG_TEMPLATE -v 0 --log-file=/tmp/$TDH_TKGMC_NAME.log > /dev/null 2>&1; ret=$?
+        tanzu management-cluster create --file $TKG_TEMPLATE -v 0 --log-file=/tmp/${TDH_TKGMC_NAME}.log > /dev/null 2>&1; ret=$?
       fi
 
       cnt=$(tanzu management-cluster get 2>/dev/null | grep -c Error)
