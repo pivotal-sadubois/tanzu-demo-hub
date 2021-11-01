@@ -40,6 +40,8 @@ fi
 # --- RESET TDH_TKGMC_NAME ---
 export TDH_TKGMC_NAME="$TDH_TKGMC_NAME_TMP"
 
+echo "InstallTKGmc.sh BBBBBB TDH_TKGMC_NAME_TMP:$TDH_TKGMC_NAME_TMP" 1>&2
+
 #sshEnvironment > /dev/null 2>&1
 createTKGMCcluster $TDH_TKGMC_NAME
 if [ $? -ne 0 ]; then exit 1; fi
