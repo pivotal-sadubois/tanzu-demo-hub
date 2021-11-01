@@ -2319,6 +2319,7 @@ EOF
 }
 
 createTKGMCcluster() {
+echo "AAAAAAAA0: 1:$1"
   unset TKG_CONFIG
   [ "$1" != "" ] && TDH_TKGMC_NAME="$1"    ## CLUSTER_NAME SET BY (InstallTKGmc.sh)
   [ ! -d ${HOME}/.tanzu-demo-hub/config ] && mkdir -p ${HOME}/.tanzu-demo-hub/config
