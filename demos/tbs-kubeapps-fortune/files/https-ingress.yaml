@@ -1,21 +1,23 @@
----
-apiVersion: extensions/v1beta1
+apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: fortune-ingress
   namespace: NAMESPACE
+  annotations:
+    - kubernetes.io/ingress.class: contour
   labels:
     app: fortune-app
 spec:
   tls:
   - secretName: https-secret
     hosts:
-      - fortune.DNS_DOMAIN
+      - fortune..DNS_DOMAIN
   rules:
-  - host: fortune.DNS_DOMAIN
+  - host: fortune..DNS_DOMAIN
     http:
       paths:
       - path: /
         backend:
           serviceName: fortune-service
           servicePort: 80
+
