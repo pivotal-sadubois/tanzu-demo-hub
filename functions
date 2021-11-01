@@ -6069,6 +6069,70 @@ InstallHarborRegistry() {
       sleep 5
     done
 
+    # --- Change from Ingress to HTTPProxy ---
+
+    HARBOR_VALUES=/tmp/harbor_httpproxy.yaml
+    echo "apiVersion: projectcontour.io/v1"                                       >  $HARBOR_VALUES
+    echo "kind: HTTPProxy"                                                        >> $HARBOR_VALUES
+    echo "metadata:"                                                              >> $HARBOR_VALUES
+    echo "  name: harbor-proxy"                                                   >> $HARBOR_VALUES
+    echo "  namespace: registry-harbor"                                           >> $HARBOR_VALUES
+    echo "  annotations:"                                                         >> $HARBOR_VALUES
+    echo "    kubernetes.io/ingress.class: contour"                               >> $HARBOR_VALUES
+    echo "spec:"                                                                  >> $HARBOR_VALUES
+    echo "  virtualhost:"                                                         >> $HARBOR_VALUES
+    echo "    fqdn: harbor.apps-contour.$TDH_ENVNAME.$AWS_HOSTED_DNS_DOMAIN"      >> $HARBOR_VALUES
+    echo "    tls:"                                                               >> $HARBOR_VALUES
+    echo "      secretName: tanzu-demo-hub-tls"                                   >> $HARBOR_VALUES
+    echo "  routes:"                                                              >> $HARBOR_VALUES
+    echo "    - conditions: "                                                     >> $HARBOR_VALUES
+    echo "      - prefix: /"                                                      >> $HARBOR_VALUES
+    echo "      services:"                                                        >> $HARBOR_VALUES
+    echo "        - name: harbor-portal"                                          >> $HARBOR_VALUES
+    echo "          port: 80"                                                     >> $HARBOR_VALUES
+    echo "      timeoutPolicy:"                                                   >> $HARBOR_VALUES
+    echo "        response: 600s"                                                 >> $HARBOR_VALUES
+    echo "    - conditions:"                                                      >> $HARBOR_VALUES
+    echo "      - prefix: /api/"                                                  >> $HARBOR_VALUES
+    echo "      services:"                                                        >> $HARBOR_VALUES
+    echo "        - name: harbor-core"                                            >> $HARBOR_VALUES
+    echo "          port: 80"                                                     >> $HARBOR_VALUES
+    echo "      timeoutPolicy:"                                                   >> $HARBOR_VALUES
+    echo "        response: 600s"                                                 >> $HARBOR_VALUES
+    echo "    - conditions:"                                                      >> $HARBOR_VALUES
+    echo "      - prefix: /service/"                                              >> $HARBOR_VALUES
+    echo "      services:"                                                        >> $HARBOR_VALUES
+    echo "        - name: harbor-core"                                            >> $HARBOR_VALUES
+    echo "          port: 80"                                                     >> $HARBOR_VALUES
+    echo "      timeoutPolicy:"                                                   >> $HARBOR_VALUES
+    echo "        response: 600s"                                                 >> $HARBOR_VALUES
+    echo "    - conditions:"                                                      >> $HARBOR_VALUES
+    echo "      - prefix: /v2/"                                                   >> $HARBOR_VALUES
+    echo "      services:"                                                        >> $HARBOR_VALUES
+    echo "        - name: harbor-core"                                            >> $HARBOR_VALUES
+    echo "          port: 80"                                                     >> $HARBOR_VALUES
+    echo "      timeoutPolicy:"                                                   >> $HARBOR_VALUES
+    echo "        response: 600s"                                                 >> $HARBOR_VALUES
+    echo "    - conditions:"                                                      >> $HARBOR_VALUES
+    echo "      - prefix: /chartrepo/"                                            >> $HARBOR_VALUES
+    echo "      services:"                                                        >> $HARBOR_VALUES
+    echo "        - name: harbor-core"                                            >> $HARBOR_VALUES
+    echo "          port: 80"                                                     >> $HARBOR_VALUES
+    echo "      timeoutPolicy:"                                                   >> $HARBOR_VALUES
+    echo "        response: 600s"                                                 >> $HARBOR_VALUES
+    echo "    - conditions:"                                                      >> $HARBOR_VALUES
+    echo "      - prefix: /c/"                                                    >> $HARBOR_VALUES
+    echo "      services:"                                                        >> $HARBOR_VALUES
+    echo "        - name: harbor-core"                                            >> $HARBOR_VALUES
+    echo "          port: 80"                                                     >> $HARBOR_VALUES
+    echo "      timeoutPolicy:"                                                   >> $HARBOR_VALUES
+    echo "        response: 600s"                                                 >> $HARBOR_VALUES
+
+    messagePrint " ▪ Replace Harbor Ingress with HTTPProxy" "$HARBOR_VALUES"
+    kubectl delete ingress-harbor -n $NAMESPACE > /dev/null 2>&1
+    kubectl apply -f $HARBOR_VALUES
+
+
     # --- WAIT FOR HARBOR TO COME ONLINE ---
     messagePrint " ▪ Verify Harbor Registry Access" "$HARBOR_HOSTNAME"
     ret=1; cnt=0
