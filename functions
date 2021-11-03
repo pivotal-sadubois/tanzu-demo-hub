@@ -7063,7 +7063,6 @@ verify_docker() {
 }
 
 tdh_tools_build() {
-echo "tdh_tools_build: gaga1"
   MODE=$1
   REBUILD_REQUIRED=0
   REBUILD_REQUIRED_SOFTWARE=0
