@@ -7063,6 +7063,7 @@ verify_docker() {
 }
 
 tdh_tools_build() {
+echo "tdh_tools_build: gaga1"
   MODE=$1
   REBUILD_REQUIRED=0
   REBUILD_REQUIRED_SOFTWARE=0
@@ -7106,6 +7107,17 @@ tdh_tools_build() {
   [ "$TDH_SERVICE_BUILD_SERVICE_DEPENDANCIES" == "" ] && TDH_SERVICE_BUILD_SERVICE_DEPENDANCIES=0.3.0
   [ "$TKG_TANZU_KUBERNETES_GRID" == "" ] && TKG_TANZU_KUBERNETES_GRID=1.4.0
 
+  if [ $BUILD_MODE == "tce" ]; then
+    . files/tdh-tools/tdh-tools-tce.cfg
+  else
+    . files/tdh-tools/tdh-tools.cfg
+  fi
+
+  messageTitle "TDH Tools Configureation (files/tdh-tools/tdh-tools.cfg)"
+  messagePrint " ▪ Build Service Version"                           "$TDH_SERVICE_BUILD_SERVICE_VERSION"
+  messagePrint " ▪ Build Service Tools (kp)"                        "$TDH_SERVICE_BUILD_SERVICE_KP"
+  messagePrint " ▪ Build Service Dependancies:"                     "$TDH_SERVICE_BUILD_SERVICE_DEPENDANCIES"
+  messagePrint " ▪ Tantzu CLI Bundle:"                              "$TKG_TANZU_KUBERNETES_GRID"
   messageTitle "TDH Tools Docker Container ($TDH_TOOLS_IMAGE)"
 
   # --- DOW3LOAD BUILD_SERVICE BINARIES ---
@@ -7208,16 +7220,21 @@ tdh_tools_build() {
     if [ ! -h $TDH_DOCKER_FILES/tce-linux-amd64 ]; then
       ln -s $TCE_LINUX_PACKAGE $TDH_DOCKER_FILES/tce-linux-amd64
     fi
+  fi
 
-  else
-    if [ ! -d $TDH_DOCKER_FILES/cli-${TKG_TANZU_KUBERNETES_GRID} ]; then
-      TANZU_CLI_BUINDLE=$TDH_DOCKER_FILES/tanzu-cli-bundle-v${TKG_TANZU_KUBERNETES_GRID}-linux-amd64.tar
-      TANZU_CLI_BUINDLE=$TDH_DOCKER_FILES/tanzu-cli-bundle-linux-amd64.tar
-      if [ ! -f $TANZU_CLI_BUINDLE ]; then
-        . ~/.tanzu-demo-hub.cfg
-  
+  if [ $BUILD_MODE == "tkg" ]; then
+    # --- CHECK WETHER THE BUNDLE IS INSTALLED ---
+    if [ ! -d $TDH_DOCKER_FILES/cli-${TKG_TANZU_KUBERNETES_GRID} -o $TDH_DOCKER_FILES/cli-${TKG_TANZU_KUBERNETES_GRID}/core/v*/tanzu-core-linux_amd64 ]; then
+      TANZU_DEMO_HUB_CACHE=$HOME/.tanzu-demo-hub/cache.orig
+      TANZU_DEMO_HUB_CACHE=$HOME/.tanzu-demo-hub/cache
+      TANZU_CLI_BUNDLE=$TDH_DOCKER_FILES/tkg-${TKG_TANZU_KUBERNETES_GRID}
+      TANZU_CLI_BUNDLE=$TANZU_DEMO_HUB_CACHE/tkg-${TKG_TANZU_KUBERNETES_GRID}
+
+      if [ ! -f $TANZU_CLI_BUNDLE/tanzu-cli-bundle-v${TKG_TANZU_KUBERNETES_GRID}-linux-amd64.tar -a \
+           ! -f $TANZU_CLI_BUNDLE/tanzu-cli-bundle-linux-amd64.tar ]; then 
+
         VMWCLI=/tmp/vmw-cli
-  
+
         if [ ! -s $VMWCLI ]; then
           messagePrint " ▪ Install Package (vmw-cli)" "installing"
           docker run apnex/vmw-cli shell > $VMWCLI 2>/dev/null
@@ -7226,24 +7243,27 @@ tdh_tools_build() {
             echo "       => docker run apnex/vmw-cli shell > /tmp/vmw-cli"
             exit 1
           fi
-  
+
           chmod 755 $VMWCLI
         fi
-  
+
+        #################################################################################
+        ################# DOWNLOAD TANZU-CLI-BUNDLE FROM MYVMWARE.COM ###################
+        #################################################################################
         export VMWUSER="$TDH_MYVMWARE_USER"
         export VMWPASS="$TDH_MYVMWARE_PASS"
         $VMWCLI ls vmware_tanzu_kubernetes_grid > /dev/null 2>&1
-  
+
         cnt=$($VMWCLI ls vmware_tanzu_kubernetes_grid 2>/dev/null | egrep "^tanzu-cli-bundle" | grep -c "$TKG_TANZU_KUBERNETES_GRID")
-        if [ $cnt -eq 0 ]; then 
-          echo "ERROR: failed to download tanzu-cli-bundle version: $TKG_TANZU_KUBERNETES_GRID from myVMware.com. This version does not" 
+        if [ $cnt -eq 0 ]; then
+          echo "ERROR: failed to download tanzu-cli-bundle version: $TKG_TANZU_KUBERNETES_GRID from myVMware.com. This version does not"
           echo "       seam to be available anymore"
           messageLine
-          $VMWCLI ls vmware_tanzu_kubernetes_grid | egrep "^tanzu-cli-bundle" 
+          $VMWCLI ls vmware_tanzu_kubernetes_grid | egrep "^tanzu-cli-bundle"
           messageLine
           exit 1
         fi
-  
+
         cnt=0
         vmwfile=$($VMWCLI ls vmware_tanzu_kubernetes_grid 2>/dev/null | egrep "^tanzu-cli-bundle" | grep linux | tail -1 | awk '{ print $1 }')
         while [ "$vmwfile" == "" -a $cnt -lt 5 ]; do
@@ -7251,20 +7271,9 @@ tdh_tools_build() {
           let cnt=cnt+1
           sleep 10
         done
-  
-  #      if [ "tanzu-cli-bundle-v${TKG_TANZU_KUBERNETES_GRID}-linux-amd64.tar" != "$vmwfile" ]; then 
-  #        echo "ERROR: $vmwfile from myVMware.com differs from the requested version $TKG_TANZU_KUBERNETES_GRID"
-  #        echo "       You may want to change the version TKG_TANZU_KUBERNETES_GRID=$TKG_TANZU_KUBERNETES_GRID in"
-#        echo "       the files/tdh-tools/tdh-tools.cfg configuration file. Please see the available versions here:"
-    #
-#        messageLine
-    #        $VMWCLI ls vmware_tanzu_kubernetes_grid | egrep "^tanzu-cli-bundle"
-  #        messageLine
-  #        exit 1
-  #      fi
 
-        messagePrint " ▪ Downloading Tanzu CLI Bundle" "$TDH_DOCKER_FILES/$vmwfile"
-    
+        messagePrint " ▪ Downloading Tanzu CLI Bundle" "${TANZU_CLI_BUNDLE}/$vmwfile"
+
         if [ "$vmwfile" == "" ]; then
           echo "ERROR: failed to download $vmwfile"
           echo "       => export VMWUSER=\"$TDH_MYVMWARE_USER\""
@@ -7272,7 +7281,7 @@ tdh_tools_build() {
           echo "       => $VMWCLI ls vmware_tanzu_kubernetes_grid"
           echo ""
           echo "INFO:  You may download tanzu-cli-bundle $TKG_TANZU_KUBERNETES_GRID manually from myVMware.com. an place it under:"
-          echo "       $TANZU_CLI_BUINDLE"
+          echo "       $TANZU_CLI_BUNDLE"
           exit 1
         else
           cnt=0
@@ -7282,7 +7291,7 @@ tdh_tools_build() {
             let cnt=cnt+1
             sleep 30
           done
-  
+
           if [ ! -f $vmwfile ]; then
             echo "ERROR: failed to download $vmwfile"
             echo "       => export VMWUSER=\"$TDH_MYVMWARE_USER\""
@@ -7291,17 +7300,26 @@ tdh_tools_build() {
             echo "       => $VMWCLI cp $vmwfile"
             echo ""
             echo "INFO:  You may download tanzu-cli-bundle $TKG_TANZU_KUBERNETES_GRID manually from myVMware.com. an place it under:"
-            echo "       $TANZU_CLI_BUINDLE"
+            echo "       $TANZU_CLI_BUNDLE"
             exit 1
           else
-            mv $vmwfile $TDH_DOCKER_FILES
+            [ ! -d $TANZU_CLI_BUNDLE ] && mkdir -p $TANZU_CLI_BUNDLE
+            mv $vmwfile ${TANZU_CLI_BUNDLE}/$vmwfile
           fi
         fi
+
+        TANZU_CLI_BUNDLE=${TANZU_CLI_BUNDLE}/$vmwfile
+      else
+        if [ -f $TANZU_CLI_BUNDLE/tanzu-cli-bundle-linux-amd64.tar ]; then  
+          TANZU_CLI_BUNDLE=${TANZU_DEMO_HUB_CACHE}/tkg-${TKG_TANZU_KUBERNETES_GRID}/tanzu-cli-bundle-linux-amd64.tar 
+        else
+          TANZU_CLI_BUNDLE=${TANZU_DEMO_HUB_CACHE}/tkg-${TKG_TANZU_KUBERNETES_GRID}/tanzu-cli-bundle-v${TKG_TANZU_KUBERNETES_GRID}-linux-amd64.tar
+        fi
       fi
-  
+
       if [ ! -d $TDH_DOCKER_FILES/cli-$TKG_TANZU_KUBERNETES_GRID  ]; then
         rm -f ${TDH_DOCKER_FILES}/cli 
-        tar xf $TANZU_CLI_BUINDLE && mv cli ${TDH_DOCKER_FILES}/cli-$TKG_TANZU_KUBERNETES_GRID
+        tar xf $TANZU_CLI_BUNDLE && mv cli ${TDH_DOCKER_FILES}/cli-$TKG_TANZU_KUBERNETES_GRID
         cd $TDH_DOCKER_FILES && ln -s  cli-$TKG_TANZU_KUBERNETES_GRID cli
       fi
 
