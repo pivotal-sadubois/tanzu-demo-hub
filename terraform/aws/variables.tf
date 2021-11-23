@@ -96,6 +96,12 @@ variable "sg_egress_all" {
   default     = "0"
 }
  
+variable "sg_ingress_cidr_block" {
+  description = "CIDR block for the egress rule"
+  type        = string
+  default     = "0.0.0.0/0"
+}
+
 variable "sg_egress_cidr_block" {
   description = "CIDR block for the egress rule"
   type        = string

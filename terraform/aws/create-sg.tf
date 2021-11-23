@@ -20,7 +20,8 @@ resource "aws_security_group_rule" "SSH" {
   protocol          = var.sg_ingress_proto
   from_port         = var.sg_ingress_ssh
   to_port           = var.sg_ingress_ssh
-  cidr_blocks       = ["${chomp(data.http.myip.body)}/32"]
+#  cidr_blocks       = ["${chomp(data.http.myip.body)}/32"]
+  cidr_blocks       = [var.sg_egress_cidr_block]
   ipv6_cidr_blocks  = []
   security_group_id = aws_security_group.sg.id
 }
@@ -30,7 +31,8 @@ resource "aws_security_group_rule" "LDAP" {
   protocol          = var.sg_ingress_proto
   from_port         = var.sg_ingress_ldap
   to_port           = var.sg_ingress_ldap
-  cidr_blocks       = ["${chomp(data.http.myip.body)}/32"]
+#  cidr_blocks       = ["${chomp(data.http.myip.body)}/32"]
+  cidr_blocks       = [var.sg_egress_cidr_block]
   ipv6_cidr_blocks  = []
   security_group_id = aws_security_group.sg.id
 }
@@ -40,7 +42,8 @@ resource "aws_security_group_rule" "LDAPS" {
   protocol          = var.sg_ingress_proto
   from_port         = var.sg_ingress_ldaps
   to_port           = var.sg_ingress_ldaps
-  cidr_blocks       = ["${chomp(data.http.myip.body)}/32"]
+#  cidr_blocks       = ["${chomp(data.http.myip.body)}/32"]
+  cidr_blocks       = [var.sg_egress_cidr_block]
   ipv6_cidr_blocks  = []
   security_group_id = aws_security_group.sg.id
 }
