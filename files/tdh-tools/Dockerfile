@@ -4,8 +4,8 @@
 # Author .......: Sacha Dubois, VMware
 # Description ..: Tanzu Demo Hub - Dockerfile for tdh-tools container
 # ############################################################################################
-
-FROM ubuntu:20.04  
+ 
+FROM ubuntu:20.04   
 MAINTAINER Sacha Dubois <sdubois@vmware.com>
 ENV TZ="Europe/Zurich"
 ARG UID GID USER TZ HOME VMWUSER VMWPASS START 
@@ -16,7 +16,7 @@ ADD kp              /usr/local/bin
 ADD mc              /usr/local/bin
 ADD jenkins-cli.jar /usr/local
 ADD tmc             /usr/local/bin
-#ADD terraform-bin   /usr/local/bin/terraform
+ADD terraform-bin   /usr/local/bin/terraform
 ADD kind            /usr/local/bin
 ADD govc            /usr/local/bin
 ADD kubectl-vsphere /usr/local/bin
@@ -83,10 +83,10 @@ RUN apt-get update && apt-get install gh -y
 #$ sudo apt update
 #$ sudo apt install golang-go
 
-# --- INSTALL TERRAFORM ---
-RUN curl -fsSL https://apt.releases.hashicorp.com/gpg | apt-key add -
-RUN apt-add-repository "deb [arch=amd64] https://apt.releases.hashicorp.com $(lsb_release -cs) main"
-RUN apt-get update && apt-get install terraform -y
+# --- INSTALL TERRAFORM (LATEST) ---
+#RUN curl -fsSL https://apt.releases.hashicorp.com/gpg | apt-key add -
+#RUN apt-add-repository "deb [arch=amd64] https://apt.releases.hashicorp.com $(lsb_release -cs) main"
+#RUN apt-get update && apt-get install terraform -y
 
 # --- INSTALL BAT ----
 RUN curl -s  https://api.github.com/repos/sharkdp/bat/releases/latest |grep browser_download_url |  cut -d '"' -f 4 | grep 'amd64.deb' | grep -v musl | wget -i -
@@ -116,8 +116,12 @@ RUN apt-get update && apt-get install -y \
     git vim azure-cli jq awscli 
 
 # --- INSTALL TANZU UTILITIES ---
+RUN ls -la /
+RUN ls -la /tanzu/cli/
+RUN ls -la /tanzu/cli/core/v*
 RUN install /tanzu/cli/core/v*/tanzu-core-linux_amd64 /usr/local/bin/tanzu
 RUN gunzip -q /tanzu/cli/*.gz
+RUN cd /tanzu && tanzu plugin clean
 RUN cd /tanzu && tanzu plugin install --local cli all
 
 RUN mv /tanzu/cli/imgpkg-linux* /usr/local/bin/imgpkg && chmod a+x /usr/local/bin/imgpkg

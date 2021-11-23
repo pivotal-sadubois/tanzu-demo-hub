@@ -414,6 +414,8 @@ createJumpHost() {
     fi
 
     cp -r ${TDHPATH}/terraform/aws $HOME/.tanzu-demo-hub/terraform
+    cd $TERRAFORM_PATH && git clone https://github.com/terraform-aws-modules/terraform-aws-ec2-instance.git > /dev/null 2>&1
+#gaga1
 
     TDH_TERRAFORM_TFVARS=${TERRAFORM_PATH}/terraform_${TDH_TKGMC_ENVNAME}.tfvars
     TDH_TERRAFORM_TFSTATE=${TERRAFORM_PATH}/terraform_${TDH_TKGMC_ENVNAME}.tfstate
@@ -518,6 +520,9 @@ createJumpHost() {
           messagePrint " ▪ Terraform (init)" "${TERRAFORM_PATH}"
           terraform -chdir=${TERRAFORM_PATH} init > /dev/null 2>&1; ret=$?
         fi
+
+echo "terraform -chdir=${TERRAFORM_PATH} init "
+#gaga2
 
         if [ $ret -ne 0 ]; then 
           echo "ERROR: terraform init failed"
@@ -1445,11 +1450,10 @@ else
     fi
 
 
-echo "TDH_TKGMC_NAME:$TDH_TKGMC_NAME"
+echo "XXX TDH_TKGMC_NAME:$TDH_TKGMC_NAME"
+echo "XXX DEPLOY_TKG_TEMPLATE:$DEPLOY_TKG_TEMPLATE"
 
-echo "tanzu-demo-hub/scripts/InstallTKGmc.sh \"$DEPLOY_TKG_TEMPLATE\" \"$TDH_TKGMC_NAME\" \"$DEBUG\""
-
-sleep 10000
+echo "XXX tanzu-demo-hub/scripts/InstallTKGmc.sh \"$DEPLOY_TKG_TEMPLATE\" \"$TDH_TKGMC_NAME\" \"$DEBUG\""
 
     # --- CREATE MANAGEMENT CLUSTER ---
     [ ! -d ~/.tanzu-demo-hub/config ] && mkdir -p ~/.tanzu-demo-hub/config
