@@ -33,7 +33,10 @@ if [ ! -f /usr/bin/docker ]; then
   add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu focal stable"
   apt update
   installPackage docker.io
-  sudo chmod 777 /var/run/docker.sock
+
+  systemctl start docker
+  systemctl enable docker
+  chmod 777 /var/run/docker.sock
 
 #  apt-get remove docker docker-engine docker.io containerd runc -y > /dev/null 2>&1
 #  #installPackage docker.io
