@@ -41,7 +41,7 @@ fi
 export TDH_TKGMC_NAME="$TDH_TKGMC_NAME_TMP"
 
 # --- CORRECT PERMISSONS ---
-sudo chown -R ubuntu:ubuntu $HOME/.local $HOME/.config
+sudo chown -R ubuntu:ubuntu $HOME/.local $HOME/.config $HOME/.kube-tkg
 
 echo "InstallTKGmc.sh BBBBBB TDH_TKGMC_NAME_TMP:$TDH_TKGMC_NAME_TMP" 1>&2
 
