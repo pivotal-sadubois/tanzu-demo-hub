@@ -40,6 +40,9 @@ fi
 # --- RESET TDH_TKGMC_NAME ---
 export TDH_TKGMC_NAME="$TDH_TKGMC_NAME_TMP"
 
+# --- CORRECT PERMISSONS ---
+sudo chown -R ubuntu:ubuntu $HOME/.local $HOME/.config
+
 echo "InstallTKGmc.sh BBBBBB TDH_TKGMC_NAME_TMP:$TDH_TKGMC_NAME_TMP" 1>&2
 
 #sshEnvironment > /dev/null 2>&1
