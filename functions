@@ -2041,40 +2041,60 @@ configureJumpHost() {
     sleep 20
   fi
 
-  # --- COPY THE AWS DIRECTORY ---
-  (cd $HOME && tar cf /tmp/tdh-home.tar .aws .azure .tanzu-demo-hub .tanzu-demo-hub.cfg > /dev/null 2>&1) 
+  stt=$($SSH_COMMAND "[ -f ~/tdh_home_unpacked ] && echo true")
+  if [ "$stt" != "true" ]; then 
+    messagePrint " ▪ Copy Tanzu Demo Hub Directory" "$HOME/.tanzu-demo-hub"
+    (cd $HOME && tar cf /tmp/tdh-home.tar .aws .azure .tanzu-demo-hub/terraform .tanzu-demo-hub/certificates .tanzu-demo-hub/config  .tanzu-demo-hub.cfg > /dev/null 2>&1)
 
-  ret=1; cnt=0
-  while [ $ret -ne 0 -a $cnt -lt 5 ]; do
-    $SCP_COMMAND /tmp/tdh-home.tar ${SSH_USER}@${SSH_HOST}:$SSH_HOME > /dev/null 2>&1; ret=$?
-    [ $ret -eq 0 ] && break
-    let cnt=cnt+1
-    sleep 30
-  done
+    ret=1; cnt=0
+    while [ $ret -ne 0 -a $cnt -lt 5 ]; do
+      $SCP_COMMAND /tmp/tdh-home.tar ${SSH_USER}@${SSH_HOST}:$SSH_HOME > /dev/null 2>&1; ret=$?
+      [ $ret -eq 0 ] && break
+      let cnt=cnt+1
+      sleep 30
+    done
 
-  if [ $ret -ne 0 ]; then 
-    echo "ERROR: failed to copy tar file"
-    if [ "$NATIVE" == "0" ]; then
-      echo "       => tools/${TDH_TOOLS}.sh"
-      echo "          tdh-tools:/$ $SCP_COMMAND /tmp/tdh-home.tar ${SSH_USER}@${SSH_HOST}:$SSH_HOME"
-      echo "          tdh-tools:/$ exit"
-    else
-      echo "       => $SCP_COMMAND /tmp/tdh-home.tar ${SSH_USER}@${SSH_HOST}:$SSH_HOME"
-    fi
+    stt=""; cnt=0
+    while [ "${stt}" != "true" -a $cnt -lt 5 ]; do
+      stt=$($SSH_COMMAND -n "tar xf tdh-home.tar && echo true && touch ~/tdh_home_unpacked")
+      [ "$stt" == "true" ] && break
+      let cnt=cnt+1
+      sleep 30
+    done 
   fi
 
-  stt=""; cnt=0
-  while [ "${stt}" != "true" -a $cnt -lt 5 ]; do
-    stt=$($SSH_COMMAND -n "tar xf tdh-home.tar && echo true")
-    [ "$stt" == "true" ] && break
-    let cnt=cnt+1
-    sleep 30
-  done
+  stt=$($SSH_COMMAND "[ -f ~/tdh_cloud_unpacked ] && echo true")
+  if [ "$stt" != "true" ]; then 
+    if [ "$TDH_TKGMC_INFRASTRUCTURE" == "AWS" ]; then
+      messagePrint " ▪ Copy AWS Configuration" "$HOME/.aws"
+      (cd $HOME && tar cf /tmp/tdh-cloud.tar .aws > /dev/null 2>&1)
+    else
+      messagePrint " ▪ Copy Azure Configuration" "$HOME/.azure"
+      (cd $HOME && tar cf /tmp/tdh-cloud.tar .azure > /dev/null 2>&1)
+    fi
+
+    ret=1; cnt=0
+    while [ $ret -ne 0 -a $cnt -lt 5 ]; do
+      $SCP_COMMAND /tmp/tdh-cloud.tar ${SSH_USER}@${SSH_HOST}:$SSH_HOME > /dev/null 2>&1; ret=$?
+      [ $ret -eq 0 ] && break
+      let cnt=cnt+1
+      sleep 30
+    done
+ 
+    stt=""; cnt=0
+    while [ "${stt}" != "true" -a $cnt -lt 5 ]; do
+      stt=$($SSH_COMMAND -n "tar xf tdh-cloud.tar && echo true && touch ~/tdh_cloud_unpacked")
+      [ "$stt" == "true" ] && break
+      let cnt=cnt+1
+      sleep 30
+    done
+  fi
 
   # --- COPY SOFTWARE ---
   stt=$($SSH_COMMAND -n "[ -d /home/ubuntu/tanzu-demo-hub/software ] && echo true")
   if [ "${stt}" == "" ]; then
     # --- COPY THE AWS DIRECTORY ---
+    messagePrint " ▪ Copy Tools and Software" "$HOME/tanzu-demo-hub/software"
     $SSH_COMMAND -n "[ ! -d $SSH_HOME/tanzu-demo-hub/software ] && mkdir -p $SSH_HOME/tanzu-demo-hub/software"
     if [ "$TDH_TKGMC_INFRASTRUCTURE" == "Azure" ]; then
       $SCP_COMMAND -r ${TDHPATH}/software/tkg-linux* ${SSH_USER}@${SSH_HOST}:${SSH_HOME}/tanzu-demo-hub/software > /dev/null 2>&1
@@ -7063,7 +7083,6 @@ verify_docker() {
 }
 
 tdh_tools_build() {
-#gaga
   MODE=$1
   REBUILD_REQUIRED=0
   REBUILD_REQUIRED_SOFTWARE=0
