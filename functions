@@ -7348,7 +7348,6 @@ tdh_tools_build() {
         cd $TDH_DOCKER_FILES && ln -s  cli-$TKG_TANZU_KUBERNETES_GRID cli
       fi
 
-      REBUILD_REQUIRED_SOFTWARE=1       ## REBUILD REQUIRED BECAUSE OF SOFTWARE CHANGE
     fi
 
     if [ $REBUILD_REQUIRED_SOFTWARE -gt 0 ]; then 
