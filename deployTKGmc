@@ -1144,8 +1144,6 @@ configureLetsEnscript
 
 export TDH_TKGMC_NAME=${TDH_TKGMC_NAME}-${TDH_USER}
 
-echo "gaga deployTKGmc: TDH_TKGMC_NAME:$TDH_TKGMC_NAME"
-
 # --- UPLOAD OVA IMAGES TO VCENTER ---
 if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "vSphere" -a "${TDH_TKGMC_TKG_TYPE}" == "tkgs" ]; then
   #########################################################################################################################
