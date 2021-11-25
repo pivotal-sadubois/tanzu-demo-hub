@@ -5,6 +5,8 @@
 # Author .......: Sacha Dubois, VMware
 # Description ..: Tanzu Demo Hub - Deploy TKG Management Cluster
 # ############################################################################################
+# 2021-11-25 ...: fix kind cluster on linux jump host
+# ############################################################################################
 
 export TANZU_DEMO_HUB=$(cd "$(pwd)/$(dirname $0)/.."; pwd)
 export TDHPATH=$(cd "$(pwd)/$(dirname $0)/.."; pwd)
@@ -42,6 +44,9 @@ export TDH_TKGMC_NAME="$TDH_TKGMC_NAME_TMP"
 
 # --- CORRECT PERMISSONS ---
 sudo chown -R ubuntu:ubuntu $HOME/.local $HOME/.config $HOME/.kube-tkg
+
+# --- FIX FOR KIND (https://kb.vmware.com/s/article/85245)
+sudo sysctl net/netfilter/nf_conntrack_max=131072
 
 echo "InstallTKGmc.sh BBBBBB TDH_TKGMC_NAME_TMP:$TDH_TKGMC_NAME_TMP" 1>&2
 
