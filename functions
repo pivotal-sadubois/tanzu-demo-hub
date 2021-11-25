@@ -7175,7 +7175,7 @@ tdh_tools_build() {
     unzip terraform_0.12.31_linux_amd64.zip 2>/dev/null 1>&2
     wget https://releases.hashicorp.com/terraform/0.14.3/terraform_0.14.3_linux_arm64.zip 2>/dev/null 1>&2
     mv terraform_0.14.3_linux_arm64.zip /tmp
-    unzip -o -d /tmp terraform_0.14.3_linux_arm64.zip 2>/dev/null 1>&2
+    unzip -o -d /tmp /tmp/terraform_0.14.3_linux_arm64.zip 2>/dev/null 1>&2
     mv /tmp/terraform $TDH_DOCKER_FILES/terraform-bin
     chmod +x $TDH_DOCKER_FILES/terraform-bin
   fi
