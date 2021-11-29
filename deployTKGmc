@@ -1199,7 +1199,7 @@ if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "vSphere" -a "${TDH_TKGMC_TKG_TYPE}" == "tk
 
     ret=1; cnt=0
     while [ $ret -ne 0 -a $cnt -lt 5 ]; do
-      tmc managementcluster register $TDH_TKGMC_NAME -c tanzu-demo-hub -p TKGS -o /tmp/k8s-register-manifest.yaml >/dev/null 2>&1; ret=$?
+      tmc managementcluster register $TDH_TKGMC_NAME -c tanzu-demo-hub -k $KUBECONFIG -p TKGS -o /tmp/k8s-register-manifest.yaml >/dev/null 2>&1; ret=$?
       [ $ret -eq 0 ] && break
       sleep 30
       let cnt=cnt+1
@@ -1524,7 +1524,7 @@ echo "XXX tanzu-demo-hub/scripts/InstallTKGmc.sh \"$DEPLOY_TKG_TEMPLATE\" \"$TDH
 
     ret=1; cnt=0
     while [ $ret -ne 0 -a $cnt -lt 5 ]; do
-      tmc managementcluster register $TDH_TKGMC_NAME -c tanzu-demo-hub -p TKG -o /tmp/k8s-register-manifest.yaml >/dev/null 2>&1; ret=$?
+      tmc managementcluster register $TDH_TKGMC_NAME -c tanzu-demo-hub -p TKG -k $KUBECONFIG -o /tmp/k8s-register-manifest.yaml >/dev/null 2>&1; ret=$?
       [ $ret -eq 0 ] && break
       sleep 30
       let cnt=cnt+1
