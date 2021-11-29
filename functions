@@ -7117,6 +7117,11 @@ tdh_tools_build() {
   DOCKER_IMAGE_ID=$(docker images | egrep "^$TDH_TOOLS_IMAGE " | grep "CHKSUM" | grep "$DOCKER_IMAGE_LATEST_ID" | awk '{ print $3 }')
   DOCKER_IMAGE_CHKSUM=$(docker images | egrep "^$TDH_TOOLS_IMAGE " | grep "CHKSUM" | grep "$DOCKER_IMAGE_LATEST_ID" | awk '{ print $2 }' | sed 's/CHKSUM-//g')
 
+  # --- CLEANUP TANZU FOLDER ---
+  [ -d $HOME/.tanzu_tools ] && rm -rf $HOME/.tanzu_tools && mkdir $HOME/.tanzu_tools
+  [ -d $HOME/.config_tools ] && rm -rf $HOME/.config_tools && mkdir $HOME/.tanzu_tools
+  [ -d $HOME/.cache_tools ] && rm -rf $HOME/.cache_tools && mkdir $HOME/.tanzu_tools
+
   # --- SET CORRECT PERMISSONS ---
   [ -f $TDH_DOCKER_FILES/tmc ] && chmod a+x $TDH_DOCKER_FILES/tmc
 
@@ -7597,6 +7602,7 @@ installTanzuPlugins() {
   if [ $cnt -gt 0 -a $NATIVE -eq 0 ]; then
     messagePrint " ▪ Install Tanzu Plugins" "tanzu plugin install --local cli all"
     cd /tanzu && tanzu plugin install --local cli all > /dev/null 2>&1
+#gaga
   fi
 }
 
@@ -7691,6 +7697,7 @@ runTDHtoolsDemos() {
       # --- DUMP ENVIRONMENT VARIABLES ---
       env | grep TDH > /tmp/tdh.env
 
+      [ ! -d $HOME/.tanzu ] && mkdir -p $HOME/.tanzu
   
       mkdir -p $HOME/.mc $HOME/.cache $HOME/.config $HOME/.local
       mkdir -p /tmp/docker && chmod a+w /tmp/docker

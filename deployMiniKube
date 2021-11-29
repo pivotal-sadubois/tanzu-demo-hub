@@ -224,6 +224,14 @@ uodateConfigMap tanzu-demo-hub TDH_MANAGED_BY_TMC       "false"
 # --- CLEANUP KUNECONFIG ---
 cleanKubeconfig
 
+# --- SWITCH TO MINIKUBE CONTEXT ---
+kubectl config use-context $TDH_MINIKUBE_PROFILE > /dev/null 2>&1
+if [ $? -ne 0 ]; then
+  echo "ERROR: Unable to switch to context $TDH_MINIKUBE_PROFILE"
+  echo "       => kubectl config use-context $TDH_MINIKUBE_PROFILE"
+  exit 1
+fi
+
 # --- INSTALL K8 SERVICES ---
 InstallCertManager
 InstallContour
