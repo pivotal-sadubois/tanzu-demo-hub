@@ -254,12 +254,15 @@ cleanupEnvironment() {
 checkKeyPairs() {
   messageTitle "SSH Key Pairs"
 
+  echo "TDH_DEPLOYMENT_ENV_NAME=${TDH_DEPLOYMENT_ENV_NAME}"
   if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "Azure" ]; then
     if [ ! -f ~/.tanzu-demo-hub/KeyPair-Azure.pem ]; then 
       # GENERATE INGRES FILES
+      echo "remove and generate keypair"
       rm -f ~/.tanzu-demo-hub/KeyPair-Azure.pem ~/.tanzu-demo-hub/KeyPair-Azure.pub
       ssh-keygen -t rsa -b 4096 -f ~/.tanzu-demo-hub/KeyPair-Azure -P "" > /dev/null 2>&1
       mv ~/.tanzu-demo-hub/KeyPair-Azure ~/.tanzu-demo-hub/KeyPair-Azure.pem
+      ls -l ~/.tanzu-demo-hub/KeyPair*
 #    else
       # COMPATE KEYS
       #LOCALSSH=$(cat ~/.tanzu-demo-hub/KeyPair-Azure.pub | base64 | tr -d ‘\r\n’)
