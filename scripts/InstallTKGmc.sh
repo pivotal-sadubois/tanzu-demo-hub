@@ -43,7 +43,11 @@ fi
 export TDH_TKGMC_NAME="$TDH_TKGMC_NAME_TMP"
 
 # --- CORRECT PERMISSONS ---
-sudo chown -R ubuntu:ubuntu $HOME/.local $HOME/.config $HOME/.kube-tkg
+[ -d $HOME/.tanzu ] && sudo chown -R ubuntu:ubuntu $HOME/.tanzu
+[ -d $HOME/.local ] && sudo chown -R ubuntu:ubuntu $HOME/.local
+[ -d $HOME/.config ] && sudo chown -R ubuntu:ubuntu $HOME/.config
+[ -d $HOME/.cache ] && sudo chown -R ubuntu:ubuntu $HOME/.cache
+[ -d $HOME/.kube-tkg ] && sudo chown -R ubuntu:ubuntu $HOME/.kube-tkg
 
 # --- FIX FOR KIND (https://kb.vmware.com/s/article/85245)
 sudo sysctl net/netfilter/nf_conntrack_max=131072 > /dev/null 2>&1
