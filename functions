@@ -2635,13 +2635,12 @@ createTKGMCcluster() {
     echo "#AWS_AMI_ID: ami-066dad3403314512a"                                          >> $TKG_TEMPLATE
     echo "CLUSTER_PLAN: dev"                                                           >> $TKG_TEMPLATE
     echo "CLUSTER_NAME: $TDH_TKGMC_NAME"                                               >> $TKG_TEMPLATE
+
+    # --- RESOURCE DEFINITIONS ---
     #echo "CONTROL_PLANE_MACHINE_TYPE: c4.2xlarge"                                      >> $TKG_TEMPLATE
     #echo "NODE_MACHINE_TYPE: c4.2xlarge"                                               >> $TKG_TEMPLATE
     echo "CONTROL_PLANE_MACHINE_TYPE: $TDH_TKGMC_CONTROL_PLANE_MACHINE_TYPE"           >> $TKG_TEMPLATE
     echo "NODE_MACHINE_TYPE: $TDH_TKGMC_MACHINE_TYPE"                                  >> $TKG_TEMPLATE
-
-    # --- RESOURCE DEFINITIONS ---
-    echo "NODE_MACHINE_TYPE: c4.2xlarge"                                               >> $TKG_TEMPLATE
 
     echo "#AWS_ACCESS_KEY_ID:"                                                         >> $TKG_TEMPLATE
     echo "#AWS_B64ENCODED_CREDENTIALS: "                                               >> $TKG_TEMPLATE
@@ -6919,6 +6918,7 @@ cleanManagementCluster() {
       tanzu config server delete $n -y
     fi
   done
+  messageTitle "Cleaning up old kubeconfig definitions - END gaga"
 }
 
 installSnap() {
