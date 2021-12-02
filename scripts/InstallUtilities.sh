@@ -30,8 +30,8 @@ if [ ! -f /usr/bin/docker ]; then
   # 20. Nov sdubois moved from snapd to apt install docker
   apt install apt-transport-https ca-certificates curl software-properties-common
   curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
-  add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu focal stable"
-  apt update
+  add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu focal stable" > /dev/null 2>&1
+  apt update > /dev/null 2>&1
   installPackage docker.io
 
   systemctl start docker
@@ -43,7 +43,7 @@ if [ ! -f /usr/bin/docker ]; then
 #  installSnap docker
 #  ln -s /snap/bin/docker /usr/bin/docker
 
-  groupadd docker
+  groupadd docker > /dev/null 2>&1
   usermod -aG docker ubuntu
 fi
 
