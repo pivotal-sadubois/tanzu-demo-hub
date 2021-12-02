@@ -1484,6 +1484,15 @@ echo gagaga2
       $SCP_COMMAND ${SSH_USER}@${SSH_HOST}:$SSH_HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.kubeconfig ~/.tanzu-demo-hub/config > /dev/null 2>&1
       $SCP_COMMAND ${SSH_USER}@${SSH_HOST}:$SSH_HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.yaml ~/.tanzu-demo-hub/config > /dev/null 2>&1
 
+echo "XXX $SSH_HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.kubeconfig"
+echo "XXX ~/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.kubeconfig"
+ls -la ~/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.kubeconfig
+
+echo "tanzu login --kubeconfig ~/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.kubeconfig  --name $TDH_TKGMC_NAME --server $TDH_TKGMC_NAME \
+         --context ${TDH_TKGMC_NAME}-admin@$TDH_TKGMC_NAME"
+
+exit
+
       # --- UNCOMMENT FOR DEBUGGING ---
       #echo "tanzu login --kubeconfig ~/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.kubeconfig \
       #  --name $TDH_TKGMC_NAME --server $TDH_TKGMC_NAME --context ${TDH_TKGMC_NAME}-admin@$TDH_TKGMC_NAME"
@@ -1494,6 +1503,22 @@ echo gagaga2
       tanzu management-cluster get > /dev/null 2>&1
       if [ $? -ne 0 ]; then
         echo "ERROR: failed to login to TKG Management Cluster: ${TDH_TKGMC_NAME}.kubeconfig"
+        if [ "$NATIVE" == "0" ]; then
+          echo "       => tools/${TDH_TOOLS}.sh"
+          echo "          tdh-tools:/$ tanzu login --kubeconfig ~/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.kubeconfig  \\"
+          echo "                         --name $TDH_TKGMC_NAME --server $TDH_TKGMC_NAME \\"
+          echo "                         --context ${TDH_TKGMC_NAME}-admin@$TDH_TKGMC_NAME"
+          echo "          tdh-tools:/$ tmc login --name $TMC_CONTEXT_NAME --no-configure"
+          echo "          tdh-tools:/$ exit"
+          echo "       => Verify you API token, mabe a new token is required"
+          echo "          TMC => My Account => API Token"
+        else
+          echo "       => export TMC_API_TOKEN=$TMC_SERVICE_TOKEN"
+          echo "       => tmc login --name $TMC_CONTEXT_NAME --no-configure"
+          echo "       => Verify you API token, mabe a new token is required"
+          echo "          TMC => My Account => API Token"
+        fi
+
         echo "       => tanzu login --kubeconfig ~/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.kubeconfig  \\"
         echo "            --name $TDH_TKGMC_NAME --server $TDH_TKGMC_NAME \\"
         echo "            --context ${TDH_TKGMC_NAME}-admin@$TDH_TKGMC_NAME"

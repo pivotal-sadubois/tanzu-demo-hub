@@ -2342,8 +2342,8 @@ createTKGMCcluster() {
   unset TKG_CONFIG
   [ "$1" != "" ] && TDH_TKGMC_NAME="$1"    ## CLUSTER_NAME SET BY (InstallTKGmc.sh)
   [ ! -d ${HOME}/.tanzu-demo-hub/config ] && mkdir -p ${HOME}/.tanzu-demo-hub/config
-  TKG_TEMPLATE=${HOME}/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.yaml; rm -f $TKG_TEMPLATE
-  TKG_KUBECONFIG=${HOME}/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.kubeconfig; rm -f $TKG_KUBECONFIG
+  TKG_TEMPLATE=${HOME}/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.yaml
+  TKG_KUBECONFIG=${HOME}/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.kubeconfig
 
   cleanKindCluster
 
@@ -2398,6 +2398,7 @@ createTKGMCcluster() {
 
       # --- CLEAN OLD MANAGEMENT CLUSTER CONFIG ---
       rm -f ~/.tanzu/config.yaml /tmp/$TDH_TKGMC_NAME.log
+      rm -f $TKG_KUBECONFIG $TKG_TEMPLATE
 
       messagePrint " ▪ Management Cluster Creating"        "This may take up to 15min ..."
 
@@ -2432,6 +2433,7 @@ createTKGMCcluster() {
       kubectl config set-cluster $TDH_TKGMC_NAME > /dev/null 2>&1
       kubectl config use-context ${TDH_TKGMC_NAME}-admin@$TDH_TKGMC_NAME > /dev/null 2>&1
       context=$(kubectl config view -o json | jq -r '.contexts[].name' 2>/dev/null)
+#gaga
       tanzu management-cluster kubeconfig get --admin --export-file=${TKG_KUBECONFIG} > /dev/null 2>&1; ret=$?
       if [ $ret -ne 0 ]; then
         echo "ERROR: failed to generate kubeconfig:"
@@ -6912,13 +6914,26 @@ cleanManagementCluster() {
   messageTitle "Cleaning up old kubeconfig definitions"
 
   for n in $(tanzu config server list | grep " tkgmc" | awk '{ print $1 }'); do
+    cfg=$(tanzu config server list -o json | jq -r --arg cluster "$n" '.[] | select(.name == $cluster).path')
+    ctx=$(tanzu config server list -o json | jq -r --arg cluster "$n" '.[] | select(.name == $cluster).context')
+
+    if [ "$cfg" != "" -a -f "$cfg" ]; then 
+      kubectl cluster-info --kubeconfig="$cfg" > /dev/null 2>&1; ret=$?
+      if [ $ret -ne 0 ]; then 
+        messagePrint " ▪ Cleaning up config of Cluster" "$n"
+        tanzu config server delete $n -y
+        messagePrint " ▪ Remofind Kubeconfig" "$cfg"
+        rm -f $cfg
+        continue
+      fi
+    fi
+
     cnt=$(kubectl config get-clusters | grep -c "$n")
     if [ $cnt -eq 0 ]; then 
       messagePrint " ▪ Cleaning up config of Cluster" "$n"
       tanzu config server delete $n -y
     fi
   done
-  messageTitle "Cleaning up old kubeconfig definitions - END gaga"
 }
 
 installSnap() {
