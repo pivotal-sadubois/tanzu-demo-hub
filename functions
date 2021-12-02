@@ -2041,8 +2041,8 @@ configureJumpHost() {
     sleep 20
   fi
 
-  stt=$($SSH_COMMAND "[ -f ~/tdh_home_unpacked ] && echo true")
-  if [ "$stt" != "true" ]; then 
+  $SSH_COMMAND "[ -f ~/tdh_home_unpacked ] && exit 0" > /dev/null 2>&1; ret=$?
+  if [ "$ret" -ne 0 ]; then 
     messagePrint " ▪ Copy Tanzu Demo Hub Directory" "$HOME/.tanzu-demo-hub"
     (cd $HOME && tar cf /tmp/tdh-home.tar .aws .azure .tanzu-demo-hub/terraform .tanzu-demo-hub/certificates .tanzu-demo-hub/config  .tanzu-demo-hub.cfg .tanzu-demo-hub/KeyPair* > /dev/null 2>&1)
 
@@ -2063,8 +2063,8 @@ configureJumpHost() {
     done 
   fi
 
-  stt=$($SSH_COMMAND "[ -f ~/tdh_cloud_unpacked ] && echo true")
-  if [ "$stt" != "true" ]; then 
+  $SSH_COMMAND "[ -f ~/tdh_cloud_unpacked ] && exit 0" > /dev/null 2>&1; ret=$?
+  if [ "$ret" -ne 0 ]; then    
     if [ "$TDH_TKGMC_INFRASTRUCTURE" == "AWS" ]; then
       messagePrint " ▪ Copy AWS Configuration" "$HOME/.aws"
       (cd $HOME && tar cf /tmp/tdh-cloud.tar .aws > /dev/null 2>&1)
@@ -2091,8 +2091,8 @@ configureJumpHost() {
   fi
 
   # --- COPY SOFTWARE ---
-  stt=$($SSH_COMMAND -n "[ -d /home/ubuntu/tanzu-demo-hub/software ] && echo true")
-  if [ "${stt}" == "" ]; then
+  $SSH_COMMAND "[ -d /home/ubuntu/tanzu-demo-hub/software ] && exit 0" > /dev/null 2>&1; ret=$?
+  if [ "$ret" -ne 0 ]; then
     # --- COPY THE AWS DIRECTORY ---
     messagePrint " ▪ Copy Tools and Software" "$HOME/tanzu-demo-hub/software"
     $SSH_COMMAND -n "[ ! -d $SSH_HOME/tanzu-demo-hub/software ] && mkdir -p $SSH_HOME/tanzu-demo-hub/software"
@@ -2339,7 +2339,6 @@ EOF
 }
 
 createTKGMCcluster() {
-echo "AAAAAAAA0: 1:$1"
   unset TKG_CONFIG
   [ "$1" != "" ] && TDH_TKGMC_NAME="$1"    ## CLUSTER_NAME SET BY (InstallTKGmc.sh)
   [ ! -d ${HOME}/.tanzu-demo-hub/config ] && mkdir -p ${HOME}/.tanzu-demo-hub/config
@@ -2347,7 +2346,6 @@ echo "AAAAAAAA0: 1:$1"
   TKG_KUBECONFIG=${HOME}/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.kubeconfig; rm -f $TKG_KUBECONFIG
 
   cleanKindCluster
-echo "AAAAAA1: TDH_TKGMC_NAME:$TDH_TKGMC_NAME"
 
   if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "docker" ]; then
     echo "CLUSTER_NAME: $TDH_TKGMC_NAME"                                               >  $TKG_TEMPLATE
@@ -2402,8 +2400,6 @@ echo "AAAAAA1: TDH_TKGMC_NAME:$TDH_TKGMC_NAME"
       rm -f ~/.tanzu/config.yaml /tmp/$TDH_TKGMC_NAME.log
 
       messagePrint " ▪ Management Cluster Creating"        "This may take up to 15min ..."
-
-echo "AAAAAA: TDH_TKGMC_NAME:$TDH_TKGMC_NAME"
 
       if [ $DEBUG -gt 0 ]; then
         messageLine
@@ -2635,17 +2631,19 @@ echo "AAAAAA: TDH_TKGMC_NAME:$TDH_TKGMC_NAME"
     echo "AWS_ACCESS_KEY_ID: $AWS_ACCESS_KEY"                                          >> $TKG_TEMPLATE
     echo "AWS_SECRET_ACCESS_KEY: $AWS_SECRET_KEY"                                      >> $TKG_TEMPLATE
     echo "AWS_SSH_KEY_NAME: tanzu-demo-hub"                                            >> $TKG_TEMPLATE
-    echo "BASTION_HOST_ENABLED: true"                                                  >> $TKG_TEMPLATE
+    echo "BASTION_HOST_ENABLED: false"                                                 >> $TKG_TEMPLATE
     echo "#AWS_AMI_ID: ami-066dad3403314512a"                                          >> $TKG_TEMPLATE
     echo "CLUSTER_PLAN: dev"                                                           >> $TKG_TEMPLATE
     echo "CLUSTER_NAME: $TDH_TKGMC_NAME"                                               >> $TKG_TEMPLATE
-    echo "CONTROL_PLANE_MACHINE_TYPE: c4.2xlarge"                                      >> $TKG_TEMPLATE
-    echo "NODE_MACHINE_TYPE: c4.2xlarge"                                               >> $TKG_TEMPLATE
+    #echo "CONTROL_PLANE_MACHINE_TYPE: c4.2xlarge"                                      >> $TKG_TEMPLATE
+    #echo "NODE_MACHINE_TYPE: c4.2xlarge"                                               >> $TKG_TEMPLATE
+    echo "CONTROL_PLANE_MACHINE_TYPE: $TDH_TKGMC_CONTROL_PLANE_MACHINE_TYPE"           >> $TKG_TEMPLATE
+    echo "NODE_MACHINE_TYPE: $TDH_TKGMC_MACHINE_TYPE"                                  >> $TKG_TEMPLATE
 
     # --- RESOURCE DEFINITIONS ---
     echo "NODE_MACHINE_TYPE: c4.2xlarge"                                               >> $TKG_TEMPLATE
 
-    echo "#AWS_ACCESS_KEY_ID:"                                                         >>  $TKG_TEMPLATE
+    echo "#AWS_ACCESS_KEY_ID:"                                                         >> $TKG_TEMPLATE
     echo "#AWS_B64ENCODED_CREDENTIALS: "                                               >> $TKG_TEMPLATE
     echo "#AWS_NODE_AZ: eu-central-1a"                                                 >> $TKG_TEMPLATE
     echo "#AWS_NODE_AZ_1: \"\""                                                        >> $TKG_TEMPLATE
@@ -7118,9 +7116,9 @@ tdh_tools_build() {
   DOCKER_IMAGE_CHKSUM=$(docker images | egrep "^$TDH_TOOLS_IMAGE " | grep "CHKSUM" | grep "$DOCKER_IMAGE_LATEST_ID" | awk '{ print $2 }' | sed 's/CHKSUM-//g')
 
   # --- CLEANUP TANZU FOLDER ---
-  [ -d $HOME/.tanzu_tools ] && rm -rf $HOME/.tanzu_tools && mkdir $HOME/.tanzu_tools
-  [ -d $HOME/.config_tools ] && rm -rf $HOME/.config_tools && mkdir $HOME/.tanzu_tools
-  [ -d $HOME/.cache_tools ] && rm -rf $HOME/.cache_tools && mkdir $HOME/.tanzu_tools
+#  [ -d $HOME/.tanzu_tools ] && rm -rf $HOME/.tanzu_tools && mkdir $HOME/.tanzu_tools
+#  [ -d $HOME/.config_tools ] && rm -rf $HOME/.config_tools && mkdir $HOME/.tanzu_tools
+#  [ -d $HOME/.cache_tools ] && rm -rf $HOME/.cache_tools && mkdir $HOME/.tanzu_tools
 
   # --- SET CORRECT PERMISSONS ---
   [ -f $TDH_DOCKER_FILES/tmc ] && chmod a+x $TDH_DOCKER_FILES/tmc
@@ -7228,6 +7226,7 @@ tdh_tools_build() {
     REBUILD_REQUIRED=1
   fi
 
+#gaga
   if [ ! -x $TDH_DOCKER_FILES/mc ]; then
     wget https://dl.min.io/client/mc/release/linux-amd64/mc > /dev/null 2>&1
     mv mc $TDH_DOCKER_FILES && chmod a+x $TDH_DOCKER_FILES/mc
@@ -7967,3 +7966,20 @@ oktaAPI() {
   fi
 }
 
+checkConnectivity() {
+  curl http://ipv4.icanhazip.com > /dev/null 2>&1; ret=$?
+
+  if [ $ret -ne 0 ]; then
+    echo "ERROR: The site http://ipv4.icanhazip.com can not be reached which is required for terraforms"
+    echo "       Most likely the reason is that GlobalVPN is active. Please deactivate it and try again"
+    if [ "$NATIVE" == "0" ]; then
+      echo "       => tools/tdh-tools.sh"
+      echo "          tdh-tools:/$ curl http://ipv4.icanhazip.com"
+      echo "          tdh-tools:/$ exit"
+    else
+      echo "       => curl http://ipv4.icanhazip.com"
+    fi
+
+    exit 1
+  fi
+}
