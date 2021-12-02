@@ -60,8 +60,8 @@ if [ ! -x /usr/bin/az ]; then
 fi
 
 if [ ! -x /usr/bin/certbot ]; then 
-  snap install core; sudo snap refresh core
-  snap install --classic certbot
+  snap install core; sudo snap refresh core > /dev/null 2>&1
+  snap install --classic certbot > /dev/null 2>&1
   ln -s /snap/bin/certbot /usr/bin/certbot
 fi
  
