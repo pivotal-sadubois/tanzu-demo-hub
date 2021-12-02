@@ -28,8 +28,8 @@ installPackage curl
 
 if [ ! -f /usr/bin/docker ]; then 
   # 20. Nov sdubois moved from snapd to apt install docker
-  apt install apt-transport-https ca-certificates curl software-properties-common
-  curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+  apt-get install apt-transport-https ca-certificates curl software-properties-common -y > /dev/null 2>&1
+  curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add - > /dev/null 2>&1
   add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu focal stable" > /dev/null 2>&1
   apt update > /dev/null 2>&1
   installPackage docker.io
