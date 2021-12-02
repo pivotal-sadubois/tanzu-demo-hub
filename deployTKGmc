@@ -254,23 +254,18 @@ cleanupEnvironment() {
 checkKeyPairs() {
   messageTitle "SSH Key Pairs"
 
-  echo "TDH_DEPLOYMENT_ENV_NAME=${TDH_DEPLOYMENT_ENV_NAME}"
   if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "Azure" ]; then
     if [ ! -f ~/.tanzu-demo-hub/KeyPair-Azure.pem ]; then 
       # GENERATE INGRES FILES
       echo "remove and generate keypair"
       rm -f ~/.tanzu-demo-hub/KeyPair-Azure.pem ~/.tanzu-demo-hub/KeyPair-Azure.pub
+
+      messagePrint " ▪ Generating Azure KeyPair" "~/.tanzu-demo-hub/KeyPair-Azure.pem"
       ssh-keygen -t rsa -b 4096 -f ~/.tanzu-demo-hub/KeyPair-Azure -P "" > /dev/null 2>&1
       mv ~/.tanzu-demo-hub/KeyPair-Azure ~/.tanzu-demo-hub/KeyPair-Azure.pem
       ls -l ~/.tanzu-demo-hub/KeyPair*
-#    else
-      # COMPATE KEYS
-      #LOCALSSH=$(cat ~/.tanzu-demo-hub/KeyPair-Azure.pub | base64 | tr -d ‘\r\n’)
-      #CONFIGSSH=$(egrep "^AZURE_SSH_PUBLIC_KEY_B64:" ${TDHPATH}/config/${TDH_TKGMC_CONFIG} | awk '{ print $2 }')
-
-      #if [ "${LOCALSSH} != ${CONFIGSSH}" ]; then
-      #  gsed -i "s/^\(AZURE_SSH_PUBLIC_KEY_B64:\) .*$/\1 $LOCALSSH/g" ${TDHPATH}/config/${TDH_TKGMC_CONFIG}
-      #fi
+    else
+      messagePrint " ▪ Azure KeyPair Verified" "~/.tanzu-demo-hub/KeyPair-Azure.pem"
     fi
   fi
 
@@ -282,11 +277,13 @@ checkKeyPairs() {
 
     # --- GENERATING KEY PAIR ---
     if [ ! -f $SSH_KEY_FILE ]; then 
-      messagePrint " ▪ Generating KeyPair" "SSH_KEY_FILE"
+      messagePrint " ▪ Generating AWS KeyPair" "SSH_KEY_FILE"
       aws ec2 --region=$AWS_REGION delete-key-pair --key-name $SSH_KEY_NAME > /dev/null 2>&1
       aws ec2 --region=$AWS_REGION create-key-pair --key-name $SSH_KEY_NAME | \
          jq -r '.KeyMaterial' > $SSH_KEY_FILE
       chmod 600 $SSH_KEY_FILE
+    else
+      messagePrint " ▪ AWS KeyPair Verified" "SSH_KEY_FILE"
     fi
 
     if [ ! -d ~/.tanzu-demo-hub ] ; then mkdir ~/.tanzu-demo-hub; fi
@@ -335,7 +332,6 @@ configureLetsEnscript() {
   domain="${TDH_TKGMC_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}"
 
   if [ -d $HOME/.tanzu-demo-hub/certificates/$domain -a -f $HOME/.tanzu-demo-hub/certificates/$domain/privkey.pem ]; then
-    messageTitle "Install Certificate for domain ($domain)"
     $SSH_COMMAND -n "mkdir -p $SSH_HOME/tanzu-demo-hub/certificates"
     $SCP_COMMAND $HOME/.tanzu-demo-hub/certificates/$domain/* ${SSH_USER}@${SSH_HOST}:~/tanzu-demo-hub/certificates > /dev/null 2>&1
   fi
@@ -343,7 +339,6 @@ configureLetsEnscript() {
   CERTS_INSTALLED=$($SSH_COMMAND -n "[ -f ~/tanzu-demo-hub/certificates/privkey.pem ] && echo true || echo false")
 
   if [ "${CERTS_INSTALLED}" == "true" ]; then
-    messageTitle "Validate Certificates for domain ($domain)"
     $SCP_COMMAND $HOME/.tanzu-demo-hub/certificates/$domain/* ${SSH_USER}@${SSH_HOST}:~/tanzu-demo-hub/certificates > /dev/null 2>&1
 
     CERTS_ENDDATE=$($SSH_COMMAND -n "openssl x509 -noout -in ~/tanzu-demo-hub/certificates/cert.pem -enddate | awk -F'=' '{ print \$2 }'")
@@ -360,14 +355,13 @@ configureLetsEnscript() {
   fi
 
   if [ "${CERTS_GENERATE_NEW}" == "true" ]; then
-    messageTitle "Generate Certificates for domain ($domain)"
+    messagePrint " ▪ Generate new Certificate for Domain:" "$domain"
     route53createHostedZone $domain
 
     echo "-------------------------------------- GENERATE LET'S-ENCRYPT CERTIFICATES -------------------------------------"
     typ=$(echo $domain | egrep -c "aztkg|awstkg|gcptkg|vstkg")
     if [ $typ -ne 0 ]; then
       messageTitle "Generate Certificate for TKG Domains ($domain)"
-echo "$SSH_COMMAND -n \"sudo certbot certonly --dns-route53 -d '*.$domain' -m sadubois@pivotal.io --agree-tos -n --expand\""
       $SSH_COMMAND -n "sudo certbot certonly --dns-route53 -d '*.$domain' -m sadubois@pivotal.io --agree-tos -n --expand"
       if [ $? -ne 0 ]; then
         echo "ERROR: failed to generate certificate. There are probably to many cert requests happends and a limit reached"
@@ -1090,10 +1084,14 @@ if [ ! -f /tdh_tools_docker_container  ]; then
     cid=$(docker ps -a | grep tdh-tools:latest | awk '{ print $1 }') 
     [ "$cid" != "" ] && for n in $cid; do docker rm $n -f > /dev/null 2>&1; done
 
+    # --- DUMP ENVIRONMENT VARIABLES ---
+    env | grep TDH > /tmp/tdh.env
+
+    [ ! -d $HOME/.tanzu ] && mkdir -p $HOME/.tanzu
+
     mkdir -p $HOME/.mc $HOME/.cache $HOME/.config $HOME/.local
     mkdir -p /tmp/docker && chmod a+w /tmp/docker
     docker run -it --rm --name tdh-tools -v /var/run/docker.sock:/var/run/docker.sock tdh-tools:latest chmod 666 /var/run/docker.sock > /dev/null 2>&1
-
     docker run -u $(id -u):$(id -g) -it --rm --name tdh-tools --env-file /tmp/tdh.env \
        -v $HOME:$HOME:ro -v $HOME/.tanzu-demo-hub:$HOME/.tanzu-demo-hub:rw \
        -v $HOME/.config:$HOME/.config:rw -v $HOME/.config_tools/tanzu:$HOME/.config/tanzu:rw\
@@ -1464,11 +1462,6 @@ else
     fi
 
 
-echo "XXX TDH_TKGMC_NAME:$TDH_TKGMC_NAME"
-echo "XXX DEPLOY_TKG_TEMPLATE:$DEPLOY_TKG_TEMPLATE"
-
-echo "XXX tanzu-demo-hub/scripts/InstallTKGmc.sh \"$DEPLOY_TKG_TEMPLATE\" \"$TDH_TKGMC_NAME\" \"$DEBUG\""
-
     # --- CREATE MANAGEMENT CLUSTER ---
     [ ! -d ~/.tanzu-demo-hub/config ] && mkdir -p ~/.tanzu-demo-hub/config
     $SSH_COMMAND -n "[ -f $SSH_HOME/tanzu-demo-hub/scripts/InstallTKGmc.sh ] && tanzu-demo-hub/scripts/InstallTKGmc.sh \"$DEPLOY_TKG_TEMPLATE\" \"$TDH_TKGMC_NAME\" \"$DEBUG\""; ret=$?
@@ -1481,8 +1474,10 @@ echo "XXX tanzu-demo-hub/scripts/InstallTKGmc.sh \"$DEPLOY_TKG_TEMPLATE\" \"$TDH
     cleanKubeconfig
     cleanManagementCluster
 
+echo gagaga1
     # --- LOGIN ---
     tanzu login --server $TDH_TKGMC_NAME > /dev/null 2>&1
+echo gagaga2
 
     cnt=$(tanzu management-cluster get 2>/dev/null | grep -c " $TDH_TKGMC_NAME ")
     if [ $cnt -eq 0 ]; then
@@ -1707,15 +1702,19 @@ echo "XXX tanzu-demo-hub/scripts/InstallTKGmc.sh \"$DEPLOY_TKG_TEMPLATE\" \"$TDH
     if [ "$NATIVE" == "0" ]; then
       echo "    => tools/tdh-tools.sh"
       echo "       tdh-tools:/$ tanzu kubernetes-release get"
-      echo "       tdh-tools:/$ tanzu cluster create -f \$HOME/.tanzu/tkg/clusterconfigs/${TDH_TKGMC_NAME}-wc-dev.yaml  <cluster-name> -tkr v1.18.17---vmware.2-tkg.1"
-      echo "       tdh-tools:/$ tanzu cluster create -f \$HOME/.tanzu/tkg/clusterconfigs/${TDH_TKGMC_NAME}-wc-prod.yaml <cluster-name>"
+      #echo "       tdh-tools:/$ tanzu cluster create -f \$HOME/.tanzu/tkg/clusterconfigs/${TDH_TKGMC_NAME}-wc-dev.yaml  <cluster-name> -tkr v1.18.17---vmware.2-tkg.1"
+      #echo "       tdh-tools:/$ tanzu cluster create -f \$HOME/.tanzu/tkg/clusterconfigs/${TDH_TKGMC_NAME}-wc-prod.yaml <cluster-name>"
+      echo "       tdh-tools:/$ tanzu cluster create -f \$HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.yaml  <cluster-name> -tkr v1.18.17---vmware.2-tkg.1"
+      echo "       tdh-tools:/$ tanzu cluster create -f \$HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.yaml <cluster-name>"
       echo "       tdh-tools:/$ tanzu cluster kubeconfig get <cluster-name> --admin"
       echo "       tdh-tools:/$ tanzu cluster list --include-management-cluster"
       echo "       tdh-tools:/$ exit"
     else
       echo "    => tanzu kubernetes-release get"
-      echo "    => tanzu cluster create -f \$HOME/.tanzu/tkg/clusterconfigs/${TDH_TKGMC_NAME}-wc-dev.yaml  <cluster-name> -tkr v1.18.17---vmware.2-tkg.1"
-      echo "    => tanzu cluster create -f \$HOME/.tanzu/tkg/clusterconfigs/${TDH_TKGMC_NAME}-wc-prod.yaml <cluster-name>"
+      #echo "    => tanzu cluster create -f \$HOME/.tanzu/tkg/clusterconfigs/${TDH_TKGMC_NAME}-wc-dev.yaml  <cluster-name> -tkr v1.18.17---vmware.2-tkg.1"
+      #echo "    => tanzu cluster create -f \$HOME/.tanzu/tkg/clusterconfigs/${TDH_TKGMC_NAME}-wc-prod.yaml <cluster-name>"
+      echo "    => tanzu cluster create -f \$HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.yaml <cluster-name>"
+      echo "    => tanzu cluster create -f \$HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.yaml <cluster-name> -tkr v1.18.17---vmware.2-tkg.1"
       echo "    => tanzu cluster kubeconfig get <cluster-name> --admin"
       echo "    => tanzu cluster list --include-management-cluster"
     fi
@@ -1724,10 +1723,10 @@ echo "XXX tanzu-demo-hub/scripts/InstallTKGmc.sh \"$DEPLOY_TKG_TEMPLATE\" \"$TDH
   printf "\e[1m2.) Ceeate Tanzu Demo Hub (TDH) Workload Cluster with services (TBS, Harbor, Ingres etc.)\e[0m\n"
   if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "vSphere" ]; then
     echo "    => ./deployTKG -m $TDH_TKGMC_NAME -d tkg-tanzu-demo-hub.cfg -n tdh-$CLOUD-$TDH_USER -tag TKG_CLUSTER_01"
-    echo "    => ./deployTKG -m $TDH_TKGMC_NAME -d tkg-tanzu-demo-hub.cfg -n tdh-$CLOUD-$TDH_USER -tag TKG_CLUSTER_02 -k \"v1.17.16---vmware.2-tkg.1\""
+    echo "    => ./deployTKG -m $TDH_TKGMC_NAME -d tkg-tanzu-demo-hub.cfg -n tdh-$CLOUD-$TDH_USER -tag TKG_CLUSTER_02 -k \"v1.20.8---vmware.1-tkg.2\""
   else
     echo "    => ./deployTKG -m $TDH_TKGMC_NAME -d tkg-tanzu-demo-hub.cfg -n tdh-$CLOUD-$TDH_USER"
-    echo "    => ./deployTKG -m $TDH_TKGMC_NAME -d tkg-tanzu-demo-hub.cfg -n tdh-$CLOUD-$TDH_USER -k \"v1.17.16---vmware.2-tkg.1\""
+    echo "    => ./deployTKG -m $TDH_TKGMC_NAME -d tkg-tanzu-demo-hub.cfg -n tdh-$CLOUD-$TDH_USER -k \"v1.20.8---vmware.1-tkg.2\""
   fi
 
 #  printf "\e[1m3.) Delete the Management Cluster (Local or on the Jump host)\e[0m\n"
