@@ -70,7 +70,7 @@ if [ $ROOT_SHELL -eq 0 ]; then
   [ ! -d $HOME/.tanzu ] && mkdir -p $HOME/.tanzu
 
   docker run -it --rm --name tdh-tools -v /var/run/docker.sock:/var/run/docker.sock tdh-tools:latest  chmod 666 /var/run/docker.sock > /dev/null 2>&1
-  docker run -u $(id -u):$(id -g) -it --rm --name tdh-tools --env-file /tmp/tdh.env \
+  docker run -u $(id -u):$(id -g) -it --rm --name tdh-tools --network=host --env-file /tmp/tdh.env \
      -v $HOME:$HOME:ro -v $HOME/.tanzu-demo-hub:$HOME/.tanzu-demo-hub:rw \
      -v $HOME/.config:$HOME/.config:rw -v $HOME/.config_tools/tanzu:$HOME/.config/tanzu:rw\
      -v $HOME/.tanzu_tools:$HOME/.tanzu:rw -v $HOME/.cache_tools:$HOME/.cache:rw \

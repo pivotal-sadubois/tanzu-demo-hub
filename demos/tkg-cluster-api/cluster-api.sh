@@ -159,10 +159,25 @@ kubectl config use-context $ctx >/dev/null 2>&1
 prtHead "Scale worker nodes by editing the CluserAPI configuration"
 kubectl config use-context $ctx >/dev/null 2>&1
 execCmd "kubectl config use-context $ctx"
-slntCmd "cat /tmp/$GUEST_CLUSTER.yaml | sed 's/replicas: 1/replicas: 3 ## Scaled by Sacha Dubois/g' > /tmp/${GUEST_CLUSTER}_new.yaml"
+slntCmd "cat /tmp/$GUEST_CLUSTER.yaml | sed 's/replicas: 1/replicas: 4 ## Scaled by Sacha Dubois/g' > /tmp/${GUEST_CLUSTER}_new.yaml"
 execCat "/tmp/${GUEST_CLUSTER}_new.yaml"
 execCmd "kubectl apply -f /tmp/$GUEST_CLUSTER.yaml --wait=true"
 fi
+
+export KUBECONFIG=/tmp/capi-cluster-01.kubeconfig:~/.kube/config
+slntCmd "export KUBECONFIG=/tmp/$GUEST_CLUSTER.kubeconfig:~/.kube/config"
+execCmd "kubectl config use-context $GUEST_CLUSTER-admin@$GUEST_CLUSTER"
+execCmd "kubectl get nodes -o wide"
+
+cnt=1
+while [ $cnt -ne 0 ]; do
+  cnt=$(tanzu cluster list | grep -c creating)
+  sleep 10
+done
+
+execCmd "tanzu cluster list"
+
+execCmd "tanzu cluster delete $GUEST_CLUSTER"
 
 prtText ""
 

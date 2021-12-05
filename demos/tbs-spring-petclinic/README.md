@@ -6,7 +6,7 @@ Consistently create production-ready container images that run on Kubernetes and
 
 *Featuring Demos*
 - [Build and deploy Spring Petclinic App on Harbor](#build-and-deploy-spring-petclinic-app-on-harbor)
-- [Build and deploy Spring Petclinic App on docker.io](#build-and-deploy-spring-petclinic-app-on-docker.io)
+- [Build and deploy Spring Petclinic App on docker](#build-and-deploy-spring-petclinic-app-on-docker)
 
 *Requirements:* This demo is part of the Tanzu Demo Hub platform and requires a Kubernetes cluster deployd with either (deployMinikube, deployTMC or deployTKG). 
 
@@ -34,7 +34,7 @@ $ ./tbs-pedclinic-harbor.sh
 
 Play the recorded 'asciinema' demo in a teminal (no kubernetes cluster or tdh environment required)
 ```
-$ ./tdh-demo-playback.sh asciinema/tbs-pedclinic-harbor..cast
+$ ./tdh-demo-playback.sh asciinema/tbs-pedclinic-harbor.cast
 ```
 
 ## Build and deploy Spring Petclinic App on Docker

@@ -197,6 +197,9 @@ cleanupEnvironment() {
       echo "ERROR: failed to delete management cluster ($TDH_TKGMC_NAME-$TDH_USER)"
       if [ "$NATIVE" == "0" ]; then
         echo "    => tools/tdh-tools.sh"
+        if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "AWS" ]; then
+          echo "       tdh-tools:/$ export AWS_REGION=$AWS_REGION"
+        fi
         echo "       tdh-tools:/$ tanzu management-cluster delete $TDH_TKGMC_NAME-$TDH_USER -y"
         echo "       tdh-tools:/$ exit"
       else
@@ -205,6 +208,10 @@ cleanupEnvironment() {
   
       exit 1
     fi
+
+    [ -f $HOME/.tanzu-demo-hub/config/$TDH_TKGMC_NAME-$TDH_USER.kubeconfig ] && rm -f $HOME/.tanzu-demo-hub/config/$TDH_TKGMC_NAME-$TDH_USER.kubeconfig
+    [ -f $HOME/.tanzu-demo-hub/config/$TDH_TKGMC_NAME-$TDH_USER.cfg ] && rm -f $HOME/.tanzu-demo-hub/config/$TDH_TKGMC_NAME-$TDH_USER.cfg
+    [ -f $HOME/.tanzu-demo-hub/config/$TDH_TKGMC_NAME-$TDH_USER.yaml ] && rm -f $HOME/.tanzu-demo-hub/config/$TDH_TKGMC_NAME-$TDH_USER.yaml
   fi
 
   if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "AWS" ]; then
@@ -1092,7 +1099,7 @@ if [ ! -f /tdh_tools_docker_container  ]; then
     mkdir -p $HOME/.mc $HOME/.cache $HOME/.config $HOME/.local
     mkdir -p /tmp/docker && chmod a+w /tmp/docker
     docker run -it --rm --name tdh-tools -v /var/run/docker.sock:/var/run/docker.sock tdh-tools:latest chmod 666 /var/run/docker.sock > /dev/null 2>&1
-    docker run -u $(id -u):$(id -g) -it --rm --name tdh-tools --env-file /tmp/tdh.env \
+    docker run -u $(id -u):$(id -g) -it --rm --name tdh-tools --network=host --env-file /tmp/tdh.env \
        -v $HOME:$HOME:ro -v $HOME/.tanzu-demo-hub:$HOME/.tanzu-demo-hub:rw \
        -v $HOME/.config:$HOME/.config:rw -v $HOME/.config_tools/tanzu:$HOME/.config/tanzu:rw\
        -v $HOME/.tanzu_tools:$HOME/.tanzu:rw -v $HOME/.cache_tools:$HOME/.cache:rw \
