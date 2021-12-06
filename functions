@@ -2047,7 +2047,7 @@ configureJumpHost() {
     # 02.12.2021 Can not copy the .tanzu-demo-hub/config over to jump, its overwriting cluster kubeconfig files on the jump if deployTKGmc is started again
     (cd $HOME && tar cf /tmp/tdh-home.tar .aws .azure .tanzu-demo-hub/terraform .tanzu-demo-hub/certificates .tanzu-demo-hub/config  .tanzu-demo-hub.cfg .tanzu-demo-hub/KeyPair* > /dev/null 2>&1)
 
-wcho YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY
+echo YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY
 
     ret=1; cnt=0
     while [ $ret -ne 0 -a $cnt -lt 5 ]; do
