@@ -2407,10 +2407,10 @@ createTKGMCcluster() {
 
       if [ $DEBUG -gt 0 ]; then
         messageLine
-        tanzu management-cluster create --file $TKG_TEMPLATE -v 0 --log-file=/tmp/${TDH_TKGMC_NAME}.log; ret=$?
+        tanzu management-cluster create --timeout 2h --file $TKG_TEMPLATE -v 0 --log-file=/tmp/${TDH_TKGMC_NAME}.log; ret=$?
         messageLine
       else
-        tanzu management-cluster create --file $TKG_TEMPLATE -v 0 --log-file=/tmp/${TDH_TKGMC_NAME}.log > /dev/null 2>&1; ret=$?
+        tanzu management-cluster create --timeout 2h --file $TKG_TEMPLATE -v 0 --log-file=/tmp/${TDH_TKGMC_NAME}.log > /dev/null 2>&1; ret=$?
       fi
 
       cnt=$(tanzu management-cluster get 2>/dev/null | grep -c Error)
@@ -2418,7 +2418,7 @@ createTKGMCcluster() {
         echo "ERROR: failed to create TKG Management Cluster"
         if [ "$NATIVE" == "0" ]; then
           echo "       => tools/${TDH_TOOLS}.sh"
-          echo "          tdh-tools:/$ tanzu management-cluster create --file $TKG_TEMPLATE -v 0 --log-file=/tmp/$TDH_TKGMC_NAME.log"
+          echo "          tdh-tools:/$ tanzu management-cluster create --timeout 2h --file $TKG_TEMPLATE -v 0 --log-file=/tmp/$TDH_TKGMC_NAME.log"
           echo "          tdh-tools:/$ exit"
         else
           echo "       => tanzu management-cluster create --file $TKG_TEMPLATE -v 0 --log-file=/tmp/$TDH_TKGMC_NAME.log"
