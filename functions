@@ -2350,6 +2350,20 @@ createTKGMCcluster() {
 
   cleanKindCluster
 
+  messageTitle "Download docker images to prevent (ImagePullBackOff)"
+  list="projects.registry.vmware.com/tkg/antrea/antrea-debian:v0.13.3_vmware.1"
+  for n in $list; do
+    messagePrint " ▪ Pull Docker Image"    "$n"
+
+    cnt=0; ret=1
+    while [ $ret -ne 0 -a $cnt -lt 5 ]; do
+      docker pull $n > /dev/null 2>&1; ret=$?
+      sleep 60
+      let cnt=cnt+1
+    done
+  done
+
+
   if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "docker" ]; then
     echo "CLUSTER_NAME: $TDH_TKGMC_NAME"                                               >  $TKG_TEMPLATE
     echo "CLUSTER_PLAN: \"dev\""                                                       >> $TKG_TEMPLATE
@@ -2371,7 +2385,7 @@ createTKGMCcluster() {
       echo "LDAP_HOST: jump.${TDH_TKGMC_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}"                           >> $TKG_TEMPLATE
       echo "LDAP_GROUP_SEARCH_NAME_ATTRIBUTE: cn"                                                    >> $TKG_TEMPLATE
       echo "LDAP_GROUP_SEARCH_USER_ATTRIBUTE: DN"                                                    >> $TKG_TEMPLATE
-      echo "LDAP_USER_SEARCH_USERNAME: userPrincipalName"                                            >> $TKG_TEMPLATE
+      cho "LDAP_USER_SEARCH_USERNAME: userPrincipalName"                                            >> $TKG_TEMPLATE
       echo "TKG_HTTP_PROXY_ENABLED: \"false\""                                                       >> $TKG_TEMPLATE
     fi
 
@@ -2744,10 +2758,10 @@ createTKGMCcluster() {
 
       if [ $DEBUG -gt 0 ]; then
         messageLine
-        tanzu management-cluster create --file $TKG_TEMPLATE -v 0 --log-file=/tmp/$TDH_TKGMC_NAME.log; ret=$?
+        tanzu management-cluster create --timeout 2h --file $TKG_TEMPLATE -v 0 --log-file=/tmp/$TDH_TKGMC_NAME.log; ret=$?
         messageLine
       else
-        tanzu management-cluster create --file $TKG_TEMPLATE -v 0 --log-file=/tmp/$TDH_TKGMC_NAME.log > /dev/null 2>&1; ret=$?
+        tanzu management-cluster create --timeout 2h --file $TKG_TEMPLATE -v 0 --log-file=/tmp/$TDH_TKGMC_NAME.log > /dev/null 2>&1; ret=$?
       fi
 
       cnt=$(tanzu management-cluster get 2>/dev/null | grep -c Error)
