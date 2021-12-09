@@ -4309,53 +4309,65 @@ alignStr() {
 }
 
 getTDHClusterCredentials() {
-  messageTitle "TMC Get TKG Cluster Credentials"
-  messagePrint " ▪ Cluster Name"           "$TDH_CLUSTER_NAME"
-  messagePrint " ▪ Kubeconfig File"        "/tmp/${TDH_CLUSTER_NAME}.kubeconfig"
-  messagePrint " ▪ Kubernetes Context"     "${TDH_CLUSTER_NAME}-admin@$TDH_CLUSTER_NAME"
 
-  ret=1; cnt=0
-  while [ $ret -ne 0 -a $cnt -lt 10 ]; do
-    #tmc cluster auth kubeconfig get $TDH_CLUSTER_NAME -p $TDH_PROVISIONER_NAME -m $TDH_MANAGEMENT_CLUSTER > /dev/null 2>&1; ret=$?
-    tmc cluster auth admin-kubeconfig get $TDH_CLUSTER_NAME -p $TDH_PROVISIONER_NAME -m $TDH_MANAGEMENT_CLUSTER > /dev/null 2>&1; ret=$?
-    sleep 60
-    let cnt=cnt+1
-  done
 
-  if [ $ret -ne 0 ]; then 
-    echo "ERROR: Failled to retrieve cluster credentials, aborting"
-    echo "       => tmc cluster auth admin-kubeconfig get $TDH_CLUSTER_NAME -p $TDH_PROVISIONER_NAME -m $TDH_MANAGEMENT_CLUSTER"
-    exit 1
-  fi
+  cnt=$(kubectl config get-clusters | egrep -c "^$TDH_CLUSTER_NAME$")
+  if [ $cnt -eq 0 ]; then 
+    messageTitle "Request TKG Cluster Credentials from TMC"
+    messagePrint " ▪ Cluster Name"           "$TDH_CLUSTER_NAME"
+    messagePrint " ▪ Kubeconfig File"        "/tmp/${TDH_CLUSTER_NAME}.kubeconfig"
+    messagePrint " ▪ Kubernetes Context"     "${TDH_CLUSTER_NAME}-admin@$TDH_CLUSTER_NAME"
 
-  rm -f /tmp/${TDH_CLUSTER_NAME}.kubeconfig; touch /tmp/${TDH_CLUSTER_NAME}.kubeconfig
-  ret=1; cnt=0
-  while [ ! -s /tmp/${TDH_CLUSTER_NAME}.kubeconfig -a $ret -ne 0 -a $cnt -lt 5 ]; do
-    tmc cluster auth admin-kubeconfig get $TDH_CLUSTER_NAME -p $TDH_PROVISIONER_NAME \
-        -m $TDH_MANAGEMENT_CLUSTER > /tmp/${TDH_CLUSTER_NAME}.kubeconfig 2>/dev/null; ret=$?
-    sleep 60
-    let cnt=cnt+1
-  done
-
-  if [ $ret -ne 0 ]; then
-    echo "ERROR: Failled to retrieve cluster credentials, aborting"
-    echo "       => tmc cluster auth admin-kubeconfig get $TDH_CLUSTER_NAME -p $TDH_PROVISIONER_NAME -m $TDH_MANAGEMENT_CLUSTER"
-    exit 1
-  fi
+    ret=1; cnt=0
+    while [ $ret -ne 0 -a $cnt -lt 10 ]; do
+      #tmc cluster auth kubeconfig get $TDH_CLUSTER_NAME -p $TDH_PROVISIONER_NAME -m $TDH_MANAGEMENT_CLUSTER > /dev/null 2>&1; ret=$?
+      tmc cluster auth admin-kubeconfig get $TDH_CLUSTER_NAME -p $TDH_PROVISIONER_NAME -m $TDH_MANAGEMENT_CLUSTER > /dev/null 2>&1; ret=$?
+      [ $ret -eq 0 ] && break
+      sleep 60
+      let cnt=cnt+1
+    done
+  
+    if [ $ret -ne 0 ]; then 
+      echo "ERROR: Failled to retrieve cluster credentials, aborting"
+      echo "       => tmc cluster auth admin-kubeconfig get $TDH_CLUSTER_NAME -p $TDH_PROVISIONER_NAME -m $TDH_MANAGEMENT_CLUSTER"
+      exit 1
+    fi
+  
+    rm -f /tmp/${TDH_CLUSTER_NAME}.kubeconfig; touch /tmp/${TDH_CLUSTER_NAME}.kubeconfig
+    ret=1; cnt=0
+    while [ ! -s /tmp/${TDH_CLUSTER_NAME}.kubeconfig -a $ret -ne 0 -a $cnt -lt 5 ]; do
+      tmc cluster auth admin-kubeconfig get $TDH_CLUSTER_NAME -p $TDH_PROVISIONER_NAME \
+          -m $TDH_MANAGEMENT_CLUSTER > /tmp/${TDH_CLUSTER_NAME}.kubeconfig 2>/dev/null; ret=$?
+      [ $ret -eq 0 ] && break
+      sleep 60
+      let cnt=cnt+1
+    done
+  
+    if [ $ret -ne 0 ]; then
+      echo "ERROR: Failled to retrieve cluster credentials, aborting"
+      echo "       => tmc cluster auth admin-kubeconfig get $TDH_CLUSTER_NAME -p $TDH_PROVISIONER_NAME -m $TDH_MANAGEMENT_CLUSTER"
+      exit 1
+    fi
  
-  chmod 600 /tmp/${TDH_CLUSTER_NAME}.kubeconfig
-  export KUBECONFIG=$HOME/.kube/config:/tmp/${TDH_CLUSTER_NAME}.kubeconfig
-  kubectl config view --flatten > ~/.kube/config.new
-  mv ~/.kube/config ~/.kube/config.last
-  mv ~/.kube/config.new ~/.kube/config
-  chmod 600 ~/.kube/config
-  unset KUBECONFIG
-
-  kubectl config use-context ${TDH_CLUSTER_NAME}-admin@$TDH_CLUSTER_NAME
-  #echo "----------------------------------------------------------------------------------------"
-  #echo "export KUBECONFIG=/tmp/${TDH_CLUSTER_NAME}.kubeconfig"
-  #echo "kubectl config get-contexts"
-  #echo "----------------------------------------------------------------------------------------"
+    chmod 600 /tmp/${TDH_CLUSTER_NAME}.kubeconfig
+    export KUBECONFIG=$HOME/.kube/config:/tmp/${TDH_CLUSTER_NAME}.kubeconfig
+    kubectl config view --flatten > ~/.kube/config.new
+    mv ~/.kube/config ~/.kube/config.last
+    mv ~/.kube/config.new ~/.kube/config
+    chmod 600 ~/.kube/config
+    unset KUBECONFIG
+  
+    kubectl config use-context ${TDH_CLUSTER_NAME}-admin@$TDH_CLUSTER_NAME
+    #echo "----------------------------------------------------------------------------------------"
+    #echo "export KUBECONFIG=/tmp/${TDH_CLUSTER_NAME}.kubeconfig"
+    #echo "kubectl config get-contexts"
+    #echo "----------------------------------------------------------------------------------------"
+  else
+    messageTitle "Verify TKG Cluster Credentials"
+    messagePrint " ▪ Cluster Name"           "$TDH_CLUSTER_NAME"
+    messagePrint " ▪ Kubeconfig File"        "/tmp/${TDH_CLUSTER_NAME}.kubeconfig"
+    messagePrint " ▪ Kubernetes Context"     "${TDH_CLUSTER_NAME}-admin@$TDH_CLUSTER_NAME"
+  fi
 }
 
 verifyDockerRegistry() {
@@ -5553,9 +5565,6 @@ InstallMetallLB() {
       sleep 5
     done
   fi
-
-
-
 }
 
 InstallContour() {
@@ -5658,7 +5667,6 @@ InstallContour() {
     exit 1
   fi
 
-echo "TDH_INFRASTRUCTURE:$TDH_INFRASTRUCTURE IPA:$ipa TDH_ENVNAME:$TDH_ENVNAME"
   # --- SET DNS RECORD ---
   if [ "$TDH_INFRASTRUCTURE" == "minikube" -o "$TDH_INFRASTRUCTURE" == "vSphere" -o "$TDH_INFRASTRUCTURE" == "Azure" -o "$TDH_INFRASTRUCTURE" == "docker" ]; then 
     setDNSrecord "$ipa" "${TDH_ENVNAME}" "${AWS_HOSTED_DNS_DOMAIN}" "*.apps-contour" "A"
@@ -5681,8 +5689,6 @@ createClusterIssuer() {
   #https://cert-manager.io/docs/tutorials/acme/dns-validation/
   NAMESPACE=cert-manager
 
-echo "XXX TDH_HARBOR_STAGING_TLS_CERT:$TDH_HARBOR_STAGING_TLS_CERT"
-
   if [ "${TDH_HARBOR_STAGING_TLS_CERT}" == "true" ]; then
     LETSENSCRIPT_SERVER="https://acme-staging-v02.api.letsencrypt.org/directory"
   else
@@ -5690,8 +5696,7 @@ echo "XXX TDH_HARBOR_STAGING_TLS_CERT:$TDH_HARBOR_STAGING_TLS_CERT"
   fi
 
   # --- NOT CERTIFICATE CLEANUP ALL AND START OVER ---
-  stt=$(kubectl get certificate $TDH_TLS_CERT -o json 2>/dev/null | \
-      jq -r '.status.conditions[] | select(.type == "Ready").status' 2>/dev/null)
+  stt=$(kubectl get certificate $TDH_TLS_CERT -o json 2>/dev/null | jq -r '.status.conditions[] | select(.type == "Ready").status' 2>/dev/null)
   if [ "${stt}" == "" -o "${stt}" == "False" ]; then
     messageTitle "Cleaning up Let's Enscript objects"
     kubectl delete clusterissuer,order,challenge,certificate --all > /dev/null 2>&1
@@ -5771,7 +5776,7 @@ echo "XXX TDH_HARBOR_STAGING_TLS_CERT:$TDH_HARBOR_STAGING_TLS_CERT"
 
     # --- RECREATE ISSUER ---
     kubectl -n $NAMESPACE delete --all clusterissuer,certificate,order,challenge > /dev/null 2>&1
-    sleep 60
+    sleep 120
     kubectl -n $NAMESPACE apply -f $TDH_TLS_ISSUER_FILE > /dev/null 2>&1
     if [ $? -ne 0 ]; then
       echo "ERROR: failed to deploy letsenscript issuer"
@@ -5811,11 +5816,11 @@ echo "XXX TDH_HARBOR_STAGING_TLS_CERT:$TDH_HARBOR_STAGING_TLS_CERT"
   fi
 
   # --- CREATE CERTIFICATE ---
-  stt_rdy=$(kubectl get certificate $TDH_TLS_CERT -o json 2>/dev/null | \
-            jq -r '.status.conditions[] | select(.type == "Ready").status')
+  stt_rdy=$(kubectl get certificate $TDH_TLS_CERT -o json 2>/dev/null | jq -r '.status.conditions[] | select(.type == "Ready").status')
   kubectl get secret $TDH_TLS_SECRET > /dev/null 2>&1; stt_sec=$?
   kubectl get certificate $TDH_TLS_CERT > /dev/null 2>&1; stt_crt=$?
-  if [ "${stt_rdy}" == "Frue" -o $stt_sec -ne 0 -o $stt_crt -ne 0 ]; then
+
+  if [ "${stt_rdy}" == "False" -o $stt_sec -ne 0 -o $stt_crt -ne 0 ]; then
     # --- CLEANUP OLD STUFF ---
     kubectl delete secret $TDH_TLS_SECRET > /dev/null 2>&1
     kubectl delete certificate $TDH_TLS_CERT > /dev/null 2>&1
@@ -5927,7 +5932,7 @@ InstallCertManager() {
   kubectl get ns $NAMESPACE > /dev/null 2>&1
   if [ $? -ne 0 ]; then
     # --- INSTALL CONTOUR INGRESS ---
-    messageTitle "Install Cert Manager"
+    messageTitle "Cert Manager"
 
     kubectl create ns $NAMESPACE > /dev/null 2>&1
     helm repo add jetstack https://charts.jetstack.io -n $NAMESPACE > /dev/null 2>&1
@@ -6041,16 +6046,16 @@ InstallHarborRegistry() {
     echo "    existingSecret: $HARBOR_TLS_SECRET"                                                                               >> $HARBOR_VALUES
     echo "    notaryExistingSecret: $NOTARY_TLS_SECRET"                                                                         >> $HARBOR_VALUES
     echo ""                                                                                                                     >> $HARBOR_VALUES
-    echo "ingress:"                                                                                                             >> $HARBOR_VALUES
-    echo "  enabled: true"                                                                                                      >> $HARBOR_VALUES
-    echo "  hosts:"                                                                                                             >> $HARBOR_VALUES
-    echo "    core: $HARBOR_HOSTNAME"                                                                                           >> $HARBOR_VALUES
-    echo "    notary: $NOTARY_HOSTNAME"                                                                                         >> $HARBOR_VALUES
-    echo "  annotations:"                                                                                                       >> $HARBOR_VALUES
-    #echo "    cert-manager.io/cluster-issuer: letsencrypt-staging  # use letsencrypt-staging cluster issuer for TLS certs"      >> $HARBOR_VALUES
-    #echo "    kubernetes.io/tls-acme: \"true\"                     # using ACME certificates for TLS"                           >> $HARBOR_VALUES
-    echo "    ingress.kubernetes.io/force-ssl-redirect: \"true\"   # force https, even if http is requested"                    >> $HARBOR_VALUES
-    echo "    kubernetes.io/ingress.class: contour                 # using Contour for ingress"                                 >> $HARBOR_VALUES
+
+    # Not required anymore because of HTTPProxy
+    #echo "ingress:"                                                                                                             >> $HARBOR_VALUES
+    #echo "  enabled: true"                                                                                                      >> $HARBOR_VALUES
+    #echo "  hosts:"                                                                                                             >> $HARBOR_VALUES
+    #echo "    core: $HARBOR_HOSTNAME"                                                                                           >> $HARBOR_VALUES
+    #echo "    notary: $NOTARY_HOSTNAME"                                                                                         >> $HARBOR_VALUES
+    #echo "  annotations:"                                                                                                       >> $HARBOR_VALUES
+    #echo "    ingress.kubernetes.io/force-ssl-redirect: \"true\"   # force https, even if http is requested"                    >> $HARBOR_VALUES
+    #echo "    kubernetes.io/ingress.class: contour                 # using Contour for ingress"                                 >> $HARBOR_VALUES
 
     # https://github.com/goharbor/harbor-helm/blob/master/values.yaml
     echo "externalURL: https://harbor.apps-contour.$TDH_ENVNAME.$AWS_HOSTED_DNS_DOMAIN"                                         >> $HARBOR_VALUES
@@ -6090,15 +6095,22 @@ InstallHarborRegistry() {
 
     cnt=0; ret=1
     while [ $ret -ne 0 -a $cnt -lt 5 ]; do
-      helm install harbor bitnami/harbor -f $HARBOR_VALUES --version $HELM_HARBOR_VERSION -n $NAMESPACE > /dev/null 2>&1; ret=$?
+      helm install harbor bitnami/harbor -f $HARBOR_VALUES --version $HELM_HARBOR_VERSION -n $NAMESPACE --wait --wait-for-jobs > /dev/null 2>&1; ret=$?
       [ $ret -eq 0 ] && break
       let cnt=cnt+1
       sleep 30
     done
 
-    if [ $? -ne 0 ]; then
+    if [ $ret -ne 0 ]; then
       echo "ERROR: failed to install bitnami/harbor"
-      echo "       => helm install harbor bitnami/harbor -f $HARBOR_VALUES --version $HELM_HARBOR_VERSION -n $NAMESPACE"
+      if [ "$NATIVE" == "0" ]; then
+        echo "       => tools/tdh-tools.sh"
+        echo "          tdh-tools:/$ helm install harbor bitnami/harbor -f $HARBOR_VALUES --version $HELM_HARBOR_VERSION -n $NAMESPACE"
+        echo "          tdh-tools:/$ exit"
+      else
+        echo "       => helm install harbor bitnami/harbor -f $HARBOR_VALUES --version $HELM_HARBOR_VERSION -n $NAMESPACE"
+      fi
+
       exit 1
     fi
 
@@ -6109,21 +6121,20 @@ InstallHarborRegistry() {
       sleep 5
     done
 
-    # --- Change from Ingress to HTTPProxy ---
-
+    # --- ADD HTTPProxy ---
     HARBOR_VALUES=/tmp/harbor_httpproxy.yaml
     echo "apiVersion: projectcontour.io/v1"                                       >  $HARBOR_VALUES
     echo "kind: HTTPProxy"                                                        >> $HARBOR_VALUES
     echo "metadata:"                                                              >> $HARBOR_VALUES
     echo "  name: harbor-proxy"                                                   >> $HARBOR_VALUES
-    echo "  namespace: registry-harbor"                                           >> $HARBOR_VALUES
+    echo "  namespace: $NAMESPACE"                                                >> $HARBOR_VALUES
     echo "  annotations:"                                                         >> $HARBOR_VALUES
     echo "    kubernetes.io/ingress.class: contour"                               >> $HARBOR_VALUES
     echo "spec:"                                                                  >> $HARBOR_VALUES
     echo "  virtualhost:"                                                         >> $HARBOR_VALUES
     echo "    fqdn: harbor.apps-contour.$TDH_ENVNAME.$AWS_HOSTED_DNS_DOMAIN"      >> $HARBOR_VALUES
     echo "    tls:"                                                               >> $HARBOR_VALUES
-    echo "      secretName: tanzu-demo-hub-tls"                                   >> $HARBOR_VALUES
+    echo "      secretName: $HARBOR_TLS_SECRET"                                   >> $HARBOR_VALUES
     echo "  routes:"                                                              >> $HARBOR_VALUES
     echo "    - conditions: "                                                     >> $HARBOR_VALUES
     echo "      - prefix: /"                                                      >> $HARBOR_VALUES
@@ -6168,23 +6179,50 @@ InstallHarborRegistry() {
     echo "      timeoutPolicy:"                                                   >> $HARBOR_VALUES
     echo "        response: 600s"                                                 >> $HARBOR_VALUES
 
-    messagePrint " ▪ Replace Harbor Ingress with HTTPProxy" "$HARBOR_VALUES"
-    kubectl delete ingress-harbor -n $NAMESPACE > /dev/null 2>&1
-    kubectl apply -f $HARBOR_VALUES
+    messagePrint " ▪ Deploy HTTPProxy for Harbor" "$HARBOR_VALUES"
+    kubectl apply -f $HARBOR_VALUES; ret=$?
+    if [ $ret -ne 0 ]; then
+      echo "ERROR: failed to deploy HTTPProxy"
+      if [ "$NATIVE" == "0" ]; then
+        echo "       => tools/tdh-tools.sh"
+        echo "          tdh-tools:/$ kubectl apply -f $HARBOR_VALUES"
+        echo "          tdh-tools:/$ exit"
+      else
+        echo "       => kubectl apply -f $HARBOR_VALUES"
+      fi
+
+      exit 1
+    fi
 
 
     # --- WAIT FOR HARBOR TO COME ONLINE ---
     messagePrint " ▪ Verify Harbor Registry Access" "$HARBOR_HOSTNAME"
     ret=1; cnt=0
     while [ $ret -ne 0 -a $cnt -le 9 ]; do
+      curl https://harbor.apps-contour.$TDH_ENVNAME.$AWS_HOSTED_DNS_DOMAIN > /dev/null 2>&1; ret=$?
+      [ $ret -eq 0 ] && break
+      sleep 60
+      let cnt=cnt+1
+    done
+
+    ret=1; cnt=0
+    while [ $ret -ne 0 -a $cnt -le 9 ]; do
       docker login $HARBOR_HOSTNAME -u admin -p $TDH_HARBOR_ADMIN_PASSWORD > /dev/null 2>&1; ret=$?
+      [ $ret -eq 0 ] && break
       sleep 60
       let cnt=cnt+1
     done
 
     if [ $ret -ne 0 ]; then
       echo "ERROR: failed to login to registry"
-      echo "       => docker login $HARBOR_HOSTNAME -u admin -p $TDH_HARBOR_ADMIN_PASSWORD"
+      if [ "$NATIVE" == "0" ]; then
+        echo "       => tools/tdh-tools.sh"
+        echo "          tdh-tools:/$ docker login $HARBOR_HOSTNAME -u admin -p $TDH_HARBOR_ADMIN_PASSWORD"
+        echo "          tdh-tools:/$ exit"
+      else
+        echo "       => docker login $HARBOR_HOSTNAME -u admin -p $TDH_HARBOR_ADMIN_PASSWORD"
+      fi
+
       exit 1
     fi
   fi
@@ -8014,4 +8052,354 @@ checkConnectivity() {
 
     exit 1
   fi
+}
+
+#kubectl apply --validate=false -f https://github.com/jetstack/cert-manager/releases/download/v0.15.1/cert-manager.crds.yaml
+#kubectl -n cert-manager apply -f /tmp/letsencrypt-staging
+
+# ------------------------------------------------------------------------------------------
+# Function Name ......: installTanzuPackages
+# Function Purpose ...: Install Tanzu Packages on TKG Workload Cluster
+# ------------------------------------------------------------------------------------------
+# Argument ($1) ......: Tanzi Package Display Name
+#          ($2) ......: Namespace Name
+#          ($3) ......: Tanzu Package Name
+#          ($4) ......: Package Description
+# ------------------------------------------------------------------------------------------
+# Return Value .......: 0 on Success, 1 on failure
+# ------------------------------------------------------------------------------------------
+installTanzuPackages() {
+  PACKAGE_NAME=$1
+  NAMESPACE=$2
+  PACKAGE_ID=$3
+  PACKAGE_DES=$4
+
+  pkg=$(tanzu package installed get $PACKAGE_NAME -n $NAMESPACE -o json 2>/dev/null | jq -r '.[].name')
+  if [ "$pkg" != "$PACKAGE_NAME" ]; then 
+    package_ver=$(tanzu package available list $PACKAGE_ID -A -o json | jq -r '.[]."version"')
+    package_rel=$(tanzu package available list $PACKAGE_ID -A -o json | jq -r '.[]."released-at"')
+
+    messageTitle "Installing $PACKAGE_DES"
+    messagePrint " ▪ Tanzu Package ($PACKAGE_NAME)"   "$PACKAGE_ID ($package_ver/$package_rel)"
+    tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $NAMESPACE --version $package_ver --create-namespace > /dev/null 2>&1; ret=$?
+    if [ $ret -ne 0 ]; then
+      echo "ERROR: failed to install Tanzu Package $PACKAGE_NAME)"
+      if [ "$NATIVE" == "0" ]; then
+        echo "       => tools/tdh-tools.sh"
+        echo "          tdh-tools:/$ tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $NAMESPACE --version $package_ver --create-namespace"
+        echo "          tdh-tools:/$ exit"
+      else
+        echo "       => tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $NAMESPACE --version $package_ver --create-namespace"
+      fi
+  
+      exit 1
+    fi
+  fi
+
+  tanzu package installed get $PACKAGE_NAME -n $NAMESPACE -o json > /tmp/pkg.json
+  pkg_stt=$(jq -r '.[]."status"' /tmp/pkg.json)
+  pkg_nam=$(jq -r '.[]."package-name"' /tmp/pkg.json)
+  pkg_ver=$(jq -r '.[]."package-version"' /tmp/pkg.json)
+
+  messageTitle "Verify $PACKAGE_DES"
+  messagePrint " ▪ Tanzu Package ($PACKAGE_NAME)"               "$pkg_nam"
+  messagePrint " ▪ Tanzu Package ($PACKAGE_NAME) Namespace"     "$NAMESPACE"
+  messagePrint " ▪ Tanzu Package ($PACKAGE_NAME) Version"       "$pkg_ver"
+  messagePrint " ▪ Tanzu Package ($PACKAGE_NAME) Status"        "$pkg_stt"
+}
+
+# ------------------------------------------------------------------------------------------
+# Function Name ......: TanzuPackage_RepoSync
+# Function Purpose ...: Install Contour Ingress Controller
+# ------------------------------------------------------------------------------------------
+# Argument ($1) ......: Tanzi Package Display Name
+#          ($2) ......: Namespace Name
+#          ($3) ......: Tanzu Package Name
+#          ($4) ......: Package Description
+# ------------------------------------------------------------------------------------------
+# Return Value .......: 0 on Success, 1 on failure
+# ------------------------------------------------------------------------------------------
+TanzuPackage_RepoSync() {
+  NAMESPACE=$1
+
+  messageTitle "Tanzu Packages Reconsile Repositories"
+  messagePrint " ▪ Wait for Tanzu Package Reconsile"   "$NAMESPACE"
+
+  ret=""; cnt=0
+  while [ "$ret" != "Reconcile succeeded" -a $cnt -lt 10 ]; do
+    ret=$(tanzu package repository list -n $NAMESPACE -o json 2>/dev/null | jq -r '.[].status' 2>/dev/null)
+    [ "$ret" == "Reconcile succeeded" ] && break
+    sleep 60
+    let cnt=cnt+1
+  done
+
+  if [ "$ret" != "Reconcile succeeded" ]; then
+    echo "ERROR: failed to reconsilte Tanzu Packages in $NAMESPACE"
+    if [ "$NATIVE" == "0" ]; then
+      echo "       => tools/tdh-tools.sh"
+      echo "          tdh-tools:/$ tanzu package repository list -n tanzu-package-repo-global"
+      echo "          tdh-tools:/$ exit"
+    else
+      echo "       => tanzu package repository list -n tanzu-package-repo-global"
+    fi
+
+    exit 1
+  fi
+}
+
+# ------------------------------------------------------------------------------------------
+# Function Name ......: TanzuPackage_CertManager
+# Function Purpose ...: Install Cert Manager
+# ------------------------------------------------------------------------------------------
+# Argument ($1) ......: Tanzi Package Display Name
+#          ($2) ......: Namespace Name
+#          ($3) ......: Tanzu Package Name
+#          ($4) ......: Package Description
+# ------------------------------------------------------------------------------------------
+# Return Value .......: 0 on Success, 1 on failure
+# ------------------------------------------------------------------------------------------
+# https://docs.vmware.com/en/VMware-Tanzu-Kubernetes-Grid/1.4/vmware-tanzu-kubernetes-grid-14/GUID-packages-cert-manager.html
+# ------------------------------------------------------------------------------------------
+TanzuPackage_CertManager() {
+  PACKAGE_NAME=cert-manager
+  NAMESPACE=cert-manager
+  PACKAGE_ID=cert-manager.tanzu.vmware.com
+  PACKAGE_DES="Certificate management (cert-manager)"
+
+  pkg=$(tanzu package installed get $PACKAGE_NAME -n $NAMESPACE -o json 2>/dev/null | jq -r '.[].name')
+  if [ "$pkg" != "$PACKAGE_NAME" ]; then
+    package_ver=$(tanzu package available list $PACKAGE_ID -A -o json | jq -r '.[]."version"')
+    package_rel=$(tanzu package available list $PACKAGE_ID -A -o json | jq -r '.[]."released-at"')
+
+    messageTitle "Installing $PACKAGE_DES"
+    messagePrint " ▪ Tanzu Package ($PACKAGE_NAME)"   "$PACKAGE_ID ($package_ver/$package_rel)"
+    tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $NAMESPACE --version $package_ver --create-namespace --wait=true > /dev/null 2>&1; ret=$?
+    if [ $ret -ne 0 ]; then
+      echo "ERROR: failed to install Tanzu Package $PACKAGE_NAME)"
+      if [ "$NATIVE" == "0" ]; then
+        echo "       => tools/tdh-tools.sh"
+        echo "          tdh-tools:/$ tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $NAMESPACE --version $package_ver --create-namespace"
+        echo "          tdh-tools:/$ exit"
+      else
+        echo "       => tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $NAMESPACE --version $package_ver --create-namespace"
+      fi
+
+      exit 1
+    fi
+  fi
+
+  tanzu package installed get $PACKAGE_NAME -n $NAMESPACE -o json > /tmp/pkg.json
+  pkg_stt=$(jq -r '.[]."status"' /tmp/pkg.json)
+  pkg_nam=$(jq -r '.[]."package-name"' /tmp/pkg.json)
+  pkg_ver=$(jq -r '.[]."package-version"' /tmp/pkg.json)
+
+  if [ "$pkg_stt" != "Reconcile succeeded" ]; then
+    echo "ERROR: failed to reconsile Tanzu Package $PACKAGE_NAME)"
+    messageLine
+    tanzu package installed get $PACKAGE_NAME -n $NAMESPACE
+    messageLine
+    if [ "$NATIVE" == "0" ]; then
+      echo "       => tools/tdh-tools.sh"
+      echo "          tdh-tools:/$ tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $NAMESPACE --version $package_ver --create-namespace"
+      echo "          tdh-tools:/$ exit"
+    else
+      echo "       => tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $NAMESPACE --version $package_ver --create-namespace"
+    fi
+
+    exit 1
+  fi
+
+  messageTitle "Verify $PACKAGE_DES"
+  messagePrint " ▪ Tanzu Package ($PACKAGE_NAME)"                 "$pkg_nam"
+  messagePrint " ▪ Tanzu Package ($PACKAGE_NAME) Namespace"       "$NAMESPACE"
+  messagePrint " ▪ Tanzu Package ($PACKAGE_NAME) Version"         "$pkg_ver"
+  messagePrint " ▪ Tanzu Package ($PACKAGE_NAME) Status"          "$pkg_stt"
+
+  # --- STORE SETTINGS IN CONFIGMAP ---
+  uodateConfigMap tanzu-demo-hub TDH_CERTMANAGER_ENABLED          "true"
+  uodateConfigMap tanzu-demo-hub TDH_CERTMANAGER_NAMESPACE        "$NAMESPACE"
+  uodateConfigMap tanzu-demo-hub TDH_CERTMANAGER_PACKAGE_NAME     "$pkg_nam"
+  uodateConfigMap tanzu-demo-hub TDH_CERTMANAGER_PACKAGE_VERSION  "$pkg_ver"
+  uodateConfigMap tanzu-demo-hub TDH_CERTMANAGERPACKAGE__STATUS   "$pkg_stt"
+}
+
+# ------------------------------------------------------------------------------------------
+# Function Name ......: TanzuPackage_Contour
+# Function Purpose ...: Install Contour Ingress Controller
+# ------------------------------------------------------------------------------------------
+# Argument ($1) ......: Tanzi Package Display Name
+#          ($2) ......: Namespace Name
+#          ($3) ......: Tanzu Package Name
+#          ($4) ......: Package Description      
+# ------------------------------------------------------------------------------------------
+# Return Value .......: 0 on Success, 1 on failure
+# ------------------------------------------------------------------------------------------
+# https://docs.vmware.com/en/VMware-Tanzu-Kubernetes-Grid/1.4/vmware-tanzu-kubernetes-grid-14/GUID-packages-ingress-contour.html
+# tanzu package available get contour.tanzu.vmware.com/1.17.1+vmware.1-tkg.1 --values-schema
+# ------------------------------------------------------------------------------------------
+TanzuPackage_Contour() {
+  PACKAGE_NAME=contour
+  NAMESPACE=ingress-contour
+  NAMESPACE=tanzu-system-ingress
+  PACKAGE_ID=contour.tanzu.vmware.com 
+  PACKAGE_DES="Contour ingress controller"
+
+  pkg=$(tanzu package installed get $PACKAGE_NAME -n $NAMESPACE -o json 2>/dev/null | jq -r '.[].name')
+  if [ "$pkg" != "$PACKAGE_NAME" ]; then
+    package_ver=$(tanzu package available list $PACKAGE_ID -A -o json | jq -r '.[]."version"')
+    package_rel=$(tanzu package available list $PACKAGE_ID -A -o json | jq -r '.[]."released-at"')
+
+    if [ "${TDH_DEPLOYMENT_CLOUD}" == "Azure" -o "${TDH_TKGMC_INFRASTRUCTURE}" == "Azure" ]; then
+      VALUE_FILE=/tmp/contour-data-values.yaml; rm -f $VALUE_FILE
+      echo "----"                                                                       >> $VALUE_FILE
+      echo "infrastructure_provider: azure"                                             >> $VALUE_FILE
+      echo "namespace: tanzu-system-ingress"                                            >> $VALUE_FILE
+      echo "contour:"                                                                   >> $VALUE_FILE
+      echo " configFileContents: {}"                                                    >> $VALUE_FILE
+      echo " useProxyProtocol: false"                                                   >> $VALUE_FILE
+      echo " replicas: 2"                                                               >> $VALUE_FILE
+      echo " pspNames: \"vmware-system-restricted\""                                    >> $VALUE_FILE
+      echo " logLevel: info"                                                            >> $VALUE_FILE
+      echo "envoy:"                                                                     >> $VALUE_FILE
+      echo " service:"                                                                  >> $VALUE_FILE
+      echo "   type: LoadBalancer"                                                      >> $VALUE_FILE
+      echo "   annotations: {}"                                                         >> $VALUE_FILE
+      echo "   nodePorts:"                                                              >> $VALUE_FILE
+      echo "     http: null"                                                            >> $VALUE_FILE
+      echo "     https: null"                                                           >> $VALUE_FILE
+      echo "   externalTrafficPolicy: Cluster"                                          >> $VALUE_FILE
+      echo "   disableWait: false"                                                      >> $VALUE_FILE
+      echo " hostPorts:"                                                                >> $VALUE_FILE
+      echo "   enable: true"                                                            >> $VALUE_FILE
+      echo "   http: 80"                                                                >> $VALUE_FILE
+      echo "   https: 443"                                                              >> $VALUE_FILE
+      echo " hostNetwork: false"                                                        >> $VALUE_FILE
+      echo " terminationGracePeriodSeconds: 300"                                        >> $VALUE_FILE
+      echo " logLevel: info"                                                            >> $VALUE_FILE
+      echo " pspNames: null"                                                            >> $VALUE_FILE
+      echo "certificates:"                                                              >> $VALUE_FILE
+      echo " duration: 8760h"                                                           >> $VALUE_FILE
+      echo " renewBefore: 360h"                                                         >> $VALUE_FILE
+    fi
+
+    if [ "${TDH_DEPLOYMENT_CLOUD}" == "AWS" -o "${TDH_TKGMC_INFRASTRUCTURE}" == "AWS" ]; then
+      VALUE_FILE=/tmp/contour-data-values.yaml; rm -f $VALUE_FILE
+      echo "---"                                                                        >  $VALUE_FILE
+      echo "infrastructure_provider: aws"                                               >> $VALUE_FILE
+      echo "namespace: tanzu-system-ingress"                                            >> $VALUE_FILE
+      echo "contour:"                                                                   >> $VALUE_FILE
+      echo " configFileContents: {}"                                                    >> $VALUE_FILE
+      echo " useProxyProtocol: false"                                                   >> $VALUE_FILE
+      echo " replicas: 2"                                                               >> $VALUE_FILE
+      echo " pspNames: \"vmware-system-restricted\""                                    >> $VALUE_FILE
+      echo " logLevel: info"                                                            >> $VALUE_FILE
+      echo "envoy:"                                                                     >> $VALUE_FILE
+      echo " service:"                                                                  >> $VALUE_FILE
+      echo "   type: LoadBalancer"                                                      >> $VALUE_FILE
+      echo "   annotations: {}"                                                         >> $VALUE_FILE
+      echo "   nodePorts:"                                                              >> $VALUE_FILE
+      echo "     http: null"                                                            >> $VALUE_FILE
+      echo "     https: null"                                                           >> $VALUE_FILE
+      echo "   externalTrafficPolicy: Cluster"                                          >> $VALUE_FILE
+      echo "   aws:"                                                                    >> $VALUE_FILE
+      echo "     LBType: classic"                                                       >> $VALUE_FILE
+      echo "   disableWait: false"                                                      >> $VALUE_FILE
+      echo " hostPorts:"                                                                >> $VALUE_FILE
+      echo "   enable: true"                                                            >> $VALUE_FILE
+      echo "   http: 80"                                                                >> $VALUE_FILE
+      echo "   https: 443"                                                              >> $VALUE_FILE
+      echo " hostNetwork: false"                                                        >> $VALUE_FILE
+      echo " terminationGracePeriodSeconds: 300"                                        >> $VALUE_FILE
+      echo " logLevel: info"                                                            >> $VALUE_FILE
+      echo " pspNames: null"                                                            >> $VALUE_FILE
+      echo "certificates:"                                                              >> $VALUE_FILE
+      echo " duration: 8760h"                                                           >> $VALUE_FILE
+      echo " renewBefore: 360h"                                                         >> $VALUE_FILE
+    fi
+
+    messageTitle "Installing $PACKAGE_DES"
+    messagePrint " ▪ Tanzu Package ($PACKAGE_NAME)"   "$PACKAGE_ID ($package_ver/$package_rel)"
+    tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $NAMESPACE \
+           --version $package_ver --create-namespace \
+           --values-file /tmp/contour-data-values.yaml --wait=true > /dev/null 2>&1; ret=$?
+    if [ $ret -ne 0 ]; then
+      echo "ERROR: failed to install Tanzu Package $PACKAGE_NAME)"
+      if [ "$NATIVE" == "0" ]; then
+        echo "       => tools/tdh-tools.sh"
+        echo "          tdh-tools:/$ tanzu package install $PACKAGE_NAME --create-namespace \\"
+        echo "                             --package-name $PACKAGE_ID \\"
+        echo "                             --namespace $NAMESPACE --version $package_ver \\"
+        echo "                             --values-file /tmp/contour-data-values.yaml"
+        echo "          tdh-tools:/$ exit"
+      else
+        echo "       => tanzu package install $PACKAGE_NAME --create-namespace \\"
+        echo "                             --package-name $PACKAGE_ID \\"
+        echo "                             --namespace $NAMESPACE --version $package_ver \\"
+        echo "                             --values-file /tmp/contour-data-values.yaml"
+      fi
+
+      exit 1
+    fi
+  fi
+
+  tanzu package installed get $PACKAGE_NAME -n $NAMESPACE -o json > /tmp/pkg.json
+  pkg_stt=$(jq -r '.[]."status"' /tmp/pkg.json)
+  pkg_nam=$(jq -r '.[]."package-name"' /tmp/pkg.json)
+  pkg_ver=$(jq -r '.[]."package-version"' /tmp/pkg.json)
+
+  if [ "$pkg_stt" != "Reconcile succeeded" ]; then
+    echo "ERROR: failed to reconsile Tanzu Package $PACKAGE_NAME)"
+    messageLine
+    tanzu package installed get $PACKAGE_NAME -n $NAMESPACE
+    messageLine
+    if [ "$NATIVE" == "0" ]; then
+      echo "       => tools/tdh-tools.sh"
+      echo "          tdh-tools:/$ tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $NAMESPACE --version $package_ver --create-namespace"
+      echo "          tdh-tools:/$ exit"
+    else
+      echo "       => tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $NAMESPACE --version $package_ver --create-namespace"
+    fi
+
+    exit 1
+  fi
+
+  messageTitle "Verify $PACKAGE_DES"      
+  messagePrint " ▪ Tanzu Package ($PACKAGE_NAME)"               "$pkg_nam"
+  messagePrint " ▪ Tanzu Package ($PACKAGE_NAME) Namespace"     "$NAMESPACE"
+  messagePrint " ▪ Tanzu Package ($PACKAGE_NAME) Version"       "$pkg_ver"
+  messagePrint " ▪ Tanzu Package ($PACKAGE_NAME) Status"        "$pkg_stt"
+
+  # --- VERIFY DNS DOMAIN ---
+  verifyHostedZone ${TDH_ENVNAME}.$AWS_HOSTED_DNS_DOMAIN
+
+  ipa=""; cnt=0
+  while [ "$ipa" == "" -a $cnt -lt 15 ]; do
+    ipa=$(kubectl describe svc envoy --namespace tanzu-system-ingress | egrep "^LoadBalancer Ingress:" | awk '{ print $NF }')
+    [ "$ipa" != "" ] && break
+    let cnt=cnt+1
+    sleep 30
+  done
+
+  if [ "$ipa" == "" ]; then
+    echo "ERROR: Failed to gather IP Adress of the ingress-contour-envoy service in namespace ingress-contour"
+    echo "       Please check manually:"
+    echo "       => kubectl get svc --namespace $NAMESPACE"
+    exit 1
+  fi
+
+  # --- SET DNS RECORD ---
+  if [ "$TDH_INFRASTRUCTURE" == "minikube" -o "$TDH_INFRASTRUCTURE" == "vSphere" -o "$TDH_INFRASTRUCTURE" == "Azure" -o "$TDH_INFRASTRUCTURE" == "docker" ]; then
+    setDNSrecord "$ipa" "${TDH_ENVNAME}" "${AWS_HOSTED_DNS_DOMAIN}" "*.apps-contour" "A"
+  else
+    setDNSalias "$ipa" "${TDH_ENVNAME}" "${AWS_HOSTED_DNS_DOMAIN}" "*.apps-contour" "A"
+  fi
+
+  # --- STORE SETTINGS IN CONFIGMAP ---
+  uodateConfigMap tanzu-demo-hub TDH_INGRESS_CONTOUR_ENABLED          "true"
+  uodateConfigMap tanzu-demo-hub TDH_INGRESS_CONTOUR_LB_IP            "$ipa"
+  uodateConfigMap tanzu-demo-hub TDH_INGRESS_CONTOUR_LB_DOMAIN        "apps-contour.$TDH_ENVNAME.$AWS_HOSTED_DNS_DOMAIN"
+  uodateConfigMap tanzu-demo-hub TDH_INGRESS_CONTOUR_NAMESPACE        "$NAMESPACE"
+  uodateConfigMap tanzu-demo-hub TDH_INGRESS_CONTOUR_PACKAGE_NAME     "$crt"
+  uodateConfigMap tanzu-demo-hub TDH_INGRESS_CONTOUR_PACKAGE_VERSION  "$ver"
+  uodateConfigMap tanzu-demo-hub TDH_INGRESS_CONTOUR_PACKAGE_STATUS   "$stt"
 }

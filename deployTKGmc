@@ -1776,3 +1776,7 @@ fi
 exit
 
 tanzu management-cluster create -y --file vs1.yaml 
+
+# --- CHECK STATUS OF MANAGEMENT CLUSTER ---
+kubectl --kubeconfig .kube-tkg/config get pods -A
+
