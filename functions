@@ -4695,7 +4695,7 @@ installKubeapps() {
     kubectl apply --namespace=$NAMESPACE -f - > /dev/null 2>&1
 
     if [ "$TDH_SERVICE_KUBEAPPS_VERSION" == "" -o "$TDH_SERVICE_KUBEAPPS_VERSION" == "latest" ]; then
-      HELM_KUBEAPPS_VERSION=$(helm search repo bitnami/kubeapps | egrep "^bitnami/kubeapps " | tail -1 | awk '{ print $2 }')
+      HELM_KUBEAPPS_VERSION=$(helm search repo bitnami/kubeapps | egrep "^bitnami/kubeapps" | tail -1 | awk '{ print $2 }')
     else
       HELM_KUBEAPPS_VERSION=$TDH_SERVICE_KUBEAPPS_VERSION
     fi
