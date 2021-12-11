@@ -114,6 +114,7 @@ oktaVerifyAccount() {
 
     if [ "${TDH_OKTA_API_TOKEN}" == "" ]; then
       echo "  TDH_OKTA_API_TOKEN               (required) OKTA API Token"
+      echo "                                   Okta Dahshboard -> Security -> API -> Create Token"
     fi
 
     if [ "${TDH_OKTA_USER}" == "" ]; then 
@@ -4694,7 +4695,7 @@ installKubeapps() {
     kubectl apply --namespace=$NAMESPACE -f - > /dev/null 2>&1
 
     if [ "$TDH_SERVICE_KUBEAPPS_VERSION" == "" -o "$TDH_SERVICE_KUBEAPPS_VERSION" == "latest" ]; then
-      HELM_KUBEAPPS_VERSION=$(helm search repo bitnami/contour | egrep "^bitnami/contour " | tail -1 | awk '{ print $2 }')
+      HELM_KUBEAPPS_VERSION=$(helm search repo bitnami/kubeapps | egrep "^bitnami/kubeapps " | tail -1 | awk '{ print $2 }')
     else
       HELM_KUBEAPPS_VERSION=$TDH_SERVICE_KUBEAPPS_VERSION
     fi
@@ -7889,6 +7890,21 @@ oktaAPI() {
     --header "Authorization: SSWS $TDH_OKTA_API_TOKEN" 
   fi
 
+  if [ "$MODE" == "create_AuthServerClaim" ]; then
+    curl --location --request POST "https://${TDH_OKTA_DOMAIN}.okta.com/api/v1/authorizationServers/$3//claims" \
+      --header 'Accept: application/json' \
+      --header 'Content-Type: application/json' \
+      --header "Authorization: SSWS $TDH_OKTA_API_TOKEN" \
+      --data "@$2"
+  fi
+
+  if [ "$MODE" == "create_AuthServerId" ]; then
+    curl --location --request POST "https://${TDH_OKTA_DOMAIN}.okta.com/api/v1/authorizationServers" \
+      --header 'Accept: application/json' \
+      --header 'Content-Type: application/json' \
+      --header "Authorization: SSWS $TDH_OKTA_API_TOKEN" \
+      --data "@$2"
+  fi
 
   if [ "$MODE" == "create_group" ]; then
     curl --location --request POST "https://${TDH_OKTA_DOMAIN}.okta.com/api/v1/groups" \
@@ -7959,6 +7975,22 @@ oktaAPI() {
       --header "Authorization: SSWS $TDH_OKTA_API_TOKEN" 2>/dev/null 
   fi
 
+  if [ "$MODE" == "getOauthScope" ]; then
+echo "https://${TDH_OKTA_DOMAIN}.okta.com/api/v1/authorizationServers/$2/claims" 1>&2
+    curl --location --request GET "https://${TDH_OKTA_DOMAIN}.okta.com/api/v1/authorizationServers/$2/claims" \
+      --header 'Accept: application/json' \
+      --header 'Content-Type: application/json' \
+      --header "Authorization: SSWS $TDH_OKTA_API_TOKEN" 2>/dev/null
+  fi
+
+  if [ "$MODE" == "authorizationServers" ]; then
+    curl --location --request GET "https://${TDH_OKTA_DOMAIN}.okta.com/api/v1/authorizationServers" \
+      --header 'Accept: application/json' \
+      --header 'Content-Type: application/json' \
+      --header "Authorization: SSWS $TDH_OKTA_API_TOKEN" 2>/dev/null
+  fi
+
+
   if [ "$MODE" == "users" ]; then
     curl --location --request GET "https://${TDH_OKTA_DOMAIN}.okta.com/api/v1/users?limit=25" \
       --header 'Accept: application/json' \
@@ -7968,13 +8000,28 @@ oktaAPI() {
 
   # --- TEST LOGIN ---
   if [ "$MODE" == "login" -o "$MODE" == "verify" ]; then 
-    err=$(curl --location --request GET "https://${TDH_OKTA_DOMAIN}.okta.com/api/v1/users?limit=25" \
+    curl --location --request GET "https://${TDH_OKTA_DOMAIN}.okta.com/api/v1/users?limit=25" \
       --header 'Accept: application/json' \
       --header 'Content-Type: application/json' \
-      --header "Authorization: SSWS $TDH_OKTA_API_TOKEN" 2>/dev/null | jq -r '.errorCode' 2>/dev/null)
+      --header "Authorization: SSWS $TDH_OKTA_API_TOKEN" 2>/dev/null  > /tmp/okta_status.yaml
+
+    err=$(jq -r '.errorCode' /tmp/okta_status.yaml  2>/dev/null) 
+    msg=$(jq -r '.errorSummary' /tmp/okta_status.yaml  2>/dev/null) 
 
     if [ "$err" != "" ]; then 
-      echo "ERROR: Failed to login to Omta, please verify the credentials"
+      echo "TDH_OKTA_USER:      $TDH_OKTA_USER"
+      echo "TDH_OKTA_DOMAIN:    $TDH_OKTA_DOMAIN"
+      echo "TDH_OKTA_API_TOKEN: $TDH_OKTA_API_TOKEN"
+      
+      echo 
+      echo "ERROR: Failed to login to Okta, please verify the credentials"
+      echo "       Create API Token => Okta Dahshboard -> Security -> API -> Create Token"
+
+      messageLine
+      jq -r '.' /tmp/okta_status.yaml
+      messageLine
+      
+      rm -f /tmp/okta_status.yaml 
       exit 1
     fi
   fi
