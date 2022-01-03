@@ -65,15 +65,27 @@ env | grep TDH > /tmp/tdh.env
 
 if [ $ROOT_SHELL -eq 0 ]; then 
   docker run -it --rm --name tdh-tools-tce -v /var/run/docker.sock:/var/run/docker.sock tdh-tools-tce:latest  chmod 666 /var/run/docker.sock > /dev/null 2>&1
-  docker run --network=host -u $(id -u):$(id -g) -it --rm --name tdh-tools-tce --env-file /tmp/tdh.env \
-     -v $HOME:$HOME:ro -v $HOME/.local:$HOME/.local:rw -v $HOME/.tanzu-demo-hub:$HOME/.tanzu-demo-hub:rw \
-     -v /var/run/docker.sock:/var/run/docker.sock -v $HOME/.cache:$HOME/.cache:rw -v $HOME/.config:$HOME/.config:rw \
-     -v $HOME/.aws:$HOME/.aws:rw -v $HOME/.vmware-cna-saas:$HOME/.vmware-cna-saas:rw -v $HOME/.azure:$HOME/.azure:rw \
-     -v /tmp:/tmp:rw -v /tmp/docker:$HOME/.docker:rw -v $HOME/.mc:$HOME/.mc:rw -v $HOME/.tanzu:$HOME/.tanzu:rw \
+  docker run -u $(id -u):$(id -g) -it --rm --name tdh-tools-tce --network=host --env-file /tmp/tdh.env \
+     -v $HOME:$HOME:ro -v $HOME/.tanzu-demo-hub:$HOME/.tanzu-demo-hub:rw \
+     -v $HOME/.config:$HOME/.config:rw -v $HOME/.config_tools/tanzu:$HOME/.config/tanzu:rw\
+     -v $HOME/.tanzu_tools:$HOME/.tanzu:rw -v $HOME/.cache_tools:$HOME/.cache:rw \
+     -v /var/run/docker.sock:/var/run/docker.sock \
+     -v $HOME/.vmware-cna-saas:$HOME/.vmware-cna-saas:rw -v $HOME/.azure:$HOME/.azure:rw \
      -v $HOME/.kube-tkg:$HOME/.kube-tkg:rw -v $HOME/.kube:$HOME/.kube:rw -v $HOME/.govmomi:$HOME/.govmomi:rw \
      -v $HOME/.ssh:$HOME/.ssh:rw -v $HOME/.terraform:$HOME/.terraform:rw -v $HOME/.gradle:$HOME/.gradle:rw \
-     -v $HOME/.s3cfg:$HOME/.s3cfg:rw \
+     -v $HOME/.s3cfg:$HOME/.s3cfg:rw -v $HOME/.local_tools:$HOME/.local:rw \
      -e "KUBECONFIG=$HOME/.kube/config" --hostname tdh-tools tdh-tools-tce:latest $COMMAND
+
+#     -v /tmp:/tmp:rw -v /tmp/docker:$HOME/.docker:rw -v $HOME/.mc:$HOME/.mc:rw \
+#  docker run --network=host -u $(id -u):$(id -g) -it --rm --name tdh-tools-tce --env-file /tmp/tdh.env \
+#     -v $HOME:$HOME:ro -v $HOME/.local:$HOME/.local:rw -v $HOME/.tanzu-demo-hub:$HOME/.tanzu-demo-hub:rw \
+#     -v /var/run/docker.sock:/var/run/docker.sock -v $HOME/.cache:$HOME/.cache:rw -v $HOME/.config:$HOME/.config:rw \
+#     -v $HOME/.aws:$HOME/.aws:rw -v $HOME/.vmware-cna-saas:$HOME/.vmware-cna-saas:rw -v $HOME/.azure:$HOME/.azure:rw \
+#     -v /tmp:/tmp:rw -v /tmp/docker:$HOME/.docker:rw -v $HOME/.mc:$HOME/.mc:rw -v $HOME/.tanzu:$HOME/.tanzu:rw \
+#     -v $HOME/.kube-tkg:$HOME/.kube-tkg:rw -v $HOME/.kube:$HOME/.kube:rw -v $HOME/.govmomi:$HOME/.govmomi:rw \
+#     -v $HOME/.ssh:$HOME/.ssh:rw -v $HOME/.terraform:$HOME/.terraform:rw -v $HOME/.gradle:$HOME/.gradle:rw \
+#     -v $HOME/.s3cfg:$HOME/.s3cfg:rw \
+#     -e "KUBECONFIG=$HOME/.kube/config" --hostname tdh-tools tdh-tools-tce:latest $COMMAND
 else
   docker run -it --rm --name tdh-tools-tce -v /var/run/docker.sock:/var/run/docker.sock tdh-tools-tce:latest  chmod 666 /var/run/docker.sock > /dev/null 2>&1
   docker run -it --rm --name tdh-tools-tce --env-file /tmp/tdh.env \

@@ -2364,7 +2364,6 @@ createTKGMCcluster() {
     done
   done
 
-
   if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "docker" ]; then
     echo "CLUSTER_NAME: $TDH_TKGMC_NAME"                                               >  $TKG_TEMPLATE
     echo "CLUSTER_PLAN: \"dev\""                                                       >> $TKG_TEMPLATE
@@ -2416,9 +2415,13 @@ createTKGMCcluster() {
 
       # --- CLEAN OLD MANAGEMENT CLUSTER CONFIG ---
       rm -f ~/.tanzu/config.yaml /tmp/$TDH_TKGMC_NAME.log
-      rm -f $TKG_KUBECONFIG $TKG_TEMPLATE
+      #rm -f $TKG_KUBECONFIG $TKG_TEMPLATE
+      ls -la $TKG_TEMPLATE
 
       messagePrint " ▪ Management Cluster Creating"        "This may take up to 15min ..."
+
+      echo "TKG_TEMPLATE:$TKG_TEMPLATE"
+      ls -la $TKG_TEMPLATE
 
       if [ $DEBUG -gt 0 ]; then
         messageLine
@@ -2451,7 +2454,6 @@ createTKGMCcluster() {
       kubectl config set-cluster $TDH_TKGMC_NAME > /dev/null 2>&1
       kubectl config use-context ${TDH_TKGMC_NAME}-admin@$TDH_TKGMC_NAME > /dev/null 2>&1
       context=$(kubectl config view -o json | jq -r '.contexts[].name' 2>/dev/null)
-#gaga
       tanzu management-cluster kubeconfig get --admin --export-file=${TKG_KUBECONFIG} > /dev/null 2>&1; ret=$?
       if [ $ret -ne 0 ]; then
         echo "ERROR: failed to generate kubeconfig:"
@@ -2470,6 +2472,8 @@ createTKGMCcluster() {
     fi
   fi
 
+  echo "gaga3 TKG_TEMPLATE:$TKG_TEMPLATE"
+  ls -la $TKG_TEMPLATE
   if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "vSphere" ]; then
     # --- SET DEFAULT VALUES ---
     [ "$TDH_TKGMC_CONTROL_PLANE_MEM_MIB" == "" ] && TDH_TKGMC_CONTROL_PLANE_MEM_MIB=8192
@@ -2625,6 +2629,8 @@ createTKGMCcluster() {
     fi
   fi
 
+  echo "gaga4 TKG_TEMPLATE:$TKG_TEMPLATE"
+  ls -la $TKG_TEMPLATE
   if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "AWS" ]; then
     messageTitle "Creating TKG Managment Cluster"
     messagePrint " ▪ Cluster Name"                  "$TDH_TKGMC_NAME"
@@ -2806,6 +2812,8 @@ createTKGMCcluster() {
     fi
   fi
 
+  echo "gaga5 TKG_TEMPLATE:$TKG_TEMPLATE"
+  ls -la $TKG_TEMPLATE
   if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "Azure" ]; then
     # --- SET DEFAULT VALUES ---
     [ "$TDH_TKGMC_CONTROL_PLANE_MACHINE_TYPE" == "" ] && TDH_TKGMC_CONTROL_PLANE_MACHINE_TYPE=Standard_D3_v2
@@ -3001,6 +3009,8 @@ createTKGMCcluster() {
 
     sudo mv /tmp/motd /etc/motd
   fi
+  echo "gaga6 TKG_TEMPLATE:$TKG_TEMPLATE"
+  ls -la $TKG_TEMPLATE
 }
 
 setTKGclusterDNS() {
@@ -4741,7 +4751,6 @@ installKubeapps() {
       #helm install kubeapps --namespace $NAMESPACE bitnami/kubeapps -f $HELM_VALUES > /dev/null 2>&1; ret=$?
       #helm install kubeapps --namespace $NAMESPACE bitnami/kubeapps -f $HELM_VALUES; ret=$?
 
-#gaga
 echo "helm install kubeapps --namespace $NAMESPACE bitnami/kubeapps -f $HELM_VALUES --version $HELM_KUBEAPPS_VERSION"
       #helm install kubeapps --namespace $NAMESPACE bitnami/kubeapps -f $HELM_VALUES --version $HELM_KUBEAPPS_VERSION > /dev/null 2>&1; ret=$?
       helm install kubeapps --namespace $NAMESPACE bitnami/kubeapps -f $HELM_VALUES --version $HELM_KUBEAPPS_VERSION; ret=$?
@@ -7297,7 +7306,6 @@ tdh_tools_build() {
     REBUILD_REQUIRED=1
   fi
 
-#gaga
   if [ ! -x $TDH_DOCKER_FILES/mc ]; then
     wget https://dl.min.io/client/mc/release/linux-amd64/mc > /dev/null 2>&1
     mv mc $TDH_DOCKER_FILES && chmod a+x $TDH_DOCKER_FILES/mc
@@ -7672,7 +7680,6 @@ installTanzuPlugins() {
   if [ $cnt -gt 0 -a $NATIVE -eq 0 ]; then
     messagePrint " ▪ Install Tanzu Plugins" "tanzu plugin install --local cli all"
     cd /tanzu && tanzu plugin install --local cli all > /dev/null 2>&1
-#gaga
   fi
 }
 

@@ -4,7 +4,7 @@
 # Author .......: Sacha Dubois, VMware
 # Description ..: Tanzu Demo Hub - Dockerfile for tdh-tools-tce (Tanzu Commninoty Eddition)
 # ############################################################################################
-
+ 
 FROM ubuntu:20.04  
 MAINTAINER Sacha Dubois <sdubois@vmware.com>
 ENV TZ="Europe/Zurich"
@@ -124,6 +124,8 @@ RUN apt-get update && apt-get install -y \
 
 # --- INSTALL TANZU UTILITIES ---
 RUN cd /tanzu/tce-linux-amd64 && ./install.sh
+#RUN cd /tanzu/tce-linux-amd64 && tanzu plugin clean								   <
+#RUN cd /tanzu/tce-linux-amd64 && tanzu plugin install --local cli all	
 
 # --- DIRTY FIX TO GET LATEST TOOLS (https://github.com/vmware-tanzu/carvel) ---
 #RUN curl -sL https://github.com/vmware-tanzu/carvel-imgpkg/releases/download/v0.13.0/imgpkg-linux-amd64 -o /tanzu/cli/imgpkg-linux-amd64
