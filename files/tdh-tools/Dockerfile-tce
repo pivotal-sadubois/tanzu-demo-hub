@@ -4,12 +4,14 @@
 # Author .......: Sacha Dubois, VMware
 # Description ..: Tanzu Demo Hub - Dockerfile for tdh-tools-tce (Tanzu Commninoty Eddition)
 # ############################################################################################
- 
+  
 FROM ubuntu:20.04  
 MAINTAINER Sacha Dubois <sdubois@vmware.com>
 ENV TZ="Europe/Zurich"
 ENV ALLOW_INSTALL_AS_ROOT="true"
 ARG UID GID USER TZ HOME VMWUSER VMWPASS START 
+ADD tdh-postinstall-root.sh        /usr/local/bin
+ADD tdh-postinstall-user-tce.sh    /usr/local/bin
 ADD tce-linux-amd64 /tanzu/tce-linux-amd64
 ADD argocd          /usr/local/bin
 ADD kubectl         /usr/local/bin
@@ -24,14 +26,15 @@ ADD kubectl-vsphere /usr/local/bin
 ADD kubectl         /usr/local/bin
 ADD vmware-ovftool  /usr/lib/vmware-ovftool
 RUN ln -s /usr/lib/vmware-ovftool/ovftool /usr/local/bin/ovftool
-
+RUN echo "127.0.1.1 tdh-tools" >> /etc/hosts
+      
 # --- LOCAL TIME AND USER ---
 RUN touch /tdh_tools_docker_container 
 RUN ln -snf /usr/share/zoneinfo/${TZ} /etc/localtime && echo ${TZ} > /etc/timezone
 #RUN useradd -u $UID -g $GID -d $HOME $USER 
 RUN grep "$GID:" /etc/group || groupadd -g $GID $USER
 RUN tail -10 /etc/group
-RUN useradd -u $UID -g $GID -d $HOME $USER 
+RUN useradd -m -u $UID -g $GID -d $HOME $USER 
 RUN groupadd docker
 RUN usermod -a -G docker $USER
 RUN usermod -a -G daemon $USER
@@ -123,7 +126,7 @@ RUN apt-get update && apt-get install -y \
     git vim azure-cli jq awscli 
 
 # --- INSTALL TANZU UTILITIES ---
-RUN cd /tanzu/tce-linux-amd64 && ./install.sh
+RUN su $USER -c /tanzu/tce-linux-amd64/install.sh
 #RUN cd /tanzu/tce-linux-amd64 && tanzu plugin clean								   <
 #RUN cd /tanzu/tce-linux-amd64 && tanzu plugin install --local cli all	
 

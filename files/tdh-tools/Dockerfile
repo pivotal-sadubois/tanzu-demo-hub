@@ -9,6 +9,8 @@ FROM ubuntu:20.04
 MAINTAINER Sacha Dubois <sdubois@vmware.com>
 ENV TZ="Europe/Zurich"
 ARG UID GID USER TZ HOME VMWUSER VMWPASS START 
+ADD tdh-postinstall-root.sh     /usr/local/bin
+ADD tdh-postinstall-user.sh     /usr/local/bin
 ADD cli             /tanzu/cli
 ADD argocd          /usr/local/bin
 ADD kubectl         /usr/local/bin

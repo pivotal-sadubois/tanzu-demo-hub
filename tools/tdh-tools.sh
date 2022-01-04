@@ -51,6 +51,7 @@ else
   echo "-----------------------------------------------------------------------------------------------------------"
   echo ""
 
+  checkCLIcommands BASIC
   tdh_tools_build
   checkExecutionLock tdh-tools
 fi

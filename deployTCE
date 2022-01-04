@@ -185,7 +185,8 @@ if [ ! -f /tdh_tools_docker_container  ]; then
 
     mkdir -p $HOME/.mc $HOME/.cache $HOME/.config $HOME/.local
     mkdir -p /tmp/docker && chmod a+w /tmp/docker
-    docker run -it --rm --name tdh-tools-tce -v /var/run/docker.sock:/var/run/docker.sock tdh-tools-tce:latest  chmod 666 /var/run/docker.sock > /dev/null 2>&1
+    docker run -it --rm --name tdh-tools-tce -v /var/run/docker.sock:/var/run/docker.sock tdh-tools-tce:latest chmod 666 /var/run/docker.sock > /dev/null 2>&1
+    docker run -it --rm --name tdh-tools-tce -v /var/run/docker.sock:/var/run/docker.sock tdh-tools-tce:latest chown $(id -un):$(id -gn) $HOME > /dev/null 2>&1
     docker run --network=host -u $(id -u):$(id -g) -it --rm --name tdh-tools-tce \
        -v $HOME:$HOME:ro -v $HOME/.local:$HOME/.local:rw -v $HOME/.tanzu-demo-hub:$HOME/.tanzu-demo-hub:rw \
        -v /var/run/docker.sock:/var/run/docker.sock -v $HOME/.cache:$HOME/.cache:rw -v $HOME/.config:$HOME/.config:rw \
@@ -201,6 +202,7 @@ if [ ! -f /tdh_tools_docker_container  ]; then
     checkTDHenvironment
 
     # --- VERIFY TOOLS AND ACCESS ---
+    checkTanzuCLI
     checkCloudCLI
     checkCLIcommands TOOLS
     checkCLIcommands TKG

@@ -2472,8 +2472,6 @@ createTKGMCcluster() {
     fi
   fi
 
-  echo "gaga3 TKG_TEMPLATE:$TKG_TEMPLATE"
-  ls -la $TKG_TEMPLATE
   if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "vSphere" ]; then
     # --- SET DEFAULT VALUES ---
     [ "$TDH_TKGMC_CONTROL_PLANE_MEM_MIB" == "" ] && TDH_TKGMC_CONTROL_PLANE_MEM_MIB=8192
@@ -2629,8 +2627,6 @@ createTKGMCcluster() {
     fi
   fi
 
-  echo "gaga4 TKG_TEMPLATE:$TKG_TEMPLATE"
-  ls -la $TKG_TEMPLATE
   if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "AWS" ]; then
     messageTitle "Creating TKG Managment Cluster"
     messagePrint " ▪ Cluster Name"                  "$TDH_TKGMC_NAME"
@@ -2812,8 +2808,6 @@ createTKGMCcluster() {
     fi
   fi
 
-  echo "gaga5 TKG_TEMPLATE:$TKG_TEMPLATE"
-  ls -la $TKG_TEMPLATE
   if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "Azure" ]; then
     # --- SET DEFAULT VALUES ---
     [ "$TDH_TKGMC_CONTROL_PLANE_MACHINE_TYPE" == "" ] && TDH_TKGMC_CONTROL_PLANE_MACHINE_TYPE=Standard_D3_v2
@@ -3009,8 +3003,6 @@ createTKGMCcluster() {
 
     sudo mv /tmp/motd /etc/motd
   fi
-  echo "gaga6 TKG_TEMPLATE:$TKG_TEMPLATE"
-  ls -la $TKG_TEMPLATE
 }
 
 setTKGclusterDNS() {
@@ -3968,7 +3960,7 @@ checkCLIcommands() {
 
   if [ "$cat" == "BASIC" ]; then
     [ "$(uname)" == "Darwin" ] && CLI_COMMANDS="/usr/local/bin/jq:brew:jq /usr/local/bin/wget:brew:wget"
-    [ "$(uname)" == "Linux" ] && CLI_COMMANDS="/usr/bin/jq:apt:jq /usr/bin/wget:apt:wget"
+    [ "$(uname)" == "Linux" ] && CLI_COMMANDS="/usr/bin/jq:apt:jq /usr/bin/wget:apt:wget /usr/bin/unzip:apt:unzip"
 
     # --- INSTALL BREW INSTALLABLE TOOLS ---
     for arg in $CLI_COMMANDS; do
@@ -3976,17 +3968,26 @@ checkCLIcommands() {
       sys=$(echo $arg | awk -F: '{ print $2 }')
       pkg=$(echo $arg | awk -F: '{ print $3 }')
 
-      if [ $sys == "brew" ]; then
-        if [ ! -x $cmd ]; then
-          if [ "$(uname)" == "Linux" ]; then
+      if [ ! -x $cmd ]; then
+	if [ "$(uname)" == "Linux" ]; then
+	  if [ $sys == "apt" ]; then
             echo "ERROR: $cmd not installed, please install it"
             echo "       => sudo apt install $pkg -y"
-          else
+	    exit 1
+	  fi
+
+	  if [ $sys == "snap" ]; then
             echo "ERROR: $cmd not installed, please install it"
-            echo "       => brew install $pkg"
+            echo "       => sudo snap install $pkg"
+            exit 1
           fi
-          exit 1
-        fi
+	else
+	  if [ $sys == "brew" ]; then
+	    echo "ERROR: $cmd not installed, please install it"
+	    echo "       => brew install $pkg"
+	    exit 1
+          fi
+	fi
       fi
     done
   fi
@@ -7327,6 +7328,22 @@ tdh_tools_build() {
     fi
   fi
 
+  # --- POSTINSTALL SCRIPTS
+  if [ ! -f $TDH_DOCKER_FILES/tdh-postinstall-root.sh ]; then
+    cp files/tdh-tools/tdh-postinstall-root.sh $TDH_DOCKER_FILES
+    chmod a+x $TDH_DOCKER_FILES/tdh-postinstall-root.sh
+  fi
+
+  if [ ! -f $TDH_DOCKER_FILES/tdh-postinstall-user.sh ]; then
+    cp files/tdh-tools/tdh-postinstall-user.sh $TDH_DOCKER_FILES
+    chmod a+x $TDH_DOCKER_FILES/tdh-postinstall-user.sh
+  fi
+
+  if [ ! -f $TDH_DOCKER_FILES/tdh-postinstall-user-tce.sh ]; then
+    cp files/tdh-tools/tdh-postinstall-user-tce.sh $TDH_DOCKER_FILES
+    chmod a+x $TDH_DOCKER_FILES/tdh-postinstall-user-tce.sh
+  fi
+
   if [ $BUILD_MODE == "tkg" ]; then
     # --- CLEANUP ---
     [ "$TDH_DOCKER_FILES" != "" ] && rm -rf $TDH_DOCKER_FILES/cli $TDH_DOCKER_FILES/cli-${TKG_TANZU_KUBERNETES_GRID} 
@@ -7430,7 +7447,6 @@ tdh_tools_build() {
         tar xf $TANZU_CLI_BUNDLE && mv cli ${TDH_DOCKER_FILES}/cli-$TKG_TANZU_KUBERNETES_GRID
         cd $TDH_DOCKER_FILES && ln -s  cli-$TKG_TANZU_KUBERNETES_GRID cli
       fi
-
     fi
 
     if [ $REBUILD_REQUIRED_SOFTWARE -gt 0 ]; then 
@@ -7438,6 +7454,7 @@ tdh_tools_build() {
   
       REBUILD_REQUIRED=1
     fi
+
   fi
 
   if [ $REBUILD_REQUIRED -gt 0 ]; then 
@@ -7464,6 +7481,7 @@ tdh_tools_build() {
 #      --build-arg TANZU_DEMO_HUB=$TANZU_DEMO_HUB \
 #      --build-arg TDHPATH=$TDHPATH \
 #      --build-arg TZ=$(ls -l /etc/localtime | /usr/bin/cut -d '/' -f 8,9) $TDH_DOCKER_FILES > /dev/null 2>&1; ret=$?
+
 
     messagePrint " ▪ Building TDH Tools docker container" "$TDH_TOOLS_IMAGE:CHKSUM-$DOCKER_CHKSUM"
     cd $TDH_DOCKER_FILES && docker build -q -t $TDH_TOOLS_IMAGE:CHKSUM-$DOCKER_CHKSUM \
@@ -8457,3 +8475,36 @@ TanzuPackage_Contour() {
   uodateConfigMap tanzu-demo-hub TDH_INGRESS_CONTOUR_PACKAGE_VERSION  "$ver"
   uodateConfigMap tanzu-demo-hub TDH_INGRESS_CONTOUR_PACKAGE_STATUS   "$stt"
 }
+
+chownDirectories() {
+  HOMEDIR=$HOME
+  USR_NAME=$(id -un)
+  GRP_NAME=$(id -gn)
+  list=".azure .cache_tools .config_tools .govmomi .gradle .kube .kube-tkg .local .local_tools .s3cfg .tanzu-demo-hub .tanzu_tools .terraform .vmware-cna-saas"
+
+  if [ "$HOME" == "" ]; then 
+    echo "ERROR: Home directory can not be determinded, \$HOME variable is not set"
+    exit 1
+  fi
+
+  for n in $list; do
+    [ ! -d $HOMEDIR/$n ] && mkdir $HOMEDIR/$n
+  done
+}
+
+checkTanzuCLI() {
+  MODE=$1
+  if [ ! -d $HOME/.tanzu ]; then 
+    if [ $MODE = "TCE" ]; then 
+      # --- INSTALL TANZU UTILITIES ---
+      cd /tanzu/tce-linux-amd64 && ./install.sh > /dev/null 2>&1
+      #cd /tanzu/tce-linux-amd64 && tanzu plugin clean                                                               <
+      #cd /tanzu/tce-linux-amd64 && tanzu plugin install --local cli all  
+    else
+      cd /tanzu && tanzu plugin clean
+      cd /tanzu && tanzu plugin install --local cli all
+    fi
+  fi
+}
+
+
