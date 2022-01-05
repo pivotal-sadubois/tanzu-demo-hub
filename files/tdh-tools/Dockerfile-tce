@@ -4,7 +4,7 @@
 # Author .......: Sacha Dubois, VMware
 # Description ..: Tanzu Demo Hub - Dockerfile for tdh-tools-tce (Tanzu Commninoty Eddition)
 # ############################################################################################
-  
+    
 FROM ubuntu:20.04  
 MAINTAINER Sacha Dubois <sdubois@vmware.com>
 ENV TZ="Europe/Zurich"
@@ -13,6 +13,7 @@ ARG UID GID USER TZ HOME VMWUSER VMWPASS START
 ADD tdh-postinstall-root.sh        /usr/local/bin
 ADD tdh-postinstall-user-tce.sh    /usr/local/bin
 ADD tce-linux-amd64 /tanzu/tce-linux-amd64
+ADD hostname                       /etc/hostname
 ADD argocd          /usr/local/bin
 ADD kubectl         /usr/local/bin
 ADD kp              /usr/local/bin
