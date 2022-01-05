@@ -7177,14 +7177,15 @@ tdh_tools_build() {
     TCE_DOWNLOAD_URL=https://github.com/vmware-tanzu/community-edition/releases/download/${TKG_COMNUNITY_EDITION_VERSION}
     TCE_LINUX_PACKAGE=tce-linux-amd64-${TKG_COMNUNITY_EDITION_VERSION}
     TCE_DARWIN_PACKAGE=tce-darwin-amd64-${TKG_COMNUNITY_EDITION_VERSION}
+    TDH_DOCKER_FILES=/tmp/tdh-tools-tce
   else 
     TDH_TOOLS_DOCKERFILE=Dockerfile
     TDH_TOOLS_IMAGE=tdh-tools
     BUILD_MODE=tkg
     [ -f files/tdh-tools/tdh-tools.cfg ] && . files/tdh-tools/tdh-tools.cfg
+    TDH_DOCKER_FILES=/tmp/tdh-tools
   fi
 
-  TDH_DOCKER_FILES=/tmp/tdh-tools
   mkdir -p $TDH_DOCKER_FILES
   cp files/tdh-tools/$TDH_TOOLS_DOCKERFILE       $TDH_DOCKER_FILES/Dockerfile
   cp files/tdh-tools/wrapdocker                  $TDH_DOCKER_FILES
@@ -8480,7 +8481,11 @@ chownDirectories() {
   HOMEDIR=$HOME
   USR_NAME=$(id -un)
   GRP_NAME=$(id -gn)
-  list=".azure .cache_tools .config_tools .govmomi .gradle .kube .kube-tkg .local .local_tools .s3cfg .tanzu-demo-hub .tanzu_tools .terraform .vmware-cna-saas"
+  MODE=$1
+  [ "$MODE" == "" ] && MODE=TKG
+  [ "$MODE" == "tkg" ] && TDH_TOOLS_DIR=.tdh-tools || TDH_TOOLS_DIR=.tdh-tools-tce
+
+  list=".azure .mvn .cache .config .govmomi .gradle .kube .kube-tkg .local .local .s3cfg .tanzu-demo-hub .tanzu .terraform .vmware-cna-saas"
 
   if [ "$HOME" == "" ]; then 
     echo "ERROR: Home directory can not be determinded, \$HOME variable is not set"
@@ -8488,14 +8493,14 @@ chownDirectories() {
   fi
 
   for n in $list; do
-    [ ! -d $HOMEDIR/$n ] && mkdir $HOMEDIR/$n
+    [ ! -d $HOMEDIR/$TDH_TOOLS_DIR/$n ] && mkdir -p $HOMEDIR/$TDH_TOOLS_DIR/$n
   done
 }
 
 checkTanzuCLI() {
   MODE=$1
   if [ ! -d $HOME/.tanzu ]; then 
-    if [ $MODE = "TCE" ]; then 
+    if [ $MODE == "tce" ]; then 
       # --- INSTALL TANZU UTILITIES ---
       cd /tanzu/tce-linux-amd64 && ./install.sh > /dev/null 2>&1
       #cd /tanzu/tce-linux-amd64 && tanzu plugin clean                                                               <

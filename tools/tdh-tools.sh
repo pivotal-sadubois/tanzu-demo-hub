@@ -51,8 +51,9 @@ else
   echo "-----------------------------------------------------------------------------------------------------------"
   echo ""
 
+  chownDirectories tkg
   checkCLIcommands BASIC
-  tdh_tools_build
+  tdh_tools_build  tkg
   checkExecutionLock tdh-tools
 fi
 
@@ -71,17 +72,33 @@ if [ $ROOT_SHELL -eq 0 ]; then
   [ ! -d $HOME/.tanzu ] && mkdir -p $HOME/.tanzu
 
   docker run -it --rm --name tdh-tools -v /var/run/docker.sock:/var/run/docker.sock tdh-tools:latest  chmod 666 /var/run/docker.sock > /dev/null 2>&1
-  docker run -u $(id -u):$(id -g) -it --rm --name tdh-tools --network=host --env-file /tmp/tdh.env \
-     -v $HOME:$HOME:ro -v $HOME/.tanzu-demo-hub:$HOME/.tanzu-demo-hub:rw \
-     -v $HOME/.config:$HOME/.config:rw -v $HOME/.config_tools/tanzu:$HOME/.config/tanzu:rw\
-     -v $HOME/.tanzu_tools:$HOME/.tanzu:rw -v $HOME/.cache_tools:$HOME/.cache:rw \
+  docker run -u $(id -u):$(id -g) -it --init --rm --name tdh-tools --network=host --env-file /tmp/tdh.env \
+     -v $HOME/.tanzu-demo-hub:$HOME/.tanzu-demo-hub:rw \
      -v /var/run/docker.sock:/var/run/docker.sock \
-     -v $HOME/.vmware-cna-saas:$HOME/.vmware-cna-saas:rw -v $HOME/.azure:$HOME/.azure:rw \
-     -v /tmp:/tmp:rw -v /tmp/docker:$HOME/.docker:rw -v $HOME/.mc:$HOME/.mc:rw \
-     -v $HOME/.kube-tkg:$HOME/.kube-tkg:rw -v $HOME/.kube:$HOME/.kube:rw -v $HOME/.govmomi:$HOME/.govmomi:rw \
-     -v $HOME/.ssh:$HOME/.ssh:rw -v $HOME/.terraform:$HOME/.terraform:rw -v $HOME/.gradle:$HOME/.gradle:rw \
-     -v $HOME/.s3cfg:$HOME/.s3cfg:rw -v $HOME/.local_tools:$HOME/.local:rw \
+     -v $HOME/.tdh-tools/.cache:$HOME/.cache:rw \
+     -v $HOME/.tdh-tools/.config:$HOME/.config:rw \
+     -v $HOME/.tdh-tools/.kube:$HOME/.kube:rw \
+     -v $HOME/.tdh-tools/.kube-tkg:$HOME/.kube-tkg:rw \
+     -v $HOME/.tdh-tools/.local:$HOME/.local:rw \
+     -v $HOME/.tdh-tools/.tanzu:$HOME/.tanzu:rw \
+     -v $HOME/.tdh-tools/.terraform:$HOME/.terraform:rw \
+     -v $HOME/.tdh-tools/.s3cfg:$HOME/.s3cfg:rw \
+     -v $HOME/.tdh-tools/.govmomi:$HOME/.govmomi:rw \
+     -v $HOME/.tdh-tools/.gradle:$HOME/.gradle:rw \
+     -v $HOME/.tdh-tools/.mvn:$HOME/.mvn:rw \
      -e "KUBECONFIG=$HOME/.kube/config" --hostname tdh-tools tdh-tools:latest $COMMAND
+
+  #docker run -u $(id -u):$(id -g) -it --rm --name tdh-tools --network=host --env-file /tmp/tdh.env \
+  #   -v $HOME:$HOME:ro -v $HOME/.tanzu-demo-hub:$HOME/.tanzu-demo-hub:rw \
+  #   -v $HOME/.config:$HOME/.config:rw -v $HOME/.config_tools/tanzu:$HOME/.config/tanzu:rw\
+  #   -v $HOME/.tanzu_tools:$HOME/.tanzu:rw -v $HOME/.cache_tools:$HOME/.cache:rw \
+  #   -v /var/run/docker.sock:/var/run/docker.sock \
+  #   -v $HOME/.vmware-cna-saas:$HOME/.vmware-cna-saas:rw -v $HOME/.azure:$HOME/.azure:rw \
+  #   -v /tmp:/tmp:rw -v /tmp/docker:$HOME/.docker:rw -v $HOME/.mc:$HOME/.mc:rw \
+  #   -v $HOME/.kube-tkg:$HOME/.kube-tkg:rw -v $HOME/.kube:$HOME/.kube:rw -v $HOME/.govmomi:$HOME/.govmomi:rw \
+  #   -v $HOME/.ssh:$HOME/.ssh:rw -v $HOME/.terraform:$HOME/.terraform:rw -v $HOME/.gradle:$HOME/.gradle:rw \
+  #   -v $HOME/.s3cfg:$HOME/.s3cfg:rw -v $HOME/.local_tools:$HOME/.local:rw \
+  #   -e "KUBECONFIG=$HOME/.kube/config" --hostname tdh-tools tdh-tools:latest $COMMAND
 
      #-v $HOME/.tanzu_tools:$HOME/.tanzu:rw -v $HOME/.config_tools:$HOME/.config:rw -v $HOME/.cache_tools:$HOME/.cache:rw \
      #-v $HOME/.tanzu_tools:$HOME/.tanzu:rw -v $HOME/.config_tools:$HOME/.config:rw -v $HOME/.cache_tools:$HOME/.cache:rw \
