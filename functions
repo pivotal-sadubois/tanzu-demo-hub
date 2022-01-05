@@ -7483,6 +7483,7 @@ tdh_tools_build() {
 #      --build-arg TZ=$(ls -l /etc/localtime | /usr/bin/cut -d '/' -f 8,9) $TDH_DOCKER_FILES > /dev/null 2>&1; ret=$?
 
 
+    let time1=($(date "+%H"*360)+$(date "+%M"*60)+$(date "+%S"))
     messagePrint " ▪ Building TDH Tools docker container" "$TDH_TOOLS_IMAGE:CHKSUM-$DOCKER_CHKSUM"
     cd $TDH_DOCKER_FILES && docker build -q -t $TDH_TOOLS_IMAGE:CHKSUM-$DOCKER_CHKSUM \
       --build-arg UID=$(id -u) \
@@ -7492,6 +7493,8 @@ tdh_tools_build() {
       --build-arg TANZU_DEMO_HUB=$TANZU_DEMO_HUB \
       --build-arg TDHPATH=$TDHPATH \
       --build-arg TZ=$(ls -l /etc/localtime | /usr/bin/cut -d '/' -f 8,9) .; ret=$?
+    let time2=($(date "+%H"*360)+$(date "+%M"*60)+$(date "+%S"))
+    let time3=time2-time1
   
     if [ $ret -ne 0 ]; then 
       echo "ERROR: failed to create $TDH_TOOLS_IMAGE container"
@@ -7505,6 +7508,7 @@ tdh_tools_build() {
       exit 1
     fi
   
+    messagePrint " ▪ Container Build for ($TDH_TOOLS_IMAGE) completed in" "$(duration $time3)"
     messagePrint " ▪ Create Tag (latest) for  TDH Tools docker container" "$TDH_TOOLS_IMAGE:latest"
     docker tag $TDH_TOOLS_IMAGE:CHKSUM-$DOCKER_CHKSUM $TDH_TOOLS_IMAGE:latest
   fi
@@ -8506,5 +8510,21 @@ checkTanzuCLI() {
     fi
   fi
 }
+
+duration() {
+  TIME=$1
+
+  if [ $TIME -ge 60 ]; then 
+    let tmin=TIME/60
+    let tsec=TIME%60
+    tmin="${tmin}m"
+  else
+    tmin=""
+    tsec=$TIME
+  fi
+
+  echo "${tmin}${tsec}s"
+}
+
 
 
