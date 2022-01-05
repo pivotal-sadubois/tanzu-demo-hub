@@ -116,7 +116,7 @@ CMD ["wrapdocker"]
 # --- IMPORT MICROSOFT SSL KEYS ---
 RUN curl -sL https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor >> /etc/apt/trusted.gpg.d/microsoft.gpg
 RUN add-apt-repository "deb [arch=amd64] https://packages.microsoft.com/repos/azure-cli/ $(lsb_release -cs) main"
-
+     
 # --- INSTALL HELM ---
 RUN curl -sL https://baltocdn.com/helm/signing.asc | gpg --dearmor >> /etc/apt/trusted.gpg.d/baltocdn.gpg
 RUN add-apt-repository "deb https://baltocdn.com/helm/stable/debian/ all main"
