@@ -99,9 +99,9 @@ CORE_MOUNTS=(
 
 # --- MAKE SURE DIRECTORIES ARE CREATED ---
 for n in $(echo ${CORE_MOUNTS[*]} | sed 's/\-. //g'); do
-  [ $n == "/var/run/docker.sock" ] && continue
   localdir=$(echo $n | awk -F: '{ print $1 }')
-  [ -d $localdir -a -d $localdir ] && mkdir -p $localdir
+  [ $localdir == "/var/run/docker.sock" ] && continue
+  [ ! -d $localdir -a ! -f $localdir ] && mkdir -p $localdir
 done
 
 [ $ROOT_SHELL -eq 0 ] && LOGIN_OPTION=$USER_OPTIONS || LOGIN_OPTION=$ROOT_OPTIONS

@@ -279,9 +279,9 @@ if [ ! -f /tdh_tools_docker_container  ]; then
     
     # --- MAKE SURE DIRECTORIES ARE CREATED ---
     for n in $(echo ${CORE_MOUNTS[*]} | sed 's/\-. //g'); do
-      [ $n == "/var/run/docker.sock" ] && continue
-      localdir=$(echo $n | awk -F: '{ print $1 }') 
-      [ -d $localdir -a -d $localdir ] && mkdir -p $localdir
+      localdir=$(echo $n | awk -F: '{ print $1 }')
+      [ $localdir == "/var/run/docker.sock" ] && continue
+      [ ! -d $localdir -a ! -f $localdir ] && mkdir -p $localdir
     done
 
     docker run $ROOT_OPTIONS ${CORE_MOUNTS[*]} tdh-tools:latest chmod 666 /var/run/docker.sock > /dev/null 2>&1
