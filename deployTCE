@@ -56,10 +56,12 @@ listDeployments() {
   printf "%-31s %-7s %-28s %s\n" "CONFIURATION" "CLOUD" "MANAGEMENT-CLUSTER" "STATUS"
   echo "-----------------------------------------------------------------------------------------------------------"
 
+echo gaga1
   cnt=$(ls -1 ${HOME}/.tanzu-demo-hub/config/tcemc-*.cfg 2>/dev/null | wc -l | sed 's/  *//g')
   if [ $cnt -eq 0 ]; then
     echo "No TKG Management Cluster has been deployed, Please use ./deployTKGmc"
   else
+echo gaga2
     for deployment in $(ls -1 ${HOME}/.tanzu-demo-hub/config/tcemc-*.cfg 2>/dev/null); do
       TDH_TKGMC_NAME=$(egrep "^TDH_TKGMC_NAME=" $deployment | awk -F'=' '{ print $2 }')
       TDH_TKGMC_CONFIG=$(egrep "^TDH_TKGMC_CONFIG=" $deployment | awk -F'=' '{ print $2 }')
@@ -82,7 +84,9 @@ listDeployments() {
         cnt=$(kubectl config get-clusters | egrep -c "^$TDH_TKGMC_NAME")
         if [ $cnt -eq 0 ]; then stt="not-deployed"; else stt="deployed/$smc"; fi
       else
+echo "tanzu config server list"
         cnt=$(tanzu config server list |  egrep -c " $TDH_TKGMC_NAME ")
+echo "CNT:$cnt"
         if [ $cnt -gt 0 ]; then
           smc="active"
           ctx=$(tanzu config server list |  egrep " $TDH_TKGMC_NAME " | awk '{ print $NF }')
@@ -99,6 +103,7 @@ listDeployments() {
     done
   fi
 
+echo gaga10
   echo "-----------------------------------------------------------------------------------------------------------"
 }
 
