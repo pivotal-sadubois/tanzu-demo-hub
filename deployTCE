@@ -90,7 +90,7 @@ echo gaga32
         if [ $cnt -eq 0 ]; then stt="not-deployed"; else stt="deployed/$smc"; fi
 echo gaga34
       else
-echo "tanzu config server list"
+echo "tanzu config server list |  egrep -c \" $TDH_TKGMC_NAME \""
         cnt=$(tanzu config server list |  egrep -c " $TDH_TKGMC_NAME ")
 echo "CNT:$cnt"
         if [ $cnt -gt 0 ]; then
