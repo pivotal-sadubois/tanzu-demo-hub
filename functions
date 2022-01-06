@@ -2429,13 +2429,8 @@ createTKGMCcluster() {
 
       # --- CLEAN OLD MANAGEMENT CLUSTER CONFIG ---
       rm -f ~/.tanzu/config.yaml /tmp/$TDH_TKGMC_NAME.log
-      #rm -f $TKG_KUBECONFIG $TKG_TEMPLATE
-      ls -la $TKG_TEMPLATE
 
       messagePrint " ▪ Management Cluster Creating"        "This may take up to 15min ..."
-
-      echo "TKG_TEMPLATE:$TKG_TEMPLATE"
-      ls -la $TKG_TEMPLATE
 
       if [ $DEBUG -gt 0 ]; then
         messageLine
