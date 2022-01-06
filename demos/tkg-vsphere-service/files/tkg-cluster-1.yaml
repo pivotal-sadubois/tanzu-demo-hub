@@ -23,10 +23,10 @@ spec:
     controlPlane:
       class: guaranteed-small
       count: 1
-      storageClass: pacific-gold-storage-policy
+      storageClass: tanzu
     workers:
       #class: best-effort-2xlarge
       class: guaranteed-small
       count: 1
-      storageClass: pacific-gold-storage-policy
+      storageClass: tanzu
 

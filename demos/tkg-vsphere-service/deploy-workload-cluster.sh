@@ -61,7 +61,7 @@ fi
 
 [ "$VSPHERE_NAMESPACE" == "" ] && export VSPHERE_NAMESPACE=tanzu-demo
 
-prtHead "Login to the vSphere Envifonment on ($VSPHERE_SERVER / $VSPHERE_USER)" 
+prtHead "Login to the vSphere Envifonment on (http://$VSPHERE_SERVER / $VSPHERE_USER)" 
 prtText " - inspect 'Hosts and Clusters'"
 prtText " - inspect 'Workload Management'"
 prtText ""
@@ -71,7 +71,8 @@ prtHead "Create a new vSphere Namespace 'tanzu-demo'"
 prtText " - Menu -> 'Workload Management' => New Namespace"
 prtText "      - Name: tanzu-demo => Create"
 prtText " - Namespace -> 'tanzu-demo' -> Summary"
-prtText "      - Storage -> Add Storage -> pacific.gold-storage-policy"
+#prtText "      - Storage -> Add Storage -> pacific.gold-storage-policy"
+prtText "      - Storage -> Add Storage -> tanzu"
 prtText "      - Permissions"
 prtText "      - Capacity and Usage"
 prtText "      - VM Servic -> Add VM Class"
@@ -121,8 +122,9 @@ prtText "press 'return' to continue"; read x
 
 prtHead "Cleanup and delete Kubernetes Cluster"
 execCmd "kubectl config use-context $SUPERVISOR_CLUSTER"
-#execCmd "kubectl delete cluster -n $VSPHERE_NAMESPACE $GUEST_CLUSTER"
-execCmd "kubectl delete tanzukubernetescluster -n $VSPHERE_NAMESPACE $GUEST_CLUSTER"
+prtText "=> To delete the cluster"
+#prtText "kubectl delete cluster -n $VSPHERE_NAMESPACE $GUEST_CLUSTER"
+prtText "kubectl delete tanzukubernetescluster -n $VSPHERE_NAMESPACE $GUEST_CLUSTER"
 
 prtText ""
 
