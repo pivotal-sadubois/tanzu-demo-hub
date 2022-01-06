@@ -101,8 +101,11 @@ CORE_MOUNTS=(
 for n in $(echo ${CORE_MOUNTS[*]} | sed 's/\-. //g'); do
   [ $n == "/var/run/docker.sock" ] && continue
   localdir=$(echo $n | awk -F: '{ print $1 }')
+echo $localdir
   [ -d $localdir -a -d $localdir ] && mkdir -p $localdir
 done
+
+exit
 
 [ $ROOT_SHELL -eq 0 ] && LOGIN_OPTION=$USER_OPTIONS || LOGIN_OPTION=$ROOT_OPTIONS
 docker run $ROOT_OPTIONS ${CORE_MOUNTS[*]} tdh-tools-tce:latest chmod 666 /var/run/docker.sock > /dev/null 2>&1
