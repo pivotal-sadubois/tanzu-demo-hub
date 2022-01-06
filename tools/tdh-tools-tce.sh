@@ -99,8 +99,11 @@ CORE_MOUNTS=(
 
 # --- MAKE SURE DIRECTORIES ARE CREATED ---
 for n in $(echo ${CORE_MOUNTS[*]} | sed 's/\-. //g'); do
+echo "N:$n"
   localdir=$(echo $n | awk -F: '{ print $1 }')
+echo "   localdir:$localdir"
   [ $n == "/var/run/docker.sock" ] && continue
+echo gaga
   [ ! -d $localdir -a ! -f $localdir ] && mkdir -p $localdir
 done
 
