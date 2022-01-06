@@ -98,12 +98,10 @@ CORE_MOUNTS=(
        ) 
 
 # --- MAKE SURE DIRECTORIES ARE CREATED ---
-[ ! -d $$HOME/$TDH_TOOLS_PATH ] && mkdir -p $HOME/$TDH_TOOLS_PATH
 for n in $(echo ${CORE_MOUNTS[*]} | sed 's/\-. //g'); do
   [ $n == "/var/run/docker.sock" ] && continue
   localdir=$(echo $n | awk -F: '{ print $1 }')
-echo $localdir
-  [ -d $localdir -a -d $localdir ] && mkdir -p $localdir
+  [ ! -d $localdir -a ! -f $localdir ] && mkdir -p $localdir
 done
 
 exit
