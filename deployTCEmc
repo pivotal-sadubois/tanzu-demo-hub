@@ -1488,10 +1488,14 @@ fi
   echo ""
   echo "-----------------------------------------------------------------------------------------------------------"
 
+echo "tanzu management-cluster create -i docker --name <MGMT-CLUSTER-NAME> -v 10 --plan dev --ceip-participation=false"
+echo "TDH_TKGMC_NAME:$TDH_TKGMC_NAME"
+
 exit
 
 tanzu management-cluster create -y --file vs1.yaml 
 
+exit
 rm -rf $HOME/.config/tanzu
 kind get clusters 2>/dev/null | xargs -n1 kind delete cluster --name > /dev/null 2>&1
 docker rm -f $(docker ps -aq) > /dev/null 2>&1
