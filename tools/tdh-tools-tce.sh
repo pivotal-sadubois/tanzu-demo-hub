@@ -104,30 +104,6 @@ for n in $(echo ${CORE_MOUNTS[*]} | sed 's/\-. //g'); do
   [ -d $localdir -a -d $localdir ] && mkdir -p $localdir
 done
 
-------------
-
-# --- DUMP ENVIRONMENT VARIABLES ---
-env | grep TDH > /tmp/tdh.env
-
-USER_OPTIONS="-u $(id -u):$(id -g) -it --init --rm --name tdh-tools-tce --network=host --env-file /tmp/tdh.env -e \"KUBECONFIG=$HOME/.kube/config\""
-ROOT_OPTIONS="-it --init --rm --name tdh-tools-tce --network=host --env-file /tmp/tdh.env"
-CORE_MOUNTS="-v /var/run/docker.sock:/var/run/docker.sock \
-             -v $HOME/.tanzu-demo-hub:$HOME/.tanzu-demo-hub:rw \
-             -v $HOME/.tdh-tools-tce/.cache:$HOME/.cache:rw \
-             -v $HOME/.tdh-tools-tce/.config:$HOME/.config:rw \
-             -v $HOME/.tdh-tools-tce/.kube:$HOME/.kube:rw \
-             -v $HOME/.tdh-tools-tce/.kube-tkg:$HOME/.kube-tkg:rw \
-             -v $HOME/.tdh-tools-tce/.local:$HOME/.local:rw \
-             -v $HOME/.tdh-tools-tce/.tanzu:$HOME/.tanzu:rw \
-             -v $HOME/.tdh-tools-tce/.terraform:$HOME/.terraform:rw \
-             -v $HOME/.tdh-tools-tce/.s3cfg:$HOME/.s3cfg:rw \
-             -v $HOME/.tdh-tools-tce/.govmomi:$HOME/.govmomi:rw \
-             -v $HOME/.tdh-tools-tce/.gradle:$HOME/.gradle:rw \
-             -v $HOME/.tdh-tools-tce/.mvn:$HOME/.mvn:rw"
-
-# --- MAKE SURE DIRECTORIES ARE CREATED ---
-createTDHdirs $(echo $CORE_MOUNTS | sed -e 's/-v//g' | awk '{ for ( i=1; i<=NF; i++) { printf("%s\n",$i)}}' | awk -F: ' { print $1 }')
-
 [ $ROOT_SHELL -eq 0 ] && LOGIN_OPTION=$USER_OPTIONS || LOGIN_OPTION=$ROOT_OPTIONS
 docker run $ROOT_OPTIONS $CORE_MOUNTS tdh-tools-tce:latest chmod 666 /var/run/docker.sock > /dev/null 2>&1
 docker run $USER_OPTIONS $CORE_MOUNTS tdh-tools-tce:latest /usr/local/bin/tdh-postinstall-user-tce.sh > /dev/null 2>&1
