@@ -98,16 +98,11 @@ CORE_MOUNTS=(
        ) 
 
 # --- MAKE SURE DIRECTORIES ARE CREATED ---
-echo gaga1
 for n in $(echo ${CORE_MOUNTS[*]} | sed 's/\-. //g'); do
-echo "N:$n"
   localdir=$(echo $n | awk -F: '{ print $1 }')
-echo "  localdir:$localdir"
   [ $n == "/var/run/docker.sock" ] && continue
   [ ! -d $localdir -a ! -f $localdir ] && mkdir -p $localdir
 done
-
-exit
 
 [ $ROOT_SHELL -eq 0 ] && LOGIN_OPTION=$USER_OPTIONS || LOGIN_OPTION=$ROOT_OPTIONS
 docker run $ROOT_OPTIONS ${CORE_MOUNTS[*]} tdh-tools-tce:latest chmod 666 /var/run/docker.sock > /dev/null 2>&1
