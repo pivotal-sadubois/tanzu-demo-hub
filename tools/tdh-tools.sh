@@ -110,14 +110,3 @@ docker run $USER_OPTIONS ${CORE_MOUNTS[*]} tdh-tools:latest /usr/local/bin/tdh-p
 docker run $LOGIN_OPTION ${CORE_MOUNTS[*]} tdh-tools:latest $COMMAND
 
 exit 0
-
-    # --- PREPARE DOCKER-RUN ENVIRONMENT ---
-    dockerRunPreparation tdh-tools
-
-    docker run $ROOT_OPTIONS ${CORE_MOUNTS[*]} tdh-tools:latest chmod 666 /var/run/docker.sock > /dev/null 2>&1
-    docker run $USER_OPTIONS ${CORE_MOUNTS[*]} tdh-tools:latest /usr/local/bin/tdh-postinstall-user-tce.sh > /dev/null 2>&1
-    docker run $USER_OPTIONS ${CORE_MOUNTS[*]} tdh-tools:latest $TDHPATH/$CMD_EXEC $CMD_ARGS; ret=$?
-   
-    # --- FINISH CURRENT SESSION AS WE RUN AS CONTAINER ---
-    exit $ret
-

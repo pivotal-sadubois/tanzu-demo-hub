@@ -105,10 +105,10 @@ for n in $(echo ${CORE_MOUNTS[*]} | sed 's/\-. //g'); do
 done
 
 [ $ROOT_SHELL -eq 0 ] && LOGIN_OPTION=$USER_OPTIONS || LOGIN_OPTION=$ROOT_OPTIONS
-docker run $ROOT_OPTIONS $CORE_MOUNTS tdh-tools-tce:latest chmod 666 /var/run/docker.sock > /dev/null 2>&1
-docker run $USER_OPTIONS $CORE_MOUNTS tdh-tools-tce:latest /usr/local/bin/tdh-postinstall-user-tce.sh > /dev/null 2>&1
-docker run $LOGIN_OPTION $CORE_MOUNTS tdh-tools-tce:latest $COMMAND
+docker run $ROOT_OPTIONS ${CORE_MOUNTS[*]} tdh-tools-tce:latest chmod 666 /var/run/docker.sock > /dev/null 2>&1
+docker run $USER_OPTIONS ${CORE_MOUNTS[*]} tdh-tools-tce:latest /usr/local/bin/tdh-postinstall-user-tce.sh > /dev/null 2>&1
+docker run $LOGIN_OPTION ${CORE_MOUNTS[*]} tdh-tools-tce:latest $COMMAND
 
-exit
+exit 0
 
 
