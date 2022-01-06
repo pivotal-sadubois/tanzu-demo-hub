@@ -183,33 +183,48 @@ if [ ! -f /tdh_tools_docker_container  ]; then
     cid=$(docker ps -a | grep tdh-tools-tce:latest | awk '{ print $1 }')
     [ "$cid" != "" ] && for n in $cid; do docker rm $n -f > /dev/null 2>&1; done
 
-    mkdir -p $HOME/.mc $HOME/.cache $HOME/.config $HOME/.local
-    mkdir -p /tmp/docker && chmod a+w /tmp/docker
-    docker run -it --init --rm --name tdh-tools-tce -v /var/run/docker.sock:/var/run/docker.sock tdh-tools-tce:latest chmod 666 /var/run/docker.sock > /dev/null 2>&1
-    docker run -it --init --rm --name tdh-tools-tce -v /var/run/docker.sock:/var/run/docker.sock tdh-tools-tce:latest chown $(id -un):$(id -gn) $HOME > /dev/null 2>&1
-    docker run -u $(id -u):$(id -g) -it --init --rm --name tdh-tools-tce --network=host --env-file /tmp/tdh.env \
-       -v $HOME/.tanzu-demo-hub:$HOME/.tanzu-demo-hub:rw \
-       -v /var/run/docker.sock:/var/run/docker.sock \
-       -v $HOME/.tdh-tools/.cache:$HOME/.cache:rw \
-       -v $HOME/.tdh-tools/.config:$HOME/.config:rw \
-       -v $HOME/.tdh-tools/.kube:$HOME/.kube:rw \
-       -v $HOME/.tdh-tools/.kube-tkg:$HOME/.kube-tkg:rw \
-       -v $HOME/.tdh-tools/.local:$HOME/.local:rw \
-       -v $HOME/.tdh-tools/.tanzu:$HOME/.tanzu:rw \
-       -v $HOME/.tdh-tools/.terraform:$HOME/.terraform:rw \
-       -v $HOME/.tdh-tools/.s3cfg:$HOME/.s3cfg:rw \
-       -v $HOME/.tdh-tools/.govmomi:$HOME/.govmomi:rw \
-       -v $HOME/.tdh-tools/.gradle:$HOME/.gradle:rw \
-       -v $HOME/.tdh-tools/.mvn:$HOME/.mvn:rw \
-       -e "KUBECONFIG=$HOME/.kube/config" --hostname tdh-tools tdh-tools-tce:latest $TDHPATH/$CMD_EXEC $CMD_ARGS; ret=$?
+    # --- DUMP ENVIRONMENT VARIABLES ---
+    env | grep TDH > /tmp/tdh.env
 
+    TDH_TOOLS=tdh-tools-tce
+    TDH_TOOLS_PATH=".${TDH_TOOLS}"
+    CORE_OPTIONS="-it --init --rm --hostname tdh-tools --name $TDH_TOOLS --network=host"
+    USER_OPTIONS="$CORE_OPTIONS -u $(id -u):$(id -g) --env-file /tmp/tdh.env -e \"KUBECONFIG=$HOME/.kube/config\""
+    ROOT_OPTIONS="$CORE_OPTIONS --env-file /tmp/tdh.env -e \"KUBECONFIG=$HOME/.kube/config\""
 
-       #-v $HOME:$HOME:ro -v $HOME/.local:$HOME/.local:rw -v $HOME/.tanzu-demo-hub:$HOME/.tanzu-demo-hub:rw \
-       #-v /var/run/docker.sock:/var/run/docker.sock -v $HOME/.cache:$HOME/.cache:rw -v $HOME/.config:$HOME/.config:rw \
-       #-v $HOME/.aws:$HOME/.aws:rw -v $HOME/.vmware-cna-saas:$HOME/.vmware-cna-saas:rw -v $HOME/.azure:$HOME/.azure:rw \
-       #-v /tmp:/tmp:rw -v /tmp/docker:$HOME/.docker:rw -v $HOME/.mc:$HOME/.mc:rw -v $HOME/.tanzu:$HOME/.tanzu:rw \
-       #-v $HOME/.kube-tkg:$HOME/.kube-tkg:rw -v $HOME/.kube:$HOME/.kube:rw \
-       #-e "KUBECONFIG=$HOME/.kube/config" --hostname tdh-tools tdh-tools-tce:latest $TDHPATH/$CMD_EXEC $CMD_ARGS; ret=$?
+    CORE_MOUNTS=(
+             "-v /var/run/docker.sock:/var/run/docker.sock"                           ## REQIORED FOR DOCKER
+             "-v $HOME/.tanzu-demo-hub:$HOME/.tanzu-demo-hub:rw"
+             "-v $HOME/.tanzu-demo-hub.cfg:$HOME/.tanzu-demo-hub.cfg:ro"
+             "-v $HOME/$TDH_TOOLS_PATH/.cache:$HOME/.cache:rw"
+             "-v $HOME/$TDH_TOOLS_PATH/.config:$HOME/.config:rw"                      ## CONFIG FOR HELM AND TANZU
+             "-v $HOME/$TDH_TOOLS_PATH/.kube:$HOME/.kube:rw"
+             "-v $HOME/$TDH_TOOLS_PATH/.kube-tkg:$HOME/.kube-tkg:rw"
+             "-v $HOME/$TDH_TOOLS_PATH/.local:$HOME/.local:rw"
+             "-v $HOME/$TDH_TOOLS_PATH/.tanzu:$HOME/.tanzu:rw"
+             "-v $HOME/$TDH_TOOLS_PATH/.terraform:$HOME/.terraform:rw"
+             "-v $HOME/$TDH_TOOLS_PATH/.terraform.d:$HOME/.terraform.d:rw"
+             "-v $HOME/$TDH_TOOLS_PATH/.s3cfg:$HOME/.s3cfg:rw"
+             "-v $HOME/$TDH_TOOLS_PATH/.govmomi:$HOME/.govmomi:rw"
+             "-v $HOME/$TDH_TOOLS_PATH/.gradle:$HOME/.gradle:rw"
+             "-v $HOME/$TDH_TOOLS_PATH/.docker:$HOME/.docker:rw"                      ## DOCKER LOGIN CREDENTIALS
+             "-v $HOME/$TDH_TOOLS_PATH/.mvn:$HOME/.mvn:rw"
+             "-v $HOME/$TDH_TOOLS_PATH/.aws:$HOME/.aws:rw"                            ## PERSISTANT AWS CREDENTIALS
+             "-v $HOME/$TDH_TOOLS_PATH/.vmware-cna-saas:$HOME/.vmware-cna-saas:rw"    ## TANZU MISSION CONTROL (TMC) LOGIN CREDENTIALS
+             "-v $HOME/$TDH_TOOLS_PATH/tmp:/tmp:rw"                                   ## KEEP TEMP PERSISTENT
+             "-v $TDHPATH/:$TDHPATH:ro"                                               ## TANZU-DEMO-HUB DIRECTORY
+           )
+
+    # --- MAKE SURE DIRECTORIES ARE CREATED ---
+    for n in $(echo ${CORE_MOUNTS[*]} | sed 's/\-. //g'); do
+      [ $n == "/var/run/docker.sock" ] && continue
+      localdir=$(echo $n | awk -F: '{ print $1 }')
+      [ -d $localdir -a -d $localdir ] && mkdir -p $localdir
+    done
+
+    docker run $ROOT_OPTIONS ${CORE_MOUNTS[*]} tdh-tools:latest chmod 666 /var/run/docker.sock > /dev/null 2>&1
+    docker run $USER_OPTIONS ${CORE_MOUNTS[*]} tdh-tools:latest /usr/local/bin/tdh-postinstall-user-tce.sh > /dev/null 2>&1
+    docker run $USER_OPTIONS ${CORE_MOUNTS[*]} tdh-tools:latest $TDHPATH/$CMD_EXEC $CMD_ARGS; ret=$?
 
     # --- FINISH CURRENT SESSION AS WE RUN AS CONTAINER ---
     exit $ret
@@ -385,6 +400,7 @@ uodateConfigMap tanzu-demo-hub TDH_PROVISIONER_NAME               "$TMC_PROVISIO
 uodateConfigMap tanzu-demo-hub TDH_MISSION_CONTROL_ACCOUNT_NAME   "ukn"
 
 # --- INSTALL K8 SERVICES ---
+exit
 InstallMetallLB
 InstallCertManager
 InstallContour
