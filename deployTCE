@@ -63,11 +63,13 @@ echo gaga1
   else
 echo gaga2
     for deployment in $(ls -1 ${HOME}/.tanzu-demo-hub/config/tcemc-*.cfg 2>/dev/null); do
+echo gaga21
       TDH_TKGMC_NAME=$(egrep "^TDH_TKGMC_NAME=" $deployment | awk -F'=' '{ print $2 }')
       TDH_TKGMC_CONFIG=$(egrep "^TDH_TKGMC_CONFIG=" $deployment | awk -F'=' '{ print $2 }')
       TDH_TKGMC_INFRASTRUCTURE=$(egrep "^TDH_TKGMC_INFRASTRUCTURE=" $deployment | awk -F'=' '{ print $2 }')
       TDH_TKGMC_KUBECONFIG=$(egrep "^TDH_TKGMC_KUBECONFIG=" $deployment | awk -F'=' '{ print $2 }')
 
+echo gaga22
       if [ "$TDH_TKGMC_INFRASTRUCTURE" == "Azure" ]; then
         TDH_REGION=$(egrep "^AZURE_LOCATION:" ${HOME}/.tanzu-demo-hub/config/$TDH_TKGMC_CONFIG | awk '{ print $2 }')
       fi
@@ -75,14 +77,18 @@ echo gaga2
       if [ "$TDH_TKGMC_INFRASTRUCTURE" == "AWS" ]; then
         TDH_REGION=$(egrep "^AWS_REGION:" ${HOME}/.tanzu-demo-hub/config/$TDH_TKGMC_CONFIG | awk '{ print $2 }')
       fi
+echo gaga23
 
       # --- VERIFY MANAGEMENT CLUSTER ---
       if [ "$TDH_TKGMC_INFRASTRUCTURE" == "AWS" -o "$TDH_TKGMC_INFRASTRUCTURE" == "Azure" -o "$TDH_TKGMC_INFRASTRUCTURE" == "docker1" ]; then
+echo gaga31
         kubectl get cluster --kubeconfig ${HOME}/.tanzu-demo-hub/config/${TDH_TKGMC_KUBECONFIG} -A --request-timeout 1 > /dev/null 2>&1
         if [ $? -ne 0 ]; then smc="unavailable"; else smc="active"; fi
+echo gaga32
 
         cnt=$(kubectl config get-clusters | egrep -c "^$TDH_TKGMC_NAME")
         if [ $cnt -eq 0 ]; then stt="not-deployed"; else stt="deployed/$smc"; fi
+echo gaga34
       else
 echo "tanzu config server list"
         cnt=$(tanzu config server list |  egrep -c " $TDH_TKGMC_NAME ")
