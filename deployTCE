@@ -339,8 +339,6 @@ uodateConfigMap tanzu-demo-hub TDH_MISSION_CONTROL_ACCOUNT_NAME   "ukn"
 # --- INSTALL K8 SERVICES ---
 InstallMetallLB
 InstallCertManager
-
-exit
 InstallContour
 
 exit

@@ -5608,12 +5608,14 @@ InstallContour() {
   fi
 
   NAMESPACE=ingress-contour
+#gaga
 
-  kubectl get ns $NAMESPACE > /dev/null 2>&1
+  cnt=$(kubectl get pods -A | egrep "^$NAMESPACE " | grep -c Running)
   if [ $? -ne 0 ]; then
     # --- INSTALL CONTOUR INGRESS ---
     messageTitle "Install Ingress Contour"
     messagePrint " ▪ Create Namespace" "$NAMESPACE" 
+    kubectl delete ns $NAMESPACE > /dev/null 2>&1
     kubectl create ns $NAMESPACE > /dev/null 2>&1
     helm repo add bitnami https://charts.bitnami.com/bitnami > /dev/null 2>&1
 
@@ -5963,6 +5965,7 @@ createClusterIssuer() {
 InstallCertManager() {
   NAMESPACE=cert-manager
 
+#gaga
   cnt=$(kubectl get pods -A | egrep "^$NAMESPACE " | grep -c Running)
   if [ $cnt -eq 0 ]; then
     # --- INSTALL CONTOUR INGRESS ---
