@@ -341,9 +341,8 @@ InstallMetallLB
 InstallCertManager
 InstallContour
 
-exit
-
 createClusterIssuer
+exit
 InstallHarborRegistry
 getRootCA tanzu-demo-hub-tls
 installBuildService
