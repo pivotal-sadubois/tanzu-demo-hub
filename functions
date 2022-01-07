@@ -6036,7 +6036,9 @@ InstallHarborRegistry() {
 
   messageTitle "Harbor Registry"
   cnt=$(kubectl get pods -A | egrep -c "^registry-harbor") 
+echo "CNT:$cnt"
   if [ $cnt -eq 0 ]; then
+echo gaga1
     # --- VERIFY SERVICE CONFIGURATION ---
     checkKubernetesServices harbor
 
@@ -6138,7 +6140,6 @@ InstallHarborRegistry() {
       [ $ret -eq 0 ] && break
       let cnt=cnt+1
       sleep 30
-echo "nid guet"
     done
 
     if [ $ret -ne 0 ]; then
