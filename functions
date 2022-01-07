@@ -6034,6 +6034,7 @@ InstallHarborRegistry() {
   HARBOR_HOSTNAME="harbor.apps-contour.$TDH_ENVNAME.$AWS_HOSTED_DNS_DOMAIN"
   NOTARY_HOSTNAME="notary.apps-contour.$TDH_ENVNAME.$AWS_HOSTED_DNS_DOMAIN"
 
+echo gaga
   messageTitle "Harbor Registry"
   cnt=$(kubectl get pods -A | egrep -c "^registry-harbor") 
 echo "CNT:$cnt"
