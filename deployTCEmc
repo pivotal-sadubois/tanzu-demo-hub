@@ -5,19 +5,38 @@
 # Author .......: Sacha Dubois, VMware
 # Description ..: Tanzu Demo Hub - Deploy TCE Management Cluster
 # ############################################################################################
-# BAD
-
 
 export TANZU_DEMO_HUB=$(cd "$(pwd)/$(dirname $0)"; pwd)
 export TDHPATH=$(cd "$(pwd)/$(dirname $0)"; pwd)
 export DEBUG=0
 export NATIVE=0                ## NATIVE=1 r(un on local host), NATIVE=0 (run within docker)
 export DEPLOY_TKG_CLEAN=0
+
+# --- SETTING FOR TDH-TOOLS ---
+export NATIVE=0                ## NATIVE=1 r(un on local host), NATIVE=0 (run within docker)
+export START_COMMAND="$*"
 export CMD_EXEC=$(basename $0)
 export CMD_ARGS=$*
-export TDH_TOOLS=tdh-tools-tce
 
-. $TANZU_DEMO_HUB/functions
+# --- SOUTCE FOUNCTIONS AND USER ENVIRONMENT ---
+[ -f $TANZU_DEMO_HUB/functions ] && . $TANZU_DEMO_HUB/functions
+[ -f $HOME/.tanzu-demo-hub.cfg ] && . $HOME/.tanzu-demo-hub.cfg
+
+while [ "$1" != "" ]; do
+  case $1 in
+    --delete)      DEPLOY_TKG_CLEAN=1;;
+    --debug)       DEBUG=1;;
+    --native)      NATIVE=1;;
+    *)             DEPLOY_TKG_TEMPLATE=$1;;
+  esac
+  shift
+done
+
+#############################################################################################################################
+################################### EXECUTING CODE WITHIN  TDH-TOOLS DOCKER CONTAINER  ######################################
+#############################################################################################################################
+runTDHtools tce "Deploy TCE Workload Cluster" "$TDHPATH/$CMD_EXEC" "$CMD_ARGS"
+
 
 usage() {
   echo "USAGE: $0 [oprions] <deployment>"
@@ -87,16 +106,6 @@ listClusters() {
     rm -f $TMPFILE
   fi
 }
-
-while [ "$1" != "" ]; do
-  case $1 in
-    --delete)      DEPLOY_TKG_CLEAN=1;;
-    --debug)       DEBUG=1;;
-    --native)      NATIVE=1;;
-    *)             DEPLOY_TKG_TEMPLATE=$1;;
-  esac
-  shift
-done
 
 if [ "${DEPLOY_TKG_TEMPLATE}" == "" ]; then
   listDeployments
@@ -970,7 +979,6 @@ createJumpHost() {
       route53setDNSrecord "$pip" "$JUMP_HOST" "$AWS_HOSTED_DNS_DOMAIN"
       messagePrint " ▪ Updating Zone Record for (jump.$TDH_TKGMC_ENVNAME.$AWS_HOSTED_DNS_DOMAIN)" "$pip"
       route53setDNSrecord "$pip" "jump.$TDH_TKGMC_ENVNAME.$AWS_HOSTED_DNS_DOMAIN" "$TDH_TKGMC_ENVNAME.$AWS_HOSTED_DNS_DOMAIN"
-#jjjjjjjjj az
 
       sed -in "/$JUMP_HOST/d" ~/.ssh/known_hosts
       messagePrint " ▪ Wait for SSH Daemon on jump-host to come online" "< 5min"
@@ -978,89 +986,18 @@ createJumpHost() {
   fi
 }
 
-if [ ! -f /tdh_tools_docker_container  ]; then
-  echo ""
-  echo "Tanzu Demo Hub - Deploy TCE Management Cluster"
-  echo "by Sacha Dubois, VMware Inc,"
-  echo "----------------------------------------------------------------------------------------------------------------------------------------------"
+# --- VERYFY ACCESS TO CLOUD ---
+checkTDHenvironment
 
-  # --- VERIFY TOOLS AND ACCESS ---
-  verify_docker
-  checkCLIcommands        BASIC
-  checkKubernetesServices registry_docker
+# --- VERIFY TOOLS AND ACCESS ---
+checkCloudCLI
+checkCLIcommands TOOLS
+checkCLIcommands TKG
+checkCLIcommands TANZU
+checkCLIcommands TMC
+checkCLIcommands VSPHERE
 
-  if [ $NATIVE -eq 0 ]; then
-    # --- CLEANUP IT DELETES ALL CONTAINERS !!! ----
-    tdh_tools_build tce
-
-    messagePrint " ▪ Running TDH Tools Docker Container" "tdh-tools-tce:latest $TDHPATH/$CMD_EXEC $CMD_ARGS"
- 
-    cid=$(docker ps -a | grep tdh-tools-tce:latest | awk '{ print $1 }') 
-    [ "$cid" != "" ] && for n in $cid; do docker rm $n -f > /dev/null 2>&1; done
-
-    # --- DUMP ENVIRONMENT VARIABLES ---
-    env | grep TDH > /tmp/tdh.env
-
-    TDH_TOOLS=tdh-tools-tce
-    TDH_TOOLS_PATH=".${TDH_TOOLS}"
-    CORE_OPTIONS="-it --init --rm --hostname tdh-tools --name $TDH_TOOLS --network=host"
-    USER_OPTIONS="$CORE_OPTIONS -u $(id -u):$(id -g) --env-file /tmp/tdh.env -e \"KUBECONFIG=$HOME/.kube/config\""
-    ROOT_OPTIONS="$CORE_OPTIONS --env-file /tmp/tdh.env -e \"KUBECONFIG=$HOME/.kube/config\""
-
-    CORE_MOUNTS=(
-             "-v /var/run/docker.sock:/var/run/docker.sock"                           ## REQIORED FOR DOCKER
-             "-v $HOME/.tanzu-demo-hub:$HOME/.tanzu-demo-hub:rw"
-             "-v $HOME/.tanzu-demo-hub.cfg:$HOME/.tanzu-demo-hub.cfg:ro"
-             "-v $HOME/$TDH_TOOLS_PATH/.cache:$HOME/.cache:rw"
-             "-v $HOME/$TDH_TOOLS_PATH/.config:$HOME/.config:rw"                      ## CONFIG FOR HELM AND TANZU
-             "-v $HOME/$TDH_TOOLS_PATH/.kube:$HOME/.kube:rw"
-             "-v $HOME/$TDH_TOOLS_PATH/.kube-tkg:$HOME/.kube-tkg:rw"
-             "-v $HOME/$TDH_TOOLS_PATH/.local:$HOME/.local:rw"
-             "-v $HOME/$TDH_TOOLS_PATH/.tanzu:$HOME/.tanzu:rw"
-             "-v $HOME/$TDH_TOOLS_PATH/.terraform:$HOME/.terraform:rw"
-             "-v $HOME/$TDH_TOOLS_PATH/.terraform.d:$HOME/.terraform.d:rw"
-             "-v $HOME/$TDH_TOOLS_PATH/.s3cfg:$HOME/.s3cfg:rw"
-             "-v $HOME/$TDH_TOOLS_PATH/.govmomi:$HOME/.govmomi:rw"
-             "-v $HOME/$TDH_TOOLS_PATH/.gradle:$HOME/.gradle:rw"
-             "-v $HOME/$TDH_TOOLS_PATH/.docker:$HOME/.docker:rw"                      ## DOCKER LOGIN CREDENTIALS
-             "-v $HOME/$TDH_TOOLS_PATH/.mvn:$HOME/.mvn:rw"
-             "-v $HOME/$TDH_TOOLS_PATH/.aws:$HOME/.aws:rw"                            ## PERSISTANT AWS CREDENTIALS
-             "-v $HOME/$TDH_TOOLS_PATH/.vmware-cna-saas:$HOME/.vmware-cna-saas:rw"    ## TANZU MISSION CONTROL (TMC) LOGIN CREDENTIALS
-             "-v $HOME/$TDH_TOOLS_PATH/tmp:/tmp:rw"                                   ## KEEP TEMP PERSISTENT
-             "-v $TDHPATH/:$TDHPATH:ro"                                               ## TANZU-DEMO-HUB DIRECTORY
-           )
-
-    # --- MAKE SURE DIRECTORIES ARE CREATED ---
-    for n in $(echo ${CORE_MOUNTS[*]} | sed 's/\-. //g'); do
-      localdir=$(echo $n | awk -F: '{ print $1 }')
-      [ $localdir == "/var/run/docker.sock" ] && continue
-      [ ! -d $localdir -a ! -f $localdir ] && mkdir -p $localdir
-    done
-    docker run $ROOT_OPTIONS ${CORE_MOUNTS[*]} tdh-tools:latest chmod 666 /var/run/docker.sock > /dev/null 2>&1
-    docker run $USER_OPTIONS ${CORE_MOUNTS[*]} tdh-tools:latest /usr/local/bin/tdh-postinstall-user-tce.sh > /dev/null 2>&1
-    docker run $USER_OPTIONS ${CORE_MOUNTS[*]} tdh-tools:latest $TDHPATH/$CMD_EXEC $CMD_ARGS; ret=$?
-
-    # --- FINISH CURRENT SESSION AS WE RUN AS CONTAINER ---
-    exit $ret
-  else
-    # --- VERYFY ACCESS TO CLOUD ---
-    checkTDHenvironment    
-
-    # --- VERIFY TOOLS AND ACCESS ---
-    checkCloudCLI
-    checkCLIcommands TOOLS
-    checkCLIcommands TKG
-    checkCLIcommands TANZU
-    checkCLIcommands TMC
-    checkCLIcommands VSPHERE
-  fi
-fi
-
-if [ "$DEPLOY_TKG_CLEAN" -eq 1 ]; then
-  cleanupEnvironment
-
-  exit 0
-fi
+[ "$DEPLOY_TKG_CLEAN" -eq 1 ] && cleanupEnvironment && exit 0
 
 # --- INSTALL TANZU PLUGINS ---
 installTanzuPlugins
