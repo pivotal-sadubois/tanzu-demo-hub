@@ -5566,6 +5566,9 @@ InstallMetallLB() {
     HELM_VALUES=/tmp/metallb_values.yaml
 
     ipa=$(docker network inspect kind | jq -r '.[].IPAM.Config[].Subnet' | egrep "^[0-9]*\." | awk -F'.' '{ printf("%s.%s\n",$1,$2)}')
+echo "IPA:$ipa"
+
+exit
 
     echo "global:"                                     >  $HELM_VALUES
     echo "  imageRegistry: docker.io"                  >> $HELM_VALUES

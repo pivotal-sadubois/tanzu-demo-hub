@@ -344,8 +344,8 @@ uodateConfigMap tanzu-demo-hub TDH_PROVISIONER_NAME               "$TMC_PROVISIO
 uodateConfigMap tanzu-demo-hub TDH_MISSION_CONTROL_ACCOUNT_NAME   "ukn"
 
 # --- INSTALL K8 SERVICES ---
-exit
 InstallMetallLB
+exit
 InstallCertManager
 InstallContour
 
