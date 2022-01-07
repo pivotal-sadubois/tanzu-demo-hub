@@ -1389,16 +1389,16 @@ fi
     if [ "$NATIVE" == "0" ]; then
       echo "    => tools/$TDH_TOOLS.sh"
       echo "       tdh-tools:/$ tanzu kubernetes-release get"
-      echo "       tdh-tools:/$ tanzu cluster create -f \$HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.yaml -tkr $rel <cluster-name>"
+      echo "       tdh-tools:/$ tanzu cluster create -f \$HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.yaml --tkr $rel <cluster-name>"
       echo "       tdh-tools:/$ tanzu cluster create -f \$HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.yaml <cluster-name>"
-      echo "       tdh-tools:/$ tanzu cluster kubeconfig get <cluster-name> --admin"
+      echo "       tdh-tools:/$ tanzu cluster kubeconfig get --admin <cluster-name>"
       echo "       tdh-tools:/$ tanzu cluster list --include-management-cluster"
       echo "       tdh-tools:/$ exit"
     else
       echo "    => tanzu kubernetes-release get"
-      echo "    => tanzu cluster create -f \$HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.yaml -tkr $rel <cluster-name> "
+      echo "    => tanzu cluster create -f \$HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.yaml --tkr $rel <cluster-name> "
       echo "    => tanzu cluster create -f \$HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.yaml <cluster-name>"
-      echo "    => tanzu cluster kubeconfig get <cluster-name> --admin"
+      echo "    => tanzu cluster kubeconfig get --admin <cluster-name>"
       echo "    => tanzu cluster list --include-management-cluster"
     fi
   fi
