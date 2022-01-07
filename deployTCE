@@ -174,10 +174,12 @@ export TDH_TLS_SECRET=${TDH_TLS_CERT}-tls
 export TDH_TLS_ISSUER_NAME=letsencrypt-staging
 export TDH_TLS_ISSUER_CONFIG=/tmp/issuer-dns-manager1.yaml
 
+echo guguserli1
 
 # --- VERYFY ACCESS TO CLOUD ---
 chownDirectories
 checkTDHenvironment
+echo guguserli2
 
 # --- VERIFY TOOLS AND ACCESS ---
 checkTanzuCLI
@@ -186,6 +188,7 @@ checkCLIcommands TOOLS
 checkCLIcommands TKG
 checkCLIcommands TANZU
 checkCLIcommands TMC
+echo guguserli3
 
 if [ "$TDH_TKGWC_K8S_VERSION" != "" ]; then 
   tanzu kubernetes-release get 2323 | sed '1d'

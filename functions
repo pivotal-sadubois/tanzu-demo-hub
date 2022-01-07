@@ -8720,15 +8720,12 @@ runTDHtools() {
                "-v $TDHPATH/:$TDHPATH:ro"                                               ## TANZU-DEMO-HUB DIRECTORY
              )
 
-echo hallo1
       # --- MAKE SURE DIRECTORIES ARE CREATED ---
       for n in $(echo ${CORE_MOUNTS[*]} | sed 's/\-. //g'); do
         [ $n == "/var/run/docker.sock" ] && continue
         localdir=$(echo $n | awk -F: '{ print $1 }')
-echo "localdir:$localdir"
         [ -d $localdir -a -d $localdir ] && mkdir -p $localdir
       done
-echo hallo10
 
       docker run $ROOT_OPTIONS ${CORE_MOUNTS[*]} tdh-tools:latest chmod 666 /var/run/docker.sock > /dev/null 2>&1
       docker run $USER_OPTIONS ${CORE_MOUNTS[*]} tdh-tools:latest /usr/local/bin/tdh-postinstall-user-tce.sh > /dev/null 2>&1
