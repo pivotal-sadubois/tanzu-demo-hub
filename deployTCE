@@ -342,9 +342,9 @@ InstallCertManager
 InstallContour
 
 createClusterIssuer
-exit
 InstallHarborRegistry
 getRootCA tanzu-demo-hub-tls
+exit
 installBuildService
 installTanzuDataPostgres
 #installSpringCloudGateway
