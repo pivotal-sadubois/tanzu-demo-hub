@@ -7260,6 +7260,30 @@ tdh_tools_build() {
     REBUILD_REQUIRED_SOFTWARE=1       ## REBUILD REQUIRED BECAUSE OF SOFTWARE CHANGE 
   fi
 
+  if [ ! -x $TDH_DOCKER_FILES/kbld ]; then
+    # --- DOWNLOAD BUILD_SERVICE BINARIES ---
+    downloadFromPivnet kbld $TDH_CARVEL_KBLD "$TDH_CARVEL_KBLD" "kbld-linux-arm64"
+    [ -f /tmp/kbld-linux-arm64-$TDH_CARVEL_KBLD ] && mv /tmp/kbld-linux-arm64-$TDH_CARVEL_KBLD $TDH_DOCKER_FILES/kbld && chmod a+x $TDH_DOCKER_FILES/kbld
+
+    REBUILD_REQUIRED_SOFTWARE=1       ## REBUILD REQUIRED BECAUSE OF SOFTWARE CHANGE
+  fi
+
+  if [ ! -x $TDH_DOCKER_FILES/kapp ]; then
+    # --- DOWNLOAD BUILD_SERVICE BINARIES ---
+    downloadFromPivnet kapp $TDH_CARVEL_KAPP "$TDH_CARVEL_KAPP" "kapp-linux-arm64"
+    [ -f /tmp/kapp-linux-arm64-$TDH_CARVEL_KAPP ] && mv /tmp/kapp-linux-arm64-$TDH_CARVEL_KAPP $TDH_DOCKER_FILES/kapp && chmod a+x $TDH_DOCKER_FILES/kapp
+
+    REBUILD_REQUIRED_SOFTWARE=1       ## REBUILD REQUIRED BECAUSE OF SOFTWARE CHANGE
+  fi
+
+  if [ ! -x $TDH_DOCKER_FILES/ytt ]; then
+    # --- DOWNLOAD BUILD_SERVICE BINARIES ---
+    downloadFromPivnet ytt $TDH_CARVEL_YTT "$TDH_CARVEL_YTT" "ytt-linux-arm64"
+    [ -f /tmp/ytt-linux-arm64-$TDH_CARVEL_YTT ] && mv /tmp/ytt-linux-arm64-$TDH_CARVEL_YTT $TDH_DOCKER_FILES/ytt && chmod a+x $TDH_DOCKER_FILES/ytt
+
+    REBUILD_REQUIRED_SOFTWARE=1       ## REBUILD REQUIRED BECAUSE OF SOFTWARE CHANGE
+  fi
+
   if [ ! -x $TDH_DOCKER_FILES/kubectl-vsphere ]; then
     cp $TDHPATH/software/vsphere-plugin-Linux.zip /tmp
     unzip -d /tmp /tmp/vsphere-plugin-Linux.zip > /dev/null 2>&1

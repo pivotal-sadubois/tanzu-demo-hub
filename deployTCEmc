@@ -1340,13 +1340,23 @@ fi
   tanzu config server list 
   echo "-----------------------------------------------------------------------------------------------------------"
   printf "\e[1m1.) Check Management Cluster Status\e[0m\n"
-  echo "    => tanzu management-cluster get"
-  printf "    => %-80s %s\n" "kubectl config set-cluster ${TDH_TKGMC_NAME}" "# Set k8s Context to mc Cluster"
-  printf "    => %-80s %s\n" "kubectl config set-context ${TDH_TKGMC_NAME}-admin@${TDH_TKGMC_NAME}" "# Set k8s Context to mc Cluster"
-  printf "    => %-80s %s\n" "kubectl get cluster --all-namespaces" "# Set k8s Context to the TCE Management Cluster"
-  printf "    => %-80s %s\n" "kubectl get kubeadmcontrolplane,machine,machinedeployment --all-namespaces" "# To verify the first control plane is up"
-  printf "    => %-80s %s\n" "tanzu login --server $TDH_TKGMC_NAME" "# Show Tanzu Management Cluster"
-  printf "    => %-80s %s\n" "tanzu management-cluster get" "# Show Tanzu Management Cluster"
+  if [ "$NATIVE" == "0" ]; then
+    echo "    => tools/$TDH_TOOLS"
+    printf "       %-80s %s\n" "tdh-tools:/$ kubectl config set-cluster ${TDH_TKGMC_NAME}" "# Set k8s Context to mc Cluster"
+    printf "       %-80s %s\n" "tdh-tools:/$ kubectl config set-context ${TDH_TKGMC_NAME}-admin@${TDH_TKGMC_NAME}" "# Set k8s Context to mc Cluster"
+    printf "       %-80s %s\n" "tdh-tools:/$ kubectl get cluster --all-namespaces" "# Set k8s Context to the TCE Management Cluster"
+    printf "       %-80s %s\n" "tdh-tools:/$ kubectl get kubeadmcontrolplane,machine,machinedeployment --all-namespaces" "# To verify the first control plane is up"
+    printf "       %-80s %s\n" "tdh-tools:/$ tanzu login --server $TDH_TKGMC_NAME" "# Show Tanzu Management Cluster"
+    printf "       %-80s %s\n" "tdh-tools:/$ tanzu management-cluster get" "# Show Tanzu Management Cluster"
+  else
+    echo "    => tanzu management-cluster get"
+    printf "    => %-80s %s\n" "kubectl config set-cluster ${TDH_TKGMC_NAME}" "# Set k8s Context to mc Cluster"
+    printf "    => %-80s %s\n" "kubectl config set-context ${TDH_TKGMC_NAME}-admin@${TDH_TKGMC_NAME}" "# Set k8s Context to mc Cluster"
+    printf "    => %-80s %s\n" "kubectl get cluster --all-namespaces" "# Set k8s Context to the TCE Management Cluster"
+    printf "    => %-80s %s\n" "kubectl get kubeadmcontrolplane,machine,machinedeployment --all-namespaces" "# To verify the first control plane is up"
+    printf "    => %-80s %s\n" "tanzu login --server $TDH_TKGMC_NAME" "# Show Tanzu Management Cluster"
+    printf "    => %-80s %s\n" "tanzu management-cluster get" "# Show Tanzu Management Cluster"
+  fi
   
   if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "vSphere" ]; then
 
@@ -1388,18 +1398,20 @@ fi
     printf "\e[1m2.) Ceeate TCE Workload Cluster\e[0m\n"
     if [ "$NATIVE" == "0" ]; then
       echo "    => tools/$TDH_TOOLS.sh"
+      echo "       tdh-tools:/$ export CLUSTER_NAME=<workload_cluster_name>"
       echo "       tdh-tools:/$ tanzu kubernetes-release get"
-      echo "       tdh-tools:/$ tanzu cluster create -f \$HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.yaml --tkr $rel <cluster-name>"
-      echo "       tdh-tools:/$ tanzu cluster create -f \$HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.yaml <cluster-name>"
-      echo "       tdh-tools:/$ tanzu cluster kubeconfig get --admin <cluster-name>"
+      echo "       tdh-tools:/$ tanzu cluster create -f \$HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.yaml --tkr $rel \$CLUSTER_NAME"
+      echo "       tdh-tools:/$ tanzu cluster create -f \$HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.yaml \$CLUSTER_NAME"
+      echo "       tdh-tools:/$ tanzu cluster kubeconfig get --admin \$CLUSTER_NAME"
       echo "       tdh-tools:/$ tanzu cluster list --include-management-cluster"
       echo "       tdh-tools:/$ exit"
     else
-      echo "    => tanzu kubernetes-release get"
-      echo "    => tanzu cluster create -f \$HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.yaml --tkr $rel <cluster-name> "
-      echo "    => tanzu cluster create -f \$HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.yaml <cluster-name>"
-      echo "    => tanzu cluster kubeconfig get --admin <cluster-name>"
-      echo "    => tanzu cluster list --include-management-cluster"
+      echo "    => $ export CLUSTER_NAME=<workload_cluster_name>"
+      echo "    => $ tanzu kubernetes-release get"
+      echo "    => $ tanzu cluster create -f \$HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.yaml --tkr $rel \$CLUSTER_NAME"
+      echo "    => $ tanzu cluster create -f \$HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.yaml \$CLUSTER_NAME"
+      echo "    => $ tanzu cluster kubeconfig get --admin \$CLUSTER_NAME"
+      echo "    => $ tanzu cluster list --include-management-cluster"
     fi
   fi
 

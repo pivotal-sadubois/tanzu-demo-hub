@@ -14,6 +14,9 @@ ADD tdh-postinstall-root.sh        /usr/local/bin
 ADD tdh-postinstall-user-tce.sh    /usr/local/bin
 ADD tce-linux-amd64 /tanzu/tce-linux-amd64
 ADD hostname                       /etc/hostname
+ADD kbld            /usr/local/bin
+ADD kapp            /usr/local/bin
+ADD ytt             /usr/local/bin
 ADD argocd          /usr/local/bin
 ADD kubectl         /usr/local/bin
 ADD kp              /usr/local/bin

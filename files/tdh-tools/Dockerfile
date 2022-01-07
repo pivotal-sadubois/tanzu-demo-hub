@@ -12,6 +12,9 @@ ARG UID GID USER TZ HOME VMWUSER VMWPASS START
 ADD tdh-postinstall-root.sh     /usr/local/bin
 ADD tdh-postinstall-user.sh     /usr/local/bin
 ADD cli             /tanzu/cli
+ADD kbld            /usr/local/bin
+ADD kapp            /usr/local/bin
+ADD ytt             /usr/local/bin
 ADD argocd          /usr/local/bin
 ADD kubectl         /usr/local/bin
 ADD kp              /usr/local/bin
