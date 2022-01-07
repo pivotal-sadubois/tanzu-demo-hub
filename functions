@@ -5540,12 +5540,15 @@ InstallMetallLB() {
   #  return
   #fi
 
+echo gaga1
   NAMESPACE=metallb
   kubectl get namespace $NAMESPACE > /dev/null 2>&1
   if [ $? -ne 0 ]; then kubectl create namespace $NAMESPACE > /dev/null 2>&1; fi
 
   cnt=$(helm list -q -n $NAMESPACE | egrep -c "^metallb")
+echo "CNT:$cnt"
   if [ $cnt -eq 0 ]; then
+echo gaga2
     messageTitle "Installing MetallLB Loadbalancer"
     
     helm repo add metallb https://metallb.github.io/metallb > /dev/null 2>&1
@@ -8717,12 +8720,15 @@ runTDHtools() {
                "-v $TDHPATH/:$TDHPATH:ro"                                               ## TANZU-DEMO-HUB DIRECTORY
              )
 
+echo hallo1
       # --- MAKE SURE DIRECTORIES ARE CREATED ---
       for n in $(echo ${CORE_MOUNTS[*]} | sed 's/\-. //g'); do
         [ $n == "/var/run/docker.sock" ] && continue
         localdir=$(echo $n | awk -F: '{ print $1 }')
+echo "localdir:$localdir"
         [ -d $localdir -a -d $localdir ] && mkdir -p $localdir
       done
+echo hallo10
 
       docker run $ROOT_OPTIONS ${CORE_MOUNTS[*]} tdh-tools:latest chmod 666 /var/run/docker.sock > /dev/null 2>&1
       docker run $USER_OPTIONS ${CORE_MOUNTS[*]} tdh-tools:latest /usr/local/bin/tdh-postinstall-user-tce.sh > /dev/null 2>&1
