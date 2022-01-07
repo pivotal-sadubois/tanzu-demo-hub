@@ -5545,9 +5545,7 @@ InstallMetallLB() {
   if [ $? -ne 0 ]; then kubectl create namespace $NAMESPACE > /dev/null 2>&1; fi
 
   cnt=$(helm list -q -n $NAMESPACE | egrep -c "^metallb")
-echo "CNT:$cnt"
   if [ $cnt -eq 0 ]; then
-echo gaga2
     messageTitle "Installing MetallLB Loadbalancer"
     
     helm repo add metallb https://metallb.github.io/metallb > /dev/null 2>&1
