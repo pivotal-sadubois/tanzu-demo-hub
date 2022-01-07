@@ -317,11 +317,6 @@ fi
 # --- GET CREDENTIALS AND SET ENVIRONMENT ---
 tanzu cluster kubeconfig get $TDH_TKGWC_NAME --admin > /dev/null 2>&1
 
-
-echo "kubectl create deployment echoserver --image=datamanos/echoserver --port=8080"
-echo "kubectl expose deployment echoserver --port=8080 --type LoadBalancer"
-echo "kubectl get svc"
-
 # --- CLEANUP KUNECONFIG ---
 cleanKubeconfig
 setK8sEnvironment $TDH_TKGWC_NAME
@@ -344,6 +339,8 @@ uodateConfigMap tanzu-demo-hub TDH_MISSION_CONTROL_ACCOUNT_NAME   "ukn"
 # --- INSTALL K8 SERVICES ---
 InstallMetallLB
 InstallCertManager
+
+exit
 InstallContour
 
 exit
