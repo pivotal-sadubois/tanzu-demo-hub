@@ -6953,8 +6953,8 @@ cleanKubeconfig() {
 
   messageTitle "Cleaning Up kubectl config ($CONFIG)"
   for cluster in $(kubectl --kubeconfig=$CONFIG config get-clusters | sed '1d' | egrep "^tdh|^tkg-mc|^tce-mc^tdh-tce|^tcemc"); do
-    ctx=$(kubectl --kubeconfig=$CONFIG config view -o json | jq -r --arg key $cluster '.contexts[] | select(.context.cluster == $key).name')
-    usr=$(kubectl --kubeconfig=$CONFIG config view -o json | jq -r --arg key $cluster '.contexts[] | select(.context.cluster == $key).context.user')
+    ctx=$(kubectl --kubeconfig=$CONFIG config view -o json | jq -r --arg key $cluster '.contexts[] | select(.context.cluster == $key).name' 2>/dev/null)
+    usr=$(kubectl --kubeconfig=$CONFIG config view -o json | jq -r --arg key $cluster '.contexts[] | select(.context.cluster == $key).context.user' 2>/dev/null)
     cnt=$(echo $cluster | grep -c minikube)
     if [ $cnt -gt 0 ]; then 
       if [ ! -d ~/.minikube/profiles/${cluster} ]; then
@@ -6986,10 +6986,10 @@ cleanKubeconfig() {
 
   # --- CLEANUP CONTEXTS WITHOUT CLUSTERS ---
   for ctx in $(kubectl --kubeconfig=$CONFIG config view -o json | jq -r '.contexts[].name' 2>/dev/null); do
-    cls=$(kubectl --kubeconfig=$CONFIG config view -o json | jq -r --arg key $ctx '.contexts[] | select(.name == $key).context.cluster')
-    usr=$(kubectl --kubeconfig=$CONFIG config view -o json | jq -r --arg key $ctx '.contexts[] | select(.name == $key).context.user')
+    cls=$(kubectl --kubeconfig=$CONFIG config view -o json | jq -r --arg key $ctx '.contexts[] | select(.name == $key).context.cluster' 2>/dev/null)
+    usr=$(kubectl --kubeconfig=$CONFIG config view -o json | jq -r --arg key $ctx '.contexts[] | select(.name == $key).context.user' 2>/dev/null)
 
-    ret=$(kubectl --kubeconfig=$CONFIG config view -o json | jq -r --arg key $cls '.clusters[] | select(.name == $key).name')
+    ret=$(kubectl --kubeconfig=$CONFIG config view -o json | jq -r --arg key $cls '.clusters[] | select(.name == $key).name' 2>/dev/null)
     if [ "$ret" == "" ]; then 
       messagePrint " ▪ Cleaning up unused k8s Context" "$ctx, User: $usr"
       kubectl --kubeconfig=$CONFIG config unset contexts.${ctx} > /dev/null 2>&1

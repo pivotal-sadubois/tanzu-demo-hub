@@ -35,8 +35,7 @@ done
 #############################################################################################################################
 ################################### EXECUTING CODE WITHIN  TDH-TOOLS DOCKER CONTAINER  ######################################
 #############################################################################################################################
-runTDHtools tce "Deploy TCE Workload Cluster" "$TDHPATH/$CMD_EXEC" "$CMD_ARGS"
-
+runTDHtools tce "Deploy TCE Management Cluster" "$TDHPATH/$CMD_EXEC" "$CMD_ARGS"
 
 usage() {
   echo "USAGE: $0 [oprions] <deployment>"
@@ -1385,19 +1384,20 @@ fi
       echo "    => tanzu cluster delete \$CLUSTER_NAME -y"
     fi
   else
+    rel=$(tanzu kubernetes-release get | tail -2 | head -1 | awk '{ print $1 }')
     printf "\e[1m2.) Ceeate TCE Workload Cluster\e[0m\n"
     if [ "$NATIVE" == "0" ]; then
       echo "    => tools/$TDH_TOOLS.sh"
       echo "       tdh-tools:/$ tanzu kubernetes-release get"
-      echo "       tdh-tools:/$ tanzu cluster create -f \$HOME/.tanzu/tkg/clusterconfigs/${TDH_TKGMC_NAME}-wc-dev.yaml  <cluster-name> -tkr v1.18.17---vmware.2-tkg.1"
-      echo "       tdh-tools:/$ tanzu cluster create -f \$HOME/.tanzu/tkg/clusterconfigs/${TDH_TKGMC_NAME}-wc-prod.yaml <cluster-name>"
+      echo "       tdh-tools:/$ tanzu cluster create -f \$HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.yaml -tkr $rel <cluster-name>"
+      echo "       tdh-tools:/$ tanzu cluster create -f \$HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.yaml <cluster-name>"
       echo "       tdh-tools:/$ tanzu cluster kubeconfig get <cluster-name> --admin"
       echo "       tdh-tools:/$ tanzu cluster list --include-management-cluster"
       echo "       tdh-tools:/$ exit"
     else
       echo "    => tanzu kubernetes-release get"
-      echo "    => tanzu cluster create -f \$HOME/.tanzu/tkg/clusterconfigs/${TDH_TKGMC_NAME}-wc-dev.yaml  <cluster-name> -tkr v1.18.17---vmware.2-tkg.1"
-      echo "    => tanzu cluster create -f \$HOME/.tanzu/tkg/clusterconfigs/${TDH_TKGMC_NAME}-wc-prod.yaml <cluster-name>"
+      echo "    => tanzu cluster create -f \$HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.yaml -tkr $rel <cluster-name> "
+      echo "    => tanzu cluster create -f \$HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.yaml <cluster-name>"
       echo "    => tanzu cluster kubeconfig get <cluster-name> --admin"
       echo "    => tanzu cluster list --include-management-cluster"
     fi
@@ -1425,8 +1425,6 @@ fi
   echo ""
   echo "-----------------------------------------------------------------------------------------------------------"
 
-echo "tanzu management-cluster create -i docker --name <MGMT-CLUSTER-NAME> -v 10 --plan dev --ceip-participation=false"
-echo "TDH_TKGMC_NAME:$TDH_TKGMC_NAME"
 
 exit
 
