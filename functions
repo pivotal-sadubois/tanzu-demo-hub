@@ -6035,8 +6035,9 @@ InstallHarborRegistry() {
   NOTARY_HOSTNAME="notary.apps-contour.$TDH_ENVNAME.$AWS_HOSTED_DNS_DOMAIN"
 
 echo gaga
+kubectl get pods -A | egrep -c "^registry-harbor"
   messageTitle "Harbor Registry"
-  cnt=$(kubectl get pods -A | egrep -c "^registry-harbor") 
+  cnt=$(kubectl get pods -A | egrep -c "^$NAMESPACE") 
 echo "CNT:$cnt"
   if [ $cnt -eq 0 ]; then
 echo gaga1
@@ -6135,10 +6136,15 @@ echo gaga1
     messagePrint " ▪ Install Harbor Helm Chart"           "bitnami/contour"
     messagePrint " ▪ Install Harbor Helm Chart Version"   "$HELM_HARBOR_VERSION"
 
+echo "----------------------------"
     cnt=0; ret=1
     while [ $ret -ne 0 -a $cnt -lt 10 ]; do
-      helm install harbor bitnami/harbor -f $HARBOR_VALUES --version $HELM_HARBOR_VERSION -n $NAMESPACE --wait --wait-for-jobs > /dev/null 2>&1; ret=$?
+      #helm install harbor bitnami/harbor -f $HARBOR_VALUES --version $HELM_HARBOR_VERSION -n $NAMESPACE --wait --wait-for-jobs > /dev/null 2>&1; ret=$?
+echo "=> gaga try CNT:$cnt"
+      helm install harbor bitnami/harbor -f $HARBOR_VALUES --version $HELM_HARBOR_VERSION -n $NAMESPACE --wait --wait-for-jobs; ret=$?
+echo "  RET:$ret"
       [ $ret -eq 0 ] && break
+echo "  xxxx"
       let cnt=cnt+1
       sleep 30
     done
@@ -6146,7 +6152,7 @@ echo gaga1
     if [ $ret -ne 0 ]; then
       echo "ERROR: failed to install bitnami/harbor"
       if [ "$NATIVE" == "0" ]; then
-        echo "       => tools/tdh-tools.sh"
+        echo "       => tools/${TDH_TOOLS}.sh"
         echo "          tdh-tools:/$ helm install harbor bitnami/harbor -f $HARBOR_VALUES --version $HELM_HARBOR_VERSION -n $NAMESPACE"
         echo "          tdh-tools:/$ exit"
       else
@@ -6226,7 +6232,7 @@ echo gaga1
     if [ $ret -ne 0 ]; then
       echo "ERROR: failed to deploy HTTPProxy"
       if [ "$NATIVE" == "0" ]; then
-        echo "       => tools/tdh-tools.sh"
+        echo "       => tools/${TDH_TOOLS}.sh"
         echo "          tdh-tools:/$ kubectl apply -f $HARBOR_VALUES"
         echo "          tdh-tools:/$ exit"
       else
@@ -6258,7 +6264,7 @@ echo gaga1
     if [ $ret -ne 0 ]; then
       echo "ERROR: failed to login to registry"
       if [ "$NATIVE" == "0" ]; then
-        echo "       => tools/tdh-tools.sh"
+        echo "       => tools/${TDH_TOOLS}.sh"
         echo "          tdh-tools:/$ docker login $HARBOR_HOSTNAME -u admin -p $TDH_HARBOR_ADMIN_PASSWORD"
         echo "          tdh-tools:/$ exit"
       else
@@ -7153,7 +7159,7 @@ selfTestStep() {
 
   if [ "$NATIVE" -eq 0 ]; then
     echo "$CMD" > /tmp/exec && chmod 777 /tmp/exec
-    tools/tdh-tools.sh --silent --cmd "bash /tmp/exec" >> /tmp/selffTest.log 2>&1; ret=$?
+    tools/${TDH_TOOLS}.sh --silent --cmd "bash /tmp/exec" >> /tmp/selffTest.log 2>&1; ret=$?
   else
     eval $CMD >> /tmp/selffTest.log 2>&1; ret=$?
   fi
@@ -8178,7 +8184,7 @@ checkConnectivity() {
     echo "ERROR: The site http://ipv4.icanhazip.com can not be reached which is required for terraforms"
     echo "       Most likely the reason is that GlobalVPN is active. Please deactivate it and try again"
     if [ "$NATIVE" == "0" ]; then
-      echo "       => tools/tdh-tools.sh"
+      echo "       => tools/${TDH_TOOLS}.sh"
       echo "          tdh-tools:/$ curl http://ipv4.icanhazip.com"
       echo "          tdh-tools:/$ exit"
     else
@@ -8220,7 +8226,7 @@ installTanzuPackages() {
     if [ $ret -ne 0 ]; then
       echo "ERROR: failed to install Tanzu Package $PACKAGE_NAME)"
       if [ "$NATIVE" == "0" ]; then
-        echo "       => tools/tdh-tools.sh"
+        echo "       => tools/${TDH_TOOLS}.sh"
         echo "          tdh-tools:/$ tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $NAMESPACE --version $package_ver --create-namespace"
         echo "          tdh-tools:/$ exit"
       else
@@ -8271,7 +8277,7 @@ TanzuPackage_RepoSync() {
   if [ "$ret" != "Reconcile succeeded" ]; then
     echo "ERROR: failed to reconsilte Tanzu Packages in $NAMESPACE"
     if [ "$NATIVE" == "0" ]; then
-      echo "       => tools/tdh-tools.sh"
+      echo "       => tools/${TDH_TOOLS}.sh"
       echo "          tdh-tools:/$ tanzu package repository list -n tanzu-package-repo-global"
       echo "          tdh-tools:/$ exit"
     else
@@ -8312,7 +8318,7 @@ TanzuPackage_CertManager() {
     if [ $ret -ne 0 ]; then
       echo "ERROR: failed to install Tanzu Package $PACKAGE_NAME)"
       if [ "$NATIVE" == "0" ]; then
-        echo "       => tools/tdh-tools.sh"
+        echo "       => tools/${TDH_TOOLS}.sh"
         echo "          tdh-tools:/$ tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $NAMESPACE --version $package_ver --create-namespace"
         echo "          tdh-tools:/$ exit"
       else
@@ -8334,7 +8340,7 @@ TanzuPackage_CertManager() {
     tanzu package installed get $PACKAGE_NAME -n $NAMESPACE
     messageLine
     if [ "$NATIVE" == "0" ]; then
-      echo "       => tools/tdh-tools.sh"
+      echo "       => tools/${TDH_TOOLS}.sh"
       echo "          tdh-tools:/$ tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $NAMESPACE --version $package_ver --create-namespace"
       echo "          tdh-tools:/$ exit"
     else
@@ -8460,7 +8466,7 @@ TanzuPackage_Contour() {
     if [ $ret -ne 0 ]; then
       echo "ERROR: failed to install Tanzu Package $PACKAGE_NAME)"
       if [ "$NATIVE" == "0" ]; then
-        echo "       => tools/tdh-tools.sh"
+        echo "       => tools/${TDH_TOOLS}.sh"
         echo "          tdh-tools:/$ tanzu package install $PACKAGE_NAME --create-namespace \\"
         echo "                             --package-name $PACKAGE_ID \\"
         echo "                             --namespace $NAMESPACE --version $package_ver \\"
@@ -8488,7 +8494,7 @@ TanzuPackage_Contour() {
     tanzu package installed get $PACKAGE_NAME -n $NAMESPACE
     messageLine
     if [ "$NATIVE" == "0" ]; then
-      echo "       => tools/tdh-tools.sh"
+      echo "       => tools/${TDH_TOOLS}.sh"
       echo "          tdh-tools:/$ tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $NAMESPACE --version $package_ver --create-namespace"
       echo "          tdh-tools:/$ exit"
     else
