@@ -8301,12 +8301,13 @@ TanzuPackage_RepoSync() {
   while [ "$ret" != "Reconcile succeeded" -a $cnt -lt 10 ]; do
     ret=$(tanzu package repository list -n $NAMESPACE -o json 2>/dev/null | jq -r '.[].status' 2>/dev/null | grep -v "Reconcile succeeded")
 echo "RET:$ret:XX"
+
     [ "$ret" == "" ] && break
     sleep 60
     let cnt=cnt+1
   done
 
-  if [ "$ret" != "Reconcile succeeded" ]; then
+  if [ "$ret" != "" ]; then
     echo "ERROR: failed to reconsilte Tanzu Packages in $NAMESPACE"
     if [ "$NATIVE" == "0" ]; then
       echo "       => tools/${TDH_TOOLS}.sh"
