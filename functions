@@ -8306,6 +8306,7 @@ echo "RET:$ret:XX"
     sleep 60
     let cnt=cnt+1
   done
+echo "2 RET:$ret:XX"
 
   if [ "$ret" != "" ]; then
     echo "ERROR: failed to reconsilte Tanzu Packages in $NAMESPACE"
