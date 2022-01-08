@@ -6139,9 +6139,10 @@ echo gaga1
 echo "----------------------------"
     cnt=0; ret=1
     while [ $ret -ne 0 -a $cnt -lt 10 ]; do
+echo "helm install harbor bitnami/harbor -f $HARBOR_VALUES --version $HELM_HARBOR_VERSION -n $NAMESPACE --wait --wait-for-jobs --timeout 10m"
       #helm install harbor bitnami/harbor -f $HARBOR_VALUES --version $HELM_HARBOR_VERSION -n $NAMESPACE --wait --wait-for-jobs > /dev/null 2>&1; ret=$?
 echo "=> gaga try CNT:$cnt"
-      helm install harbor bitnami/harbor -f $HARBOR_VALUES --version $HELM_HARBOR_VERSION -n $NAMESPACE --wait --wait-for-jobs; ret=$?
+      helm install harbor bitnami/harbor -f $HARBOR_VALUES --version $HELM_HARBOR_VERSION -n $NAMESPACE --wait --wait-for-jobs --timeout 10m; ret=$?
 echo "  RET:$ret"
       [ $ret -eq 0 ] && break
 echo "  xxxx"
@@ -8250,20 +8251,50 @@ installTanzuPackages() {
 }
 
 # ------------------------------------------------------------------------------------------
-# Function Name ......: TanzuPackage_RepoSync
-# Function Purpose ...: Install Contour Ingress Controller
+# Function Name ......: TanzuPackage_AddRep
+# Function Purpose ...: Add Tanzu Package Repositories
 # ------------------------------------------------------------------------------------------
-# Argument ($1) ......: Tanzi Package Display Name
-#          ($2) ......: Namespace Name
-#          ($3) ......: Tanzu Package Name
-#          ($4) ......: Package Description
+# Argument ($1) ......: Tanzu Package Namespace Name
+#          ($2) ......: Tanzu Package Repo
+# ------------------------------------------------------------------------------------------
+# Return Value .......: 0 on Success, 1 on failure
+# ------------------------------------------------------------------------------------------
+TanzuPackage_AddRepo() {
+  NAMESPACE=$1
+  TANZU_REPO_NAME=$2
+  TANZU_REPO_URL=$3
+
+  stt=$(tanzu package repository list -n tanzu-package-repo-global -o json 2>/dev/null | \
+        jq -r --arg pkg tce-repo '.[] | select(.name == $pkg).status' 2>/dev/null) 
+  if [ "$stt" == "" ]; then 
+    messagePrint " ▪ Adding Tanzu Package Repository"   "$TANUU_REPO"
+    tanzu package repository add $TANZU_REPO_NAME --url $TANZU_REPO_URL \
+    --namespace $NAMESPACE; ret=$? 
+
+    if [ "$ret" != "Reconcile succeeded" ]; then
+      echo "ERROR: failed to reconsilte Tanzu Packages in $NAMESPACE"
+      if [ "$NATIVE" == "0" ]; then
+        echo "       => tools/${TDH_TOOLS}.sh"
+        echo "          tdh-tools:/$ tanzu tanzu package repository add $TANZU_REPO_NAME --url $TANZU_REPO_URL --namespace $NAMESPACE"
+        echo "          tdh-tools:/$ exit"
+      else
+        echo "       => tanzu tanzu package repository add $TANZU_REPO_NAME --url $TANZU_REPO_URL --namespace $NAMESPACE"
+      fi
+    fi
+  fi
+}
+
+# ------------------------------------------------------------------------------------------
+# Function Name ......: TanzuPackage_RepoSync
+# Function Purpose ...: Wait for Tanzu Package Repository to be ssynced
+# ------------------------------------------------------------------------------------------
+# Argument ($1) ......: Namespace Name
 # ------------------------------------------------------------------------------------------
 # Return Value .......: 0 on Success, 1 on failure
 # ------------------------------------------------------------------------------------------
 TanzuPackage_RepoSync() {
   NAMESPACE=$1
 
-  messageTitle "Tanzu Packages Reconsile Repositories"
   messagePrint " ▪ Wait for Tanzu Package Reconsile"   "$NAMESPACE"
 
   ret=""; cnt=0
