@@ -8269,9 +8269,9 @@ TanzuPackage_AddRepo() {
   if [ "$stt" == "" ]; then 
     messagePrint " ▪ Adding Tanzu Package Repository"   "$TANUU_REPO"
     tanzu package repository add $TANZU_REPO_NAME --url $TANZU_REPO_URL \
-    --namespace $NAMESPACE; ret=$? 
+    --namespace $NAMESPACE > /dev/null 2>&1; ret=$? 
 
-    if [ "$ret" != "Reconcile succeeded" ]; then
+    if [ $ret -ne 0 ]; then
       echo "ERROR: failed to reconsilte Tanzu Packages in $NAMESPACE"
       if [ "$NATIVE" == "0" ]; then
         echo "       => tools/${TDH_TOOLS}.sh"
