@@ -346,7 +346,7 @@ messageTitle "Tanzu Package Management"
 TanzuPackage_AddRepo      tanzu-package-repo-global tce-repo projects.registry.vmware.com/tce/main:0.9.1
 TanzuPackage_RepoSync     tanzu-package-repo-global
 messageLine
-tanzu package repository list -n 
+tanzu package repository list -A
 messageLine
 
 #TanzuPackage_CertManager
