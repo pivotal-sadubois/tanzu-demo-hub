@@ -8518,12 +8518,15 @@ TanzuPackage_CertManager() {
 # https://tanzucommunityedition.io/docs/latest/package-readme-harbor-2.3.3/
 # ------------------------------------------------------------------------------------------
 TanzuPackage_Harbor () {
+echo gaga1
   PACKAGE_NAME=$1
   NAMESPACE=registry-harbor
   NAMESPACE=tanzu-system-registry
+  NAMESPACE=harbor
   PACKAGE_ID=$2
   PACKAGE_DES="Harbor OCI Registry"
 
+echo gaga2
   HARBOR_TLS_SECRET=$TDH_TLS_SECRET
   NOTARY_TLS_SECRET=$TDH_TLS_SECRET
   HARBOR_HOSTNAME="harbor.apps-contour.$TDH_ENVNAME.$AWS_HOSTED_DNS_DOMAIN"
@@ -8531,6 +8534,7 @@ TanzuPackage_Harbor () {
 
   pkg=$(tanzu package installed get $PACKAGE_NAME -n $NAMESPACE -o json 2>/dev/null | jq -r '.[].name')
   if [ "$pkg" != "$PACKAGE_NAME" ]; then
+echo gaga3
     package_ver=$(tanzu package available list $PACKAGE_ID -A -o json | jq -r '.[]."version"' | tail -1)
     package_rel=$(tanzu package available list $PACKAGE_ID -A -o json | jq -r '.[]."released-at"' | tail -1)
 
@@ -8654,6 +8658,7 @@ TanzuPackage_Harbor () {
     echo "      timeoutPolicy:"                                                   >> $HARBOR_VALUES
     echo "        response: 600s"                                                 >> $HARBOR_VALUES
 
+echo gaga4
 echo "HARBOR_VALUES:$HARBOR_VALUES"
     messageTitle "Installing $PACKAGE_DES"
     messagePrint " ▪ Tanzu Package ($PACKAGE_NAME)"   "$PACKAGE_ID ($package_ver/$package_rel)"
