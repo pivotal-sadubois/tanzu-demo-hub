@@ -8542,7 +8542,8 @@ echo gaga3
 
     HARBOR_VALUES=/tmp/harbor_values.yaml
     echo "harborAdminPassword: $TDH_HARBOR_ADMIN_PASSWORD"                                                                      >  $HARBOR_VALUES
-    echo "secretKey: MmetwEOsKpC7VWGx"                                                                                          >>  $HARBOR_VALUES
+    echo "secretKey: MmetwEOsKpC7VWGx"                                                                                          >> $HARBOR_VALUES
+    echo "hostname: harbor.apps-contour.$TDH_ENVNAME.$AWS_HOSTED_DNS_DOMAIN"                                                    >> $HARBOR_VALUES
 
     echo ""                                                                                                                     >> $HARBOR_VALUES
     echo "global:"                                                                                                              >> $HARBOR_VALUES
