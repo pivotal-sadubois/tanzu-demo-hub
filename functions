@@ -8860,7 +8860,15 @@ TanzuPackage_Contour() {
   if [ "$ipa" == "" ]; then
     echo "ERROR: Failed to gather IP Adress of the ingress-contour-envoy service in namespace ingress-contour"
     echo "       Please check manually:"
-    echo "       => kubectl get svc --namespace $NAMESPACE"
+    messageLine
+    if [ "$NATIVE" == "0" ]; then
+      echo "       => tools/${TDH_TOOLS}.sh"
+      echo "          tdh-tools:/$ kubectl get svc --namespace $NAMESPACE"
+      echo "          tdh-tools:/$ exit"
+    else
+      echo "       => kubectl get svc --namespace $NAMESPACE"
+    fi
+
     exit 1
   fi
 
