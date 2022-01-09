@@ -8654,7 +8654,7 @@ TanzuPackage_Harbor () {
 
   ipa=""; cnt=0
   while [ "$ipa" == "" -a $cnt -lt 15 ]; do
-    ipa=$(kubectl describe svc envoy --namespace tanzu-system-ingress | egrep "^LoadBalancer Ingress:" | awk '{ print $NF }')
+    ipa=$(kubectl describe svc envoy --namespace projectcontour | egrep "^LoadBalancer Ingress:" | awk '{ print $NF }')
     [ "$ipa" != "" ] && break
     let cnt=cnt+1
     sleep 30
