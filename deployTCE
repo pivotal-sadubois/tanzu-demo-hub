@@ -345,12 +345,18 @@ InstallContour
 messageTitle "Tanzu Package Management"
 TanzuPackage_AddRepo      tanzu-package-repo-global tce-repo projects.registry.vmware.com/tce/main:0.9.1
 TanzuPackage_RepoSync     tanzu-package-repo-global
+
+TanzuPackage_CertManager  cert-manager cert-manager.community.tanzu.vmware.com
+TanzuPackage_Contour      Contour contour.community.tanzu.vmware.com
 TanzuPackage_LocalStorage local-path-storage local-path-storage.community.tanzu.vmware.com
+
+createClusterIssuer
+
 #TanzuPackage_Harbor       Harbor harbor.community.tanzu.vmware.com 
 
 exit
 
-createClusterIssuer
+
 InstallHarborRegistry
 getRootCA tanzu-demo-hub-tls
 exit

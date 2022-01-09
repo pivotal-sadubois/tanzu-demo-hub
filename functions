@@ -8413,9 +8413,9 @@ TanzuPackage_LocalStorage() {
 # https://docs.vmware.com/en/VMware-Tanzu-Kubernetes-Grid/1.4/vmware-tanzu-kubernetes-grid-14/GUID-packages-cert-manager.html
 # ------------------------------------------------------------------------------------------
 TanzuPackage_CertManager() {
-  PACKAGE_NAME=cert-manager
-  NAMESPACE=cert-manager
-  PACKAGE_ID=cert-manager.tanzu.vmware.com
+  PACKAGE_NAME=$1
+  NAMESPACE=$1
+  PACKAGE_ID=$2
   PACKAGE_DES="Certificate management (cert-manager)"
 
   pkg=$(tanzu package installed get $PACKAGE_NAME -n $NAMESPACE -o json 2>/dev/null | jq -r '.[].name')
@@ -8490,10 +8490,10 @@ TanzuPackage_CertManager() {
 # tanzu package available get contour.tanzu.vmware.com/1.17.1+vmware.1-tkg.1 --values-schema
 # ------------------------------------------------------------------------------------------
 TanzuPackage_Contour() {
-  PACKAGE_NAME=contour
+  PACKAGE_NAME=$1
   NAMESPACE=ingress-contour
   NAMESPACE=tanzu-system-ingress
-  PACKAGE_ID=contour.tanzu.vmware.com 
+  PACKAGE_ID=$2
   PACKAGE_DES="Contour ingress controller"
 
   pkg=$(tanzu package installed get $PACKAGE_NAME -n $NAMESPACE -o json 2>/dev/null | jq -r '.[].name')
