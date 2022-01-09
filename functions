@@ -8533,12 +8533,17 @@ TanzuPackage_Harbor () {
 
   pkg=$(tanzu package installed get $PACKAGE_NAME -n $PACKAGE_NAMESPACE -o json 2>/dev/null | jq -r '.[].name')
   if [ "$pkg" != "$PACKAGE_NAME" ]; then
+    messagePrint " ▪ Create Namespace"  "$NAMESPACE"
+    kubectl delete namespace $NAMESPACE > /dev/null 2>&1
+    kubectl create namespace $NAMESPACE > /dev/null 2>&1
+
     messagePrint " ▪ Create Docker secret"  "tdh-docker-repo"
     kubectl -n $NAMESPACE create secret docker-registry tdh-docker-repo \
             --docker-server $TDH_REGISTRY_DOCKER_NAME \
             --docker-username $TDH_REGISTRY_DOCKER_USER \
             --docker-password $TDH_REGISTRY_DOCKER_PASS > /dev/null 2>&1
 
+#gaga
     # --- COPY SECRET TO NAMESPACE ---
     kubectl get secret tanzu-demo-hub-tls --namespace=default  -oyaml | grep -v '^\s*namespace:\s' | \
     kubectl apply --namespace=$NAMESPACE -f - > /dev/null 2>&1
@@ -8584,12 +8589,12 @@ TanzuPackage_Harbor () {
 #    echo "    notaryExistingSecret: $NOTARY_TLS_SECRET"                                                                         >> $HARBOR_VALUES
 #    echo ""                                                                                                                     >> $HARBOR_VALUES
 
-    # https://github.com/goharbor/harbor-helm/blob/master/values.yaml
-    echo "externalURL: https://harbor.apps-contour.$TDH_ENVNAME.$AWS_HOSTED_DNS_DOMAIN"                                         >> $HARBOR_VALUES
-    echo ""                                                                                                                     >> $HARBOR_VALUES
-    echo "portal:"                                                                                                              >> $HARBOR_VALUES
-    echo "  tls:"                                                                                                               >> $HARBOR_VALUES
-    echo "    existingSecret: $HARBOR_TLS_SECRET"                                                                               >> $HARBOR_VALUES
+#    # https://github.com/goharbor/harbor-helm/blob/master/values.yaml
+#    echo "externalURL: https://harbor.apps-contour.$TDH_ENVNAME.$AWS_HOSTED_DNS_DOMAIN"                                         >> $HARBOR_VALUES
+#    echo ""                                                                                                                     >> $HARBOR_VALUES
+#    echo "portal:"                                                                                                              >> $HARBOR_VALUES
+#    echo "  tls:"                                                                                                               >> $HARBOR_VALUES
+#    echo "    existingSecret: $HARBOR_TLS_SECRET"                                                                               >> $HARBOR_VALUES
     echo ""                                                                                                                     >> $HARBOR_VALUES
     echo "persistence:"                                                                                                         >> $HARBOR_VALUES
     echo "  enabled: true"                                                                                                      >> $HARBOR_VALUES
