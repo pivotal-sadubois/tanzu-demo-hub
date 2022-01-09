@@ -8522,21 +8522,31 @@ TanzuPackage_Harbor () {
 echo gaga1
   PACKAGE_NAME=$1
   NAMESPACE=registry-harbor
-  NAMESPACE=tanzu-system-registry
-  NAMESPACE=harbor
+  NAMESPACE=tanzu-packages
   PACKAGE_ID=$2
   PACKAGE_DES="Harbor OCI Registry"
 
 echo gaga2
-  HARBOR_TLS_SECRET=harbor-tls
-  NOTARY_TLS_SECRET=harbor-tls
+  HARBOR_TLS_SECRET=tanzu-demo-hub-tls
+  NOTARY_TLS_SECRET=tanzu-demo-hub-tls
   HARBOR_HOSTNAME="harbor.apps-contour.$TDH_ENVNAME.$AWS_HOSTED_DNS_DOMAIN"
   NOTARY_HOSTNAME="notary.apps-contour.$TDH_ENVNAME.$AWS_HOSTED_DNS_DOMAIN"
 
   pkg=$(tanzu package installed get $PACKAGE_NAME -n $NAMESPACE -o json 2>/dev/null | jq -r '.[].name')
-echo "PKG:$pkg"
   if [ "$pkg" != "$PACKAGE_NAME" ]; then
-echo gaga3
+    messagePrint " ▪ Create Docker secret"  "tdh-docker-repo"
+    kubectl -n $NAMESPACE create secret docker-registry tdh-docker-repo \
+            --docker-server $TDH_REGISTRY_DOCKER_NAME \
+            --docker-username $TDH_REGISTRY_DOCKER_USER \
+            --docker-password $TDH_REGISTRY_DOCKER_PASS > /dev/null 2>&1
+
+    # --- COPY SECRET TO NAMESPACE ---
+    kubectl get secret tanzu-demo-hub-tls --namespace=default  -oyaml | grep -v '^\s*namespace:\s' | \
+    kubectl apply --namespace=$NAMESPACE -f - > /dev/null 2>&1
+
+    HARBOR_VALUES=/tmp/harbor_values.yaml
+    echo "harborAdminPassword: $TDH_HARBOR_ADMIN_PASSWORD"                                                                      >  $HARBOR_VALUES
+
     package_ver=$(tanzu package available list $PACKAGE_ID -A -o json | jq -r '.[]."version"' | tail -1)
     package_rel=$(tanzu package available list $PACKAGE_ID -A -o json | jq -r '.[]."released-at"' | tail -1)
 
@@ -8603,64 +8613,6 @@ echo gaga3
     echo "    trivy:"                                                                                                           >> $HARBOR_VALUES
     echo "      accessMode: ReadWriteOnce"                                                                                      >> $HARBOR_VALUES
     echo "      size: 10Gi"                                                                                                     >> $HARBOR_VALUES
-
-    # --- ADD HTTPProxy ---
-    echo "---"                                                                  >> $HARBOR_VALUES
-    echo "apiVersion: projectcontour.io/v1"                                       >> $HARBOR_VALUES
-    echo "kind: HTTPProxy"                                                        >> $HARBOR_VALUES
-    echo "metadata:"                                                              >> $HARBOR_VALUES
-    echo "  name: harbor-httpproxy"                                               >> $HARBOR_VALUES
-    echo "  namespace: harbor"                                                    >> $HARBOR_VALUES
-    echo "  annotations:"                                                         >> $HARBOR_VALUES
-    echo "    kubernetes.io/ingress.class: contour"                               >> $HARBOR_VALUES
-    echo "spec:"                                                                  >> $HARBOR_VALUES
-    echo "  virtualhost:"                                                         >> $HARBOR_VALUES
-    echo "    fqdn: harbor.apps-contour.$TDH_ENVNAME.$AWS_HOSTED_DNS_DOMAIN"      >> $HARBOR_VALUES
-    echo "    tls:"                                                               >> $HARBOR_VALUES
-    echo "      secretName: $HARBOR_TLS_SECRET"                                   >> $HARBOR_VALUES
-    echo "  routes:"                                                              >> $HARBOR_VALUES
-    echo "    - conditions: "                                                     >> $HARBOR_VALUES
-    echo "      - prefix: /"                                                      >> $HARBOR_VALUES
-    echo "      services:"                                                        >> $HARBOR_VALUES
-    echo "        - name: harbor-portal"                                          >> $HARBOR_VALUES
-    echo "          port: 80"                                                     >> $HARBOR_VALUES
-    echo "      timeoutPolicy:"                                                   >> $HARBOR_VALUES
-    echo "        response: 600s"                                                 >> $HARBOR_VALUES
-    echo "    - conditions:"                                                      >> $HARBOR_VALUES
-    echo "      - prefix: /api/"                                                  >> $HARBOR_VALUES
-    echo "      services:"                                                        >> $HARBOR_VALUES
-    echo "        - name: harbor-core"                                            >> $HARBOR_VALUES
-    echo "          port: 80"                                                     >> $HARBOR_VALUES
-    echo "      timeoutPolicy:"                                                   >> $HARBOR_VALUES
-    echo "        response: 600s"                                                 >> $HARBOR_VALUES
-    echo "    - conditions:"                                                      >> $HARBOR_VALUES
-    echo "      - prefix: /service/"                                              >> $HARBOR_VALUES
-    echo "      services:"                                                        >> $HARBOR_VALUES
-    echo "        - name: harbor-core"                                            >> $HARBOR_VALUES
-    echo "          port: 80"                                                     >> $HARBOR_VALUES
-    echo "      timeoutPolicy:"                                                   >> $HARBOR_VALUES
-    echo "        response: 600s"                                                 >> $HARBOR_VALUES
-    echo "    - conditions:"                                                      >> $HARBOR_VALUES
-    echo "      - prefix: /v2/"                                                   >> $HARBOR_VALUES
-    echo "      services:"                                                        >> $HARBOR_VALUES
-    echo "        - name: harbor-core"                                            >> $HARBOR_VALUES
-    echo "          port: 80"                                                     >> $HARBOR_VALUES
-    echo "      timeoutPolicy:"                                                   >> $HARBOR_VALUES
-    echo "        response: 600s"                                                 >> $HARBOR_VALUES
-    echo "    - conditions:"                                                      >> $HARBOR_VALUES
-    echo "      - prefix: /chartrepo/"                                            >> $HARBOR_VALUES
-    echo "      services:"                                                        >> $HARBOR_VALUES
-    echo "        - name: harbor-core"                                            >> $HARBOR_VALUES
-    echo "          port: 80"                                                     >> $HARBOR_VALUES
-    echo "      timeoutPolicy:"                                                   >> $HARBOR_VALUES
-    echo "        response: 600s"                                                 >> $HARBOR_VALUES
-    echo "    - conditions:"                                                      >> $HARBOR_VALUES
-    echo "      - prefix: /c/"                                                    >> $HARBOR_VALUES
-    echo "      services:"                                                        >> $HARBOR_VALUES
-    echo "        - name: harbor-core"                                            >> $HARBOR_VALUES
-    echo "          port: 80"                                                     >> $HARBOR_VALUES
-    echo "      timeoutPolicy:"                                                   >> $HARBOR_VALUES
-    echo "        response: 600s"                                                 >> $HARBOR_VALUES
 
 echo gaga4
 echo "HARBOR_VALUES:$HARBOR_VALUES"
