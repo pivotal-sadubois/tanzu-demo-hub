@@ -8593,7 +8593,6 @@ TanzuPackage_Harbor () {
     echo "      size: 10Gi"                                                                                                     >> $HARBOR_VALUES
 
     # --- ADD HTTPProxy ---
-    HARBOR_VALUES=/tmp/harbor_httpproxy.yaml
     echo "apiVersion: projectcontour.io/v1"                                       >> $HARBOR_VALUES
     echo "kind: HTTPProxy"                                                        >> $HARBOR_VALUES
     echo "metadata:"                                                              >> $HARBOR_VALUES
