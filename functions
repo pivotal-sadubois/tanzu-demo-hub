@@ -8570,7 +8570,7 @@ TanzuPackage_Harbor () {
     messagePrint " ▪ Tanzu Package ($PACKAGE_NAME)"   "$PACKAGE_ID ($package_ver/$package_rel)"
     tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $NAMESPACE \
            --version $package_ver --create-namespace \
-           --values-file /tmp/contour-data-values.yaml --wait=true > /dev/null 2>&1; ret=$?
+           --values-file $HARBOR_VALUES --wait=true > /dev/null 2>&1; ret=$?
     if [ $ret -ne 0 ]; then
       echo "ERROR: failed to install Tanzu Package $PACKAGE_NAME)"
       if [ "$NATIVE" == "0" ]; then
@@ -8578,13 +8578,13 @@ TanzuPackage_Harbor () {
         echo "          tdh-tools:/$ tanzu package install $PACKAGE_NAME --create-namespace \\"
         echo "                             --package-name $PACKAGE_ID \\"
         echo "                             --namespace $NAMESPACE --version $package_ver \\"
-        echo "                             --values-file /tmp/contour-data-values.yaml"
+        echo "                             --values-file $HARBOR_VALUES"
         echo "          tdh-tools:/$ exit"
       else
         echo "       => tanzu package install $PACKAGE_NAME --create-namespace \\"
         echo "                             --package-name $PACKAGE_ID \\"
         echo "                             --namespace $NAMESPACE --version $package_ver \\"
-        echo "                             --values-file /tmp/contour-data-values.yaml"
+        echo "                             --values-file $HARBOR_VALUES"
       fi
 
       exit 1
@@ -8684,6 +8684,43 @@ TanzuPackage_Contour() {
   if [ "$pkg" != "$PACKAGE_NAME" ]; then
     package_ver=$(tanzu package available list $PACKAGE_ID -A -o json | jq -r '.[]."version"' | tail -1)
     package_rel=$(tanzu package available list $PACKAGE_ID -A -o json | jq -r '.[]."released-at"' | tail -1)
+
+echo "TDH_DEPLOYMENT_CLOUD:$TDH_DEPLOYMENT_CLOUD"
+echo "TDH_TKGMC_INFRASTRUCTURE:$TDH_TKGMC_INFRASTRUCTURE"
+
+sleep 10000
+
+    if [ "${TDH_DEPLOYMENT_CLOUD}" == "docker" -o "${TDH_TKGMC_INFRASTRUCTURE}" == "docker" ]; then
+      VALUE_FILE=/tmp/contour-data-values.yaml; rm -f $VALUE_FILE
+      echo "----"                                                                       >> $VALUE_FILE
+      echo "namespace: tanzu-system-ingress"                                            >> $VALUE_FILE
+      echo "contour:"                                                                   >> $VALUE_FILE
+      echo " configFileContents: {}"                                                    >> $VALUE_FILE
+      echo " useProxyProtocol: false"                                                   >> $VALUE_FILE
+      echo " replicas: 2"                                                               >> $VALUE_FILE
+      echo " pspNames: \"vmware-system-restricted\""                                    >> $VALUE_FILE
+      echo " logLevel: info"                                                            >> $VALUE_FILE
+      echo "envoy:"                                                                     >> $VALUE_FILE
+      echo " service:"                                                                  >> $VALUE_FILE
+      echo "   type: LoadBalancer"                                                      >> $VALUE_FILE
+      echo "   annotations: {}"                                                         >> $VALUE_FILE
+      echo "   nodePorts:"                                                              >> $VALUE_FILE
+      echo "     http: null"                                                            >> $VALUE_FILE
+      echo "     https: null"                                                           >> $VALUE_FILE
+      echo "   externalTrafficPolicy: Cluster"                                          >> $VALUE_FILE
+      echo "   disableWait: false"                                                      >> $VALUE_FILE
+      echo " hostPorts:"                                                                >> $VALUE_FILE
+      echo "   enable: true"                                                            >> $VALUE_FILE
+      echo "   http: 80"                                                                >> $VALUE_FILE
+      echo "   https: 443"                                                              >> $VALUE_FILE
+      echo " hostNetwork: false"                                                        >> $VALUE_FILE
+      echo " terminationGracePeriodSeconds: 300"                                        >> $VALUE_FILE
+      echo " logLevel: info"                                                            >> $VALUE_FILE
+      echo " pspNames: null"                                                            >> $VALUE_FILE
+      echo "certificates:"                                                              >> $VALUE_FILE
+      echo " duration: 8760h"                                                           >> $VALUE_FILE
+      echo " renewBefore: 360h"                                                         >> $VALUE_FILE
+    fi
 
     if [ "${TDH_DEPLOYMENT_CLOUD}" == "Azure" -o "${TDH_TKGMC_INFRASTRUCTURE}" == "Azure" ]; then
       VALUE_FILE=/tmp/contour-data-values.yaml; rm -f $VALUE_FILE
