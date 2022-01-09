@@ -8788,7 +8788,6 @@ TanzuPackage_Contour() {
     tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $NAMESPACE \
            --version $package_ver --create-namespace --poll-timeout 10m \
            --values-file /tmp/contour-data-values.yaml --wait=true > /tmp/contour.log 2>&1; ret=$?
-date
     if [ $ret -ne 0 ]; then
       logMessages /tmp/contour.log
       echo "ERROR: failed to install Tanzu Package $PACKAGE_NAME)"
@@ -8844,7 +8843,7 @@ date
 
   ipa=""; cnt=0
   while [ "$ipa" == "" -a $cnt -lt 15 ]; do
-    ipa=$(kubectl describe svc envoy --namespace tanzu-system-ingress | egrep "^LoadBalancer Ingress:" | awk '{ print $NF }')
+    ipa=$(kubectl describe svc envoy --namespace projectcontour | egrep "^LoadBalancer Ingress:" | awk '{ print $NF }')
     [ "$ipa" != "" ] && break
     let cnt=cnt+1
     sleep 30
