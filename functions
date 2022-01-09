@@ -7296,6 +7296,14 @@ tdh_tools_build() {
     REBUILD_REQUIRED_SOFTWARE=1       ## REBUILD REQUIRED BECAUSE OF SOFTWARE CHANGE
   fi
 
+  if [ ! -x $TDH_DOCKER_FILES/imgpkg ]; then
+    # --- DOWNLOAD BUILD_SERVICE BINARIES ---
+    downloadFromPivnet imgpkg $TDH_CARVEL_IMGPKG "$TDH_CARVEL_IMGPKG" "imgpkg-linux-amd64"
+    [ -f /tmp/imgpkg-linux-amd64-$TDH_CARVEL_IMGPKG ] && mv /tmp/imgpkg-linux-amd64-$TDH_CARVEL_IMGPKG $TDH_DOCKER_FILES/imgpkg && chmod a+x $TDH_DOCKER_FILES/imgpkg
+
+    REBUILD_REQUIRED_SOFTWARE=1       ## REBUILD REQUIRED BECAUSE OF SOFTWARE CHANGE
+  fi
+
   if [ ! -x $TDH_DOCKER_FILES/kapp ]; then
     # --- DOWNLOAD BUILD_SERVICE BINARIES ---
     downloadFromPivnet kapp $TDH_CARVEL_KAPP "$TDH_CARVEL_KAPP" "kapp-linux-arm64"

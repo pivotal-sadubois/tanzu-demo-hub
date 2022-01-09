@@ -13,6 +13,7 @@ ADD tdh-postinstall-root.sh     /usr/local/bin
 ADD tdh-postinstall-user.sh     /usr/local/bin
 ADD cli             /tanzu/cli
 ADD kbld            /usr/local/bin
+ADD imgpkg          /usr/local/bin
 ADD kapp            /usr/local/bin
 ADD ytt             /usr/local/bin
 ADD argocd          /usr/local/bin
