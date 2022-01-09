@@ -8519,7 +8519,6 @@ TanzuPackage_CertManager() {
 # https://tanzucommunityedition.io/docs/latest/package-readme-harbor-2.3.3/
 # ------------------------------------------------------------------------------------------
 TanzuPackage_Harbor () {
-echo gaga1
   PACKAGE_NAME=$1
   NAMESPACE=registry-harbor
   PACKAGE_NAMESPACE=tanzu-packages
@@ -8532,7 +8531,7 @@ echo gaga1
   HARBOR_HOSTNAME="harbor.apps-contour.$TDH_ENVNAME.$AWS_HOSTED_DNS_DOMAIN"
   NOTARY_HOSTNAME="notary.apps-contour.$TDH_ENVNAME.$AWS_HOSTED_DNS_DOMAIN"
 
-  pkg=$(tanzu package installed get $PACKAGE_NAME -n $NAMESPACE -o json 2>/dev/null | jq -r '.[].name')
+  pkg=$(tanzu package installed get $PACKAGE_NAME -n $PACKAGE_NAMESPACE -o json 2>/dev/null | jq -r '.[].name')
   if [ "$pkg" != "$PACKAGE_NAME" ]; then
     messagePrint " ▪ Create Docker secret"  "tdh-docker-repo"
     kubectl -n $NAMESPACE create secret docker-registry tdh-docker-repo \
@@ -8624,9 +8623,9 @@ echo gaga1
       echo "ERROR: failed to install Tanzu Package $PACKAGE_NAME)"
       if [ "$NATIVE" == "0" ]; then
         echo "       => tools/${TDH_TOOLS}.sh"
-        echo "          tdh-tools:/$ tanzu package install $PACKAGE_NAMESPACE --create-namespace \\"
+        echo "          tdh-tools:/$ tanzu package install $PACKAGE_NAME --create-namespace \\"
         echo "                             --package-name $PACKAGE_ID \\"
-        echo "                             --namespace $NAMESPACE --version $package_ver \\"
+        echo "                             --namespace $PACKAGE_NAMESPACE --version $package_ver \\"
         echo "                             --values-file $HARBOR_VALUES --poll-timeout 10m --wait=true"
         echo "          tdh-tools:/$ exit"
       else
@@ -8642,24 +8641,7 @@ echo gaga1
     fi
   fi
 
-#    messagePrint " ▪ Deploy HTTPProxy for Harbor" "$HARBOR_VALUES"
-#    kubectl apply -f $HARBOR_VALUES; ret=$?
-#    if [ $ret -ne 0 ]; then
-#      echo "ERROR: failed to deploy HTTPProxy"
-#      if [ "$NATIVE" == "0" ]; then
-#        echo "       => tools/${TDH_TOOLS}.sh"
-#        echo "          tdh-tools:/$ kubectl apply -f $HARBOR_VALUES"
-#        echo "          tdh-tools:/$ exit"
-#      else
-#        echo "       => kubectl apply -f $HARBOR_VALUES"
-#      fi
-#
-#      exit 1
-#    fi
-
-#gaga
-
-  tanzu package installed get $PACKAGE_NAME -n $NAMESPACE -o json > /tmp/pkg.json
+  tanzu package installed get $PACKAGE_NAME -n $PACKAGE_NAMESPACE -o json > /tmp/pkg.json
   pkg_stt=$(jq -r '.[]."status"' /tmp/pkg.json)
   pkg_nam=$(jq -r '.[]."package-name"' /tmp/pkg.json)
   pkg_ver=$(jq -r '.[]."package-version"' /tmp/pkg.json)
@@ -8667,14 +8649,14 @@ echo gaga1
   if [ "$pkg_stt" != "Reconcile succeeded" ]; then
     echo "ERROR: failed to reconsile Tanzu Package $PACKAGE_NAME)"
     messageLine
-    tanzu package installed get $PACKAGE_NAME -n $NAMESPACE
+    tanzu package installed get $PACKAGE_NAME -n $PACKAGE_NAMESPACE
     messageLine
     if [ "$NATIVE" == "0" ]; then
       echo "       => tools/${TDH_TOOLS}.sh"
-      echo "          tdh-tools:/$ tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $NAMESPACE --version $package_ver --create-namespace"
+      echo "          tdh-tools:/$ tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $PACKAGE_NAMESPACE --version $package_ver --create-namespace"
       echo "          tdh-tools:/$ exit"
     else
-      echo "       => tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $NAMESPACE --version $package_ver --create-namespace"
+      echo "       => tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $PACKAGE_NAMESPACE --version $package_ver --create-namespace"
     fi
 
     exit 1
@@ -8721,7 +8703,7 @@ echo gaga1
   uodateConfigMap tanzu-demo-hub TDH_INGRESS_CONTOUR_PACKAGE_STATUS   "$stt"
 
 
-
+#NAMESPACE
 
 #gaga
 
