@@ -8522,11 +8522,11 @@ TanzuPackage_Harbor () {
 echo gaga1
   PACKAGE_NAME=$1
   NAMESPACE=registry-harbor
-  NAMESPACE=tanzu-packages
+  PACKAGE_NAMESPACE=tanzu-packages
+  NAMESPACE=harbor
   PACKAGE_ID=$2
   PACKAGE_DES="Harbor OCI Registry"
 
-echo gaga2
   HARBOR_TLS_SECRET=tanzu-demo-hub-tls
   NOTARY_TLS_SECRET=tanzu-demo-hub-tls
   HARBOR_HOSTNAME="harbor.apps-contour.$TDH_ENVNAME.$AWS_HOSTED_DNS_DOMAIN"
@@ -8614,11 +8614,9 @@ echo gaga2
     echo "      accessMode: ReadWriteOnce"                                                                                      >> $HARBOR_VALUES
     echo "      size: 10Gi"                                                                                                     >> $HARBOR_VALUES
 
-echo gaga4
-echo "HARBOR_VALUES:$HARBOR_VALUES"
     messageTitle "Installing $PACKAGE_DES"
     messagePrint " ▪ Tanzu Package ($PACKAGE_NAME)"   "$PACKAGE_ID ($package_ver/$package_rel)"
-    tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $NAMESPACE \
+    tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $PACKAGE_NAMESPACE \
            --version $package_ver --create-namespace --poll-timeout 10m \
            --values-file $HARBOR_VALUES --wait=true > /tmp/error.log 2>&1; ret=$?
     if [ $ret -ne 0 ]; then
@@ -8626,16 +8624,16 @@ echo "HARBOR_VALUES:$HARBOR_VALUES"
       echo "ERROR: failed to install Tanzu Package $PACKAGE_NAME)"
       if [ "$NATIVE" == "0" ]; then
         echo "       => tools/${TDH_TOOLS}.sh"
-        echo "          tdh-tools:/$ tanzu package install $PACKAGE_NAME --create-namespace \\"
+        echo "          tdh-tools:/$ tanzu package install $PACKAGE_NAMESPACE --create-namespace \\"
         echo "                             --package-name $PACKAGE_ID \\"
         echo "                             --namespace $NAMESPACE --version $package_ver \\"
-        echo "                             --values-file $HARBOR_VALUES"
+        echo "                             --values-file $HARBOR_VALUES --poll-timeout 10m --wait=true"
         echo "          tdh-tools:/$ exit"
       else
         echo "       => tanzu package install $PACKAGE_NAME --create-namespace \\"
         echo "                             --package-name $PACKAGE_ID \\"
-        echo "                             --namespace $NAMESPACE --version $package_ver \\"
-        echo "                             --values-file $HARBOR_VALUES"
+        echo "                             --namespace $PACKAGE_NAMESPACE --version $package_ver \\"
+        echo "                             --values-file $HARBOR_VALUES --poll-timeout 10m --wait=true"
       fi
 
       exit 1

@@ -341,6 +341,7 @@ uodateConfigMap tanzu-demo-hub TDH_MISSION_CONTROL_ACCOUNT_NAME   "ukn"
 InstallMetallLB
 #InstallCertManager
 #InstallContour
+#InstallHarborRegistry
 
 messageTitle "Tanzu Package Management"
 TanzuPackage_AddRepo      tanzu-package-repo-global tce-repo projects.registry.vmware.com/tce/main:0.9.1
@@ -350,12 +351,11 @@ TanzuPackage_CertManager  cert-manager cert-manager.community.tanzu.vmware.com
 TanzuPackage_Contour      contour contour.community.tanzu.vmware.com
 TanzuPackage_LocalStorage local-path-storage local-path-storage.community.tanzu.vmware.com
 createClusterIssuer
-TanzuPackage_Harbor       harbor harbor.community.tanzu.vmware.com 
+TanzuPackage_Harbor       harbor-pkg harbor.community.tanzu.vmware.com 
 
 exit
 
 
-InstallHarborRegistry
 getRootCA tanzu-demo-hub-tls
 exit
 installBuildService
