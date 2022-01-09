@@ -8524,6 +8524,11 @@ TanzuPackage_Harbor () {
   PACKAGE_ID=$2
   PACKAGE_DES="Harbor OCI Registry"
 
+  HARBOR_TLS_SECRET=$TDH_TLS_SECRET
+  NOTARY_TLS_SECRET=$TDH_TLS_SECRET
+  HARBOR_HOSTNAME="harbor.apps-contour.$TDH_ENVNAME.$AWS_HOSTED_DNS_DOMAIN"
+  NOTARY_HOSTNAME="notary.apps-contour.$TDH_ENVNAME.$AWS_HOSTED_DNS_DOMAIN"
+
   pkg=$(tanzu package installed get $PACKAGE_NAME -n $NAMESPACE -o json 2>/dev/null | jq -r '.[].name')
   if [ "$pkg" != "$PACKAGE_NAME" ]; then
     package_ver=$(tanzu package available list $PACKAGE_ID -A -o json | jq -r '.[]."version"' | tail -1)
@@ -8649,6 +8654,7 @@ TanzuPackage_Harbor () {
     echo "      timeoutPolicy:"                                                   >> $HARBOR_VALUES
     echo "        response: 600s"                                                 >> $HARBOR_VALUES
 
+echo "HARBOR_VALUES:$HARBOR_VALUES"
     messageTitle "Installing $PACKAGE_DES"
     messagePrint " ▪ Tanzu Package ($PACKAGE_NAME)"   "$PACKAGE_ID ($package_ver/$package_rel)"
     tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $NAMESPACE \
