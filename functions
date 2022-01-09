@@ -8685,11 +8685,6 @@ TanzuPackage_Contour() {
     package_ver=$(tanzu package available list $PACKAGE_ID -A -o json | jq -r '.[]."version"' | tail -1)
     package_rel=$(tanzu package available list $PACKAGE_ID -A -o json | jq -r '.[]."released-at"' | tail -1)
 
-echo "TDH_DEPLOYMENT_CLOUD:$TDH_DEPLOYMENT_CLOUD"
-echo "TDH_TKGMC_INFRASTRUCTURE:$TDH_TKGMC_INFRASTRUCTURE"
-
-sleep 10000
-
     if [ "${TDH_DEPLOYMENT_CLOUD}" == "docker" -o "${TDH_TKGMC_INFRASTRUCTURE}" == "docker" ]; then
       VALUE_FILE=/tmp/contour-data-values.yaml; rm -f $VALUE_FILE
       echo "----"                                                                       >> $VALUE_FILE
