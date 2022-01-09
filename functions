@@ -8300,13 +8300,11 @@ TanzuPackage_RepoSync() {
   ret=""; cnt=0
   while [ "$ret" != "Reconcile succeeded" -a $cnt -lt 10 ]; do
     ret=$(tanzu package repository list -n $NAMESPACE -o json 2>/dev/null | jq -r '.[].status' 2>/dev/null | grep -v "Reconcile succeeded")
-echo "RET:$ret:XX"
 
     [ "$ret" == "" ] && break
     sleep 60
     let cnt=cnt+1
   done
-echo "2 RET:$ret:XX"
 
   if [ "$ret" != "" ]; then
     echo "ERROR: failed to reconsilte Tanzu Packages in $NAMESPACE"
