@@ -8343,8 +8343,8 @@ TanzuPackage_LocalStorage() {
 
   pkg=$(tanzu package installed get $PACKAGE_NAME -n $NAMESPACE -o json 2>/dev/null | jq -r '.[].name')
   if [ "$pkg" != "$PACKAGE_NAME" ]; then
-    package_ver=$(tanzu package available list $PACKAGE_ID -A -o json | jq -r '.[]."version"')
-    package_rel=$(tanzu package available list $PACKAGE_ID -A -o json | jq -r '.[]."released-at"')
+    package_ver=$(tanzu package available list $PACKAGE_ID -A -o json | jq -r '.[]."version"' | tail -1)
+    package_rel=$(tanzu package available list $PACKAGE_ID -A -o json | jq -r '.[]."released-at"' | tail -1)
 
     messageTitle "Installing $PACKAGE_DES"
     messagePrint " ▪ Tanzu Package ($PACKAGE_NAME)"   "$PACKAGE_ID ($package_ver/$package_rel)"
@@ -8420,8 +8420,8 @@ TanzuPackage_CertManager() {
 
   pkg=$(tanzu package installed get $PACKAGE_NAME -n $NAMESPACE -o json 2>/dev/null | jq -r '.[].name')
   if [ "$pkg" != "$PACKAGE_NAME" ]; then
-    package_ver=$(tanzu package available list $PACKAGE_ID -A -o json | jq -r '.[]."version"')
-    package_rel=$(tanzu package available list $PACKAGE_ID -A -o json | jq -r '.[]."released-at"')
+    package_ver=$(tanzu package available list $PACKAGE_ID -A -o json | jq -r '.[]."version"' | tail -1)
+    package_rel=$(tanzu package available list $PACKAGE_ID -A -o json | jq -r '.[]."released-at"' | tail -1)
 
     messageTitle "Installing $PACKAGE_DES"
     messagePrint " ▪ Tanzu Package ($PACKAGE_NAME)"   "$PACKAGE_ID ($package_ver/$package_rel)"
@@ -8498,8 +8498,8 @@ TanzuPackage_Contour() {
 
   pkg=$(tanzu package installed get $PACKAGE_NAME -n $NAMESPACE -o json 2>/dev/null | jq -r '.[].name')
   if [ "$pkg" != "$PACKAGE_NAME" ]; then
-    package_ver=$(tanzu package available list $PACKAGE_ID -A -o json | jq -r '.[]."version"')
-    package_rel=$(tanzu package available list $PACKAGE_ID -A -o json | jq -r '.[]."released-at"')
+    package_ver=$(tanzu package available list $PACKAGE_ID -A -o json | jq -r '.[]."version"' | tail -1)
+    package_rel=$(tanzu package available list $PACKAGE_ID -A -o json | jq -r '.[]."released-at"' | tail -1)
 
     if [ "${TDH_DEPLOYMENT_CLOUD}" == "Azure" -o "${TDH_TKGMC_INFRASTRUCTURE}" == "Azure" ]; then
       VALUE_FILE=/tmp/contour-data-values.yaml; rm -f $VALUE_FILE
