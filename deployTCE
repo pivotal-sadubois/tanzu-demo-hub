@@ -351,8 +351,8 @@ date
 TanzuPackage_Contour      contour contour.community.tanzu.vmware.com
 TanzuPackage_LocalStorage local-path-storage local-path-storage.community.tanzu.vmware.com
 
-exit
 createClusterIssuer
+exit
 
 #TanzuPackage_Harbor       Harbor harbor.community.tanzu.vmware.com 
 

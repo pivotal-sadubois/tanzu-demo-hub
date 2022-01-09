@@ -8440,8 +8440,10 @@ TanzuPackage_CertManager() {
 
     messageTitle "Installing $PACKAGE_DES"
     messagePrint " ▪ Tanzu Package ($PACKAGE_NAME)"   "$PACKAGE_ID ($package_ver/$package_rel)"
-    tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $NAMESPACE --version $package_ver --create-namespace --wait=true > /dev/null 2>&1; ret=$?
+    tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $NAMESPACE --version $package_ver \
+            --create-namespace --poll-timeout 10m --wait=true > /tmp/error.log 2>&1; ret=$?
     if [ $ret -ne 0 ]; then
+      logMessages /tmp/error.log
       echo "ERROR: failed to install Tanzu Package $PACKAGE_NAME)"
       if [ "$NATIVE" == "0" ]; then
         echo "       => tools/${TDH_TOOLS}.sh"
@@ -8452,6 +8454,8 @@ TanzuPackage_CertManager() {
       fi
 
       exit 1
+    else
+      rm -f /tmp/error.log
     fi
   fi
 
@@ -8570,9 +8574,10 @@ TanzuPackage_Harbor () {
     messageTitle "Installing $PACKAGE_DES"
     messagePrint " ▪ Tanzu Package ($PACKAGE_NAME)"   "$PACKAGE_ID ($package_ver/$package_rel)"
     tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $NAMESPACE \
-           --version $package_ver --create-namespace \
-           --values-file $HARBOR_VALUES --wait=true > /dev/null 2>&1; ret=$?
+           --version $package_ver --create-namespace --poll-timeout 10m \
+           --values-file $HARBOR_VALUES --wait=true > /tmp/error.log 2>&1; ret=$?
     if [ $ret -ne 0 ]; then
+      logMessages /tmp/error.log
       echo "ERROR: failed to install Tanzu Package $PACKAGE_NAME)"
       if [ "$NATIVE" == "0" ]; then
         echo "       => tools/${TDH_TOOLS}.sh"
@@ -8589,6 +8594,8 @@ TanzuPackage_Harbor () {
       fi
 
       exit 1
+    else
+      rm -f /tmp/error.log
     fi
   fi
 
