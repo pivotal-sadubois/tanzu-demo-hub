@@ -8338,7 +8338,7 @@ TanzuPackage_RepoSync() {
 TanzuPackage_LocalStorage() {
   PACKAGE_NAME="$1"
   NAMESPACE="$1"
-  PACKAGE_ID="$3"
+  PACKAGE_ID="$2"
   PACKAGE_DES="Local Storage (RWO AccessMode)"
 
   pkg=$(tanzu package installed get $PACKAGE_NAME -n $NAMESPACE -o json 2>/dev/null | jq -r '.[].name')
