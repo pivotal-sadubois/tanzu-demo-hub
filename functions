@@ -5625,13 +5625,27 @@ InstallContour() {
             --docker-username $TDH_REGISTRY_DOCKER_USER \
             --docker-password $TDH_REGISTRY_DOCKER_PASS
 
-    kubectl patch serviceaccount default -p '{"imagePullSecrets": [{"name": "tdh-docker-repo"}]}' -n $NAMESPACE > /dev/null 2>&1
-    if [ $? -ne 0 ]; then
+    cnt=0; ret=1
+    while [ $ret -ne 0 -a $cnt -lt 5 ]; do
+      kubectl patch serviceaccount default -p '{"imagePullSecrets": [{"name": "tdh-docker-repo"}]}' -n $NAMESPACE > /dev/null 2>&1; ret=$?
+      [ $ret -eq 0 ] && break
+      let cnt=cnt+1
+      sleep 30
+    done
+
+    if [ $ret -ne 0 ]; then
       echo "ERROR: Failed to Patch Service account"
-      echo "       => kubectl patch serviceaccount default -p '{\"imagePullSecrets\": [{\"name\": \"tdh-docker-repo\"}]}' -n $NAMESPACE"
+      if [ "$NATIVE" == "0" ]; then
+        echo "       => tools/${TDH_TOOLS}.sh"
+        echo "          tdh-tools:/$ kubectl patch serviceaccount default -p '{\"imagePullSecrets\": [{\"name\": \"tdh-docker-repo\"}]}' -n $NAMESPACE"
+        echo "          tdh-tools:/$ exit"
+      else
+        echo "       => kubectl patch serviceaccount default -p '{\"imagePullSecrets\": [{\"name\": \"tdh-docker-repo\"}]}' -n $NAMESPACE"
+      fi
+
       exit 1
     fi
-  
+
     messagePrint " ▪ Install Contour Helm Chart" "bitnami/contour"
     helm repo update > /dev/null 2>&1
 
@@ -5659,9 +5673,16 @@ InstallContour() {
       sleep 30
     done
 
-    if [ $? -ne 0 ]; then
+    if [ $ret -ne 0 ]; then
       echo "ERROR: failed to install bitnami/contour"
-      echo "       => helm install -f /tmp/contour_values.yaml ingress bitnami/contour -n $NAMESPACE --version $HELM_CONTOUR_VERSION"
+      if [ "$NATIVE" == "0" ]; then
+        echo "       => tools/${TDH_TOOLS}.sh"
+        echo "          tdh-tools:/$ helm install -f /tmp/contour_values.yaml ingress bitnami/contour -n $NAMESPACE --version $HELM_CONTOUR_VERSION"
+        echo "          tdh-tools:/$ exit"
+      else
+        echo "       => helm install -f /tmp/contour_values.yaml ingress bitnami/contour -n $NAMESPACE --version $HELM_CONTOUR_VERSION"
+      fi
+
       exit 1
     fi
 
@@ -6038,9 +6059,7 @@ echo gaga
 kubectl get pods -A | egrep -c "^registry-harbor"
   messageTitle "Harbor Registry"
   cnt=$(kubectl get pods -A | egrep -c "^$NAMESPACE") 
-echo "CNT:$cnt"
   if [ $cnt -eq 0 ]; then
-echo gaga1
     # --- VERIFY SERVICE CONFIGURATION ---
     checkKubernetesServices harbor
 
@@ -6136,16 +6155,11 @@ echo gaga1
     messagePrint " ▪ Install Harbor Helm Chart"           "bitnami/contour"
     messagePrint " ▪ Install Harbor Helm Chart Version"   "$HELM_HARBOR_VERSION"
 
-echo "----------------------------"
     cnt=0; ret=1
     while [ $ret -ne 0 -a $cnt -lt 10 ]; do
-echo "helm install harbor bitnami/harbor -f $HARBOR_VALUES --version $HELM_HARBOR_VERSION -n $NAMESPACE --wait --wait-for-jobs --timeout 10m"
       #helm install harbor bitnami/harbor -f $HARBOR_VALUES --version $HELM_HARBOR_VERSION -n $NAMESPACE --wait --wait-for-jobs > /dev/null 2>&1; ret=$?
-echo "=> gaga try CNT:$cnt"
       helm install harbor bitnami/harbor -f $HARBOR_VALUES --version $HELM_HARBOR_VERSION -n $NAMESPACE --wait --wait-for-jobs --timeout 10m; ret=$?
-echo "  RET:$ret"
       [ $ret -eq 0 ] && break
-echo "  xxxx"
       let cnt=cnt+1
       sleep 30
     done
@@ -8473,6 +8487,176 @@ TanzuPackage_CertManager() {
   uodateConfigMap tanzu-demo-hub TDH_CERTMANAGER_PACKAGE_NAME     "$pkg_nam"
   uodateConfigMap tanzu-demo-hub TDH_CERTMANAGER_PACKAGE_VERSION  "$pkg_ver"
   uodateConfigMap tanzu-demo-hub TDH_CERTMANAGERPACKAGE__STATUS   "$pkg_stt"
+}
+
+# ------------------------------------------------------------------------------------------
+# Function Name ......: TanzuPackage_Harbor
+# Function Purpose ...: Install the Harbor OCI Registry
+# ------------------------------------------------------------------------------------------
+# Argument ($1) ......: Tanzi Package Display Name
+#          ($2) ......: Namespace Name
+#          ($3) ......: Tanzu Package Name
+#          ($4) ......: Package Description
+# ------------------------------------------------------------------------------------------
+# Return Value .......: 0 on Success, 1 on failure
+# ------------------------------------------------------------------------------------------
+# https://tanzucommunityedition.io/docs/latest/package-readme-harbor-2.3.3/
+# ------------------------------------------------------------------------------------------
+TanzuPackage_Harbor () {
+  PACKAGE_NAME=$1
+  NAMESPACE=registry-harbor
+  NAMESPACE=tanzu-system-registry
+  PACKAGE_ID=$2
+  PACKAGE_DES="Harbor OCI Registry"
+
+  pkg=$(tanzu package installed get $PACKAGE_NAME -n $NAMESPACE -o json 2>/dev/null | jq -r '.[].name')
+  if [ "$pkg" != "$PACKAGE_NAME" ]; then
+    package_ver=$(tanzu package available list $PACKAGE_ID -A -o json | jq -r '.[]."version"' | tail -1)
+    package_rel=$(tanzu package available list $PACKAGE_ID -A -o json | jq -r '.[]."released-at"' | tail -1)
+
+    HARBOR_VALUES=/tmp/harbor_values.yaml
+    echo "harborAdminPassword: $TDH_HARBOR_ADMIN_PASSWORD"                                                                      >  $HARBOR_VALUES
+
+    echo ""                                                                                                                     >> $HARBOR_VALUES
+    echo "global:"                                                                                                              >> $HARBOR_VALUES
+    echo "  imageRegistry: docker.io"                                                                                           >> $HARBOR_VALUES
+    echo "  imagePullSecrets:"                                                                                                  >> $HARBOR_VALUES
+    echo "    - tdh-docker-repo"                                                                                                >> $HARBOR_VALUES
+
+    if [ "${TDH_DEPLOYMENT_CLOUD}" == "vSphere" -a "${TDH_TKGMC_TKG_TYPE}" == "tkgs" ]; then
+      echo "  storageClass: $VSPHERE_TKGS_STORAGE_CLASS"                                                                       >> $HARBOR_VALUES
+    fi
+
+    echo ""                                                                                                                     >> $HARBOR_VALUES
+    echo "service:"                                                                                                             >> $HARBOR_VALUES
+    echo "  type: ClusterIP"                                                                                                    >> $HARBOR_VALUES
+    echo "  tls:"                                                                                                               >> $HARBOR_VALUES
+    echo "    enabled: true"                                                                                                    >> $HARBOR_VALUES
+    echo "    existingSecret: $HARBOR_TLS_SECRET"                                                                               >> $HARBOR_VALUES
+    echo "    notaryExistingSecret: $NOTARY_TLS_SECRET"                                                                         >> $HARBOR_VALUES
+    echo ""                                                                                                                     >> $HARBOR_VALUES
+
+    # https://github.com/goharbor/harbor-helm/blob/master/values.yaml
+    echo "externalURL: https://harbor.apps-contour.$TDH_ENVNAME.$AWS_HOSTED_DNS_DOMAIN"                                         >> $HARBOR_VALUES
+    echo ""                                                                                                                     >> $HARBOR_VALUES
+    echo "portal:"                                                                                                              >> $HARBOR_VALUES
+    echo "  tls:"                                                                                                               >> $HARBOR_VALUES
+    echo "    existingSecret: $HARBOR_TLS_SECRET"                                                                               >> $HARBOR_VALUES
+    echo ""                                                                                                                     >> $HARBOR_VALUES
+    echo "persistence:"                                                                                                         >> $HARBOR_VALUES
+    echo "  enabled: true"                                                                                                      >> $HARBOR_VALUES
+    echo "  resourcePolicy: 'keep'"                                                                                             >> $HARBOR_VALUES
+    echo "  persistentVolumeClaim:"                                                                                             >> $HARBOR_VALUES
+    echo "    registry:"                                                                                                        >> $HARBOR_VALUES
+    echo "      accessMode: ReadWriteOnce"                                                                                      >> $HARBOR_VALUES
+    echo "      size: 50Gi"                                                                                                     >> $HARBOR_VALUES
+    echo "    chartmuseum:"                                                                                                     >> $HARBOR_VALUES
+    echo "      accessMode: ReadWriteOnce"                                                                                      >> $HARBOR_VALUES
+    echo "      size: 5Gi"                                                                                                      >> $HARBOR_VALUES
+    echo "    jobservice:"                                                                                                      >> $HARBOR_VALUES
+    echo "      accessMode: ReadWriteOnce"                                                                                      >> $HARBOR_VALUES
+    echo "      size: 5Gi"                                                                                                      >> $HARBOR_VALUES
+    echo "    database:"                                                                                                        >> $HARBOR_VALUES
+    echo "      accessMode: ReadWriteOnce"                                                                                      >> $HARBOR_VALUES
+    echo "      size: 50Gi"                                                                                                     >> $HARBOR_VALUES
+    echo "    redis:"                                                                                                           >> $HARBOR_VALUES
+    echo "      accessMode: ReadWriteOnce"                                                                                      >> $HARBOR_VALUES
+    echo "      size: 50Gi"                                                                                                     >> $HARBOR_VALUES
+    echo "    trivy:"                                                                                                           >> $HARBOR_VALUES
+    echo "      accessMode: ReadWriteOnce"                                                                                      >> $HARBOR_VALUES
+    echo "      size: 10Gi"                                                                                                     >> $HARBOR_VALUES
+
+    messageTitle "Installing $PACKAGE_DES"
+    messagePrint " ▪ Tanzu Package ($PACKAGE_NAME)"   "$PACKAGE_ID ($package_ver/$package_rel)"
+    tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $NAMESPACE \
+           --version $package_ver --create-namespace \
+           --values-file /tmp/contour-data-values.yaml --wait=true > /dev/null 2>&1; ret=$?
+    if [ $ret -ne 0 ]; then
+      echo "ERROR: failed to install Tanzu Package $PACKAGE_NAME)"
+      if [ "$NATIVE" == "0" ]; then
+        echo "       => tools/${TDH_TOOLS}.sh"
+        echo "          tdh-tools:/$ tanzu package install $PACKAGE_NAME --create-namespace \\"
+        echo "                             --package-name $PACKAGE_ID \\"
+        echo "                             --namespace $NAMESPACE --version $package_ver \\"
+        echo "                             --values-file /tmp/contour-data-values.yaml"
+        echo "          tdh-tools:/$ exit"
+      else
+        echo "       => tanzu package install $PACKAGE_NAME --create-namespace \\"
+        echo "                             --package-name $PACKAGE_ID \\"
+        echo "                             --namespace $NAMESPACE --version $package_ver \\"
+        echo "                             --values-file /tmp/contour-data-values.yaml"
+      fi
+
+      exit 1
+    fi
+  fi
+
+  tanzu package installed get $PACKAGE_NAME -n $NAMESPACE -o json > /tmp/pkg.json
+  pkg_stt=$(jq -r '.[]."status"' /tmp/pkg.json)
+  pkg_nam=$(jq -r '.[]."package-name"' /tmp/pkg.json)
+  pkg_ver=$(jq -r '.[]."package-version"' /tmp/pkg.json)
+
+  if [ "$pkg_stt" != "Reconcile succeeded" ]; then
+    echo "ERROR: failed to reconsile Tanzu Package $PACKAGE_NAME)"
+    messageLine
+    tanzu package installed get $PACKAGE_NAME -n $NAMESPACE
+    messageLine
+    if [ "$NATIVE" == "0" ]; then
+      echo "       => tools/${TDH_TOOLS}.sh"
+      echo "          tdh-tools:/$ tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $NAMESPACE --version $package_ver --create-namespace"
+      echo "          tdh-tools:/$ exit"
+    else
+      echo "       => tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $NAMESPACE --version $package_ver --create-namespace"
+    fi
+
+    exit 1
+  fi
+
+  messageTitle "Verify $PACKAGE_DES"
+  messagePrint " ▪ Tanzu Package ($PACKAGE_NAME)"               "$pkg_nam"
+  messagePrint " ▪ Tanzu Package ($PACKAGE_NAME) Namespace"     "$NAMESPACE"
+  messagePrint " ▪ Tanzu Package ($PACKAGE_NAME) Version"       "$pkg_ver"
+  messagePrint " ▪ Tanzu Package ($PACKAGE_NAME) Status"        "$pkg_stt"
+
+  # --- VERIFY DNS DOMAIN ---
+  verifyHostedZone ${TDH_ENVNAME}.$AWS_HOSTED_DNS_DOMAIN
+
+  ipa=""; cnt=0
+  while [ "$ipa" == "" -a $cnt -lt 15 ]; do
+    ipa=$(kubectl describe svc envoy --namespace tanzu-system-ingress | egrep "^LoadBalancer Ingress:" | awk '{ print $NF }')
+    [ "$ipa" != "" ] && break
+    let cnt=cnt+1
+    sleep 30
+  done
+
+  if [ "$ipa" == "" ]; then
+    echo "ERROR: Failed to gather IP Adress of the ingress-contour-envoy service in namespace ingress-contour"
+    echo "       Please check manually:"
+    echo "       => kubectl get svc --namespace $NAMESPACE"
+    exit 1
+  fi
+
+  # --- SET DNS RECORD ---
+  if [ "$TDH_INFRASTRUCTURE" == "minikube" -o "$TDH_INFRASTRUCTURE" == "vSphere" -o "$TDH_INFRASTRUCTURE" == "Azure" -o "$TDH_INFRASTRUCTURE" == "docker" ]; then
+    setDNSrecord "$ipa" "${TDH_ENVNAME}" "${AWS_HOSTED_DNS_DOMAIN}" "*.apps-contour" "A"
+  else
+    setDNSalias "$ipa" "${TDH_ENVNAME}" "${AWS_HOSTED_DNS_DOMAIN}" "*.apps-contour" "A"
+  fi
+
+  # --- STORE SETTINGS IN CONFIGMAP ---
+  uodateConfigMap tanzu-demo-hub TDH_INGRESS_CONTOUR_ENABLED          "true"
+  uodateConfigMap tanzu-demo-hub TDH_INGRESS_CONTOUR_LB_IP            "$ipa"
+  uodateConfigMap tanzu-demo-hub TDH_INGRESS_CONTOUR_LB_DOMAIN        "apps-contour.$TDH_ENVNAME.$AWS_HOSTED_DNS_DOMAIN"
+  uodateConfigMap tanzu-demo-hub TDH_INGRESS_CONTOUR_NAMESPACE        "$NAMESPACE"
+  uodateConfigMap tanzu-demo-hub TDH_INGRESS_CONTOUR_PACKAGE_NAME     "$crt"
+  uodateConfigMap tanzu-demo-hub TDH_INGRESS_CONTOUR_PACKAGE_VERSION  "$ver"
+  uodateConfigMap tanzu-demo-hub TDH_INGRESS_CONTOUR_PACKAGE_STATUS   "$stt"
+
+
+
+
+#gaga
+
 }
 
 # ------------------------------------------------------------------------------------------

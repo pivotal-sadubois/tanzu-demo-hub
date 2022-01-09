@@ -339,8 +339,8 @@ uodateConfigMap tanzu-demo-hub TDH_MISSION_CONTROL_ACCOUNT_NAME   "ukn"
 
 # --- INSTALL K8 SERVICES ---
 InstallMetallLB
-InstallCertManager
-InstallContour
+#InstallCertManager
+#InstallContour
 
 messageTitle "Tanzu Package Management"
 TanzuPackage_AddRepo      tanzu-package-repo-global tce-repo projects.registry.vmware.com/tce/main:0.9.1
