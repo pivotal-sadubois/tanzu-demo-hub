@@ -8528,8 +8528,8 @@ echo gaga1
   PACKAGE_DES="Harbor OCI Registry"
 
 echo gaga2
-  HARBOR_TLS_SECRET=$TDH_TLS_SECRET
-  NOTARY_TLS_SECRET=$TDH_TLS_SECRET
+  HARBOR_TLS_SECRET=harbor-tls
+  NOTARY_TLS_SECRET=harbor-tls
   HARBOR_HOSTNAME="harbor.apps-contour.$TDH_ENVNAME.$AWS_HOSTED_DNS_DOMAIN"
   NOTARY_HOSTNAME="notary.apps-contour.$TDH_ENVNAME.$AWS_HOSTED_DNS_DOMAIN"
 
@@ -8604,6 +8604,7 @@ echo gaga3
     echo "      size: 10Gi"                                                                                                     >> $HARBOR_VALUES
 
     # --- ADD HTTPProxy ---
+    echo "---"                                                                  >> $HARBOR_VALUES
     echo "apiVersion: projectcontour.io/v1"                                       >> $HARBOR_VALUES
     echo "kind: HTTPProxy"                                                        >> $HARBOR_VALUES
     echo "metadata:"                                                              >> $HARBOR_VALUES
