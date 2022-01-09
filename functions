@@ -8317,7 +8317,88 @@ TanzuPackage_RepoSync() {
     fi
 
     exit 1
+  else
+    messageLine
+    tanzu package repository list -A
+    messageLine
   fi
+}
+
+# ------------------------------------------------------------------------------------------
+# Function Name ......: TanzuPackage_CertManager
+# Function Purpose ...: Install Cert Manager
+# ------------------------------------------------------------------------------------------
+# Argument ($1) ......: Tanzi Package Display Name
+#          ($2) ......: Namespace Name
+#          ($3) ......: Tanzu Package Name
+#          ($4) ......: Package Description
+# ------------------------------------------------------------------------------------------
+# Return Value .......: 0 on Success, 1 on failure
+# ------------------------------------------------------------------------------------------
+# https://docs.vmware.com/en/VMware-Tanzu-Kubernetes-Grid/1.4/vmware-tanzu-kubernetes-grid-14/GUID-packages-cert-manager.html
+# ------------------------------------------------------------------------------------------
+TanzuPackage_CertManager() {
+  PACKAGE_NAME="$1"
+  NAMESPACE="$1"
+  PACKAGE_ID="$3"
+  PACKAGE_DES="Local Storage (RWO AccessMode)"
+
+  pkg=$(tanzu package installed get $PACKAGE_NAME -n $NAMESPACE -o json 2>/dev/null | jq -r '.[].name')
+  if [ "$pkg" != "$PACKAGE_NAME" ]; then
+    package_ver=$(tanzu package available list $PACKAGE_ID -A -o json | jq -r '.[]."version"')
+    package_rel=$(tanzu package available list $PACKAGE_ID -A -o json | jq -r '.[]."released-at"')
+
+    messageTitle "Installing $PACKAGE_DES"
+    messagePrint " ▪ Tanzu Package ($PACKAGE_NAME)"   "$PACKAGE_ID ($package_ver/$package_rel)"
+    tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $NAMESPACE --version $package_ver --create-namespace --wait=true > /dev/null 2>&1; ret=$?
+    if [ $ret -ne 0 ]; then
+      echo "ERROR: failed to install Tanzu Package $PACKAGE_NAME)"
+      if [ "$NATIVE" == "0" ]; then
+        echo "       => tools/${TDH_TOOLS}.sh"
+        echo "          tdh-tools:/$ tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $NAMESPACE --version $package_ver --create-namespace"
+        echo "          tdh-tools:/$ exit"
+      else
+        echo "       => tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $NAMESPACE --version $package_ver --create-namespace"
+      fi
+
+      exit 1
+    fi
+  fi
+
+  tanzu package installed get $PACKAGE_NAME -n $NAMESPACE -o json > /tmp/pkg.json
+  pkg_stt=$(jq -r '.[]."status"' /tmp/pkg.json)
+  pkg_nam=$(jq -r '.[]."package-name"' /tmp/pkg.json)
+  pkg_ver=$(jq -r '.[]."package-version"' /tmp/pkg.json)
+
+  if [ "$pkg_stt" != "Reconcile succeeded" ]; then
+    echo "ERROR: failed to reconsile Tanzu Package $PACKAGE_NAME)"
+    messageLine
+    tanzu package installed get $PACKAGE_NAME -n $NAMESPACE
+    messageLine
+    if [ "$NATIVE" == "0" ]; then
+      echo "       => tools/${TDH_TOOLS}.sh"
+      echo "          tdh-tools:/$ tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $NAMESPACE --version $package_ver --create-namespace"
+      echo "          tdh-tools:/$ exit"
+    else
+      echo "       => tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $NAMESPACE --version $package_ver --create-namespace"
+    fi
+
+    exit 1
+  fi
+
+  messageTitle "Verify $PACKAGE_DES"
+  messagePrint " ▪ Tanzu Package ($PACKAGE_NAME)"                 "$pkg_nam"
+  messagePrint " ▪ Tanzu Package ($PACKAGE_NAME) Namespace"       "$NAMESPACE"
+  messagePrint " ▪ Tanzu Package ($PACKAGE_NAME) Version"         "$pkg_ver"
+  messagePrint " ▪ Tanzu Package ($PACKAGE_NAME) Status"          "$pkg_stt"
+
+  # --- STORE SETTINGS IN CONFIGMAP ---
+  uodateConfigMap tanzu-demo-hub TDH_CERTMANAGER_ENABLED          "true"
+  uodateConfigMap tanzu-demo-hub TDH_CERTMANAGER_NAMESPACE        "$NAMESPACE"
+  uodateConfigMap tanzu-demo-hub TDH_CERTMANAGER_PACKAGE_NAME     "$pkg_nam"
+  uodateConfigMap tanzu-demo-hub TDH_CERTMANAGER_PACKAGE_VERSION  "$pkg_ver"
+  uodateConfigMap tanzu-demo-hub TDH_CERTMANAGERPACKAGE__STATUS   "$pkg_stt"
+
 }
 
 # ------------------------------------------------------------------------------------------
