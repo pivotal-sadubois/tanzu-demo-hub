@@ -7270,10 +7270,14 @@ tdh_tools_build() {
   fi
 
   messageTitle "TDH Tools Configureation (files/tdh-tools/tdh-tools.cfg)"
-  messagePrint " ▪ Build Service Version"                           "$TDH_SERVICE_BUILD_SERVICE_VERSION"
-  messagePrint " ▪ Build Service Tools (kp)"                        "$TDH_SERVICE_BUILD_SERVICE_KP"
-  messagePrint " ▪ Build Service Dependancies:"                     "$TDH_SERVICE_BUILD_SERVICE_DEPENDANCIES"
-  messagePrint " ▪ Tantzu CLI Bundle:"                              "$TKG_TANZU_KUBERNETES_GRID"
+  messagePrint " ▪ Build Service Version"                                      "$TDH_SERVICE_BUILD_SERVICE_VERSION"
+  messagePrint " ▪ Build Service Tools (kp)"                                   "$TDH_SERVICE_BUILD_SERVICE_KP"
+  messagePrint " ▪ Build Service Dependancies"                                 "$TDH_SERVICE_BUILD_SERVICE_DEPENDANCIES"
+  messagePrint " ▪ Tantzu CLI Bundle"                                          "$TKG_TANZU_KUBERNETES_GRID"
+  messagePrint " ▪ Carvel Tools: - Handle multiple k8s Ressources (kapp)"      "$$TDH_CARVEL_KAPP"
+  messagePrint " ▪ Carvel Tools: - Build/Reference container images (kbld)"    "$$TDH_CARVEL_KBLD"
+  messagePrint " ▪ Carvel Tools: - Template Overlay for k8s config (ytt)"      "$$TDH_CARVEL_YTT"
+  messagePrint " ▪ Carvel Tools: - Bundle and Relocate App Config (imgpkg)"    "$$TDH_CARVEL_IMGPKG"
   messageTitle "TDH Tools Docker Container ($TDH_TOOLS_IMAGE)"
 
   # --- DOW3LOAD BUILD_SERVICE BINARIES ---
@@ -8529,6 +8533,7 @@ TanzuPackage_Harbor () {
 
     HARBOR_VALUES=/tmp/harbor_values.yaml
     echo "harborAdminPassword: $TDH_HARBOR_ADMIN_PASSWORD"                                                                      >  $HARBOR_VALUES
+    echo "secretKey: $TDH_HARBOR_ADMIN_PASSWORD"                                                                                >>  $HARBOR_VALUES
 
     echo ""                                                                                                                     >> $HARBOR_VALUES
     echo "global:"                                                                                                              >> $HARBOR_VALUES
