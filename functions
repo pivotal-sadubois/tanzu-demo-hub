@@ -8533,6 +8533,7 @@ echo gaga2
   NOTARY_HOSTNAME="notary.apps-contour.$TDH_ENVNAME.$AWS_HOSTED_DNS_DOMAIN"
 
   pkg=$(tanzu package installed get $PACKAGE_NAME -n $NAMESPACE -o json 2>/dev/null | jq -r '.[].name')
+echo "PKG:$pkg"
   if [ "$pkg" != "$PACKAGE_NAME" ]; then
 echo gaga3
     package_ver=$(tanzu package available list $PACKAGE_ID -A -o json | jq -r '.[]."version"' | tail -1)
