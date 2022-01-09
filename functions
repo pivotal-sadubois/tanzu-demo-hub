@@ -8687,7 +8687,6 @@ TanzuPackage_Contour() {
 
     if [ "${TDH_DEPLOYMENT_CLOUD}" == "docker" -o "${TDH_TKGMC_INFRASTRUCTURE}" == "docker" ]; then
       VALUE_FILE=/tmp/contour-data-values.yaml; rm -f $VALUE_FILE
-      echo "namespace: tanzu-system-ingress"                                            >> $VALUE_FILE
       echo "contour:"                                                                   >> $VALUE_FILE
       echo " configFileContents: {}"                                                    >> $VALUE_FILE
       echo " useProxyProtocol: false"                                                   >> $VALUE_FILE
@@ -8790,10 +8789,8 @@ TanzuPackage_Contour() {
            --version $package_ver --create-namespace \
            --values-file /tmp/contour-data-values.yaml --wait=true > /tmp/contour.log 2>&1; ret=$?
     if [ $ret -ne 0 ]; then
+      logMessages /tmp/contour.log
       echo "ERROR: failed to install Tanzu Package $PACKAGE_NAME)"
-      messageLine
-      cat /tmp/contour.log 
-      messageLine
       if [ "$NATIVE" == "0" ]; then
         echo "       => tools/${TDH_TOOLS}.sh"
         echo "          tdh-tools:/$ tanzu package install $PACKAGE_NAME --create-namespace \\"
@@ -8810,7 +8807,6 @@ TanzuPackage_Contour() {
 
       exit 1
     else
-      logMessages /tmp/contour.log
       rm -f /tmp/contour.log
     fi
   fi
