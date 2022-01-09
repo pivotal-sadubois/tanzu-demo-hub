@@ -8552,6 +8552,7 @@ TanzuPackage_Harbor () {
     HARBOR_VALUES=/tmp/harbor_values.yaml
     echo "harborAdminPassword: $TDH_HARBOR_ADMIN_PASSWORD"                                                                      >  $HARBOR_VALUES
     echo "secretKey: MmetwEOsKpC7VWGx"                                                                                          >> $HARBOR_VALUES
+    echo "tlsCertificateSecretName: $HARBOR_TLS_SECRET"                                                                         >> $HARBOR_VALUES
     echo "hostname: harbor.apps-contour.$TDH_ENVNAME.$AWS_HOSTED_DNS_DOMAIN"                                                    >> $HARBOR_VALUES
 
     echo ""                                                                                                                     >> $HARBOR_VALUES
@@ -8575,13 +8576,13 @@ TanzuPackage_Harbor () {
     echo "registry:"                                                                                                            >> $HARBOR_VALUES
     echo "  secret: 7SihDjyRJsczsOaJ"                                                                                           >> $HARBOR_VALUES
     echo ""                                                                                                                     >> $HARBOR_VALUES
-    echo "service:"                                                                                                             >> $HARBOR_VALUES
-    echo "  type: ClusterIP"                                                                                                    >> $HARBOR_VALUES
-    echo "  tls:"                                                                                                               >> $HARBOR_VALUES
-    echo "    enabled: true"                                                                                                    >> $HARBOR_VALUES
-    echo "    existingSecret: $HARBOR_TLS_SECRET"                                                                               >> $HARBOR_VALUES
-    echo "    notaryExistingSecret: $NOTARY_TLS_SECRET"                                                                         >> $HARBOR_VALUES
-    echo ""                                                                                                                     >> $HARBOR_VALUES
+#    echo "service:"                                                                                                             >> $HARBOR_VALUES
+#    echo "  type: ClusterIP"                                                                                                    >> $HARBOR_VALUES
+#    echo "  tls:"                                                                                                               >> $HARBOR_VALUES
+#    echo "    enabled: true"                                                                                                    >> $HARBOR_VALUES
+#    echo "    existingSecret: $HARBOR_TLS_SECRET"                                                                               >> $HARBOR_VALUES
+#    echo "    notaryExistingSecret: $NOTARY_TLS_SECRET"                                                                         >> $HARBOR_VALUES
+#    echo ""                                                                                                                     >> $HARBOR_VALUES
 
     # https://github.com/goharbor/harbor-helm/blob/master/values.yaml
     echo "externalURL: https://harbor.apps-contour.$TDH_ENVNAME.$AWS_HOSTED_DNS_DOMAIN"                                         >> $HARBOR_VALUES
