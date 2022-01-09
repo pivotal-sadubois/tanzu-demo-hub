@@ -8521,7 +8521,6 @@ TanzuPackage_Harbor () {
   PACKAGE_NAME=$1
   NAMESPACE=registry-harbor
   NAMESPACE=tanzu-system-registry
-  NAMESPACE=harbor
   PACKAGE_ID=$2
   PACKAGE_DES="Harbor OCI Registry"
 
@@ -8621,6 +8620,7 @@ TanzuPackage_Harbor () {
     fi
   fi
 
+  NAMESPACE=harbor
     # --- ADD HTTPProxy ---
     HARBOR_VALUES=/tmp/harbor_httpproxy.yaml
     echo "apiVersion: projectcontour.io/v1"                                       >  $HARBOR_VALUES
