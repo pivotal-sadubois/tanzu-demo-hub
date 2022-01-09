@@ -8533,7 +8533,7 @@ TanzuPackage_Harbor () {
 
     HARBOR_VALUES=/tmp/harbor_values.yaml
     echo "harborAdminPassword: $TDH_HARBOR_ADMIN_PASSWORD"                                                                      >  $HARBOR_VALUES
-    echo "secretKey: $TDH_HARBOR_ADMIN_PASSWORD"                                                                                >>  $HARBOR_VALUES
+    echo "secretKey: MmetwEOsKpC7VWGx"                                                                                          >>  $HARBOR_VALUES
 
     echo ""                                                                                                                     >> $HARBOR_VALUES
     echo "global:"                                                                                                              >> $HARBOR_VALUES
