@@ -8592,42 +8592,13 @@ TanzuPackage_Harbor () {
     echo "      accessMode: ReadWriteOnce"                                                                                      >> $HARBOR_VALUES
     echo "      size: 10Gi"                                                                                                     >> $HARBOR_VALUES
 
-    messageTitle "Installing $PACKAGE_DES"
-    messagePrint " ▪ Tanzu Package ($PACKAGE_NAME)"   "$PACKAGE_ID ($package_ver/$package_rel)"
-    tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $NAMESPACE \
-           --version $package_ver --create-namespace --poll-timeout 10m \
-           --values-file $HARBOR_VALUES --wait=true > /tmp/error.log 2>&1; ret=$?
-    if [ $ret -ne 0 ]; then
-      logMessages /tmp/error.log
-      echo "ERROR: failed to install Tanzu Package $PACKAGE_NAME)"
-      if [ "$NATIVE" == "0" ]; then
-        echo "       => tools/${TDH_TOOLS}.sh"
-        echo "          tdh-tools:/$ tanzu package install $PACKAGE_NAME --create-namespace \\"
-        echo "                             --package-name $PACKAGE_ID \\"
-        echo "                             --namespace $NAMESPACE --version $package_ver \\"
-        echo "                             --values-file $HARBOR_VALUES"
-        echo "          tdh-tools:/$ exit"
-      else
-        echo "       => tanzu package install $PACKAGE_NAME --create-namespace \\"
-        echo "                             --package-name $PACKAGE_ID \\"
-        echo "                             --namespace $NAMESPACE --version $package_ver \\"
-        echo "                             --values-file $HARBOR_VALUES"
-      fi
-
-      exit 1
-    else
-      rm -f /tmp/error.log
-    fi
-  fi
-
-  NAMESPACE=harbor
     # --- ADD HTTPProxy ---
     HARBOR_VALUES=/tmp/harbor_httpproxy.yaml
-    echo "apiVersion: projectcontour.io/v1"                                       >  $HARBOR_VALUES
+    echo "apiVersion: projectcontour.io/v1"                                       >> $HARBOR_VALUES
     echo "kind: HTTPProxy"                                                        >> $HARBOR_VALUES
     echo "metadata:"                                                              >> $HARBOR_VALUES
     echo "  name: harbor-httpproxy"                                               >> $HARBOR_VALUES
-    echo "  namespace: $NAMESPACE"                                                >> $HARBOR_VALUES
+    echo "  namespace: harbor"                                                    >> $HARBOR_VALUES
     echo "  annotations:"                                                         >> $HARBOR_VALUES
     echo "    kubernetes.io/ingress.class: contour"                               >> $HARBOR_VALUES
     echo "spec:"                                                                  >> $HARBOR_VALUES
@@ -8679,20 +8650,48 @@ TanzuPackage_Harbor () {
     echo "      timeoutPolicy:"                                                   >> $HARBOR_VALUES
     echo "        response: 600s"                                                 >> $HARBOR_VALUES
 
-    messagePrint " ▪ Deploy HTTPProxy for Harbor" "$HARBOR_VALUES"
-    kubectl apply -f $HARBOR_VALUES; ret=$?
+    messageTitle "Installing $PACKAGE_DES"
+    messagePrint " ▪ Tanzu Package ($PACKAGE_NAME)"   "$PACKAGE_ID ($package_ver/$package_rel)"
+    tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $NAMESPACE \
+           --version $package_ver --create-namespace --poll-timeout 10m \
+           --values-file $HARBOR_VALUES --wait=true > /tmp/error.log 2>&1; ret=$?
     if [ $ret -ne 0 ]; then
-      echo "ERROR: failed to deploy HTTPProxy"
+      logMessages /tmp/error.log
+      echo "ERROR: failed to install Tanzu Package $PACKAGE_NAME)"
       if [ "$NATIVE" == "0" ]; then
         echo "       => tools/${TDH_TOOLS}.sh"
-        echo "          tdh-tools:/$ kubectl apply -f $HARBOR_VALUES"
+        echo "          tdh-tools:/$ tanzu package install $PACKAGE_NAME --create-namespace \\"
+        echo "                             --package-name $PACKAGE_ID \\"
+        echo "                             --namespace $NAMESPACE --version $package_ver \\"
+        echo "                             --values-file $HARBOR_VALUES"
         echo "          tdh-tools:/$ exit"
       else
-        echo "       => kubectl apply -f $HARBOR_VALUES"
+        echo "       => tanzu package install $PACKAGE_NAME --create-namespace \\"
+        echo "                             --package-name $PACKAGE_ID \\"
+        echo "                             --namespace $NAMESPACE --version $package_ver \\"
+        echo "                             --values-file $HARBOR_VALUES"
       fi
 
       exit 1
+    else
+      rm -f /tmp/error.log
     fi
+  fi
+
+#    messagePrint " ▪ Deploy HTTPProxy for Harbor" "$HARBOR_VALUES"
+#    kubectl apply -f $HARBOR_VALUES; ret=$?
+#    if [ $ret -ne 0 ]; then
+#      echo "ERROR: failed to deploy HTTPProxy"
+#      if [ "$NATIVE" == "0" ]; then
+#        echo "       => tools/${TDH_TOOLS}.sh"
+#        echo "          tdh-tools:/$ kubectl apply -f $HARBOR_VALUES"
+#        echo "          tdh-tools:/$ exit"
+#      else
+#        echo "       => kubectl apply -f $HARBOR_VALUES"
+#      fi
+#
+#      exit 1
+#    fi
 
 #gaga
 
