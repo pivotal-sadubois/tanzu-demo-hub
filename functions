@@ -8325,19 +8325,17 @@ TanzuPackage_RepoSync() {
 }
 
 # ------------------------------------------------------------------------------------------
-# Function Name ......: TanzuPackage_CertManager
+# Function Name ......: TanzuPackage_LocalStorage
 # Function Purpose ...: Install Cert Manager
 # ------------------------------------------------------------------------------------------
-# Argument ($1) ......: Tanzi Package Display Name
-#          ($2) ......: Namespace Name
-#          ($3) ......: Tanzu Package Name
-#          ($4) ......: Package Description
+# Argument ($1) ......: Tanzu Package Name
+#          ($2) ......: Tanzu Package Id
 # ------------------------------------------------------------------------------------------
 # Return Value .......: 0 on Success, 1 on failure
 # ------------------------------------------------------------------------------------------
-# https://docs.vmware.com/en/VMware-Tanzu-Kubernetes-Grid/1.4/vmware-tanzu-kubernetes-grid-14/GUID-packages-cert-manager.html
+# https://tanzucommunityedition.io/docs/latest/package-readme-local-path-storage-0.0.20/
 # ------------------------------------------------------------------------------------------
-TanzuPackage_CertManager() {
+TanzuPackage_LocalStorage() {
   PACKAGE_NAME="$1"
   NAMESPACE="$1"
   PACKAGE_ID="$3"
