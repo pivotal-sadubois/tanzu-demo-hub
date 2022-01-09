@@ -7274,10 +7274,10 @@ tdh_tools_build() {
   messagePrint " ▪ Build Service Tools (kp)"                                   "$TDH_SERVICE_BUILD_SERVICE_KP"
   messagePrint " ▪ Build Service Dependancies"                                 "$TDH_SERVICE_BUILD_SERVICE_DEPENDANCIES"
   messagePrint " ▪ Tantzu CLI Bundle"                                          "$TKG_TANZU_KUBERNETES_GRID"
-  messagePrint " ▪ Carvel Tools: - Handle multiple k8s Ressources (kapp)"      "$$TDH_CARVEL_KAPP"
-  messagePrint " ▪ Carvel Tools: - Build/Reference container images (kbld)"    "$$TDH_CARVEL_KBLD"
-  messagePrint " ▪ Carvel Tools: - Template Overlay for k8s config (ytt)"      "$$TDH_CARVEL_YTT"
-  messagePrint " ▪ Carvel Tools: - Bundle and Relocate App Config (imgpkg)"    "$$TDH_CARVEL_IMGPKG"
+  messagePrint " ▪ Carvel Tools: - Handle multiple k8s Ressources (kapp)"      "$TDH_CARVEL_KAPP"
+  messagePrint " ▪ Carvel Tools: - Build/Reference container images (kbld)"    "$TDH_CARVEL_KBLD"
+  messagePrint " ▪ Carvel Tools: - Template Overlay for k8s config (ytt)"      "$TDH_CARVEL_YTT"
+  messagePrint " ▪ Carvel Tools: - Bundle and Relocate App Config (imgpkg)"    "$TDH_CARVEL_IMGPKG"
   messageTitle "TDH Tools Docker Container ($TDH_TOOLS_IMAGE)"
 
   # --- DOW3LOAD BUILD_SERVICE BINARIES ---
@@ -8545,6 +8545,16 @@ TanzuPackage_Harbor () {
       echo "  storageClass: $VSPHERE_TKGS_STORAGE_CLASS"                                                                       >> $HARBOR_VALUES
     fi
 
+    echo "database:"                                                                                                            >> $HARBOR_VALUES
+    echo "  password: 9uorOHGRc8MjWDVg"                                                                                         >> $HARBOR_VALUES
+    echo "core:"                                                                                                                >> $HARBOR_VALUES
+    echo "  secret: r7eqtW42TFgm5CT1"                                                                                           >> $HARBOR_VALUES
+    echo "  xsrfKey: CbU5zjhjdaQ1uol7z7AfZjr38by6phIL"                                                                          >> $HARBOR_VALUES
+    echo "jobservice:"                                                                                                          >> $HARBOR_VALUES
+    echo "  secret: 4jYz75cztLwQK4Uw"                                                                                           >> $HARBOR_VALUES
+    echo ""                                                                                                                     >> $HARBOR_VALUES
+    echo "registry:"                                                                                                            >> $HARBOR_VALUES
+    echo "  secret: 7SihDjyRJsczsOaJ"                                                                                           >> $HARBOR_VALUES
     echo ""                                                                                                                     >> $HARBOR_VALUES
     echo "service:"                                                                                                             >> $HARBOR_VALUES
     echo "  type: ClusterIP"                                                                                                    >> $HARBOR_VALUES
