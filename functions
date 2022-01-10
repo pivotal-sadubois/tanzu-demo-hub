@@ -8556,11 +8556,11 @@ TanzuPackage_Harbor () {
 
 
     HARBOR_VALUES=/tmp/harbor_values.yaml
-    echo "#@data/values"                                                                                                        >  $HARBOR_VALUES
-    echo "#@overlay/match-child-defaults missing_ok=True"                                                                       >> $HARBOR_VALUES
-    echo ""                                                                                                                     >> $HARBOR_VALUES
-    echo "---"                                                                                                                  >> $HARBOR_VALUES
-    echo "harborAdminPassword: $TDH_HARBOR_ADMIN_PASSWORD"                                                                      >> $HARBOR_VALUES
+    #echo "#@data/values"                                                                                                        >  $HARBOR_VALUES
+    #echo "#@overlay/match-child-defaults missing_ok=True"                                                                       >> $HARBOR_VALUES
+    #echo ""                                                                                                                     >> $HARBOR_VALUES
+    #echo "---"                                                                                                                  >> $HARBOR_VALUES
+    echo "harborAdminPassword: $TDH_HARBOR_ADMIN_PASSWORD"                                                                      >  $HARBOR_VALUES
     echo "secretKey: MmetwEOsKpC7VWGx"                                                                                          >> $HARBOR_VALUES
     echo "hostname: harbor.apps-contour.$TDH_ENVNAME.$AWS_HOSTED_DNS_DOMAIN"                                                    >> $HARBOR_VALUES
     #echo "tlsCertificateSecretName: $HARBOR_TLS_SECRET"                                                                        >> $HARBOR_VALUES
