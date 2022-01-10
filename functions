@@ -9112,13 +9112,15 @@ runTDHtools() {
                "-v $TDHPATH/:$TDHPATH:ro"                                               ## TANZU-DEMO-HUB DIRECTORY
              )
 
+echo ID:${id}
+
       # --- MAKE SURE DIRECTORIES ARE CREATED ---
       for n in $(echo ${CORE_MOUNTS[*]} | sed 's/\-. //g'); do
 echo "N:$n"
         [ $n == "/var/run/docker.sock" ] && continue
         localdir=$(echo $n | awk -F: '{ print $1 }')
 echo "  localdir:$localdir"
-        [ -d $localdir -a -d $localdir ] && mkdir -p $localdir && echo "  create dir $localdir"
+        [ -d $localdir ] && mkdir -p $localdir && echo "  create dir $localdir"
       done
 
 exit
