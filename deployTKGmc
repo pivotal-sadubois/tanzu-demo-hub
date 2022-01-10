@@ -53,6 +53,7 @@ listTemplates() {
 }
 
 listDeployments() {
+  echo ""
   printf "%-30s %-7s %-7s %-30s %-5s %s\n" "CONFIURATION" "CLOUD" "DOMAIN" "MGMT-CLUSTER" "PLAN" "CONFIGURATION"
   echo "-----------------------------------------------------------------------------------------------------------"
 
@@ -1085,7 +1086,7 @@ checkTDHenvironment
 
 # --- VERIFY TOOLS AND ACCESS ---
 checkCloudCLI
-kCLIcommands TOOLS
+checkCLIcommands TOOLS
 checkCLIcommands TKG
 checkCLIcommands TANZU
 checkCLIcommands TMC

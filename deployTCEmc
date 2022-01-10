@@ -11,6 +11,7 @@ export TDHPATH=$(cd "$(pwd)/$(dirname $0)"; pwd)
 export DEBUG=0
 export NATIVE=0                ## NATIVE=1 r(un on local host), NATIVE=0 (run within docker)
 export DEPLOY_TKG_CLEAN=0
+export TDH_TOOLS=tdh-tools-tce
 
 # --- SETTING FOR TDH-TOOLS ---
 export NATIVE=0                ## NATIVE=1 r(un on local host), NATIVE=0 (run within docker)
@@ -52,6 +53,7 @@ listTemplates() {
 }
 
 listDeployments() {
+  echo ""
   printf "%-30s %-7s %-7s %-30s %-5s %s\n" "CONFIURATION" "CLOUD" "DOMAIN" "MGMT-CLUSTER" "PLAN" "CONFIGURATION"
   echo "-----------------------------------------------------------------------------------------------------------"
 
@@ -92,13 +94,7 @@ listClusters() {
             jq -r '.status.status.state.state')
 
       printf "%-20s %-20s %-10s %-20s %-15s %-10s\n" $cln $ver $cpv $acc $reg $stt
-
     done
-
-
-#    tmc cluster list --output json | jq -r '.clusters[1] | [.fullName.name,.spec.provisionedcluster.version]'
-
-#  tmc cluster list --group $TMC_CLUSTER_GROUP
   echo "-----------------------------------------------------------------------------------------------------------"
 
     # --- CLEANUP ---
@@ -996,11 +992,19 @@ checkCLIcommands TANZU
 checkCLIcommands TMC
 checkCLIcommands VSPHERE
 
-[ "$DEPLOY_TKG_CLEAN" -eq 1 ] && cleanupEnvironment && exit 0
+f [ "$DEPLOY_TKG_CLEAN" -eq 1 ]; then
+  cleanupEnvironment
+  cleanKubeconfig
+  cleanManagementCluster
+
+  exit 0
+fi
 
 # --- INSTALL TANZU PLUGINS ---
 installTanzuPlugins
 
+# --- CLEANUP KUNECONFIG ---
+cleanKubeconfig
 checkTDHAccess
 checkCloudAccess
 
