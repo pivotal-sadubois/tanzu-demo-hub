@@ -5608,7 +5608,6 @@ InstallContour() {
   fi
 
   NAMESPACE=ingress-contour
-#gaga
 
   cnt=$(kubectl get pods -A | egrep "^$NAMESPACE " | grep -c Running)
   if [ $? -ne 0 ]; then
@@ -5986,7 +5985,6 @@ createClusterIssuer() {
 InstallCertManager() {
   NAMESPACE=cert-manager
 
-#gaga
   cnt=$(kubectl get pods -A | egrep "^$NAMESPACE " | grep -c Running)
   if [ $cnt -eq 0 ]; then
     # --- INSTALL CONTOUR INGRESS ---
@@ -8393,7 +8391,6 @@ TanzuPackage_LocalStorage() {
   pkg_nam=$(jq -r '.[]."package-name"' /tmp/pkg.json)
   pkg_ver=$(jq -r '.[]."package-version"' /tmp/pkg.json)
 
-echo "gaga pkg_stt:$pkg_stt pkg_ver:$pkg_ver"
   if [ "$pkg_stt" != "Reconcile succeeded" ]; then
     echo "ERROR: failed to reconsile Tanzu Package ($PACKAGE_NAME)"
     messageLine
@@ -8629,9 +8626,10 @@ TanzuPackage_Harbor () {
     messageTitle "Installing $PACKAGE_DES"
     messagePrint " ▪ Tanzu Package ($PACKAGE_NAME)"   "$PACKAGE_ID ($package_ver/$package_rel)"
     tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $PACKAGE_NAMESPACE \
-           --version $package_ver --create-namespace --poll-timeout 10m -log-file /tmp/harbor.log \
+           --version $package_ver --create-namespace --poll-timeout 10m --log-file /tmp/harbor.log \
            --values-file $HARBOR_VALUES --wait=true --verbose 9 > /tmp/error.log 2>&1; ret=$?
 
+#gaga
 messageLine
 cat /tmp/error.log
 messageLine
