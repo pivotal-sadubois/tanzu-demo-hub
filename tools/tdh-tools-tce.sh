@@ -38,7 +38,7 @@ done
 #############################################################################################################################
 ################################### EXECUTING CODE WITHIN  TDH-TOOLS DOCKER CONTAINER  ######################################
 #############################################################################################################################
-runTDHtools tkg "Run TDH Tools Docker Container" "bash" ""
+runTDHtools tce "Run TDH Tools Docker Container" "bash" ""
 
 usage() {
   echo "USAGE: $0 [oprions] <deployment>"

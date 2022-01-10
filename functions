@@ -7260,7 +7260,7 @@ tdh_tools_build() {
     . files/tdh-tools/tdh-tools.cfg
   fi
 
-  messageTitle "TDH Tools Configureation (files/tdh-tools/tdh-tools.cfg)"
+  messageTitle "TDH Tools Configureation (files/tdh-tools/$TDH_TOOLS.cfg)"
   messagePrint " ▪ Build Service Version"                                      "$TDH_SERVICE_BUILD_SERVICE_VERSION"
   messagePrint " ▪ Build Service Tools (kp)"                                   "$TDH_SERVICE_BUILD_SERVICE_KP"
   messagePrint " ▪ Build Service Dependancies"                                 "$TDH_SERVICE_BUILD_SERVICE_DEPENDANCIES"
@@ -7409,20 +7409,14 @@ tdh_tools_build() {
   fi
 
   # --- POSTINSTALL SCRIPTS
-  if [ ! -f $TDH_DOCKER_FILES/tdh-postinstall-root.sh ]; then
-    cp files/tdh-tools/tdh-postinstall-root.sh $TDH_DOCKER_FILES
-    chmod a+x $TDH_DOCKER_FILES/tdh-postinstall-root.sh
-  fi
+  cp files/tdh-tools/tdh-postinstall-root.sh $TDH_DOCKER_FILES
+  chmod a+x $TDH_DOCKER_FILES/tdh-postinstall-root.sh
 
-  if [ ! -f $TDH_DOCKER_FILES/tdh-postinstall-user.sh ]; then
-    cp files/tdh-tools/tdh-postinstall-user.sh $TDH_DOCKER_FILES
-    chmod a+x $TDH_DOCKER_FILES/tdh-postinstall-user.sh
-  fi
+  cp files/tdh-tools/tdh-postinstall-user.sh $TDH_DOCKER_FILES
+  chmod a+x $TDH_DOCKER_FILES/tdh-postinstall-user.sh
 
-  if [ ! -f $TDH_DOCKER_FILES/tdh-postinstall-user-tce.sh ]; then
-    cp files/tdh-tools/tdh-postinstall-user-tce.sh $TDH_DOCKER_FILES
-    chmod a+x $TDH_DOCKER_FILES/tdh-postinstall-user-tce.sh
-  fi
+  cp files/tdh-tools/tdh-postinstall-user-tce.sh $TDH_DOCKER_FILES
+  chmod a+x $TDH_DOCKER_FILES/tdh-postinstall-user-tce.sh
 
   echo tdh-tools > $TDH_DOCKER_FILES/hostname
 
@@ -7869,7 +7863,6 @@ cleanKindCluster() {
   fi
 }
 
-#hallo
 runTDHtoolsDemos() {
   if [ ! -f /tdh_tools_docker_container  ]; then
     if [ $NATIVE -eq 0 ]; then
@@ -9083,10 +9076,10 @@ runTDHtools() {
     checkKubernetesServices registry_docker
 
     if [ $NATIVE -eq 0 ]; then
-      tdh_tools_build tce
-      messagePrint " ▪ Running TDH Tools Docker Container" "tdh-tools-tce:latest $TDHPATH/$CMD_EXEC $CMD_ARGS"
+      tdh_tools_build $TOOLS_TLAG
+      messagePrint " ▪ Running TDH Tools Docker Container" "$TDH_TOOLS:latest $TDHPATH/$CMD_EXEC $CMD_ARGS"
 
-      cid=$(docker ps -a | grep tdh-tools:latest | awk '{ print $1 }')
+      cid=$(docker ps -a | grep $TDH_TOOLS:latest | awk '{ print $1 }')
       [ "$cid" != "" ] && for n in $cid; do docker rm $n -f > /dev/null 2>&1; done
 
       # --- DUMP ENVIRONMENT VARIABLES ---
@@ -9127,9 +9120,9 @@ runTDHtools() {
       done
 
       [ "$TOOLS_TLAG" == "tce" ] && POSTSCRIPT="tdh-postinstall-user-tce.sh" || POSTSCRIPT="tdh-postinstall-user.sh" 
-      docker run $ROOT_OPTIONS ${CORE_MOUNTS[*]} tdh-tools:latest chmod 666 /var/run/docker.sock > /dev/null 2>&1
-      docker run $USER_OPTIONS ${CORE_MOUNTS[*]} tdh-tools:latest /usr/local/bin/$POSTSCRIPT > /dev/null 2>&1
-      docker run $USER_OPTIONS ${CORE_MOUNTS[*]} tdh-tools:latest $DOCKER_EXEC $DOCKER_ARGS; ret=$?
+      docker run $ROOT_OPTIONS ${CORE_MOUNTS[*]} $TDH_TOOLS:latest chmod 666 /var/run/docker.sock > /dev/null 2>&1
+      docker run $USER_OPTIONS ${CORE_MOUNTS[*]} $TDH_TOOLS:latest /usr/local/bin/$POSTSCRIPT > /dev/null 2>&1
+      docker run $USER_OPTIONS ${CORE_MOUNTS[*]} $TDH_TOOLS:latest $DOCKER_EXEC $DOCKER_ARGS; ret=$?
 
       # --- FINISH CURRENT SESSION AS WE RUN AS CONTAINER ---
       exit $ret
