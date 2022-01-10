@@ -9116,7 +9116,7 @@ runTDHtools() {
       for n in $(echo ${CORE_MOUNTS[*]} | sed 's/\-. //g'); do
         [ $n == "/var/run/docker.sock" ] && continue
         localdir=$(echo $n | awk -F: '{ print $1 }')
-        [ ! -d $localdir ] && mkdir -p $localdir 
+        [ ! -e $localdir ] && mkdir -p $localdir 
       done
 
       [ "$TOOLS_TLAG" == "tce" ] && POSTSCRIPT="tdh-postinstall-user-tce.sh" || POSTSCRIPT="tdh-postinstall-user.sh" 
