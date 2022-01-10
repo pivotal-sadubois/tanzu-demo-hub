@@ -8562,10 +8562,10 @@ TanzuPackage_Harbor () {
     echo "secretKey: MmetwEOsKpC7VWGx"                                                                                          >> $HARBOR_VALUES
     echo "hostname: harbor.apps-contour.$TDH_ENVNAME.$AWS_HOSTED_DNS_DOMAIN"                                                    >> $HARBOR_VALUES
     echo "tlsCertificateSecretName: $HARBOR_TLS_SECRET"                                                                         >> $HARBOR_VALUES
-#    echo "tlsCertificate:"                                                                                                      >> $HARBOR_VALUES
-#    echo "  tls.crt: $tls_crt"                                                                                                  >> $HARBOR_VALUES
-#    echo "  tls.key: $tls_key"                                                                                                  >> $HARBOR_VALUES
-#    echo ""                                                                                                                     >> $HARBOR_VALUES
+    echo "tlsCertificate:"                                                                                                      >> $HARBOR_VALUES
+    echo "  tls.crt: $tls_crt"                                                                                                  >> $HARBOR_VALUES
+    echo "  tls.key: $tls_key"                                                                                                  >> $HARBOR_VALUES
+    echo ""                                                                                                                     >> $HARBOR_VALUES
     
 
     echo "global:"                                                                                                              >> $HARBOR_VALUES
@@ -8630,7 +8630,11 @@ TanzuPackage_Harbor () {
     messagePrint " ▪ Tanzu Package ($PACKAGE_NAME)"   "$PACKAGE_ID ($package_ver/$package_rel)"
     tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $PACKAGE_NAMESPACE \
            --version $package_ver --create-namespace --poll-timeout 10m \
-           --values-file $HARBOR_VALUES --wait=true > /tmp/error.log 2>&1; ret=$?
+           --values-file $HARBOR_VALUES --wait=true --verbose 9 > /tmp/error.log 2>&1; ret=$?
+
+messageLine
+cat /tmp/error.log
+messageLine
     if [ $ret -ne 0 ]; then
       logMessages /tmp/error.log
       echo "ERROR: failed to install Tanzu Package $PACKAGE_NAME)"
