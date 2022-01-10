@@ -4213,13 +4213,9 @@ tmcCreateCluster() {
     fi
 
     if [ "$stt" == "" -o "$stt" != "READY" ]; then
-echo "XXX TMC_K8S_VERSIONS:$TMC_K8S_VERSIONS"
-echo "XXX TDH_TKGWC_KUBERNETES:$TDH_TKGWC_KUBERNETES"
       KUBERNETES_VERSION=$(for n in $TMC_K8S_VERSIONS; do echo v$n; done | egrep "$TDH_TKGWC_KUBERNETES" | tail -1 | sed 's/^v//g') 
 
       [ "$TMC_KUBERNETES_VERSION" != "" ] && KUBERNETES_VERSION=$TMC_KUBERNETES_VERSION
-
-echo "KUBERNETES_VERSION:$KUBERNETES_VERSION"
 
       messageTitle "TMC Create Cluster"     
       messagePrint " ▪ TMC Cluster Name"       "$TDH_CLUSTER_NAME"
@@ -4344,7 +4340,6 @@ alignStr() {
 
 getTDHClusterCredentials() {
 
-
   cnt=$(kubectl config get-clusters | egrep -c "^$TDH_CLUSTER_NAME$")
   if [ $cnt -eq 0 ]; then 
     messageTitle "Request TKG Cluster Credentials from TMC"
@@ -4386,8 +4381,8 @@ getTDHClusterCredentials() {
     chmod 600 /tmp/${TDH_CLUSTER_NAME}.kubeconfig
     export KUBECONFIG=$HOME/.kube/config:/tmp/${TDH_CLUSTER_NAME}.kubeconfig
     kubectl config view --flatten > ~/.kube/config.new
-    mv ~/.kube/config ~/.kube/config.last
-    mv ~/.kube/config.new ~/.kube/config
+    [ -f $HOME/.kube/config ] && mv $HOME/.kube/config $HOME/.kube/config.last
+    [ -f $HOME/.kube/config.new ] && mv ~/.kube/config.new ~/.kube/config
     chmod 600 ~/.kube/config
     unset KUBECONFIG
   
@@ -8556,25 +8551,21 @@ TanzuPackage_Harbor () {
 
 
     HARBOR_VALUES=/tmp/harbor_values.yaml
-    #echo "#@data/values"                                                                                                        >  $HARBOR_VALUES
-    #echo "#@overlay/match-child-defaults missing_ok=True"                                                                       >> $HARBOR_VALUES
-    #echo ""                                                                                                                     >> $HARBOR_VALUES
-    #echo "---"                                                                                                                  >> $HARBOR_VALUES
     echo "harborAdminPassword: $TDH_HARBOR_ADMIN_PASSWORD"                                                                      >  $HARBOR_VALUES
     echo "secretKey: MmetwEOsKpC7VWGx"                                                                                          >> $HARBOR_VALUES
     echo "hostname: harbor.apps-contour.$TDH_ENVNAME.$AWS_HOSTED_DNS_DOMAIN"                                                    >> $HARBOR_VALUES
     #echo "tlsCertificateSecretName: $HARBOR_TLS_SECRET"                                                                        >> $HARBOR_VALUES
     echo "logLevel: debug"                                                                                                      >> $HARBOR_VALUES
-    #echo "tlsCertificate:"                                                                                                      >> $HARBOR_VALUES
-    #echo "  tls.crt: $tls_crt"                                                                                                  >> $HARBOR_VALUES
-    #echo "  tls.key: $tls_key"                                                                                                  >> $HARBOR_VALUES
-    #echo "  ca.crt: $ca_crt"                                                                                                    >> $HARBOR_VALUES
+    #echo "tlsCertificate:"                                                                                                     >> $HARBOR_VALUES
+    #echo "  tls.crt: $tls_crt"                                                                                                 >> $HARBOR_VALUES
+    #echo "  tls.key: $tls_key"                                                                                                 >> $HARBOR_VALUES
+    #echo "  ca.crt: $ca_crt"                                                                                                   >> $HARBOR_VALUES
     echo "tlsCertificate:"                                                                                                      >> $HARBOR_VALUES
-    echo "  tls.crt: |"                                                                                                  >> $HARBOR_VALUES
-    kubectl get secrets tanzu-demo-hub-tls -n harbor -o json | jq -r '.data."tls.crt"' | base64 -d | sed 's/^/    /g' >> $HARBOR_VALUES
-    echo "  tls.key: |"                                                                                                  >> $HARBOR_VALUES
-    kubectl get secrets tanzu-demo-hub-tls -n harbor -o json | jq -r '.data."tls.key"' | base64 -d | sed 's/^/    /g' >> $HARBOR_VALUES
-    echo "  ca.crt: |"                                                                                                    >> $HARBOR_VALUES
+    echo "  tls.crt: |"                                                                                                         >> $HARBOR_VALUES
+    kubectl get secrets tanzu-demo-hub-tls -n harbor -o json | jq -r '.data."tls.crt"' | base64 -d | sed 's/^/    /g'           >> $HARBOR_VALUES
+    echo "  tls.key: |"                                                                                                         >> $HARBOR_VALUES
+    kubectl get secrets tanzu-demo-hub-tls -n harbor -o json | jq -r '.data."tls.key"' | base64 -d | sed 's/^/    /g'           >> $HARBOR_VALUES
+    echo "  ca.crt: |"                                                                                                          >> $HARBOR_VALUES
     cat /home/sdubois/.tanzu-demo-hub/certificates/tdh-cert.pem | sed 's/^/    /g' >> $HARBOR_VALUES
     echo ""                                                                                                                     >> $HARBOR_VALUES
     
@@ -8585,7 +8576,7 @@ TanzuPackage_Harbor () {
     echo "    - tdh-docker-repo"                                                                                                >> $HARBOR_VALUES
 
     if [ "${TDH_DEPLOYMENT_CLOUD}" == "vSphere" -a "${TDH_TKGMC_TKG_TYPE}" == "tkgs" ]; then
-      echo "  storageClass: $VSPHERE_TKGS_STORAGE_CLASS"                                                                       >> $HARBOR_VALUES
+      echo "  storageClass: $VSPHERE_TKGS_STORAGE_CLASS"                                                                        >> $HARBOR_VALUES
     fi
 
     echo "database:"                                                                                                            >> $HARBOR_VALUES
@@ -8599,20 +8590,6 @@ TanzuPackage_Harbor () {
     echo "registry:"                                                                                                            >> $HARBOR_VALUES
     echo "  secret: 7SihDjyRJsczsOaJ"                                                                                           >> $HARBOR_VALUES
     echo ""                                                                                                                     >> $HARBOR_VALUES
-#    echo "service:"                                                                                                             >> $HARBOR_VALUES
-#    echo "  type: ClusterIP"                                                                                                    >> $HARBOR_VALUES
-#    echo "  tls:"                                                                                                               >> $HARBOR_VALUES
-#    echo "    enabled: true"                                                                                                    >> $HARBOR_VALUES
-#    echo "    existingSecret: $HARBOR_TLS_SECRET"                                                                               >> $HARBOR_VALUES
-#    echo "    notaryExistingSecret: $NOTARY_TLS_SECRET"                                                                         >> $HARBOR_VALUES
-#    echo ""                                                                                                                     >> $HARBOR_VALUES
-
-#    # https://github.com/goharbor/harbor-helm/blob/master/values.yaml
-#    echo "externalURL: https://harbor.apps-contour.$TDH_ENVNAME.$AWS_HOSTED_DNS_DOMAIN"                                         >> $HARBOR_VALUES
-#    echo ""                                                                                                                     >> $HARBOR_VALUES
-#    echo "portal:"                                                                                                              >> $HARBOR_VALUES
-#    echo "  tls:"                                                                                                               >> $HARBOR_VALUES
-#    echo "    existingSecret: $HARBOR_TLS_SECRET"                                                                               >> $HARBOR_VALUES
     echo ""                                                                                                                     >> $HARBOR_VALUES
     echo "persistence:"                                                                                                         >> $HARBOR_VALUES
     echo "  enabled: true"                                                                                                      >> $HARBOR_VALUES
@@ -8643,12 +8620,6 @@ TanzuPackage_Harbor () {
            --version $package_ver --create-namespace --poll-timeout 10m --log-file /tmp/harbor.log \
            --values-file $HARBOR_VALUES --wait=true --verbose 9 > /tmp/error.log 2>&1; ret=$?
 
-#gaga
-messageLine
-cat /tmp/error.log
-messageLine
-cat /tmp/harbor.log
-messageLine
     if [ $ret -ne 0 ]; then
       logMessages /tmp/error.log
       echo "ERROR: failed to install Tanzu Package $PACKAGE_NAME)"
@@ -8702,9 +8673,11 @@ messageLine
   # --- VERIFY DNS DOMAIN ---
   verifyHostedZone ${TDH_ENVNAME}.$AWS_HOSTED_DNS_DOMAIN
 
+  [ "$TDH_TOOLS" == "tdh-tools" ] && CONTOUR_NS=tanzu-system-ingress || CONTOUR_NS=projectcontour
+
   ipa=""; cnt=0
   while [ "$ipa" == "" -a $cnt -lt 15 ]; do
-    ipa=$(kubectl describe svc envoy --namespace projectcontour | egrep "^LoadBalancer Ingress:" | awk '{ print $NF }')
+    ipa=$(kubectl describe svc envoy --namespace $CONTOUR_NS | egrep "^LoadBalancer Ingress:" | awk '{ print $NF }')
     [ "$ipa" != "" ] && break
     let cnt=cnt+1
     sleep 30
@@ -8922,9 +8895,11 @@ TanzuPackage_Contour() {
   # --- VERIFY DNS DOMAIN ---
   verifyHostedZone ${TDH_ENVNAME}.$AWS_HOSTED_DNS_DOMAIN
 
+  [ "$TDH_TOOLS" == "tdh-tools" ] && CONTOUR_NS=tanzu-system-ingress || CONTOUR_NS=projectcontour
+
   ipa=""; cnt=0
   while [ "$ipa" == "" -a $cnt -lt 15 ]; do
-    ipa=$(kubectl describe svc envoy --namespace projectcontour | egrep "^LoadBalancer Ingress:" | awk '{ print $NF }')
+    ipa=$(kubectl describe svc envoy --namespace $CONTOUR_NS | egrep "^LoadBalancer Ingress:" | awk '{ print $NF }')
     [ "$ipa" != "" ] && break
     let cnt=cnt+1
     sleep 30
