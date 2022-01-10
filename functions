@@ -8565,10 +8565,17 @@ TanzuPackage_Harbor () {
     echo "hostname: harbor.apps-contour.$TDH_ENVNAME.$AWS_HOSTED_DNS_DOMAIN"                                                    >> $HARBOR_VALUES
     #echo "tlsCertificateSecretName: $HARBOR_TLS_SECRET"                                                                        >> $HARBOR_VALUES
     echo "logLevel: debug"                                                                                                      >> $HARBOR_VALUES
+    #echo "tlsCertificate:"                                                                                                      >> $HARBOR_VALUES
+    #echo "  tls.crt: $tls_crt"                                                                                                  >> $HARBOR_VALUES
+    #echo "  tls.key: $tls_key"                                                                                                  >> $HARBOR_VALUES
+    #echo "  ca.crt: $ca_crt"                                                                                                    >> $HARBOR_VALUES
     echo "tlsCertificate:"                                                                                                      >> $HARBOR_VALUES
-    echo "  tls.crt: $tls_crt"                                                                                                  >> $HARBOR_VALUES
-    echo "  tls.key: $tls_key"                                                                                                  >> $HARBOR_VALUES
-    echo "  ca.crt: $ca_crt"                                                                                                    >> $HARBOR_VALUES
+    echo "  tls.crt: |"                                                                                                  >> $HARBOR_VALUES
+echo $tls_crt | base64 -w 10000 >> $HARBOR_VALUES
+    echo "  tls.key: |"                                                                                                  >> $HARBOR_VALUES
+echo $tls_key | base64 -w 10000 >> $HARBOR_VALUES
+    echo "  ca.crt: |"                                                                                                    >> $HARBOR_VALUES
+echo $ca_crt | base64 -w 10000 >> $HARBOR_VALUES
     echo ""                                                                                                                     >> $HARBOR_VALUES
     
 
