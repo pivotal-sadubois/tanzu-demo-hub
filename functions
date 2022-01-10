@@ -9126,8 +9126,9 @@ runTDHtools() {
         [ -d $localdir -a -d $localdir ] && mkdir -p $localdir
       done
 
+      [ "$TOOLS_TLAG" == "tce" ] && POSTSCRIPT="tdh-postinstall-user-tce.sh" || POSTSCRIPT="tdh-postinstall-user.sh" 
       docker run $ROOT_OPTIONS ${CORE_MOUNTS[*]} tdh-tools:latest chmod 666 /var/run/docker.sock > /dev/null 2>&1
-      docker run $USER_OPTIONS ${CORE_MOUNTS[*]} tdh-tools:latest /usr/local/bin/tdh-postinstall-user-tce.sh > /dev/null 2>&1
+      docker run $USER_OPTIONS ${CORE_MOUNTS[*]} tdh-tools:latest /usr/local/bin/$POSTSCRIPT > /dev/null 2>&1
       docker run $USER_OPTIONS ${CORE_MOUNTS[*]} tdh-tools:latest $DOCKER_EXEC $DOCKER_ARGS; ret=$?
 
       # --- FINISH CURRENT SESSION AS WE RUN AS CONTAINER ---
