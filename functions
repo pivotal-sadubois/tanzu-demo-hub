@@ -8545,10 +8545,13 @@ TanzuPackage_Harbor () {
 
 #gaga
     # --- COPY SECRET TO NAMESPACE ---
-    #kubectl get secret tanzu-demo-hub-tls --namespace=default  -oyaml | grep -v '^\s*namespace:\s' | \
-    #kubectl apply --namespace=$NAMESPACE -f - > /dev/null 2>&1
     kubectl get secret tanzu-demo-hub-tls --namespace=default  -oyaml | grep -v '^\s*namespace:\s' | \
-    kubectl apply --namespace=$NAMESPACE -f - 
+    kubectl apply --namespace=$NAMESPACE -f - > /dev/null 2>&1
+    #kubectl get secret tanzu-demo-hub-tls --namespace=default  -oyaml | grep -v '^\s*namespace:\s' | \
+    #kubectl apply --namespace=$NAMESPACE -f - 
+
+    tls_crt=$(kubectl get secrets tanzu-demo-hub-tls -n harbor -o json | jq -r '.data."tls.crt"') 
+    tls_key=$(kubectl get secrets tanzu-demo-hub-tls -n harbor -o json | jq -r '.data."tls.key"') 
 
     HARBOR_VALUES=/tmp/harbor_values.yaml
     echo "harborAdminPassword: $TDH_HARBOR_ADMIN_PASSWORD"                                                                      >  $HARBOR_VALUES
@@ -8559,10 +8562,14 @@ TanzuPackage_Harbor () {
     HARBOR_VALUES=/tmp/harbor_values.yaml
     echo "harborAdminPassword: $TDH_HARBOR_ADMIN_PASSWORD"                                                                      >  $HARBOR_VALUES
     echo "secretKey: MmetwEOsKpC7VWGx"                                                                                          >> $HARBOR_VALUES
-    echo "tlsCertificateSecretName: $HARBOR_TLS_SECRET"                                                                         >> $HARBOR_VALUES
     echo "hostname: harbor.apps-contour.$TDH_ENVNAME.$AWS_HOSTED_DNS_DOMAIN"                                                    >> $HARBOR_VALUES
-
+    echo "tlsCertificateSecretName: $HARBOR_TLS_SECRET"                                                                         >> $HARBOR_VALUES
+    echo "tlsCertificate:"                                                                                                      >> $HARBOR_VALUES
+    echo "  tls.crt: $tls_crt"                                                                                                  >> $HARBOR_VALUES
+    echo "  tls.key: $tls_key"                                                                                                  >> $HARBOR_VALUES
     echo ""                                                                                                                     >> $HARBOR_VALUES
+    
+
     echo "global:"                                                                                                              >> $HARBOR_VALUES
     echo "  imageRegistry: docker.io"                                                                                           >> $HARBOR_VALUES
     echo "  imagePullSecrets:"                                                                                                  >> $HARBOR_VALUES
