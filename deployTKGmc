@@ -11,11 +11,32 @@ export TDHPATH=$(cd "$(pwd)/$(dirname $0)"; pwd)
 export DEBUG=0
 export NATIVE=0                ## NATIVE=1 r(un on local host), NATIVE=0 (run within docker)
 export DEPLOY_TKG_CLEAN=0
-export CMD_EXEC=$(basename $0)
-export CMD_ARGS=$*
 export TDH_TOOLS=tdh-tools
 
-. $TANZU_DEMO_HUB/functions
+# --- SETTING FOR TDH-TOOLS ---
+export NATIVE=0                ## NATIVE=1 r(un on local host), NATIVE=0 (run within docker)
+export START_COMMAND="$*"
+export CMD_EXEC=$(basename $0)
+export CMD_ARGS=$*
+
+# --- SOUTCE FOUNCTIONS AND USER ENVIRONMENT ---
+[ -f $TANZU_DEMO_HUB/functions ] && . $TANZU_DEMO_HUB/functions
+[ -f $HOME/.tanzu-demo-hub.cfg ] && . $HOME/.tanzu-demo-hub.cfg
+
+while [ "$1" != "" ]; do
+  case $1 in
+    --delete)      DEPLOY_TKG_CLEAN=1;;
+    --debug)       DEBUG=1;;
+    --native)      NATIVE=1;;
+    *)             DEPLOY_TKG_TEMPLATE=$1;;
+  esac
+  shift
+done
+
+#############################################################################################################################
+################################### EXECUTING CODE WITHIN  TDH-TOOLS DOCKER CONTAINER  ######################################
+#############################################################################################################################
+runTDHtools tkg "Deploy TCE Management Cluster" "$TDHPATH/$CMD_EXEC" "$CMD_ARGS"
 
 usage() {
   echo "USAGE: $0 [oprions] <deployment>"
@@ -133,21 +154,10 @@ listClusters() {
   fi
 }
 
-while [ "$1" != "" ]; do
-  case $1 in
-    --delete)      DEPLOY_TKG_CLEAN=1;;
-    --debug)       DEBUG=1;;
-    --native)      NATIVE=1;;
-    *)             DEPLOY_TKG_TEMPLATE=$1;;
-  esac
-  shift
-done
-
 if [ "${DEPLOY_TKG_TEMPLATE}" == "" ]; then
   listDeployments
   usage; exit 0
 fi
-
 
 # --- VERIFY DEPLOYMENT ---
 if [ ! -f ${TDHPATH}/deployments/${DEPLOY_TKG_TEMPLATE} ]; then
@@ -843,8 +853,6 @@ echo "terraform -chdir=${TERRAFORM_PATH} init "
 #        exit
 #      fi
 #
-#docker run --rm --name azure-cli bitnami/azure-cli:latest login --service-principal --username $appid --password tanzu-demo-hub --tenant $AZURE_TENANT_ID > /dev/null 2>&1
-
       AZURE_CLIENT_ID=$appid
       AZURE_CLIENT_SECRET=$(az ad sp create-for-rbac --name "TanzuDemoHub-$TDH_USER" 2>/dev/null | jq -r '.password')
 
@@ -1072,69 +1080,16 @@ echo "terraform -chdir=${TERRAFORM_PATH} init "
   fi
 }
 
-if [ ! -f /tdh_tools_docker_container  ]; then
-  echo ""
-  echo "Tanzu Demo Hub - Deploy TKG Management Cluster"
-  echo "by Sacha Dubois, VMware Inc,"
-  echo "----------------------------------------------------------------------------------------------------------------------------------------------"
+# --- VERYFY ACCESS TO CLOUD ---
+checkTDHenvironment
 
-  # --- VERIFY TOOLS AND ACCESS ---
-  verify_docker
-  checkCLIcommands        BASIC
-  checkKubernetesServices registry_docker
-
-  if [ $NATIVE -eq 0 ]; then
-    tdh_tools_build
-
-    messagePrint " ▪ Running TDH Tools Docker Container" "tdh-tools:latest $TDHPATH/$CMD_EXEC $CMD_ARGS"
- 
-    cid=$(docker ps -a | grep tdh-tools:latest | awk '{ print $1 }') 
-    [ "$cid" != "" ] && for n in $cid; do docker rm $n -f > /dev/null 2>&1; done
-
-    # --- DUMP ENVIRONMENT VARIABLES ---
-    env | grep TDH > /tmp/tdh.env
-
-    [ ! -d $HOME/.tanzu ] && mkdir -p $HOME/.tanzu
-
-    mkdir -p $HOME/.mc $HOME/.cache $HOME/.config $HOME/.local
-    mkdir -p /tmp/docker && chmod a+w /tmp/docker
-    docker run -it --rm --name tdh-tools -v /var/run/docker.sock:/var/run/docker.sock tdh-tools:latest chmod 666 /var/run/docker.sock > /dev/null 2>&1
-    docker run -u $(id -u):$(id -g) -it --rm --name tdh-tools --network=host --env-file /tmp/tdh.env \
-       -v $HOME:$HOME:ro -v $HOME/.tanzu-demo-hub:$HOME/.tanzu-demo-hub:rw \
-       -v $HOME/.config:$HOME/.config:rw -v $HOME/.config_tools/tanzu:$HOME/.config/tanzu:rw\
-       -v $HOME/.tanzu_tools:$HOME/.tanzu:rw -v $HOME/.cache_tools:$HOME/.cache:rw \
-       -v /var/run/docker.sock:/var/run/docker.sock \
-       -v $HOME/.vmware-cna-saas:$HOME/.vmware-cna-saas:rw -v $HOME/.azure:$HOME/.azure:rw \
-       -v /tmp:/tmp:rw -v /tmp/docker:$HOME/.docker:rw -v $HOME/.mc:$HOME/.mc:rw \
-       -v $HOME/.kube-tkg:$HOME/.kube-tkg:rw -v $HOME/.kube:$HOME/.kube:rw -v $HOME/.govmomi:$HOME/.govmomi:rw \
-       -v $HOME/.ssh:$HOME/.ssh:rw -v $HOME/.terraform:$HOME/.terraform:rw -v $HOME/.gradle:$HOME/.gradle:rw \
-       -v $HOME/.s3cfg:$HOME/.s3cfg:rw -v $HOME/.local_tools:$HOME/.local:rw \
-       -e "KUBECONFIG=$HOME/.kube/config" --hostname tdh-tools tdh-tools:latest $TDHPATH/$CMD_EXEC $CMD_ARGS; ret=$?
-
-#    docker run -u $(id -u):$(id -g) --group-add 0 -it --rm --name tdh-tools --network=host \
-#       -v $HOME:$HOME:ro -v $HOME/.local:$HOME/.local:rw -v $HOME/.tanzu-demo-hub:$HOME/.tanzu-demo-hub:rw \
-#       -v /var/run/docker.sock:/var/run/docker.sock:rw -v $HOME/.cache:$HOME/.cache:rw -v $HOME/.config:$HOME/.config:rw \
-#       -v $HOME/.aws:$HOME/.aws:rw -v $HOME/.vmware-cna-saas:$HOME/.vmware-cna-saas:rw -v $HOME/.azure:$HOME/.azure:rw \
-#       -v /tmp:/tmp:rw -v /tmp/docker:$HOME/.docker:rw -v $HOME/.mc:$HOME/.mc:rw -v $HOME/.tanzu:$HOME/.tanzu:rw \
-#       -v $HOME/.kube-tkg:$HOME/.kube-tkg:rw -v $HOME/.kube:$HOME/.kube:rw -v $HOME/.govmomi:$HOME/.govmomi:rw \
-#       -v $HOME/.ssh:$HOME/.ssh:rw -v $HOME/.terraform:$HOME/.terraform:rw \
-#       -e "KUBECONFIG=$HOME/.kube/config" --hostname tdh-tools tdh-tools:latest $TDHPATH/$CMD_EXEC $CMD_ARGS; ret=$?
-
-    # --- FINISH CURRENT SESSION AS WE RUN AS CONTAINER ---
-    exit $ret
-  else
-    # --- VERYFY ACCESS TO CLOUD ---
-    checkTDHenvironment    
-
-    # --- VERIFY TOOLS AND ACCESS ---
-    checkCloudCLI
-    checkCLIcommands TOOLS
-    checkCLIcommands TKG
-    checkCLIcommands TANZU
-    checkCLIcommands TMC
-    checkCLIcommands VSPHERE
-  fi
-fi
+# --- VERIFY TOOLS AND ACCESS ---
+checkCloudCLI
+kCLIcommands TOOLS
+checkCLIcommands TKG
+checkCLIcommands TANZU
+checkCLIcommands TMC
+checkCLIcommands VSPHERE
 
 if [ "$DEPLOY_TKG_CLEAN" -eq 1 ]; then
   cleanupEnvironment
@@ -1165,7 +1120,8 @@ sshEnvironment
 configureJumpHost
 configureLetsEnscript
 
-export TDH_TKGMC_NAME=${TDH_TKGMC_NAME}-${TDH_USER}
+# --- SET MANAGEMENT CLUSTER NAME ---
+TDH_TKGMC_NAME=${TDH_TKGMC_NAME}-${TDH_USER}
 
 # --- UPLOAD OVA IMAGES TO VCENTER ---
 if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "vSphere" -a "${TDH_TKGMC_TKG_TYPE}" == "tkgs" ]; then
