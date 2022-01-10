@@ -8545,8 +8545,10 @@ TanzuPackage_Harbor () {
 
 #gaga
     # --- COPY SECRET TO NAMESPACE ---
+    #kubectl get secret tanzu-demo-hub-tls --namespace=default  -oyaml | grep -v '^\s*namespace:\s' | \
+    #kubectl apply --namespace=$NAMESPACE -f - > /dev/null 2>&1
     kubectl get secret tanzu-demo-hub-tls --namespace=default  -oyaml | grep -v '^\s*namespace:\s' | \
-    kubectl apply --namespace=$NAMESPACE -f - > /dev/null 2>&1
+    kubectl apply --namespace=$NAMESPACE -f - 
 
     HARBOR_VALUES=/tmp/harbor_values.yaml
     echo "harborAdminPassword: $TDH_HARBOR_ADMIN_PASSWORD"                                                                      >  $HARBOR_VALUES
