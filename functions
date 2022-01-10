@@ -8540,13 +8540,13 @@ TanzuPackage_Harbor () {
             --docker-username $TDH_REGISTRY_DOCKER_USER \
             --docker-password $TDH_REGISTRY_DOCKER_PASS > /dev/null 2>&1
 
-#gaga
     # --- COPY SECRET TO NAMESPACE ---
     kubectl get secret tanzu-demo-hub-tls --namespace=default  -oyaml | grep -v '^\s*namespace:\s' | \
     kubectl apply --namespace=$NAMESPACE -f - > /dev/null 2>&1
 
     tls_crt=$(kubectl get secrets tanzu-demo-hub-tls -n harbor -o json | jq -r '.data."tls.crt"') 
     tls_key=$(kubectl get secrets tanzu-demo-hub-tls -n harbor -o json | jq -r '.data."tls.key"') 
+    ca_crt=$(/home/sdubois/.tanzu-demo-hub/certificates/tdh-cert.pem | base64 -w 10000)
 
     HARBOR_VALUES=/tmp/harbor_values.yaml
     echo "harborAdminPassword: $TDH_HARBOR_ADMIN_PASSWORD"                                                                      >  $HARBOR_VALUES
@@ -8554,14 +8554,16 @@ TanzuPackage_Harbor () {
     package_ver=$(tanzu package available list $PACKAGE_ID -A -o json | jq -r '.[]."version"' | tail -1)
     package_rel=$(tanzu package available list $PACKAGE_ID -A -o json | jq -r '.[]."released-at"' | tail -1)
 
+
     HARBOR_VALUES=/tmp/harbor_values.yaml
     echo "harborAdminPassword: $TDH_HARBOR_ADMIN_PASSWORD"                                                                      >  $HARBOR_VALUES
     echo "secretKey: MmetwEOsKpC7VWGx"                                                                                          >> $HARBOR_VALUES
     echo "hostname: harbor.apps-contour.$TDH_ENVNAME.$AWS_HOSTED_DNS_DOMAIN"                                                    >> $HARBOR_VALUES
-    echo "tlsCertificateSecretName: $HARBOR_TLS_SECRET"                                                                         >> $HARBOR_VALUES
+    #echo "tlsCertificateSecretName: $HARBOR_TLS_SECRET"                                                                         >> $HARBOR_VALUES
     echo "tlsCertificate:"                                                                                                      >> $HARBOR_VALUES
     echo "  tls.crt: $tls_crt"                                                                                                  >> $HARBOR_VALUES
     echo "  tls.key: $tls_key"                                                                                                  >> $HARBOR_VALUES
+    echo "  ca.crt: $ca_crt"                                                                                                  >> $HARBOR_VALUES
     echo ""                                                                                                                     >> $HARBOR_VALUES
     
 
