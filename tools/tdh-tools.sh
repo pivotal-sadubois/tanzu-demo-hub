@@ -11,20 +11,17 @@ export TDHPATH=$(cd "$(pwd)/$(dirname $0)/../"; pwd)
 export ROOT_SHELL=0
 export COMMAND=bash
 export SILENT=0
+export TDH_TOOLS=tdh-tools
 
-. $TANZU_DEMO_HUB/functions
+# --- SETTING FOR TDH-TOOLS ---
+export NATIVE=0                ## NATIVE=1 r(un on local host), NATIVE=0 (run within docker)
+export START_COMMAND="$*"
+export CMD_EXEC=$(basename $0)
+export CMD_ARGS=$*
 
-. ~/.tanzu-demo-hub.cfg
-
-usage() {
-  echo "USAGE: $0 [oprions] <deployment>"
-  echo "                   --usage     # Show this info"
-  echo "                   --help      # Show this info"
-  echo "                   --root      # Get a Root Shell"
-  echo "                   --debug     # Show Debugging information"
-  echo "                   --cmd       # Execute a command"
-  exit 
-}
+# --- SOUTCE FOUNCTIONS AND USER ENVIRONMENT ---
+[ -f $TANZU_DEMO_HUB/functions ] && . $TANZU_DEMO_HUB/functions
+[ -f $HOME/.tanzu-demo-hub.cfg ] && . $HOME/.tanzu-demo-hub.cfg
 
 while [ "$1" != "" ]; do
   case $1 in
@@ -38,8 +35,22 @@ while [ "$1" != "" ]; do
   shift
 done
 
-mkdir -p $HOME/.mc $HOME/.cache $HOME/.config $HOME/.local
-mkdir -p /tmp/docker && chmod a+w /tmp/docker
+#############################################################################################################################
+################################### EXECUTING CODE WITHIN  TDH-TOOLS DOCKER CONTAINER  ######################################
+#############################################################################################################################
+runTDHtools tkg "Run TDH Tools Docker Container" "bash" ""
+
+usage() {
+  echo "USAGE: $0 [oprions] <deployment>"
+  echo "                   --usage     # Show this info"
+  echo "                   --help      # Show this info"
+  echo "                   --root      # Get a Root Shell"
+  echo "                   --debug     # Show Debugging information"
+  echo "                   --cmd       # Execute a command"
+  exit
+}
+
+
 
 if [ $SILENT -eq 1 ]; then 
   tdh_tools_build > /dev/null 2>&1
@@ -104,6 +115,7 @@ for n in $(echo ${CORE_MOUNTS[*]} | sed 's/\-. //g'); do
   [ ! -d $localdir -a ! -f $localdir ] && mkdir -p $localdir
 done
 
+[ "$TDH_TOOLS" == "tdh-tools" ] && CONTOUR_NS=tanzu-system-ingress || CONTOUR_NS=projectcontour
 [ $ROOT_SHELL -eq 0 ] && LOGIN_OPTION=$USER_OPTIONS || LOGIN_OPTION=$ROOT_OPTIONS
 docker run $ROOT_OPTIONS ${CORE_MOUNTS[*]} tdh-tools:latest chmod 666 /var/run/docker.sock > /dev/null 2>&1
 docker run $USER_OPTIONS ${CORE_MOUNTS[*]} tdh-tools:latest /usr/local/bin/tdh-postinstall-user-tce.sh > /dev/null 2>&1
