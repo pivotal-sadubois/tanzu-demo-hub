@@ -8547,8 +8547,6 @@ TanzuPackage_Harbor () {
     tls_crt=$(kubectl get secrets tanzu-demo-hub-tls -n harbor -o json | jq -r '.data."tls.crt"') 
     tls_key=$(kubectl get secrets tanzu-demo-hub-tls -n harbor -o json | jq -r '.data."tls.key"') 
     ca_crt=$(cat /home/sdubois/.tanzu-demo-hub/certificates/tdh-cert.pem | base64 -w 10000)
-echo "ca_crt:$ca_crt"
-ls -la /home/sdubois/.tanzu-demo-hub/certificates/tdh-cert.pem 
 
     HARBOR_VALUES=/tmp/harbor_values.yaml
     echo "harborAdminPassword: $TDH_HARBOR_ADMIN_PASSWORD"                                                                      >  $HARBOR_VALUES
@@ -8627,8 +8625,6 @@ ls -la /home/sdubois/.tanzu-demo-hub/certificates/tdh-cert.pem
     echo "      accessMode: ReadWriteOnce"                                                                                      >> $HARBOR_VALUES
     echo "      size: 10Gi"                                                                                                     >> $HARBOR_VALUES
 
-echo xxxxxxxx
-sleep 100000
     messageTitle "Installing $PACKAGE_DES"
     messagePrint " ▪ Tanzu Package ($PACKAGE_NAME)"   "$PACKAGE_ID ($package_ver/$package_rel)"
     tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $PACKAGE_NAMESPACE \
