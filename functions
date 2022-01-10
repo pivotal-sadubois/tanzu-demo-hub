@@ -8573,7 +8573,7 @@ TanzuPackage_Harbor () {
     echo "  tls.crt: |"                                                                                                  >> $HARBOR_VALUES
     kubectl get secrets tanzu-demo-hub-tls -n harbor -o json | jq -r '.data."tls.crt"' | base64 -d | sed 's/^/    /g' >> $HARBOR_VALUES
     echo "  tls.key: |"                                                                                                  >> $HARBOR_VALUES
-     tls_key=$(kubectl get secrets tanzu-demo-hub-tls -n harbor -o json | jq -r '.data."tls.key"') | base64 -d | sed 's/^/    /g' >> $HARBOR_VALUES
+    kubectl get secrets tanzu-demo-hub-tls -n harbor -o json | jq -r '.data."tls.key"' | base64 -d | sed 's/^/    /g' >> $HARBOR_VALUES
     echo "  ca.crt: |"                                                                                                    >> $HARBOR_VALUES
     cat /home/sdubois/.tanzu-demo-hub/certificates/tdh-cert.pem | sed 's/^/    /g' >> $HARBOR_VALUES
     echo ""                                                                                                                     >> $HARBOR_VALUES
