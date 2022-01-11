@@ -280,7 +280,14 @@ tmcCheckLogin() {
   fi
 
   export TMC_API_TOKEN=$TMC_SERVICE_TOKEN
-  tmc login --name $TMC_CONTEXT_NAME --no-configure > /dev/null 2>&1; ret=$?
+  ret=1; cnt=0
+  while [ $ret -ne 0 -a $cnt -lt 5 ]; do
+    tmc login --name $TMC_CONTEXT_NAME --no-configure > /dev/null 2>&1; ret=$?
+    [ $ret -eq 0 ] && break
+    let cnt=cnt+1
+    sleep 30
+  done
+
   if [ $ret -ne 0 ]; then
     echo "ERROR: failed to login into TMC"
     if [ "$NATIVE" == "0" ]; then
@@ -608,6 +615,19 @@ checkKubernetesServices() {
   missing_variables=0
 
   if [ 1 -eq 1 ]; then
+    if [ "${service}" == "cert-manager" ]; then
+      if [ "${TDH_CERTMANAGER_EMAIL}" == "" ]; then
+        missing_variables=1
+        echo ""
+        echo "  4MISSING ENVIRONMENT-VARIABES    DESCRIPTION        "
+        echo "  -----------------------------------------------------------------------------------------------------------------------------------------------------"
+
+        if [ "${TDH_CERTMANAGER_EMAIL}" == "" ]; then
+          echo "  TDH_CERTMANAGER_EMAIL              (required) Personal Email address to receive update from Let's Enscript"
+        fi
+      fi
+    fi
+
     if [ "${service}" == "tanzu_data_protection" ]; then
       if [ "${TDH_TANZU_DATA_PROTECTION_ARN}" == "" -o "TDH_TANZU_DATA_PROTECTION_BACKUP_LOCATION" == "" ]; then
         missing_variables=1
@@ -1556,7 +1576,7 @@ scanCluster() {
   fi
 }
 
-checkTMCAccess() {
+checkTMCAccess_old() {
   missing_variables=0
 
   if [ "${TDH_DEPLOYMENT_CLOUD}" == "AWS" ]; then
@@ -4105,7 +4125,7 @@ checkTMCAccess() {
 
   if [ "${TDH_DEPLOYMENT_CLOUD}" == "vSphere" ]; then
     TMC_ACCOUNT_NAME=$TMC_ACCOUNT_NAME_AWS
-    TDH_CLUSTER_NAME="tdh-vsphere-${TDH_USER}"
+    [ "$TDH_CLUSTER_NAME" == "" ] && TDH_CLUSTER_NAME="tdh-vsphere-${TDH_USER}"
 
     if [ "$TDH_SERVICE_TANZU_MISSION_CONTROL" == "true" ]; then 
      tmc clustergroup create -n tanzu-demo-hub -d "Tanzu Demo Hub by Sacha Dubois" > /dev/null 2>&1
@@ -4140,9 +4160,10 @@ checkTMCAccess() {
       if [ "${TMC_SSH_KEY_NAME_AWS}" == "" ]; then
         echo "  TMC_SSH_KEY_NAME_AWS            (required) AWS SSH Key name for Region"
       fi
-      TDH_CLUSTER_NAMTDH_CLUSTER_NAME="tdh-aws-${TDH_USER}"
+
+      [ "$TDH_CLUSTER_NAME" == "" ] && TDH_CLUSTER_NAME="tdh-aws-${TDH_USER}"
     else
-      TDH_CLUSTER_NAME="tdh-aws-${TDH_USER}"
+      [ "$TDH_CLUSTER_NAME" == "" ] && TDH_CLUSTER_NAME="tdh-aws-${TDH_USER}"
 
       messageTitle "Tanzu Mission Control (TMC) - Config" 
       messagePrint " ▪ TMC User"                        "$TDH_USER"
@@ -4208,6 +4229,10 @@ tmcCreateCluster() {
     stt=$(tmc cluster list -m $TDH_MANAGEMENT_CLUSTER -p $TDH_PROVISIONER_NAME --name $TDH_CLUSTER_NAME -o json 2>/dev/null | \
           jq -r '.clusters[].status.phase' 2>/dev/null) 
 
+    if [ "$stt" == "CREATING" ]; then                                         
+       echo "ERROR: Cluster is currently beeing crated, please try again later"; exit 1
+    fi
+
     if [ "$stt" == "DELETING" ]; then                                         
        echo "ERROR: Cluster is currently on deleting, please try again later"; exit 1
     fi
@@ -4216,21 +4241,31 @@ tmcCreateCluster() {
       KUBERNETES_VERSION=$(for n in $TMC_K8S_VERSIONS; do echo v$n; done | egrep "$TDH_TKGWC_KUBERNETES" | tail -1 | sed 's/^v//g') 
 
       [ "$TMC_KUBERNETES_VERSION" != "" ] && KUBERNETES_VERSION=$TMC_KUBERNETES_VERSION
+      [ "$TDH_TKGWC_CONTROPLANE" == "3" ] && TMC_TKGWC_TEMPLATE="aws-ha" || TMC_TKGWC_TEMPLATE="default"
 
-      messageTitle "TMC Create Cluster"     
-      messagePrint " ▪ TMC Cluster Name"       "$TDH_CLUSTER_NAME"
-      messagePrint " ▪ TMC Cluster Group"      "$TDH_CLUSTER_GROUP"
-      messagePrint " ▪ TMC Template"           "$TMC_TKGWC_TEMPLATE"
-      messagePrint " ▪ Provisioner Name"       "$TDH_PROVISIONER_NAME"
-      messagePrint " ▪ TKG Management Cluster" "$TDH_MANAGEMENT_CLUSTER"
-      messagePrint " ▪ Account Name"           "$TMC_ACCOUNT_NAME"
-      messagePrint " ▪ Kubernetes Version"     "$TDH_TKGWC_KUBERNETES"
-      messagePrint " ▪ Kubernetes Image"         "$KUBERNETES_VERSION"
+      messageTitle "TMC Create Workload Cluster"     
+      messagePrint " ▪ TMC Cluster Name"                 "$TDH_CLUSTER_NAME"
+      messagePrint " ▪ TMC Cluster Group"                "$TDH_CLUSTER_GROUP"
+      messagePrint " ▪ TMC Template"                     "$TMC_TKGWC_TEMPLATE"
+      messagePrint " ▪ TMC Provisioner Name"             "$TDH_PROVISIONER_NAME"
+      messagePrint " ▪ TKG Management Cluster"           "$TDH_MANAGEMENT_CLUSTER"
+      messagePrint " ▪ TMC Account Name"                 "$TMC_ACCOUNT_NAME"
+      messagePrint " ▪ Kubernetes Version"               "$TDH_TKGWC_KUBERNETES"
+      messagePrint " ▪ Kubernetes Image"                 "$KUBERNETES_VERSION"
+
+      INSTANCE_TYPE=$(nodeType $TDH_TKGWC_WORKERNODES_TYPE) 
+      messagePrint " ▪ TKG Cluster Worker Nodes"         "$TDH_TKGWC_WORKERNODES"
+      messagePrint " ▪ TKG Cluster Worker Node Type"     "$TDH_TKGWC_WORKERNODES_TYPE ($INSTANCE_TYPE)"
+
+      #messagePrint " ▪ TKG Control Plane Nodes"         "$TDH_TKGWC_CONTROPLANE"
+      #messagePrint " ▪ TKG Control Plane Nodes Type"    "$TDH_TKGWC_CONTROPLANE_NODETYPE (${nodes[$TDH_TKGWC_NODE_TYPE]}"
+      #messagePrint " ▪ TKG Cluster Worker Nodes         "$TDH_TKGWC_CONTROPLANE"
+      #messagePrint " ▪ TKG Cluster Worker Node Type     "$TDH_TKGWC_WORKERNODES_TYPE (${nodes[$TDH_TKGWC_NODE_TYPE]}"
 
       tmc cluster create -m $TDH_MANAGEMENT_CLUSTER -p $TDH_PROVISIONER_NAME \
                          --ssh-key-name $TMC_SSH_KEY_NAME_AWS -c $TMC_ACCOUNT_NAME \
                          --worker-node-count $TDH_TKGWC_WORKERNODES \
-                         -r $AWS_REGION -n $TDH_CLUSTER_NAME -y $TDH_TKGWC_WORKERNODES_TYPE \
+                         -r $AWS_REGION -n $TDH_CLUSTER_NAME -y $INSTANCE_TYPE \
                          -g $TDH_CLUSTER_GROUP -t $TMC_TKGWC_TEMPLATE \
                          --version $KUBERNETES_VERSION --availability-zone $AWS_PRIMARY_AZ
 
@@ -5785,7 +5820,7 @@ createClusterIssuer() {
     echo "  name: $TDH_TLS_ISSUER_NAME"                                            >> $TDH_TLS_ISSUER_FILE
     echo "spec:"                                                                   >> $TDH_TLS_ISSUER_FILE
     echo "  acme:"                                                                 >> $TDH_TLS_ISSUER_FILE
-    echo "    email: sdubois@vmware.com"                                           >> $TDH_TLS_ISSUER_FILE
+    echo "    email: $TDH_CERTMANAGER_EMAIL"                                       >> $TDH_TLS_ISSUER_FILE
     echo "    privateKeySecretRef:"                                                >> $TDH_TLS_ISSUER_FILE
     echo "      name: $TDH_TLS_ISSUER_NAME"                                        >> $TDH_TLS_ISSUER_FILE
     echo "    server: $LETSENSCRIPT_SERVER"                                        >> $TDH_TLS_ISSUER_FILE
@@ -5939,9 +5974,9 @@ createClusterIssuer() {
       messagePrint " ▪ LetsEnscript Certificate Secret"       "${TDH_TLS_SECRET}"
     else
       messagePrint " ▪ LetsEnscript Certificate Status"       "$stt"
-      echo "------------------------------------------------------------------------------------------------------------------------"
+      echo "   ------------------------------------------------------------------------------------------------------------------------"
       kubectl describe certificate $TDH_TLS_CERT
-      echo "------------------------------------------------------------------------------------------------------------------------"
+      echo "   ------------------------------------------------------------------------------------------------------------------------"
       echo "=> kubectl describe clusterissuer letsencrypt-staging"
       echo "=> kubectl describe order"
       echo "=> kubectl describe challenge"
@@ -8353,8 +8388,8 @@ TanzuPackage_LocalStorage() {
 
   pkg=$(tanzu package installed get $PACKAGE_NAME -n $NAMESPACE -o json 2>/dev/null | jq -r '.[].name')
   if [ "$pkg" != "$PACKAGE_NAME" ]; then
-    package_ver=$(tanzu package available list $PACKAGE_ID -A -o json | jq -r '.[]."version"' | tail -1)
-    package_rel=$(tanzu package available list $PACKAGE_ID -A -o json | jq -r '.[]."released-at"' | tail -1)
+    package_ver=$(tanzu package available list $PACKAGE_ID -A -o json 2>/dev/null | jq -r '.[]."version"' | tail -1)
+    package_rel=$(tanzu package available list $PACKAGE_ID -A -o json 2>/dev/null | jq -r '.[]."released-at"' | tail -1)
 
     messageTitle "Installing $PACKAGE_DES"
     messagePrint " ▪ Tanzu Package ($PACKAGE_NAME)"   "$PACKAGE_ID ($package_ver/$package_rel)"
@@ -8429,7 +8464,9 @@ TanzuPackage_CertManager() {
   PACKAGE_ID=$2
   PACKAGE_DES="Certificate management (cert-manager)"
 
+echo gaga0
   pkg=$(tanzu package installed get $PACKAGE_NAME -n $NAMESPACE -o json 2>/dev/null | jq -r '.[].name')
+echo "gaga1 pkg:$pkg"
   if [ "$pkg" != "$PACKAGE_NAME" ]; then
     package_ver=$(tanzu package available list $PACKAGE_ID -A -o json | jq -r '.[]."version"' | tail -1)
     package_rel=$(tanzu package available list $PACKAGE_ID -A -o json | jq -r '.[]."released-at"' | tail -1)
@@ -8455,10 +8492,13 @@ TanzuPackage_CertManager() {
     fi
   fi
 
+echo gaga2
   tanzu package installed get $PACKAGE_NAME -n $NAMESPACE -o json > /tmp/pkg.json
   pkg_stt=$(jq -r '.[]."status"' /tmp/pkg.json)
   pkg_nam=$(jq -r '.[]."package-name"' /tmp/pkg.json)
   pkg_ver=$(jq -r '.[]."package-version"' /tmp/pkg.json)
+
+echo "pkg_stt:$pkg_stt"
 
   if [ "$pkg_stt" != "Reconcile succeeded" ]; then
     echo "ERROR: failed to reconsile Tanzu Package $PACKAGE_NAME)"
@@ -8505,6 +8545,7 @@ TanzuPackage_CertManager() {
 # ------------------------------------------------------------------------------------------
 TanzuPackage_Harbor () {
   PACKAGE_NAME=$1
+  NAMESPACE=tanzu-system-registry
   NAMESPACE=registry-harbor
   PACKAGE_NAMESPACE=tanzu-packages
   NAMESPACE=harbor
@@ -8515,6 +8556,9 @@ TanzuPackage_Harbor () {
   NOTARY_TLS_SECRET=tanzu-demo-hub-tls
   HARBOR_HOSTNAME="harbor.apps-contour.$TDH_ENVNAME.$AWS_HOSTED_DNS_DOMAIN"
   NOTARY_HOSTNAME="notary.apps-contour.$TDH_ENVNAME.$AWS_HOSTED_DNS_DOMAIN"
+
+  # --- CREATE PACKAGE_NAMESPACE NAMESPACE ---
+  kubectl create ns $PACKAGE_NAMESPACE > /dev/null 2>&1
 
   pkg=$(tanzu package installed get $PACKAGE_NAME -n $PACKAGE_NAMESPACE -o json 2>/dev/null | jq -r '.[].name')
   if [ "$pkg" != "$PACKAGE_NAME" ]; then
@@ -8534,7 +8578,7 @@ TanzuPackage_Harbor () {
 
     tls_crt=$(kubectl get secrets tanzu-demo-hub-tls -n harbor -o json | jq -r '.data."tls.crt"') 
     tls_key=$(kubectl get secrets tanzu-demo-hub-tls -n harbor -o json | jq -r '.data."tls.key"') 
-    ca_crt=$(cat /home/sdubois/.tanzu-demo-hub/certificates/tdh-cert.pem | base64 -w 10000)
+    ca_crt=$(cat $HOME/.tanzu-demo-hub/certificates/tdh-cert.pem | base64 -w 10000)
 
     HARBOR_VALUES=/tmp/harbor_values.yaml
     echo "harborAdminPassword: $TDH_HARBOR_ADMIN_PASSWORD"                                                                      >  $HARBOR_VALUES
@@ -8544,7 +8588,8 @@ TanzuPackage_Harbor () {
 
 
     HARBOR_VALUES=/tmp/harbor_values.yaml
-    echo "harborAdminPassword: $TDH_HARBOR_ADMIN_PASSWORD"                                                                      >  $HARBOR_VALUES
+    echo "namespace: $NAMESPACE"                                                                                     >  $HARBOR_VALUES
+    echo "harborAdminPassword: $TDH_HARBOR_ADMIN_PASSWORD"                                                                      >> $HARBOR_VALUES
     echo "secretKey: MmetwEOsKpC7VWGx"                                                                                          >> $HARBOR_VALUES
     echo "hostname: harbor.apps-contour.$TDH_ENVNAME.$AWS_HOSTED_DNS_DOMAIN"                                                    >> $HARBOR_VALUES
     #echo "tlsCertificateSecretName: $HARBOR_TLS_SECRET"                                                                        >> $HARBOR_VALUES
@@ -8559,14 +8604,14 @@ TanzuPackage_Harbor () {
     echo "  tls.key: |"                                                                                                         >> $HARBOR_VALUES
     kubectl get secrets tanzu-demo-hub-tls -n harbor -o json | jq -r '.data."tls.key"' | base64 -d | sed 's/^/    /g'           >> $HARBOR_VALUES
     echo "  ca.crt: |"                                                                                                          >> $HARBOR_VALUES
-    cat /home/sdubois/.tanzu-demo-hub/certificates/tdh-cert.pem | sed 's/^/    /g' >> $HARBOR_VALUES
+    cat $HOME/.tanzu-demo-hub/certificates/tdh-cert.pem | sed 's/^/    /g' >> $HARBOR_VALUES
     echo ""                                                                                                                     >> $HARBOR_VALUES
     
 
-    echo "global:"                                                                                                              >> $HARBOR_VALUES
-    echo "  imageRegistry: docker.io"                                                                                           >> $HARBOR_VALUES
-    echo "  imagePullSecrets:"                                                                                                  >> $HARBOR_VALUES
-    echo "    - tdh-docker-repo"                                                                                                >> $HARBOR_VALUES
+    #echo "global:"                                                                                                              >> $HARBOR_VALUES
+    #echo "  imageRegistry: docker.io"                                                                                           >> $HARBOR_VALUES
+    #echo "  imagePullSecrets:"                                                                                                  >> $HARBOR_VALUES
+    #echo "    - tdh-docker-repo"                                                                                                >> $HARBOR_VALUES
 
     if [ "${TDH_DEPLOYMENT_CLOUD}" == "vSphere" -a "${TDH_TKGMC_TKG_TYPE}" == "tkgs" ]; then
       echo "  storageClass: $VSPHERE_TKGS_STORAGE_CLASS"                                                                        >> $HARBOR_VALUES
@@ -8585,16 +8630,13 @@ TanzuPackage_Harbor () {
     echo ""                                                                                                                     >> $HARBOR_VALUES
     echo ""                                                                                                                     >> $HARBOR_VALUES
     echo "persistence:"                                                                                                         >> $HARBOR_VALUES
-    echo "  enabled: true"                                                                                                      >> $HARBOR_VALUES
-    echo "  resourcePolicy: 'keep'"                                                                                             >> $HARBOR_VALUES
+    #echo "  enabled: true"                                                                                                      >> $HARBOR_VALUES
+    #echo "  resourcePolicy: 'keep'"                                                                                             >> $HARBOR_VALUES
     echo "  persistentVolumeClaim:"                                                                                             >> $HARBOR_VALUES
     echo "    registry:"                                                                                                        >> $HARBOR_VALUES
     echo "      accessMode: ReadWriteOnce"                                                                                      >> $HARBOR_VALUES
     echo "      size: 50Gi"                                                                                                     >> $HARBOR_VALUES
-    echo "    chartmuseum:"                                                                                                     >> $HARBOR_VALUES
-    echo "      accessMode: ReadWriteOnce"                                                                                      >> $HARBOR_VALUES
-    echo "      size: 5Gi"                                                                                                      >> $HARBOR_VALUES
-    echo "    jobservice:"                                                                                                      >> $HARBOR_VALUES
+    echo "    jobservice:"                                                                                                        >> $HARBOR_VALUES
     echo "      accessMode: ReadWriteOnce"                                                                                      >> $HARBOR_VALUES
     echo "      size: 5Gi"                                                                                                      >> $HARBOR_VALUES
     echo "    database:"                                                                                                        >> $HARBOR_VALUES
@@ -8667,6 +8709,8 @@ TanzuPackage_Harbor () {
   verifyHostedZone ${TDH_ENVNAME}.$AWS_HOSTED_DNS_DOMAIN
 
   [ "$TDH_TOOLS" == "tdh-tools" ] && CONTOUR_NS=tanzu-system-ingress || CONTOUR_NS=projectcontour
+  [ "$TDH_TOOLS" == "tdh-tools" ] && CONTOUR_NS=$NAMESPACE || CONTOUR_NS=projectcontour
+echo "gaga CONTOUR_NS:$CONTOUR_NS"
 
   ipa=""; cnt=0
   while [ "$ipa" == "" -a $cnt -lt 15 ]; do
@@ -8723,9 +8767,13 @@ TanzuPackage_Harbor () {
 TanzuPackage_Contour() {
   PACKAGE_NAME=$1
   NAMESPACE=ingress-contour
+  PACKAGE_NAMESPACE=tanzu-packages
   NAMESPACE=tanzu-system-ingress
   PACKAGE_ID=$2
   PACKAGE_DES="Contour ingress controller"
+
+  # --- CREATE PACKAGE_NAMESPACE NAMESPACE ---
+  kubectl create ns $PACKAGE_NAMESPACE > /dev/null 2>&1
 
   pkg=$(tanzu package installed get $PACKAGE_NAME -n $NAMESPACE -o json 2>/dev/null | jq -r '.[].name')
   if [ "$pkg" != "$PACKAGE_NAME" ]; then
@@ -9109,6 +9157,7 @@ runTDHtools() {
                "-v $HOME/$TDH_TOOLS_PATH/.aws:$HOME/.aws:rw"                            ## PERSISTANT AWS CREDENTIALS
                "-v $HOME/$TDH_TOOLS_PATH/.vmware-cna-saas:$HOME/.vmware-cna-saas:rw"    ## TANZU MISSION CONTROL (TMC) LOGIN CREDENTIALS
                "-v $HOME/$TDH_TOOLS_PATH/tmp:/tmp:rw"                                   ## KEEP TEMP PERSISTENT
+#gaga
                "-v $TDHPATH/:$TDHPATH:ro"                                               ## TANZU-DEMO-HUB DIRECTORY
              )
 
@@ -9150,4 +9199,26 @@ logMessages() {
   messageLine
 
 }
+
+# ------------------------------------------------------------------------------------------
+# Function Name ......: nodeType
+# Function Purpose ...: Convert Node Cathegory (S,M,L) into Cloud Instance Type
+# ------------------------------------------------------------------------------------------
+# Argument ($1) ......: Node Cathegory (S=Small, M=Medium, L=Large Nodes
+# Dependancies: ......: deployment/tkg-tanzu-demo-hub.cfg TDH_TKGWC_CONTROPLANE_NODETYPE
+#                     : deployment/tmc-aws-awshosted.cfg  nodes[0] variable
+# ------------------------------------------------------------------------------------------
+# Return Value .......: AWS, Azure, vSphere Node Type (ie. m5.xlarge or Standard_D2s_v3 
+# ------------------------------------------------------------------------------------------
+nodeType() {
+  NODETYPE=$1
+  ntyoe=0
+
+  [ "$NODETYPE" == "S" -o "$NODETYPE" == "s" ] && ntyoe=0
+  [ "$NODETYPE" == "M" -o "$NODETYPE" == "m" ] && ntyoe=1
+  [ "$NODETYPE" == "L" -o "$NODETYPE" == "l" ] && ntyoe=2
+
+  echo "${nodes[$ntyoe]}"
+}
+
 
