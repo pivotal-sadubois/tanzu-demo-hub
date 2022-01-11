@@ -992,7 +992,7 @@ checkCLIcommands TANZU
 checkCLIcommands TMC
 checkCLIcommands VSPHERE
 
-f [ "$DEPLOY_TKG_CLEAN" -eq 1 ]; then
+if [ "$DEPLOY_TKG_CLEAN" -eq 1 ]; then
   cleanupEnvironment
   cleanKubeconfig
   cleanManagementCluster
