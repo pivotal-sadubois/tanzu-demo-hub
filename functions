@@ -5987,9 +5987,9 @@ createClusterIssuer() {
     stt=$(kubectl get certificate $TDH_TLS_CERT -o json 2>/dev/null | jq -r '.status.conditions[].status')
     if [ "$stt" != "True" ]; then
       messagePrint " ▪ LetsEnscript Certificate Status"       "$stt"
-      echo "------------------------------------------------------------------------------------------------------------------------"
+      echo "   ------------------------------------------------------------------------------------------------------------------------"
       kubectl describe certificate $TDH_TLS_CERT
-      echo "------------------------------------------------------------------------------------------------------------------------"
+      echo "   ------------------------------------------------------------------------------------------------------------------------"
       echo "=> kubectl describe clusterissuer letsencrypt-staging"
       echo "=> kubectl describe order"
       echo "=> kubectl describe challenge"
@@ -8257,6 +8257,7 @@ checkConnectivity() {
 # ------------------------------------------------------------------------------------------
 installTanzuPackages() {
   PACKAGE_NAME=$1
+  PACKAGE_NAMESPACE=tanzu-system-packages
   NAMESPACE=$2
   PACKAGE_ID=$3
   PACKAGE_DES=$4
@@ -8339,6 +8340,10 @@ TanzuPackage_AddRepo() {
 # ------------------------------------------------------------------------------------------
 TanzuPackage_RepoSync() {
   NAMESPACE=$1
+  PACKAGE_NAMESPACE=tanzu-system-packages
+
+  # --- CREATE PACKAGE_NAMESPACE NAMESPACE ---
+  kubectl create ns $PACKAGE_NAMESPACE > /dev/null 2>&1
 
   messagePrint " ▪ Wait for Tanzu Package Reconsile"   "$NAMESPACE"
 
@@ -8383,6 +8388,7 @@ TanzuPackage_RepoSync() {
 TanzuPackage_LocalStorage() {
   PACKAGE_NAME="$1"
   NAMESPACE="$1"
+  PACKAGE_NAMESPACE=tanzu-system-packages
   PACKAGE_ID="$2"
   PACKAGE_DES="Local Storage (RWO AccessMode)"
 
@@ -8393,7 +8399,7 @@ TanzuPackage_LocalStorage() {
 
     messageTitle "Installing $PACKAGE_DES"
     messagePrint " ▪ Tanzu Package ($PACKAGE_NAME)"   "$PACKAGE_ID ($package_ver/$package_rel)"
-    tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $NAMESPACE --version $package_ver --create-namespace --wait=true > /tmp/error.log 2>&1; ret=$?
+    tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $PACKAGE_NAMESPACE --version $package_ver --create-namespace --wait=true > /tmp/error.log 2>&1; ret=$?
     if [ $ret -ne 0 ]; then
       logMessages /tmp/error.log
       echo "ERROR: failed to install Tanzu Package $PACKAGE_NAME)"
@@ -8409,22 +8415,22 @@ TanzuPackage_LocalStorage() {
     fi
   fi
 
-  tanzu package installed get $PACKAGE_NAME -n $NAMESPACE -o json > /tmp/pkg.json
+  tanzu package installed get $PACKAGE_NAME -n $PACKAGE_NAMESPACE -o json > /tmp/pkg.json
   pkg_stt=$(jq -r '.[]."status"' /tmp/pkg.json)
   pkg_nam=$(jq -r '.[]."package-name"' /tmp/pkg.json)
   pkg_ver=$(jq -r '.[]."package-version"' /tmp/pkg.json)
 
-  if [ "$pkg_stt" != "Reconcile succeeded" ]; then
+  if [ "$pkg_stt" != "Reconcile succeeded" -a "$pkg_stt" != "Reconciling" ]; then
     echo "ERROR: failed to reconsile Tanzu Package ($PACKAGE_NAME)"
     messageLine
-    tanzu package installed get $PACKAGE_NAME -n $NAMESPACE
+    tanzu package installed get $PACKAGE_NAME -n $PACKAGE_NAMESPACE
     messageLine
     if [ "$NATIVE" == "0" ]; then
       echo "       => tools/${TDH_TOOLS}.sh"
-      echo "          tdh-tools:/$ tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $NAMESPACE --version $package_ver --create-namespace"
+      echo "          tdh-tools:/$ tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $PACKAGE_NAMESPACE --version $package_ver --create-namespace"
       echo "          tdh-tools:/$ exit"
     else
-      echo "       => tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $NAMESPACE --version $package_ver --create-namespace"
+      echo "       => tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $PACKAGE_NAMESPACE --version $package_ver --create-namespace"
     fi
 
     exit 1
@@ -8460,30 +8466,29 @@ TanzuPackage_LocalStorage() {
 # ------------------------------------------------------------------------------------------
 TanzuPackage_CertManager() {
   PACKAGE_NAME=$1
-  NAMESPACE=$1
+  PACKAGE_NAMESPACE=tanzu-system-packages
+  NAMESPACE=tanzu-system-ingress 
   PACKAGE_ID=$2
   PACKAGE_DES="Certificate management (cert-manager)"
 
-echo gaga0
-  pkg=$(tanzu package installed get $PACKAGE_NAME -n $NAMESPACE -o json 2>/dev/null | jq -r '.[].name')
-echo "gaga1 pkg:$pkg"
+  pkg=$(tanzu package installed get $PACKAGE_NAME -n $PACKAGE_NAMESPACE -o json 2>/dev/null | jq -r '.[].name')
   if [ "$pkg" != "$PACKAGE_NAME" ]; then
     package_ver=$(tanzu package available list $PACKAGE_ID -A -o json | jq -r '.[]."version"' | tail -1)
     package_rel=$(tanzu package available list $PACKAGE_ID -A -o json | jq -r '.[]."released-at"' | tail -1)
 
-    messageTitle "Installing $PACKAGE_DES"
+    messageTitle "Installing $PACKAGE_DES in $PACKAGE_NAMESPACE"
     messagePrint " ▪ Tanzu Package ($PACKAGE_NAME)"   "$PACKAGE_ID ($package_ver/$package_rel)"
-    tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $NAMESPACE --version $package_ver \
+    tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $PACKAGE_NAMESPACE --version $package_ver \
             --create-namespace --poll-timeout 10m --wait=true > /tmp/error.log 2>&1; ret=$?
     if [ $ret -ne 0 ]; then
       logMessages /tmp/error.log
       echo "ERROR: failed to install Tanzu Package $PACKAGE_NAME)"
       if [ "$NATIVE" == "0" ]; then
         echo "       => tools/${TDH_TOOLS}.sh"
-        echo "          tdh-tools:/$ tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $NAMESPACE --version $package_ver --create-namespace"
+        echo "          tdh-tools:/$ tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $PACKAGE_NAMESPACE --version $package_ver --create-namespace"
         echo "          tdh-tools:/$ exit"
       else
-        echo "       => tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $NAMESPACE --version $package_ver --create-namespace"
+        echo "       => tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $PACKAGE_NAMESPACE --version $package_ver --create-namespace"
       fi
 
       exit 1
@@ -8492,25 +8497,22 @@ echo "gaga1 pkg:$pkg"
     fi
   fi
 
-echo gaga2
-  tanzu package installed get $PACKAGE_NAME -n $NAMESPACE -o json > /tmp/pkg.json
+  tanzu package installed get $PACKAGE_NAME -n $PACKAGE_NAMESPACE -o json > /tmp/pkg.json
   pkg_stt=$(jq -r '.[]."status"' /tmp/pkg.json)
   pkg_nam=$(jq -r '.[]."package-name"' /tmp/pkg.json)
   pkg_ver=$(jq -r '.[]."package-version"' /tmp/pkg.json)
 
-echo "pkg_stt:$pkg_stt"
-
-  if [ "$pkg_stt" != "Reconcile succeeded" ]; then
+  if [ "$pkg_stt" != "Reconcile succeeded" -a "$pkg_stt" != "Reconciling" ]; then
     echo "ERROR: failed to reconsile Tanzu Package $PACKAGE_NAME)"
     messageLine
-    tanzu package installed get $PACKAGE_NAME -n $NAMESPACE
+    tanzu package installed get $PACKAGE_NAME -n $PACKAGE_NAMESPACE
     messageLine
     if [ "$NATIVE" == "0" ]; then
       echo "       => tools/${TDH_TOOLS}.sh"
-      echo "          tdh-tools:/$ tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $NAMESPACE --version $package_ver --create-namespace"
+      echo "          tdh-tools:/$ tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $PACKAGE_NAMESPACE --version $package_ver --create-namespace"
       echo "          tdh-tools:/$ exit"
     else
-      echo "       => tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $NAMESPACE --version $package_ver --create-namespace"
+      echo "       => tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $PACKAGE_NAMESPACE --version $package_ver --create-namespace"
     fi
 
     exit 1
@@ -8545,10 +8547,9 @@ echo "pkg_stt:$pkg_stt"
 # ------------------------------------------------------------------------------------------
 TanzuPackage_Harbor () {
   PACKAGE_NAME=$1
-  NAMESPACE=tanzu-system-registry
   NAMESPACE=registry-harbor
-  PACKAGE_NAMESPACE=tanzu-packages
-  NAMESPACE=harbor
+  PACKAGE_NAMESPACE=tanzu-system-packages
+  NAMESPACE=tanzu-system-registry
   PACKAGE_ID=$2
   PACKAGE_DES="Harbor OCI Registry"
 
@@ -8557,8 +8558,7 @@ TanzuPackage_Harbor () {
   HARBOR_HOSTNAME="harbor.apps-contour.$TDH_ENVNAME.$AWS_HOSTED_DNS_DOMAIN"
   NOTARY_HOSTNAME="notary.apps-contour.$TDH_ENVNAME.$AWS_HOSTED_DNS_DOMAIN"
 
-  # --- CREATE PACKAGE_NAMESPACE NAMESPACE ---
-  kubectl create ns $PACKAGE_NAMESPACE > /dev/null 2>&1
+  #tanzu package installed delete harbor-pkg --namespace tanzu-system-packages
 
   pkg=$(tanzu package installed get $PACKAGE_NAME -n $PACKAGE_NAMESPACE -o json 2>/dev/null | jq -r '.[].name')
   if [ "$pkg" != "$PACKAGE_NAME" ]; then
@@ -8576,20 +8576,18 @@ TanzuPackage_Harbor () {
     kubectl get secret tanzu-demo-hub-tls --namespace=default  -oyaml | grep -v '^\s*namespace:\s' | \
     kubectl apply --namespace=$NAMESPACE -f - > /dev/null 2>&1
 
-    tls_crt=$(kubectl get secrets tanzu-demo-hub-tls -n harbor -o json | jq -r '.data."tls.crt"') 
-    tls_key=$(kubectl get secrets tanzu-demo-hub-tls -n harbor -o json | jq -r '.data."tls.key"') 
+    tls_crt=$(kubectl get secrets tanzu-demo-hub-tls -n $NAMESPACE -o json | jq -r '.data."tls.crt"') 
+    tls_key=$(kubectl get secrets tanzu-demo-hub-tls -n $NAMESPACE -o json | jq -r '.data."tls.key"') 
     ca_crt=$(cat $HOME/.tanzu-demo-hub/certificates/tdh-cert.pem | base64 -w 10000)
 
-    HARBOR_VALUES=/tmp/harbor_values.yaml
-    echo "harborAdminPassword: $TDH_HARBOR_ADMIN_PASSWORD"                                                                      >  $HARBOR_VALUES
+
 
     package_ver=$(tanzu package available list $PACKAGE_ID -A -o json | jq -r '.[]."version"' | tail -1)
     package_rel=$(tanzu package available list $PACKAGE_ID -A -o json | jq -r '.[]."released-at"' | tail -1)
 
-
     HARBOR_VALUES=/tmp/harbor_values.yaml
-    echo "namespace: $NAMESPACE"                                                                                     >  $HARBOR_VALUES
-    echo "harborAdminPassword: $TDH_HARBOR_ADMIN_PASSWORD"                                                                      >> $HARBOR_VALUES
+    #echo "namespace: $NAMESPACE"                                                                                     >  $HARBOR_VALUES
+    echo "harborAdminPassword: $TDH_HARBOR_ADMIN_PASSWORD"                                                                      >  $HARBOR_VALUES
     echo "secretKey: MmetwEOsKpC7VWGx"                                                                                          >> $HARBOR_VALUES
     echo "hostname: harbor.apps-contour.$TDH_ENVNAME.$AWS_HOSTED_DNS_DOMAIN"                                                    >> $HARBOR_VALUES
     #echo "tlsCertificateSecretName: $HARBOR_TLS_SECRET"                                                                        >> $HARBOR_VALUES
@@ -8600,9 +8598,9 @@ TanzuPackage_Harbor () {
     #echo "  ca.crt: $ca_crt"                                                                                                   >> $HARBOR_VALUES
     echo "tlsCertificate:"                                                                                                      >> $HARBOR_VALUES
     echo "  tls.crt: |"                                                                                                         >> $HARBOR_VALUES
-    kubectl get secrets tanzu-demo-hub-tls -n harbor -o json | jq -r '.data."tls.crt"' | base64 -d | sed 's/^/    /g'           >> $HARBOR_VALUES
+    kubectl get secrets tanzu-demo-hub-tls -n $NAMESPACE -o json | jq -r '.data."tls.crt"' | base64 -d | sed 's/^/    /g'       >> $HARBOR_VALUES
     echo "  tls.key: |"                                                                                                         >> $HARBOR_VALUES
-    kubectl get secrets tanzu-demo-hub-tls -n harbor -o json | jq -r '.data."tls.key"' | base64 -d | sed 's/^/    /g'           >> $HARBOR_VALUES
+    kubectl get secrets tanzu-demo-hub-tls -n $NAMESPACE -o json | jq -r '.data."tls.key"' | base64 -d | sed 's/^/    /g'       >> $HARBOR_VALUES
     echo "  ca.crt: |"                                                                                                          >> $HARBOR_VALUES
     cat $HOME/.tanzu-demo-hub/certificates/tdh-cert.pem | sed 's/^/    /g' >> $HARBOR_VALUES
     echo ""                                                                                                                     >> $HARBOR_VALUES
@@ -8683,7 +8681,7 @@ TanzuPackage_Harbor () {
   pkg_nam=$(jq -r '.[]."package-name"' /tmp/pkg.json)
   pkg_ver=$(jq -r '.[]."package-version"' /tmp/pkg.json)
 
-  if [ "$pkg_stt" != "Reconcile succeeded" ]; then
+  if [ "$pkg_stt" != "Reconcile succeeded" -a "$pkg_stt" != "Reconciling" ]; then
     echo "ERROR: failed to reconsile Tanzu Package $PACKAGE_NAME)"
     messageLine
     tanzu package installed get $PACKAGE_NAME -n $PACKAGE_NAMESPACE
@@ -8704,17 +8702,18 @@ TanzuPackage_Harbor () {
   messagePrint " ▪ Tanzu Package ($PACKAGE_NAME) Namespace"     "$NAMESPACE"
   messagePrint " ▪ Tanzu Package ($PACKAGE_NAME) Version"       "$pkg_ver"
   messagePrint " ▪ Tanzu Package ($PACKAGE_NAME) Status"        "$pkg_stt"
+  messagePrint " ▪ Tanzu Package ($PACKAGE_NAME) FQDN"          "https://harbor.apps-contour.$TDH_ENVNAME.$AWS_HOSTED_DNS_DOMAIN"
 
   # --- VERIFY DNS DOMAIN ---
   verifyHostedZone ${TDH_ENVNAME}.$AWS_HOSTED_DNS_DOMAIN
 
   [ "$TDH_TOOLS" == "tdh-tools" ] && CONTOUR_NS=tanzu-system-ingress || CONTOUR_NS=projectcontour
   [ "$TDH_TOOLS" == "tdh-tools" ] && CONTOUR_NS=$NAMESPACE || CONTOUR_NS=projectcontour
-echo "gaga CONTOUR_NS:$CONTOUR_NS"
 
   ipa=""; cnt=0
   while [ "$ipa" == "" -a $cnt -lt 15 ]; do
-    ipa=$(kubectl describe svc envoy --namespace $CONTOUR_NS | egrep "^LoadBalancer Ingress:" | awk '{ print $NF }')
+    #ipa=$(kubectl describe svc envoy --namespace $CONTOUR_NS | egrep "^LoadBalancer Ingress:" | awk '{ print $NF }')
+    ipa=$(kubectl get httpproxy harbor-httpproxy -n $NAMESPACE -o json | jq -r '.status.loadBalancer.ingress[].hostname') 
     [ "$ipa" != "" ] && break
     let cnt=cnt+1
     sleep 30
@@ -8742,12 +8741,6 @@ echo "gaga CONTOUR_NS:$CONTOUR_NS"
   uodateConfigMap tanzu-demo-hub TDH_INGRESS_CONTOUR_PACKAGE_NAME     "$crt"
   uodateConfigMap tanzu-demo-hub TDH_INGRESS_CONTOUR_PACKAGE_VERSION  "$ver"
   uodateConfigMap tanzu-demo-hub TDH_INGRESS_CONTOUR_PACKAGE_STATUS   "$stt"
-
-
-#NAMESPACE
-
-#gaga
-
 }
 
 # ------------------------------------------------------------------------------------------
@@ -8767,15 +8760,12 @@ echo "gaga CONTOUR_NS:$CONTOUR_NS"
 TanzuPackage_Contour() {
   PACKAGE_NAME=$1
   NAMESPACE=ingress-contour
-  PACKAGE_NAMESPACE=tanzu-packages
+  PACKAGE_NAMESPACE=tanzu-system-packages
   NAMESPACE=tanzu-system-ingress
   PACKAGE_ID=$2
   PACKAGE_DES="Contour ingress controller"
 
-  # --- CREATE PACKAGE_NAMESPACE NAMESPACE ---
-  kubectl create ns $PACKAGE_NAMESPACE > /dev/null 2>&1
-
-  pkg=$(tanzu package installed get $PACKAGE_NAME -n $NAMESPACE -o json 2>/dev/null | jq -r '.[].name')
+  pkg=$(tanzu package installed get $PACKAGE_NAME -n $PACKAGE_NAMESPACE -o json 2>/dev/null | jq -r '.[].name')
   if [ "$pkg" != "$PACKAGE_NAME" ]; then
     package_ver=$(tanzu package available list $PACKAGE_ID -A -o json | jq -r '.[]."version"' | tail -1)
     package_rel=$(tanzu package available list $PACKAGE_ID -A -o json | jq -r '.[]."released-at"' | tail -1)
@@ -8880,7 +8870,7 @@ TanzuPackage_Contour() {
 
     messageTitle "Installing $PACKAGE_DES"
     messagePrint " ▪ Tanzu Package ($PACKAGE_NAME)"   "$PACKAGE_ID ($package_ver/$package_rel)"
-    tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $NAMESPACE \
+    tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $PACKAGE_NAMESPACE \
            --version $package_ver --create-namespace --poll-timeout 10m \
            --values-file /tmp/contour-data-values.yaml --wait=true > /tmp/contour.log 2>&1; ret=$?
     if [ $ret -ne 0 ]; then
@@ -8890,13 +8880,13 @@ TanzuPackage_Contour() {
         echo "       => tools/${TDH_TOOLS}.sh"
         echo "          tdh-tools:/$ tanzu package install $PACKAGE_NAME --create-namespace \\"
         echo "                             --package-name $PACKAGE_ID \\"
-        echo "                             --namespace $NAMESPACE --version $package_ver \\"
+        echo "                             --namespace $PACKAGE_NAMESPACE --version $package_ver \\"
         echo "                             --values-file /tmp/contour-data-values.yaml"
         echo "          tdh-tools:/$ exit"
       else
         echo "       => tanzu package install $PACKAGE_NAME --create-namespace \\"
         echo "                             --package-name $PACKAGE_ID \\"
-        echo "                             --namespace $NAMESPACE --version $package_ver \\"
+        echo "                             --namespace $PACKAGE_NAMESPACE --version $package_ver \\"
         echo "                             --values-file /tmp/contour-data-values.yaml"
       fi
 
@@ -8906,22 +8896,22 @@ TanzuPackage_Contour() {
     fi
   fi
 
-  tanzu package installed get $PACKAGE_NAME -n $NAMESPACE -o json > /tmp/pkg.json
+  tanzu package installed get $PACKAGE_NAME -n $PACKAGE_NAMESPACE -o json > /tmp/pkg.json
   pkg_stt=$(jq -r '.[]."status"' /tmp/pkg.json)
   pkg_nam=$(jq -r '.[]."package-name"' /tmp/pkg.json)
   pkg_ver=$(jq -r '.[]."package-version"' /tmp/pkg.json)
 
-  if [ "$pkg_stt" != "Reconcile succeeded" ]; then
+  if [ "$pkg_stt" != "Reconcile succeeded" -a "$pkg_stt" != "Reconciling" ]; then
     echo "ERROR: failed to reconsile Tanzu Package $PACKAGE_NAME)"
     messageLine
-    tanzu package installed get $PACKAGE_NAME -n $NAMESPACE
+    tanzu package installed get $PACKAGE_NAME -n $PACKAGE_NAMESPACE
     messageLine
     if [ "$NATIVE" == "0" ]; then
       echo "       => tools/${TDH_TOOLS}.sh"
-      echo "          tdh-tools:/$ tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $NAMESPACE --version $package_ver --create-namespace"
+      echo "          tdh-tools:/$ tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $PACKAGE_NAMESPACE --version $package_ver --create-namespace"
       echo "          tdh-tools:/$ exit"
     else
-      echo "       => tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $NAMESPACE --version $package_ver --create-namespace"
+      echo "       => tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $PACKAGE_NAMESPACE --version $package_ver --create-namespace"
     fi
 
     exit 1
@@ -9157,7 +9147,6 @@ runTDHtools() {
                "-v $HOME/$TDH_TOOLS_PATH/.aws:$HOME/.aws:rw"                            ## PERSISTANT AWS CREDENTIALS
                "-v $HOME/$TDH_TOOLS_PATH/.vmware-cna-saas:$HOME/.vmware-cna-saas:rw"    ## TANZU MISSION CONTROL (TMC) LOGIN CREDENTIALS
                "-v $HOME/$TDH_TOOLS_PATH/tmp:/tmp:rw"                                   ## KEEP TEMP PERSISTENT
-#gaga
                "-v $TDHPATH/:$TDHPATH:ro"                                               ## TANZU-DEMO-HUB DIRECTORY
              )
 
@@ -9169,9 +9158,13 @@ runTDHtools() {
       done
 
       [ "$TOOLS_TLAG" == "tce" ] && POSTSCRIPT="tdh-postinstall-user-tce.sh" || POSTSCRIPT="tdh-postinstall-user.sh" 
+echo "gaga1 $(date)"
       docker run $ROOT_OPTIONS ${CORE_MOUNTS[*]} $TDH_TOOLS:latest chmod 666 /var/run/docker.sock > /dev/null 2>&1
+echo "gaga2 $(date)"
       docker run $USER_OPTIONS ${CORE_MOUNTS[*]} $TDH_TOOLS:latest /usr/local/bin/$POSTSCRIPT > /dev/null 2>&1
+echo "gaga3 $(date)"
       docker run $USER_OPTIONS ${CORE_MOUNTS[*]} $TDH_TOOLS:latest $DOCKER_EXEC $DOCKER_ARGS; ret=$?
+echo "gaga4 $(date)"
   
       # --- FINISH CURRENT SESSION AS WE RUN AS CONTAINER ---
       exit $ret
@@ -9221,4 +9214,4 @@ nodeType() {
   echo "${nodes[$ntyoe]}"
 }
 
-
+#https://vcsa-01.haas-464.pez.vmware.com/ui/app/devcenter/api-explorer
