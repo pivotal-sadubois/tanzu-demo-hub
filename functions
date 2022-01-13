@@ -2082,8 +2082,6 @@ configureJumpHost() {
     # 02.12.2021 Can not copy the .tanzu-demo-hub/config over to jump, its overwriting cluster kubeconfig files on the jump if deployTKGmc is started again
     (cd $HOME && tar cf /tmp/tdh-home.tar .aws .azure .tanzu-demo-hub/terraform .tanzu-demo-hub/certificates .tanzu-demo-hub/config  .tanzu-demo-hub.cfg .tanzu-demo-hub/KeyPair* > /dev/null 2>&1)
 
-echo YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY
-
     ret=1; cnt=0
     while [ $ret -ne 0 -a $cnt -lt 5 ]; do
       $SCP_COMMAND /tmp/tdh-home.tar ${SSH_USER}@${SSH_HOST}:$SSH_HOME > /dev/null 2>&1; ret=$?
@@ -4800,14 +4798,11 @@ installKubeapps() {
 #    echo "    - --cookie-secure=false"                                                                                               >> $HELM_VALUES
 
     messagePrint " ▪ Deploy the Kubeapps Helm Chart" "kubeapps"
+    helm repo add bitnami https://charts.bitnami.com/bitnami > /dev/null 2>&1
+
     cnt=0; ret=1
     while [ $ret -ne 0 -a $cnt -lt 5 ]; do
-      #helm install kubeapps --namespace $NAMESPACE bitnami/kubeapps -f $HELM_VALUES > /dev/null 2>&1; ret=$?
-      #helm install kubeapps --namespace $NAMESPACE bitnami/kubeapps -f $HELM_VALUES; ret=$?
-
-echo "helm install kubeapps --namespace $NAMESPACE bitnami/kubeapps -f $HELM_VALUES --version $HELM_KUBEAPPS_VERSION"
-      #helm install kubeapps --namespace $NAMESPACE bitnami/kubeapps -f $HELM_VALUES --version $HELM_KUBEAPPS_VERSION > /dev/null 2>&1; ret=$?
-      helm install kubeapps --namespace $NAMESPACE bitnami/kubeapps -f $HELM_VALUES --version $HELM_KUBEAPPS_VERSION; ret=$?
+      helm install kubeapps --namespace $NAMESPACE bitnami/kubeapps -f $HELM_VALUES --version $HELM_KUBEAPPS_VERSION > /tmp/error.log 2>&1; ret=$?
 
       [ $ret -eq 0 ] && break
       let cnt=cnt+1
@@ -4815,8 +4810,16 @@ echo "helm install kubeapps --namespace $NAMESPACE bitnami/kubeapps -f $HELM_VAL
     done
 
     if [ $ret -ne 0 ]; then
+      logMessages /tmp/error.log
       echo "ERROR: Failed to deploy Kubeapps Helm Chart"
-      echo "       => helm install kubeapps --namespace $NAMESPACE bitnami/kubeapps -f $HELM_VALUES"
+      if [ "$NATIVE" == "0" ]; then
+        echo "       => tools/${TDH_TOOLS}.sh"
+        echo "          tdh-tools:/$ helm install kubeapps --namespace $NAMESPACE bitnami/kubeapps -f $HELM_VALUES"
+        echo "          tdh-tools:/$ exit"
+      else
+        echo "       => helm install kubeapps --namespace $NAMESPACE bitnami/kubeapps -f $HELM_VALUES"
+      fi
+
       exit 1
     fi
 
@@ -4892,10 +4895,27 @@ installMinio() {
     echo "      path: /"                                                                                                        >> $HELM_VALUES
 
     messagePrint " ▪ Deploy the Minio Helm Chart" "tdh-minio"
-    helm install tdh-minio bitnami/minio -f ${HELM_VALUES} > /dev/null 2>&1
-    if [ $? -ne 0 ]; then
+    helm repo add bitnami https://charts.bitnami.com/bitnami > /dev/null 2>&1
+
+    cnt=0; ret=1
+    while [ $ret -ne 0 -a $cnt -lt 5 ]; do
+      helm install kubeapps --namespace $NAMESPACE bitnami/kubeapps -f $HELM_VALUES --version $HELM_KUBEAPPS_VERSION > /tmp/error.log 2>&1; ret=$?
+      [ $ret -eq 0 ] && break
+      let cnt=cnt+1
+      sleep 30
+    done
+
+    if [ $ret -ne 0 ]; then
+      logMessages /tmp/error.log
       echo "ERROR: Failed to deploy Minio Helm Chart"
-      echo "       => helm install tdh-minio bitnami/minio -f ${HELM_VALUES}"
+      if [ "$NATIVE" == "0" ]; then
+        echo "       => tools/${TDH_TOOLS}.sh"
+        echo "          tdh-tools:/$ helm install tdh-minio bitnami/minio -f ${HELM_VALUES}"
+        echo "          tdh-tools:/$ exit"
+      else
+        echo "       =>  helm install tdh-minio bitnami/minio -f ${HELM_VALUES}"
+      fi
+
       exit 1
     fi
   fi
@@ -4942,21 +4962,27 @@ installMinio() {
     # --- WAIT FOR HARBOR TO COME ONLINE ---
     ret=1; cnt=0
     while [ $ret -ne 0 -a $cnt -le 5 ]; do
-      mc alias set minio https://minio.$DOMAIN $ACCESS_KEY $SECRET_KEY > /dev/null 2>&1; ret=$?
+      mc alias set minio https://minio.$DOMAIN $ACCESS_KEY $SECRET_KEY > /tmp/error.log 2>&1; ret=$?
       [ $ret -eq 0 ] && break
       sleep 60
       let cnt=cnt+1
     done
-  
-    if [ $ret -ne 0 ]; then
-      echo "ERROR: Unable to configure Minio Client (mc)"
-      echo "       => mc alias set minio https://minio.$DOMAIN $ACCESS_KEY $SECRET_KEY"
-      echo "try latter manually"
-    fi
-  
-    #mc mb minio/tdh-postgres-backup > /dev/null 2>&1
-  fi
 
+    if [ $ret -ne 0 ]; then
+      logMessages /tmp/error.log
+      echo "ERROR: Unable to configure Minio Client (mc)"
+      if [ "$NATIVE" == "0" ]; then
+        echo "       => tools/${TDH_TOOLS}.sh"
+        echo "          tdh-tools:/$ mc alias set minio https://minio.$DOMAIN $ACCESS_KEY $SECRET_KEY"
+        echo "          tdh-tools:/$ exit"
+      else
+        echo "       => mc alias set minio https://minio.$DOMAIN $ACCESS_KEY $SECRET_KEY"
+      fi
+
+      exit 1
+    fi
+  fi
+  
   # --- STORE SETTINGS IN CONFIGMAP ---
   uodateConfigMap tanzu-demo-hub TDH_SERVICE_MINIO                "true"
   uodateConfigMap tanzu-demo-hub TDH_SERVICE_MINIO_INTERNAL_NAME  "tdh-minio.default.svc.cluster.local:9000"
@@ -5009,14 +5035,23 @@ installTanzuDataPostgres() {
      
       cnt=0; ret=1
       while [ $ret -ne 0 -a $cnt -lt 5 ]; do
-        docker login $TDH_HARBOR_REGISTRY_DNS_HARBOR -u admin -p $TDH_HARBOR_REGISTRY_ADMIN_PASSWORD > /dev/null 2>&1; ret=$?
+        docker login $TDH_HARBOR_REGISTRY_DNS_HARBOR -u admin -p $TDH_HARBOR_REGISTRY_ADMIN_PASSWORD > /tmp/error.log 2>&1; ret=$?
         sleep 10
         let cnt=cnt+1
       done
-  
+
       if [ $ret -ne 0 ]; then
+        logMessages /tmp/error.log
         echo "ERROR: Docker login does not work 1"
-        echo "       => docker login $TDH_HARBOR_REGISTRY_DNS_HARBOR -u admin -p $TDH_HARBOR_REGISTRY_ADMIN_PASSWORD"; exit 1
+        if [ "$NATIVE" == "0" ]; then
+          echo "       => tools/${TDH_TOOLS}.sh"
+          echo "          tdh-tools:/$ docker login $TDH_HARBOR_REGISTRY_DNS_HARBOR -u admin -p $TDH_HARBOR_REGISTRY_ADMIN_PASSWORD"; exit 1
+          echo "          tdh-tools:/$ exit"
+        else
+          echo "       => docker login $TDH_HARBOR_REGISTRY_DNS_HARBOR -u admin -p $TDH_HARBOR_REGISTRY_ADMIN_PASSWORD"; exit 1
+        fi
+  
+        exit 1
       fi
   
       messageTitle "Tanzu Postgres Operator"
@@ -5062,10 +5097,18 @@ installTanzuDataPostgres() {
 
         messagePrint " ▪ Deploy the Postgres operator" "postgres-operator"
         #helm install postgres-operator -n $NAMESPACE -f /tmp/values-overrides.yaml ${POSTGRES_INSTALL_PATH}/operator/ > /dev/null 2>&1
-        helm install postgres-operator -f /tmp/values-overrides.yaml ${POSTGRES_INSTALL_PATH}/operator/ > /dev/null 2>&1
-        if [ $? -ne 0 ]; then
+        helm install postgres-operator -f /tmp/values-overrides.yaml ${POSTGRES_INSTALL_PATH}/operator/ > /tmp/error.log 2>&1; ret=$?
+        if [ $ret -ne 0 ]; then
+          logMessages /tmp/error.log
           echo "ERROR: Failed to deploy Postgres Helm Chart"
-          echo "       => helm install postgres-operator -n $NAMESPACE -f /tmp/values-overrides.yaml ${POSTGRES_INSTALL_PATH}/operator/"
+          if [ "$NATIVE" == "0" ]; then
+            echo "       => tools/${TDH_TOOLS}.sh"
+            echo "          tdh-tools:/$ ERROR: Failed to deploy Postgres Helm Chart"
+            echo "          tdh-tools:/$ exit"
+          else
+            echo "       => ERROR: Failed to deploy Postgres Helm Chart"
+          fi
+  
           exit 1
         fi
 
@@ -5188,6 +5231,7 @@ installBuildService() {
     checkKubernetesServices registry_docker
     checkKubernetesServices github
   
+    export TDH_REGISTRY_VMWARE_NAME=registry.tanzu.vmware.com
     messagePrint " ▪ Verify VMware Registry Access" "$TDH_REGISTRY_VMWARE_NAME"
     messagePrint "   Registry User"                 "$TDH_REGISTRY_VMWARE_USER"
     messagePrint "   Registry Password"             "$(maskPassword \"$TDH_REGISTRY_VMWARE_PASS\")"
@@ -5310,10 +5354,10 @@ installBuildService() {
       fi
 
       messagePrint " ▪ Relocate the images" "$TDH_REGISTRY_VMWARE_NAME/library/build-service"
-      imgpkg copy -b "registry.pivotal.io/build-service/bundle:$TDH_SERVICE_BUILD_SERVICE_VERSION" --to-repo $DNS_HARBOR/library/build-service > /dev/null 2>&1; ret=$?
+      imgpkg copy -b "$TDH_REGISTRY_VMWARE_NAME/build-service/bundle:$TDH_SERVICE_BUILD_SERVICE_VERSION" --to-repo $DNS_HARBOR/library/build-service > /dev/null 2>&1; ret=$?
       if [ $ret -ne 0 ]; then
         echo "ERROR: Image Relocation failed"
-        echo "       => imgpkg copy -b \"registry.pivotal.io/build-service/bundle:$TDH_SERVICE_BUILD_SERVICE_VERSION\" --to-repo $DNS_HARBOR/library/build-service"
+        echo "       => imgpkg copy -b \"$TDH_REGISTRY_VMWARE_NAME/build-service/bundle:$TDH_SERVICE_BUILD_SERVICE_VERSION\" --to-repo $DNS_HARBOR/library/build-service"
       fi
 
       messagePrint " ▪ Pull the Tanzu Build Service bundle image locally" "$TDH_REGISTRY_VMWARE_NAME/library/build-service"
@@ -5333,7 +5377,38 @@ installBuildService() {
         echo "   -----------------------------------------------------------------------------------------------------------"
         echo "   WARNING: This process may take up to 2h. You can run 'kapp inspect -a tanzu-build-service' to see progress "
         echo "   -----------------------------------------------------------------------------------------------------------"
+        touch /tmp/bundle/values.yaml
 
+#        ytt -f /tmp/bundle/values.yaml \
+#            -f /tmp/bundle/config/ \
+#            -f $HOME/.tanzu-demo-hub/certificates/ca.pem \
+#            -v kp_default_repository=$DNS_HARBOR/library/build-service \
+#            -v kp_default_repository_username=admin \
+#            -v kp_default_repository_password=$TDH_HARBOR_REGISTRY_ADMIN_PASSWORD \
+#            --data-value-yaml pull_from_kp_default_repo=true \
+#            --data-value-yaml pull_from_tanzunet=true \
+#            -v tanzunet_username=\"$TDH_REGISTRY_VMWARE_USER\" \
+#            -v tanzunet_password=\"$TDH_REGISTRY_VMWARE_PASS\" \
+#            -v descriptor_name='lite' \
+#            --data-value-yaml enable_automatic_dependency_updates=true"
+#
+#
+#        ytt -f /tmp/bundle/values.yaml \
+#            -f /tmp/bundle/config/ \
+#            -f $HOME/.tanzu-demo-hub/certificates/ca.pem \
+#            -v kp_default_repository="$DNS_HARBOR/library/build-service" \
+#            -v kp_default_repository_username="admin" \
+#            -v kp_default_repository_password="$TDH_HARBOR_REGISTRY_ADMIN_PASSWORD" \
+#	    --data-value-yaml pull_from_kp_default_repo=true \
+#            --data-value-yaml pull_from_tanzunet=true
+#            -v tanzunet_username="$TDH_REGISTRY_VMWARE_USER" \
+#            -v tanzunet_password="$TDH_REGISTRY_VMWARE_PASS" \
+#	    -v descriptor_name='lite' \
+#	   --data-value-yaml enable_automatic_dependency_updates=true \
+#	   | kbld -f /tmp/bundle/.imgpkg/images.yml -f- \
+#	   | kapp deploy -a tanzu-build-service -f- -y > /tmp/kapp.log 2>&1; ret=$?
+
+        # --- 1.2.1 Tested ---
         ytt -f /tmp/bundle/values.yaml \
             -f /tmp/bundle/config/ \
             -f $HOME/.tanzu-demo-hub/certificates/ca.pem \
@@ -5578,6 +5653,7 @@ InstallMetallLB() {
   if [ $cnt -eq 0 ]; then
     messageTitle "Installing MetallLB Loadbalancer"
     
+#gaga
     helm repo add metallb https://metallb.github.io/metallb > /dev/null 2>&1
     if [ $? -ne 0 ]; then
       echo "ERROR: failed to add helm registry https://metallb.github.io/metallb"; exit 1
@@ -7275,11 +7351,6 @@ tdh_tools_build() {
   DOCKER_IMAGE_ID=$(docker images | egrep "^$TDH_TOOLS_IMAGE " | grep "CHKSUM" | grep "$DOCKER_IMAGE_LATEST_ID" | awk '{ print $3 }')
   DOCKER_IMAGE_CHKSUM=$(docker images | egrep "^$TDH_TOOLS_IMAGE " | grep "CHKSUM" | grep "$DOCKER_IMAGE_LATEST_ID" | awk '{ print $2 }' | sed 's/CHKSUM-//g')
 
-  # --- CLEANUP TANZU FOLDER ---
-#  [ -d $HOME/.tanzu_tools ] && rm -rf $HOME/.tanzu_tools && mkdir $HOME/.tanzu_tools
-#  [ -d $HOME/.config_tools ] && rm -rf $HOME/.config_tools && mkdir $HOME/.tanzu_tools
-#  [ -d $HOME/.cache_tools ] && rm -rf $HOME/.cache_tools && mkdir $HOME/.tanzu_tools
-
   # --- SET CORRECT PERMISSONS ---
   [ -f $TDH_DOCKER_FILES/tmc ] && chmod a+x $TDH_DOCKER_FILES/tmc
 
@@ -7317,6 +7388,10 @@ tdh_tools_build() {
 
     REBUILD_REQUIRED_SOFTWARE=1       ## REBUILD REQUIRED BECAUSE OF SOFTWARE CHANGE 
   fi
+
+#echo "TDH_SERVICE_BUILD_SERVICE_DEPENDANCIES:$TDH_SERVICE_BUILD_SERVICE_DEPENDANCIES"
+#downloadFromPivnet tbs-dependencies $TDH_SERVICE_BUILD_SERVICE_DEPENDANCIES "descriptor-$TDH_SERVICE_BUILD_SERVICE_DEPENDANCIES.yaml"
+#gaga
 
   if [ ! -x $TDH_DOCKER_FILES/kbld ]; then
     # --- DOWNLOAD BUILD_SERVICE BINARIES ---
@@ -8012,6 +8087,60 @@ leftText() {
   printf "$str\n" $TEXT
 }
 
+# ------------------------------------------------------------------------------------------
+# Function Name ......: vSphereAPI_createNamespace
+# Function Purpose ...: Create a vSphere Namespace
+# ------------------------------------------------------------------------------------------
+# Argument ($1) ......: vSphere API Token
+#          ($2) ......: vSphere Server Name
+#          ($3) ......: vSphere Namespace name
+# ------------------------------------------------------------------------------------------
+# Return Value .......: 0 on Success, 1 on failure
+# ------------------------------------------------------------------------------------------
+vSphereAPI_createNamespace() {
+  API_TOKEN=$1
+  VCENTER_SERVER=$2
+  NAMESPACE=$3
+
+#gaga
+  stt=$(curl -k -X GET -H "vmware-api-session-id: $API_TOKEN" ${VCENTER_SERVER}/api/vcenter/namespaces/instances/$NAMESPACE 2>/dev/null | jq -r '.cluster')
+  if [ "$stt" == "" -o "$stt" == "null" ]; then
+    vs_cluster=$(curl -k -X GET -H "vmware-api-session-id: $API_TOKEN" ${VCENTER_SERVER}/api/vcenter/namespace-management/clusters 2>/dev/null | jq -r '.[].cluster')
+    VSPHERE_CONFIG=/tmp/okta_config.json; rm -f $OKTA_CONFIG
+    echo '{'                                                                         >  $VSPHERE_CONFIG
+    echo "  \"cluster\": \"$vs_cluster\","                                           >> $VSPHERE_CONFIG
+    echo "  \"namespace\": \"$NAMESPACE\""                                           >> $VSPHERE_CONFIG
+    echo '}'                                                                         >> $VSPHERE_CONFIG
+
+    curl -k -X POST -H "vmware-api-session-id: $API_TOKEN" ${VCENTER_SERVER}/api/vcenter/namespaces/instances \
+         -H 'Content-type: application/json' -d "@$VSPHERE_CONFIG" > /tmp/error.log 2>&1; ret=$?
+    if [ $ret -ne 0 ]; then
+      logMessages /tmp/error.log
+      echo "ERROR: failed to set vSphere Namespace $NAMESPACE"
+      if [ "$NATIVE" == "0" ]; then
+        echo "       => tools/${TDH_TOOLS}.sh"
+        echo "          tdh-tools:/$ curl -k -X POST -H \"vmware-api-session-id: $API_TOKEN\" ${VCENTER_SERVER}/api/vcenter/namespaces/instances \\"
+        echo "                            -H 'Content-type: application/json' -d \"@$VSPHERE_CONFIG\""
+        echo "          tdh-tools:/$ exit"
+      else
+        echo "       => curl -k -X POST -H \"vmware-api-session-id: $API_TOKEN\" ${VCENTER_SERVER}/api/vcenter/namespaces/instances \\"
+        echo "               -H 'Content-type: application/json' -d \"@$VSPHERE_CONFIG\""
+      fi
+
+      exit 1
+    fi
+  fi
+
+echo guguseli
+
+#    echo '{'                                                                         >  $VSPHERE_CONFIG
+#    echo '  "description": "Tanzu Demo Hub - Demo Namespace"'                        >> $VSPHERE_CONFIG
+#    echo '}'                                                                         >> $VSPHERE_CONFIG
+
+
+}
+
+
 oktaAPIdata() {
   curl --location --request $1 "$2" \
     --header 'Accept: application/json' \
@@ -8019,7 +8148,6 @@ oktaAPIdata() {
     --header "Authorization: SSWS $TDH_OKTA_API_TOKEN" \
     --data "@$3" 2>/dev/null
 }
-
 
 oktaAPI() {
   MODE=$1
@@ -8546,6 +8674,11 @@ TanzuPackage_CertManager() {
 # https://tanzucommunityedition.io/docs/latest/package-readme-harbor-2.3.3/
 # ------------------------------------------------------------------------------------------
 TanzuPackage_Harbor () {
+  if [ "$TDH_SERVICE_REGISTRY_HARBOR" != "true" ]; then
+    uodateConfigMap tanzu-demo-hub TDH_SERVICE_REGISTRY_HARBOR        "false"
+    return
+  fi
+
   PACKAGE_NAME=$1
   NAMESPACE=registry-harbor
   PACKAGE_NAMESPACE=tanzu-system-packages
@@ -8681,6 +8814,7 @@ TanzuPackage_Harbor () {
   pkg_nam=$(jq -r '.[]."package-name"' /tmp/pkg.json)
   pkg_ver=$(jq -r '.[]."package-version"' /tmp/pkg.json)
 
+  pkg_stt="Reconciling" ### sdubois 12-01-3033 beacuse of problems witj Reconsiling
   if [ "$pkg_stt" != "Reconcile succeeded" -a "$pkg_stt" != "Reconciling" ]; then
     echo "ERROR: failed to reconsile Tanzu Package $PACKAGE_NAME)"
     messageLine
@@ -8703,6 +8837,8 @@ TanzuPackage_Harbor () {
   messagePrint " ▪ Tanzu Package ($PACKAGE_NAME) Version"       "$pkg_ver"
   messagePrint " ▪ Tanzu Package ($PACKAGE_NAME) Status"        "$pkg_stt"
   messagePrint " ▪ Tanzu Package ($PACKAGE_NAME) FQDN"          "https://harbor.apps-contour.$TDH_ENVNAME.$AWS_HOSTED_DNS_DOMAIN"
+  messagePrint " ▪ Tanzu Package ($PACKAGE_NAME) USer:    "     "admin"
+  messagePrint " ▪ Tanzu Package ($PACKAGE_NAME) Password:"     "$TDH_HARBOR_ADMIN_PASSWORD"
 
   # --- VERIFY DNS DOMAIN ---
   verifyHostedZone ${TDH_ENVNAME}.$AWS_HOSTED_DNS_DOMAIN
@@ -8734,13 +8870,14 @@ TanzuPackage_Harbor () {
   fi
 
   # --- STORE SETTINGS IN CONFIGMAP ---
-  uodateConfigMap tanzu-demo-hub TDH_INGRESS_CONTOUR_ENABLED          "true"
-  uodateConfigMap tanzu-demo-hub TDH_INGRESS_CONTOUR_LB_IP            "$ipa"
-  uodateConfigMap tanzu-demo-hub TDH_INGRESS_CONTOUR_LB_DOMAIN        "apps-contour.$TDH_ENVNAME.$AWS_HOSTED_DNS_DOMAIN"
-  uodateConfigMap tanzu-demo-hub TDH_INGRESS_CONTOUR_NAMESPACE        "$NAMESPACE"
-  uodateConfigMap tanzu-demo-hub TDH_INGRESS_CONTOUR_PACKAGE_NAME     "$crt"
-  uodateConfigMap tanzu-demo-hub TDH_INGRESS_CONTOUR_PACKAGE_VERSION  "$ver"
-  uodateConfigMap tanzu-demo-hub TDH_INGRESS_CONTOUR_PACKAGE_STATUS   "$stt"
+  uodateConfigMap tanzu-demo-hub TDH_HARBOR_REGISTRY_ENABLED        "true"
+  uodateConfigMap tanzu-demo-hub TDH_HARBOR_REGISTRY_ADMIN_PASSWORD "$TDH_HARBOR_ADMIN_PASSWORD"
+  uodateConfigMap tanzu-demo-hub TDH_HARBOR_REGISTRY_DNS_HARBOR     "$HARBOR_HOSTNAME"
+  uodateConfigMap tanzu-demo-hub TDH_HARBOR_REGISTRY_DNS_NOTARY     "$NOTARY_HOSTNAME"
+  uodateConfigMap tanzu-demo-hub TDH_HARBOR_REGISTRY_CHART_NAME     "$crt"
+  uodateConfigMap tanzu-demo-hub TDH_HARBOR_REGISTRY_CHART_VERSION  "$ver"
+  uodateConfigMap tanzu-demo-hub TDH_HARBOR_REGISTRY_CHART_STATUS   "$stt"
+  uodateConfigMap tanzu-demo-hub TDH_HARBOR_REGISTRY_CHART_UPDATE   "$dat"
 }
 
 # ------------------------------------------------------------------------------------------
@@ -9158,13 +9295,9 @@ runTDHtools() {
       done
 
       [ "$TOOLS_TLAG" == "tce" ] && POSTSCRIPT="tdh-postinstall-user-tce.sh" || POSTSCRIPT="tdh-postinstall-user.sh" 
-echo "gaga1 $(date)"
       docker run $ROOT_OPTIONS ${CORE_MOUNTS[*]} $TDH_TOOLS:latest chmod 666 /var/run/docker.sock > /dev/null 2>&1
-echo "gaga2 $(date)"
       docker run $USER_OPTIONS ${CORE_MOUNTS[*]} $TDH_TOOLS:latest /usr/local/bin/$POSTSCRIPT > /dev/null 2>&1
-echo "gaga3 $(date)"
       docker run $USER_OPTIONS ${CORE_MOUNTS[*]} $TDH_TOOLS:latest $DOCKER_EXEC $DOCKER_ARGS; ret=$?
-echo "gaga4 $(date)"
   
       # --- FINISH CURRENT SESSION AS WE RUN AS CONTAINER ---
       exit $ret
@@ -9215,3 +9348,28 @@ nodeType() {
 }
 
 #https://vcsa-01.haas-464.pez.vmware.com/ui/app/devcenter/api-explorer
+
+xxx() {
+    cnt=0; ret=1
+    while [ $ret -ne 0 -a $cnt -lt 5 ]; do
+      helm install kubeapps --namespace $NAMESPACE bitnami/kubeapps -f $HELM_VALUES --version $HELM_KUBEAPPS_VERSION > /tmp/error.log 2>&1; ret=$?
+
+      [ $ret -eq 0 ] && break
+      let cnt=cnt+1
+      sleep 30
+    done
+
+    if [ $ret -ne 0 ]; then
+      logMessages /tmp/error.log
+      echo "ERROR: Failed to deploy Kubeapps Helm Chart"
+      if [ "$NATIVE" == "0" ]; then
+        echo "       => tools/${TDH_TOOLS}.sh"
+        echo "          tdh-tools:/$ helm install kubeapps --namespace $NAMESPACE bitnami/kubeapps -f $HELM_VALUES"
+        echo "          tdh-tools:/$ exit"
+      else
+        echo "       => helm install kubeapps --namespace $NAMESPACE bitnami/kubeapps -f $HELM_VALUES"
+      fi
+
+      exit 1
+    fi
+}
