@@ -5417,6 +5417,20 @@ installBuildService() {
         echo "   -----------------------------------------------------------------------------------------------------------"
         touch /tmp/bundle/values.yaml
 
+	#echo "ytt -f /tmp/bundle/values.yaml -f /tmp/bundle/config/ -f $HOME/.tanzu-demo-hub/certificates/ca.pem -v kp_default_repository=$DNS_HARBOR/library/build-service -v kp_default_repository_username=admin -v kp_default_repository_password=$TDH_HARBOR_REGISTRY_ADMIN_PASSWORD -v pull_from_kp_default_repo=true -v kp_default_repository=$DNS_HARBOR/library/build-service -v tanzunet_username=\"$TDH_REGISTRY_VMWARE_USER\" -v tanzunet_password=\"$TDH_REGISTRY_VMWARE_PASS\""
+
+	 ytt -f /tmp/bundle/values.yaml \
+            -f /tmp/bundle/config/ \
+            -f $HOME/.tanzu-demo-hub/certificates/ca.pem \
+            -v kp_default_repository=$DNS_HARBOR/library/build-service \
+            -v kp_default_repository_username=admin \
+            -v kp_default_repository_password=$TDH_HARBOR_REGISTRY_ADMIN_PASSWORD \
+            -v tanzunet_username="$TDH_REGISTRY_VMWARE_USER" \
+            -v tanzunet_password="$TDH_REGISTRY_VMWARE_PASS" \
+	    -v descriptor_name='lite' \
+           | kbld -f /tmp/bundle/.imgpkg/images.yml -f- \
+           | kapp deploy -a tanzu-build-service -f- -y > /tmp/kapp.log 2>&1; ret=$?
+
 #        ytt -f /tmp/bundle/values.yaml \
 #            -f /tmp/bundle/config/ \
 #            -f $HOME/.tanzu-demo-hub/certificates/ca.pem \
@@ -5447,16 +5461,16 @@ installBuildService() {
 #	   | kapp deploy -a tanzu-build-service -f- -y > /tmp/kapp.log 2>&1; ret=$?
 
         # --- 1.2.1 Tested ---
-        ytt -f /tmp/bundle/values.yaml \
-            -f /tmp/bundle/config/ \
-            -f $HOME/.tanzu-demo-hub/certificates/ca.pem \
-            -v tanzunet_username="$TDH_REGISTRY_VMWARE_USER" \
-            -v tanzunet_password="$TDH_REGISTRY_VMWARE_PASS" \
-            -v docker_repository="$DNS_HARBOR/library/build-service" \
-            -v docker_username="admin" \
-            -v docker_password="$TDH_HARBOR_REGISTRY_ADMIN_PASSWORD" 2>/dev/null \
-            | kbld -f /tmp/bundle/.imgpkg/images.yml -f- 2>/dev/null \
-            | kapp deploy -a tanzu-build-service -f- -y > /tmp/kapp.log 2>&1; ret=$?
+#        ytt -f /tmp/bundle/values.yaml \
+#            -f /tmp/bundle/config/ \
+#            -f $HOME/.tanzu-demo-hub/certificates/ca.pem \
+#            -v tanzunet_username="$TDH_REGISTRY_VMWARE_USER" \
+#            -v tanzunet_password="$TDH_REGISTRY_VMWARE_PASS" \
+#            -v docker_repository="$DNS_HARBOR/library/build-service" \
+#            -v docker_username="admin" \
+#            -v docker_password="$TDH_HARBOR_REGISTRY_ADMIN_PASSWORD" 2>/dev/null \
+#            | kbld -f /tmp/bundle/.imgpkg/images.yml -f- 2>/dev/null \
+#            | kapp deploy -a tanzu-build-service -f- -y > /tmp/kapp.log 2>&1; ret=$?
 
         cnt=$(kapp inspect -a tanzu-build-service --json | jq -r '.Tables[].Rows[].reconcile_state' | grep -vc "ok")
         while [ $cnt -ne 0 ]; do
