@@ -130,11 +130,11 @@ RUN gunzip -q /tanzu/cli/*.gz
 RUN cd /tanzu && tanzu plugin clean
 RUN cd /tanzu && tanzu plugin install --local cli all
 
-RUN mv /tanzu/cli/imgpkg-linux* /usr/local/bin/imgpkg && chmod a+x /usr/local/bin/imgpkg
-RUN mv /tanzu/cli/kapp-linux* /usr/local/bin/kapp && chmod a+x /usr/local/bin/kapp
-RUN mv /tanzu/cli/kbld-linux* /usr/local/bin/kbld && chmod a+x /usr/local/bin/kbld
-RUN mv /tanzu/cli/ytt-linux* /usr/local/bin/ytt && chmod a+x /usr/local/bin/ytt
-RUN mv /tanzu/cli/vendir-linux* /usr/local/bin/vendir && chmod a+x /usr/local/bin/vendir
+#RUN mv /tanzu/cli/imgpkg-linux* /usr/local/bin/imgpkg && chmod a+x /usr/local/bin/imgpkg
+#RUN mv /tanzu/cli/kapp-linux* /usr/local/bin/kapp && chmod a+x /usr/local/bin/kapp
+#RUN mv /tanzu/cli/kbld-linux* /usr/local/bin/kbld && chmod a+x /usr/local/bin/kbld
+#RUN mv /tanzu/cli/ytt-linux* /usr/local/bin/ytt && chmod a+x /usr/local/bin/ytt
+#RUN mv /tanzu/cli/vendir-linux* /usr/local/bin/vendir && chmod a+x /usr/local/bin/vendir
 
 # --- DIRTY FIX TO GET LATEST TOOLS (https://github.com/vmware-tanzu/carvel) ---
 RUN curl -sL https://github.com/vmware-tanzu/carvel-imgpkg/releases/download/v0.13.0/imgpkg-linux-amd64 -o /tanzu/cli/imgpkg-linux-amd64

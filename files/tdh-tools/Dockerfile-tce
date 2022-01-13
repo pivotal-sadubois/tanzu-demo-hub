@@ -134,7 +134,7 @@ RUN apt-get update && apt-get install -y \
 RUN su $USER -c /tanzu/tce-linux-amd64/install.sh
 #RUN cd /tanzu/tce-linux-amd64 && tanzu plugin clean								   <
 #RUN cd /tanzu/tce-linux-amd64 && tanzu plugin install --local cli all	
-
+  
 # --- DIRTY FIX TO GET LATEST TOOLS (https://github.com/vmware-tanzu/carvel) ---
 #RUN curl -sL https://github.com/vmware-tanzu/carvel-imgpkg/releases/download/v0.13.0/imgpkg-linux-amd64 -o /tanzu/cli/imgpkg-linux-amd64
 #RUN mv /tanzu/cli/imgpkg-linux-amd64 /usr/local/bin/imgpkg && chmod a+x /usr/local/bin/imgpkg
