@@ -8088,6 +8088,26 @@ leftText() {
 }
 
 # ------------------------------------------------------------------------------------------
+# Function Name ......: vSphereAPI_getToken
+# Function Purpose ...: Create a vSphere Namespace
+# ------------------------------------------------------------------------------------------
+# Argument ($1) ......: vSphere API Token
+#          ($2) ......: vSphere Server Name
+#          ($3) ......: vSphere Namespace name
+# ------------------------------------------------------------------------------------------
+# Return Value .......: 0 on Success, 1 on failure
+# ------------------------------------------------------------------------------------------
+vSphereAPI_getToken() {
+  VCENTER_SERVER="$1"
+  VCENTER_USER="$2"
+  VCENTER_PASS="$3"
+  USERPASS="${VCENTER_USER}:${VCENTER_PASS}"
+
+  curl -k -X POST "${VCENTER_SERVER}/rest/com/vmware/cis/session" -u "$USERPASS" 2>/dev/null | jq -r '.value'
+
+}
+
+# ------------------------------------------------------------------------------------------
 # Function Name ......: vSphereAPI_createNamespace
 # Function Purpose ...: Create a vSphere Namespace
 # ------------------------------------------------------------------------------------------
@@ -8102,11 +8122,11 @@ vSphereAPI_createNamespace() {
   VCENTER_SERVER=$2
   NAMESPACE=$3
 
-#gaga
+  # --- CREATE VSPHERE NAMESPACE ---
   stt=$(curl -k -X GET -H "vmware-api-session-id: $API_TOKEN" ${VCENTER_SERVER}/api/vcenter/namespaces/instances/$NAMESPACE 2>/dev/null | jq -r '.cluster')
   if [ "$stt" == "" -o "$stt" == "null" ]; then
     vs_cluster=$(curl -k -X GET -H "vmware-api-session-id: $API_TOKEN" ${VCENTER_SERVER}/api/vcenter/namespace-management/clusters 2>/dev/null | jq -r '.[].cluster')
-    VSPHERE_CONFIG=/tmp/okta_config.json; rm -f $OKTA_CONFIG
+    VSPHERE_CONFIG=/tmp/vsphere_config.json; rm -f $OKTA_CONFIG
     echo '{'                                                                         >  $VSPHERE_CONFIG
     echo "  \"cluster\": \"$vs_cluster\","                                           >> $VSPHERE_CONFIG
     echo "  \"namespace\": \"$NAMESPACE\""                                           >> $VSPHERE_CONFIG
@@ -8116,6 +8136,7 @@ vSphereAPI_createNamespace() {
          -H 'Content-type: application/json' -d "@$VSPHERE_CONFIG" > /tmp/error.log 2>&1; ret=$?
     if [ $ret -ne 0 ]; then
       logMessages /tmp/error.log
+      logMessages $VSPHERE_CONFIG
       echo "ERROR: failed to set vSphere Namespace $NAMESPACE"
       if [ "$NATIVE" == "0" ]; then
         echo "       => tools/${TDH_TOOLS}.sh"
@@ -8131,11 +8152,52 @@ vSphereAPI_createNamespace() {
     fi
   fi
 
-echo guguseli
+  # --- GET STORAGE POLICY ID FOR 'TANZU' ---
+  vm_policy=$(curl -k -X GET -H 'Content-type: application/json' \
+                   -H "vmware-api-session-id: $API_TOKEN" ${VCENTER_URL}/rest/vcenter/storage/policies 2>/dev/null | \
+                   jq -r '.value[] | select(.name == "tanzu" ).policy')
 
-#    echo '{'                                                                         >  $VSPHERE_CONFIG
-#    echo '  "description": "Tanzu Demo Hub - Demo Namespace"'                        >> $VSPHERE_CONFIG
-#    echo '}'                                                                         >> $VSPHERE_CONFIG
+
+  # --- UPDATE VSPHERE NAMESPACE CONFIG ---
+  VSPHERE_CONFIG=/tmp/vsphere_config.json; rm -f $OKTA_CONFIG
+  echo '{'                                                                         >  $VSPHERE_CONFIG
+  echo '  "description": "Tanzu Demo Hub - Demo Namespace 3",'                     >> $VSPHERE_CONFIG
+  echo '  "vm_service_spec": {'                                                    >> $VSPHERE_CONFIG
+  echo '    "vm_classes": ['                                                       >> $VSPHERE_CONFIG
+  echo '      "best-effort-medium",'                                               >> $VSPHERE_CONFIG
+  echo '      "best-effort-large",'                                                >> $VSPHERE_CONFIG
+  echo '      "best-effort-xlarge",'                                               >> $VSPHERE_CONFIG
+  echo '      "guaranteed-medium",'                                                >> $VSPHERE_CONFIG
+  echo '      "guaranteed-large",'                                                 >> $VSPHERE_CONFIG
+  echo '      "guaranteed-xlarge"'                                                 >> $VSPHERE_CONFIG
+  echo '    ]'                                                                     >> $VSPHERE_CONFIG
+  echo '  },'                                                                      >> $VSPHERE_CONFIG
+  echo '  "storage_specs": ['                                                      >> $VSPHERE_CONFIG
+  echo '    {'                                                                     >> $VSPHERE_CONFIG
+  echo "      \"policy\": \"$vm_policy\""                                          >> $VSPHERE_CONFIG
+  echo '    }'                                                                     >> $VSPHERE_CONFIG
+  echo '  ]'                                                                       >> $VSPHERE_CONFIG
+  echo '}'                                                                         >> $VSPHERE_CONFIG
+
+  curl -k -X PATCH -H 'Content-type: application/json' \
+                   -H "vmware-api-session-id: $API_TOKEN" ${VCENTER_SERVER}/api/vcenter/namespaces/instances/$NAMESPACE \
+                   -d "@$VSPHERE_CONFIG" > /tmp/error.log 2>&1; ret=$?
+  if [ $ret -ne 0 ]; then
+    logMessages /tmp/error.log
+    logMessages $VSPHERE_CONFIG
+    echo "ERROR: failed to Patch vSphere Namespace $NAMESPACE"
+    if [ "$NATIVE" == "0" ]; then
+      echo "       => tools/${TDH_TOOLS}.sh"
+      echo "          tdh-tools:/$ curl -k -X PATH -H \"vmware-api-session-id: $API_TOKEN\" ${VCENTER_SERVER}/api/vcenter/namespaces/instances/$NAMESPACE \\"
+      echo "                            -H 'Content-type: application/json' -d \"@$VSPHERE_CONFIG\""
+      echo "          tdh-tools:/$ exit"
+    else
+      echo "       => curl -k -X PATH -H \"vmware-api-session-id: $API_TOKEN\" ${VCENTER_SERVER}/api/vcenter/namespaces/instances/$NAMESPACE \\"
+      echo "               -H 'Content-type: application/json' -d \"@$VSPHERE_CONFIG\""
+    fi
+
+    exit 1
+  fi
 
 
 }
