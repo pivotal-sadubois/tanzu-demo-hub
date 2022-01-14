@@ -2,8 +2,13 @@
 # ############################################################################################
 # File: ........: vSphereCreateNamespace.sh
 # Language .....: bash
+# Date .........: 14.01.2022
 # Author .......: Sacha Dubois, VMware Tanzu
 # Description ..: vSphere create a vSphere Namespace
+# ############################################################################################
+# Reference: 
+# https://developer.vmware.com/apis/vsphere-automation/latest/vcenter/inventory/ 
+# https://developer.vmware.com/apis/1192/vsphere
 # ############################################################################################
 
 usage() {
