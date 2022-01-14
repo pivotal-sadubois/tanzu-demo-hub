@@ -5284,7 +5284,6 @@ installBuildService() {
         echo "       => docker login $TDH_REGISTRY_DOCKER_NAME -u $TDH_REGISTRY_DOCKER_USER -p $TDH_REGISTRY_DOCKER_PASS"; exit 1
       fi
   
-      echo gaga1
       messagePrint " ▪ Relocate images to" "$TDH_REGISTRY_DOCKER_NAME/$TDH_REGISTRY_DOCKER_USER/build-service"
       cnt=0; ret=1
       while [ $ret -ne 0 -a $cnt -lt 5 ]; do
@@ -5417,9 +5416,8 @@ installBuildService() {
         echo "   -----------------------------------------------------------------------------------------------------------"
         touch /tmp/bundle/values.yaml
 
-	#echo "ytt -f /tmp/bundle/values.yaml -f /tmp/bundle/config/ -f $HOME/.tanzu-demo-hub/certificates/ca.pem -v kp_default_repository=$DNS_HARBOR/library/build-service -v kp_default_repository_username=admin -v kp_default_repository_password=$TDH_HARBOR_REGISTRY_ADMIN_PASSWORD -v pull_from_kp_default_repo=true -v kp_default_repository=$DNS_HARBOR/library/build-service -v tanzunet_username=\"$TDH_REGISTRY_VMWARE_USER\" -v tanzunet_password=\"$TDH_REGISTRY_VMWARE_PASS\""
-
-	 ytt -f /tmp/bundle/values.yaml \
+        # --- 1.4.2 Tested ---
+	ytt -f /tmp/bundle/values.yaml \
             -f /tmp/bundle/config/ \
             -f $HOME/.tanzu-demo-hub/certificates/ca.pem \
             -v kp_default_repository=$DNS_HARBOR/library/build-service \
@@ -5427,50 +5425,21 @@ installBuildService() {
             -v kp_default_repository_password=$TDH_HARBOR_REGISTRY_ADMIN_PASSWORD \
             -v tanzunet_username="$TDH_REGISTRY_VMWARE_USER" \
             -v tanzunet_password="$TDH_REGISTRY_VMWARE_PASS" \
-	    -v descriptor_name='lite' \
+	    -v descriptor_name='lite' 2>/dev/null \
            | kbld -f /tmp/bundle/.imgpkg/images.yml -f- \
            | kapp deploy -a tanzu-build-service -f- -y > /tmp/kapp.log 2>&1; ret=$?
 
-#        ytt -f /tmp/bundle/values.yaml \
-#            -f /tmp/bundle/config/ \
-#            -f $HOME/.tanzu-demo-hub/certificates/ca.pem \
-#            -v kp_default_repository=$DNS_HARBOR/library/build-service \
-#            -v kp_default_repository_username=admin \
-#            -v kp_default_repository_password=$TDH_HARBOR_REGISTRY_ADMIN_PASSWORD \
-#            --data-value-yaml pull_from_kp_default_repo=true \
-#            --data-value-yaml pull_from_tanzunet=true \
-#            -v tanzunet_username=\"$TDH_REGISTRY_VMWARE_USER\" \
-#            -v tanzunet_password=\"$TDH_REGISTRY_VMWARE_PASS\" \
-#            -v descriptor_name='lite' \
-#            --data-value-yaml enable_automatic_dependency_updates=true"
-#
-#
-#        ytt -f /tmp/bundle/values.yaml \
-#            -f /tmp/bundle/config/ \
-#            -f $HOME/.tanzu-demo-hub/certificates/ca.pem \
-#            -v kp_default_repository="$DNS_HARBOR/library/build-service" \
-#            -v kp_default_repository_username="admin" \
-#            -v kp_default_repository_password="$TDH_HARBOR_REGISTRY_ADMIN_PASSWORD" \
-#	    --data-value-yaml pull_from_kp_default_repo=true \
-#            --data-value-yaml pull_from_tanzunet=true
-#            -v tanzunet_username="$TDH_REGISTRY_VMWARE_USER" \
-#            -v tanzunet_password="$TDH_REGISTRY_VMWARE_PASS" \
-#	    -v descriptor_name='lite' \
-#	   --data-value-yaml enable_automatic_dependency_updates=true \
-#	   | kbld -f /tmp/bundle/.imgpkg/images.yml -f- \
-#	   | kapp deploy -a tanzu-build-service -f- -y > /tmp/kapp.log 2>&1; ret=$?
-
         # --- 1.2.1 Tested ---
-#        ytt -f /tmp/bundle/values.yaml \
-#            -f /tmp/bundle/config/ \
-#            -f $HOME/.tanzu-demo-hub/certificates/ca.pem \
-#            -v tanzunet_username="$TDH_REGISTRY_VMWARE_USER" \
-#            -v tanzunet_password="$TDH_REGISTRY_VMWARE_PASS" \
-#            -v docker_repository="$DNS_HARBOR/library/build-service" \
-#            -v docker_username="admin" \
-#            -v docker_password="$TDH_HARBOR_REGISTRY_ADMIN_PASSWORD" 2>/dev/null \
-#            | kbld -f /tmp/bundle/.imgpkg/images.yml -f- 2>/dev/null \
-#            | kapp deploy -a tanzu-build-service -f- -y > /tmp/kapp.log 2>&1; ret=$?
+        #ytt -f /tmp/bundle/values.yaml \
+        #    -f /tmp/bundle/config/ \
+        #    -f $HOME/.tanzu-demo-hub/certificates/ca.pem \
+        #    -v tanzunet_username="$TDH_REGISTRY_VMWARE_USER" \
+        #    -v tanzunet_password="$TDH_REGISTRY_VMWARE_PASS" \
+        #    -v docker_repository="$DNS_HARBOR/library/build-service" \
+        #    -v docker_username="admin" \
+        #    -v docker_password="$TDH_HARBOR_REGISTRY_ADMIN_PASSWORD" 2>/dev/null \
+        #    | kbld -f /tmp/bundle/.imgpkg/images.yml -f- 2>/dev/null \
+        #    | kapp deploy -a tanzu-build-service -f- -y > /tmp/kapp.log 2>&1; ret=$?
 
         cnt=$(kapp inspect -a tanzu-build-service --json | jq -r '.Tables[].Rows[].reconcile_state' | grep -vc "ok")
         while [ $cnt -ne 0 ]; do
@@ -5705,7 +5674,6 @@ InstallMetallLB() {
   if [ $cnt -eq 0 ]; then
     messageTitle "Installing MetallLB Loadbalancer"
     
-#gaga
     helm repo add metallb https://metallb.github.io/metallb > /dev/null 2>&1
     if [ $? -ne 0 ]; then
       echo "ERROR: failed to add helm registry https://metallb.github.io/metallb"; exit 1
@@ -7440,10 +7408,6 @@ tdh_tools_build() {
 
     REBUILD_REQUIRED_SOFTWARE=1       ## REBUILD REQUIRED BECAUSE OF SOFTWARE CHANGE 
   fi
-
-#echo "TDH_SERVICE_BUILD_SERVICE_DEPENDANCIES:$TDH_SERVICE_BUILD_SERVICE_DEPENDANCIES"
-#downloadFromPivnet tbs-dependencies $TDH_SERVICE_BUILD_SERVICE_DEPENDANCIES "descriptor-$TDH_SERVICE_BUILD_SERVICE_DEPENDANCIES.yaml"
-#gaga
 
   if [ ! -x $TDH_DOCKER_FILES/kbld ]; then
     # --- DOWNLOAD BUILD_SERVICE BINARIES ---
