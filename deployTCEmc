@@ -981,10 +981,8 @@ createJumpHost() {
   fi
 }
 
-echo xxxxx1
 # --- VERYFY ACCESS TO CLOUD ---
 checkTDHenvironment
-echo xxxxx2
 
 # --- VERIFY TOOLS AND ACCESS ---
 checkCloudCLI
@@ -993,7 +991,6 @@ checkCLIcommands TKG
 checkCLIcommands TANZU
 checkCLIcommands TMC
 checkCLIcommands VSPHERE
-echo xxxxx3
 
 if [ "$DEPLOY_TKG_CLEAN" -eq 1 ]; then
   cleanupEnvironment
@@ -1003,16 +1000,13 @@ if [ "$DEPLOY_TKG_CLEAN" -eq 1 ]; then
   exit 0
 fi
 
-echo xxxxx4
 # --- INSTALL TANZU PLUGINS ---
 installTanzuPlugins
-echo xxxxx5
 
 # --- CLEANUP KUNECONFIG ---
 cleanKubeconfig
 checkTDHAccess
 checkCloudAccess
-echo xxxxx6
 
 #checkTMCAccess
 #checkTKGdownloads
