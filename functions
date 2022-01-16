@@ -7864,7 +7864,7 @@ tdh_tools_build() {
 
     REBUILD_REQUIRED_SOFTWARE=1       ## REBUILD REQUIRED BECAUSE OF SOFTWARE CHANGE
   else
-    cp $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER/$TDH_FILE_NAM $TDH_DOCKER_FILES/$TDH_FILE_NAM
+    cp $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER/$TDH_FILE_NAM $TDH_DOCKER_FILES/$TDH_FILE_TAG
     chmod a+x $TDH_DOCKER_FILES/$TDH_FILE_TAG
   fi
 
@@ -7906,9 +7906,13 @@ tdh_tools_build() {
 
       exit 1
     else
+echo gaga1
       unzip -o -d /tmp /tmp/terraform_$TDH_TERRAFORM_linux_amd64.zip 2>/dev/null 1>&2
+echo gaga2
       mv /tmp/terraform $TDH_DOCKER_CACHE/terraform/terraform-$TDH_TERRAFORM
+echo gaga3
     fi
+echo gaga4
 
     REBUILD_REQUIRED_SOFTWARE=1       ## REBUILD REQUIRED BECAUSE OF SOFTWARE CHANGE
   else
