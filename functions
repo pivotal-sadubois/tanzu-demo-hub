@@ -368,6 +368,7 @@ vSphereLogin() {
 }
 
 tmcCheckLogin() {
+  FLAG=$1
   [ "${TDH_TANZU_MISSION_CONTROL_REGISTRATION}" == "false" ] && return
   missing_variables=0
 
@@ -399,6 +400,9 @@ tmcCheckLogin() {
     echo "  -------------------------------------------------------------------------------------------------------------------------------------------------------"
     exit 1
   fi
+
+  # --- IF STARTED BY (tdh-tools) CONTAINER, NO TMC CLI IST INSTALLED ---
+  [ -f "$FLAG" == "--noverify" ] && return
 
   export TMC_API_TOKEN=$TMC_SERVICE_TOKEN
   ret=1; cnt=0
@@ -7699,7 +7703,7 @@ tdh_tools_build() {
   # --- TANZU MISSION CONTROL BINARY ---
   if [ ! -e $TDH_DOCKER_CACHE/tmc-$TMC_CLI/tmc-linux-$TMC_CLI ]; then 
     TDH_TANZU_MISSION_CONTROL_REGISTRATION=true
-    tmcCheckLogin
+    tmcCheckLogin --noverify
 
     # --- DOWNLOAD TMC CLI ---
     API_TOKEN=$(tmcAPI_getToken $TMC_SERVICE_TOKEN)
