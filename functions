@@ -7776,6 +7776,8 @@ tdh_tools_build() {
     if [ -f /tmp/$TDH_FILE_NAM ]; then
       [ ! -d $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER ] && mkdir -p $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER
       mv /tmp/$TDH_FILE_NAM $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER
+      cp $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER/$TDH_FILE_NAM $TDH_DOCKER_FILES/$TDH_FILE_TAG
+      chmod a+x $TDH_DOCKER_FILES/$TDH_FILE_TAG
     fi
 
     REBUILD_REQUIRED_SOFTWARE=1       ## REBUILD REQUIRED BECAUSE OF SOFTWARE CHANGE
@@ -7797,6 +7799,8 @@ tdh_tools_build() {
     if [ -f /tmp/$TDH_FILE_NAM ]; then
       [ ! -d $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER ] && mkdir -p $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER
       mv /tmp/$TDH_FILE_NAM $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER
+      cp $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER/$TDH_FILE_NAM $TDH_DOCKER_FILES/$TDH_FILE_TAG
+      chmod a+x $TDH_DOCKER_FILES/$TDH_FILE_TAG
     fi
 
     REBUILD_REQUIRED_SOFTWARE=1       ## REBUILD REQUIRED BECAUSE OF SOFTWARE CHANGE
@@ -7818,6 +7822,8 @@ tdh_tools_build() {
     if [ -f /tmp/$TDH_FILE_NAM ]; then
       [ ! -d $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER ] && mkdir -p $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER
       mv /tmp/$TDH_FILE_NAM $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER
+      cp $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER/$TDH_FILE_NAM $TDH_DOCKER_FILES/$TDH_FILE_TAG
+      chmod a+x $TDH_DOCKER_FILES/$TDH_FILE_TAG
     fi
 
     REBUILD_REQUIRED_SOFTWARE=1       ## REBUILD REQUIRED BECAUSE OF SOFTWARE CHANGE
@@ -7839,6 +7845,8 @@ tdh_tools_build() {
     if [ -f /tmp/$TDH_FILE_NAM ]; then
       [ ! -d $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER ] && mkdir -p $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER
       mv /tmp/$TDH_FILE_NAM $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER
+      cp $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER/$TDH_FILE_NAM $TDH_DOCKER_FILES/$TDH_FILE_TAG
+      chmod a+x $TDH_DOCKER_FILES/$TDH_FILE_TAG
     fi
 
     REBUILD_REQUIRED_SOFTWARE=1       ## REBUILD REQUIRED BECAUSE OF SOFTWARE CHANGE
@@ -7860,6 +7868,8 @@ tdh_tools_build() {
     if [ -f /tmp/$TDH_FILE_NAM ]; then
       [ ! -d $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER ] && mkdir -p $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER
       mv /tmp/$TDH_FILE_NAM $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER
+      cp $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER/$TDH_FILE_NAM $TDH_DOCKER_FILES/$TDH_FILE_TAG
+      chmod a+x $TDH_DOCKER_FILES/$TDH_FILE_TAG
     fi
 
     REBUILD_REQUIRED_SOFTWARE=1       ## REBUILD REQUIRED BECAUSE OF SOFTWARE CHANGE
@@ -7888,9 +7898,7 @@ tdh_tools_build() {
   fi
 
   # --- TERRAFORM BINARY ---
-echo gaga00
   if [ ! -e $TDH_DOCKER_CACHE/terraform/terraform-$TDH_TERRAFORM ]; then
-echo gaga01
     messagePrint " ▪ Downloading Terraform binary"                                "terraform_${TDH_TERRAFORM}_linux_amd64.zip"
     [ ! -e $TDH_DOCKER_CACHE/terraform ] && mkdir -p $TDH_DOCKER_CACHE/terraform
     curl -q https://releases.hashicorp.com/terraform/$TDH_TERRAFORM/terraform_${TDH_TERRAFORM}_linux_amd64.zip \
@@ -7908,14 +7916,11 @@ echo gaga01
 
       exit 1
     else
-echo gaga1
-ls -la /tmp/terraform_${TDH_TERRAFORM}_linux_amd64.zip 
       unzip -o -d /tmp /tmp/terraform_${TDH_TERRAFORM}_linux_amd64.zip 2>/dev/null 1>&2
-echo gaga2
       mv /tmp/terraform $TDH_DOCKER_CACHE/terraform/terraform-$TDH_TERRAFORM
-echo gaga3
+      cp $TDH_DOCKER_CACHE/terraform/terraform-$TDH_TERRAFORM $TDH_DOCKER_FILES/terraform-bin
+      chmod +x $TDH_DOCKER_FILES/terraform-bin
     fi
-echo gaga4
 
     REBUILD_REQUIRED_SOFTWARE=1       ## REBUILD REQUIRED BECAUSE OF SOFTWARE CHANGE
   else
