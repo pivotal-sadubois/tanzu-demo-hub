@@ -7909,8 +7909,8 @@ echo gaga01
       exit 1
     else
 echo gaga1
-ls -la /tmp/terraform_$TDH_TERRAFORM_linux_amd64.zip 
-      unzip -o -d /tmp /tmp/terraform_$TDH_TERRAFORM_linux_amd64.zip 2>/dev/null 1>&2
+ls -la /tmp/terraform_${TDH_TERRAFORM}_linux_amd64.zip 
+      unzip -o -d /tmp /tmp/terraform_${TDH_TERRAFORM}_linux_amd64.zip 2>/dev/null 1>&2
 echo gaga2
       mv /tmp/terraform $TDH_DOCKER_CACHE/terraform/terraform-$TDH_TERRAFORM
 echo gaga3
