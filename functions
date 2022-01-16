@@ -7888,7 +7888,9 @@ tdh_tools_build() {
   fi
 
   # --- TERRAFORM BINARY ---
+echo gaga00
   if [ ! -e $TDH_DOCKER_CACHE/terraform/terraform-$TDH_TERRAFORM ]; then
+echo gaga01
     messagePrint " ▪ Downloading Terraform binary"                                "terraform_${TDH_TERRAFORM}_linux_amd64.zip"
     [ ! -e $TDH_DOCKER_CACHE/terraform ] && mkdir -p $TDH_DOCKER_CACHE/terraform
     wget -q https://releases.hashicorp.com/terraform/$TDH_TERRAFORM/terraform_${TDH_TERRAFORM}_linux_amd64.zip \
@@ -7907,6 +7909,7 @@ tdh_tools_build() {
       exit 1
     else
 echo gaga1
+ls -la /tmp/terraform_$TDH_TERRAFORM_linux_amd64.zip 
       unzip -o -d /tmp /tmp/terraform_$TDH_TERRAFORM_linux_amd64.zip 2>/dev/null 1>&2
 echo gaga2
       mv /tmp/terraform $TDH_DOCKER_CACHE/terraform/terraform-$TDH_TERRAFORM
