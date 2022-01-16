@@ -7893,8 +7893,7 @@ echo gaga00
 echo gaga01
     messagePrint " ▪ Downloading Terraform binary"                                "terraform_${TDH_TERRAFORM}_linux_amd64.zip"
     [ ! -e $TDH_DOCKER_CACHE/terraform ] && mkdir -p $TDH_DOCKER_CACHE/terraform
-echo "wget -q https://releases.hashicorp.com/terraform/$TDH_TERRAFORM/terraform_${TDH_TERRAFORM}_linux_amd64.zip -o /tmp/terraform_${TDH_TERRAFORM}_linux_amd64.zip"
-    wget -q https://releases.hashicorp.com/terraform/$TDH_TERRAFORM/terraform_${TDH_TERRAFORM}_linux_amd64.zip \
+    curl -q https://releases.hashicorp.com/terraform/$TDH_TERRAFORM/terraform_${TDH_TERRAFORM}_linux_amd64.zip \
          -o /tmp/terraform_${TDH_TERRAFORM}_linux_amd64.zip > /tmp/error.log 2>&1
     if [ ! -s /tmp/terraform_${TDH_TERRAFORM}_linux_amd64.zip ]; then
       logMessages /tmp/error.log
