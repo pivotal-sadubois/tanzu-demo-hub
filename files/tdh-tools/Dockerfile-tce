@@ -24,7 +24,7 @@ ADD kp              /usr/local/bin
 ADD mc              /usr/local/bin
 ADD jenkins-cli.jar /usr/local
 ADD tmc             /usr/local/bin
-#ADD terraform-bin   /usr/local/bin/terraform
+ADD terraform-bin   /usr/local/bin/terraform
 ADD kind            /usr/local/bin
 ADD govc            /usr/local/bin
 ADD kubectl-vsphere /usr/local/bin

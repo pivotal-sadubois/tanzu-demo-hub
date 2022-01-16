@@ -1,0 +1,209 @@
+#!/bin/bash
+# ############################################################################################
+# File: ........: registerTMCmc 
+# Language .....: bash
+# Author .......: Sacha Dubois, VMware
+# Description ..: Register a TKG Management Cluster to TMC
+# ############################################################################################
+
+export TANZU_DEMO_HUB=$(cd "$(pwd)/$(dirname $0)"; pwd)
+export TDHPATH=$(cd "$(pwd)/$(dirname $0)"; pwd)
+export DEBUG=0
+export NATIVE=0
+export TDH_DEPLOYMENT_ENV_NAME="awstkg"
+export TDH_DEPLOYMENT_CLOUD="AWS"
+export DEPLOY_PCF_DEPLOYMENT=aws_tkg_default.cfg
+
+unset TMC_MANAGEMENT_CLUSTER
+
+# --- SETTING FOR TDH-TOOLS ---
+export NATIVE=0                ## NATIVE=1 r(un on local host), NATIVE=0 (run within docker)
+export START_COMMAND="$*"
+export CMD_EXEC=$(basename $0)
+export CMD_ARGS=$*
+
+# --- SOUTCE FOUNCTIONS AND USER ENVIRONMENT ---
+[ -f $TANZU_DEMO_HUB/functions ] && . $TANZU_DEMO_HUB/functions
+[ -f $HOME/.tanzu-demo-hub.cfg ] && . $HOME/.tanzu-demo-hub.cfg
+
+usage() {
+  echo ""
+  echo "USAGE: $0 >options> [-d <display-name>] [-debug|-clean]"
+  echo "            Options:  -d <display-name>           # Tanzu Mission Control (TMC) Deployment Name"
+  echo "                                                  # (default: tkgmc-vsphere-<tmc-user>"
+  echo ""
+  echo "                      --native                    # Native execution without tdh-tools container"
+  echo "                      --debug                     # default (disabled)"
+  echo "                      --clean                     # cleanuo the deployment"
+  echo ""
+}
+
+#############################################################################################################################
+################################### EXECUTING CODE WITHIN  TDH-TOOLS DOCKER CONTAINER  ######################################
+#############################################################################################################################
+runTDHtools tkg "Deploy TKG Cluster with Tanzu Mission Control (TMC)" "$TDHPATH/$CMD_EXEC" "$CMD_ARGS"
+
+while [ "$1" != "" ]; do
+  case $1 in
+    -d)  TMC_DISPLAY_NAME=$2;;
+    --clean) DEPLOY_TKG_CLEAN=1;;
+    --debug) DEBUG=1;;
+    --native)      NATIVE=1;;
+  esac
+  shift
+done
+
+# --- VERIFY TOOLS AND ACCESS ---
+checkCloudCLI
+checkCLIcommands TOOLS
+checkCLIcommands TKG
+checkCLIcommands TANZU
+checkCLIcommands TMC
+
+# --- CLEANUP KUNECONFIG ---
+cleanKubeconfig
+tmcCheckLogin
+#checkTDHAccess
+vSphereLogin
+
+# --- VERIFY ITS A PEZ CLUSTER ---
+cnt=$(echo $VSPHERE_TKGS_VCENTER_SERVER | egrep -c "\.haas-") 
+if [ $cnt -gt 0 ]; then 
+  PEZ_ID=$(echo "$VSPHERE_TKGS_VCENTER_SERVER" | awk -F'.' '{ print $2 }') 
+  TMC_DISPLAY_NAME="tkgmc-vsphere-${PEZ_ID}-$TDH_USER"
+  TMC_CONFIG_NAME="tmc-vsphere-${PEZ_ID}"
+else
+  TMC_CONFIG_NAME="tmc-vsphere-tkgs"
+  TMC_DISPLAY_NAME="tkgmc-vsphere--$TDH_USER"
+fi
+
+
+cnt=$(kubectl get ns | egrep -c "^svc-tmc-c8") 
+if [ $cnt -gt 0 ]; then
+  kubectl -n svc-tmc-c8 get cm stack-config -o json > /tmp/clinfo.yaml 2>/dev/null; ret=$? 
+  if [ $ret -eq 0 ]; then 
+    clu_mgmt=$(jq -r '.data.management_cluster_name' /tmp/clinfo.yaml) 
+    tmc_host=$(jq -r '.data.tmc_host' /tmp/clinfo.yaml) 
+    tmc_url=$(jq -r '.data.tmc_url' /tmp/clinfo.yaml) 
+
+    # --- CLEANUP TEMPORARY FILES ---
+    rm -f /tmp/status.yaml
+
+    if [ "$TMC_DISPLAY_NAME" != "$clu_mgmt" ]; then 
+      echo "ERROR: vSphere Supervisor cluster ($VSPHERE_TKGS_SUPERVISOR_CLUSTER) is already registered in"
+      echo "       TMC Instance ($tmc_url) as $tmc_host."
+      echo "       Please unregister it first:"
+     if [ "$NATIVE" == "0" ]; then
+        echo "       => tools/${TDH_TOOLS}.sh"
+        echo "          tdh-tools:/$ tmc managementcluster deregister $clu_mgmt"
+        echo "          tdh-tools:/$ exit"
+      else
+        echo "       => tmc managementcluster deregister $clu_mgmt"
+      fi
+
+      exit 1
+    else
+      tmc_orgid=$(jq -r '.data.org_id' /tmp/clinfo.yaml)
+
+      messageTitle "Verify TMC Registration of the vSphere Supervisor Cluster"
+      messagePrint " ▪ Tanzu Mission Control (TMC) - Instance Name"            "$TMC_SERVER_URL"
+      messagePrint " ▪ Tanzu Mission Control (TMC) - Organization Id"          "$tmc_orgid"
+      messagePrint " ▪ TMC Management Clusrer - Display Name"                  "$TMC_DISPLAY_NAME"
+      messagePrint " ▪ TMC Management Clusrer - vCenter Supervisor Cluster"    "$TMC_DISPLAY_NAME"
+
+      ret=1; cnt=0
+      while [ $ret -ne 0 -a $cnt -lt 5 ]; do
+        tmc managementcluster get $TMC_DISPLAY_NAME -o json > /tmp/status.json 2>&1; ret=$? 
+        [ $ret -eq 0 ] && break
+        let cnt=cnt+1
+        sleep 30
+      done
+
+      if [ $ret -ne 0 ]; then
+       echo "ERROR: failed to get management cluster status"
+       if [ "$NATIVE" == "0" ]; then
+          echo "       => tools/${TDH_TOOLS}.sh"
+          echo "          tdh-tools:/$ tmc managementcluster get $TMC_DISPLAY_NAME"
+          echo "          tdh-tools:/$ exit"
+        else
+          echo "       => tmc managementcluster get $TMC_DISPLAY_NAME"
+        fi
+
+        exit 1
+      fi
+
+      mc_update=$(jq -r '.status.lastUpdate' /tmp/status.json)
+      mc_status=$(jq -r '.status.healthDetails.message' /tmp/status.json)
+      messagePrint " ▪ TMC Management Clusrer - Last Update from Agent"        "$mc_update"
+      messagePrint " ▪ TMC Management Clusrer - Agent Status"                  "$mc_status"
+     
+      # --- CLEANUP TEMPORARY FILES ---
+      rm -f /tmp/status.yaml
+    fi
+  else
+    messageTitle "Register vSphere Supervisor Cluster to Tanzu Mission Control (TMC)"
+    messagePrint " ▪ vCenter Supervisor Cluster"                       "$VSPHERE_TKGS_SUPERVISOR_CLUSTER"
+    messagePrint " ▪ Tanzu Mission Control (TMC) - Instance"            "$TMC_SERVER_URL"
+    messagePrint " ▪ Tanzu Mission Control (TMC) - Management Clusrer"  "$TMC_DISPLAY_NAME"
+    messagePrint " ▪ Tanzu Mission Control (TMC) - Cluster Group"       "tanzu-demo-hub"
+
+    ret=1; cnt=0
+    while [ $ret -ne 0 -a $cnt -lt 5 ]; do
+      tmc managementcluster register -c tanzu-demo-hub $TMC_DISPLAY_NAME -p TKGS -k $HOME/.kube/config > /dev/null 2>&1; ret=$?
+      [ $ret -eq 0 ] && break
+      let cnt=cnt+1
+      sleep 30
+    done
+
+    if [ $ret -ne 0 ]; then
+     echo "ERROR: failed to register vSphere supervisor cluster to Tanzu Mission Control (TMC)"
+     if [ "$NATIVE" == "0" ]; then
+        echo "       => tools/${TDH_TOOLS}.sh"
+        echo "          tdh-tools:/$ tmc managementcluster register -c tanzu-demo-hub tkgmc-vsphere-haas-464-sadubois -p TKGS -k $HOME/.kube/config"
+        echo "          tdh-tools:/$ exit"
+      else
+        echo "       => tmc managementcluster register -c tanzu-demo-hub tkgmc-vsphere-haas-464-sadubois -p TKGS -k $HOME/.kube/config"
+      fi
+
+      exit 1
+    fi
+  fi
+fi
+
+VSPHERE_NAMESPACE=tanzu-demo-hub
+TDH_VSPHERE_API_TOKEN=$(vSphereAPI_getToken "$VSPHERE_TKGS_VCENTER_SERVER" "$VSPHERE_TKGS_VCENTER_ADMIN" "$VSPHERE_TKGS_VCENTER_PASSWORD")
+vSphereAPI_createNamespace $TDH_VSPHERE_API_TOKEN $VSPHERE_TKGS_VCENTER_SERVER $VSPHERE_NAMESPACE
+
+messageTitle "TMC Management Server Configuration"
+messagePrint " ▪ Tanzu Mission Control (TMC) - Management Cluster"       "$TMC_DISPLAY_NAME"
+messagePrint " ▪ Tanzu Mission Control (TMC) - Configuration Files"      "$HOME/.tanzu-demo-hub/config/${TMC_CONFIG_NAME}.cfg"
+
+KUBERNETES_RELEASE=$(kubectl get tanzukubernetesreleases | tail -1 | awk '{ print $1 }')
+
+CONFIG_FILE="$HOME/.tanzu-demo-hub/config/${TMC_CONFIG_NAME}.cfg"
+echo "TDH_INFRASTRUCTURE=tmc"                                                  >  $CONFIG_FILE
+echo "TDH_ENVNAME=tkgs"                                                        >> $CONFIG_FILE
+echo "TDH_DEPLOYMENT_CLOUD=vSphere"                                            >> $CONFIG_FILE
+echo "TDH_DEPLOYMENT_DESCRIPTION='VMware Tanzu for vSphere (TKGs) on PEZ'"     >> $CONFIG_FILE
+echo "TDH_DEPLOYMENT_MAINTAINER=$TDH_USER"                                     >> $CONFIG_FILE
+echo "TDH_DEPLOYMENT_DEBUG=false"                                              >> $CONFIG_FILE
+echo "TDH_DEPLOYMENT_CLUSTERGROUP=$VSPHERE_NAMESPACE"                          >> $CONFIG_FILE
+echo "TDH_MANAGEMENT_CLUSTER=$TMC_DISPLAY_NAME"                                >> $CONFIG_FILE
+echo "TDH_DEPLOYMENT_CLUSTER_PLAN=dev"                                         >> $CONFIG_FILE
+echo "TDH_TKGWC_STORAGE_CLASS=tanzu"                                           >> $CONFIG_FILE
+echo "TDH_TKGWC_KUBERNETES=\"$KUBERNETES_RELEASE\""                            >> $CONFIG_FILE
+echo ""                                                                        >> $CONFIG_FILE
+echo "nodes[0]='best-effort-medium'"                                           >> $CONFIG_FILE
+echo "nodes[1]='best-effort-large'"                                            >> $CONFIG_FILE
+echo "nodes[2]='best-effort-xlarge'"                                           >> $CONFIG_FILE
+
+
+
+
+
+
+
+
+
+
+

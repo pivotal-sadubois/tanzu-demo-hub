@@ -6,7 +6,7 @@
 # Description ..: Tanzu Demo Hub - Cluster Installation
 # ############################################################################################
   
-alias cat='/usr/local/bin/bat -p'
+[ -f usr/local/bin/bat ] && alias cat='/usr/local/bin/bat -p'
 
 function ctrl_c() {
   echo "** Trapped CTRL-C"
@@ -251,11 +251,127 @@ checkIdentityProvider() {
   fi
 }
 
+# ------------------------------------------------------------------------------------------
+# Function Name ......: vSphereLogin
+# Function Purpose ...: Login to vSphere Supervisor Cluster
+# ------------------------------------------------------------------------------------------
+# Argument ($1) ......: TMC Supervisor Cluster Display Name
+# Dependancies: ......: $HOME/.tanzu-demo-hub.cfg
+# ------------------------------------------------------------------------------------------
+# Variables ..........: VSPHERE_TKGS_VCENTER_SERVER ......... (required) vSphere Server Name
+#                       VSPHERE_TKGS_VCENTER_SERVER ......... (required) vSphere Server Name
+#                       VSPHERE_TKGS_VCENTER_ADMIN ........ (required) vCenter Amdinistrator
+#                       VSPHERE_TKGS_VCENTER_PASSWORD .... (required) vCenter Admin Password
+#                       VSPHERE_TKGS_SUPERVISOR_CLUSTER ...... (required) Supervisor Cluster
+# ------------------------------------------------------------------------------------------
+# Return Value .......: 0 on Success, 1 on failure
+# ------------------------------------------------------------------------------------------
+vSphereLogin() {
+  missing_variables=0
+
+  if [ "${VSPHERE_TKGS_VCENTER_ADMIN}" == "" -o "${VSPHERE_TKGS_VCENTER_PASSWORD}" == "" -o "${VSPHERE_TKGS_VCENTER_SERVER}" == "" -o \
+       "${VSPHERE_TKGS_SUPERVISOR_CLUSTER}" == "" -o "${TDH_USER}" == "" ]; then
+ 
+    missing_variables=1
+    echo ""
+    echo "  4MISSING ENVIRONMENT-VARIABES         DESCRIPTION        "
+    echo "  -------------------------------------------------------------------------------------------------------------------------------------------------------"
+ 
+    if [ "${VSPHERE_TKGS_VCENTER_SERVER}" == "" ]; then
+      echo "  VSPHERE_TKGS_VCENTER_SERVER           (required) vSphere Server Name"
+      echo "                                        ie. https://vcsa-01.haas-464.pez.vmware.com"
+    fi
+ 
+    if [ "${VSPHERE_TKGS_VCENTER_ADMIN}" == "" ]; then
+      echo "  VSPHERE_TKGS_VCENTER_ADMIN            (required) vCenter Amdinistrator"
+    fi
+ 
+    if [ "${VSPHERE_TKGS_VCENTER_PASSWORD}" == "" ]; then
+      echo "  VSPHERE_TKGS_VCENTER_PASSWORD         (required) vCenter Admin Password"
+    fi
+ 
+    if [ "${VSPHERE_TKGS_SUPERVISOR_CLUSTER}" == "" ]; then
+      echo "  VSPHERE_TKGS_SUPERVISOR_CLUSTER       (required) vSphere Supervisor Cluster"
+    fi
+
+    if [ "${TDH_USER}" == "" ]; then
+      echo "  TDH_USER                             (required) Tanzu Demo Hub User to tag TKG Clusters with your Name"
+      echo "                                        => (usually you VMware User Name without @vmware.com)"
+    fi
+  else
+    echo "vSphere Access Credentials (TKGs)"
+    messagePrint " ▪ vCenter Server Name"                "$VSPHERE_TKGS_VCENTER_SERVER"
+    messagePrint " ▪ vCenter Admin User"                 "$VSPHERE_TKGS_VCENTER_ADMIN"
+    messagePrint " ▪ vCenter Admin Password"             $(maskPassword "$VSPHERE_TKGS_VCENTER_PASSWORD")
+    messagePrint " ▪ vCenter Supervisor Cluster"         "$VSPHERE_TKGS_SUPERVISOR_CLUSTER"
+  fi
+
+  if [ ${missing_variables} -eq 1 ]; then
+    echo "  -------------------------------------------------------------------------------------------------------------------------------------------------------"
+    echo "  IMPORTANT: Please set the missing environment variables either in your shell or in the tanzu-demo-hub"
+    echo "             configuration file ~/.tanzu-demo-hub.cfg and set all variables with the 'export' notation"
+    echo "             ie. => export <environment_variable>=\"<value>\""
+    echo "  -------------------------------------------------------------------------------------------------------------------------------------------------------"
+    exit 1
+  fi
+
+  # --- SET LOGIN PASSWORD AS ENVIRONMENT VARIABLE ---
+  export KUBECTL_VSPHERE_PASSWORD=$VSPHERE_TKGS_VCENTER_PASSWORD
+
+  ret=1; cnt=0
+  while [ $ret -ne 0 -a $cnt -lt 5 ]; do
+    kubectl vsphere login --insecure-skip-tls-verify --server $VSPHERE_TKGS_SUPERVISOR_CLUSTER -u $VSPHERE_TKGS_VCENTER_ADMIN > /tmp/error.log 2>&1; ret=$?
+    [ $ret -eq 0 ] && break
+    let cnt=cnt+1
+    sleep 30
+  done
+
+  if [ $ret -ne 0 ]; then
+    logMessages /tmp/error.log
+    echo "ERROR: failed to login into TMC"
+    if [ "$NATIVE" == "0" ]; then
+      echo "       => tools/${TDH_TOOLS}.sh"
+      echo "          tdh-tools:/$ export KUBECTL_VSPHERE_PASSWORD=$VSPHERE_TKGS_VCENTER_PASSWORD"
+      echo "          tdh-tools:/$ kubectl vsphere login --insecure-skip-tls-verify --server $VSPHERE_TKGS_SUPERVISOR_CLUSTER -u $VSPHERE_VCENTER_ADMIN"
+      echo "          tdh-tools:/$ exit"
+    else
+      echo "       => export KUBECTL_VSPHERE_PASSWORD=$VSPHERE_TKGS_VCENTER_PASSWORD"
+      echo "       => kubectl vsphere login --insecure-skip-tls-verify --server $VSPHERE_TKGS_SUPERVISOR_CLUSTER -u $VSPHERE_VCENTER_ADMIN"
+    fi
+
+    echo "       => Make sure that the following variables in ~/.tanzu-demo-hub.cfg are correct"
+    echo "          VSPHERE_TKGS_VCENTER_SERVER=$VSPHERE_TKGS_VCENTER_SERVER"
+    echo "          VSPHERE_TKGS_VCENTER_ADMIN=$VSPHERE_TKGS_VCENTER_ADMIN"
+    echo "          VSPHERE_TKGS_VCENTER_PASSWORD=$VSPHERE_TKGS_VCENTER_PASSWORD"
+    echo "          VSPHERE_TKGS_SUPERVISOR_CLUSTER=$VSPHERE_TKGS_SUPERVISOR_CLUSTER"
+    echo ""
+    exit 1
+  fi
+
+  kubectl config use-context $VSPHERE_TKGS_SUPERVISOR_CLUSTER > /dev/null 2>&1
+  kubectl get ns > /tmp/error.log 2>&1; ret=$?
+  if [ $ret -ne 0 ]; then
+    logMessages /tmp/error.log
+    echo "ERROR: failed to switch kubernetes context"
+    if [ "$NATIVE" == "0" ]; then
+      echo "       => tools/${TDH_TOOLS}.sh"
+      echo "          tdh-tools:/$ kubectl config use-context $VSPHERE_TKGS_SUPERVISOR_CLUSTER"
+      echo "          tdh-tools:/$ kubectl get ns"
+      echo "          tdh-tools:/$ exit"
+    else
+      echo "       => kubectl config use-context $VSPHERE_TKGS_SUPERVISOR_CLUSTER"
+      echo "       => kubectl get ns"
+    fi
+    exit
+  fi
+
+}
+
 tmcCheckLogin() {
   [ "${TDH_TANZU_MISSION_CONTROL_REGISTRATION}" == "false" ] && return
   missing_variables=0
 
-  if [ "${TMC_SERVICE_TOKEN}" == "" -o "${TMC_CONTEXT_NAME}" == "" ]; then
+  if [ "${TMC_SERVICE_TOKEN}" == "" -o "${TMC_CONTEXT_NAME}" == "" -o "${TMC_SERVER_URL}" == "" ]; then
     missing_variables=1
     echo ""
     echo "  ?MISSING ENVIRONMENT-VARIABES    DESCRIPTION        "
@@ -263,6 +379,11 @@ tmcCheckLogin() {
 
     if [ "${TMC_SERVICE_TOKEN}" == "" ]; then
       echo "  TMC_SERVICE_TOKEN                (required) is the TMC_API_TOKEN which can be optained in the TMC console"
+    fi
+
+    if [ "${TMC_SERVER_URL}" == "" ]; then
+      echo "  TMC_SERVER_URL                   (required) The TMC Server Url"
+      echo "                                   ie. TMC_SERVER_URL=\"https://tanzuemea.tmc.cloud.vmware.com\""
     fi
 
     if [ "${TMC_CONTEXT_NAME}" == "" ]; then
@@ -309,6 +430,14 @@ tmcCheckLogin() {
 
   if [ $? -ne 0 ]; then 
     echo "ERROR: Currently not logged in TMC, please login: tmc login"
+    exit 1
+  fi
+
+  API_TOKEN=$(tmcAPI_getToken $TMC_SERVICE_TOKEN) 
+
+  file=$(tmcAPI_getCliBinary $API_TOKEN $TMC_SERVER_URL)
+  if [ "file" == "" ]; then 
+    echo "ERROR: failed to login to TMC API on $TMC_SERVER_URL"
     exit 1
   fi
 }
@@ -4251,21 +4380,29 @@ tmcCreateCluster() {
       messagePrint " ▪ Kubernetes Version"               "$TDH_TKGWC_KUBERNETES"
       messagePrint " ▪ Kubernetes Image"                 "$KUBERNETES_VERSION"
 
-      INSTANCE_TYPE=$(nodeType $TDH_TKGWC_WORKERNODES_TYPE) 
+      TDH_TKGWC_WORKERNODES_MACHINE=$(nodeType $TDH_TKGWC_WORKERNODES_TYPE)
+      TDH_TKGWC_CONTROPLANE_MACHINE=$(nodeType $TDH_TKGWC_CONTROPLANE_NODETYPE)
       messagePrint " ▪ TKG Cluster Worker Nodes"         "$TDH_TKGWC_WORKERNODES"
-      messagePrint " ▪ TKG Cluster Worker Node Type"     "$TDH_TKGWC_WORKERNODES_TYPE ($INSTANCE_TYPE)"
+      messagePrint " ▪ TKG Cluster Worker Node Type"     "$TDH_TKGWC_WORKERNODES_TYPE ($TDH_TKGWC_WORKERNODES_MACHINE)"
+      messagePrint " ▪ TKG Control Plane Nodes"          "$TDH_TKGWC_CONTROPLANE"
+      messagePrint " ▪ TKG Control Plane Nodes Type"     "$TDH_TKGWC_CONTROPLANE_NODETYPE ($TDH_TKGWC_CONTROPLANE_MACHINE)"
 
-      #messagePrint " ▪ TKG Control Plane Nodes"         "$TDH_TKGWC_CONTROPLANE"
-      #messagePrint " ▪ TKG Control Plane Nodes Type"    "$TDH_TKGWC_CONTROPLANE_NODETYPE (${nodes[$TDH_TKGWC_NODE_TYPE]}"
-      #messagePrint " ▪ TKG Cluster Worker Nodes         "$TDH_TKGWC_CONTROPLANE"
-      #messagePrint " ▪ TKG Cluster Worker Node Type     "$TDH_TKGWC_WORKERNODES_TYPE (${nodes[$TDH_TKGWC_NODE_TYPE]}"
 
       tmc cluster create -m $TDH_MANAGEMENT_CLUSTER -p $TDH_PROVISIONER_NAME \
+                         --worker-instance-type $TDH_TKGWC_WORKERNODES_MACHINE \
+                         --instance-type $TDH_TKGWC_CONTROPLANE_MACHINE \
                          --ssh-key-name $TMC_SSH_KEY_NAME_AWS -c $TMC_ACCOUNT_NAME \
                          --worker-node-count $TDH_TKGWC_WORKERNODES \
-                         -r $AWS_REGION -n $TDH_CLUSTER_NAME -y $INSTANCE_TYPE \
+                         -r $AWS_REGION -n $TDH_CLUSTER_NAME \
                          -g $TDH_CLUSTER_GROUP -t $TMC_TKGWC_TEMPLATE \
                          --version $KUBERNETES_VERSION --availability-zone $AWS_PRIMARY_AZ
+
+      #tmc cluster create -m $TDH_MANAGEMENT_CLUSTER -p $TDH_PROVISIONER_NAME \
+      #                   --ssh-key-name $TMC_SSH_KEY_NAME_AWS -c $TMC_ACCOUNT_NAME \
+      #                   --worker-node-count $TDH_TKGWC_WORKERNODES \
+      #                   -r $AWS_REGION -n $TDH_CLUSTER_NAME -y $INSTANCE_TYPE \
+      #                   -g $TDH_CLUSTER_GROUP -t $TMC_TKGWC_TEMPLATE \
+      #                   --version $KUBERNETES_VERSION --availability-zone $AWS_PRIMARY_AZ
 
       if [ $? -ne 0 ]; then 
         echo "ERROR: failed to build TKG Cluster on AWS"
@@ -4297,52 +4434,62 @@ tmcCreateCluster() {
     fi
 
     if [ "$stt" == "" -o "$stt" != "READY" ]; then
-      KUBERNETES_VERSION=$(kubectl get tanzukubernetesreleases | egrep "^$TDH_TKGWC_KUBERNETES" | tail -1 | awk '{ print $2 }')
-      if [ "$KUBERNETES_VERSION" == "" ]; then TDH_CLUSTER_NAME
-        echo "ERROR: No such kubernetes release ($TDH_TKGWC_KUBERNETES), try another one"
-        echo "       => kubectl get tanzukubernetesreleases"
-        exit 1
-      fi
+      messageTitle "TMC Create Workload Cluster"
+      messagePrint " ▪ TMC Cluster Name"                 "$TDH_CLUSTER_NAME"
+      messagePrint " ▪ TMC Cluster Group"                "$TDH_CLUSTER_GROUP"
+      messagePrint " ▪ TMC Template"                     "$TMC_TKGWC_TEMPLATE"
+      messagePrint " ▪ TMC Provisioner Name"             "$TDH_PROVISIONER_NAME"
+      messagePrint " ▪ TKG Management Cluster"           "$TDH_MANAGEMENT_CLUSTER"
+      messagePrint " ▪ TMC Account Name"                 "$TMC_ACCOUNT_NAME"
+      messagePrint " ▪ Kubernetes Version"               "$TDH_TKGWC_KUBERNETES"
 
-      messageTitle "TMC Create Cluster"
-      messagePrint " ▪ TKG Cluster Name"         "$TDH_CLUSTER_NAME"
-      messagePrint " ▪ TKG Cluster Group"        "$TDH_CLUSTER_GROUP"
-      messagePrint " ▪ TKG Template"             "tkgs"
-      messagePrint " ▪ TKG Instance Type"        "$TDH_TKGWC_CONTROPLANE_TYPE"
-      messagePrint " ▪ TKG Control Plane Nodes"  "$TDH_TKGWC_CONTROPLANE"
-      messagePrint " ▪ TKG Worker Instance Type" "$TDH_TKGWC_WORKERNODES_TYPE"
-      messagePrint " ▪ TKG Worker Nodes"         "$TDH_TKGWC_WORKERNODES"
-      messagePrint " ▪ TKG Supervisor Cluster"   "$TDH_MANAGEMENT_CLUSTER"
-      messagePrint " ▪ TKG Storage Class"        "$TDH_TKGWC_STORAGE_CLASS"
-      messagePrint " ▪ TKG Service CIDR"         "$TDH_TKGMC_SERVICE_CIDR"
-      messagePrint " ▪ TKG Cluster CIDR"         "$TDH_TKGMC_CLUSTER_CIDR"
-      messagePrint " ▪ Provisioner Name"         "$TDH_PROVISIONER_NAME"
-      messagePrint " ▪ Kubernetes Version"       "$TDH_TKGWC_KUBERNETES"
-      messagePrint " ▪ Kubernetes Image"         "$KUBERNETES_VERSION"
+      TDH_TKGWC_WORKERNODES_MACHINE=$(nodeType $TDH_TKGWC_WORKERNODES_TYPE)
+      TDH_TKGWC_CONTROPLANE_MACHINE=$(nodeType $TDH_TKGWC_CONTROPLANE_NODETYPE)
+      messagePrint " ▪ TKG Cluster Worker Nodes"         "$TDH_TKGWC_WORKERNODES"
+      messagePrint " ▪ TKG Cluster Worker Node Type"     "$TDH_TKGWC_WORKERNODES_TYPE ($TDH_TKGWC_WORKERNODES_MACHINE)"
+      messagePrint " ▪ TKG Control Plane Nodes"          "$TDH_TKGWC_CONTROPLANE"
+      messagePrint " ▪ TKG Control Plane Nodes Type"     "$TDH_TKGWC_CONTROPLANE_NODETYPE ($TDH_TKGWC_CONTROPLANE_MACHINE)"
+
+TDH_TKGWC_WORKERNODES=2
+#TDH_TKGWC_WORKERNODES_MACHINE=best-effort-2xlarge
+TDH_TKGWC_CONTROPLANE_MACHINE=best-effort-xlarge
+
 
       # List of Tanzu Kubernetes Releases
       # https://docs.vmware.com/en/VMware-vSphere/7.0/vmware-vsphere-with-tanzu/GUID-292482C2-A5FA-44B5-B26E-F887A91BB19D.html
-      # kubectl get tanzukubernetesreleases => v1.20.2+vmware.1-tkg.1.1d4f79a
-
       tmc cluster create -t tkgs -m $TDH_MANAGEMENT_CLUSTER -p $TDH_PROVISIONER_NAME \
-                           --worker-instance-type $TDH_TKGWC_CONTROPLANE_TYPE \
-                           --instance-type $TDH_TKGWC_CONTROPLANE_TYPE \
-                           --pods-cidr-blocks "$TDH_TKGMC_SERVICE_CIDR" \
-                           --service-cidr-blocks "$TDH_TKGMC_CLUSTER_CIDR" \
+                           --worker-instance-type $TDH_TKGWC_WORKERNODES_MACHINE \
+                           --instance-type $TDH_TKGWC_CONTROPLANE_MACHINE \
                            --worker-node-count $TDH_TKGWC_WORKERNODES \
                            --storage-class $TDH_TKGWC_STORAGE_CLASS \
-                           -g $TDH_CLUSTER_GROUP --version $KUBERNETES_VERSION -n $TDH_CLUSTER_NAME > /dev/null 2>&1
-      if [ $? -ne 0 ]; then
+                           -g $TDH_CLUSTER_GROUP --version $TDH_TKGWC_KUBERNETES -n $TDH_CLUSTER_NAME > /tmp/error.log 2>&1; ret=$?
+
+      if [ $ret -ne 0 ]; then
+        logMessages /tmp/error.log
         echo "ERROR: failed to build Cluster on vSphere"
-        echo "       => tmc cluster create -t tkgs -m $TDH_MANAGEMENT_CLUSTER -p $TDH_PROVISIONER_NAME \\"
-        echo "              -c $TMC_ACCOUNT_NAME  -n $TDH_CLUSTER_NAME -q $TMC_TKGWC_WORKERNODES \\"
-        echo "              -y $TDH_TKGWC_CONTROPLANE_TYPE -q $TDH_TKGWC_WORKERNODES \\"
-        echo "              --default-storage-class $TDH_TKGWC_STORAGE_CLASS \\"
-        echo "              --worker-instance-type $TDH_TKGWC_CONTROPLANE_TYPE \\"
-        echo "              -g $TDH_CLUSTER_GROUP --version $KUBERNETES_VERSION"
+        if [ "$NATIVE" == "0" ]; then
+          echo "       => tools/${TDH_TOOLS}.sh"
+          echo "          tdh-tools:/$ tmc cluster create -t tkgs -m $TDH_MANAGEMENT_CLUSTER -p $TDH_PROVISIONER_NAME \\"
+          echo "                          --worker-instance-type $TDH_TKGWC_WORKERNODES_MACHINE \\"
+          echo "                          --instance-type $INSTANCE_TYPE \\"
+          echo "                          --default-storage-class $TDH_TKGWC_STORAGE_CLASS \\"
+          echo "                          --worker-node-count $TDH_TKGWC_WORKERNODES \\"
+          echo "                          --storage-class $TDH_TKGWC_STORAGE_CLASS \\"
+          echo "                          -g $TDH_CLUSTER_GROUP --version $KUBERNETES_VERSION -n $TDH_CLUSTER_NAME"
+          echo "          tdh-tools:/$ exit"
+        else
+          echo "       => tmc cluster create -t tkgs -m $TDH_MANAGEMENT_CLUSTER -p $TDH_PROVISIONER_NAME \\"
+          echo "                          --worker-instance-type $TDH_TKGWC_WORKERNODES_MACHINE \\"
+          echo "                          --instance-type $INSTANCE_TYPE \\"
+          echo "                          --default-storage-class $TDH_TKGWC_STORAGE_CLASS \\"
+          echo "                          --worker-node-count $TDH_TKGWC_WORKERNODES \\"
+          echo "                          --storage-class $TDH_TKGWC_STORAGE_CLASS \\"
+          echo "              -g $TDH_CLUSTER_GROUP --version $KUBERNETES_VERSION -n $TDH_CLUSTER_NAM"
+        fi
+  
         exit 1
       fi
-  
+
       messagePrint " ▪ Cluster Status"         "creating ...."
       stt=""
       while [ "$stt" != "READY" ]; do
@@ -4439,6 +4586,157 @@ a=1
 verifyVMwareRegistry() {
 a=1
 }
+
+installTAP() {
+  NAMESPACE=tap
+
+  if [ "$TDH_SERVICE_TAP" != "true" ]; then
+    uodateConfigMap tanzu-demo-hub TDH_SERVICE_TAP        "false"
+    return
+  fi
+
+  messageTitle "Spring Cloud Gateway"
+  cnt=0
+  if [ $cnt -eq 0 ]; then
+    TDH_SERVICE_TAP_VERSION=$(getConfigMap tanzu-demo-hub TDH_SERVICE_TAP_VERSION)
+
+    # --- VERIFY SERVICE CONFIGURATION ---
+    checkKubernetesServices registry_vmware
+    checkKubernetesServices registry_docker
+    checkKubernetesServices github
+
+    export TDH_REGISTRY_VMWARE_NAME=registry.tanzu.vmware.com
+    messagePrint " ▪ Verify VMware Registry Access" "$TDH_REGISTRY_VMWARE_NAME"
+    messagePrint "   Registry User"                 "$TDH_REGISTRY_VMWARE_USER"
+    messagePrint "   Registry Password"             "$(maskPassword \"$TDH_REGISTRY_VMWARE_PASS\")"
+
+    cnt=0; ret=1
+    while [ $ret -ne 0 -a $cnt -lt 5 ]; do
+      docker login $TDH_REGISTRY_VMWARE_NAME -u $TDH_REGISTRY_VMWARE_USER -p $TDH_REGISTRY_VMWARE_PASS > /dev/null 2>&1; ret=$?
+      sleep 10
+      let cnt=cnt+1
+    done
+
+    if [ $ret -ne 0 ]; then
+      echo "ERROR: Docker login does not work 2"
+      echo "       => docker login $TDH_REGISTRY_VMWARE_NAME -u $TDH_REGISTRY_VMWARE_USER -p $TDH_REGISTRY_VMWARE_PASS"; exit 1
+    fi
+
+    messagePrint " ▪ Verify Harbor Registry Access" "$TDH_HARBOR_REGISTRY_DNS_HARBOR"
+    messagePrint "   Registry User"                 "admin"
+    messagePrint "   Registry Password"             "$(maskPassword \"$TDH_HARBOR_REGISTRY_ADMIN_PASSWORD\")"
+
+    DNS_DOMAIN=$(getConfigMap tanzu-demo-hub TDH_INGRESS_CONTOUR_LB_DOMAIN)
+    DNS_HARBOR=$(getConfigMap tanzu-demo-hub TDH_HARBOR_REGISTRY_DNS_HARBOR)
+    TDH_HARBOR_REGISTRY_DNS_HARBOR=$(getConfigMap tanzu-demo-hub TDH_HARBOR_REGISTRY_DNS_HARBOR)
+    TDH_HARBOR_REGISTRY_ADMIN_PASSWORD=$(getConfigMap tanzu-demo-hub TDH_HARBOR_REGISTRY_ADMIN_PASSWORD)
+
+    cnt=0; ret=1
+    while [ $ret -ne 0 -a $cnt -lt 50 ]; do
+      docker login $TDH_HARBOR_REGISTRY_DNS_HARBOR -u admin -p $TDH_HARBOR_REGISTRY_ADMIN_PASSWORD > /dev/null 2>&1; ret=$?
+      sleep 10
+      let cnt=cnt+1
+    done
+
+    if [ $ret -ne 0 ]; then
+      echo "ERROR: Docker login does not work 5'"
+      echo "       => docker login $TDH_HARBOR_REGISTRY_DNS_HARBOR -u admin -p $TDH_HARBOR_REGISTRY_ADMIN_PASSWORD"; exit 1
+    fi
+
+    TAP_CONFIG=/tmp/tap_config.yaml
+    echo ""                                                                                                                       >  $TAP_CONFIG
+    echo "profile: full"                                                                                                          >> $TAP_CONFIG
+    echo ""                                                                                                                       >> $TAP_CONFIG
+    echo "buildservice:"                                                                                                          >> $TAP_CONFIG
+    echo "  kp_default_repository: $DNS_HARBOR/library/tap-build-service"                                                         >> $TAP_CONFIG
+    echo "  kp_default_repository_username: admin"                                                                                >> $TAP_CONFIG
+    echo "  kp_default_repository_password: $TDH_HARBOR_REGISTRY_ADMIN_PASSWORD"                                                  >> $TAP_CONFIG
+    echo "  tanzunet_username: $TDH_REGISTRY_VMWARE_USER"                                                                         >> $TAP_CONFIG
+    echo "  tanzunet_password: $TDH_REGISTRY_VMWARE_PASS"                                                                         >> $TAP_CONFIG
+    echo ""                                                                                                                       >> $TAP_CONFIG
+    echo "supply_chain: basic"                                                                                                    >> $TAP_CONFIG
+    echo ""                                                                                                                       >> $TAP_CONFIG
+    echo "ootb_supply_chain_basic:"                                                                                               >> $TAP_CONFIG
+    echo "  registry:"                                                                                                            >> $TAP_CONFIG
+    echo "    server: $DNS_HARBOR"                                                                                                >> $TAP_CONFIG
+    echo "    repository: \"tap-supply-chain\""                                                                                   >> $TAP_CONFIG
+    echo "    "                                                                                                                   >> $TAP_CONFIG
+    echo "ootb_supply_chain_testing:"                                                                                             >> $TAP_CONFIG
+    echo " registry:"                                                                                                             >> $TAP_CONFIG
+    echo "  server: \"source-lab.io\""                                                                                            >> $TAP_CONFIG
+    echo "  repository: \"tap/supply-chain\""                                                                                     >> $TAP_CONFIG
+    echo "  "                                                                                                                     >> $TAP_CONFIG
+    echo "ootb_supply_chain_testing_scanning:"                                                                                    >> $TAP_CONFIG
+    echo " registry:"                                                                                                             >> $TAP_CONFIG
+    echo "  server: \"source-lab.io\""                                                                                            >> $TAP_CONFIG
+    echo "  repository: \"tap/supply-chain\""                                                                                     >> $TAP_CONFIG
+    echo ""                                                                                                                       >> $TAP_CONFIG
+    echo "grype:"                                                                                                                 >> $TAP_CONFIG
+    echo "  targetImagePullSecret: \"supply-chain\""                                                                              >> $TAP_CONFIG
+    echo ""                                                                                                                       >> $TAP_CONFIG
+    echo "contour:"                                                                                                               >> $TAP_CONFIG
+    echo "  infrastructure_provider: aws"                                                                                         >> $TAP_CONFIG
+    echo "  envoy:"                                                                                                               >> $TAP_CONFIG
+    echo "    service:"                                                                                                           >> $TAP_CONFIG
+    echo "      aws:"                                                                                                             >> $TAP_CONFIG
+    echo "        LBType: nlb"                                                                                                    >> $TAP_CONFIG
+    echo ""                                                                                                                       >> $TAP_CONFIG
+    echo "tap_gui:"                                                                                                               >> $TAP_CONFIG
+    echo "  service_type: LoadBalancer"                                                                                           >> $TAP_CONFIG
+    echo "  #ingressEnabled: \"true\""                                                                                            >> $TAP_CONFIG
+    echo "  ingressDomain: tap-gui.$DNS_DOMAIN"                                                                                   >> $TAP_CONFIG
+    echo "  app_config:"                                                                                                          >> $TAP_CONFIG
+    echo "    organization:"                                                                                                      >> $TAP_CONFIG
+    echo "      name: tanzu-demo-hub"                                                                                             >> $TAP_CONFIG
+    echo "    app:"                                                                                                               >> $TAP_CONFIG
+    echo "      title: Tanzu Demo Hub"                                                                                            >> $TAP_CONFIG
+    echo "      baseUrl: http://xyz.$DNS_DOMAIN:7000"                                                                             >> $TAP_CONFIG
+    echo "    integrations:"                                                                                                      >> $TAP_CONFIG
+    echo "      github:"                                                                                                          >> $TAP_CONFIG
+    echo "      - host: github.com"                                                                                               >> $TAP_CONFIG
+    echo "        token: $git_token"                                                                                              >> $TAP_CONFIG
+    echo "    catalog:"                                                                                                           >> $TAP_CONFIG
+    echo "      locations:"                                                                                                       >> $TAP_CONFIG
+    echo "        - type: url"                                                                                                    >> $TAP_CONFIG
+    echo "          target: $catalog_info"                                                                                        >> $TAP_CONFIG
+    echo "    backend:"                                                                                                           >> $TAP_CONFIG
+    echo "        baseUrl: http://xyz.$DNS_DOMAIN:7000:7000"                                                                      >> $TAP_CONFIG
+    echo "        cors:"                                                                                                          >> $TAP_CONFIG
+    echo "            origin: http://xyz.$DNS_DOMAIN:7000:7000"                                                                   >> $TAP_CONFIG
+    echo ""                                                                                                                       >> $TAP_CONFIG
+    echo ""                                                                                                                       >> $TAP_CONFIG
+    echo "cnrs:"                                                                                                                  >> $TAP_CONFIG
+    echo "  domain_name: $DNS_DOMAIN"                                                                                             >> $TAP_CONFIG
+    echo ""                                                                                                                       >> $TAP_CONFIG
+    echo ""                                                                                                                       >> $TAP_CONFIG
+    echo "image_policy_webhook:"                                                                                                  >> $TAP_CONFIG
+    echo "   allow_unmatched_images: true"                                                                                        >> $TAP_CONFIG
+    echo ""                                                                                                                       >> $TAP_CONFIG
+    echo "learningcenter:"                                                                                                        >> $TAP_CONFIG
+    echo "  ingressDomain: learn.$DNS_DOMAIN"                                                                                     >> $TAP_CONFIG
+    echo "  storageClass: \"default\""                                                                                            >> $TAP_CONFIG
+    echo ""                                                                                                                       >> $TAP_CONFIG
+    echo "tap_gui:"                                                                                                               >> $TAP_CONFIG
+    echo "  service_type: LoadBalancer"                                                                                           >> $TAP_CONFIG
+    echo ""                                                                                                                       >> $TAP_CONFIG
+    echo "ceip_policy_disclosed: true"                                                                                            >> $TAP_CONFIG
+    echo ""                                                                                                                       >> $TAP_CONFIG
+    echo "accelerator:"                                                                                                           >> $TAP_CONFIG
+    echo "  service_type: \"LoadBalancer\""                                                                                       >> $TAP_CONFIG
+    echo ""                                                                                                                       >> $TAP_CONFIG
+    echo "appliveview:"                                                                                                           >> $TAP_CONFIG
+    echo "  connector_namespaces: [default]"                                                                                      >> $TAP_CONFIG
+    echo "  service_type: LoadBalancer"                                                                                           >> $TAP_CONFIG
+    echo ""                                                                                                                       >> $TAP_CONFIG
+    echo "metadata_store:"                                                                                                        >> $TAP_CONFIG
+    echo "  app_service_type: LoadBalancer"                                                                                       >> $TAP_CONFIG
+    echo ""                                                                                                                       >> $TAP_CONFIG
+
+echo "TAP_CONFIG:$TAP_CONFIG"
+
+  fi
+} 
+
 
 installSpringCloudGateway() {
   NAMESPACE=spring-cloud-gateway
@@ -5293,7 +5591,6 @@ installBuildService() {
         let cnt=cnt+1
         sleep 30
       done
-      echo "gaga2 ret:$ret"
 
       if [ $ret -ne 0 ]; then
         logMessages /tmp/error.log
@@ -5311,7 +5608,6 @@ installBuildService() {
         exit 1
       fi
 
-      echo gaga3
       messagePrint " ▪ Pull the Tanzu Build Service bundle image locally" "$TDH_REGISTRY_VMWARE_NAME/library/build-service"
       rm -rf /tmp/bundle
       cnt=0; ret=1
@@ -5322,7 +5618,6 @@ installBuildService() {
         sleep 30
       done
 
-      echo "gaga4 ret:$ret"
       if [ $ret -ne 0 ]; then
         logMessages /tmp/error.log
         echo "ERROR: Image Relocation failed"
@@ -6940,7 +7235,6 @@ cleanAWSenv() {
   while [ $i -le $tot ]; do
     gnm=$(jq -r ".SecurityGroups[$i].GroupName" 2>/dev/null $SECGRP)
     gid=$(jq -r ".SecurityGroups[$i].GroupId" 2>/dev/null $SECGRP)
-#gugu
 
     cnt=$(jq -r ".SecurityGroups[$i].Tags[].Value" 2>/dev/null $SECGRP | egrep -c "^${ENV_NAME}")
     if [ $cnt -gt 0 ]; then
@@ -7352,12 +7646,16 @@ tdh_tools_build() {
     TCE_LINUX_PACKAGE=tce-linux-amd64-${TKG_COMNUNITY_EDITION_VERSION}
     TCE_DARWIN_PACKAGE=tce-darwin-amd64-${TKG_COMNUNITY_EDITION_VERSION}
     TDH_DOCKER_FILES=/tmp/tdh-tools-tce
+    TDH_DOCKER_CACHE=$HOME/.tanzu-demo-hub/cache
+    [ ! -d $TDH_DOCKER_CACHE ] && mkdir -p $TDH_DOCKER_CACHE
   else 
     TDH_TOOLS_DOCKERFILE=Dockerfile
     TDH_TOOLS_IMAGE=tdh-tools
     BUILD_MODE=tkg
     [ -f files/tdh-tools/tdh-tools.cfg ] && . files/tdh-tools/tdh-tools.cfg
     TDH_DOCKER_FILES=/tmp/tdh-tools
+    TDH_DOCKER_CACHE=$HOME/.tanzu-demo-hub/cache
+    [ ! -d $TDH_DOCKER_CACHE ] && mkdir -p $TDH_DOCKER_CACHE
   fi
 
   mkdir -p $TDH_DOCKER_FILES
@@ -7370,9 +7668,6 @@ tdh_tools_build() {
   DOCKER_IMAGE_LATEST_ID=$(docker images | egrep "^$TDH_TOOLS_IMAGE " | grep "latest" | awk '{ print $3 }')
   DOCKER_IMAGE_ID=$(docker images | egrep "^$TDH_TOOLS_IMAGE " | grep "CHKSUM" | grep "$DOCKER_IMAGE_LATEST_ID" | awk '{ print $3 }')
   DOCKER_IMAGE_CHKSUM=$(docker images | egrep "^$TDH_TOOLS_IMAGE " | grep "CHKSUM" | grep "$DOCKER_IMAGE_LATEST_ID" | awk '{ print $2 }' | sed 's/CHKSUM-//g')
-
-  # --- SET CORRECT PERMISSONS ---
-  [ -f $TDH_DOCKER_FILES/tmc ] && chmod a+x $TDH_DOCKER_FILES/tmc
 
   # --- SET DEFAULT VALUES ---
   [ "$TDH_SERVICE_BUILD_SERVICE_VERSION" == "" ] && TDH_SERVICE_BUILD_SERVICE_VERSION=1.2.1
@@ -7387,6 +7682,7 @@ tdh_tools_build() {
   fi
 
   messageTitle "TDH Tools Configureation (files/tdh-tools/$TDH_TOOLS.cfg)"
+  messagePrint " ▪ Tanzu Mission Control CLI"                                  "$TMC_CLI"
   messagePrint " ▪ Build Service Version"                                      "$TDH_SERVICE_BUILD_SERVICE_VERSION"
   messagePrint " ▪ Build Service Tools (kp)"                                   "$TDH_SERVICE_BUILD_SERVICE_KP"
   messagePrint " ▪ Build Service Dependancies"                                 "$TDH_SERVICE_BUILD_SERVICE_DEPENDANCIES"
@@ -7395,50 +7691,177 @@ tdh_tools_build() {
   messagePrint " ▪ Carvel Tools: - Build/Reference container images (kbld)"    "$TDH_CARVEL_KBLD"
   messagePrint " ▪ Carvel Tools: - Template Overlay for k8s config (ytt)"      "$TDH_CARVEL_YTT"
   messagePrint " ▪ Carvel Tools: - Bundle and Relocate App Config (imgpkg)"    "$TDH_CARVEL_IMGPKG"
+  messagePrint " ▪ Hashicorp Terraform"                                        "$TDH_TERRAFORM"
+  messagePrint " ▪ Local Kubernetes clusters (Kind)"                           "$TDH_KIND"
+  messagePrint " ▪ vSphere CLI (GOVC)"                                         "$TDH_GOVC"
   messageTitle "TDH Tools Docker Container ($TDH_TOOLS_IMAGE)"
 
-  # --- DOW3LOAD BUILD_SERVICE BINARIES ---
-  if [ ! -f $TDH_DOCKER_FILES/kp-linux-${TDH_SERVICE_BUILD_SERVICE_KP} ]; then 
-    TDH_SERVICE_BUILD_SERVICE_VERSION=$TDH_SERVICE_BUILD_SERVICE_VERSION
-    downloadFromPivnet build-service $TDH_SERVICE_BUILD_SERVICE_VERSION "$TDH_SERVICE_BUILD_SERVICE_KP" "kp-linux" 
-    if [ -f /tmp/kp-linux-${TDH_SERVICE_BUILD_SERVICE_KP} ]; then 
-      mv /tmp/kp-linux-$TDH_SERVICE_BUILD_SERVICE_KP $TDH_DOCKER_FILES 
-      cp $TDH_DOCKER_FILES/kp-linux-${TDH_SERVICE_BUILD_SERVICE_KP} $TDH_DOCKER_FILES/kp && chmod a+x $TDH_DOCKER_FILES/kp
+  # --- TANZU MISSION CONTROL BINARY ---
+  if [ ! -e $TDH_DOCKER_CACHE/tmc-$TMC_CLI/tmc-linux-$TMC_CLI ]; then 
+    TDH_TANZU_MISSION_CONTROL_REGISTRATION=true
+    tmcCheckLogin
+
+    # --- DOWNLOAD TMC CLI ---
+    API_TOKEN=$(tmcAPI_getToken $TMC_SERVICE_TOKEN)
+    download_url=$(tmcAPI_getCliBinary $API_TOKEN $TMC_SERVER_URL)
+    filename=$(echo $download_url | awk -F'/' '{ printf("tmc-linux-%s\n", $(NF-3))}')
+    [ ! -d $TDH_DOCKER_CACHE/tmc-$TMC_CLI ] && mkdir -p $TDH_DOCKER_CACHE/tmc-$TMC_CLI
+
+    if [ ! -e $TDH_DOCKER_CACHE/tmc-$TMC_CLI/$filename ]; then 
+      messagePrint " ▪ Downloading TMC CLI BINARY"                                "$file"
+      wget -q $file -o $TDH_DOCKER_CACHE/tmc-$TMC_CLI/$filename > /tmp/error.log 2>&1; ret=$?
+      [ -L $TDH_DOCKER_CACHE/tmc-$TMC_CLI/tmc-linux-$TMC_CLI ] && rn -f $TDH_DOCKER_CACHE/tmc-$TMC_CLI/tmc-linux-$TMC_CLI
+
+      if [ ! -f $TDH_DOCKER_CACHE/tmc-$TMC_CLI/$filename ]; then
+        logMessages /tmp/error.log
+        logMessages $VSPHERE_CONFIG
+        echo "ERROR: failed to download $file"
+        if [ "$NATIVE" == "0" ]; then
+          echo "       => tools/${TDH_TOOLS}.sh"
+          echo "          tdh-tools:/$ wget $file -p $TDH_DOCKER_CACHE/tmc-$TMC_CLI/$filename"
+          echo "          tdh-tools:/$ exit"
+        else
+          echo "       => wget $file -p $TDH_DOCKER_CACHE/tmc-$TMC_CLI/$filename"
+        fi
+  
+        exit 1
+      else
+        ln -s $filename $TDH_DOCKER_CACHE/tmc-$TMC_CLI/tmc-linux-$TMC_CLI
+      fi
+
+      REBUILD_REQUIRED_SOFTWARE=1       ## REBUILD REQUIRED BECAUSE OF SOFTWARE CHANGE
+    fi
+  else
+    cp $TDH_DOCKER_CACHE/tmc-$TMC_CLI/tmc-linux-$TMC_CLI $TDH_DOCKER_FILES/tmc
+    chmod a+x $TDH_DOCKER_FILES/tmc
+  fi
+
+  VMWCLI=/tmp/vmw-cli
+  if [ ! -s $VMWCLI ]; then
+    messagePrint " ▪ Install Package (vmw-cli)" "installing"
+    docker run apnex/vmw-cli shell > $VMWCLI 2>/dev/null
+    if [ $? -ne 0 ]; then
+      echo "ERROR: faileed to run vmw-cli docker container"
+      echo "       => docker run apnex/vmw-cli shell > /tmp/vmw-cli"
+      exit 1
     fi
 
-    REBUILD_REQUIRED_SOFTWARE=1       ## REBUILD REQUIRED BECAUSE OF SOFTWARE CHANGE 
+    chmod 755 $VMWCLI
   fi
 
-  if [ ! -x $TDH_DOCKER_FILES/kbld ]; then
-    # --- DOWNLOAD BUILD_SERVICE BINARIES ---
-    downloadFromPivnet kbld $TDH_CARVEL_KBLD "$TDH_CARVEL_KBLD" "kbld - Linux"
-    [ -f /tmp/kbld-linux-amd64-$TDH_CARVEL_KBLD ] && mv /tmp/kbld-linux-amd64-$TDH_CARVEL_KBLD $TDH_DOCKER_FILES/kbld && chmod a+x $TDH_DOCKER_FILES/kbld
+  #################################################################################
+  ################# DOWNLOAD TANZU-CLI-BUNDLE FROM MYVMWARE.COM ###################
+  #################################################################################
+  #export VMWUSER="$TDH_MYVMWARE_USER"
+  #export VMWPASS="$TDH_MYVMWARE_PASS"
+  #$VMWCLI ls vmware_tanzu_kubernetes_grid > /dev/null 2>&1
+
+  # https://customerconnect.vmware.com/downloads/info/slug/datacenter_cloud_infrastructure/vmware_vsphere/7_0
+
+
+  # --- TANZU BUILD SERVICE CLI (kp) BINARY ---
+  TDH_BNDL_NAM="build-service"
+  TDH_BNDL_VER=$TDH_SERVICE_BUILD_SERVICE_VERSION
+  TDH_FILE_TAG="kp"
+  TDH_FILE_STR="${TDH_FILE_TAG}-linux"
+  TDH_FILE_VER=$TDH_SERVICE_BUILD_SERVICE_KP
+  TDH_FILE_NAM="$TDH_FILE_TAG-linux-$TDH_FILE_VER"
+
+  if [ ! -e $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER/$TDH_FILE_NAM ]; then
+    downloadFromPivnet $TDH_BNDL_NAM $TDH_BNDL_VER "$TDH_FILE_VER" "${TDH_FILE_STR}"
+    if [ -f /tmp/$TDH_FILE_NAM ]; then
+      [ ! -d $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER ] && mkdir -p $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER
+      mv /tmp/$TDH_FILE_NAM $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER
+    fi
 
     REBUILD_REQUIRED_SOFTWARE=1       ## REBUILD REQUIRED BECAUSE OF SOFTWARE CHANGE
+  else
+    cp $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER/$TDH_FILE_NAM $TDH_DOCKER_FILES/$TDH_FILE_NAM
+    chmod a+x $TDH_DOCKER_FILES/$TDH_FILE_TAG
   fi
 
-  if [ ! -x $TDH_DOCKER_FILES/imgpkg ]; then
-    # --- DOWNLOAD BUILD_SERVICE BINARIES ---
-    downloadFromPivnet imgpkg $TDH_CARVEL_IMGPKG "$TDH_CARVEL_IMGPKG" "imgpkg - Linux"
-    [ -f /tmp/imgpkg-linux-amd64-$TDH_CARVEL_IMGPKG ] && mv /tmp/imgpkg-linux-amd64-$TDH_CARVEL_IMGPKG $TDH_DOCKER_FILES/imgpkg && chmod a+x $TDH_DOCKER_FILES/imgpkg
+  # --- TANZU CARVEL TOOLS (imgpkg) BINARY ---
+  TDH_BNDL_NAM="imgpkg"
+  TDH_BNDL_VER=$TDH_CARVEL_IMGPKG
+  TDH_FILE_TAG="$TDH_BNDL_NAM"
+  TDH_FILE_STR="${TDH_FILE_TAG} - Linux"
+  TDH_FILE_VER=$TDH_CARVEL_IMGPKG
+  TDH_FILE_NAM="$TDH_FILE_TAG-linux-amd64-$TDH_FILE_VER"
+
+  if [ ! -e $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER/$TDH_FILE_NAM ]; then
+    downloadFromPivnet $TDH_BNDL_NAM $TDH_BNDL_VER "$TDH_FILE_VER" "${TDH_FILE_STR}"
+    if [ -f /tmp/$TDH_FILE_NAM ]; then
+      [ ! -d $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER ] && mkdir -p $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER
+      mv /tmp/$TDH_FILE_NAM $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER
+    fi
 
     REBUILD_REQUIRED_SOFTWARE=1       ## REBUILD REQUIRED BECAUSE OF SOFTWARE CHANGE
+  else
+    cp $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER/$TDH_FILE_NAM $TDH_DOCKER_FILES/$TDH_FILE_NAM
+    chmod a+x $TDH_DOCKER_FILES/$TDH_FILE_TAG
   fi
 
-  if [ ! -x $TDH_DOCKER_FILES/kapp ]; then
-    # --- DOWNLOAD BUILD_SERVICE BINARIES ---
-    downloadFromPivnet kapp $TDH_CARVEL_KAPP "$TDH_CARVEL_KAPP" "kapp - Linux"
-    [ -f /tmp/kapp-linux-amd64-$TDH_CARVEL_KAPP ] && mv /tmp/kapp-linux-amd64-$TDH_CARVEL_KAPP $TDH_DOCKER_FILES/kapp && chmod a+x $TDH_DOCKER_FILES/kapp
+  # --- TANZU CARVEL TOOLS (kbld) BINARY ---
+  TDH_BNDL_NAM="kbld"
+  TDH_BNDL_VER=$TDH_CARVEL_KBLD
+  TDH_FILE_TAG="$TDH_BNDL_NAM"
+  TDH_FILE_STR="${TDH_FILE_TAG} - Linux"
+  TDH_FILE_VER=$TDH_BNDL_VER
+  TDH_FILE_NAM="$TDH_FILE_TAG-linux-amd64-$TDH_FILE_VER"
+
+  if [ ! -e $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER/$TDH_FILE_NAM ]; then
+    downloadFromPivnet $TDH_BNDL_NAM $TDH_BNDL_VER "$TDH_FILE_VER" "${TDH_FILE_STR}"
+    if [ -f /tmp/$TDH_FILE_NAM ]; then
+      [ ! -d $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER ] && mkdir -p $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER
+      mv /tmp/$TDH_FILE_NAM $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER
+    fi
 
     REBUILD_REQUIRED_SOFTWARE=1       ## REBUILD REQUIRED BECAUSE OF SOFTWARE CHANGE
+  else
+    cp $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER/$TDH_FILE_NAM $TDH_DOCKER_FILES/$TDH_FILE_NAM
+    chmod a+x $TDH_DOCKER_FILES/$TDH_FILE_TAG
   fi
 
-  if [ ! -x $TDH_DOCKER_FILES/ytt ]; then
-    # --- DOWNLOAD BUILD_SERVICE BINARIES ---
-    downloadFromPivnet ytt $TDH_CARVEL_YTT "$TDH_CARVEL_YTT" "ytt - Linux"
-    [ -f /tmp/ytt-linux-amd64-$TDH_CARVEL_YTT ] && mv /tmp/ytt-linux-amd64-$TDH_CARVEL_YTT $TDH_DOCKER_FILES/ytt && chmod a+x $TDH_DOCKER_FILES/ytt
+  # --- TANZU CARVEL TOOLS (kbld) BINARY ---
+  TDH_BNDL_NAM="kapp"
+  TDH_BNDL_VER=$TDH_CARVEL_KAPP
+  TDH_FILE_TAG="$TDH_BNDL_NAM"
+  TDH_FILE_STR="${TDH_FILE_TAG} - Linux"
+  TDH_FILE_VER=$TDH_BNDL_VER
+  TDH_FILE_NAM="$TDH_FILE_TAG-linux-amd64-$TDH_FILE_VER"
+
+  if [ ! -e $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER/$TDH_FILE_NAM ]; then
+    downloadFromPivnet $TDH_BNDL_NAM $TDH_BNDL_VER "$TDH_FILE_VER" "${TDH_FILE_STR}"
+    if [ -f /tmp/$TDH_FILE_NAM ]; then
+      [ ! -d $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER ] && mkdir -p $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER
+      mv /tmp/$TDH_FILE_NAM $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER
+    fi
 
     REBUILD_REQUIRED_SOFTWARE=1       ## REBUILD REQUIRED BECAUSE OF SOFTWARE CHANGE
+  else
+    cp $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER/$TDH_FILE_NAM $TDH_DOCKER_FILES/$TDH_FILE_NAM
+    chmod a+x $TDH_DOCKER_FILES/$TDH_FILE_TAG
+  fi
+
+  # --- TANZU CARVEL TOOLS (kbld) BINARY ---
+  TDH_BNDL_NAM="ytt"
+  TDH_BNDL_VER=$TDH_CARVEL_YTT
+  TDH_FILE_TAG="$TDH_BNDL_NAM"
+  TDH_FILE_STR="${TDH_FILE_TAG} - Linux"
+  TDH_FILE_VER=$TDH_BNDL_VER
+  TDH_FILE_NAM="$TDH_FILE_TAG-linux-amd64-$TDH_FILE_VER"
+
+  if [ ! -e $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER/$TDH_FILE_NAM ]; then
+    downloadFromPivnet $TDH_BNDL_NAM $TDH_BNDL_VER "$TDH_FILE_VER" "${TDH_FILE_STR}"
+    if [ -f /tmp/$TDH_FILE_NAM ]; then
+      [ ! -d $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER ] && mkdir -p $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER
+      mv /tmp/$TDH_FILE_NAM $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER
+    fi
+
+    REBUILD_REQUIRED_SOFTWARE=1       ## REBUILD REQUIRED BECAUSE OF SOFTWARE CHANGE
+  else
+    cp $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER/$TDH_FILE_NAM $TDH_DOCKER_FILES/$TDH_FILE_NAM
+    chmod a+x $TDH_DOCKER_FILES/$TDH_FILE_TAG
   fi
 
   if [ ! -x $TDH_DOCKER_FILES/kubectl-vsphere ]; then
@@ -7460,28 +7883,92 @@ tdh_tools_build() {
     [ -f argocd-linux-amd64 ] && mv argocd-linux-amd64 $TDH_DOCKER_FILES/argocd && chmod +x $TDH_DOCKER_FILES/argocd
   fi
 
-  if [ ! -s $TDH_DOCKER_FILES/terraform-bin ]; then
-    #wget https://releases.hashicorp.com/terraform/0.12.31/terraform_0.12.31_linux_amd64.zip 2>/dev/null 1>&2
-    unzip terraform_0.12.31_linux_amd64.zip 2>/dev/null 1>&2
-    wget https://releases.hashicorp.com/terraform/0.14.3/terraform_0.14.3_linux_amd64.zip 2>/dev/null 1>&2
-    mv terraform_0.14.3_linux_amd64.zip /tmp
-    unzip -o -d /tmp /tmp/terraform_0.14.3_linux_amd64.zip 2>/dev/null 1>&2
-    mv /tmp/terraform $TDH_DOCKER_FILES/terraform-bin
+  # --- TERRAFORM BINARY ---
+  if [ ! -e $TDH_DOCKER_CACHE/terraform/terraform-$TDH_TERRAFORM ]; then
+    messagePrint " ▪ Downloading Terraform binary"                                "terraform_${TDH_TERRAFORM}_linux_amd64.zip"
+    [ ! -e $TDH_DOCKER_CACHE/terraform ] && mkdir -p $TDH_DOCKER_CACHE/terraform
+    wget -q https://releases.hashicorp.com/terraform/$TDH_TERRAFORM/terraform_${TDH_TERRAFORM}_linux_amd64.zip \
+         -o /tmp/terraform_${TDH_TERRAFORM}_linux_amd64.zip > /tmp/error.log 2>&1
+    if [ ! -f /tmp/terraform_${TDH_TERRAFORM}_linux_amd64.zip ]; then
+      logMessages /tmp/error.log
+      echo "ERROR: failed to download $file"
+      if [ "$NATIVE" == "0" ]; then
+        echo "       => tools/${TDH_TOOLS}.sh"
+        echo "          tdh-tools:/$ wget -q https://releases.hashicorp.com/terraform/$TDH_TERRAFORM/terraform_${TDH_TERRAFORM}_linux_amd64.zip"
+        echo "          tdh-tools:/$ exit"
+      else
+        echo "       => wget -q https://releases.hashicorp.com/terraform/$TDH_TERRAFORM/terraform_${TDH_TERRAFORM}_linux_amd64.zip"
+      fi
+
+      exit 1
+    else
+      unzip -o -d /tmp /tmp/terraform_$TDH_TERRAFORM_linux_amd64.zip 2>/dev/null 1>&2
+      mv /tmp/terraform $TDH_DOCKER_CACHE/terraform/terraform-$TDH_TERRAFORM
+    fi
+
+    REBUILD_REQUIRED_SOFTWARE=1       ## REBUILD REQUIRED BECAUSE OF SOFTWARE CHANGE
+  else
+    cp $TDH_DOCKER_CACHE/terraform/terraform-$TDH_TERRAFORM $TDH_DOCKER_FILES/terraform-bin
     chmod +x $TDH_DOCKER_FILES/terraform-bin
   fi
 
-  # --- INSTALL KIND ---
-  if [ ! -s $TDH_DOCKER_FILES/kind ]; then
-    curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.9.0/kind-linux-amd64 2>/dev/null
-    mv kind  $TDH_DOCKER_FILES/kind
+  # --- KUBERNETES KIND BINARY ---
+  if [ ! -e $TDH_DOCKER_CACHE/kind/kind-linux-amd64-$TDH_KIND ]; then
+    messagePrint " ▪ Downloading Kind binary"                                "kind-${TDH_KIND}-linux-amd64"
+    [ ! -e $TDH_DOCKER_CACHE/kind ] && mkdir -p $TDH_DOCKER_CACHE/kind
+
+    wget -q https://kind.sigs.k8s.io/dl/v${TDH_KIND}/kind-linux-amd64 \
+         -o /tmp/kind-linux-amd64-$TDH_KIND > /tmp/error.log 2>&1
+    if [ ! -f /tmp/kind-linux-amd64-${TDH_KIND} ]; then
+      logMessages /tmp/error.log
+      echo "ERROR: failed to download $file"
+      if [ "$NATIVE" == "0" ]; then
+        echo "       => tools/${TDH_TOOLS}.sh"
+        echo "          tdh-tools:/$ wget -q https://kind.sigs.k8s.io/dl/v${TDH_KIND}/kind-linux-amd64"
+        echo "          tdh-tools:/$ exit"
+      else
+        echo "       => wget -q https://kind.sigs.k8s.io/dl/v${TDH_KIND}/kind-linux-amd64"
+      fi
+
+      exit 1
+    else
+      
+      mv /tmp/kind-linux-amd64-${TDH_KIND} $TDH_DOCKER_CACHE/kind
+    fi
+
+    REBUILD_REQUIRED_SOFTWARE=1       ## REBUILD REQUIRED BECAUSE OF SOFTWARE CHANGE
+  else
+    cp $TDH_DOCKER_CACHE/kind/kind-linux-amd64-$TDH_KIND $TDH_DOCKER_FILES/kind
     chmod +x $TDH_DOCKER_FILES/kind
   fi
 
-  if [ ! -s $TDH_DOCKER_FILES/govc ]; then
-    wget https://github.com/vmware/govmomi/releases/download/v0.24.0/govc_linux_amd64.gz 2>/dev/null 1>&2
-    gunzip govc_linux_amd64.gz
+  # --- GOVC BINARY ---
+  if [ ! -e $TDH_DOCKER_CACHE/govc/govc-linux-amd64-$TDH_GOVC ]; then
+    messagePrint " ▪ Downloading vSphere CLI (GOVC)"                                "govc-${TDH_GOVC}-linux-amd64"
+    [ ! -e $TDH_DOCKER_CACHE/govc ] && mkdir -p $TDH_DOCKER_CACHE/govc
 
-    mv govc_linux_amd64 $TDH_DOCKER_FILES/govc
+    wget -q https://github.com/vmware/govmomi/releases/download/v${TDH_GOVC}/govc_linux_amd64.gz \
+         -o /tmp/govc-linux-amd64-$TDH_GOVC > /tmp/error.log 2>&1
+    if [ ! -f /tmp/govc-linux-amd64-${TDH_GOVC} ]; then
+      logMessages /tmp/error.log
+      echo "ERROR: failed to download $file"
+      if [ "$NATIVE" == "0" ]; then
+        echo "       => tools/${TDH_TOOLS}.sh"
+        echo "          tdh-tools:/$ https://github.com/vmware/govmomi/releases/download/v${TDH_GOVC}/govc_linux_amd64.gz"
+        echo "          tdh-tools:/$ exit"
+      else
+        echo "       => wget -q https://github.com/vmware/govmomi/releases/download/v${TDH_GOVC}/govc_linux_amd64.gz"
+      fi
+
+      exit 1
+    else
+
+      mv /tmp/govc-linux-amd64-${TDH_GOVC} $TDH_DOCKER_CACHE/govc
+    fi
+
+    REBUILD_REQUIRED_SOFTWARE=1       ## REBUILD REQUIRED BECAUSE OF SOFTWARE CHANGE
+  else
+    cp $TDH_DOCKER_CACHE/govc/govc-linux-amd64-$TDH_GOVC $TDH_DOCKER_FILES/govc
     chmod +x $TDH_DOCKER_FILES/govc
   fi
 
@@ -8104,6 +8591,71 @@ leftText() {
 }
 
 # ------------------------------------------------------------------------------------------
+# Function Name ......: tmcAPI_getToken
+# Function Purpose ...: Get TMC API Bearer Token
+# ------------------------------------------------------------------------------------------
+# Argument ($1) ......: TMC Refresh Token
+# ------------------------------------------------------------------------------------------
+# Return Value .......: API Access Token
+# ------------------------------------------------------------------------------------------
+# Reference Documentation: 
+# https://developer.vmware.com/apis/897/tanzu-mission-control
+# ------------------------------------------------------------------------------------------
+tmcAPI_getToken() {
+  REFRESH_TOKEN="$1"
+  VMC_SERVER="https://console.cloud.vmware.com/csp/gateway/am"
+
+  curl -k -X POST "$VMC_SERVER/api/auth/api-tokens/authorize?refresh_token=$TMC_SERVICE_TOKEN" 2>/dev/null | jq -r '.access_token'
+}
+
+# ------------------------------------------------------------------------------------------
+# Function Name ......: tmcAPI_getCliBinary
+# Function Purpose ...: Get TMC CLI Binary 
+# ------------------------------------------------------------------------------------------
+# Argument ($1) ......: TMC BEARER Token 
+#          ($2) ......: TMC Server URL
+# ------------------------------------------------------------------------------------------
+# Return Value .......: API Access Token
+# ------------------------------------------------------------------------------------------
+# Reference Documentation: 
+# https://developer.vmware.com/apis/897/tanzu-mission-control
+# ------------------------------------------------------------------------------------------
+tmcAPI_getCliBinary() {
+  REFRESH_TOKEN="$1"
+  TMC_SERVER="$2"
+
+  latest=$(curl -k -X GET -H "Authorization: Bearer $REFRESH_TOKEN" \
+                          -H 'Content-Type: application/x-www-form-urlencoded' \
+                          ${TMC_SERVER}/v1alpha/system/binaries 2>/dev/null | jq -r '.latestVersion')
+
+  curl -k -X GET -H "Authdrization: Bearer $REFRESH_TOKEN" \
+                 -H 'Content-Type: application/x-www-form-urlencoded' \
+                 ${TMC_SERVER}/v1alpha/system/binaries 2>/dev/null | jq -r ".versions.\"$latest\".linuxX64"
+}
+
+
+# ------------------------------------------------------------------------------------------
+# Function Name ......: vSphereAPI_getToken
+# Function Purpose ...: Create a vSphere Namespace
+# ------------------------------------------------------------------------------------------
+# Argument ($1) ......: vSphere API Token
+#          ($2) ......: vSphere Server Name
+#          ($3) ......: vSphere Namespace name
+# ------------------------------------------------------------------------------------------
+# Return Value .......: API Access Token
+# ------------------------------------------------------------------------------------------
+vSphereAPI_getToken() {
+  VCENTER_SERVER="$1"
+  VCENTER_USER="$2"
+  VCENTER_PASS="$3"
+  USERPASS="${VCENTER_USER}:${VCENTER_PASS}"
+
+  curl -k -X POST "${VCENTER_SERVER}/rest/com/vmware/cis/session" -u "$USERPASS" 2>/dev/null | jq -r '.value'
+
+}
+
+
+# ------------------------------------------------------------------------------------------
 # Function Name ......: vSphereAPI_getToken
 # Function Purpose ...: Create a vSphere Namespace
 # ------------------------------------------------------------------------------------------
@@ -8141,6 +8693,10 @@ vSphereAPI_createNamespace() {
   # --- CREATE VSPHERE NAMESPACE ---
   stt=$(curl -k -X GET -H "vmware-api-session-id: $API_TOKEN" ${VCENTER_SERVER}/api/vcenter/namespaces/instances/$NAMESPACE 2>/dev/null | jq -r '.cluster')
   if [ "$stt" == "" -o "$stt" == "null" ]; then
+    messageTitle "Create vSphere Namespace for Tanzu Demo Hub Environment"
+    messagePrint " ▪ vSphere Server"     "$VCENTER_SERVER"
+    messagePrint " ▪ vSphere Namespace"  "$NAMESPACE"
+
     vs_cluster=$(curl -k -X GET -H "vmware-api-session-id: $API_TOKEN" ${VCENTER_SERVER}/api/vcenter/namespace-management/clusters 2>/dev/null | jq -r '.[].cluster')
     VSPHERE_CONFIG=/tmp/vsphere_config.json; rm -f $OKTA_CONFIG
     echo '{'                                                                         >  $VSPHERE_CONFIG
@@ -8166,13 +8722,16 @@ vSphereAPI_createNamespace() {
 
       exit 1
     fi
+  else
+    messageTitle "Verify vSphere Namespace for Tanzu Demo Hub Environment"
+    messagePrint " ▪ vSphere Server"     "$VCENTER_SERVER"
+    messagePrint " ▪ vSphere Namespace"  "$NAMESPACE"
   fi
 
   # --- GET STORAGE POLICY ID FOR 'TANZU' ---
   vm_policy=$(curl -k -X GET -H 'Content-type: application/json' \
-                   -H "vmware-api-session-id: $API_TOKEN" ${VCENTER_URL}/rest/vcenter/storage/policies 2>/dev/null | \
+                   -H "vmware-api-session-id: $API_TOKEN" ${VCENTER_SERVER}/rest/vcenter/storage/policies 2>/dev/null | \
                    jq -r '.value[] | select(.name == "tanzu" ).policy')
-
 
   # --- UPDATE VSPHERE NAMESPACE CONFIG ---
   VSPHERE_CONFIG=/tmp/vsphere_config.json; rm -f $OKTA_CONFIG
@@ -8183,9 +8742,11 @@ vSphereAPI_createNamespace() {
   echo '      "best-effort-medium",'                                               >> $VSPHERE_CONFIG
   echo '      "best-effort-large",'                                                >> $VSPHERE_CONFIG
   echo '      "best-effort-xlarge",'                                               >> $VSPHERE_CONFIG
+  echo '      "best-effort-2xlarge",'                                              >> $VSPHERE_CONFIG
   echo '      "guaranteed-medium",'                                                >> $VSPHERE_CONFIG
   echo '      "guaranteed-large",'                                                 >> $VSPHERE_CONFIG
-  echo '      "guaranteed-xlarge"'                                                 >> $VSPHERE_CONFIG
+  echo '      "guaranteed-xlarge",'                                                 >> $VSPHERE_CONFIG
+  echo '      "guaranteed-2xlarge"'                                                >> $VSPHERE_CONFIG
   echo '    ]'                                                                     >> $VSPHERE_CONFIG
   echo '  },'                                                                      >> $VSPHERE_CONFIG
   echo '  "storage_specs": ['                                                      >> $VSPHERE_CONFIG
