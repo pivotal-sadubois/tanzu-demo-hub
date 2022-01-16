@@ -402,7 +402,7 @@ tmcCheckLogin() {
   fi
 
   # --- IF STARTED BY (tdh-tools) CONTAINER, NO TMC CLI IST INSTALLED ---
-  [ -f "$FLAG" == "--noverify" ] && return
+  [ "$FLAG" == "--noverify" ] && return
 
   export TMC_API_TOKEN=$TMC_SERVICE_TOKEN
   ret=1; cnt=0
