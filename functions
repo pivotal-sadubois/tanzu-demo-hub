@@ -4391,9 +4391,7 @@ tmcCreateCluster() {
       messagePrint " ▪ TKG Control Plane Nodes"          "$TDH_TKGWC_CONTROPLANE"
       messagePrint " ▪ TKG Control Plane Nodes Type"     "$TDH_TKGWC_CONTROPLANE_NODETYPE ($TDH_TKGWC_CONTROPLANE_MACHINE)"
 
-
       tmc cluster create -m $TDH_MANAGEMENT_CLUSTER -p $TDH_PROVISIONER_NAME \
-                         --worker-instance-type $TDH_TKGWC_WORKERNODES_MACHINE \
                          --instance-type $TDH_TKGWC_CONTROPLANE_MACHINE \
                          --ssh-key-name $TMC_SSH_KEY_NAME_AWS -c $TMC_ACCOUNT_NAME \
                          --worker-node-count $TDH_TKGWC_WORKERNODES \
@@ -4453,10 +4451,6 @@ tmcCreateCluster() {
       messagePrint " ▪ TKG Cluster Worker Node Type"     "$TDH_TKGWC_WORKERNODES_TYPE ($TDH_TKGWC_WORKERNODES_MACHINE)"
       messagePrint " ▪ TKG Control Plane Nodes"          "$TDH_TKGWC_CONTROPLANE"
       messagePrint " ▪ TKG Control Plane Nodes Type"     "$TDH_TKGWC_CONTROPLANE_NODETYPE ($TDH_TKGWC_CONTROPLANE_MACHINE)"
-
-TDH_TKGWC_WORKERNODES=2
-#TDH_TKGWC_WORKERNODES_MACHINE=best-effort-2xlarge
-TDH_TKGWC_CONTROPLANE_MACHINE=best-effort-xlarge
 
 
       # List of Tanzu Kubernetes Releases

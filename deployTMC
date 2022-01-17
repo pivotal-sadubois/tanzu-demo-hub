@@ -64,7 +64,7 @@ listClusterConfig() {
 
 listDeployments() {
   echo
-  printf "%-31s %-7s %-25s %s\n" "TMC-DEPLOYMENT" "CLOUD" "MANAGEMENT-CLUSTER" "STATUS"
+  printf "%-31s %-7s %-35s %s\n" "TMC-DEPLOYMENT" "CLOUD" "MANAGEMENT-CLUSTER" "STATUS"
   messageLine
 
   for deployment in $(ls -1 ${TDHPATH}/deployments/tmc-*.cfg ${HOME}/.tanzu-demo-hub/config/tmc* 2>/dev/null ); do
@@ -84,7 +84,7 @@ listDeployments() {
 
     dep=$(basename $deployment)
 
-    printf "%-31s %-7s %-25s %s\n" $dep $TDH_DEPLOYMENT_CLOUD $TDH_MANAGEMENT_CLUSTER "$stt"
+    printf "%-31s %-7s %-35s %s\n" $dep $TDH_DEPLOYMENT_CLOUD $TDH_MANAGEMENT_CLUSTER "$stt"
   done
 
   messageLine
@@ -284,12 +284,13 @@ createClusterIssuer
 getRootCA tanzu-demo-hub-tls
 TanzuPackage_Harbor       harbor-pkg           harbor.tanzu.vmware.com
 
-installBuildService
-installTanzuDataPostgres
+installBuildService          ## Tanzu Build Service (TBS)
+installTanzuDataPostgres     ## Tanzu Data SQL
 installSpringCloudGateway
-installMinio
+installMinio                 ## Required for Tanzu PostgreSQL Demos
 installKubeapps
 installJenkins
+installTAP                   ## Tanzu Application Platform (TAP)
 
 echo "-----------------------------------------------------------------------------------------------------------"
 echo "Tanzu Kubernetes Grid Cluster ($TDH_CLUSTER_NAME) build completed"
