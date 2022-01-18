@@ -479,15 +479,18 @@ pivnetAPIdownload() {
 
   # --- LOGIN INTO PIVNET ---
   wget -O /tmp/$FILE_NAME --header="Authorization: Bearer $token" \
-  https://network.pivotal.io/api/v2/products/$PRODUCT_SLUG/releases/$PRODUCT_ID/product_files/$PRODUCT_FILE/download > /dev/null 2>&1
+  https://network.tanzu.vmware.com/api/v2/products/$PRODUCT_SLUG/releases/$PRODUCT_ID/product_files/$PRODUCT_FILE/download > /dev/null 2>&1
+
+  #https://network.pivotal.io/api/v2/products/$PRODUCT_SLUG/releases/$PRODUCT_ID/product_files/$PRODUCT_FILE/download > /dev/null 2>&1
   #wget -O /tmp/$FILE_NAME --header="Authorization: Bearer $token" \
   #https://network.pivotal.io/api/v2/products/$PRODUCT_SLUG/releases/$PRODUCT_ID/product_files/$PRODUCT_FILE/download 
 
   if [ ! -f /tmp/$FILE_NAME ]; then
-    echo "ERROR: Error downloading file from PIVNET /tmp/$FILE_NAME"
+    echo "1ERROR: Error downloading file from PIVNET /tmp/$FILE_NAME"
     echo "       SLUG:$PRODUCT_SLUG, PRODUCT_ID:$PRODUCT_ID PRODUCT_FILE:$PRODUCT_FILE"
     exit 1
   fi
+
 
 #pivnetAPIdownload "1edb78016b054bbaab960b3007a77b12-r" build-service 843689 build-service-1.1.2.tar
 
@@ -4594,6 +4597,35 @@ installTAP() {
     return
   fi
 
+  if [ 1 -eq 1 ]; then 
+
+    # --- TANZU BUILD SERVICE CLI (kp) BINARY ---
+    TDH_BNDL_NAM="tanzu-application-platform"
+    TDH_BNDL_VER=$TDH_SERVICE_TAP_VERSION
+    TDH_FILE_TAG="kp"
+    TDH_FILE_STR="${TDH_FILE_TAG}-linux"
+    TDH_FILE_VER=$TDH_SERVICE_BUILD_SERVICE_KP
+    TDH_FILE_NAM="$TDH_FILE_TAG-linux-$TDH_FILE_VER"
+  
+    if [ ! -e $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER/$TDH_FILE_NAM ]; then
+      downloadFromPivnet $TDH_BNDL_NAM $TDH_BNDL_VER "$TDH_FILE_VER" "${TDH_FILE_STR}"
+      if [ -f /tmp/$TDH_FILE_NAM ]; then
+        [ ! -d $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER ] && mkdir -p $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER
+        mv /tmp/$TDH_FILE_NAM $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER
+        cp $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER/$TDH_FILE_NAM $TDH_DOCKER_FILES/$TDH_FILE_TAG
+        chmod a+x $TDH_DOCKER_FILES/$TDH_FILE_TAG
+      fi
+  
+      REBUILD_REQUIRED_SOFTWARE=1       ## REBUILD REQUIRED BECAUSE OF SOFTWARE CHANGE
+    else
+      cp $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER/$TDH_FILE_NAM $TDH_DOCKER_FILES/$TDH_FILE_TAG
+      chmod a+x $TDH_DOCKER_FILES/$TDH_FILE_TAG
+    fi
+  fi
+
+
+return
+
   messageTitle "Spring Cloud Gateway"
   cnt=0
   if [ $cnt -eq 0 ]; then
@@ -4740,13 +4772,10 @@ echo "TAP_CONFIG:$TAP_CONFIG"
 installSpringCloudGateway() {
   NAMESPACE=spring-cloud-gateway
 
-echo "TDH_SERVICE_SPRING_CLOUD_GATEWAY:$TDH_SERVICE_SPRING_CLOUD_GATEWAY"
-echo gaga1
   if [ "$TDH_SERVICE_SPRING_CLOUD_GATEWAY" != "true" ]; then
     uodateConfigMap tanzu-demo-hub TDH_SERVICE_SPRING_CLOUD_GATEWAY        "false"
     return
   fi
-echo gaga2
 
   messageTitle "Spring Cloud Gateway"
   cnt=$(kubectl get pods -A | egrep -c "^$NAMESPACE")
@@ -7650,7 +7679,9 @@ tdh_tools_build() {
     TDH_DOCKER_FILES=/tmp/tdh-tools-tce
     TDH_DOCKER_CACHE=$HOME/.tanzu-demo-hub/cache
     [ ! -d $TDH_DOCKER_CACHE ] && mkdir -p $TDH_DOCKER_CACHE
-  else 
+  fi
+
+  if [ "$MODE" == "tkg" ]; then 
     TDH_TOOLS_DOCKERFILE=Dockerfile
     TDH_TOOLS_IMAGE=tdh-tools
     BUILD_MODE=tkg
@@ -7698,6 +7729,133 @@ tdh_tools_build() {
   messagePrint " ▪ vSphere CLI (GOVC)"                                         "$TDH_GOVC"
   messageTitle "TDH Tools Docker Container ($TDH_TOOLS_IMAGE)"
 
+  #################################################################################
+  ################# DOWNLOAD TANZU-CLI-BUNDLE FROM MYVMWARE.COM ###################
+  #################################################################################
+  VMWCLI=/tmp/vmw-cli
+  if [ ! -s $VMWCLI ]; then
+    messagePrint " ▪ Install Package (vmw-cli)" "installing"
+    docker run apnex/vmw-cli shell > $VMWCLI 2>/dev/null
+    if [ $? -ne 0 ]; then
+      echo "ERROR: faileed to run vmw-cli docker container"
+      echo "       => docker run apnex/vmw-cli shell > /tmp/vmw-cli"
+      exit 1
+    fi
+
+    chmod 755 $VMWCLI
+  fi
+
+  #export VMWUSER="$TDH_MYVMWARE_USER"
+  #export VMWPASS="$TDH_MYVMWARE_PASS"
+  #$VMWCLI ls vmware_tanzu_kubernetes_grid > /dev/null 2>&1
+
+
+#gaga100
+  if [ "$TDH_SERVICE_TAP_VERSION" != "" ]; then 
+    [ ! -d $TDH_DOCKER_CACHE/tap-$TDH_SERVICE_TAP_VERSION ] && mkdir -p $TDH_DOCKER_CACHE/tac-$TDH_SERVICE_TAP_VERSION
+
+    # --- DOWNLOAD TANZU FRAMEWORK ---
+    TAC_PRODUCT_SLUG="tanzu-application-platform"
+    TAC_PRODUCT_FILE="tanzu-framework-linux-amd64"
+    TAC_PRODUCT_VERS="$TDH_TAP_TANZU_FRAMEWORK"
+    TAC_PRODUCT_PNID="$TDH_TAP_TANZU_FRAMEWORK_PIVNET_ID"
+    if [ ! -e $TDH_DOCKER_CACHE/tac-$TDH_SERVICE_TAP_VERSION/${TAC_PRODUCT_FILE}-${TAC_PRODUCT_VERS}.tar ]; then
+      pid=$(pivnetAPI $PCF_PIVNET_TOKEN GET products/$TAC_PRODUCT_SLUG/releases 2> /dev/null | \
+               jq -r --arg key "$TDH_SERVICE_TAP_VERSION" '.releases[] | select(.version == $key).id')
+
+      pivnetAPIdownload $PCF_PIVNET_TOKEN $TAC_PRODUCT_SLUG $pid $TAC_PRODUCT_PNID ${TAC_PRODUCT_FILE}.tar > /tmp/error.log 2>&1
+      if [ ! -e /tmp/${TAC_PRODUCT_FILE}.tar ]; then 
+        logMessages /tmp/error.log
+        echo "ERROR: failed to download file ${TAC_PRODUCT_FILE}.tar"
+        if [ "$NATIVE" == "0" ]; then
+          echo "       => tools/${TDH_TOOLS}.sh"
+          echo "          tdh-tools:/$ pivnetAPIdownload $PCF_PIVNET_TOKEN $TAC_PRODUCT_SLUG $pid $TDH_TANZU_FRAMEWORK_PIVNET_ID ${TAC_PRODUCT_FILE}.tar"
+          echo "          tdh-tools:/$ exit"
+        else
+          echo "       => pivnetAPIdownload $PCF_PIVNET_TOKEN $TAC_PRODUCT_SLUG $pid $TDH_TANZU_FRAMEWORK_PIVNET_ID ${PRODUCT_FILE}.tar"
+        fi
+
+        exit 1
+      else
+        mv /tmp/${TAC_PRODUCT_FILE}.tar $TDH_DOCKER_CACHE/tac-$TDH_SERVICE_TAP_VERSION/${TAC_PRODUCT_FILE}-${TAC_PRODUCT_VERS}.tar
+        rm -f $TDH_DOCKER_CACHE/tac-$TDH_SERVICE_TAP_VERSION/${TAC_PRODUCT_FILE}.tar
+        ln -s ${TAC_PRODUCT_FILE}-${TAC_PRODUCT_VERS}.tar $TDH_DOCKER_CACHE/tac-$TDH_SERVICE_TAP_VERSION/${TAC_PRODUCT_FILE}.tar
+      fi
+    fi
+
+    (cd $TDH_DOCKER_FILES && tar xf $TDH_DOCKER_CACHE/tac-$TDH_SERVICE_TAP_VERSION/${TAC_PRODUCT_FILE}.tar) 
+    rm -rf $TDH_DOCKER_FILES/clitap
+    mv $TDH_DOCKER_FILES/cli $TDH_DOCKER_FILES/clitap
+    find $TDH_DOCKER_FILES/clitap -type d -exec chmod 777 {} \; 2> /dev/null
+    chmod -R a+r $$TDH_DOCKER_FILES/clitap 2>/dev/null
+
+    # --- DOWNLOAD TANZU FRAMEWORK ---
+    TAC_PRODUCT_SLUG="tanzu-application-platform"
+    TAC_PRODUCT_FILE="tap-gui-blank-catalog"
+    TAC_PRODUCT_VERS="$TDH_TAP_GUI_BLANK_CATALOG"
+    TAC_PRODUCT_PNID="$TDH_TAP_GUI_BLANK_CATALOG_PIVNET_ID"
+    if [ ! -e $TDH_DOCKER_CACHE/tac-$TDH_SERVICE_TAP_VERSION/${TAC_PRODUCT_FILE}-${TAC_PRODUCT_VERS}.tgz ]; then
+      pid=$(pivnetAPI $PCF_PIVNET_TOKEN GET products/$TAC_PRODUCT_SLUG/releases 2> /dev/null | \
+               jq -r --arg key "$TDH_SERVICE_TAP_VERSION" '.releases[] | select(.version == $key).id')
+
+      pivnetAPIdownload $PCF_PIVNET_TOKEN $TAC_PRODUCT_SLUG $pid $TAC_PRODUCT_PNID ${TAC_PRODUCT_FILE}.tgz > /tmp/error.log 2>&1
+      if [ ! -s /tmp/${TAC_PRODUCT_FILE}.tgz ]; then
+        logMessages /tmp/error.log
+        echo "ERROR: failed to download file ${TAC_PRODUCT_FILE}.tgz"
+        if [ "$NATIVE" == "0" ]; then
+          echo "       => tools/${TDH_TOOLS}.sh"
+          echo "          tdh-tools:/$ pivnetAPIdownload $PCF_PIVNET_TOKEN $TAC_PRODUCT_SLUG $pid $TDH_TANZU_FRAMEWORK_PIVNET_ID ${TAC_PRODUCT_FILE}.tgz"
+          echo "          tdh-tools:/$ exit"
+        else
+          echo "       => pivnetAPIdownload $PCF_PIVNET_TOKEN $TAC_PRODUCT_SLUG $pid $TDH_TANZU_FRAMEWORK_PIVNET_ID ${PRODUCT_FILE}.tgz"
+        fi
+
+        exit 1
+      else
+        mv /tmp/${TAC_PRODUCT_FILE}.tgz $TDH_DOCKER_CACHE/tac-$TDH_SERVICE_TAP_VERSION/${TAC_PRODUCT_FILE}-${TAC_PRODUCT_VERS}.tgz
+        rm -f $TDH_DOCKER_CACHE/tac-$TDH_SERVICE_TAP_VERSION/${TAC_PRODUCT_FILE}.tgz
+        ln -s ${TAC_PRODUCT_FILE}-${TAC_PRODUCT_VERS}.tgz $TDH_DOCKER_CACHE/tac-$TDH_SERVICE_TAP_VERSION/${TAC_PRODUCT_FILE}.tgz
+      fi
+    fi
+
+    (cd $TDH_DOCKER_FILES && tar xfz $TDH_DOCKER_CACHE/tac-$TDH_SERVICE_TAP_VERSION/${TAC_PRODUCT_FILE}.tgz)
+    find $TDH_DOCKER_FILES/blank -type d -exec chmod 777 {} \; 2>/dev/null
+    chmod -R a+r $$TDH_DOCKER_FILES/blank 2>/dev/null
+
+    # --- DOWNLOAD TANZU FRAMEWORK ---
+    TAC_PRODUCT_SLUG="tanzu-application-platform"
+    TAC_PRODUCT_FILE="tap-gui-yelb-catalog"
+    TAC_PRODUCT_VERS="$TDH_TAP_GUI_YELB_CATALOG"
+    TAC_PRODUCT_PNID="$TDH_TAP_GUI_YELB_CATALOG_PIVNET_ID"
+    if [ ! -e $TDH_DOCKER_CACHE/tac-$TDH_SERVICE_TAP_VERSION/${TAC_PRODUCT_FILE}-${TAC_PRODUCT_VERS}.tgz ]; then
+      pid=$(pivnetAPI $PCF_PIVNET_TOKEN GET products/$TAC_PRODUCT_SLUG/releases 2> /dev/null | \
+               jq -r --arg key "$TDH_SERVICE_TAP_VERSION" '.releases[] | select(.version == $key).id')
+
+      pivnetAPIdownload $PCF_PIVNET_TOKEN $TAC_PRODUCT_SLUG $pid $TAC_PRODUCT_PNID ${TAC_PRODUCT_FILE}.tgz > /tmp/error.log 2>&1
+      if [ ! -s /tmp/${TAC_PRODUCT_FILE}.tgz ]; then
+        logMessages /tmp/error.log
+        echo "ERROR: failed to download file ${TAC_PRODUCT_FILE}.tgz"
+        if [ "$NATIVE" == "0" ]; then
+          echo "       => tools/${TDH_TOOLS}.sh"
+          echo "          tdh-tools:/$ pivnetAPIdownload $PCF_PIVNET_TOKEN $TAC_PRODUCT_SLUG $pid $TDH_TANZU_FRAMEWORK_PIVNET_ID ${TAC_PRODUCT_FILE}.tgz"
+          echo "          tdh-tools:/$ exit"
+        else
+          echo "       => pivnetAPIdownload $PCF_PIVNET_TOKEN $TAC_PRODUCT_SLUG $pid $TDH_TANZU_FRAMEWORK_PIVNET_ID ${PRODUCT_FILE}.tgz"
+        fi
+
+        exit 1
+      else
+        mv /tmp/${TAC_PRODUCT_FILE}.tgz $TDH_DOCKER_CACHE/tac-$TDH_SERVICE_TAP_VERSION/${TAC_PRODUCT_FILE}-${TAC_PRODUCT_VERS}.tgz
+        rm -f $TDH_DOCKER_CACHE/tac-$TDH_SERVICE_TAP_VERSION/${TAC_PRODUCT_FILE}.tgz
+        ln -s ${TAC_PRODUCT_FILE}-${TAC_PRODUCT_VERS}.tgz $TDH_DOCKER_CACHE/tac-$TDH_SERVICE_TAP_VERSION/${TAC_PRODUCT_FILE}.tgz
+      fi
+    fi
+
+    (cd $TDH_DOCKER_FILES && tar xfz $TDH_DOCKER_CACHE/tac-$TDH_SERVICE_TAP_VERSION/${TAC_PRODUCT_FILE}.tgz)
+    find $TDH_DOCKER_FILES/yelb-catalog -type d -exec chmod 777 {} \; 2>/dev/null
+    chmod -R a+r $$TDH_DOCKER_FILES/yelb-catalog 2>/dev/null
+  fi
+
   # --- TANZU MISSION CONTROL BINARY ---
   if [ ! -e $TDH_DOCKER_CACHE/tmc-$TMC_CLI/tmc-linux-$TMC_CLI ]; then 
     TDH_TANZU_MISSION_CONTROL_REGISTRATION=true
@@ -7709,12 +7867,12 @@ tdh_tools_build() {
     filename=$(echo $download_url | awk -F'/' '{ printf("tmc-linux-%s\n", $(NF-3))}')
     [ ! -d $TDH_DOCKER_CACHE/tmc-$TMC_CLI ] && mkdir -p $TDH_DOCKER_CACHE/tmc-$TMC_CLI
 
-    if [ ! -e $TDH_DOCKER_CACHE/tmc-$TMC_CLI/$filename ]; then 
+    if [ ! -s $TDH_DOCKER_CACHE/tmc-$TMC_CLI/$filename ]; then 
       messagePrint " ▪ Downloading TMC CLI BINARY"                                "$filename"
       wget -q $file -o $TDH_DOCKER_CACHE/tmc-$TMC_CLI/$filename > /tmp/error.log 2>&1; ret=$?
       [ -L $TDH_DOCKER_CACHE/tmc-$TMC_CLI/tmc-linux-$TMC_CLI ] && rn -f $TDH_DOCKER_CACHE/tmc-$TMC_CLI/tmc-linux-$TMC_CLI
 
-      if [ ! -f $TDH_DOCKER_CACHE/tmc-$TMC_CLI/$filename ]; then
+      if [ ! -s $TDH_DOCKER_CACHE/tmc-$TMC_CLI/$filename ]; then
         logMessages /tmp/error.log
         logMessages $VSPHERE_CONFIG
         echo "ERROR: failed to download $file"
@@ -7733,33 +7891,39 @@ tdh_tools_build() {
 
       REBUILD_REQUIRED_SOFTWARE=1       ## REBUILD REQUIRED BECAUSE OF SOFTWARE CHANGE
     fi
-  else
-    cp $TDH_DOCKER_CACHE/tmc-$TMC_CLI/tmc-linux-$TMC_CLI $TDH_DOCKER_FILES/tmc
-    chmod a+x $TDH_DOCKER_FILES/tmc
   fi
 
-  VMWCLI=/tmp/vmw-cli
-  if [ ! -s $VMWCLI ]; then
-    messagePrint " ▪ Install Package (vmw-cli)" "installing"
-    docker run apnex/vmw-cli shell > $VMWCLI 2>/dev/null
-    if [ $? -ne 0 ]; then
-      echo "ERROR: faileed to run vmw-cli docker container"
-      echo "       => docker run apnex/vmw-cli shell > /tmp/vmw-cli"
-      exit 1
-    fi
-
-    chmod 755 $VMWCLI
-  fi
-
-  #################################################################################
-  ################# DOWNLOAD TANZU-CLI-BUNDLE FROM MYVMWARE.COM ###################
-  #################################################################################
-  #export VMWUSER="$TDH_MYVMWARE_USER"
-  #export VMWPASS="$TDH_MYVMWARE_PASS"
-  #$VMWCLI ls vmware_tanzu_kubernetes_grid > /dev/null 2>&1
+  cp $TDH_DOCKER_CACHE/tmc-$TMC_CLI/tmc-linux-$TMC_CLI $TDH_DOCKER_FILES/tmc
+  chmod a+x $TDH_DOCKER_FILES/tmc
 
   # https://customerconnect.vmware.com/downloads/info/slug/datacenter_cloud_infrastructure/vmware_vsphere/7_0
 
+  # --- DOWNLOAD PIVNET ---
+  if [ ! -e $TDH_DOCKER_CACHE/pivnet/pivnet-linux-amd64-$TDH_PIVNET ]; then
+    curl -q https://github.com/pivotal-cf/pivnet-cli/releases/download/v${TDH_PIVNET}/pivnet-linux-amd64-$TDH_PIVNET \
+         -o /tmp/pivnet-linux-amd64-$TDH_PIVNET > /tmp/error.log 2>&1
+    if [ ! -s /tmp/pivnet-linux-amd64-$TDH_PIVNET ]; then
+      logMessages /tmp/error.log
+      echo "ERROR: failed to download pivnet binary"
+      if [ "$NATIVE" == "0" ]; then
+        echo "       => tools/${TDH_TOOLS}.sh"
+        echo "          tdh-tools:/$ curl -q https://github.com/pivotal-cf/pivnet-cli/releases/download/v${TDH_PIVNET}/pivnet-linux-amd64-$TDH_PIVNET"
+        echo "          tdh-tools:/$ exit"
+      else
+        echo "       => curl -q https://github.com/pivotal-cf/pivnet-cli/releases/download/v${TDH_PIVNET}/pivnet-linux-amd64-$TDH_PIVNET"
+      fi
+
+      exit 1
+    else
+      [ ! -d $TDH_DOCKER_CACHE/pivnet ] && mkdir -p $TDH_DOCKER_CACHE/pivnet
+      mv /tmp/pivnet-linux-amd64-$TDH_PIVNET $TDH_DOCKER_CACHE/pivnet/pivnet-linux-amd64-$TDH_PIVNET
+      cp $TDH_DOCKER_CACHE/pivnet/pivnet-linux-amd64-$TDH_PIVNET $TDH_DOCKER_FILES/pivnet
+      chmod a+x $TDH_DOCKER_FILES/pivnet
+    fi
+  else
+    cp $TDH_DOCKER_CACHE/pivnet/pivnet-linux-amd64-$TDH_PIVNET $TDH_DOCKER_FILES/pivnet
+    chmod a+x $TDH_DOCKER_FILES/pivnet
+  fi
 
   # --- TANZU BUILD SERVICE CLI (kp) BINARY ---
   TDH_BNDL_NAM="build-service"
@@ -7769,7 +7933,7 @@ tdh_tools_build() {
   TDH_FILE_VER=$TDH_SERVICE_BUILD_SERVICE_KP
   TDH_FILE_NAM="$TDH_FILE_TAG-linux-$TDH_FILE_VER"
 
-  if [ ! -e $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER/$TDH_FILE_NAM ]; then
+  if [ ! -s $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER/$TDH_FILE_NAM ]; then
     downloadFromPivnet $TDH_BNDL_NAM $TDH_BNDL_VER "$TDH_FILE_VER" "${TDH_FILE_STR}"
     if [ -f /tmp/$TDH_FILE_NAM ]; then
       [ ! -d $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER ] && mkdir -p $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER
@@ -7792,9 +7956,9 @@ tdh_tools_build() {
   TDH_FILE_VER=$TDH_CARVEL_IMGPKG
   TDH_FILE_NAM="$TDH_FILE_TAG-linux-amd64-$TDH_FILE_VER"
 
-  if [ ! -e $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER/$TDH_FILE_NAM ]; then
+  if [ ! -s $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER/$TDH_FILE_NAM ]; then
     downloadFromPivnet $TDH_BNDL_NAM $TDH_BNDL_VER "$TDH_FILE_VER" "${TDH_FILE_STR}"
-    if [ -f /tmp/$TDH_FILE_NAM ]; then
+    if [ -s /tmp/$TDH_FILE_NAM ]; then
       [ ! -d $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER ] && mkdir -p $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER
       mv /tmp/$TDH_FILE_NAM $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER
       cp $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER/$TDH_FILE_NAM $TDH_DOCKER_FILES/$TDH_FILE_TAG
@@ -7815,9 +7979,9 @@ tdh_tools_build() {
   TDH_FILE_VER=$TDH_BNDL_VER
   TDH_FILE_NAM="$TDH_FILE_TAG-linux-amd64-$TDH_FILE_VER"
 
-  if [ ! -e $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER/$TDH_FILE_NAM ]; then
+  if [ ! -s $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER/$TDH_FILE_NAM ]; then
     downloadFromPivnet $TDH_BNDL_NAM $TDH_BNDL_VER "$TDH_FILE_VER" "${TDH_FILE_STR}"
-    if [ -f /tmp/$TDH_FILE_NAM ]; then
+    if [ -s /tmp/$TDH_FILE_NAM ]; then
       [ ! -d $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER ] && mkdir -p $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER
       mv /tmp/$TDH_FILE_NAM $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER
       cp $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER/$TDH_FILE_NAM $TDH_DOCKER_FILES/$TDH_FILE_TAG
@@ -7838,9 +8002,9 @@ tdh_tools_build() {
   TDH_FILE_VER=$TDH_BNDL_VER
   TDH_FILE_NAM="$TDH_FILE_TAG-linux-amd64-$TDH_FILE_VER"
 
-  if [ ! -e $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER/$TDH_FILE_NAM ]; then
+  if [ ! -s $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER/$TDH_FILE_NAM ]; then
     downloadFromPivnet $TDH_BNDL_NAM $TDH_BNDL_VER "$TDH_FILE_VER" "${TDH_FILE_STR}"
-    if [ -f /tmp/$TDH_FILE_NAM ]; then
+    if [ -s /tmp/$TDH_FILE_NAM ]; then
       [ ! -d $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER ] && mkdir -p $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER
       mv /tmp/$TDH_FILE_NAM $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER
       cp $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER/$TDH_FILE_NAM $TDH_DOCKER_FILES/$TDH_FILE_TAG
@@ -7861,9 +8025,9 @@ tdh_tools_build() {
   TDH_FILE_VER=$TDH_BNDL_VER
   TDH_FILE_NAM="$TDH_FILE_TAG-linux-amd64-$TDH_FILE_VER"
 
-  if [ ! -e $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER/$TDH_FILE_NAM ]; then
+  if [ ! -s $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER/$TDH_FILE_NAM ]; then
     downloadFromPivnet $TDH_BNDL_NAM $TDH_BNDL_VER "$TDH_FILE_VER" "${TDH_FILE_STR}"
-    if [ -f /tmp/$TDH_FILE_NAM ]; then
+    if [ -s /tmp/$TDH_FILE_NAM ]; then
       [ ! -d $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER ] && mkdir -p $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER
       mv /tmp/$TDH_FILE_NAM $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER
       cp $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER/$TDH_FILE_NAM $TDH_DOCKER_FILES/$TDH_FILE_TAG
@@ -7876,7 +8040,7 @@ tdh_tools_build() {
     chmod a+x $TDH_DOCKER_FILES/$TDH_FILE_TAG
   fi
 
-  if [ ! -x $TDH_DOCKER_FILES/kubectl-vsphere ]; then
+  if [ ! -s $TDH_DOCKER_FILES/kubectl-vsphere ]; then
     cp $TDHPATH/software/vsphere-plugin-Linux.zip /tmp
     unzip -d /tmp /tmp/vsphere-plugin-Linux.zip > /dev/null 2>&1
     chmod a+x /tmp/bin/kubectl-vsphere /tmp/bin/kubectl
@@ -7896,9 +8060,9 @@ tdh_tools_build() {
   fi
 
   # --- TERRAFORM BINARY ---
-  if [ ! -e $TDH_DOCKER_CACHE/terraform/terraform-$TDH_TERRAFORM ]; then
+  if [ ! -s $TDH_DOCKER_CACHE/terraform/terraform-$TDH_TERRAFORM ]; then
     messagePrint " ▪ Downloading Terraform binary"                                "terraform_${TDH_TERRAFORM}_linux_amd64.zip"
-    [ ! -e $TDH_DOCKER_CACHE/terraform ] && mkdir -p $TDH_DOCKER_CACHE/terraform
+    [ ! -s $TDH_DOCKER_CACHE/terraform ] && mkdir -p $TDH_DOCKER_CACHE/terraform
     curl -q https://releases.hashicorp.com/terraform/$TDH_TERRAFORM/terraform_${TDH_TERRAFORM}_linux_amd64.zip \
          -o /tmp/terraform_${TDH_TERRAFORM}_linux_amd64.zip > /tmp/error.log 2>&1
     if [ ! -s /tmp/terraform_${TDH_TERRAFORM}_linux_amd64.zip ]; then
@@ -7927,9 +8091,9 @@ tdh_tools_build() {
   fi
 
   # --- KUBERNETES KIND BINARY ---
-  if [ ! -e $TDH_DOCKER_CACHE/kind/kind-linux-amd64-$TDH_KIND ]; then
+  if [ ! -s $TDH_DOCKER_CACHE/kind/kind-linux-amd64-$TDH_KIND ]; then
     messagePrint " ▪ Downloading Kind binary"                                "kind-${TDH_KIND}-linux-amd64"
-    [ ! -e $TDH_DOCKER_CACHE/kind ] && mkdir -p $TDH_DOCKER_CACHE/kind
+    [ ! -s $TDH_DOCKER_CACHE/kind ] && mkdir -p $TDH_DOCKER_CACHE/kind
 
     wget -q https://kind.sigs.k8s.io/dl/v${TDH_KIND}/kind-linux-amd64 \
          -o /tmp/kind-linux-amd64-$TDH_KIND > /tmp/error.log 2>&1
@@ -7957,9 +8121,9 @@ tdh_tools_build() {
   fi
 
   # --- GOVC BINARY ---
-  if [ ! -e $TDH_DOCKER_CACHE/govc/govc-linux-amd64-$TDH_GOVC ]; then
+  if [ ! -s $TDH_DOCKER_CACHE/govc/govc-linux-amd64-$TDH_GOVC ]; then
     messagePrint " ▪ Downloading vSphere CLI (GOVC)"                                "govc-${TDH_GOVC}-linux-amd64"
-    [ ! -e $TDH_DOCKER_CACHE/govc ] && mkdir -p $TDH_DOCKER_CACHE/govc
+    [ ! -s $TDH_DOCKER_CACHE/govc ] && mkdir -p $TDH_DOCKER_CACHE/govc
 
     wget -q https://github.com/vmware/govmomi/releases/download/v${TDH_GOVC}/govc_linux_amd64.gz \
          -o /tmp/govc-linux-amd64-$TDH_GOVC > /tmp/error.log 2>&1
@@ -7976,15 +8140,14 @@ tdh_tools_build() {
 
       exit 1
     else
-
       mv /tmp/govc-linux-amd64-${TDH_GOVC} $TDH_DOCKER_CACHE/govc
     fi
 
     REBUILD_REQUIRED_SOFTWARE=1       ## REBUILD REQUIRED BECAUSE OF SOFTWARE CHANGE
-  else
-    cp $TDH_DOCKER_CACHE/govc/govc-linux-amd64-$TDH_GOVC $TDH_DOCKER_FILES/govc
-    chmod +x $TDH_DOCKER_FILES/govc
   fi
+
+  cp $TDH_DOCKER_CACHE/govc/govc-linux-amd64-$TDH_GOVC $TDH_DOCKER_FILES/govc
+  chmod +x $TDH_DOCKER_FILES/govc
 
   if [ ! -s $TDH_DOCKER_FILES/ovftool ]; then
      echo -e "\n\n\nyes" | nohup $TDHPATH/software/VMware-ovftool-4.4.1-16812187-lin.x86_64.bundle > /dev/null 2>&1
@@ -8014,7 +8177,7 @@ tdh_tools_build() {
     REBUILD_REQUIRED=1
   fi
 
-  if [ ! -x $TDH_DOCKER_FILES/mc ]; then
+  if [ ! -s $TDH_DOCKER_FILES/mc ]; then
     wget https://dl.min.io/client/mc/release/linux-amd64/mc > /dev/null 2>&1
     mv mc $TDH_DOCKER_FILES && chmod a+x $TDH_DOCKER_FILES/mc
   fi
@@ -8024,7 +8187,8 @@ tdh_tools_build() {
     TCE_DOWNLOAD_URL=https://github.com/vmware-tanzu/community-edition/releases/download/${TKG_COMNUNITY_EDITION_VERSION}
     TCE_LINUX_PACKAGE=tce-linux-amd64-${TKG_COMNUNITY_EDITION_VERSION}
 
-    if [ ! -d $TDH_DOCKER_FILES/$TCE_LINUX_PACKAGE ]; then
+    if [ ! -d $TDH_DOCKER_FILES/$TCE_LINUX_PACKAGE -o ! -f $TDH_DOCKER_FILES/$TCE_LINUX_PACKAGE/install.sh ]; then
+      rm -rf $TDH_DOCKER_FILES/$TCE_LINUX_PACKAGE
       wget $TCE_DOWNLOAD_URL/${TCE_LINUX_PACKAGE}.tar.gz > /dev/null 2>&1
       tar xvfz ${TCE_LINUX_PACKAGE}.tar.gz > /dev/null 2>&1
       mv $TCE_LINUX_PACKAGE $TDH_DOCKER_FILES
@@ -8046,6 +8210,10 @@ tdh_tools_build() {
   chmod a+x $TDH_DOCKER_FILES/tdh-postinstall-user-tce.sh
 
   echo tdh-tools > $TDH_DOCKER_FILES/hostname
+
+  if [ $BUILD_MODE == "tap" ]; then
+echo gaga100
+  fi
 
   if [ $BUILD_MODE == "tkg" ]; then
     # --- CLEANUP ---
@@ -8161,7 +8329,7 @@ tdh_tools_build() {
   fi
 
   if [ $REBUILD_REQUIRED -gt 0 ]; then 
-    if [ ! -f $TDH_DOCKER_FILES/kubectl ]; then
+    if [ ! -s $TDH_DOCKER_FILES/kubectl ]; then
       curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
       chmod a+x kubectl
       mv kubectl $TDH_DOCKER_FILES/kubectl
@@ -9831,7 +9999,6 @@ secInSec() {
   date "+%S" | sed 's/^0//g'
 }
 
-#hallo
 dockerRunPreparation() {
   TDH_TOOLS=$1
   TDH_TOOLS_PATH=".${TDH_TOOLS}"
@@ -9895,8 +10062,25 @@ runTDHtools() {
   DOCKER_EXEC="$3"
   DOCKER_ARGS="$4"
 
-  [ "$TOOLS_TLAG" == "tce" -o "$TOOLS_TLAG" == "TCE" ] && TDH_TOOLS=tdh-tools-tce || TDH_TOOLS=tdh-tools
+  if [ "$TOOLS_TLAG" == "tce" -o "$TOOLS_TLAG" == "TCE" ]; then 
+    TDH_TOOLS=tdh-tools-tce 
+    POSTSCRIPT="tdh-postinstall-user-tce.sh"
+  fi
+
+  if [ "$TOOLS_TLAG" == "tkg" -o "$TOOLS_TLAG" == "TKG" ]; then 
+    TDH_TOOLS=tdh-tools
+    POSTSCRIPT="tdh-postinstall-user.sh"
+  fi
+
+  if [ "$TOOLS_TLAG" == "tap" -o "$TOOLS_TLAG" == "TAP" ]; then 
+    TDH_TOOLS=tdh-tools-tap
+    POSTSCRIPT="tdh-postinstall-user-tap.sh"
+  fi
+
   TDH_TOOLS_PATH=".${TDH_TOOLS}"
+
+echo "TDH_TOOLS:$TDH_TOOLS"
+echo "POSTSCRIPT:$POSTSCRIPT"
 
   if [ ! -f /tdh_tools_docker_container  ]; then
     tdhHeader "$HEADER_TEXT"
@@ -9917,7 +10101,7 @@ runTDHtools() {
       env | grep TDH > /tmp/tdh.env
 
       export CORE_OPTIONS="-it --init --rm --hostname tdh-tools --name $TDH_TOOLS --network=host"
-      export USER_OPTIONS="$CORE_OPTIONS -u $(id -u):$(id -g) --env-file /tmp/tdh.env -e \"KUBECONFIG=$HOME/.kube/config\""
+      export USER_OPTIONS="$CORE_OPTIONS -w $HOME -u $(id -u):$(id -g) --env-file /tmp/tdh.env -e \"KUBECONFIG=$HOME/.kube/config\""
       export ROOT_OPTIONS="$CORE_OPTIONS --env-file /tmp/tdh.env -e \"KUBECONFIG=$HOME/.kube/config\""
 
       export CORE_MOUNTS=(
@@ -9947,13 +10131,14 @@ runTDHtools() {
       for n in $(echo ${CORE_MOUNTS[*]} | sed 's/\-. //g'); do
         [ $n == "/var/run/docker.sock" ] && continue
         localdir=$(echo $n | awk -F: '{ print $1 }')
-        [ ! -e $localdir ] && mkdir -p $localdir 
+        [ ! -e $localdir ] && mkdir -p $localdir && chmod 777 $localdir 
       done
 
-      [ "$TOOLS_TLAG" == "tce" ] && POSTSCRIPT="tdh-postinstall-user-tce.sh" || POSTSCRIPT="tdh-postinstall-user.sh" 
+
       docker run $ROOT_OPTIONS ${CORE_MOUNTS[*]} $TDH_TOOLS:latest chmod 666 /var/run/docker.sock > /dev/null 2>&1
       docker run $USER_OPTIONS ${CORE_MOUNTS[*]} $TDH_TOOLS:latest /usr/local/bin/$POSTSCRIPT > /dev/null 2>&1
-      docker run $USER_OPTIONS ${CORE_MOUNTS[*]} $TDH_TOOLS:latest $DOCKER_EXEC $DOCKER_ARGS; ret=$?
+      [ $ROOT_SHELL -eq 1 ] && SEXEC_OPTIONS=$ROOT_OPTIONS || SEXEC_OPTIONS=$USER_OPTIONS
+      docker run $SEXEC_OPTIONS ${CORE_MOUNTS[*]} $TDH_TOOLS:latest $DOCKER_EXEC $DOCKER_ARGS; ret=$?
   
       # --- FINISH CURRENT SESSION AS WE RUN AS CONTAINER ---
       exit $ret
