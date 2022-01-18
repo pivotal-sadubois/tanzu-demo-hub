@@ -5,6 +5,8 @@
 # Author .......: Sacha Dubois, VMware
 # Description ..: Tanzu Demo Hub - Cluster Installation
 # ############################################################################################
+
+ROOT_SHELL=0
   
 [ -f usr/local/bin/bat ] && alias cat='/usr/local/bin/bat -p'
 
@@ -10100,7 +10102,7 @@ echo "POSTSCRIPT:$POSTSCRIPT"
       env | grep TDH > /tmp/tdh.env
 
       export CORE_OPTIONS="-it --init --rm --hostname tdh-tools --name $TDH_TOOLS --network=host"
-      export USER_OPTIONS="$CORE_OPTIONS -w $HOME -u $(id -u):$(id -g) --env-file /tmp/tdh.env -e \"KUBECONFIG=$HOME/.kube/config\""
+      export USER_OPTIONS="$CORE_OPTIONS -u $(id -u):$(id -g) --env-file /tmp/tdh.env -e \"KUBECONFIG=$HOME/.kube/config\""
       export ROOT_OPTIONS="$CORE_OPTIONS --env-file /tmp/tdh.env -e \"KUBECONFIG=$HOME/.kube/config\""
 
       export CORE_MOUNTS=(
