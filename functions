@@ -5047,7 +5047,7 @@ installJenkins() {
 
   echo "   ------------------------------------------------------------------------------------------------------------------------------------------------------------------"
   echo "   Jenkins CLI:"
-  echo "   wget https://jenkins.$DOMAIN/jenkins/jnlpJars/jenkins-cli.jar -o /tmp/jenkins-cli.jar"
+  echo "   wget https://jenkins.$DOMAIN/jenkins/jnlpJars/jenkins-cli.jar -O /tmp/jenkins-cli.jar"
   echo "   java -jar /tmp/jenkins-cli.jar -s https://jenkins.$DOMAIN -auth admin:$jenkins_pass"
   echo "  ------------------------------------------------------------------------------------------------------------------------------------------------------------------"
 
@@ -7871,7 +7871,7 @@ tdh_tools_build() {
 
     if [ ! -s $TDH_DOCKER_CACHE/tmc-$TMC_CLI/$filename ]; then 
       messagePrint " ▪ Downloading TMC CLI BINARY"                                "$filename"
-      wget $download_url -o $TDH_DOCKER_CACHE/tmc-$TMC_CLI/$filename > /tmp/error.log 2>&1; ret=$?
+      wget $download_url -O $TDH_DOCKER_CACHE/tmc-$TMC_CLI/$filename > /tmp/error.log 2>&1; ret=$?
       [ -L $TDH_DOCKER_CACHE/tmc-$TMC_CLI/tmc-linux-$TMC_CLI ] && rm -f $TDH_DOCKER_CACHE/tmc-$TMC_CLI/tmc-linux-$TMC_CLI
 
       if [ ! -s $TDH_DOCKER_CACHE/tmc-$TMC_CLI/$filename ]; then
@@ -7879,10 +7879,10 @@ tdh_tools_build() {
         echo "ERROR: failed to download $file"
         if [ "$NATIVE" == "0" ]; then
           echo "       => tools/${TDH_TOOLS}.sh"
-          echo "          tdh-tools:/$ wget $download_url -o $TDH_DOCKER_CACHE/tmc-$TMC_CLI/$filename"
+          echo "          tdh-tools:/$ wget $download_url -O $TDH_DOCKER_CACHE/tmc-$TMC_CLI/$filename"
           echo "          tdh-tools:/$ exit"
         else
-          echo "       => wget $download_url -o $TDH_DOCKER_CACHE/tmc-$TMC_CLI/$filename"
+          echo "       => wget $download_url -O $TDH_DOCKER_CACHE/tmc-$TMC_CLI/$filename"
         fi
   
         exit 1
@@ -8097,7 +8097,7 @@ tdh_tools_build() {
     [ ! -s $TDH_DOCKER_CACHE/kind ] && mkdir -p $TDH_DOCKER_CACHE/kind
 
     wget https://kind.sigs.k8s.io/dl/v${TDH_KIND}/kind-linux-amd64 \
-         -o /tmp/kind-linux-amd64-$TDH_KIND > /tmp/error.log 2>&1
+         -O /tmp/kind-linux-amd64-$TDH_KIND > /tmp/error.log 2>&1
     if [ ! -f /tmp/kind-linux-amd64-${TDH_KIND} ]; then
       logMessages /tmp/error.log
       echo "ERROR: failed to download $file"
@@ -8126,28 +8126,33 @@ tdh_tools_build() {
     messagePrint " ▪ Downloading vSphere CLI (GOVC)"                                "govc-${TDH_GOVC}-linux-amd64"
     [ ! -s $TDH_DOCKER_CACHE/govc ] && mkdir -p $TDH_DOCKER_CACHE/govc
 
-    wget https://github.com/vmware/govmomi/releases/download/v${TDH_GOVC}/govc_linux_amd64.gz \
-         -o /tmp/govc-linux-amd64-$TDH_GOVC > /tmp/error.log 2>&1
-    if [ ! -f /tmp/govc-linux-amd64-${TDH_GOVC} ]; then
+    filename="govc_Linux_x86_64"
+
+    wget https://github.com/vmware/govmomi/releases/download/v${TDH_GOVC}/${filename}.tar.gz \
+         -O /tmp/${filename}.tar.gz > /tmp/error.log 2>&1
+    if [ ! -f /tmp/${filename}.tar.gz ]; then
       logMessages /tmp/error.log
-      echo "ERROR: failed to download $file"
+      echo "ERROR: failed to download ${filename}.tar.gz"
       if [ "$NATIVE" == "0" ]; then
         echo "       => tools/${TDH_TOOLS}.sh"
-        echo "          tdh-tools:/$ https://github.com/vmware/govmomi/releases/download/v${TDH_GOVC}/govc_linux_amd64.gz"
+        echo "          tdh-tools:/$ wget https://github.com/vmware/govmomi/releases/download/v${TDH_GOVC}/${filename}.tar.gz"
         echo "          tdh-tools:/$ exit"
       else
-        echo "       => wget https://github.com/vmware/govmomi/releases/download/v${TDH_GOVC}/govc_linux_amd64.gz"
+        echo "       => wget https://github.com/vmware/govmomi/releases/download/v${TDH_GOVC}/${filename}.tar.gz"
       fi
 
       exit 1
     else
-      mv /tmp/govc-linux-amd64-${TDH_GOVC} $TDH_DOCKER_CACHE/govc
+      (cd /tmp; tar zxf ${filename}.tar.gz)
+      mv /tmp/govc $TDH_DOCKER_CACHE/govc/${filename}-${TDH_GOVC}
+      ln -s ${filename}-${TDH_GOVC} $TDH_DOCKER_CACHE/govc/govc
+
     fi
 
     REBUILD_REQUIRED_SOFTWARE=1       ## REBUILD REQUIRED BECAUSE OF SOFTWARE CHANGE
   fi
 
-  cp $TDH_DOCKER_CACHE/govc/govc-linux-amd64-$TDH_GOVC $TDH_DOCKER_FILES/govc
+  cp $TDH_DOCKER_CACHE/govc/govc $TDH_DOCKER_FILES/govc
   chmod +x $TDH_DOCKER_FILES/govc
 
   if [ ! -s $TDH_DOCKER_FILES/ovftool ]; then
