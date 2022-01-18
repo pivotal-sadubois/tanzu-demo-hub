@@ -10080,9 +10080,6 @@ runTDHtools() {
 
   TDH_TOOLS_PATH=".${TDH_TOOLS}"
 
-echo "TDH_TOOLS:$TDH_TOOLS"
-echo "POSTSCRIPT:$POSTSCRIPT"
-
   if [ ! -f /tdh_tools_docker_container  ]; then
     tdhHeader "$HEADER_TEXT"
 
