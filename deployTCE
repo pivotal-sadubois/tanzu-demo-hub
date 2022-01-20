@@ -44,16 +44,10 @@ runTDHtools tce "Deploy TCE Workload Cluster" "$TDHPATH/$CMD_EXEC" "$CMD_ARGS"
 
 
 if [ -f $HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME} -o $HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.cfg ]; then 
-  if [ -f $HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME} ]; then 
-    . $HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME} 
-  else
-    . $HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.cfg
-  fi
+  [ -f $HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME} ] && TDH_TKGMC_NAME=$(echo "$TDH_TKGMC_NAME" | awk -F'.' '{ print $1 }')
 fi
 
-
-echo "hallo1 TDH_TKGMC_CONFIG:$TDH_TKGMC_CONFIG"
-echo "hallo1 TDH_TKGMC_NAME:$TDH_TKGMC_NAME"
+echo "TDH_TKGMC_NAME:$TDH_TKGMC_NAME"
 exit
 
 usage() {
@@ -150,7 +144,6 @@ if [ "${TKG_DEPLOYMENT}" == "" -o "${TDH_TKGMC_NAME}" == "" -o "${TDH_TKGWC_NAME
   fi
   usage; exit 0
 fi
-echo "hallo2 TDH_TKGMC_NAME:$TDH_TKGMC_NAME"
 
 # --- VERIFY DEPLOYMENT ---
 TKG_DEPLOYMENT_CONFIG=$(echo $TKG_DEPLOYMENT | sed 's/cfg/yaml/g')
@@ -160,7 +153,6 @@ if [ ! -f ${TDHPATH}/deployments/${TKG_DEPLOYMENT} ]; then
 else
   . ${TDHPATH}/deployments/${TKG_DEPLOYMENT}
 fi
-echo "hallo3 TDH_TKGMC_NAME:$TDH_TKGMC_NAME"
 
 if [ ! -f ${TDHPATH}/deployments/${TKG_DEPLOYMENT} ]; then
   echo "ERROR: The Deployment deployments/$TKG_DEPLOYMENT does not have a releated $TKG_DEPLOYMENT file"
@@ -177,6 +169,9 @@ echo "hallo4 TDH_TKGMC_NAME:$TDH_TKGMC_NAME"
 # --- SOURCE MANAGEMENT CLUSTER VARIABLES ---
 if [ -f $HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.cfg ]; then
   . $HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.cfg
+else
+  echo "ERROR: Configuration for Management Cluster $TDH_TKGMC_NAME could not be found"
+  exit 1
 fi
 
 if [ "$TDH_DEPLOYMENT_CLUSTER_PLAN" == "dev" ]; then
