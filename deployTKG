@@ -256,8 +256,8 @@ messagePrint " ▪ Workload Cluster Cloud Config"         "$HOME/.tanzu/tkg/clus
 messagePrint " ▪ Workload Cluster Configuration"        "deployments/$TKG_DEPLOYMENT"
 messagePrint " ▪ Workload Cluster consolidated Config"  "$HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml"
 
-[ "$TDH_DEPLOYMENT_CLUSTER_PLAN" == "dev" ] && DEP_SOURCE=$HOME/.tanzu/tkg/clusterconfigs/${TDH_TKGMC_NAME}-wc-dev.yaml
-[ "$TDH_DEPLOYMENT_CLUSTER_PLAN" == "prod" ] && DEP_SOURCE=$HOME/.tanzu/tkg/clusterconfigs/${TDH_TKGMC_NAME}-wc-prod.yaml
+[ "$TDH_DEPLOYMENT_CLUSTER_PLAN" == "dev" ] && DEP_SOURCE=$HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.yaml
+[ "$TDH_DEPLOYMENT_CLUSTER_PLAN" == "prod" ] && DEP_SOURCE=$HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.yaml
   
 # --- GENERATE WORKLOAD CLUSTER CONFIG FILE ---
 CLUSTER_CONFIG_FILE=$HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml
@@ -312,7 +312,6 @@ if [ $DEBUG -gt 0 ]; then
   cat $HOME/.tanzu/tkg/clusterconfigs/$TDH_TKGMC_CONFIG deployments/$TKG_DEPLOYMENT | egrep -v "^#" | sed -e '/^$/d'
 fi
 
-echo "tanzu cluster create $TDH_TKGWC_NAME -f $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml --tkr $TDH_TKGWC_K8S_VERSION"
 tanzu cluster get $TDH_TKGWC_NAME >/dev/null 2>&1; ret=$?
 if [ $ret -ne 0 ]; then  
   echo "-----------------------------------------------------------------------------------------------------------"

@@ -161,7 +161,6 @@ fi
 if [ -f ~/.tanzu-demo-hub.cfg ]; then
   . ~/.tanzu-demo-hub.cfg
 fi
-echo "hallo4 TDH_TKGMC_NAME:$TDH_TKGMC_NAME"
 
 # --- SOURCE MANAGEMENT CLUSTER VARIABLES ---
 if [ -f $HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.cfg ]; then
@@ -184,7 +183,6 @@ export TDH_TLS_CERT=tanzu-demo-hub
 export TDH_TLS_SECRET=${TDH_TLS_CERT}-tls
 export TDH_TLS_ISSUER_NAME=letsencrypt-staging
 export TDH_TLS_ISSUER_CONFIG=/tmp/issuer-dns-manager1.yaml
-echo "hallo5 TDH_TKGMC_NAME:$TDH_TKGMC_NAME"
 
 # --- VERYFY ACCESS TO CLOUD ---
 checkTDHenvironment
@@ -223,7 +221,6 @@ if [ "$TDH_TKGWC_K8S_VERSION" != "" ]; then
 else
   TDH_TKGWC_K8S_VERSION=$(tanzu kubernetes-release get | tail -1 | awk '{ print $1 }')
 fi
-echo "hallo6 TDH_TKGMC_NAME:$TDH_TKGMC_NAME"
 
 # --- GET TDH_TKGWC_CPIP_ADDRESS FROM NAME TAG ---
 if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "vSphere" ]; then
@@ -252,7 +249,6 @@ if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "vSphere" ]; then
   #TDH_TKGWC_CPIP_ADDRESS
   #TDH_TKGWC_NAME_TAG
 fi
-echo "hallo7 TDH_TKGMC_NAME:$TDH_TKGMC_NAME"
 
 messageTitle "Tanzu Kubernetes Grid Deployment"
 messagePrint " ▪ Management Cluster Name"               "$TDH_TKGMC_NAME"
@@ -263,21 +259,13 @@ messagePrint " ▪ Workload Cluster Cloud Config"         "$HOME/.tanzu/tkg/clus
 messagePrint " ▪ Workload Cluster Configuration"        "deployments/$TKG_DEPLOYMENT"
 messagePrint " ▪ Workload Cluster consolidated Config"  "$HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml"
 
-#gagagaga
-#[ "$TDH_DEPLOYMENT_CLUSTER_PLAN" == "dev" ] && DEP_SOURCE=$HOME/.tanzu/tkg/clusterconfigs/${TDH_TKGMC_NAME}-wc-dev.yaml
-#[ "$TDH_DEPLOYMENT_CLUSTER_PLAN" == "prod" ] && DEP_SOURCE=$HOME/.tanzu/tkg/clusterconfigs/${TDH_TKGMC_NAME}-wc-prod.yaml
 [ "$TDH_DEPLOYMENT_CLUSTER_PLAN" == "dev" ] && DEP_SOURCE=$HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.yaml
 [ "$TDH_DEPLOYMENT_CLUSTER_PLAN" == "prod" ] && DEP_SOURCE=$HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.yaml
-
-echo "xxxxxx1 DEP_SOURCE:$DEP_SOURCE"
-echo "xxxxxx1 TDH_TKGWC_NAME:$TDH_TKGWC_NAME"
   
 # --- GENERATE WORKLOAD CLUSTER CONFIG FILE ---
 CLUSTER_CONFIG_FILE=$HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml
 
-echo xxxxx1
 egrep -v "^#|ENDPOINT" $DEP_SOURCE | sed -e '/^$/d'                               >  $CLUSTER_CONFIG_FILE
-echo xxxxx2
 echo "CLUSTER_NAME: $TDH_TKGWC_NAME"                                              >> $CLUSTER_CONFIG_FILE
 echo "WORKER_MACHINE_COUNT: $TDH_TKGWC_WORKERNODES"                               >> $CLUSTER_CONFIG_FILE
 echo "CNI: antrea"                                                                >> $CLUSTER_CONFIG_FILE
@@ -327,7 +315,6 @@ if [ $DEBUG -gt 0 ]; then
   cat $HOME/.tanzu/tkg/clusterconfigs/$TDH_TKGMC_CONFIG deployments/$TKG_DEPLOYMENT | egrep -v "^#" | sed -e '/^$/d'
 fi
 
-echo "tanzu cluster create $TDH_TKGWC_NAME -f $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml --tkr $TDH_TKGWC_K8S_VERSION"
 tanzu cluster get $TDH_TKGWC_NAME >/dev/null 2>&1; ret=$?
 if [ $ret -ne 0 ]; then  
   echo "-----------------------------------------------------------------------------------------------------------"
