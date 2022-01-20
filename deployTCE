@@ -468,8 +468,10 @@ else
   echo "    => tanzu cluster delete $TDH_TKGWC_NAME"
 fi
 
+exit
+
 echo "-----------------------------------------------------------------------------------------------------------"
-echo "Tanzu Kubernetes Grid Cluster ($TDH_TKGWC_NAME) build completed"
+echo "1Tanzu Kubernetes Grid Cluster ($TDH_TKGWC_NAME) build completed"
 echo "-----------------------------------------------------------------------------------------------------------"
 echo "1.) Set KUBECONFIG and set the cluster context"
 echo "    => kubectl config set-cluster ${TDH_TKGWC_NAME}"
