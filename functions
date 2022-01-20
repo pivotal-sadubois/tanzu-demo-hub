@@ -7792,8 +7792,6 @@ tdh_tools_build() {
   #export VMWPASS="$TDH_MYVMWARE_PASS"
   #$VMWCLI ls vmware_tanzu_kubernetes_grid > /dev/null 2>&1
 
-echo gaga1
-
 #gaga100
   if [ "$TDH_SERVICE_TAP_VERSION" != "" ]; then 
     [ ! -d $TDH_DOCKER_CACHE/tap-$TDH_SERVICE_TAP_VERSION ] && mkdir -p $TDH_DOCKER_CACHE/tap-$TDH_SERVICE_TAP_VERSION
@@ -7827,13 +7825,11 @@ echo gaga1
       fi
     fi
 
-echo gaga2
     (cd $TDH_DOCKER_FILES && tar xf $TDH_DOCKER_CACHE/tap-$TDH_SERVICE_TAP_VERSION/${TAC_PRODUCT_FILE}.tar) 
     rm -rf $TDH_DOCKER_FILES/clitap
     mv $TDH_DOCKER_FILES/cli $TDH_DOCKER_FILES/clitap
     find $TDH_DOCKER_FILES/clitap -type d -exec chmod 777 {} \; 2> /dev/null
     chmod -R a+r $$TDH_DOCKER_FILES/clitap 2>/dev/null
-echo gaga3
 
     # --- DOWNLOAD TANZU FRAMEWORK ---
     TAC_PRODUCT_SLUG="tanzu-application-platform"
@@ -7864,13 +7860,10 @@ echo gaga3
       fi
     fi
 
-echo gaga4
-echo "(cd $TDH_DOCKER_FILES && tar xfz $TDH_DOCKER_CACHE/tap-$TDH_SERVICE_TAP_VERSION/${TAC_PRODUCT_FILE}.tgz)"
     (cd $TDH_DOCKER_FILES && tar xf $TDH_DOCKER_CACHE/tap-$TDH_SERVICE_TAP_VERSION/${TAC_PRODUCT_FILE}.tgz)
     find $TDH_DOCKER_FILES/blank -type d -exec chmod 777 {} \; 2>/dev/null
     chmod -R a+r $$TDH_DOCKER_FILES/blank 2>/dev/null
 
-echo gaga5
     # --- DOWNLOAD TANZU FRAMEWORK ---
     TAC_PRODUCT_SLUG="tanzu-application-platform"
     TAC_PRODUCT_FILE="tap-gui-yelb-catalog"
@@ -7904,7 +7897,6 @@ echo gaga5
     find $TDH_DOCKER_FILES/yelb-catalog -type d -exec chmod 777 {} \; 2>/dev/null
     chmod -R a+r $$TDH_DOCKER_FILES/yelb-catalog 2>/dev/null
   fi
-echo gaga10
 
   # --- TANZU MISSION CONTROL BINARY ---
   if [ ! -s $TDH_DOCKER_CACHE/tmc-$TMC_CLI/tmc-linux-$TMC_CLI ]; then 
@@ -9504,7 +9496,6 @@ TanzuPackage_CertManager() {
   pkg_nam=$(jq -r '.[]."package-name"' /tmp/pkg.json)
   pkg_ver=$(jq -r '.[]."package-version"' /tmp/pkg.json)
 
-echo "gaga pkg_stt:$pkg_stt"
   if [ "$pkg_stt" != "Reconcile succeeded" -a "$pkg_stt" != "Reconciling" ]; then
     echo "ERROR: failed to reconsile Tanzu Package ($PACKAGE_NAME)"
     messageLine
