@@ -10151,8 +10151,8 @@ runTDHtools() {
                "-v $HOME/.tanzu-demo-hub.cfg:$HOME/.tanzu-demo-hub.cfg:ro"
                "-v $HOME/$TDH_TOOLS_PATH/.cache:$HOME/.cache:rw"
                "-v $HOME/$TDH_TOOLS_PATH/.config:$HOME/.config:rw"                      ## CONFIG FOR HELM AND TANZU
-               "-v $HOME/$TDH_TOOLS_PATH/.kube:$HOME/.kube:rw"
-               "-v $HOME/$TDH_TOOLS_PATH/.kube-tkg:$HOME/.kube-tkg:rw"
+               "-v $HOME/$TDH_TOOLS_PATH/.kube:$HOME/.kube:rw"                          ## KUBERNETES CLUSTER CONTEXTS
+               "-v $HOME/$TDH_TOOLS_PATH/.kube-tkg:$HOME/.kube-tkg:rw"                  ## TANZU MANAGEMENT CLUSTER CONTEXTS
                "-v $HOME/$TDH_TOOLS_PATH/.local:$HOME/.local:rw"
                "-v $HOME/$TDH_TOOLS_PATH/.tanzu:$HOME/.tanzu:rw"
                "-v $HOME/$TDH_TOOLS_PATH/.terraform:$HOME/.terraform:rw"
