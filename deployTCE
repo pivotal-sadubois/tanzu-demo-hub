@@ -37,12 +37,24 @@ while [ "$1" != "" ]; do
   shift
 done
 
-echo "hallo1 TDH_TKGMC_NAME:$TDH_TKGMC_NAME"
-
 #############################################################################################################################
 ################################### EXECUTING CODE WITHIN  TDH-TOOLS DOCKER CONTAINER  ######################################
 #############################################################################################################################
 runTDHtools tce "Deploy TCE Workload Cluster" "$TDHPATH/$CMD_EXEC" "$CMD_ARGS"
+
+
+if [ -f $HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME} -o $HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.cfg ]; then 
+  if [ -f $HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME} ]; then 
+    . $HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME} 
+  else
+    . $HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.cfg
+  fi
+fi
+
+
+echo "hallo1 TDH_TKGMC_CONFIG:$TDH_TKGMC_CONFIG"
+echo "hallo1 TDH_TKGMC_NAME:$TDH_TKGMC_NAME"
+exit
 
 usage() {
   echo ""
