@@ -251,13 +251,19 @@ messagePrint " ▪ Workload Cluster Cloud Config"         "$HOME/.tanzu/tkg/clus
 messagePrint " ▪ Workload Cluster Configuration"        "deployments/$TKG_DEPLOYMENT"
 messagePrint " ▪ Workload Cluster consolidated Config"  "$HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml"
 
-[ "$TDH_DEPLOYMENT_CLUSTER_PLAN" == "dev" ] && DEP_SOURCE=$HOME/.tanzu/tkg/clusterconfigs/${TDH_TKGMC_NAME}-wc-dev.yaml
-[ "$TDH_DEPLOYMENT_CLUSTER_PLAN" == "prod" ] && DEP_SOURCE=$HOME/.tanzu/tkg/clusterconfigs/${TDH_TKGMC_NAME}-wc-prod.yaml
+#[ "$TDH_DEPLOYMENT_CLUSTER_PLAN" == "dev" ] && DEP_SOURCE=$HOME/.tanzu/tkg/clusterconfigs/${TDH_TKGMC_NAME}-wc-dev.yaml
+#[ "$TDH_DEPLOYMENT_CLUSTER_PLAN" == "prod" ] && DEP_SOURCE=$HOME/.tanzu/tkg/clusterconfigs/${TDH_TKGMC_NAME}-wc-prod.yaml
+[ "$TDH_DEPLOYMENT_CLUSTER_PLAN" == "dev" ] && DEP_SOURCE=$HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.yaml
+[ "$TDH_DEPLOYMENT_CLUSTER_PLAN" == "prod" ] && DEP_SOURCE=$HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.yaml
+
+echo "xxxxxx1 DEP_SOURCE:$DEP_SOURCE"
   
 # --- GENERATE WORKLOAD CLUSTER CONFIG FILE ---
 CLUSTER_CONFIG_FILE=$HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml
 
+echo xxxxx1
 egrep -v "^#|ENDPOINT" $DEP_SOURCE | sed -e '/^$/d'                               >  $CLUSTER_CONFIG_FILE
+echo xxxxx2
 echo "CLUSTER_NAME: $TDH_TKGWC_NAME"                                              >> $CLUSTER_CONFIG_FILE
 echo "WORKER_MACHINE_COUNT: $TDH_TKGWC_WORKERNODES"                               >> $CLUSTER_CONFIG_FILE
 echo "CNI: antrea"                                                                >> $CLUSTER_CONFIG_FILE
