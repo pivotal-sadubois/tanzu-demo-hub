@@ -7866,7 +7866,7 @@ echo gaga3
 
 echo gaga4
 echo "(cd $TDH_DOCKER_FILES && tar xfz $TDH_DOCKER_CACHE/tap-$TDH_SERVICE_TAP_VERSION/${TAC_PRODUCT_FILE}.tgz)"
-    (cd $TDH_DOCKER_FILES && tar xfz $TDH_DOCKER_CACHE/tap-$TDH_SERVICE_TAP_VERSION/${TAC_PRODUCT_FILE}.tgz)
+    (cd $TDH_DOCKER_FILES && tar xf $TDH_DOCKER_CACHE/tap-$TDH_SERVICE_TAP_VERSION/${TAC_PRODUCT_FILE}.tgz)
     find $TDH_DOCKER_FILES/blank -type d -exec chmod 777 {} \; 2>/dev/null
     chmod -R a+r $$TDH_DOCKER_FILES/blank 2>/dev/null
 
@@ -7900,10 +7900,11 @@ echo gaga5
       fi
     fi
 
-    (cd $TDH_DOCKER_FILES && tar xfz $TDH_DOCKER_CACHE/tap-$TDH_SERVICE_TAP_VERSION/${TAC_PRODUCT_FILE}.tgz)
+    (cd $TDH_DOCKER_FILES && tar xf $TDH_DOCKER_CACHE/tap-$TDH_SERVICE_TAP_VERSION/${TAC_PRODUCT_FILE}.tgz)
     find $TDH_DOCKER_FILES/yelb-catalog -type d -exec chmod 777 {} \; 2>/dev/null
     chmod -R a+r $$TDH_DOCKER_FILES/yelb-catalog 2>/dev/null
   fi
+echo gaga10
 
   # --- TANZU MISSION CONTROL BINARY ---
   if [ ! -s $TDH_DOCKER_CACHE/tmc-$TMC_CLI/tmc-linux-$TMC_CLI ]; then 
