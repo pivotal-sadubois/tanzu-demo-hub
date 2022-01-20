@@ -11,12 +11,41 @@ export TDHPATH=$(cd "$(pwd)/$(dirname $0)"; pwd)
 export DEBUG=0
 export NATIVE=0
 export TDH_TKGWC_K8S_VERSION=""
-export CMD_EXEC=$(basename $0)
-export CMD_ARGS=$*
 export TDH_TANZU_MISSION_CONTROL_REGISTRATION=true
 export TDH_TOOLS=tdh-tools
 
-. $TANZU_DEMO_HUB/functions
+# --- SETTING FOR TDH-TOOLS ---
+export NATIVE=0                ## NATIVE=1 r(un on local host), NATIVE=0 (run within docker)
+export START_COMMAND="$*"
+export CMD_EXEC=$(basename $0)
+export CMD_ARGS=$*
+
+# --- SOUTCE FOUNCTIONS AND USER ENVIRONMENT ---
+[ -f $TANZU_DEMO_HUB/functions ] && . $TANZU_DEMO_HUB/functions
+[ -f $HOME/.tanzu-demo-hub.cfg ] && . $HOME/.tanzu-demo-hub.cfg
+
+while [ "$1" != "" ]; do
+  case $1 in
+    -d)   TKG_DEPLOYMENT=$2;;
+    -m)   TDH_TKGMC_NAME=$2;;
+    -n)   TDH_TKGWC_NAME=$2;;
+    -k)   TDH_TKGWC_K8S_VERSION=$2;;
+    -tag) TDH_TKGWC_NAME_TAG=$2;;
+    --debug)       DEBUG=1;;
+    --native)      NATIVE=1;;
+  esac
+  shift
+done
+
+############################################################################################################################
+################################### EXECUTING CODE WITHIN  TDH-TOOLS DOCKER CONTAINER  ######################################
+#############################################################################################################################
+runTDHtools tce "Deploy TCE Workload Cluster" "$TDHPATH/$CMD_EXEC" "$CMD_ARGS"
+
+# --- FIX MANAGEMENT SERVER NAME INSTEAD OF ITS DEPLOYMENT FILE NAME ---
+if [ -f $HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME} -o $HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.cfg ]; then
+  [ -f $HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME} ] && TDH_TKGMC_NAME=$(echo "$TDH_TKGMC_NAME" | awk -F'.' '{ print $1 }')
+fi
 
 usage() {
   echo ""
@@ -102,57 +131,6 @@ listDeployments() {
   echo "-----------------------------------------------------------------------------------------------------------"
 }
 
-listDeployments_old() {
-  echo
-  printf "%-31s %-7s %-15s %-22s %-5s %s\n" "TKG-MANAGEMENT-CLUSTER" "CLOUD" "REGION" "STATUS"
-  echo "-----------------------------------------------------------------------------------------------------------"
-
-  cnt=$(ls -1 ${HOME}/.tanzu-demo-hub/config/tkgmc-*.cfg 2>/dev/null | wc -l | sed 's/  *//g')
-  if [ $cnt -eq 0 ]; then 
-    echo "No TKG Management Cluster has been deployed, Please use ./deployTKGmc"
-  else
-    for deployment in $(ls -1 ${HOME}/.tanzu-demo-hub/config/tkgmc-*.cfg 2>/dev/null); do
-      TDH_TKGMC_NAME=$(egrep "^TDH_TKGMC_NAME=" $deployment | awk -F'=' '{ print $2 }') 
-      TDH_TKGMC_CONFIG=$(egrep "^TDH_TKGMC_CONFIG=" $deployment | awk -F'=' '{ print $2 }') 
-      TDH_TKGMC_INFRASTRUCTURE=$(egrep "^TDH_TKGMC_INFRASTRUCTURE=" $deployment | awk -F'=' '{ print $2 }')
-      TDH_TKGMC_KUBECONFIG=$(egrep "^TDH_TKGMC_KUBECONFIG=" $deployment | awk -F'=' '{ print $2 }')
-
-      if [ "$TDH_TKGMC_INFRASTRUCTURE" == "Azure" ]; then
-        TDH_REGION=$(egrep "^AZURE_LOCATION:" ${HOME}/.tanzu-demo-hub/config/$TDH_TKGMC_CONFIG | awk '{ print $2 }')
-      fi
-
-      if [ "$TDH_TKGMC_INFRASTRUCTURE" == "AWS" ]; then 
-        TDH_REGION=$(egrep "^AWS_REGION:" ${HOME}/.tanzu-demo-hub/config/$TDH_TKGMC_CONFIG | awk '{ print $2 }')
-      fi
-
-      # --- VERIFY MANAGEMENT CLUSTER ---
-      kubectl get cluster --kubeconfig ${HOME}/.tanzu-demo-hub/config/${TDH_TKGMC_KUBECONFIG} > /dev/null 2>&1
-      if [ $? -ne 0 ]; then smc="unavailable"; else smc="active"; fi
-      
-      cnt=$(kubectl config get-clusters | egrep -c "^$TDH_TKGMC_NAME") 
-      if [ $cnt -eq 0 ]; then stt="not-deployed"; else stt="deployed/$smc"; fi
-  
-      printf "%-31s %-7s %-15s %-22s %-5s %s\n" $TDH_TKGMC_NAME $TDH_TKGMC_INFRASTRUCTURE $TDH_REGION "$stt"
-    done
-  fi
-
-  echo "-----------------------------------------------------------------------------------------------------------"
-}
-
-while [ "$1" != "" ]; do
-  case $1 in
-    -d)   TKG_DEPLOYMENT=$2;;
-    -m)   TDH_TKGMC_NAME=$2;;
-    -n)   TDH_TKGWC_NAME=$2;;
-    -k)   TDH_TKGWC_K8S_VERSION=$2;;
-    -tag) TDH_TKGWC_NAME_TAG=$2;;
-    --debug)       DEBUG=1;;
-    --native)      NATIVE=1;;
-  esac
-  shift
-done
-
-
 if [ "${TKG_DEPLOYMENT}" == "" -o "${TDH_TKGMC_NAME}" == "" -o "${TDH_TKGWC_NAME}" == "" ]; then
   if [ "${TKG_DEPLOYMENT}" == "" ]; then 
     listDeployments
@@ -203,68 +181,16 @@ export TDH_TLS_SECRET=${TDH_TLS_CERT}-tls
 export TDH_TLS_ISSUER_NAME=letsencrypt-staging
 export TDH_TLS_ISSUER_CONFIG=/tmp/issuer-dns-manager1.yaml
 
-if [ ! -f /tdh_tools_docker_container  ]; then
-  echo ""
-  echo "Tanzu Demo Hub - Deploy TKG Workload Cluster"
-  echo "by Sacha Dubois, VMware Inc,"
-  echo "-----------------------------------------------------------------------------------------------------------"
+# --- VERYFY ACCESS TO CLOUD ---
+checkTDHenvironment
 
-  # --- VERIFY TOOLS AND ACCESS ---
-  checkCLIcommands BASIC
-
-  if [ $NATIVE -eq 0 ]; then
-    tdh_tools_build
-
-    messagePrint " ▪ Running TDH Tools Docker Container" "tdh-tools:latest $TDHPATH/$CMD_EXEC $CMD_ARGS"
-
-    cid=$(docker ps -a | grep tdh-tools:latest | awk '{ print $1 }')
-    [ "$cid" != "" ] && for n in $cid; do docker rm $n -f > /dev/null 2>&1; done
-
-    # --- DUMP ENVIRONMENT VARIABLES ---
-    env | grep TDH > /tmp/tdh.env
-
-    [ ! -d $HOME/.tanzu ] && mkdir -p $HOME/.tanzu
-
-    mkdir -p $HOME/.mc $HOME/.cache $HOME/.config $HOME/.local
-    mkdir -p /tmp/docker && chmod a+w /tmp/docker
-    docker run -it --rm --name tdh-tools -v /var/run/docker.sock:/var/run/docker.sock tdh-tools:latest  chmod 666 /var/run/docker.sock > /dev/null 2>&1
-    docker run -u $(id -u):$(id -g) -it --rm --name tdh-tools --env-file /tmp/tdh.env \
-       -v $HOME:$HOME:ro -v $HOME/.tanzu-demo-hub:$HOME/.tanzu-demo-hub:rw \
-       -v $HOME/.config:$HOME/.config:rw -v $HOME/.config_tools/tanzu:$HOME/.config/tanzu:rw\
-       -v $HOME/.tanzu_tools:$HOME/.tanzu:rw -v $HOME/.cache_tools:$HOME/.cache:rw \
-       -v /var/run/docker.sock:/var/run/docker.sock \
-       -v $HOME/.vmware-cna-saas:$HOME/.vmware-cna-saas:rw -v $HOME/.azure:$HOME/.azure:rw \
-       -v /tmp:/tmp:rw -v /tmp/docker:$HOME/.docker:rw -v $HOME/.mc:$HOME/.mc:rw \
-       -v $HOME/.kube-tkg:$HOME/.kube-tkg:rw -v $HOME/.kube:$HOME/.kube:rw -v $HOME/.govmomi:$HOME/.govmomi:rw \
-       -v $HOME/.ssh:$HOME/.ssh:rw -v $HOME/.terraform:$HOME/.terraform:rw -v $HOME/.gradle:$HOME/.gradle:rw \
-       -v $HOME/.s3cfg:$HOME/.s3cfg:rw -v $HOME/.local_tools:$HOME/.local:rw \
-       -e "KUBECONFIG=$HOME/.kube/config" --hostname tdh-tools tdh-tools:latest $TDHPATH/$CMD_EXEC $CMD_ARGS; ret=$?
-
-
-    #docker run -u $(id -u):$(id -g) --group-add 0 -it --rm --name tdh-tools \
-    #   -e "KUBECONFIG=$HOME/.kube/config" --hostname tdh-tools tdh-tools:latest $TDHPATH/$CMD_EXEC $CMD_ARGS
-    #docker run -u $(id -u):$(id -g) -it --rm --name tdh-tools \
-    #   -v $HOME:$HOME:ro -v $HOME/.local:$HOME/.local:rw -v $HOME/.tanzu-demo-hub:$HOME/.tanzu-demo-hub:rw \
-    #   -v /var/run/docker.sock:/var/run/docker.sock -v $HOME/.cache:$HOME/.cache:rw -v $HOME/.config:$HOME/.config:rw \
-    #   -v $HOME/.aws:$HOME/.aws:rw -v $HOME/.vmware-cna-saas:$HOME/.vmware-cna-saas:rw -v $HOME/.azure:$HOME/.azure:rw \
-    #   -v /tmp:/tmp:rw -v /tmp/docker:$HOME/.docker:rw -v $HOME/.mc:$HOME/.mc:rw -v $HOME/.tanzu:$HOME/.tanzu:rw \
-    #   -v $HOME/.kube-tkg:$HOME/.kube-tkg:rw -v $HOME/.kube:$HOME/.kube:rw \
-    #   -e "KUBECONFIG=$HOME/.kube/config" --hostname tdh-tools tdh-tools:latest $TDHPATH/$CMD_EXEC $CMD_ARGS; ret=$?
-
-    # --- FINISH CURRENT SESSION AS WE RUN AS CONTAINER ---
-    exit $ret
-  else
-    # --- VERYFY ACCESS TO CLOUD ---
-    checkTDHenvironment
-
-    # --- VERIFY TOOLS AND ACCESS ---
-    checkCloudCLI
-    checkCLIcommands TOOLS
-    checkCLIcommands TKG
-    checkCLIcommands TANZU
-    checkCLIcommands TMC
-  fi
-fi
+# --- VERIFY TOOLS AND ACCESS ---
+checkTanzuCLI
+checkCloudCLI
+checkCLIcommands TOOLS
+checkCLIcommands TKG
+checkCLIcommands TANZU
+checkCLIcommands TMC
 
 if [ "$TDH_TKGWC_K8S_VERSION" != "" ]; then 
   tanzu kubernetes-release get 2323 | sed '1d'
@@ -485,6 +411,42 @@ if [ "${TDH_TKGMC_INFRASTRUCTURE}" != "vSphere1" ]; then
   checkTMCintegration      TCI   ## Tanzu Cluster Inspection
 fi
 
+echo "-----------------------------------------------------------------------------------------------------------"
+echo "Tanzu Kubernetes Grid Cluster ($TDH_TKGWC_NAME) build completed"
+echo "-----------------------------------------------------------------------------------------------------------"
+if [ "$NATIVE" == "0" ]; then
+  printf "\e[1m1.) Set KUBECONFIG and set the cluster context\e[0m\n"
+  echo "    => tools/tdh-tools.sh"
+  echo "       tdh-tools:/$ kubectl config set-cluster ${TDH_TKGWC_NAME}"
+  echo "       tdh-tools:/$ kubectl config use-context ${TDH_TKGWC_CONTEXT}"
+  printf "\e[1m2.) Relaxing Pod Security in cluster ($TDH_TKGWC_NAME)\e[0m\n"
+  echo "    # Allow Privileged Pods for the Cluster"
+  echo "    => tools/tdh-tools.sh"
+  echo "       tdh-tools:/$ kubectl create clusterrolebinding tanzu-demo-hub-privileged-cluster-role-binding \\"
+  echo "                      --clusterrole=vmware-system-tmc-psp-privileged --group=system:authenticated"
+  echo "    # Allow Privileged Pods for a Namespace (my-namespace)"
+  echo "    => tdh-tools:/$ kubectl create rolebinding tanzu-demo-hub-privileged-my-namespace-role-binding \\"
+  echo "                      --clusterrole=vmware-system-tmc-psp-privileged --group=system:authenticated -n my-namespace"
+  printf "\e[1m2.) Delete Cluster if not used anymore\e[0m\n"
+  echo "    => tools/tdh-tools.sh"
+  echo "       tdh-tools:/$ tanzu cluster delete $TDH_TKGWC_NAME"
+else
+  echo "1.) Set KUBECONFIG and set the cluster context"
+  echo "    => kubectl config set-cluster ${TDH_TKGWC_NAME}"
+  echo "    => kubectl config use-context ${TDH_TKGWC_CONTEXT}"
+  echo "    => kubectl config get-contexts"
+  echo "2.) Relaxing Pod Security in cluster ($TDH_TKGWC_NAME)"
+  echo "    # Allow Privileged Pods for the Cluster"
+  echo "    => kubectl create clusterrolebinding tanzu-demo-hub-privileged-cluster-role-binding \\"
+  echo "        --clusterrole=vmware-system-tmc-psp-privileged --group=system:authenticated"
+  echo "    # Allow Privileged Pods for a Namespace (my-namespace)"
+  echo "    => kubectl create rolebinding tanzu-demo-hub-privileged-my-namespace-role-binding \\"
+  echo "        --clusterrole=vmware-system-tmc-psp-privileged --group=system:authenticated -n my-namespace"
+  echo "3.) Delete Cluster if not used anymore"
+  echo "    => tanzu cluster delete $TDH_TKGWC_NAME"
+fi
+
+exit
 
 echo "-----------------------------------------------------------------------------------------------------------"
 echo "Tanzu Kubernetes Grid Cluster ($TDH_TKGWC_NAME) build completed"

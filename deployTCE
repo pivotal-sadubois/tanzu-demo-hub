@@ -42,13 +42,10 @@ done
 #############################################################################################################################
 runTDHtools tce "Deploy TCE Workload Cluster" "$TDHPATH/$CMD_EXEC" "$CMD_ARGS"
 
-
+# --- FIX MANAGEMENT SERVER NAME INSTEAD OF ITS DEPLOYMENT FILE NAME ---
 if [ -f $HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME} -o $HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.cfg ]; then 
   [ -f $HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME} ] && TDH_TKGMC_NAME=$(echo "$TDH_TKGMC_NAME" | awk -F'.' '{ print $1 }')
 fi
-
-echo "TDH_TKGMC_NAME:$TDH_TKGMC_NAME"
-exit
 
 usage() {
   echo ""
@@ -470,8 +467,6 @@ else
   echo "3.) Delete Cluster if not used anymore"
   echo "    => tanzu cluster delete $TDH_TKGWC_NAME"
 fi
-
-exit
 
 echo "-----------------------------------------------------------------------------------------------------------"
 echo "Tanzu Kubernetes Grid Cluster ($TDH_TKGWC_NAME) build completed"
