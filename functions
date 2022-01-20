@@ -7833,6 +7833,7 @@ echo gaga2
     mv $TDH_DOCKER_FILES/cli $TDH_DOCKER_FILES/clitap
     find $TDH_DOCKER_FILES/clitap -type d -exec chmod 777 {} \; 2> /dev/null
     chmod -R a+r $$TDH_DOCKER_FILES/clitap 2>/dev/null
+echo gaga3
 
     # --- DOWNLOAD TANZU FRAMEWORK ---
     TAC_PRODUCT_SLUG="tanzu-application-platform"
@@ -7863,11 +7864,13 @@ echo gaga2
       fi
     fi
 
+echo gaga4
+echo "(cd $TDH_DOCKER_FILES && tar xfz $TDH_DOCKER_CACHE/tac-$TDH_SERVICE_TAP_VERSION/${TAC_PRODUCT_FILE}.tgz)"
     (cd $TDH_DOCKER_FILES && tar xfz $TDH_DOCKER_CACHE/tac-$TDH_SERVICE_TAP_VERSION/${TAC_PRODUCT_FILE}.tgz)
     find $TDH_DOCKER_FILES/blank -type d -exec chmod 777 {} \; 2>/dev/null
     chmod -R a+r $$TDH_DOCKER_FILES/blank 2>/dev/null
 
-echo gaga3
+echo gaga5
     # --- DOWNLOAD TANZU FRAMEWORK ---
     TAC_PRODUCT_SLUG="tanzu-application-platform"
     TAC_PRODUCT_FILE="tap-gui-yelb-catalog"
