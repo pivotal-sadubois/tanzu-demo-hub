@@ -7796,14 +7796,14 @@ echo gaga1
 
 #gaga100
   if [ "$TDH_SERVICE_TAP_VERSION" != "" ]; then 
-    [ ! -d $TDH_DOCKER_CACHE/tap-$TDH_SERVICE_TAP_VERSION ] && mkdir -p $TDH_DOCKER_CACHE/tac-$TDH_SERVICE_TAP_VERSION
+    [ ! -d $TDH_DOCKER_CACHE/tap-$TDH_SERVICE_TAP_VERSION ] && mkdir -p $TDH_DOCKER_CACHE/tap-$TDH_SERVICE_TAP_VERSION
 
     # --- DOWNLOAD TANZU FRAMEWORK ---
     TAC_PRODUCT_SLUG="tanzu-application-platform"
     TAC_PRODUCT_FILE="tanzu-framework-linux-amd64"
     TAC_PRODUCT_VERS="$TDH_TAP_TANZU_FRAMEWORK"
     TAC_PRODUCT_PNID="$TDH_TAP_TANZU_FRAMEWORK_PIVNET_ID"
-    if [ ! -e $TDH_DOCKER_CACHE/tac-$TDH_SERVICE_TAP_VERSION/${TAC_PRODUCT_FILE}-${TAC_PRODUCT_VERS}.tar ]; then
+    if [ ! -e $TDH_DOCKER_CACHE/tap-$TDH_SERVICE_TAP_VERSION/${TAC_PRODUCT_FILE}-${TAC_PRODUCT_VERS}.tar ]; then
       pid=$(pivnetAPI $PCF_PIVNET_TOKEN GET products/$TAC_PRODUCT_SLUG/releases 2> /dev/null | \
                jq -r --arg key "$TDH_SERVICE_TAP_VERSION" '.releases[] | select(.version == $key).id')
 
@@ -7821,14 +7821,14 @@ echo gaga1
 
         exit 1
       else
-        mv /tmp/${TAC_PRODUCT_FILE}.tar $TDH_DOCKER_CACHE/tac-$TDH_SERVICE_TAP_VERSION/${TAC_PRODUCT_FILE}-${TAC_PRODUCT_VERS}.tar
-        rm -f $TDH_DOCKER_CACHE/tac-$TDH_SERVICE_TAP_VERSION/${TAC_PRODUCT_FILE}.tar
-        ln -s ${TAC_PRODUCT_FILE}-${TAC_PRODUCT_VERS}.tar $TDH_DOCKER_CACHE/tac-$TDH_SERVICE_TAP_VERSION/${TAC_PRODUCT_FILE}.tar
+        mv /tmp/${TAC_PRODUCT_FILE}.tar $TDH_DOCKER_CACHE/tap-$TDH_SERVICE_TAP_VERSION/${TAC_PRODUCT_FILE}-${TAC_PRODUCT_VERS}.tar
+        rm -f $TDH_DOCKER_CACHE/tap-$TDH_SERVICE_TAP_VERSION/${TAC_PRODUCT_FILE}.tar
+        ln -s ${TAC_PRODUCT_FILE}-${TAC_PRODUCT_VERS}.tar $TDH_DOCKER_CACHE/tap-$TDH_SERVICE_TAP_VERSION/${TAC_PRODUCT_FILE}.tar
       fi
     fi
 
 echo gaga2
-    (cd $TDH_DOCKER_FILES && tar xf $TDH_DOCKER_CACHE/tac-$TDH_SERVICE_TAP_VERSION/${TAC_PRODUCT_FILE}.tar) 
+    (cd $TDH_DOCKER_FILES && tar xf $TDH_DOCKER_CACHE/tap-$TDH_SERVICE_TAP_VERSION/${TAC_PRODUCT_FILE}.tar) 
     rm -rf $TDH_DOCKER_FILES/clitap
     mv $TDH_DOCKER_FILES/cli $TDH_DOCKER_FILES/clitap
     find $TDH_DOCKER_FILES/clitap -type d -exec chmod 777 {} \; 2> /dev/null
@@ -7840,7 +7840,7 @@ echo gaga3
     TAC_PRODUCT_FILE="tap-gui-blank-catalog"
     TAC_PRODUCT_VERS="$TDH_TAP_GUI_BLANK_CATALOG"
     TAC_PRODUCT_PNID="$TDH_TAP_GUI_BLANK_CATALOG_PIVNET_ID"
-    if [ ! -e $TDH_DOCKER_CACHE/tac-$TDH_SERVICE_TAP_VERSION/${TAC_PRODUCT_FILE}-${TAC_PRODUCT_VERS}.tgz ]; then
+    if [ ! -e $TDH_DOCKER_CACHE/tap-$TDH_SERVICE_TAP_VERSION/${TAC_PRODUCT_FILE}-${TAC_PRODUCT_VERS}.tgz ]; then
       pid=$(pivnetAPI $PCF_PIVNET_TOKEN GET products/$TAC_PRODUCT_SLUG/releases 2> /dev/null | \
                jq -r --arg key "$TDH_SERVICE_TAP_VERSION" '.releases[] | select(.version == $key).id')
 
@@ -7858,15 +7858,15 @@ echo gaga3
 
         exit 1
       else
-        mv /tmp/${TAC_PRODUCT_FILE}.tgz $TDH_DOCKER_CACHE/tac-$TDH_SERVICE_TAP_VERSION/${TAC_PRODUCT_FILE}-${TAC_PRODUCT_VERS}.tgz
-        rm -f $TDH_DOCKER_CACHE/tac-$TDH_SERVICE_TAP_VERSION/${TAC_PRODUCT_FILE}.tgz
-        ln -s ${TAC_PRODUCT_FILE}-${TAC_PRODUCT_VERS}.tgz $TDH_DOCKER_CACHE/tac-$TDH_SERVICE_TAP_VERSION/${TAC_PRODUCT_FILE}.tgz
+        mv /tmp/${TAC_PRODUCT_FILE}.tgz $TDH_DOCKER_CACHE/tap-$TDH_SERVICE_TAP_VERSION/${TAC_PRODUCT_FILE}-${TAC_PRODUCT_VERS}.tgz
+        rm -f $TDH_DOCKER_CACHE/tap-$TDH_SERVICE_TAP_VERSION/${TAC_PRODUCT_FILE}.tgz
+        ln -s ${TAC_PRODUCT_FILE}-${TAC_PRODUCT_VERS}.tgz $TDH_DOCKER_CACHE/tap-$TDH_SERVICE_TAP_VERSION/${TAC_PRODUCT_FILE}.tgz
       fi
     fi
 
 echo gaga4
-echo "(cd $TDH_DOCKER_FILES && tar xfz $TDH_DOCKER_CACHE/tac-$TDH_SERVICE_TAP_VERSION/${TAC_PRODUCT_FILE}.tgz)"
-    (cd $TDH_DOCKER_FILES && tar xfz $TDH_DOCKER_CACHE/tac-$TDH_SERVICE_TAP_VERSION/${TAC_PRODUCT_FILE}.tgz)
+echo "(cd $TDH_DOCKER_FILES && tar xfz $TDH_DOCKER_CACHE/tap-$TDH_SERVICE_TAP_VERSION/${TAC_PRODUCT_FILE}.tgz)"
+    (cd $TDH_DOCKER_FILES && tar xfz $TDH_DOCKER_CACHE/tap-$TDH_SERVICE_TAP_VERSION/${TAC_PRODUCT_FILE}.tgz)
     find $TDH_DOCKER_FILES/blank -type d -exec chmod 777 {} \; 2>/dev/null
     chmod -R a+r $$TDH_DOCKER_FILES/blank 2>/dev/null
 
@@ -7876,7 +7876,7 @@ echo gaga5
     TAC_PRODUCT_FILE="tap-gui-yelb-catalog"
     TAC_PRODUCT_VERS="$TDH_TAP_GUI_YELB_CATALOG"
     TAC_PRODUCT_PNID="$TDH_TAP_GUI_YELB_CATALOG_PIVNET_ID"
-    if [ ! -e $TDH_DOCKER_CACHE/tac-$TDH_SERVICE_TAP_VERSION/${TAC_PRODUCT_FILE}-${TAC_PRODUCT_VERS}.tgz ]; then
+    if [ ! -e $TDH_DOCKER_CACHE/tap-$TDH_SERVICE_TAP_VERSION/${TAC_PRODUCT_FILE}-${TAC_PRODUCT_VERS}.tgz ]; then
       pid=$(pivnetAPI $PCF_PIVNET_TOKEN GET products/$TAC_PRODUCT_SLUG/releases 2> /dev/null | \
                jq -r --arg key "$TDH_SERVICE_TAP_VERSION" '.releases[] | select(.version == $key).id')
 
@@ -7894,13 +7894,13 @@ echo gaga5
 
         exit 1
       else
-        mv /tmp/${TAC_PRODUCT_FILE}.tgz $TDH_DOCKER_CACHE/tac-$TDH_SERVICE_TAP_VERSION/${TAC_PRODUCT_FILE}-${TAC_PRODUCT_VERS}.tgz
-        rm -f $TDH_DOCKER_CACHE/tac-$TDH_SERVICE_TAP_VERSION/${TAC_PRODUCT_FILE}.tgz
-        ln -s ${TAC_PRODUCT_FILE}-${TAC_PRODUCT_VERS}.tgz $TDH_DOCKER_CACHE/tac-$TDH_SERVICE_TAP_VERSION/${TAC_PRODUCT_FILE}.tgz
+        mv /tmp/${TAC_PRODUCT_FILE}.tgz $TDH_DOCKER_CACHE/tap-$TDH_SERVICE_TAP_VERSION/${TAC_PRODUCT_FILE}-${TAC_PRODUCT_VERS}.tgz
+        rm -f $TDH_DOCKER_CACHE/tap-$TDH_SERVICE_TAP_VERSION/${TAC_PRODUCT_FILE}.tgz
+        ln -s ${TAC_PRODUCT_FILE}-${TAC_PRODUCT_VERS}.tgz $TDH_DOCKER_CACHE/tap-$TDH_SERVICE_TAP_VERSION/${TAC_PRODUCT_FILE}.tgz
       fi
     fi
 
-    (cd $TDH_DOCKER_FILES && tar xfz $TDH_DOCKER_CACHE/tac-$TDH_SERVICE_TAP_VERSION/${TAC_PRODUCT_FILE}.tgz)
+    (cd $TDH_DOCKER_FILES && tar xfz $TDH_DOCKER_CACHE/tap-$TDH_SERVICE_TAP_VERSION/${TAC_PRODUCT_FILE}.tgz)
     find $TDH_DOCKER_FILES/yelb-catalog -type d -exec chmod 777 {} \; 2>/dev/null
     chmod -R a+r $$TDH_DOCKER_FILES/yelb-catalog 2>/dev/null
   fi
