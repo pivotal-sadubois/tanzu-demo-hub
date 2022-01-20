@@ -4050,6 +4050,7 @@ checkCLIcommands() {
     fi
   fi
 
+echo gaga1
   if [ "$cat" == "VSPHERE" ]; then
     CLI_COMMANDS="/usr/local/bin/govc:brew:govc /usr/local/bin/packer:brew:packer"
 
@@ -4073,6 +4074,7 @@ checkCLIcommands() {
       fi
     done
   fi
+echo gaga2
 
   if [ "$cat" == "TANZU_DATA" ]; then
     [ "$(uname)" == "Linux" ] && CLI_COMMANDS="/usr/local/bin/mc:apt:minio/stable/mc /usr/local/bin/psql:apt:libpq /usr/local/bin/s3cmd:brew:s3cmd"
@@ -4379,6 +4381,9 @@ tmcCreateCluster() {
       [ "$TMC_KUBERNETES_VERSION" != "" ] && KUBERNETES_VERSION=$TMC_KUBERNETES_VERSION
       [ "$TDH_TKGWC_CONTROPLANE" == "3" ] && TMC_TKGWC_TEMPLATE="aws-ha" || TMC_TKGWC_TEMPLATE="default"
 
+      # --- SEARCH KUBERNETES VERSIONS ---
+      KUBERNETES_VERSION=$(tmcGetKubernetesImage $TDH_TKGWC_KUBERNETES) 
+
       messageTitle "TMC Create Workload Cluster"     
       messagePrint " ▪ TMC Cluster Name"                 "$TDH_CLUSTER_NAME"
       messagePrint " ▪ TMC Cluster Group"                "$TDH_CLUSTER_GROUP"
@@ -4599,7 +4604,43 @@ installTAP() {
     return
   fi
 
-  if [ 1 -eq 1 ]; then 
+  NAMESPACE=tap-install
+  export INSTALL_REGISTRY_USERNAME=$TDH_REGISTRY_VMWARE_USER
+  export INSTALL_REGISTRY_PASSWORD=$TDH_REGISTRY_VMWARE_PASS
+  export INSTALL_REGISTRY_HOSTNAME=registry.tanzu.vmware.com
+
+  kubectl create ns $NAMESPACE > /dev/null 2>&1
+    cnt=$(kubectl get secrets -n $NAMESPACE | egrep -c "^tap-registry") 
+
+  # --- CREATE A REGISTRY SECRET ---
+  tanzu secret registry add tap-registry \
+  --username ${INSTALL_REGISTRY_USERNAME} --password ${INSTALL_REGISTRY_PASSWORD} \
+  --server ${INSTALL_REGISTRY_HOSTNAME} \
+  --export-to-all-namespaces --yes --namespace $NAMESPACE > /tmp/error.log 2>&1; ret=$? 
+
+      if [ $ret -ne 0 ]; then
+        logMessages /tmp/error.log
+        echo "ERROR: failed to create registry secret"
+        if [ "$NATIVE" == "0" ]; then
+          echo "       => tools/${TDH_TOOLS}.sh"
+          echo "          tdh-tools:/$ tanzu secret registry add tap-registry \\"
+          echo "                          --username ${INSTALL_REGISTRY_USERNAME} --password ${INSTALL_REGISTRY_PASSWORD} \\"
+          echo "                          --server ${INSTALL_REGISTRY_HOSTNAME} \\"
+          echo "                          --export-to-all-namespaces --yes --namespace $NAMESPACE"
+          echo "          tdh-tools:/$ exit"
+        else
+          echo "       => tanzu secret registry add tap-registry \\"
+          echo "                --username ${INSTALL_REGISTRY_USERNAME} --password ${INSTALL_REGISTRY_PASSWORD} \\"
+          echo "                --server ${INSTALL_REGISTRY_HOSTNAME} \\"
+          echo "                --export-to-all-namespaces --yes --namespace $NAMESPACE"
+        fi
+
+        exit 1
+      fi
+
+exit
+
+  if [ 2 -eq 1 ]; then 
 
     # --- TANZU BUILD SERVICE CLI (kp) BINARY ---
     TDH_BNDL_NAM="tanzu-application-platform"
@@ -7729,6 +7770,8 @@ tdh_tools_build() {
   messagePrint " ▪ Hashicorp Terraform"                                        "$TDH_TERRAFORM"
   messagePrint " ▪ Local Kubernetes clusters (Kind)"                           "$TDH_KIND"
   messagePrint " ▪ vSphere CLI (GOVC)"                                         "$TDH_GOVC"
+  messagePrint " ▪ Microsft Azure CLI (az)"                                    "latest"
+  messagePrint " ▪ Amazon AWS CLI (aws)"                                       "latest"
   messageTitle "TDH Tools Docker Container ($TDH_TOOLS_IMAGE)"
 
   #################################################################################
@@ -8122,11 +8165,10 @@ tdh_tools_build() {
   fi
 
   # --- GOVC BINARY ---
-  if [ ! -s $TDH_DOCKER_CACHE/govc/govc-linux-amd64-$TDH_GOVC ]; then
+  filename="govc_Linux_x86_64"
+  if [ ! -s $TDH_DOCKER_CACHE/govc/${filename}-$TDH_GOVC ]; then
     messagePrint " ▪ Downloading vSphere CLI (GOVC)"                                "govc-${TDH_GOVC}-linux-amd64"
     [ ! -s $TDH_DOCKER_CACHE/govc ] && mkdir -p $TDH_DOCKER_CACHE/govc
-
-    filename="govc_Linux_x86_64"
 
     wget https://github.com/vmware/govmomi/releases/download/v${TDH_GOVC}/${filename}.tar.gz \
          -O /tmp/${filename}.tar.gz > /tmp/error.log 2>&1
@@ -8145,8 +8187,8 @@ tdh_tools_build() {
     else
       (cd /tmp; tar zxf ${filename}.tar.gz)
       mv /tmp/govc $TDH_DOCKER_CACHE/govc/${filename}-${TDH_GOVC}
+      [ -L $TDH_DOCKER_CACHE/govc/govc ] && rm -f $TDH_DOCKER_CACHE/govc/govc
       ln -s ${filename}-${TDH_GOVC} $TDH_DOCKER_CACHE/govc/govc
-
     fi
 
     REBUILD_REQUIRED_SOFTWARE=1       ## REBUILD REQUIRED BECAUSE OF SOFTWARE CHANGE
@@ -10125,6 +10167,7 @@ runTDHtools() {
                "-v $HOME/$TDH_TOOLS_PATH/.docker:$HOME/.docker:rw"                      ## DOCKER LOGIN CREDENTIALS
                "-v $HOME/$TDH_TOOLS_PATH/.mvn:$HOME/.mvn:rw"
                "-v $HOME/$TDH_TOOLS_PATH/.aws:$HOME/.aws:rw"                            ## PERSISTANT AWS CREDENTIALS
+               "-v $HOME/$TDH_TOOLS_PATH/.azure:$HOME/.azure:rw"                        ## PERSISTANT MICROSOFT AZURE CREDENTIALS
                "-v $HOME/$TDH_TOOLS_PATH/.vmware-cna-saas:$HOME/.vmware-cna-saas:rw"    ## TANZU MISSION CONTROL (TMC) LOGIN CREDENTIALS
                "-v $HOME/$TDH_TOOLS_PATH/tmp:/tmp:rw"                                   ## KEEP TEMP PERSISTENT
                "-v $TDHPATH/:$TDHPATH:ro"                                               ## TANZU-DEMO-HUB DIRECTORY
@@ -10217,3 +10260,20 @@ xxx() {
       exit 1
     fi
 }
+
+# ------------------------------------------------------------------------------------------
+# Function Name ......: tmcGetKubernetesImage
+# Function Purpose ...: Get the Kubernetes Version
+# ------------------------------------------------------------------------------------------
+# Argument ($1) ......: Kubernetes search string 1.20 or 1.20.2
+# ------------------------------------------------------------------------------------------
+# Return Value .......: Kubernetes Image ie. 1.18.10-1-amazon2 
+# ------------------------------------------------------------------------------------------
+tmcGetKubernetesImage() {
+  VERSION=$1
+
+  echo $TMC_K8S_VERSIONS | awk 'BEGIN{a=""}{ for(i=1; i<=NF; i++) { printf("%s\n",$i) } }' | \
+  egrep "^$VERSION" | head -1
+}
+
+
