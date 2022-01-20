@@ -30,8 +30,6 @@ ADD govc            /usr/local/bin
 ADD kubectl-vsphere /usr/local/bin
 ADD kubectl         /usr/local/bin
 ADD vmware-ovftool  /usr/lib/vmware-ovftool
-RUN ln -s /usr/lib/vmware-ovftool/ovftool /usr/local/bin/ovftool
-#RUN echo "127.0.1.1 tdh-tools" >> /etc/hosts
       
 # --- LOCAL TIME AND USER ---
 RUN touch /tdh_tools_docker_container 

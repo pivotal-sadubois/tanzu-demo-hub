@@ -430,7 +430,6 @@ createJumpHost() {
 
     cp -r ${TDHPATH}/terraform/aws $HOME/.tanzu-demo-hub/terraform
     cd $TERRAFORM_PATH && git clone https://github.com/terraform-aws-modules/terraform-aws-ec2-instance.git > /dev/null 2>&1
-#gaga1
 
     TDH_TERRAFORM_TFVARS=${TERRAFORM_PATH}/terraform_${TDH_TKGMC_ENVNAME}.tfvars
     TDH_TERRAFORM_TFSTATE=${TERRAFORM_PATH}/terraform_${TDH_TKGMC_ENVNAME}.tfstate
@@ -535,9 +534,6 @@ createJumpHost() {
           messagePrint " ▪ Terraform (init)" "${TERRAFORM_PATH}"
           terraform -chdir=${TERRAFORM_PATH} init > /dev/null 2>&1; ret=$?
         fi
-
-echo "terraform -chdir=${TERRAFORM_PATH} init "
-#gaga2
 
         if [ $ret -ne 0 ]; then 
           echo "ERROR: terraform init failed"
@@ -1306,8 +1302,8 @@ if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "vSphere" -a "${TDH_TKGMC_TKG_TYPE}" == "tk
   STORAGE_CLASS=$(kubectl get storageclasses | sed '1d' | head -1 | awk '{ print $1 }')
 
   DEPLOYMENT_FILE=${HOME}/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.cfg
-  TKG_WC_CONFIG_DEV="$HOME/.tanzu/tkg/clusterconfigs/${TDH_TKGMC_NAME}-wc-dev.yaml"
-  TKG_WC_CONFIG_PRD="$HOME/.tanzu/tkg/clusterconfigs/${TDH_TKGMC_NAME}-wc-prod.yaml"
+  TKG_WC_CONFIG_DEV="$HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}-wc-dev.yaml"
+  TKG_WC_CONFIG_PRD="$HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}-wc-prod.yaml"
   TKG_MC_CONFIG="$HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.yaml"
 
   echo "TDH_TKGMC_INFRASTRUCTURE=$TDH_DEPLOYMENT_ENV_NAME"               >  $DEPLOYMENT_FILE
@@ -1329,8 +1325,8 @@ if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "vSphere" -a "${TDH_TKGMC_TKG_TYPE}" == "tk
   echo "SERVICE_DOMAIN: $VSPHERE_DNS_DOMAIN"                             >> $TKG_MC_CONFIG
 
   messageTitle "Create config file for TKG Workload Clusters"
-  messagePrint " ▪ Deployment File (dev)"      "~/.tanzu/tkg/clusterconfigs/${TDH_TKGMC_NAME}-wc-dev.yaml"
-  messagePrint " ▪ Deployment File (prod)"     "~/.tanzu/tkg/clusterconfigs/${TDH_TKGMC_NAME}-wc-prod.yaml"
+  messagePrint " ▪ Deployment File (dev)"      "~/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}-wc-dev.yaml"
+  messagePrint " ▪ Deployment File (prod)"     "~/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}-wc-prod.yaml"
 
   # --- CONFIG FOR PROD AND DEV ---
   cat $TKG_MC_CONFIG > $TKG_WC_CONFIG_DEV
@@ -1338,8 +1334,8 @@ if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "vSphere" -a "${TDH_TKGMC_TKG_TYPE}" == "tk
   echo "CLUSTER_PLAN: dev"             >>  $TKG_WC_CONFIG_DEV
   echo "CLUSTER_PLAN: prod"            >>  $TKG_WC_CONFIG_PRD
 
-  WC_DEV_PATH=$HOME/.tanzu/tkg/clusterconfigs/${TDH_TKGMC_NAME}-wc-dev.yaml
-  WC_PRD_PATH=$HOME/.tanzu/tkg/clusterconfigs/${TDH_TKGMC_NAME}-wc-prod.yaml
+  WC_DEV_PATH=$HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}-wc-dev.yaml
+  WC_PRD_PATH=$HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}-wc-prod.yaml
   messageLine
   printf "\e[1m1.) vCenter WebAccess Access ($VSPHERE_VCENTER_SERVER)\e[0m\n"
   echo "    => http://$VSPHERE_VCENTER_SERVER  ($VSPHERE_VCENTER_ADMIN/$VSPHERE_VCENTER_PASSWORD)"
@@ -1428,6 +1424,7 @@ else
     fi
 
 
+#gaga1
     # --- CREATE MANAGEMENT CLUSTER ---
     [ ! -d ~/.tanzu-demo-hub/config ] && mkdir -p ~/.tanzu-demo-hub/config
     $SSH_COMMAND -n "[ -f $SSH_HOME/tanzu-demo-hub/scripts/InstallTKGmc.sh ] && tanzu-demo-hub/scripts/InstallTKGmc.sh \"$DEPLOY_TKG_TEMPLATE\" \"$TDH_TKGMC_NAME\" \"$DEBUG\""; ret=$?
@@ -1492,16 +1489,23 @@ else
   tmc managementcluster get $TDH_TKGMC_NAME > /dev/null 2>&1
   if [ $? -eq 0 ]; then
     #tmc managementcluster get aws-hosted -o json | jq -r '.status.phase'
-    stt=$(tmc managementcluster get $TDH_TKGMC_NAME -o json 2>/dev/null | jq -r '.status.conditions.READY.status') 
-    if [ "$stt" == "FALSE" ]; then 
-      messagePrint " ▪ TMC ReRegister Cluster"             "$TDH_TKGMC_NAME"
-      tmc managementcluster reregister $TDH_TKGMC_NAME -o /tmp/k8s-register-manifest.yaml > /dev/null 2>&1; ret=$?
-      if [ $ret -eq 0 ]; then
-        kubectl apply -f /tmp/k8s-register-manifest.yaml > /dev/null 2>&1; ret=$?
-        if [ $ret -eq 0 ]; then
-          messagePrint " ▪ TMC ReRegister Cluster failed, deregister"             "$TDH_TKGMC_NAME"
-          tmc managementcluster deregister $TDH_TKGMC_NAME > /dev/null 2>&1
+    stt=$(tmc managementcluster get $TDH_TKGMC_NAME -o json 2>/dev/null | jq -r '.status.phase') 
+    if [ "$stt" != "READY" ]; then 
+      messagePrint " ▪ TMC DeRegister Cluster"             "$TDH_TKGMC_NAME"
+      #tmc managementcluster reregister $TDH_TKGMC_NAME -o /tmp/k8s-register-manifest.yaml > /dev/null 2>&1; ret=$?
+      tmc managementcluster deregister $TDH_TKGMC_NAME > /tmp/error.log 2>&1; ret=$?
+      if [ $ret -ne 0 ]; then
+        logMessages /tmp/error.log
+        echo "ERROR: failed to deregister Management Cluster $TDH_TKGMC_NAME, please try manually"
+        if [ "$NATIVE" == "0" ]; then
+          echo "       => tools/${TDH_TOOLS}.sh"
+          echo "          tdh-tools:/$ tmc managementcluster deregister $TDH_TKGMC_NAME"
+          echo "          tdh-tools:/$ exit"
+        else
+          echo "       => tmc managementcluster deregister $TDH_TKGMC_NAME"
         fi
+
+        exit 1
       fi
     fi
   fi
@@ -1512,30 +1516,27 @@ else
 
     ret=1; cnt=0
     while [ $ret -ne 0 -a $cnt -lt 5 ]; do
-      tmc managementcluster register $TDH_TKGMC_NAME -c tanzu-demo-hub -p TKG -k $KUBECONFIG -o /tmp/k8s-register-manifest.yaml >/dev/null 2>&1; ret=$?
-      [ $ret -eq 0 ] && break
+      tmc managementcluster register $TDH_TKGMC_NAME -c tanzu-demo-hub -p TKG --kubeconfig=$HOME/.kube/config > /tmp/error.log 2>&1; ret=$?
+      if [ $ret -eq 0 ]; then
+        tmc managementcluster get $TDH_TKGMC_NAME > /dev/null 2>&1; ret=$?
+        if [ $ret -eq 0 ]; then break; else ret=1; fi
+      fi
       sleep 30
       let cnt=cnt+1
     done
 
-    if [ $? -ne 0 ]; then
-      echo "ERROR: failed to register TKG Management Cluster: $TDH_TKGMC_NAME to TMC"
-      echo "       => tmc managementcluster register $TDH_TKGMC_NAME -c tanzu-demo-hub -p TKG"
-      exit
-    fi
-
-    messagePrint " ▪ Install TMC Agent in Namespace"             "vmware-system-tmc"
-    if [ $DEBUG -gt 0 ]; then
-      echo "--------------------------------------------------------------------------------------------------------------"
-      kubectl apply -f /tmp/k8s-register-manifest.yaml; ret=$?
-      echo "--------------------------------------------------------------------------------------------------------------"
-    else
-      kubectl apply -f /tmp/k8s-register-manifest.yaml > /dev/null 2>&1; ret=$?
-    fi
-
     if [ $ret -ne 0 ]; then
-      echo "ERROR: failed to install TMC Agent"
-      echo "       => kubectl apply -f /tmp/k8s-register-manifest.yaml"
+      logMessages /tmp/error.log
+      echo "ERROR: ailed to register TKG Management Cluster: $TDH_TKGMC_NAME to TMC"
+      if [ "$NATIVE" == "0" ]; then
+        echo "       => tools/${TDH_TOOLS}.sh"
+        echo "          tdh-tools:/$ tmc managementcluster register $TDH_TKGMC_NAME -c tanzu-demo-hub -p TKG -k $HOME/.kube/config"
+        echo "          tdh-tools:/$ exit"
+      else
+        echo "       => tmc managementcluster register $TDH_TKGMC_NAME -c tanzu-demo-hub -p TKG -k $HOME/.kube/config"
+      fi
+
+      exit 1
     fi
 
     cnt=0; stt="PENDING"
@@ -1550,6 +1551,7 @@ else
   # --- CLEANUP OLD MANAGEMENT CLUSTERS ---
   #cleanKubeconfig $HOME/.tanzu/config.yaml  => cleanManagementCluster
 
+#gaga
   messageTitle "Create the TKG Management Cluster deployment File"
   messagePrint " ▪ Deployment File"        "$HOME/.tanzu-demo-hub/config/tkgmc-${TDH_TKGMC_NAME}.yaml"
   messagePrint " ▪ Management Cluster"     "$TDH_TKGMC_NAME"
@@ -1558,8 +1560,8 @@ else
   mkdir -p $HOME/.tanzu/tkg/clusterconfigs
 
   DEPLOYMENT_FILE=${HOME}/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.cfg
-  TKG_WC_CONFIG_DEV="$HOME/.tanzu/tkg/clusterconfigs/${TDH_TKGMC_NAME}-wc-dev.yaml"
-  TKG_WC_CONFIG_PRD="$HOME/.tanzu/tkg/clusterconfigs/${TDH_TKGMC_NAME}-wc-prod.yaml"
+  TKG_WC_CONFIG_DEV="$HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}-wc-dev.yaml"
+  TKG_WC_CONFIG_PRD="$HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}-wc-prod.yaml"
   TKG_MC_CONFIG="$HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.yaml"
 
   echo "TDH_TKGMC_INFRASTRUCTURE=$TDH_DEPLOYMENT_ENV_NAME"               >  $DEPLOYMENT_FILE
@@ -1581,8 +1583,8 @@ else
   #echo "TDH_TKGMC_CONTROL_PLANE_MACHINE_TYPE=Standard_D2s_v3"           >> $DEPLOYMENT_FILE
 
   messageTitle "Create config file for TKG Workload Clusters"
-  messagePrint " ▪ Deployment File (dev)"      "~/.tanzu/tkg/clusterconfigs/${TDH_TKGMC_NAME}-wc-dev.yaml"
-  messagePrint " ▪ Deployment File (prod)"     "~/.tanzu/tkg/clusterconfigs/${TDH_TKGMC_NAME}-wc-prod.yaml"
+  messagePrint " ▪ Deployment File (dev)"      "~/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}-wc-dev.yaml"
+  messagePrint " ▪ Deployment File (prod)"     "~/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}-wc-prod.yaml"
 
   # --- CONFIG FOR PROD AND DEV ---
   idp=$(egrep "^IDENTITY_MANAGEMENT_TYPE:" $TKG_MC_CONFIG | awk '{ print $NF }')

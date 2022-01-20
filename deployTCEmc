@@ -1044,19 +1044,27 @@ if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "docker" ]; then
   tmc managementcluster get $TDH_TKGMC_NAME > /dev/null 2>&1
   if [ $? -eq 0 ]; then
     #tmc managementcluster get aws-hosted -o json | jq -r '.status.phase'
-    stt=$(tmc managementcluster get $TDH_TKGMC_NAME -o json 2>/dev/null | jq -r '.status.conditions.READY.status')
-    if [ "$stt" == "FALSE" ]; then
-      messagePrint " ▪ TMC ReRegister Cluster"             "$TDH_TKGMC_NAME"
-      tmc managementcluster reregister $TDH_TKGMC_NAME -o /tmp/k8s-register-manifest.yaml > /dev/null 2>&1; ret=$?
-      if [ $ret -eq 0 ]; then
-        kubectl apply -f /tmp/k8s-register-manifest.yaml > /dev/null 2>&1; ret=$?
-        if [ $ret -eq 0 ]; then
-          messagePrint " ▪ TMC ReRegister Cluster failed, deregister"             "$TDH_TKGMC_NAME"
-          tmc managementcluster deregister $TDH_TKGMC_NAME > /dev/null 2>&1
+    stt=$(tmc managementcluster get $TDH_TKGMC_NAME -o json 2>/dev/null | jq -r '.status.phase')
+    if [ "$stt" != "READY" ]; then
+      messagePrint " ▪ TMC DeRegister Cluster"             "$TDH_TKGMC_NAME"
+      #tmc managementcluster reregister $TDH_TKGMC_NAME -o /tmp/k8s-register-manifest.yaml > /dev/null 2>&1; ret=$?
+      tmc managementcluster deregister $TDH_TKGMC_NAME > /tmp/error.log 2>&1; ret=$?
+      if [ $ret -ne 0 ]; then
+        logMessages /tmp/error.log
+        echo "ERROR: failed to deregister Management Cluster $TDH_TKGMC_NAME, please try manually"
+        if [ "$NATIVE" == "0" ]; then
+          echo "       => tools/${TDH_TOOLS}.sh"
+          echo "          tdh-tools:/$ tmc managementcluster deregister $TDH_TKGMC_NAME"
+          echo "          tdh-tools:/$ exit"
+        else
+          echo "       => tmc managementcluster deregister $TDH_TKGMC_NAME"
         fi
+
+        exit 1
       fi
     fi
   fi
+
 
   tmc managementcluster get $TDH_TKGMC_NAME > /dev/null 2>&1
   if [ $? -ne 0 ]; then
@@ -1064,8 +1072,7 @@ if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "docker" ]; then
 
     ret=1; cnt=0
     while [ $ret -ne 0 -a $cnt -lt 5 ]; do
-      #tmc managementcluster register $TDH_TKGMC_NAME -c tanzu-demo-hub -p TKG --kubeconfig=$HOME/.kube-tkg/config -o /tmp/k8s-register-manifest.yaml >/dev/null 2>&1; ret=$?
-      tmc managementcluster register $TDH_TKGMC_NAME -c tanzu-demo-hub -p TKG --kubeconfig=$HOME/.kube-tkg/config >/dev/null 2>&1; ret=$?
+      tmc managementcluster register $TDH_TKGMC_NAME -c tanzu-demo-hub -p TKG --kubeconfig=$HOME/.kube-tkg/config > /tmp/error.log 2>&1; ret=$?
       if [ $ret -eq 0 ]; then 
         tmc managementcluster get $TDH_TKGMC_NAME > /dev/null 2>&1; ret=$?
         if [ $ret -eq 0 ]; then break; else ret=1; fi
@@ -1074,36 +1081,31 @@ if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "docker" ]; then
       let cnt=cnt+1
     done
 
-    if [ $? -ne 0 ]; then
-      echo "ERROR: failed to register TCE Management Cluster: $TDH_TKGMC_NAME to TMC"
-      echo "       => tmc managementcluster register $TDH_TKGMC_NAME -c tanzu-demo-hub -p TKG --kubeconfig=$HOME/.kube-tkg/config"
-      exit
+    if [ $ret -ne 0 ]; then
+      logMessages /tmp/error.log
+      echo "ERROR: ailed to register TKG Management Cluster: $TDH_TKGMC_NAME to TMC"
+      if [ "$NATIVE" == "0" ]; then
+        echo "       => tools/${TDH_TOOLS}.sh"
+        echo "          tdh-tools:/$ tmc managementcluster register $TDH_TKGMC_NAME -c tanzu-demo-hub -p TKG -k $HOME/.kube-tkg/config"
+        echo "          tdh-tools:/$ exit"
+      else
+        echo "       => tmc managementcluster register $TDH_TKGMC_NAME -c tanzu-demo-hub -p TKG -k $HOME/.kube-tkg/config"
+      fi
+
+      exit 1
     fi
 
-    # NOT NEEDED ANYMORE, WILL VE INSTALLED DURING REGISTRATION (sdubois)
-    #messagePrint " ▪ Install TMC Agent in Namespace"             "vmware-system-tmc"
-    #if [ $DEBUG -gt 0 ]; then
-    #  echo "--------------------------------------------------------------------------------------------------------------"
-    #  kubectl apply -f /tmp/k8s-register-manifest.yaml; ret=$?
-    #  echo "--------------------------------------------------------------------------------------------------------------"
-    #else
-    #  kubectl apply -f /tmp/k8s-register-manifest.yaml > /dev/null 2>&1; ret=$?
-    #fi
-    #
-    #if [ $ret -ne 0 ]; then
-    #  echo "ERROR: failed to install TMC Agent"
-    #  echo "       => kubectl apply -f /tmp/k8s-register-manifest.yaml"
-    #fi
-    #
-    #cnt=0; stt="PENDING"
-    #while [ "$stt" != "READY" -a $cnt -lt 10 ]; do
-    #  stt=$(tmc managementcluster get $TDH_TKGMC_NAME -o json | jq -r '.status.phase')
-    #  sleep 60
-    #
-    #  let cnt=cnt+1
-    #done
+    cnt=0; stt="PENDING"
+    while [ "$stt" != "READY" -a $cnt -lt 10 ]; do
+      stt=$(tmc managementcluster get $TDH_TKGMC_NAME -o json | jq -r '.status.phase')
+      sleep 60
+
+      let cnt=cnt+1
+    done
   fi
 
+  # --- CLEANUP OLD MANAGEMENT CLUSTERS ---
+  #cleanKubeconfig $HOME/.tanzu/config.yaml  => cleanManagementCluster
 
 else
 
@@ -1267,8 +1269,8 @@ fi
   mkdir -p $HOME/.tanzu/tkg/clusterconfigs
 
   DEPLOYMENT_FILE=${HOME}/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.cfg
-  TKG_WC_CONFIG_DEV="$HOME/.tanzu/tkg/clusterconfigs/${TDH_TKGMC_NAME}-wc-dev.yaml"
-  TKG_WC_CONFIG_PRD="$HOME/.tanzu/tkg/clusterconfigs/${TDH_TKGMC_NAME}-wc-prod.yaml"
+  TKG_WC_CONFIG_DEV="$HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}-wc-dev.yaml"
+  TKG_WC_CONFIG_PRD="$HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}-wc-prod.yaml"
   TKG_MC_CONFIG="$HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.yaml"
 
   echo "TDH_TKGMC_INFRASTRUCTURE=$TDH_DEPLOYMENT_ENV_NAME"               >  $DEPLOYMENT_FILE
