@@ -4050,7 +4050,6 @@ checkCLIcommands() {
     fi
   fi
 
-echo gaga1
   if [ "$cat" == "VSPHERE" ]; then
     CLI_COMMANDS="/usr/local/bin/govc:brew:govc /usr/local/bin/packer:brew:packer"
 
@@ -4074,7 +4073,6 @@ echo gaga1
       fi
     done
   fi
-echo gaga2
 
   if [ "$cat" == "TANZU_DATA" ]; then
     [ "$(uname)" == "Linux" ] && CLI_COMMANDS="/usr/local/bin/mc:apt:minio/stable/mc /usr/local/bin/psql:apt:libpq /usr/local/bin/s3cmd:brew:s3cmd"
@@ -7794,6 +7792,7 @@ tdh_tools_build() {
   #export VMWPASS="$TDH_MYVMWARE_PASS"
   #$VMWCLI ls vmware_tanzu_kubernetes_grid > /dev/null 2>&1
 
+echo gaga1
 
 #gaga100
   if [ "$TDH_SERVICE_TAP_VERSION" != "" ]; then 
@@ -7828,6 +7827,7 @@ tdh_tools_build() {
       fi
     fi
 
+echo gaga2
     (cd $TDH_DOCKER_FILES && tar xf $TDH_DOCKER_CACHE/tac-$TDH_SERVICE_TAP_VERSION/${TAC_PRODUCT_FILE}.tar) 
     rm -rf $TDH_DOCKER_FILES/clitap
     mv $TDH_DOCKER_FILES/cli $TDH_DOCKER_FILES/clitap
@@ -7867,6 +7867,7 @@ tdh_tools_build() {
     find $TDH_DOCKER_FILES/blank -type d -exec chmod 777 {} \; 2>/dev/null
     chmod -R a+r $$TDH_DOCKER_FILES/blank 2>/dev/null
 
+echo gaga3
     # --- DOWNLOAD TANZU FRAMEWORK ---
     TAC_PRODUCT_SLUG="tanzu-application-platform"
     TAC_PRODUCT_FILE="tap-gui-yelb-catalog"
