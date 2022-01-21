@@ -817,6 +817,7 @@ createJumpHost() {
     # --- VERIFY / CREATE APPLICATION ID AND SERVICE PRINCIPLE ---
     appid=$(az ad app list --display-name "TanzuDemoHub-$TDH_USER" | jq -r '.[].appId')
     if [ "$appid" == "" ]; then 
+echo gaga1
       messageTitle "Register Azure Application (TanzuDemoHub-$TDH_USER)"
       az ad sp create-for-rbac --role Owner --name "TanzuDemoHub-$TDH_USER" > /tmp/TanzuDemoHub-$TDH_USER.json 2>/dev/null
       AZURE_CLIENT_ID=$(jq -r '.appId' /tmp/TanzuDemoHub-$TDH_USER.json)
@@ -829,6 +830,7 @@ createJumpHost() {
       echo " "
       exit 0
     else
+echo gaga2
       if [ "$AZURE_CLIENT_SECRET" == "" ]; then 
         AZURE_CLIENT_ID=$appid
         AZURE_CLIENT_SECRET=$(az ad sp create-for-rbac --role Owner --name "TanzuDemoHub-$TDH_USER)" 2>/dev/null | jq -r '.password') 
@@ -838,6 +840,7 @@ createJumpHost() {
         echo " "
         exit 0
       else
+echo gaga4
         docker run --rm --name azure-cli bitnami/azure-cli:latest login --service-principal --username $appid --password $AZURE_CLIENT_SECRET --tenant $AZURE_TENANT_ID > /dev/null 2>&1
         if [ $? -ne 0 ]; then 
           AZURE_CLIENT_ID=$appid
