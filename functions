@@ -4400,7 +4400,7 @@ tmcCreateCluster() {
       messagePrint " ▪ TKG Control Plane Nodes Type"     "$TDH_TKGWC_CONTROPLANE_NODETYPE ($TDH_TKGWC_CONTROPLANE_MACHINE)"
 
       tmc cluster create -m $TDH_MANAGEMENT_CLUSTER -p $TDH_PROVISIONER_NAME \
-                         --instance-type $TDH_TKGWC_CONTROPLANE_MACHINE \
+                         --instance-type $TDH_TKGWC_WORKERNODES_MACHINE \
                          --ssh-key-name $TMC_SSH_KEY_NAME_AWS -c $TMC_ACCOUNT_NAME \
                          --worker-node-count $TDH_TKGWC_WORKERNODES \
                          -r $AWS_REGION -n $TDH_CLUSTER_NAME \
