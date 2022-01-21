@@ -851,7 +851,7 @@ createJumpHost() {
 #      fi
 #
       AZURE_CLIENT_ID=$appid
-      AZURE_CLIENT_SECRET=$(az ad sp create-for-rbac --name "TanzuDemoHub-$TDH_USER" 2>/dev/null | jq -r '.password')
+      AZURE_CLIENT_SECRET=$(az ad sp create-for-rbac --role Owner --name "TanzuDemoHub-$TDH_USER" 2>/dev/null | jq -r '.password')
 
       echo "INFO: Please set the new generated Azure Client Secret for the Azure ClientID (TanzuDemoHub-$TDH_USER)"
       echo "      into your ~/.tanzu-demo-hub.cfg and restart $0"
@@ -861,7 +861,7 @@ createJumpHost() {
     else
       if [ "$AZURE_CLIENT_SECRET" == "" ]; then 
         AZURE_CLIENT_ID=$appid
-        AZURE_CLIENT_SECRET=$(az ad sp create-for-rbac --name "TanzuDemoHub-$TDH_USER)" 2>/dev/null | jq -r '.password') 
+        AZURE_CLIENT_SECRET=$(az ad sp create-for-rbac --role Owner --name "TanzuDemoHub-$TDH_USER)" 2>/dev/null | jq -r '.password') 
         echo "INFO: Please set the new generated Azure Client Secret for the Azure ClientID (TanzuDemoHub-$TDH_USER)"
         echo "      into your ~/.tanzu-demo-hub.cfg and restart $0"
         echo "      => export AZURE_CLIENT_SECRET=\"$AZURE_CLIENT_SECRET\""
