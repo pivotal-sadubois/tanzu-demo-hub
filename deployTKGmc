@@ -194,16 +194,45 @@ cleanupEnvironment() {
 
   cleanKindCluster
 
-echo "gaga jump delete $TDH_TKGMC_NAME"
+
+echo gagagagaga1
+  # --- DEREGISTER TMC REGISTRATION
+echo "tmc managementcluster get $TDH_TKGMC_NAME-$TDH_USER"
+  tmc managementcluster get $TDH_TKGMC_NAME-$TDH_USER > /dev/null 2>&1; ret=$?
+  if [ $ret -eq 0 ]; then
+echo gagagagaga2
+    stt=$(tmc managementcluster get $TDH_TKGMC_NAME-$TDH_USER -o json 2>/dev/null | jq -r '.status.phase')
+    if [ "$stt" != "" ]; then
+echo gagagagaga3
+      messagePrint " ▪ TMC DeRegister Cluster"             "$TDH_TKGMC_NAME-$TDH_USER"
+      #tmc managementcluster reregister $TDH_TKGMC_NAME-$TDH_USER -o /tmp/k8s-register-manifest.yaml > /dev/null 2>&1; ret=$?
+      tmc managementcluster deregister $TDH_TKGMC_NAME-$TDH_USER -k $HOME/.kube/config -f > /tmp/error.log 2>&1; ret=$?
+      if [ $ret -ne 0 ]; then
+        logMessages /tmp/error.log
+        echo "ERROR: failed to deregister Management Cluster $TDH_TKGMC_NAME-$TDH_USER, please try manually"
+        if [ "$NATIVE" == "0" ]; then
+          echo "       => tools/${TDH_TOOLS}.sh"
+          echo "          tdh-tools:/$ tmc managementcluster deregister $TDH_TKGMC_NAME-$TDH_USER -k $HOME/.kube/config -f"
+          echo "          tdh-tools:/$ exit"
+        else
+          echo "       => tmc managementcluster deregister $TDH_TKGMC_NAME-$TDH_USER -k $HOME/.kube/config -f"
+        fi
+
+        exit 1
+      fi
+    fi
+  fi
+echo gagagagaga10
+
   # --- DELETE MANAGEMENT CLUSTER FROM THE JUMP HOST ---
+echo "$SSH_COMMAND -n \"[ -f $SSH_HOME/tanzu-demo-hub/scripts/removeTKGmc.sh ] && tanzu-demo-hub/scripts/removeTKGmc.sh \"$TDH_TKGMC_NAME-$TDH_USER\" \"$DEBUG\""
   [ ! -d ~/.tanzu-demo-hub/config ] && mkdir -p ~/.tanzu-demo-hub/config
-  $SSH_COMMAND -n "[ -f $SSH_HOME/tanzu-demo-hub/scripts/removeTKGmc.sh ] && tanzu-demo-hub/scripts/removeTKGmc.sh \"$TDH_TKGMC_NAME\" \"$DEBUG\""; ret=$?
+  $SSH_COMMAND -n "[ -f $SSH_HOME/tanzu-demo-hub/scripts/removeTKGmc.sh ] && tanzu-demo-hub/scripts/removeTKGmc.sh \"$TDH_TKGMC_NAME-$TDH_USER\" \"$DEBUG\""; ret=$?
   if [ ${ret} -ne 0 ]; then
     echo "ERROR: Failed to deploy Management Server on $JUMP_HOST"
-    echo "       => $SSH_DISPLAY -n tanzu-demo-hub/scripts/InstallTKGmc.sh \"$TDH_TKGMC_NAME\" \"$DEBUG\""
+    echo "       => $SSH_DISPLAY -n tanzu-demo-hub/scripts/InstallTKGmc.sh \"$TDH_TKGMC_NAME-$TDH_USER\" \"$DEBUG\""
     exit 1
   fi
-echo "gaga jump delete $TDH_TKGMC_NAME"
 
   cnt=$(tanzu cluster list --include-management-cluster 2>/dev/null | grep -c " $TDH_TKGMC_NAME-$TDH_USER") 
   if [ $cnt -gt 0 ]; then 
