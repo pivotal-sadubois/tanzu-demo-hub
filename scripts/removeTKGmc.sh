@@ -24,9 +24,10 @@ fi
 export TDH_TKGMC_NAME="$TDH_TKGMC_NAME_TMP"
 
 cnt=$(tanzu cluster list --include-management-cluster 2>/dev/null | grep -c " $$TDH_TKGMC_NAME")
+echo "CNT:$cnt TDH_TKGMC_NAME:$TDH_TKGMC_NAME" 1>&2
 if [ $cnt -gt 0 ]; then
   messageTitle "Deleting Management Cluster ($TDH_TKGMC_NAME)"
-echo "XXX tanzu management-cluster delete $TDH_TKGMC_NAME -y"
+echo "XXX tanzu management-cluster delete $TDH_TKGMC_NAME -y" 1>&2
   tanzu management-cluster delete $TDH_TKGMC_NAME -y > /tmp/error.log 2>&1; ret=$?
  
   if [ $ret -ne 0 ]; then
