@@ -23,8 +23,6 @@ fi
 # --- RESET TDH_TKGMC_NAME ---
 export TDH_TKGMC_NAME="$TDH_TKGMC_NAME_TMP"
 
-echo hallo
-hostname
 cnt=$(tanzu cluster list --include-management-cluster 2>/dev/null | grep -c " $$TDH_TKGMC_NAME")
 if [ $cnt -gt 0 ]; then
   messageTitle "Deleting Management Cluster ($TDH_TKGMC_NAME)"
@@ -45,8 +43,8 @@ if [ $cnt -gt 0 ]; then
     exit 1
   fi
 
-  [ -f $HOME/.tanzu-demo-hub/config/$TDH_TKGMC_NAME-$TDH_USER.kubeconfig ] && rm -f $HOME/.tanzu-demo-hub/config/$TDH_TKGMC_NAME-$TDH_USER.kubeconfig
-  [ -f $HOME/.tanzu-demo-hub/config/$TDH_TKGMC_NAME-$TDH_USER.cfg ] && rm -f $HOME/.tanzu-demo-hub/config/$TDH_TKGMC_NAME-$TDH_USER.cfg
-  [ -f $HOME/.tanzu-demo-hub/config/$TDH_TKGMC_NAME-$TDH_USER.yaml ] && rm -f $HOME/.tanzu-demo-hub/config/$TDH_TKGMC_NAME-$TDH_USER.yaml
+  [ -f $HOME/.tanzu-demo-hub/config/$TDH_TKGMC_NAME.kubeconfig ] && rm -f $HOME/.tanzu-demo-hub/config/$TDH_TKGMC_NAME.kubeconfig
+  [ -f $HOME/.tanzu-demo-hub/config/$TDH_TKGMC_NAME.cfg ] && rm -f $HOME/.tanzu-demo-hub/config/$TDH_TKGMC_NAME.cfg
+  [ -f $HOME/.tanzu-demo-hub/config/$TDH_TKGMC_NAME.yaml ] && rm -f $HOME/.tanzu-demo-hub/config/$TDH_TKGMC_NAME.yaml
 fi
 
