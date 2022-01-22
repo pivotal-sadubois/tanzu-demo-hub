@@ -7515,6 +7515,27 @@ cleanKubeconfig() {
   done
 }
 
+deleteManagementCluster() {
+  MGMT_CLUSTER=$1
+
+  tmc managementcluster delete $MGMT_CLUSTER -f > /dev/null 2>&1
+
+  cnt=$(tanzu management-cluster get 2>/dev/null | grep -c " $MGMT_CLUSTER ")
+  if [ $cnt -gt 0 ]; then
+    tanzu management-cluster delete $MGMT_CLUSTER -y --force > /tmp/error.log 2>&1; ret=$?
+    if [ $ret -ne 0 ]; then
+      logMessages /tmp/error.log
+      echo "ERROR: failed to delete TKG Management Cluster: ${MGMT_CLUSTER}"
+      if [ "$NATIVE" == "0" ]; then
+        echo "       => tools/${TDH_TOOLS}.sh"
+        echo "          tdh-tools:/$ tmc managementcluster delete $MGMT_CLUSTER -f"
+        echo "          tdh-tools:/$ exit"
+      else
+        echo "       => tmc managementcluster delete $MGMT_CLUSTER -f"
+      fi
+    fi
+  fi
+}
 
 cleanManagementCluster() {
   messageTitle "Cleaning up old kubeconfig definitions"
