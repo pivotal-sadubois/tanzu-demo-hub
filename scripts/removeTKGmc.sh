@@ -26,8 +26,8 @@ export TDH_TKGMC_NAME="$TDH_TKGMC_NAME_TMP"
 cnt=$(tanzu cluster list --include-management-cluster 2>/dev/null | grep -c " $$TDH_TKGMC_NAME")
 if [ $cnt -gt 0 ]; then
   messageTitle "Deleting Management Cluster ($TDH_TKGMC_NAME)"
-  #tanzu management-cluster delete $TDH_TKGMC_NAME -y > /tmp/error.log 2>&1; ret=$?
-  tanzu management-cluster delete -y > /tmp/error.log 2>&1; ret=$?
+echo "XXX tanzu management-cluster delete $TDH_TKGMC_NAME -y"
+  tanzu management-cluster delete $TDH_TKGMC_NAME -y > /tmp/error.log 2>&1; ret=$?
  
   if [ $ret -ne 0 ]; then
     logMessages /tmp/error.log
