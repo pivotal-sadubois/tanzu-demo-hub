@@ -194,42 +194,36 @@ cleanupEnvironment() {
 
   cleanKindCluster
 
-
-echo gagagagaga1
   # --- DEREGISTER TMC REGISTRATION
-echo "tmc managementcluster get $TDH_TKGMC_NAME-$TDH_USER"
   tmc managementcluster get $TDH_TKGMC_NAME-$TDH_USER > /dev/null 2>&1; ret=$?
   if [ $ret -eq 0 ]; then
-echo gagagagaga2
     stt=$(tmc managementcluster get $TDH_TKGMC_NAME-$TDH_USER -o json 2>/dev/null | jq -r '.status.phase')
     if [ "$stt" != "" ]; then
-echo gagagagaga3
       messagePrint " ▪ TMC DeRegister Cluster"             "$TDH_TKGMC_NAME-$TDH_USER"
-      #tmc managementcluster reregister $TDH_TKGMC_NAME-$TDH_USER -o /tmp/k8s-register-manifest.yaml > /dev/null 2>&1; ret=$?
-      tmc managementcluster deregister $TDH_TKGMC_NAME-$TDH_USER -k $HOME/.kube/config -f > /tmp/error.log 2>&1; ret=$?
+      tmc managementcluster deregister $TDH_TKGMC_NAME-$TDH_USER -k $HOME/.kube/config  > /tmp/error.log 2>&1; ret=$?
       if [ $ret -ne 0 ]; then
         logMessages /tmp/error.log
         echo "ERROR: failed to deregister Management Cluster $TDH_TKGMC_NAME-$TDH_USER, please try manually"
         if [ "$NATIVE" == "0" ]; then
           echo "       => tools/${TDH_TOOLS}.sh"
           echo "          tdh-tools:/$ tmc managementcluster deregister $TDH_TKGMC_NAME-$TDH_USER -k $HOME/.kube/config -f"
+          echo "          tdh-tools:/$ tmc managementcluster delete $TDH_TKGMC_NAME-$TDH_USER -f"
           echo "          tdh-tools:/$ exit"
         else
           echo "       => tmc managementcluster deregister $TDH_TKGMC_NAME-$TDH_USER -k $HOME/.kube/config -f"
+          echo "       => tmc managementcluster delete $TDH_TKGMC_NAME-$TDH_USER -f"
         fi
 
         exit 1
       fi
     fi
   fi
-echo gagagagaga10
 
   # --- DELETE MANAGEMENT CLUSTER FROM THE JUMP HOST ---
-echo "$SSH_COMMAND -n \"[ -f $SSH_HOME/tanzu-demo-hub/scripts/removeTKGmc.sh ] && tanzu-demo-hub/scripts/removeTKGmc.sh \"$TDH_TKGMC_NAME-$TDH_USER\" \"$DEBUG\""
   [ ! -d ~/.tanzu-demo-hub/config ] && mkdir -p ~/.tanzu-demo-hub/config
   $SSH_COMMAND -n "[ -f $SSH_HOME/tanzu-demo-hub/scripts/removeTKGmc.sh ] && tanzu-demo-hub/scripts/removeTKGmc.sh \"$TDH_TKGMC_NAME-$TDH_USER\" \"$DEBUG\""; ret=$?
   if [ ${ret} -ne 0 ]; then
-    echo "ERROR: Failed to deploy Management Server on $JUMP_HOST"
+    echo "ERROR: Failed to delete Management Server on $JUMP_HOST"
     echo "       => $SSH_DISPLAY -n tanzu-demo-hub/scripts/InstallTKGmc.sh \"$TDH_TKGMC_NAME-$TDH_USER\" \"$DEBUG\""
     exit 1
   fi
@@ -260,6 +254,10 @@ echo "$SSH_COMMAND -n \"[ -f $SSH_HOME/tanzu-demo-hub/scripts/removeTKGmc.sh ] &
     [ -f $HOME/.tanzu-demo-hub/config/$TDH_TKGMC_NAME-$TDH_USER.kubeconfig ] && rm -f $HOME/.tanzu-demo-hub/config/$TDH_TKGMC_NAME-$TDH_USER.kubeconfig
     [ -f $HOME/.tanzu-demo-hub/config/$TDH_TKGMC_NAME-$TDH_USER.cfg ] && rm -f $HOME/.tanzu-demo-hub/config/$TDH_TKGMC_NAME-$TDH_USER.cfg
     [ -f $HOME/.tanzu-demo-hub/config/$TDH_TKGMC_NAME-$TDH_USER.yaml ] && rm -f $HOME/.tanzu-demo-hub/config/$TDH_TKGMC_NAME-$TDH_USER.yaml
+  fi
+
+  if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "Azure" ]; then
+echo "gaga Azure"
   fi
 
   if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "AWS" ]; then
@@ -299,6 +297,9 @@ echo "$SSH_COMMAND -n \"[ -f $SSH_HOME/tanzu-demo-hub/scripts/removeTKGmc.sh ] &
       exit 1
     fi
   fi
+
+  cleanKubeconfig           $HOME/.kube/config
+  cleanKubeconfig           $HOME/.kube-tkg/config
 }
 
 checkKeyPairs() {
@@ -893,6 +894,7 @@ createJumpHost() {
     messagePrint " ▪ ServicePrincipal" "$objid"
     messagePrint " ▪ Role Binding" "Owner"
 
+#gaga
     messageTitle "Verifing Azure Jump-Server ($JUMP_HOST)"
     stt=$(az group exists --name Admin)
     if [ "$stt" == "false" ]; then
@@ -1385,11 +1387,9 @@ else
   ############################## TANZU KUBERNETS GRID FOR AWS, AZURE AND VPSHERE (TKGm) ###################################
   #########################################################################################################################
 
-echo "gaga2 uploadOVAimages.sh"
   if [ "${TDH_TKGMC_TKG_TYPE}" == "tkgm" ]; then
     $SSH_COMMAND -n "[ -f $SSH_HOME/tanzu-demo-hub/scripts/uploadOVAimages.sh ] && tanzu-demo-hub/scripts/uploadOVAimages.sh $DEPLOY_TKG_TEMPLATE $DEBUG"
   fi
-echo "gaga2 uploadOVAimages.sh"
 
   cnt=$(tanzu management-cluster get 2>/dev/null | grep -c " $TDH_TKGMC_NAME ")
   if [ $cnt -eq 0 ]; then
@@ -1500,8 +1500,8 @@ echo "gaga2 uploadOVAimages.sh"
     stt=$(tmc managementcluster get $TDH_TKGMC_NAME -o json 2>/dev/null | jq -r '.status.phase') 
     if [ "$stt" != "READY" ]; then 
       messagePrint " ▪ TMC DeRegister Cluster"             "$TDH_TKGMC_NAME"
-      #tmc managementcluster reregister $TDH_TKGMC_NAME -o /tmp/k8s-register-manifest.yaml > /dev/null 2>&1; ret=$?
-      tmc managementcluster deregister $TDH_TKGMC_NAME -k $HOME/.kube/config -f > /tmp/error.log 2>&1; ret=$?
+      #tmc managementcluster deregister $TDH_TKGMC_NAME -k $HOME/.kube/config -f > /tmp/error.log 2>&1; ret=$?
+      tmc managementcluster deregister $TDH_TKGMC_NAME -k $HOME/.kube/config > /tmp/error.log 2>&1; ret=$?
       if [ $ret -ne 0 ]; then
         logMessages /tmp/error.log
         echo "ERROR: failed to deregister Management Cluster $TDH_TKGMC_NAME, please try manually"
@@ -1535,7 +1535,7 @@ echo "gaga2 uploadOVAimages.sh"
 
     if [ $ret -ne 0 ]; then
       logMessages /tmp/error.log
-      echo "ERROR: ailed to register TKG Management Cluster: $TDH_TKGMC_NAME to TMC"
+      echo "ERROR: failed to register TKG Management Cluster: $TDH_TKGMC_NAME to TMC"
       if [ "$NATIVE" == "0" ]; then
         echo "       => tools/${TDH_TOOLS}.sh"
         echo "          tdh-tools:/$ tmc managementcluster register $TDH_TKGMC_NAME -c tanzu-demo-hub -p TKG -k $HOME/.kube/config"

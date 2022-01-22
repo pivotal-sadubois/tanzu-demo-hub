@@ -7468,7 +7468,7 @@ cleanKubeconfig() {
   fi
 
   messageTitle "Cleaning Up kubectl config ($CONFIG)"
-  for cluster in $(kubectl --kubeconfig=$CONFIG config get-clusters | sed '1d' | egrep "^tdh|^tkg-mc|^tce-mc^tdh-tce|^tcemc"); do
+  for cluster in $(kubectl --kubeconfig=$CONFIG config get-clusters | sed '1d' | egrep "^tdh|^tkgmc|^tcemc^tdh-tce|^tcemc"); do
     ctx=$(kubectl --kubeconfig=$CONFIG config view -o json | jq -r --arg key $cluster '.contexts[] | select(.context.cluster == $key).name' 2>/dev/null)
     usr=$(kubectl --kubeconfig=$CONFIG config view -o json | jq -r --arg key $cluster '.contexts[] | select(.context.cluster == $key).context.user' 2>/dev/null)
     cnt=$(echo $cluster | grep -c minikube)
