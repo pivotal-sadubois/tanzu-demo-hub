@@ -1628,9 +1628,13 @@ else
   TKG_WC_CONFIG_PRD="$HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}-wc-prod.yaml"
   TKG_MC_CONFIG="$HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.yaml"
 
+  TMC_CONFIG_NAME="$(echo ${TDH_TKGMC_NAME} | sed 's/tkgmc/tmc/g')"
+  CONFIG_FILE="$HOME/.tanzu-demo-hub/config/${TMC_CONFIG_NAME}.cfg"
+
   echo "TDH_TKGMC_INFRASTRUCTURE=$TDH_DEPLOYMENT_ENV_NAME"                       >  $DEPLOYMENT_FILE
   echo "TDH_TKGMC_NAME=$TDH_TKGMC_NAME"                                          >> $DEPLOYMENT_FILE
   echo "TDH_TKGMC_ENVNAME=$TDH_TKGMC_ENVNAME"                                    >> $DEPLOYMENT_FILE
+  echo "TDH_TKGMC_TMC_CONFIG=${TMC_CONFIG_NAME}.cfg"                             >> $DEPLOYMENT_FILE
   echo "TDH_TKGMC_CONFIG=${TDH_TKGMC_NAME}.yaml"                                 >> $DEPLOYMENT_FILE
   echo "TDH_TKGMC_WC_CONFIG_DEV=${TDH_TKGMC_NAME}-wc-dev.yaml"                   >> $DEPLOYMENT_FILE
   echo "TDH_TKGMC_WC_CONFIG_PROD=${TDH_TKGMC_NAME}-wc-prod.yaml"                 >> $DEPLOYMENT_FILE
@@ -1645,9 +1649,6 @@ else
   #echo "TDH_TKGMC_MACHINE_HEALTH_CHECK_ENABLED=true"                            >> $DEPLOYMENT_FILE
   #echo "TDH_TKGMC_MACHINE_TYPE=Standard_D2s_v3"                                 >> $DEPLOYMENT_FILE
   #echo "TDH_TKGMC_CONTROL_PLANE_MACHINE_TYPE=Standard_D2s_v3"                   >> $DEPLOYMENT_FILE
-
-  TMC_CONFIG_NAME="$(echo ${TDH_TKGMC_NAME} | sed 's/tkgmc/tmc/g')"
-  CONFIG_FILE="$HOME/.tanzu-demo-hub/config/${TMC_CONFIG_NAME}.cfg"
 
   messageTitle "Create config file for TMC Management Cluster"
   messagePrint " ▪ Deployment File (dev)"      "$CONFIG_FILE"
