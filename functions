@@ -4268,6 +4268,15 @@ checkTMCAccess() {
     fi
   fi
 
+  if [ "${TDH_DEPLOYMENT_CLOUD}" == "Azure" ]; then
+    TMC_ACCOUNT_NAME=$TMC_ACCOUNT_NAME_AWS
+    [ "$TDH_CLUSTER_NAME" == "" ] && TDH_CLUSTER_NAME="tdh-azure-${TDH_USER}"
+
+    if [ "$TDH_SERVICE_TANZU_MISSION_CONTROL" == "true" ]; then
+     tmc clustergroup create -n tanzu-demo-hub -d "Tanzu Demo Hub by Sacha Dubois" > /dev/null 2>&1
+    fi
+  fi
+
   if [ "${TDH_DEPLOYMENT_CLOUD}" == "AWS" ]; then
     TMC_ACCOUNT_NAME=$TMC_ACCOUNT_NAME_AWS
 
@@ -4361,6 +4370,178 @@ checkTMCcontext() {
 
 tmcCreateCluster() {
   # steve: missing provisioner, returned sacha's cluster
+
+  if [ "$TDH_DEPLOYMENT_CLOUD" == "Azure" ]; then 
+    TDH_PROVISIONER_NAME=default
+    #TMC_ACCOUNT_NAME=$TMC_ACCOUNT_NAME_AWS
+    TMC_ACCOUNT_NAME=sdubois@vnware.com
+
+    stt=$(tmc cluster list -m $TDH_MANAGEMENT_CLUSTER -p $TDH_PROVISIONER_NAME --name $TDH_CLUSTER_NAME -o json 2>/dev/null | \
+          jq -r '.clusters[].status.phase' 2>/dev/null) 
+
+    if [ "$stt" == "CREATING" ]; then                                         
+       echo "ERROR: Cluster is currently beeing crated, please try again later"; exit 1
+    fi
+
+    if [ "$stt" == "DELETING" ]; then                                         
+       echo "ERROR: Cluster is currently on deleting, please try again later"; exit 1
+    fi
+
+    if [ "$stt" == "" -o "$stt" != "READY" ]; then
+      KUBERNETES_VERSION=$(echo ${TMC_K8S_VERSIONS[*]} | sed 's/ /\n/g' | egrep "$TDH_TKGWC_KUBERNETES" | tail -1)
+
+      [ "$TMC_KUBERNETES_VERSION" != "" ] && KUBERNETES_VERSION=$TMC_KUBERNETES_VERSION
+      [ "$TDH_TKGWC_CONTROPLANE" == "3" ] && TMC_TKGWC_TEMPLATE="aws-ha" || TMC_TKGWC_TEMPLATE="default"
+
+      # --- SEARCH KUBERNETES VERSIONS ---
+      #KUBERNETES_VERSION=$(tmcGetKubernetesImage $TDH_TKGWC_KUBERNETES) 
+
+      messageTitle "TMC Create Workload Cluster"     
+      messagePrint " ▪ TMC Cluster Name"                 "$TDH_CLUSTER_NAME"
+      messagePrint " ▪ TMC Cluster Group"                "$TDH_CLUSTER_GROUP"
+      messagePrint " ▪ TMC Template"                     "$TMC_TKGWC_TEMPLATE"
+      messagePrint " ▪ TMC Provisioner Name"             "$TDH_PROVISIONER_NAME"
+      messagePrint " ▪ TKG Management Cluster"           "$TDH_MANAGEMENT_CLUSTER"
+      messagePrint " ▪ TMC Account Name"                 "$TMC_ACCOUNT_NAME"
+      messagePrint " ▪ Kubernetes Version"               "$TDH_TKGWC_KUBERNETES"
+      messagePrint " ▪ Kubernetes Image"                 "$KUBERNETES_VERSION"
+
+      TDH_TKGWC_WORKERNODES_MACHINE=$(nodeType $TDH_TKGWC_WORKERNODES_TYPE)
+      TDH_TKGWC_CONTROPLANE_MACHINE=$(nodeType $TDH_TKGWC_CONTROPLANE_NODETYPE)
+      messagePrint " ▪ TKG Cluster Worker Nodes"         "$TDH_TKGWC_WORKERNODES"
+      messagePrint " ▪ TKG Cluster Worker Node Type"     "$TDH_TKGWC_WORKERNODES_TYPE ($TDH_TKGWC_WORKERNODES_MACHINE)"
+      messagePrint " ▪ TKG Control Plane Nodes"          "$TDH_TKGWC_CONTROPLANE"
+      messagePrint " ▪ TKG Control Plane Nodes Type"     "$TDH_TKGWC_CONTROPLANE_NODETYPE ($TDH_TKGWC_CONTROPLANE_MACHINE)"
+
+      if [ -f $HOME/.tanzu-demo-hub/KeyPair-Azure.pub ]; then 
+        read ssh_key < $HOME/.tanzu-demo-hub/KeyPair-Azure.pub
+      else
+        echo "ERROR: ssh key $HOME/.tanzu-demo-hub/KeyPair-Azure.pub does not exist"
+        exit
+      fi
+
+      TMC_CONFIG=/tmp/tmc_config.yaml
+      echo ""                                                                                                                       >  $TMC_CONFIG
+      echo "fullName:"                                                                                                              >> $TMC_CONFIG
+      echo "  managementClusterName: $TDH_MANAGEMENT_CLUSTER"                                                                       >> $TMC_CONFIG
+      echo "  name: $TDH_CLUSTER_NAME"                                                                                              >> $TMC_CONFIG
+      #echo "  orgId: fea0ee4b-bbf6-4444-b1d6-e493597d46a4"                                                                          >> $TMC_CONFIG
+      echo "  provisionerName: default"                                                                                             >> $TMC_CONFIG
+      echo "meta:"                                                                                                                  >> $TMC_CONFIG
+      echo "spec:"                                                                                                                  >> $TMC_CONFIG
+      echo "  clusterGroupName: $TDH_CLUSTER_GROUP"                                                                                 >> $TMC_CONFIG
+      echo "  tkgAzure:"                                                                                                       >> $TMC_CONFIG
+      echo "    distribution:"                                                                                                       >> $TMC_CONFIG
+      echo "      osName: ubuntu"                                                                                                       >> $TMC_CONFIG
+      echo "      osVersion: \"18.04\""                                                                                                       >> $TMC_CONFIG
+      echo "      region: $AZURE_LOCATION"                                                                                           >> $TMC_CONFIG
+      echo "      resourceGroup: ${TDH_CLUSTER_NAME}-rg"                                                                             >> $TMC_CONFIG
+      echo "      #version: v1.21.2+vmware.1-tkg.2"                                                                                  >> $TMC_CONFIG
+      echo "      version: $KUBERNETES_VERSION"                                                                                      >> $TMC_CONFIG
+      echo "    settings:"                                                                                                           >> $TMC_CONFIG
+      echo "      network:"                                                                                                          >> $TMC_CONFIG
+      echo "        cluster:"                                                                                                        >> $TMC_CONFIG
+      echo "          pods:"                                                                                                         >> $TMC_CONFIG
+      echo "            cidrBlocks:"                                                                                                 >> $TMC_CONFIG
+      echo "            - 100.96.0.0/11"                                                                                             >> $TMC_CONFIG
+      echo "          services:"                                                                                                     >> $TMC_CONFIG
+      echo "            cidrBlocks:"                                                                                                 >> $TMC_CONFIG
+      echo "            - 100.64.0.0/13"                                                                                             >> $TMC_CONFIG
+      echo "        provider:"                                                                                                       >> $TMC_CONFIG
+      echo "          controlPlaneSubnet:"                                                                                           >> $TMC_CONFIG
+      echo "            cidrBlock: 10.0.0.0/24"                                                                                      >> $TMC_CONFIG
+      echo "            name: sacha-controlplane-subnet"                                                                             >> $TMC_CONFIG
+      echo "          vnet:"                                                                                                         >> $TMC_CONFIG
+      echo "            cidrBlock: 10.0.0.0/16"                                                                                      >> $TMC_CONFIG
+      echo "            spec:"                                                                                                       >> $TMC_CONFIG
+      echo "              name: tkg-vnet"                                                                                            >> $TMC_CONFIG
+      echo "              resourceGroup: ${TDH_CLUSTER_NAME}-rg"                                                                     >> $TMC_CONFIG
+      echo "          workerNodeSubnet:"                                                                                                       >> $TMC_CONFIG
+      echo "            cidrBlock: 10.0.1.0/24"                                                                                                       >> $TMC_CONFIG
+      echo "            name: tkg-node-subnet"                                                                                       >> $TMC_CONFIG
+      echo "      security:"                                                                                                         >> $TMC_CONFIG
+      echo "        sshKeyValue: $ssh_key"                                                                                           >> $TMC_CONFIG
+      echo "        subscriptionId: $AZURE_SUBSCRIPTION_ID"                                                                          >> $TMC_CONFIG
+      echo "    topology:"                                                                                                           >> $TMC_CONFIG
+      echo "      controlPlane:"                                                                                                     >> $TMC_CONFIG
+      echo "        vmSize: $TDH_TKGWC_CONTROPLANE_MACHINE"                                                                          >> $TMC_CONFIG
+      echo "type:"                                                                                                                   >> $TMC_CONFIG
+      echo "  kind: Cluster"                                                                                                         >> $TMC_CONFIG
+      echo "  package: vmware.tanzu.manage.v1alpha1.cluster"                                                                         >> $TMC_CONFIG
+      echo "  version: v1alpha1"                                                                                                     >> $TMC_CONFIG
+
+echo $TMC_CONFIG
+
+exit
+
+
+
+      # tmc cluster get -m tkgmc-azure-sadubois -p default sacha -o yaml > /tmp/template.yaml
+
+#gaga
+      #tmc cluster create -m $TDH_MANAGEMENT_CLUSTER -t expert \
+
+      tmc cluster create -m tkgmc-azure-sadubois -t expert \
+      --spec.tkg-azure.distribution.region westeurope \
+      --spec.tkg-azure.distribution.resource-group tdh-azure-sadubois-rg \
+      --spec.tkg-azure.distribution.version "v1.21.2+vmware.1" \
+      --spec.tkg-azure.distribution.os-name "ubuntu" \
+      --spec.tkg-azure.distribution.os-version "18.04" \
+      --spec.tkg-azure.settings.network.cluster.pods.cidr-blocks "100.96.0.0/11" \
+      --spec.tkg-azure.settings.network.cluster.services.cidr-blocks "100.64.0.0/13" \
+      --spec.tkg-azure.settings.network.provider.control-plane-subnet.cidr-block "10.0.0.0/24" \
+      --spec.tkg-azure.settings.network.provider.control-plane-subnet.name "my-controlplane-subnet" \
+      --spec.tkg-azure.settings.network.provider.worker-node-subnet.cidr-block "10.0.1.0/24" \
+      --spec.tkg-azure.settings.network.provider.worker-node-subnet.name "my-node-subnet" \
+      --spec.tkg-azure.topology.node-pools.spec.taints.effect [ "NO_SCHEDULE" ] \
+      --spec.tkg-azure.topology.node-pools.info.name md-0
+
+#      --spec.tkg-azure.topology.node-pools.spec.taints.key "example-key" \
+#      --spec.tkg-azure.topology.node-pools.spec.taints.value "value1" \
+
+exit
+tmc cluster create -m tkgmc-azure-sadubois -p default \
+          --ssh-key-name tanzu-demo-hub -c sdubois@vnware.com \
+          --worker-node-count 3 \
+          -r westeurope -n tdh-azure-sadubois -q  \
+          -g tanzu-demo-hub -t default \
+          --version v1.20.8---vmware.1-tkg.3
+
+
+exit
+      tmc cluster create -m $TDH_MANAGEMENT_CLUSTER -p $TDH_PROVISIONER_NAME \
+                         --instance-type $TDH_TKGWC_WORKERNODES_MACHINE \
+                         --ssh-key-name $TMC_SSH_KEY_NAME_AWS -c $TMC_ACCOUNT_NAME \
+                         --worker-node-count $TDH_TKGWC_WORKERNODES \
+                         -r $AZURE_LOCATION -n $TDH_CLUSTER_NAME \
+                         -g $TDH_CLUSTER_GROUP -t $TMC_TKGWC_TEMPLATE \
+                         -s ~/.tanzu-demo-hub/KeyPair-Azure.pub \
+                         -t expert \
+                         --version $KUBERNETES_VERSION 
+
+      if [ $? -ne 0 ]; then 
+        echo "ERROR: failed to build TKG Cluster on Azure"
+        echo "       => tmc cluster create -m $TDH_MANAGEMENT_CLUSTER -p $TDH_PROVISIONER_NAME \\"
+        echo "          --ssh-key-name $TMC_SSH_KEY_NAME_AWS -c $TMC_ACCOUNT_NAME \\"
+        echo "          --worker-node-count $TDH_TKGWC_WORKERNODES \\"
+        echo "          -r $AZURE_LOCATION -n $TDH_CLUSTER_NAME -q $TMC_TKGWC_WORKERNODES \\"
+        echo "          -g $TDH_CLUSTER_GROUP -t $TMC_TKGWC_TEMPLATE \\"
+        echo "          -t expert \\"
+        echo "          --version $KUBERNETES_VERSION"
+        exit 1
+      fi
+
+      messagePrint " ▪ Cluster Status"         "creating ...."
+      stt=""
+      while [ "$stt" != "READY" ]; do
+        stt=$(tmc cluster list -m $TDH_MANAGEMENT_CLUSTER --name $TDH_CLUSTER_NAME -o json 2>/dev/null | \
+              jq -r '.clusters[].status.phase' 2>/dev/null | head -1)
+  
+        sleep 10
+      done
+    fi
+  fi
+
   if [ "$TDH_DEPLOYMENT_CLOUD" == "AWS" ]; then 
     stt=$(tmc cluster list -m $TDH_MANAGEMENT_CLUSTER -p $TDH_PROVISIONER_NAME --name $TDH_CLUSTER_NAME -o json 2>/dev/null | \
           jq -r '.clusters[].status.phase' 2>/dev/null) 
@@ -4407,13 +4588,6 @@ tmcCreateCluster() {
                          -g $TDH_CLUSTER_GROUP -t $TMC_TKGWC_TEMPLATE \
                          --version $KUBERNETES_VERSION --availability-zone $AWS_PRIMARY_AZ
 
-      #tmc cluster create -m $TDH_MANAGEMENT_CLUSTER -p $TDH_PROVISIONER_NAME \
-      #                   --ssh-key-name $TMC_SSH_KEY_NAME_AWS -c $TMC_ACCOUNT_NAME \
-      #                   --worker-node-count $TDH_TKGWC_WORKERNODES \
-      #                   -r $AWS_REGION -n $TDH_CLUSTER_NAME -y $INSTANCE_TYPE \
-      #                   -g $TDH_CLUSTER_GROUP -t $TMC_TKGWC_TEMPLATE \
-      #                   --version $KUBERNETES_VERSION --availability-zone $AWS_PRIMARY_AZ
-
       if [ $? -ne 0 ]; then 
         echo "ERROR: failed to build TKG Cluster on AWS"
         echo "       => tmc cluster create -m $TDH_MANAGEMENT_CLUSTER -p $TDH_PROVISIONER_NAME \\"
@@ -4434,7 +4608,9 @@ tmcCreateCluster() {
         sleep 10
       done
     fi
-  else
+  fi
+
+  if [ "$TDH_DEPLOYMENT_CLOUD" == "vSphere" ]; then 
     TDH_PROVISIONER_NAME=tanzu-demo-hub
     stt=$(tmc cluster list -m $TDH_MANAGEMENT_CLUSTER -p $TDH_PROVISIONER_NAME --name $TDH_CLUSTER_NAME -o json 2>/dev/null | \
           jq -r '.clusters[].status.phase' 2>/dev/null)

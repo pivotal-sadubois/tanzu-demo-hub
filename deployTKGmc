@@ -233,7 +233,6 @@ cleanupEnvironment() {
     messageTitle "Deleting Management Cluster ($TDH_TKGMC_NAME-$TDH_USER)"
     tanzu management-cluster delete ${TDH_TKGMC_NAME}-$TDH_USER -y > /tmp/error.log 2>&1; ret=$?
     
-#gaga
     if [ $ret -ne 0 ]; then 
       logMessages /tmp/error.log
       echo "ERROR: failed to delete management cluster ($TDH_TKGMC_NAME-$TDH_USER)"
@@ -894,7 +893,6 @@ createJumpHost() {
     messagePrint " ▪ ServicePrincipal" "$objid"
     messagePrint " ▪ Role Binding" "Owner"
 
-#gaga
     messageTitle "Verifing Azure Jump-Server ($JUMP_HOST)"
     stt=$(az group exists --name Admin)
     if [ "$stt" == "false" ]; then
@@ -1348,36 +1346,95 @@ if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "vSphere" -a "${TDH_TKGMC_TKG_TYPE}" == "tk
   printf "\e[1m1.) vCenter WebAccess Access ($VSPHERE_VCENTER_SERVER)\e[0m\n"
   echo "    => http://$VSPHERE_VCENTER_SERVER  ($VSPHERE_VCENTER_ADMIN/$VSPHERE_VCENTER_PASSWORD)"
   printf "\e[1m2.) vCenter CLI Access ($VSPHERE_VCENTER_SERVER)\e[0m\n"
-  echo "    => export GOVC_INSECURE=1"
-  echo "    => export GOVC_URL=https://${VSPHERE_VCENTER_SERVER}/sdk"
-  echo "    => export GOVC_USERNAME=$VSPHERE_VCENTER_ADMIN"
-  echo "    => export GOVC_PASSWORD=$VSPHERE_VCENTER_PASSWORD"
-  echo "    => govc ls /*/host/Workload-Cluster"
+
+  if [ "$NATIVE" == "0" ]; then
+    echo "    => tools/tdh-tools.sh"
+    echo "       tdh-tools:/$ export GOVC_INSECURE=1"
+    echo "       tdh-tools:/$ export GOVC_URL=https://${VSPHERE_VCENTER_SERVER}/sdk"
+    echo "       tdh-tools:/$ export GOVC_USERNAME=$VSPHERE_VCENTER_ADMIN"
+    echo "       tdh-tools:/$ export GOVC_PASSWORD=$VSPHERE_VCENTER_PASSWORD"
+    echo "       tdh-tools:/$ govc ls /*/host/Workload-Cluster"
+    echo "       tdh-tools:/$ exit"
+  else
+    echo "    => export GOVC_INSECURE=1"
+    echo "    => export GOVC_URL=https://${VSPHERE_VCENTER_SERVER}/sdk"
+    echo "    => export GOVC_USERNAME=$VSPHERE_VCENTER_ADMIN"
+    echo "    => export GOVC_PASSWORD=$VSPHERE_VCENTER_PASSWORD"
+    echo "    => govc ls /*/host/Workload-Cluster"
+  fi
+
   printf "\e[1m3.) login into the Supervisor Cluster\e[0m\n"
-  echo "    => export KUBECTL_VSPHERE_PASSWORD=$VSPHERE_VCENTER_PASSWORD"
-  echo "    => kubectl vsphere login --insecure-skip-tls-verify --server $VSPHERE_API_SERVER -u administrator@vsphere.local"
-  echo "    => kubectl config use-context wcp.${VSPHERE_DNS_DOMAIN}"
-  echo "    => tanzu login --name $TDH_TKGMC_NAME --kubeconfig ~/.kube/config --context wcp.$VSPHERE_DNS_DOMAIN"
+  if [ "$NATIVE" == "0" ]; then
+    echo "    => tools/tdh-tools.sh"
+    echo "       tdh-tools:/$ xport KUBECTL_VSPHERE_PASSWORD=$VSPHERE_VCENTER_PASSWORD"
+    echo "       tdh-tools:/$ kubectl vsphere login --insecure-skip-tls-verify --server $VSPHERE_API_SERVER -u administrator@vsphere.local"
+    echo "       tdh-tools:/$ kubectl config use-context wcp.${VSPHERE_DNS_DOMAIN}"
+    echo "       tdh-tools:/$ tanzu login --name $TDH_TKGMC_NAME --kubeconfig ~/.kube/config --context wcp.$VSPHERE_DNS_DOMAIN"
+    echo "       tdh-tools:/$ exit"
+  else
+    echo "    => export KUBECTL_VSPHERE_PASSWORD=$VSPHERE_VCENTER_PASSWORD"
+    echo "    => kubectl vsphere login --insecure-skip-tls-verify --server $VSPHERE_API_SERVER -u administrator@vsphere.local"
+    echo "    => kubectl config use-context wcp.${VSPHERE_DNS_DOMAIN}"
+    echo "    => tanzu login --name $TDH_TKGMC_NAME --kubeconfig ~/.kube/config --context wcp.$VSPHERE_DNS_DOMAIN"
+  fi
+
   printf "\e[1m4.) Create Kubernetes Cluster with the ClusterAPI\e[0m\n"
   echo "    Adjust parameters such as cluster name and kubernetes version if you are not happy woth the" 
   echo "    default settings."
-  echo "    => kubectl apply  -f $CLUSTER_TEMPLATE   ## Create the k8s Clusteer"
-  echo "    ?> kubectl get tanzukubernetesclusters -n tanzu-demo-hub"
-  echo "    => kubectl describe tanzukubernetescluster -n tanzu-demo-hub tkgs-cluster-1"
-  echo "    => kubectl delete -f $CLUSTER_TEMPLATE   ## Delete the k8s Clusteer"
+  if [ "$NATIVE" == "0" ]; then
+    echo "    => tools/tdh-tools.sh"
+    echo "       tdh-tools:/$ kubectl apply  -f $CLUSTER_TEMPLATE   ## Create the k8s Clusteer"
+    echo "       tdh-tools:/$ => kubectl get tanzukubernetesclusters -n tanzu-demo-hub"
+    echo "       tdh-tools:/$ => kubectl describe tanzukubernetescluster -n tanzu-demo-hub tkgs-cluster-1"
+    echo "       tdh-tools:/$ => kubectl delete -f $CLUSTER_TEMPLATE   ## Delete the k8s Clusteer"
+    echo "       tdh-tools:/$ exit"
+  else
+    echo "    => kubectl apply  -f $CLUSTER_TEMPLATE   ## Create the k8s Clusteer"
+    echo "    ?> kubectl get tanzukubernetesclusters -n tanzu-demo-hub"
+    echo "    => kubectl describe tanzukubernetescluster -n tanzu-demo-hub tkgs-cluster-1"
+    echo "    => kubectl delete -f $CLUSTER_TEMPLATE   ## Delete the k8s Clusteer"
+  fi
+
   printf "\e[1m5.) Create Kubernetes Cluster with Tanzu CLI\e[0m\n"
-  echo "    => tanzu config server list"
-  echo "    => tanzu kubernetes-release get"
-  echo "    => tanzu cluster create --file $WC_DEV_PATH --tkr=\"v1.20.2---vmware.1-tkg.1.1d4f79a\" <cluster-name>  -y"
-  echo "    => tanzu cluster create --file $WC_PRD_PATH --tkr=\"v1.18.5---vmware.1-tkg.1.c40d30d\" <cluster-name> -y"
-  echo "    => tanzu cluster list"
-  echo "    => tanzu cluster delete -n tanzu-demo-hub <cluster-name> -y"
+  if [ "$NATIVE" == "0" ]; then
+    echo "    => tools/tdh-tools.sh"
+    echo "       tdh-tools:/$ tanzu config server list"
+    echo "       tdh-tools:/$ tanzu kubernetes-release get"
+    echo "       tdh-tools:/$ tanzu cluster create --file $WC_DEV_PATH --tkr=\"v1.20.2---vmware.1-tkg.1.1d4f79a\" <cluster-name> -y"
+    echo "       tdh-tools:/$ anzu cluster create --file $WC_PRD_PATH --tkr=\"v1.18.5---vmware.1-tkg.1.c40d30d\" <cluster-name> -y"
+    echo "       tdh-tools:/$ tanzu cluster list"
+    echo "       tdh-tools:/$ tanzu cluster delete -n tanzu-demo-hub <cluster-name> -y"
+    echo "       tdh-tools:/$ exit"
+  else
+    echo "    => tanzu config server list"
+    echo "    => tanzu kubernetes-release get"
+    echo "    => tanzu cluster create --file $WC_DEV_PATH --tkr=\"v1.20.2---vmware.1-tkg.1.1d4f79a\" <cluster-name> -y"
+    echo "    => tanzu cluster create --file $WC_PRD_PATH --tkr=\"v1.18.5---vmware.1-tkg.1.c40d30d\" <cluster-name> -y"
+    echo "    => tanzu cluster list"
+    echo "    => tanzu cluster delete -n tanzu-demo-hub <cluster-name> -y"
+  fi
+
   printf "\e[1m6.) Create TKG Cluster for Tanzu-Demo-Hub\e[0m\n"
-  echo "    => kubectl config set-context $VSPHERE_API_SERVER"
-  echo "    => ./deployTKG -m $TDH_TKGMC_NAME -d tkg-tanzu-demo-hub.cfg -n tdh-${TDH_DEPLOYMENT_ENV_NAME}-${TDH_USER}"
-  echo "    => ./deployTKG -m $TDH_TKGMC_NAME -d tkg-tanzu-demo-hub.cfg -n tdh-${TDH_DEPLOYMENT_ENV_NAME}-${TDH_USER} -k \"v1.17.16---vmware.2-tkg.1\""
+  if [ "$NATIVE" == "0" ]; then
+    echo "    => tools/tdh-tools.sh"
+    echo "       tdh-tools:/$ kubectl config set-context $VSPHERE_API_SERVER"
+    echo "       tdh-tools:/$ ./deployTKG -m $TDH_TKGMC_NAME -d tkg-tanzu-demo-hub.cfg -n tdh-${TDH_DEPLOYMENT_ENV_NAME}-${TDH_USER}"
+    echo "       tdh-tools:/$ ./deployTKG -m $TDH_TKGMC_NAME -d tkg-tanzu-demo-hub.cfg -n tdh-${TDH_DEPLOYMENT_ENV_NAME}-${TDH_USER} -k \"v1.17.16---vmware.2-tkg.1\""
+    echo "       tdh-tools:/$ exit"
+  else
+    echo "    => kubectl config set-context $VSPHERE_API_SERVER"
+    echo "    => ./deployTKG -m $TDH_TKGMC_NAME -d tkg-tanzu-demo-hub.cfg -n tdh-${TDH_DEPLOYMENT_ENV_NAME}-${TDH_USER}"
+    echo "    => ./deployTKG -m $TDH_TKGMC_NAME -d tkg-tanzu-demo-hub.cfg -n tdh-${TDH_DEPLOYMENT_ENV_NAME}-${TDH_USER} -k \"v1.17.16---vmware.2-tkg.1\""
+  fi
+
   printf "\e[1m7.) Create Kubernetes Cluster through Tanzu Mission Control (TMC) ***UNSTABLE*** \e[0m\n"
-  echo "    => ./deployTMC tmc-vsphere-${TDH_USER}.cfg"
+  if [ "$NATIVE" == "0" ]; then
+    echo "    => tools/tdh-tools.sh"
+    echo "       tdh-tools:/$ ./deployTMC tmc-vsphere-${TDH_USER}.cfg"
+    echo "       tdh-tools:/$ exit"
+  else
+    echo "    => ./deployTMC tmc-vsphere-${TDH_USER}.cfg"
+  fi
   messageLine
 
   # Tanzu Kubernetes Cluster Operational Commands
@@ -1571,23 +1628,46 @@ else
   TKG_WC_CONFIG_PRD="$HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}-wc-prod.yaml"
   TKG_MC_CONFIG="$HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.yaml"
 
-  echo "TDH_TKGMC_INFRASTRUCTURE=$TDH_DEPLOYMENT_ENV_NAME"               >  $DEPLOYMENT_FILE
-  echo "TDH_TKGMC_NAME=$TDH_TKGMC_NAME"                                  >> $DEPLOYMENT_FILE
-  echo "TDH_TKGMC_ENVNAME=$TDH_TKGMC_ENVNAME"                            >> $DEPLOYMENT_FILE
-  echo "TDH_TKGMC_CONFIG=${TDH_TKGMC_NAME}.yaml"                         >> $DEPLOYMENT_FILE
-  echo "TDH_TKGMC_WC_CONFIG_DEV=${TDH_TKGMC_NAME}-wc-dev.yaml"           >> $DEPLOYMENT_FILE
-  echo "TDH_TKGMC_WC_CONFIG_PROD=${TDH_TKGMC_NAME}-wc-prod.yaml"         >> $DEPLOYMENT_FILE
-  echo "TDH_TKGMC_KUBECONFIG=${TDH_TKGMC_NAME}.kubeconfig"               >> $DEPLOYMENT_FILE
+  echo "TDH_TKGMC_INFRASTRUCTURE=$TDH_DEPLOYMENT_ENV_NAME"                       >  $DEPLOYMENT_FILE
+  echo "TDH_TKGMC_NAME=$TDH_TKGMC_NAME"                                          >> $DEPLOYMENT_FILE
+  echo "TDH_TKGMC_ENVNAME=$TDH_TKGMC_ENVNAME"                                    >> $DEPLOYMENT_FILE
+  echo "TDH_TKGMC_CONFIG=${TDH_TKGMC_NAME}.yaml"                                 >> $DEPLOYMENT_FILE
+  echo "TDH_TKGMC_WC_CONFIG_DEV=${TDH_TKGMC_NAME}-wc-dev.yaml"                   >> $DEPLOYMENT_FILE
+  echo "TDH_TKGMC_WC_CONFIG_PROD=${TDH_TKGMC_NAME}-wc-prod.yaml"                 >> $DEPLOYMENT_FILE
+  echo "TDH_TKGMC_KUBECONFIG=${TDH_TKGMC_NAME}.kubeconfig"                       >> $DEPLOYMENT_FILE
 
-  #echo "TDH_TKGMC_PLAN=dev"                                             >> $DEPLOYMENT_FILE
-  #echo "TDH_TKGMC_CEIP_PARTICIPATION=true"                              >> $DEPLOYMENT_FILE
-  #echo "TDH_TKGMC_CNI=antrea"                                           >> $DEPLOYMENT_FILE
-  #echo "TDH_TKGMC_LOGLEVEL=1"                                           >> $DEPLOYMENT_FILE
-  #echo "TDH_TKGMC_SERVICE_CIDR=100.64.0.0/13"                           >> $DEPLOYMENT_FILE
-  #echo "TDH_TKGMC_CLUSTER_CIDR=100.96.0.0/11"                           >> $DEPLOYMENT_FILE
-  #echo "TDH_TKGMC_MACHINE_HEALTH_CHECK_ENABLED=true"                    >> $DEPLOYMENT_FILE
-  #echo "TDH_TKGMC_MACHINE_TYPE=Standard_D2s_v3"                         >> $DEPLOYMENT_FILE
-  #echo "TDH_TKGMC_CONTROL_PLANE_MACHINE_TYPE=Standard_D2s_v3"           >> $DEPLOYMENT_FILE
+  #echo "TDH_TKGMC_PLAN=dev"                                                     >> $DEPLOYMENT_FILE
+  #echo "TDH_TKGMC_CEIP_PARTICIPATION=true"                                      >> $DEPLOYMENT_FILE
+  #echo "TDH_TKGMC_CNI=antrea"                                                   >> $DEPLOYMENT_FILE
+  #echo "TDH_TKGMC_LOGLEVEL=1"                                                   >> $DEPLOYMENT_FILE
+  #echo "TDH_TKGMC_SERVICE_CIDR=100.64.0.0/13"                                   >> $DEPLOYMENT_FILE
+  #echo "TDH_TKGMC_CLUSTER_CIDR=100.96.0.0/11"                                   >> $DEPLOYMENT_FILE
+  #echo "TDH_TKGMC_MACHINE_HEALTH_CHECK_ENABLED=true"                            >> $DEPLOYMENT_FILE
+  #echo "TDH_TKGMC_MACHINE_TYPE=Standard_D2s_v3"                                 >> $DEPLOYMENT_FILE
+  #echo "TDH_TKGMC_CONTROL_PLANE_MACHINE_TYPE=Standard_D2s_v3"                   >> $DEPLOYMENT_FILE
+
+  TMC_CONFIG_NAME="$(echo ${TDH_TKGMC_NAME} | sed 's/tkgmc/tmc/g')"
+  CONFIG_FILE="$HOME/.tanzu-demo-hub/config/${TMC_CONFIG_NAME}.cfg"
+
+  messageTitle "Create config file for TMC Management Cluster"
+  messagePrint " ▪ Deployment File (dev)"      "$CONFIG_FILE"
+  echo "TDH_INFRASTRUCTURE=tmc"                                                     >  $CONFIG_FILE
+  echo "TDH_ENVNAME=tkgm"                                                           >> $CONFIG_FILE
+  echo "TDH_DEPLOYMENT_CLOUD=$TDH_DEPLOYMENT_ENV_NAME"                              >> $CONFIG_FILE
+  echo "TDH_DEPLOYMENT_DESCRIPTION='Tanzu Kubernetes Grid (TKGm) on Azure'"         >> $CONFIG_FILE
+  echo "TDH_DEPLOYMENT_MAINTAINER=$TDH_USER"                                        >> $CONFIG_FILE
+  echo "TDH_DEPLOYMENT_DEBUG=false"                                                 >> $CONFIG_FILE
+  echo "TDH_DEPLOYMENT_CLUSTERGROUP=tanzu-demo-hub"                                 >> $CONFIG_FILE
+  echo "TDH_MANAGEMENT_CLUSTER=$TDH_TKGMC_NAME"                                     >> $CONFIG_FILE
+  echo "TDH_DEPLOYMENT_CLUSTER_PLAN=dev"                                            >> $CONFIG_FILE
+
+  str=$(tanzu kubernetes-release get 2>/dev/null | egrep " v" | awk '{ print $1 ":" $2 }') 
+  echo "TMC_K8S_VERSIONS=\"$str\""                                                  >> $CONFIG_FILE
+
+  echo ""                                                                           >> $CONFIG_FILE
+  echo "nodes[0]='Standard_D2s_v3'   ## Azure Standard_D2s_v3 (2 Cores, 8 GB RAM)"  >> $CONFIG_FILE
+  echo "nodes[1]='Standard_D4s_v3'   ## Azure Standard_D4s_v3 (2 Cores, 8 GB RAM)"  >> $CONFIG_FILE
+  echo "nodes[2]='Standard_D8s_v3'   ## Azure Standard_D8s_v3 (4 Cores, 16 GB RAM)" >> $CONFIG_FILE
 
   messageTitle "Create config file for TKG Workload Clusters"
   messagePrint " ▪ Deployment File (dev)"      "~/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}-wc-dev.yaml"
@@ -1652,7 +1732,6 @@ else
   printf "    => %-80s %s\n" "tanzu management-cluster get" "# Show Tanzu Management Cluster"
   
   if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "vSphere" ]; then
-
     printf "\e[1m2.) Ceeate TKG Workload Cluster\e[0m\n"
     echo "    TKG Workload Cluster 01 ...............................: NAME_TAG: TKG_CLUSTER_01"
     echo "        Cluster Control Plane .............................: $VSPHERE_TKGM_WKLD_CLUSTER01_CONTROL_PLANE"
@@ -1665,6 +1744,7 @@ else
     echo "        LoadBalancer IP Pool ..............................: $VSPHERE_TKGM_WKLD_CLUSTER03_LOADBALANCER_POOL"
     echo ""
 
+#gagag
     if [ "$NATIVE" == "0" ]; then
       echo "    => tools/tdh-tools.sh"
       echo "       tdh-tools:/$ export CLUSTER_NAME=<cluster_name>                   ## Workload Cluster Name"
@@ -1711,11 +1791,25 @@ else
 
   printf "\e[1m2.) Ceeate Tanzu Demo Hub (TDH) Workload Cluster with services (TBS, Harbor, Ingres etc.)\e[0m\n"
   if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "vSphere" ]; then
-    echo "    => ./deployTKG -m $TDH_TKGMC_NAME -d tkg-tanzu-demo-hub.cfg -n tdh-$CLOUD-$TDH_USER -tag TKG_CLUSTER_01"
-    echo "    => ./deployTKG -m $TDH_TKGMC_NAME -d tkg-tanzu-demo-hub.cfg -n tdh-$CLOUD-$TDH_USER -tag TKG_CLUSTER_02 -k \"v1.20.8---vmware.1-tkg.2\""
+    if [ "$NATIVE" == "0" ]; then
+      echo "    => tools/tdh-tools.sh"
+      echo "       tdh-tools:/$ ./deployTKG -m $TDH_TKGMC_NAME -d tkg-tanzu-demo-hub.cfg -n tdh-$CLOUD-$TDH_USER -tag TKG_CLUSTER_01"
+      echo "       tdh-tools:/$ ./deployTKG -m $TDH_TKGMC_NAME -d tkg-tanzu-demo-hub.cfg -n tdh-$CLOUD-$TDH_USER -tag TKG_CLUSTER_02 -k \"v1.20.8---vmware.1-tkg.2\""
+      echo "       tdh-tools:/$ exit"
+    else
+      echo "    => ./deployTKG -m $TDH_TKGMC_NAME -d tkg-tanzu-demo-hub.cfg -n tdh-$CLOUD-$TDH_USER -tag TKG_CLUSTER_01"
+      echo "    => ./deployTKG -m $TDH_TKGMC_NAME -d tkg-tanzu-demo-hub.cfg -n tdh-$CLOUD-$TDH_USER -tag TKG_CLUSTER_02 -k \"v1.20.8---vmware.1-tkg.2\""
+    fi
   else
-    echo "    => ./deployTKG -m $TDH_TKGMC_NAME -d tkg-tanzu-demo-hub.cfg -n tdh-$CLOUD-$TDH_USER"
-    echo "    => ./deployTKG -m $TDH_TKGMC_NAME -d tkg-tanzu-demo-hub.cfg -n tdh-$CLOUD-$TDH_USER -k \"v1.20.8---vmware.1-tkg.2\""
+    if [ "$NATIVE" == "0" ]; then
+      echo "    => tools/tdh-tools.sh"
+      echo "       tdh-tools:/$ ./deployTKG -m $TDH_TKGMC_NAME -d tkg-tanzu-demo-hub.cfg -n tdh-$CLOUD-$TDH_USER"
+      echo "       tdh-tools:/$ ./deployTKG -m $TDH_TKGMC_NAME -d tkg-tanzu-demo-hub.cfg -n tdh-$CLOUD-$TDH_USER -k \"v1.20.8---vmware.1-tkg.2\""
+      echo "       tdh-tools:/$ exit"
+    else
+      echo "    => ./deployTKG -m $TDH_TKGMC_NAME -d tkg-tanzu-demo-hub.cfg -n tdh-$CLOUD-$TDH_USER"
+      echo "    => ./deployTKG -m $TDH_TKGMC_NAME -d tkg-tanzu-demo-hub.cfg -n tdh-$CLOUD-$TDH_USER -k \"v1.20.8---vmware.1-tkg.2\""
+    fi
   fi
 
 #  printf "\e[1m3.) Delete the Management Cluster (Local or on the Jump host)\e[0m\n"
