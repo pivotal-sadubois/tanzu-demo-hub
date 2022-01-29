@@ -4388,13 +4388,12 @@ tmcCreateCluster() {
     fi
 
     if [ "$stt" == "" -o "$stt" != "READY" ]; then
-      KUBERNETES_VERSION=$(echo ${TMC_K8S_VERSIONS[*]} | sed 's/ /\n/g' | egrep "$TDH_TKGWC_KUBERNETES" | tail -1)
-
       [ "$TMC_KUBERNETES_VERSION" != "" ] && KUBERNETES_VERSION=$TMC_KUBERNETES_VERSION
       [ "$TDH_TKGWC_CONTROPLANE" == "3" ] && TMC_TKGWC_TEMPLATE="aws-ha" || TMC_TKGWC_TEMPLATE="default"
 
       # --- SEARCH KUBERNETES VERSIONS ---
-      #KUBERNETES_VERSION=$(tmcGetKubernetesImage $TDH_TKGWC_KUBERNETES) 
+      KUBERNETES_VERSION=$(echo ${TMC_K8S_VERSIONS[*]} | sed 's/ /\n/g' | egrep "$TDH_TKGWC_KUBERNETES" | tail -1 | awk -F: '{ print $2 }')
+echo "KUBERNETES_VERSION:$KUBERNETES_VERSION"
 
       messageTitle "TMC Create Workload Cluster"     
       messagePrint " ▪ TMC Cluster Name"                 "$TDH_CLUSTER_NAME"
@@ -4432,11 +4431,10 @@ tmcCreateCluster() {
       echo "  clusterGroupName: $TDH_CLUSTER_GROUP"                                                                                 >> $TMC_CONFIG
       echo "  tkgAzure:"                                                                                                       >> $TMC_CONFIG
       echo "    distribution:"                                                                                                       >> $TMC_CONFIG
-      echo "      osName: ubuntu"                                                                                                       >> $TMC_CONFIG
-      echo "      osVersion: \"18.04\""                                                                                                       >> $TMC_CONFIG
+      echo "      osName: ubuntu"                                                                                                    >> $TMC_CONFIG
+      echo "      osVersion: \"18.04\""                                                                                              >> $TMC_CONFIG
       echo "      region: $AZURE_LOCATION"                                                                                           >> $TMC_CONFIG
       echo "      resourceGroup: ${TDH_CLUSTER_NAME}-rg"                                                                             >> $TMC_CONFIG
-      echo "      #version: v1.21.2+vmware.1-tkg.2"                                                                                  >> $TMC_CONFIG
       echo "      version: $KUBERNETES_VERSION"                                                                                      >> $TMC_CONFIG
       echo "    settings:"                                                                                                           >> $TMC_CONFIG
       echo "      network:"                                                                                                          >> $TMC_CONFIG

@@ -1661,8 +1661,13 @@ else
   echo "TDH_MANAGEMENT_CLUSTER=$TDH_TKGMC_NAME"                                     >> $CONFIG_FILE
   echo "TDH_DEPLOYMENT_CLUSTER_PLAN=dev"                                            >> $CONFIG_FILE
 
-  str=$(tanzu kubernetes-release get 2>/dev/null | egrep " v" | awk '{ print $1 ":" $2 }') 
-  echo "TMC_K8S_VERSIONS=\"$str\""                                                  >> $CONFIG_FILE
+  echo "# THILS VALUES HAS BEEN GENERATED, DONT EDIT MANUALLY"                      >> $CONFIG_FILE
+  tanzu kubernetes-release get | egrep " v" | awk '{ printf("# TMC_K8S_VERSIONS:%s:%s:%s:%s\n",$1,$2,$3,$4)}' >> $CONFIG_FILE
+
+  str=$(tanzu kubernetes-release get 2>/dev/null | egrep " v" | awk '{ print $1 }') 
+  for n in $str; do
+    tanzu kubernetes-release os get $n | sed '1d' | awk -v n="$n" '{ printf("# TMC_K8S_OS_REL:%s:%s:%s:%s\n",n,$1,$2,$3)}' >> $CONFIG_FILE
+  done
 
   echo ""                                                                           >> $CONFIG_FILE
   echo "nodes[0]='Standard_D2s_v3'   ## Azure Standard_D2s_v3 (2 Cores, 8 GB RAM)"  >> $CONFIG_FILE
