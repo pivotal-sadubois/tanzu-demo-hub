@@ -52,7 +52,7 @@ usage() {
   echo "USAGE: $0 [options] -m <mgmt-cluster> -d <deployment> -n <cluster-name> [-k <kubernetes-version>] [--debug]"
   echo "            Options:  -n  <cluster-name>        # Should reflect the environment and its purpose. Make sure"
   echo "                                                # to add your user name, to prevent conflicts in TMC"
-  echo "                                                # ie. tdh-sdubois-azure or tdh-sdubois-aws-01"
+  echo "                                                # ie. tdh-azure-sdubois or tdh-aws-sdubois-aws"
   echo ""
   echo "                      -tag <name-tag>           # Cluster NameTag ie. TKG_CLUSTER_01 or TKG_CLUSTER_02"
   echo "                      -k  <controlplane-ip>     # default (latest)"
@@ -131,7 +131,7 @@ listDeployments() {
   echo "-----------------------------------------------------------------------------------------------------------"
 }
 
-if [ "${TKG_DEPLOYMENT}" == "" -o "${TDH_TKGMC_NAME}" == "" -o "${TDH_TKGWC_NAME}" == "" ]; then
+if [ "${TKG_DEPLOYMENT}" == "" -o "${TDH_TKGMC_NAME}" == "" ]; then
   if [ "${TKG_DEPLOYMENT}" == "" ]; then
     listDeployments
   fi
@@ -149,12 +149,6 @@ if [ ! -f ${TDHPATH}/deployments/${TKG_DEPLOYMENT} ]; then
   exit 1
 else
   . ${TDHPATH}/deployments/${TKG_DEPLOYMENT}
-fi
-
-if [ ! -f ${TDHPATH}/deployments/${TKG_DEPLOYMENT} ]; then
-  echo "ERROR: The Deployment deployments/$TKG_DEPLOYMENT does not have a releated $TKG_DEPLOYMENT file"
-  echo "       Please take deployments/tkg-tanzu-demo-hub.yaml as a template."
-  exit 1
 fi
 
 # --- CHECK ENVIRONMENT VARIABLES ---
@@ -175,6 +169,9 @@ if [ "$TDH_DEPLOYMENT_CLUSTER_PLAN" == "dev" ]; then
 else
   TDH_TKGMC_CONFIG=$TDH_TKGMC_WC_CONFIG_PROD
 fi
+
+# --- SET THE CLUSTER NAME IF NON HAS SET WITH COMMAND LINE ARGS ---
+[ "$TDH_TKGWC_NAME" == "" ] && TDH_TKGWC_NAME="tdh-$(echo $TDH_TKGMC_INFRASTRUCTURE | tr "[A-Z]" "[a.z]")-$TDH_USER"
 
 # --- DIRTY FIX ---
 export TDH_INFRASTRUCTURE=$TDH_TKGMC_INFRASTRUCTURE

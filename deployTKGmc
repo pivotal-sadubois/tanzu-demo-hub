@@ -1312,14 +1312,30 @@ if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "vSphere" -a "${TDH_TKGMC_TKG_TYPE}" == "tk
   TKG_WC_CONFIG_PRD="$HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}-wc-prod.yaml"
   TKG_MC_CONFIG="$HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.yaml"
 
-  echo "TDH_TKGMC_INFRASTRUCTURE=$TDH_DEPLOYMENT_ENV_NAME"               >  $DEPLOYMENT_FILE
-  echo "TDH_TKGMC_NAME=$TDH_TKGMC_NAME"                                  >> $DEPLOYMENT_FILE
-  echo "TDH_TKGMC_ENVNAME=$TDH_TKGMC_ENVNAME"                            >> $DEPLOYMENT_FILE
-  echo "TDH_TKGMC_TKG_TYPE=TKGs"                                         >> $DEPLOYMENT_FILE
-  echo "TDH_TKGMC_CONFIG=${TDH_TKGMC_NAME}.yaml"                         >> $DEPLOYMENT_FILE
-  echo "TDH_TKGMC_WC_CONFIG_DEV=${TDH_TKGMC_NAME}-wc-dev.yaml"           >> $DEPLOYMENT_FILE
-  echo "TDH_TKGMC_WC_CONFIG_PROD=${TDH_TKGMC_NAME}-wc-prod.yaml"         >> $DEPLOYMENT_FILE
-  echo "TDH_TKGMC_KUBECONFIG=${TDH_TKGMC_NAME}.kubeconfig"               >> $DEPLOYMENT_FILE
+  echo "TDH_TKGMC_INFRASTRUCTURE=$TDH_DEPLOYMENT_ENV_NAME"                            >  $DEPLOYMENT_FILE
+  echo "TDH_TKGMC_NAME=$TDH_TKGMC_NAME"                                               >> $DEPLOYMENT_FILE
+  echo "TDH_TKGMC_ENVNAME=$TDH_TKGMC_ENVNAME"                                         >> $DEPLOYMENT_FILE
+  echo "TDH_TKGMC_TKG_TYPE=TKGs"                                                      >> $DEPLOYMENT_FILE
+  echo "TDH_TKGMC_CONFIG=${TDH_TKGMC_NAME}.yaml"                                      >> $DEPLOYMENT_FILE
+  echo "TDH_TKGMC_WC_CONFIG_DEV=${TDH_TKGMC_NAME}-wc-dev.yaml"                        >> $DEPLOYMENT_FILE
+  echo "TDH_TKGMC_WC_CONFIG_PROD=${TDH_TKGMC_NAME}-wc-prod.yaml"                      >> $DEPLOYMENT_FILE
+  echo "TDH_TKGMC_KUBECONFIG=${TDH_TKGMC_NAME}.kubeconfig"                            >> $DEPLOYMENT_FILE
+
+  if [ "$TDH_DEPLOYMENT_ENV_NAME" == "Azure" ]; then
+    echo ""                                                                           >> $DEPLOYMENT_FILE
+    echo "nodes[0]='Standard_D2s_v3'   ## Azure Standard_D2s_v3 (2 Cores, 8 GB RAM)"  >> $DEPLOYMENT_FILE
+    echo "nodes[1]='Standard_D4s_v3'   ## Azure Standard_D4s_v3 (2 Cores, 8 GB RAM)"  >> $DEPLOYMENT_FILE
+    echo "nodes[2]='Standard_D8s_v3'   ## Azure Standard_D8s_v3 (4 Cores, 16 GB RAM)" >> $DEPLOYMENT_FILE
+  fi
+
+  if [ "$TDH_DEPLOYMENT_ENV_NAME" == "AWS" ]; then
+    echo ""                                                                           >> $DEPLOYMENT_FILE
+    echo "nodes[0]='m5.large'          ## AWS m5.large   (2 Cores, 8 GB RAM)"         >> $DEPLOYMENT_FILE
+    echo "nodes[1]='m5.xlarge'         ## AWS m5.xlarge  (2 Cores, 8 GB RAM)"         >> $DEPLOYMENT_FILE
+    echo "nodes[2]='m5.2xlarge'        ## AWS m5.2xlarge (4 Cores, 16 GB RAM)"        >> $DEPLOYMENT_FILE
+  fi
+
+#gaga
 
   echo "WORKER_STORAGE_CLASS: $STORAGE_CLASS"                            >  $TKG_MC_CONFIG
   echo "CONTROL_PLANE_STORAGE_CLASS: $STORAGE_CLASS"                     >> $TKG_MC_CONFIG
@@ -1670,10 +1686,20 @@ else
     tanzu kubernetes-release os get $n | sed '1d' | awk -v n="$n" '{ printf("# TMC_K8S_OS_REL:%s:%s:%s:%s\n",n,$1,$2,$3)}' >> $CONFIG_FILE
   done
 
-  echo ""                                                                           >> $CONFIG_FILE
-  echo "nodes[0]='Standard_D2s_v3'   ## Azure Standard_D2s_v3 (2 Cores, 8 GB RAM)"  >> $CONFIG_FILE
-  echo "nodes[1]='Standard_D4s_v3'   ## Azure Standard_D4s_v3 (2 Cores, 8 GB RAM)"  >> $CONFIG_FILE
-  echo "nodes[2]='Standard_D8s_v3'   ## Azure Standard_D8s_v3 (4 Cores, 16 GB RAM)" >> $CONFIG_FILE
+#gaga
+  if [ "$TDH_DEPLOYMENT_ENV_NAME" == "Azure" ]; then
+    echo ""                                                                           >> $CONFIG_FILE
+    echo "nodes[0]='Standard_D2s_v3'   ## Azure Standard_D2s_v3 (2 Cores, 8 GB RAM)"  >> $CONFIG_FILE
+    echo "nodes[1]='Standard_D4s_v3'   ## Azure Standard_D4s_v3 (2 Cores, 8 GB RAM)"  >> $CONFIG_FILE
+    echo "nodes[2]='Standard_D8s_v3'   ## Azure Standard_D8s_v3 (4 Cores, 16 GB RAM)" >> $CONFIG_FILE
+  fi
+
+  if [ "$TDH_DEPLOYMENT_ENV_NAME" == "AWS" ]; then
+    echo ""                                                                           >> $CONFIG_FILE
+    echo "nodes[0]='m5.large'          ## AWS m5.large   (2 Cores, 8 GB RAM)"         >> $CONFIG_FILE
+    echo "nodes[1]='m5.xlarge'         ## AWS m5.xlarge  (2 Cores, 8 GB RAM)"         >> $CONFIG_FILE
+    echo "nodes[2]='m5.2xlarge'        ## AWS m5.2xlarge (4 Cores, 16 GB RAM)"        >> $CONFIG_FILE
+  fi
 
   messageTitle "Create config file for TKG Workload Clusters"
   messagePrint " ▪ Deployment File (dev)"      "~/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}-wc-dev.yaml"
@@ -1750,7 +1776,6 @@ else
     echo "        LoadBalancer IP Pool ..............................: $VSPHERE_TKGM_WKLD_CLUSTER03_LOADBALANCER_POOL"
     echo ""
 
-#gagag
     if [ "$NATIVE" == "0" ]; then
       echo "    => tools/tdh-tools.sh"
       echo "       tdh-tools:/$ export CLUSTER_NAME=<cluster_name>                   ## Workload Cluster Name"

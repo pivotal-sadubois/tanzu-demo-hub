@@ -1616,6 +1616,8 @@ checkTMCintegration() {
         fi
       fi
 
+      sleep 300
+
       if [ $cnt -eq 0 ]; then 
         messagePrint " ▪ Configure Full Backup (full-backup) configuration"            "enabled"
 
@@ -2421,6 +2423,7 @@ route53setNSrecord () {
 
 route53deleteHostedZone() {
   ZONE_ID=$1
+
   aws route53 list-resource-record-sets --hosted-zone-id $ZONE_ID | jq -c '.ResourceRecordSets[]' | \
   while read -r resourcerecordset; do
     read -r name type <<<$(echo $(jq -r '.Name,.Type' <<<"$resourcerecordset"))
@@ -4392,8 +4395,22 @@ tmcCreateCluster() {
       [ "$TDH_TKGWC_CONTROPLANE" == "3" ] && TMC_TKGWC_TEMPLATE="aws-ha" || TMC_TKGWC_TEMPLATE="default"
 
       # --- SEARCH KUBERNETES VERSIONS ---
-      KUBERNETES_VERSION=$(echo ${TMC_K8S_VERSIONS[*]} | sed 's/ /\n/g' | egrep "$TDH_TKGWC_KUBERNETES" | tail -1 | awk -F: '{ print $2 }')
-echo "KUBERNETES_VERSION:$KUBERNETES_VERSION"
+      TDH_TKGMC_TMC_CONFIG=$(egrep "^TDH_TKGMC_TMC_CONFIG=" $HOME/.tanzu-demo-hub/config/${TDH_MANAGEMENT_CLUSTER}.cfg | awk -F= '{ print $2 }')
+      KUBERNETES_NAME=$(egrep "^# TMC_K8S_VERSIONS:" $HOME/.tanzu-demo-hub/config/${TDH_TKGMC_TMC_CONFIG} | \
+                        egrep "$TDH_TKGWC_KUBERNETES" | tail -1 | awk -F: '{ print $2 }')
+      KUBERNETES_VERSION=$(egrep "^# TMC_K8S_VERSIONS:" $HOME/.tanzu-demo-hub/config/${TDH_TKGMC_TMC_CONFIG} | \
+                           egrep "$TDH_TKGWC_KUBERNETES" | tail -1 | awk -F: '{ print $3 }')
+      KUBERNETES_OSVER=$(egrep "^# TMC_K8S_OS_REL:$KUBERNETES_NAME:" $HOME/.tanzu-demo-hub/config/${TDH_TKGMC_TMC_CONFIG} | \
+                         tail -1 | awk -F: '{ print $4 }')
+      KUBERNETES_OSTYP=$(egrep "^# TMC_K8S_OS_REL:$KUBERNETES_NAME:" $HOME/.tanzu-demo-hub/config/${TDH_TKGMC_TMC_CONFIG} | \
+                         tail -1 | awk -F: '{ print $3 }')
+
+      messageTitle "TMC Create Workload Cluster"     
+      messagePrint " ▪ TMC Cluster Name"                 "$TDH_CLUSTER_NAME"
+      messagePrint " ▪ TMC Cluster Group"                "$TDH_CLUSTER_GROUP"
+      messagePrint " ▪ TMC Template"                     "$TMC_TKGWC_TEMPLATE"
+      messagePrint " ▪ TMC Provisioner Name"             "$TDH_PROVISIONER_NAME"
+      messagePrint " ▪ TKG Management Cluster"           "$TDH_MANAGEMENT_CLUSTER"
 
       messageTitle "TMC Create Workload Cluster"     
       messagePrint " ▪ TMC Cluster Name"                 "$TDH_CLUSTER_NAME"
@@ -4420,19 +4437,18 @@ echo "KUBERNETES_VERSION:$KUBERNETES_VERSION"
       fi
 
       TMC_CONFIG=/tmp/tmc_config.yaml
-      echo ""                                                                                                                       >  $TMC_CONFIG
-      echo "fullName:"                                                                                                              >> $TMC_CONFIG
-      echo "  managementClusterName: $TDH_MANAGEMENT_CLUSTER"                                                                       >> $TMC_CONFIG
-      echo "  name: $TDH_CLUSTER_NAME"                                                                                              >> $TMC_CONFIG
-      #echo "  orgId: fea0ee4b-bbf6-4444-b1d6-e493597d46a4"                                                                          >> $TMC_CONFIG
-      echo "  provisionerName: default"                                                                                             >> $TMC_CONFIG
-      echo "meta:"                                                                                                                  >> $TMC_CONFIG
-      echo "spec:"                                                                                                                  >> $TMC_CONFIG
-      echo "  clusterGroupName: $TDH_CLUSTER_GROUP"                                                                                 >> $TMC_CONFIG
-      echo "  tkgAzure:"                                                                                                       >> $TMC_CONFIG
+      echo ""                                                                                                                        >  $TMC_CONFIG
+      echo "fullName:"                                                                                                               >> $TMC_CONFIG
+      echo "  managementClusterName: $TDH_MANAGEMENT_CLUSTER"                                                                        >> $TMC_CONFIG
+      echo "  name: $TDH_CLUSTER_NAME"                                                                                               >> $TMC_CONFIG
+      echo "  provisionerName: default"                                                                                              >> $TMC_CONFIG
+      echo "meta:"                                                                                                                   >> $TMC_CONFIG
+      echo "spec:"                                                                                                                   >> $TMC_CONFIG
+      echo "  clusterGroupName: $TDH_CLUSTER_GROUP"                                                                                  >> $TMC_CONFIG
+      echo "  tkgAzure:"                                                                                                             >> $TMC_CONFIG
       echo "    distribution:"                                                                                                       >> $TMC_CONFIG
-      echo "      osName: ubuntu"                                                                                                    >> $TMC_CONFIG
-      echo "      osVersion: \"18.04\""                                                                                              >> $TMC_CONFIG
+      echo "      osName: $KUBERNETES_OSTYP"                                                                                         >> $TMC_CONFIG
+      echo "      osVersion: \"$KUBERNETES_OSVER\""                                                                                  >> $TMC_CONFIG
       echo "      region: $AZURE_LOCATION"                                                                                           >> $TMC_CONFIG
       echo "      resourceGroup: ${TDH_CLUSTER_NAME}-rg"                                                                             >> $TMC_CONFIG
       echo "      version: $KUBERNETES_VERSION"                                                                                      >> $TMC_CONFIG
@@ -4454,8 +4470,8 @@ echo "KUBERNETES_VERSION:$KUBERNETES_VERSION"
       echo "            spec:"                                                                                                       >> $TMC_CONFIG
       echo "              name: tkg-vnet"                                                                                            >> $TMC_CONFIG
       echo "              resourceGroup: ${TDH_CLUSTER_NAME}-rg"                                                                     >> $TMC_CONFIG
-      echo "          workerNodeSubnet:"                                                                                                       >> $TMC_CONFIG
-      echo "            cidrBlock: 10.0.1.0/24"                                                                                                       >> $TMC_CONFIG
+      echo "          workerNodeSubnet:"                                                                                             >> $TMC_CONFIG
+      echo "            cidrBlock: 10.0.1.0/24"                                                                                      >> $TMC_CONFIG
       echo "            name: tkg-node-subnet"                                                                                       >> $TMC_CONFIG
       echo "      security:"                                                                                                         >> $TMC_CONFIG
       echo "        sshKeyValue: $ssh_key"                                                                                           >> $TMC_CONFIG
@@ -4463,69 +4479,29 @@ echo "KUBERNETES_VERSION:$KUBERNETES_VERSION"
       echo "    topology:"                                                                                                           >> $TMC_CONFIG
       echo "      controlPlane:"                                                                                                     >> $TMC_CONFIG
       echo "        vmSize: $TDH_TKGWC_CONTROPLANE_MACHINE"                                                                          >> $TMC_CONFIG
+      echo "      nodePools:"                                                                                                        >> $TMC_CONFIG
+      echo "       - spec:"                                                                                                          >> $TMC_CONFIG
+      echo "           workerNodeCount: $TDH_TKGWC_WORKERNODES"                                                                      >> $TMC_CONFIG
+      echo "           tkgAzure:"                                                                                                    >> $TMC_CONFIG
+      echo "             vmSize: $TDH_TKGWC_WORKERNODES_MACHINE"                                                                     >> $TMC_CONFIG
+      echo "         info:"                                                                                                          >> $TMC_CONFIG
+      echo "           name: md-0"                                                                                                   >> $TMC_CONFIG
       echo "type:"                                                                                                                   >> $TMC_CONFIG
       echo "  kind: Cluster"                                                                                                         >> $TMC_CONFIG
       echo "  package: vmware.tanzu.manage.v1alpha1.cluster"                                                                         >> $TMC_CONFIG
       echo "  version: v1alpha1"                                                                                                     >> $TMC_CONFIG
 
-echo $TMC_CONFIG
-
-exit
-
-
-
-      # tmc cluster get -m tkgmc-azure-sadubois -p default sacha -o yaml > /tmp/template.yaml
-
-#gaga
-      #tmc cluster create -m $TDH_MANAGEMENT_CLUSTER -t expert \
-
-      tmc cluster create -m tkgmc-azure-sadubois -t expert \
-      --spec.tkg-azure.distribution.region westeurope \
-      --spec.tkg-azure.distribution.resource-group tdh-azure-sadubois-rg \
-      --spec.tkg-azure.distribution.version "v1.21.2+vmware.1" \
-      --spec.tkg-azure.distribution.os-name "ubuntu" \
-      --spec.tkg-azure.distribution.os-version "18.04" \
-      --spec.tkg-azure.settings.network.cluster.pods.cidr-blocks "100.96.0.0/11" \
-      --spec.tkg-azure.settings.network.cluster.services.cidr-blocks "100.64.0.0/13" \
-      --spec.tkg-azure.settings.network.provider.control-plane-subnet.cidr-block "10.0.0.0/24" \
-      --spec.tkg-azure.settings.network.provider.control-plane-subnet.name "my-controlplane-subnet" \
-      --spec.tkg-azure.settings.network.provider.worker-node-subnet.cidr-block "10.0.1.0/24" \
-      --spec.tkg-azure.settings.network.provider.worker-node-subnet.name "my-node-subnet" \
-      --spec.tkg-azure.topology.node-pools.spec.taints.effect [ "NO_SCHEDULE" ] \
-      --spec.tkg-azure.topology.node-pools.info.name md-0
-
-#      --spec.tkg-azure.topology.node-pools.spec.taints.key "example-key" \
-#      --spec.tkg-azure.topology.node-pools.spec.taints.value "value1" \
-
-exit
-tmc cluster create -m tkgmc-azure-sadubois -p default \
-          --ssh-key-name tanzu-demo-hub -c sdubois@vnware.com \
-          --worker-node-count 3 \
-          -r westeurope -n tdh-azure-sadubois -q  \
-          -g tanzu-demo-hub -t default \
-          --version v1.20.8---vmware.1-tkg.3
-
-
-exit
-      tmc cluster create -m $TDH_MANAGEMENT_CLUSTER -p $TDH_PROVISIONER_NAME \
-                         --instance-type $TDH_TKGWC_WORKERNODES_MACHINE \
-                         --ssh-key-name $TMC_SSH_KEY_NAME_AWS -c $TMC_ACCOUNT_NAME \
-                         --worker-node-count $TDH_TKGWC_WORKERNODES \
-                         -r $AZURE_LOCATION -n $TDH_CLUSTER_NAME \
-                         -g $TDH_CLUSTER_GROUP -t $TMC_TKGWC_TEMPLATE \
-                         -s ~/.tanzu-demo-hub/KeyPair-Azure.pub \
-                         -t expert \
-                         --version $KUBERNETES_VERSION 
-
-      if [ $? -ne 0 ]; then 
-        echo "ERROR: failed to build TKG Cluster on Azure"
-        echo "       => tmc cluster create -m $TDH_MANAGEMENT_CLUSTER -p $TDH_PROVISIONER_NAME \\"
-        echo "          --ssh-key-name $TMC_SSH_KEY_NAME_AWS -c $TMC_ACCOUNT_NAME \\"
-        echo "          --worker-node-count $TDH_TKGWC_WORKERNODES \\"
-        echo "          -r $AZURE_LOCATION -n $TDH_CLUSTER_NAME -q $TMC_TKGWC_WORKERNODES \\"
-        echo "          -g $TDH_CLUSTER_GROUP -t $TMC_TKGWC_TEMPLATE \\"
-        echo "          -t expert \\"
-        echo "          --version $KUBERNETES_VERSION"
+      tmc cluster create -f $TMC_CONFIG > /tmp/error 2>&1; ret=$?
+      if [ $ret -ne 0 ]; then 
+        logMessages /tmp/error.log
+        echo "ERROR: failed to build TKG Cluster with TMC on Azure"
+        if [ "$NATIVE" == "0" ]; then
+          echo "       => tools/${TDH_TOOLS}.sh"
+          echo "          tdh-tools:/$ tmc cluster create -f $TMC_CONFIG"
+          echo "          tdh-tools:/$ exit"
+        else
+          echo "       => tmc cluster create -f $TMC_CONFIG"
+        fi
         exit 1
       fi
 
@@ -4537,6 +4513,8 @@ exit
   
         sleep 10
       done
+
+      sleep 300
     fi
   fi
 
@@ -4605,6 +4583,8 @@ exit
   
         sleep 10
       done
+
+      sleep 300
     fi
   fi
 
@@ -4679,6 +4659,7 @@ exit
         sleep 10
       done
   
+      sleep 300
     fi
   fi
 
@@ -7987,7 +7968,6 @@ tdh_tools_build() {
   #export VMWPASS="$TDH_MYVMWARE_PASS"
   #$VMWCLI ls vmware_tanzu_kubernetes_grid > /dev/null 2>&1
 
-#gaga100
   if [ "$TDH_SERVICE_TAP_VERSION" != "" ]; then 
     [ ! -d $TDH_DOCKER_CACHE/tap-$TDH_SERVICE_TAP_VERSION ] && mkdir -p $TDH_DOCKER_CACHE/tap-$TDH_SERVICE_TAP_VERSION
 
@@ -9955,7 +9935,7 @@ TanzuPackage_Harbor () {
 # Return Value .......: 0 on Success, 1 on failure
 # ------------------------------------------------------------------------------------------
 # https://docs.vmware.com/en/VMware-Tanzu-Kubernetes-Grid/1.4/vmware-tanzu-kubernetes-grid-14/GUID-packages-ingress-contour.html
-# tanzu package available get contour.tanzu.vmware.com/1.17.1+vmware.1-tkg.1 --values-schema
+# tanzu package available get contour.tanzu.vmware.com/1.17.2+vmware.1-tkg.2 --values-schema
 # ------------------------------------------------------------------------------------------
 TanzuPackage_Contour() {
   PACKAGE_NAME=$1
@@ -10002,8 +9982,6 @@ TanzuPackage_Contour() {
 
     if [ "${TDH_DEPLOYMENT_CLOUD}" == "Azure" -o "${TDH_TKGMC_INFRASTRUCTURE}" == "Azure" ]; then
       VALUE_FILE=/tmp/contour-data-values.yaml; rm -f $VALUE_FILE
-      echo "----"                                                                       >> $VALUE_FILE
-      echo "infrastructure_provider: azure"                                             >> $VALUE_FILE
       echo "namespace: tanzu-system-ingress"                                            >> $VALUE_FILE
       echo "contour:"                                                                   >> $VALUE_FILE
       echo " configFileContents: {}"                                                    >> $VALUE_FILE
@@ -10036,7 +10014,6 @@ TanzuPackage_Contour() {
     if [ "${TDH_DEPLOYMENT_CLOUD}" == "AWS" -o "${TDH_TKGMC_INFRASTRUCTURE}" == "AWS" ]; then
       VALUE_FILE=/tmp/contour-data-values.yaml; rm -f $VALUE_FILE
       echo "---"                                                                        >  $VALUE_FILE
-      echo "infrastructure_provider: aws"                                               >> $VALUE_FILE
       echo "namespace: tanzu-system-ingress"                                            >> $VALUE_FILE
       echo "contour:"                                                                   >> $VALUE_FILE
       echo " configFileContents: {}"                                                    >> $VALUE_FILE
@@ -10101,6 +10078,12 @@ TanzuPackage_Contour() {
   pkg_nam=$(jq -r '.[]."package-name"' /tmp/pkg.json)
   pkg_ver=$(jq -r '.[]."package-version"' /tmp/pkg.json)
 
+  messageTitle "Verify $PACKAGE_DES"      
+  messagePrint " ▪ Tanzu Package ($PACKAGE_NAME)"               "$pkg_nam"
+  messagePrint " ▪ Tanzu Package ($PACKAGE_NAME) Namespace"     "$NAMESPACE"
+  messagePrint " ▪ Tanzu Package ($PACKAGE_NAME) Version"       "$pkg_ver"
+  messagePrint " ▪ Tanzu Package ($PACKAGE_NAME) Status"        "$pkg_stt"
+
   if [ "$pkg_stt" != "Reconcile succeeded" -a "$pkg_stt" != "Reconciling" ]; then
     echo "ERROR: failed to reconsile Tanzu Package $PACKAGE_NAME)"
     messageLine
@@ -10108,23 +10091,21 @@ TanzuPackage_Contour() {
     messageLine
     if [ "$NATIVE" == "0" ]; then
       echo "       => tools/${TDH_TOOLS}.sh"
-      echo "          tdh-tools:/$ tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $PACKAGE_NAMESPACE --version $package_ver --create-namespace"
+      echo "          tdh-tools:/$ tanzu package installed get $PACKAGE_NAME -n $PACKAGE_NAMESPACE"
+      echo "          tdh-tools:/$ tanzu package installed delete $PACKAGE_NAME --namespace $PACKAGE_NAMESPACE"
       echo "          tdh-tools:/$ exit"
     else
-      echo "       => tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $PACKAGE_NAMESPACE --version $package_ver --create-namespace"
+      echo "       => tanzu package installed get $PACKAGE_NAME -n $PACKAGE_NAMESPACE"
+      echo "       => tanzu package installed delete $PACKAGE_NAME --namespace $PACKAGE_NAMESPACE"
     fi
 
     exit 1
   fi
-
-  messageTitle "Verify $PACKAGE_DES"      
-  messagePrint " ▪ Tanzu Package ($PACKAGE_NAME)"               "$pkg_nam"
-  messagePrint " ▪ Tanzu Package ($PACKAGE_NAME) Namespace"     "$NAMESPACE"
-  messagePrint " ▪ Tanzu Package ($PACKAGE_NAME) Version"       "$pkg_ver"
-  messagePrint " ▪ Tanzu Package ($PACKAGE_NAME) Status"        "$pkg_stt"
+echo gaga9
 
   # --- VERIFY DNS DOMAIN ---
   verifyHostedZone ${TDH_ENVNAME}.$AWS_HOSTED_DNS_DOMAIN
+echo gaga10
 
   [ "$TDH_TOOLS" == "tdh-tools" ] && CONTOUR_NS=tanzu-system-ingress || CONTOUR_NS=projectcontour
 
@@ -10152,11 +10133,14 @@ TanzuPackage_Contour() {
   fi
 
   # --- SET DNS RECORD ---
-  if [ "$TDH_INFRASTRUCTURE" == "minikube" -o "$TDH_INFRASTRUCTURE" == "vSphere" -o "$TDH_INFRASTRUCTURE" == "Azure" -o "$TDH_INFRASTRUCTURE" == "docker" ]; then
+  if [ "$TDH_DEPLOYMENT_CLOUD" == "minikube" -o "$TDH_DEPLOYMENT_CLOUD" == "vSphere" -o "$TDH_DEPLOYMENT_CLOUD" == "Azure" -o "$TDH_DEPLOYMENT_CLOUD" == "docker" ]; then
+echo gaga121
     setDNSrecord "$ipa" "${TDH_ENVNAME}" "${AWS_HOSTED_DNS_DOMAIN}" "*.apps-contour" "A"
   else
+echo gaga122
     setDNSalias "$ipa" "${TDH_ENVNAME}" "${AWS_HOSTED_DNS_DOMAIN}" "*.apps-contour" "A"
   fi
+echo gaga12
 
   # --- STORE SETTINGS IN CONFIGMAP ---
   uodateConfigMap tanzu-demo-hub TDH_INGRESS_CONTOUR_ENABLED          "true"
