@@ -2978,9 +2978,7 @@ createTKGMCcluster() {
     fi
   fi
 
-echo "gaga createTKGMCcluster gaga1"
   if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "Azure" ]; then
-echo "gaga createTKGMCcluster gaga2"
     # --- SET DEFAULT VALUES ---
     [ "$TDH_TKGMC_CONTROL_PLANE_MACHINE_TYPE" == "" ] && TDH_TKGMC_CONTROL_PLANE_MACHINE_TYPE=Standard_D3_v2
     [ "$TDH_TKGMC_MACHINE_TYPE" == "" ] && TDH_TKGMC_MACHINE_TYPE=Standard_D2_v4
@@ -3042,6 +3040,11 @@ echo "gaga createTKGMCcluster gaga2"
     echo "ENABLE_CEIP_PARTICIPATION: \"false\""                                       >> $TKG_TEMPLATE
     echo "ENABLE_MHC: \"true\""                                                       >> $TKG_TEMPLATE
     echo "SERVICE_CIDR: $TDH_TKGMC_SERVICE_CIDR"                                      >> $TKG_TEMPLATE
+
+    echo "ENABLE_MHC: true"                                                           >> $TKG_TEMPLATE
+    echo "MHC_UNKNOWN_STATUS_TIMEOUT: 10m"                                            >> $TKG_TEMPLATE
+    echo "MHC_FALSE_STATUS_TIMEOUT: 20m"                                              >> $TKG_TEMPLATE
+
     echo ""                                                                           >> $TKG_TEMPLATE
     echo "INFRASTRUCTURE_PROVIDER: azure"                                             >> $TKG_TEMPLATE
 
@@ -3076,10 +3079,8 @@ echo "gaga createTKGMCcluster gaga2"
 
     #MPDE=azure
 
-echo "gaga createTKGMCcluster gaga3"
     tanzu login --server $TDH_TKGMC_NAME > /dev/null 2>&1
     cnt=$(tanzu management-cluster get 2>/dev/null | egrep -c " $TDH_TKGMC_NAME ")
-echo "gaga createTKGMCcluster gaga4 CNT:$cnt TKG_KUBECONFIG:$TKG_KUBECONFIG"
     if [ ${cnt} -eq 0 ]; then
       # --- CLEANUP OLD CONFIG ---
       export KUBECONFIG=~/.kube-tkg/config
@@ -3122,9 +3123,7 @@ echo "gaga createTKGMCcluster gaga4 CNT:$cnt TKG_KUBECONFIG:$TKG_KUBECONFIG"
       messagePrint " ▪ Management Cluster already installed"    "/tmp/$TDH_TKGMC_NAME.log"
     fi
 
-echo "gaga createTKGMCcluster gaga4"
     if [ ! -f $TKG_KUBECONFIG ]; then 
-echo "gaga createTKGMCcluster gaga31"
       tanzu management-cluster kubeconfig get --admin > /dev/null 2>&1
       kubectl config set-cluster $TDH_TKGMC_NAME > /dev/null 2>&1
       kubectl config use-context ${TDH_TKGMC_NAME}-admin@$TDH_TKGMC_NAME > /dev/null 2>&1

@@ -1454,11 +1454,12 @@ else
     # --- ACCEPT LICENSE AGREEMENT ---
     if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "Azure" ]; then
       messageTitle "Accepting Image Terms for Provider (vmware-inc) / Offer: (tkg-capi)"
+      #[ ! -d $HOME/.tanzu-demo-hub/cache/azure-eula ] && mkdir -p $HOME/.tanzu-demo-hub/cache/azure-eula
 
       for img in $(az vm image list --publisher vmware-inc --offer tkg-capi --all | jq -r '.[].urn' | \
                    grep -v "2020" | awk -F: '{ printf("%s:%s:%s\n",$1,$2,$3)}' | sort | uniq); do
         stt=$(az vm image terms show --urn $img:latest | jq -r '.accepted')
-  
+
         if [ "$stt" != "true" ]; then 
           messagePrint " ▪ Accepting Image Terms for image ($img)" "$img"
 
