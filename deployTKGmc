@@ -1321,21 +1321,6 @@ if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "vSphere" -a "${TDH_TKGMC_TKG_TYPE}" == "tk
   echo "TDH_TKGMC_WC_CONFIG_PROD=${TDH_TKGMC_NAME}-wc-prod.yaml"                      >> $DEPLOYMENT_FILE
   echo "TDH_TKGMC_KUBECONFIG=${TDH_TKGMC_NAME}.kubeconfig"                            >> $DEPLOYMENT_FILE
 
-  if [ "$TDH_DEPLOYMENT_ENV_NAME" == "Azure" ]; then
-    echo ""                                                                           >> $DEPLOYMENT_FILE
-    echo "nodes[0]='Standard_D2s_v3'   ## Azure Standard_D2s_v3 (2 Cores, 8 GB RAM)"  >> $DEPLOYMENT_FILE
-    echo "nodes[1]='Standard_D4s_v3'   ## Azure Standard_D4s_v3 (2 Cores, 8 GB RAM)"  >> $DEPLOYMENT_FILE
-    echo "nodes[2]='Standard_D8s_v3'   ## Azure Standard_D8s_v3 (4 Cores, 16 GB RAM)" >> $DEPLOYMENT_FILE
-  fi
-
-  if [ "$TDH_DEPLOYMENT_ENV_NAME" == "AWS" ]; then
-    echo ""                                                                           >> $DEPLOYMENT_FILE
-    echo "nodes[0]='m5.large'          ## AWS m5.large   (2 Cores, 8 GB RAM)"         >> $DEPLOYMENT_FILE
-    echo "nodes[1]='m5.xlarge'         ## AWS m5.xlarge  (2 Cores, 8 GB RAM)"         >> $DEPLOYMENT_FILE
-    echo "nodes[2]='m5.2xlarge'        ## AWS m5.2xlarge (4 Cores, 16 GB RAM)"        >> $DEPLOYMENT_FILE
-  fi
-
-#gaga
 
   echo "WORKER_STORAGE_CLASS: $STORAGE_CLASS"                            >  $TKG_MC_CONFIG
   echo "CONTROL_PLANE_STORAGE_CLASS: $STORAGE_CLASS"                     >> $TKG_MC_CONFIG
@@ -1521,10 +1506,26 @@ else
     # --- LOGIN ---
     tanzu login --server $TDH_TKGMC_NAME > /dev/null 2>&1
 
+echo gaga1
     cnt=$(tanzu management-cluster get 2>/dev/null | grep -c " $TDH_TKGMC_NAME ")
     if [ $cnt -eq 0 ]; then
+echo gaga2
+echo "$SCP_COMMAND ${SSH_USER}@${SSH_HOST}:$SSH_HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.kubeconfig ~/.tanzu-demo-hub/config"
       $SCP_COMMAND ${SSH_USER}@${SSH_HOST}:$SSH_HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.kubeconfig ~/.tanzu-demo-hub/config > /dev/null 2>&1
       $SCP_COMMAND ${SSH_USER}@${SSH_HOST}:$SSH_HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.yaml ~/.tanzu-demo-hub/config > /dev/null 2>&1
+
+      if [ ! -f $HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.kubeconfig ]; then 
+        echo "ERROR: failed to copy ${TDH_TKGMC_NAME}.kubeconfig"
+        if [ "$NATIVE" == "0" ]; then
+          echo "       => tools/${TDH_TOOLS}.sh"
+          echo "          tdh-tools:/$ $SCP_COMMAND ${SSH_USER}@${SSH_HOST}:$SSH_HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.kubeconfig ~/.tanzu-demo-hub/config"
+          echo "          tdh-tools:/$ exit"
+        else
+          echo "       => $SCP_COMMAND ${SSH_USER}@${SSH_HOST}:$SSH_HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.kubeconfig ~/.tanzu-demo-hub/config"
+        fi
+
+        exit 1
+      fi
 
       # --- UNCOMMENT FOR DEBUGGING ---
       #echo "tanzu login --kubeconfig ~/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.kubeconfig \
@@ -1647,14 +1648,28 @@ else
   TMC_CONFIG_NAME="$(echo ${TDH_TKGMC_NAME} | sed 's/tkgmc/tmc/g')"
   CONFIG_FILE="$HOME/.tanzu-demo-hub/config/${TMC_CONFIG_NAME}.cfg"
 
-  echo "TDH_TKGMC_INFRASTRUCTURE=$TDH_DEPLOYMENT_ENV_NAME"                       >  $DEPLOYMENT_FILE
-  echo "TDH_TKGMC_NAME=$TDH_TKGMC_NAME"                                          >> $DEPLOYMENT_FILE
-  echo "TDH_TKGMC_ENVNAME=$TDH_TKGMC_ENVNAME"                                    >> $DEPLOYMENT_FILE
-  echo "TDH_TKGMC_TMC_CONFIG=${TMC_CONFIG_NAME}.cfg"                             >> $DEPLOYMENT_FILE
-  echo "TDH_TKGMC_CONFIG=${TDH_TKGMC_NAME}.yaml"                                 >> $DEPLOYMENT_FILE
-  echo "TDH_TKGMC_WC_CONFIG_DEV=${TDH_TKGMC_NAME}-wc-dev.yaml"                   >> $DEPLOYMENT_FILE
-  echo "TDH_TKGMC_WC_CONFIG_PROD=${TDH_TKGMC_NAME}-wc-prod.yaml"                 >> $DEPLOYMENT_FILE
-  echo "TDH_TKGMC_KUBECONFIG=${TDH_TKGMC_NAME}.kubeconfig"                       >> $DEPLOYMENT_FILE
+  echo "TDH_TKGMC_INFRASTRUCTURE=$TDH_DEPLOYMENT_ENV_NAME"                            >  $DEPLOYMENT_FILE
+  echo "TDH_TKGMC_NAME=$TDH_TKGMC_NAME"                                               >> $DEPLOYMENT_FILE
+  echo "TDH_TKGMC_ENVNAME=$TDH_TKGMC_ENVNAME"                                         >> $DEPLOYMENT_FILE
+  echo "TDH_TKGMC_TMC_CONFIG=${TMC_CONFIG_NAME}.cfg"                                  >> $DEPLOYMENT_FILE
+  echo "TDH_TKGMC_CONFIG=${TDH_TKGMC_NAME}.yaml"                                      >> $DEPLOYMENT_FILE
+  echo "TDH_TKGMC_WC_CONFIG_DEV=${TDH_TKGMC_NAME}-wc-dev.yaml"                        >> $DEPLOYMENT_FILE
+  echo "TDH_TKGMC_WC_CONFIG_PROD=${TDH_TKGMC_NAME}-wc-prod.yaml"                      >> $DEPLOYMENT_FILE
+  echo "TDH_TKGMC_KUBECONFIG=${TDH_TKGMC_NAME}.kubeconfig"                            >> $DEPLOYMENT_FILE
+
+  if [ "$TDH_DEPLOYMENT_ENV_NAME" == "Azure" ]; then
+    echo ""                                                                           >> $DEPLOYMENT_FILE
+    echo "nodes[0]='Standard_D2s_v3'   ## Azure Standard_D2s_v3 (2 Cores, 8 GB RAM)"  >> $DEPLOYMENT_FILE
+    echo "nodes[1]='Standard_D4s_v3'   ## Azure Standard_D4s_v3 (2 Cores, 8 GB RAM)"  >> $DEPLOYMENT_FILE
+    echo "nodes[2]='Standard_D8s_v3'   ## Azure Standard_D8s_v3 (4 Cores, 16 GB RAM)" >> $DEPLOYMENT_FILE
+  fi
+
+  if [ "$TDH_DEPLOYMENT_ENV_NAME" == "AWS" ]; then
+    echo ""                                                                           >> $DEPLOYMENT_FILE
+    echo "nodes[0]='m5.large'          ## AWS m5.large   (2 Cores, 8 GB RAM)"         >> $DEPLOYMENT_FILE
+    echo "nodes[1]='m5.xlarge'         ## AWS m5.xlarge  (2 Cores, 8 GB RAM)"         >> $DEPLOYMENT_FILE
+    echo "nodes[2]='m5.2xlarge'        ## AWS m5.2xlarge (4 Cores, 16 GB RAM)"        >> $DEPLOYMENT_FILE
+  fi
 
   #echo "TDH_TKGMC_PLAN=dev"                                                     >> $DEPLOYMENT_FILE
   #echo "TDH_TKGMC_CEIP_PARTICIPATION=true"                                      >> $DEPLOYMENT_FILE

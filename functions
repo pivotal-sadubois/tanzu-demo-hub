@@ -1513,12 +1513,14 @@ checkTMCintegration() {
       cnt=$(tmc cluster integration list --cluster-name $TDH_CLUSTER_NAME -m $TDH_MANAGEMENT_CLUSTER  \
             -p $TDH_PROVISIONER_NAME --name tanzu-observability-saas 2>/dev/null | egrep -c "tanzu-observability-saas") 
       if [ $cnt -eq 0 ]; then 
+        [ "$TDH_DEPLOYMENT_TYPE" == "tmc" ] && MGMG_CLUSTER="$TDH_MANAGEMENT_CLUSTER" || MGMG_CLUSTER="attached"
+
         TANZU_OBSERVABILITY=/tmp/tanzu_observability.yaml; rm -f $TANZU_OBSERVABILITY
         echo ""                                                                      >  $TANZU_OBSERVABILITY
         echo "{"                                                                     >> $TANZU_OBSERVABILITY
         echo "    \"full_name\": {"                                                  >> $TANZU_OBSERVABILITY
         echo "        \"provisionerName\": \"$TDH_PROVISIONER_NAME\","               >> $TANZU_OBSERVABILITY
-        echo "        \"managementClusterName\": \"$TDH_MANAGEMENT_CLUSTER\","       >> $TANZU_OBSERVABILITY
+        echo "        \"managementClusterName\": \"$MGMG_CLUSTER\","                 >> $TANZU_OBSERVABILITY
         echo "        \"clusterName\": \"$TDH_CLUSTER_NAME\","                       >> $TANZU_OBSERVABILITY
         echo "        \"name\": \"tanzu-observability-saas\""                        >> $TANZU_OBSERVABILITY
         echo "    },"                                                                >> $TANZU_OBSERVABILITY
@@ -2519,13 +2521,13 @@ createTKGMCcluster() {
   unset TKG_CONFIG
   [ "$1" != "" ] && TDH_TKGMC_NAME="$1"    ## CLUSTER_NAME SET BY (InstallTKGmc.sh)
   [ ! -d ${HOME}/.tanzu-demo-hub/config ] && mkdir -p ${HOME}/.tanzu-demo-hub/config
-  TKG_TEMPLATE=${HOME}/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.yaml
-  TKG_KUBECONFIG=${HOME}/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.kubeconfig
+  TKG_TEMPLATE=${HOME}/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.yaml; rm -f $TKG_TEMPLATE
+  TKG_KUBECONFIG=${HOME}/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.kubeconfig; rm -f $TKG_KUBECONFIG
 
   cleanKindCluster
 
   messageTitle "Download docker images to prevent (ImagePullBackOff)"
-  list="projects.registry.vmware.com/tkg/antrea/antrea-debian:v0.13.3_vmware.1"
+  list="projects.registry.vmware.com/tkg/antrea/antrea-debian:v0.13.3_vmware.1 projects.registry.vmware.com/tkg/tanzu_core/capabilities/capabilities-controller-manager:v1.4.1"
   for n in $list; do
     messagePrint " ▪ Pull Docker Image"    "$n"
 
@@ -2976,7 +2978,9 @@ createTKGMCcluster() {
     fi
   fi
 
+echo "gaga createTKGMCcluster gaga1"
   if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "Azure" ]; then
+echo "gaga createTKGMCcluster gaga2"
     # --- SET DEFAULT VALUES ---
     [ "$TDH_TKGMC_CONTROL_PLANE_MACHINE_TYPE" == "" ] && TDH_TKGMC_CONTROL_PLANE_MACHINE_TYPE=Standard_D3_v2
     [ "$TDH_TKGMC_MACHINE_TYPE" == "" ] && TDH_TKGMC_MACHINE_TYPE=Standard_D2_v4
@@ -3072,8 +3076,10 @@ createTKGMCcluster() {
 
     #MPDE=azure
 
+echo "gaga createTKGMCcluster gaga3"
     tanzu login --server $TDH_TKGMC_NAME > /dev/null 2>&1
     cnt=$(tanzu management-cluster get 2>/dev/null | egrep -c " $TDH_TKGMC_NAME ")
+echo "gaga createTKGMCcluster gaga4 CNT:$cnt TKG_KUBECONFIG:$TKG_KUBECONFIG"
     if [ ${cnt} -eq 0 ]; then
       # --- CLEANUP OLD CONFIG ---
       export KUBECONFIG=~/.kube-tkg/config
@@ -3111,8 +3117,14 @@ createTKGMCcluster() {
 
         exit 1
       fi
-
       messagePrint " ▪ Management Cluster Creating Completed"    "/tmp/$TDH_TKGMC_NAME.log"
+    else
+      messagePrint " ▪ Management Cluster already installed"    "/tmp/$TDH_TKGMC_NAME.log"
+    fi
+
+echo "gaga createTKGMCcluster gaga4"
+    if [ ! -f $TKG_KUBECONFIG ]; then 
+echo "gaga createTKGMCcluster gaga31"
       tanzu management-cluster kubeconfig get --admin > /dev/null 2>&1
       kubectl config set-cluster $TDH_TKGMC_NAME > /dev/null 2>&1
       kubectl config use-context ${TDH_TKGMC_NAME}-admin@$TDH_TKGMC_NAME > /dev/null 2>&1
@@ -9945,6 +9957,10 @@ TanzuPackage_Contour() {
   PACKAGE_ID=$2
   PACKAGE_DES="Contour ingress controller"
 
+  # INFO
+  # deployTMC set: ie. TDH_DEPLOYMENT_CLOUD=Azure
+  # deployTKG set: ie. TDH_TKGMC_INFRASTRUCTURE=Azure
+
   pkg=$(tanzu package installed get $PACKAGE_NAME -n $PACKAGE_NAMESPACE -o json 2>/dev/null | jq -r '.[].name')
   if [ "$pkg" != "$PACKAGE_NAME" ]; then
     package_ver=$(tanzu package available list $PACKAGE_ID -A -o json | jq -r '.[]."version"' | tail -1)
@@ -10101,11 +10117,9 @@ TanzuPackage_Contour() {
 
     exit 1
   fi
-echo gaga9
 
   # --- VERIFY DNS DOMAIN ---
   verifyHostedZone ${TDH_ENVNAME}.$AWS_HOSTED_DNS_DOMAIN
-echo gaga10
 
   [ "$TDH_TOOLS" == "tdh-tools" ] && CONTOUR_NS=tanzu-system-ingress || CONTOUR_NS=projectcontour
 
@@ -10133,14 +10147,12 @@ echo gaga10
   fi
 
   # --- SET DNS RECORD ---
-  if [ "$TDH_DEPLOYMENT_CLOUD" == "minikube" -o "$TDH_DEPLOYMENT_CLOUD" == "vSphere" -o "$TDH_DEPLOYMENT_CLOUD" == "Azure" -o "$TDH_DEPLOYMENT_CLOUD" == "docker" ]; then
-echo gaga121
+  if [ "$TDH_DEPLOYMENT_CLOUD" == "minikube" -o "$TDH_DEPLOYMENT_CLOUD" == "vSphere" -o "$TDH_DEPLOYMENT_CLOUD" == "Azure" -o "$TDH_DEPLOYMENT_CLOUD" == "docker" -o \
+       "$TDH_TKGMC_INFRASTRUCTURE" == "minikube" -o "$TDH_TKGMC_INFRASTRUCTURE" == "vSphere" -o "$TDH_TKGMC_INFRASTRUCTURE" == "Azure" -o "$TDH_TKGMC_INFRASTRUCTURE" == "docker" ]; then
     setDNSrecord "$ipa" "${TDH_ENVNAME}" "${AWS_HOSTED_DNS_DOMAIN}" "*.apps-contour" "A"
   else
-echo gaga122
     setDNSalias "$ipa" "${TDH_ENVNAME}" "${AWS_HOSTED_DNS_DOMAIN}" "*.apps-contour" "A"
   fi
-echo gaga12
 
   # --- STORE SETTINGS IN CONFIGMAP ---
   uodateConfigMap tanzu-demo-hub TDH_INGRESS_CONTOUR_ENABLED          "true"
@@ -10450,5 +10462,144 @@ tmcGetKubernetesImage() {
   echo $TMC_K8S_VERSIONS | awk 'BEGIN{a=""}{ for(i=1; i<=NF; i++) { printf("%s\n",$i) } }' | \
   egrep "^$VERSION" | head -1
 }
+
+# ------------------------------------------------------------------------------------------
+# Function Name ......: dockerPullImages
+# Function Purpose ...: Get the Kubernetes Version
+# ------------------------------------------------------------------------------------------
+# Argument ($1) ......: Kubernetes search string 1.20 or 1.20.2
+# ------------------------------------------------------------------------------------------
+# Return Value .......: Kubernetes Image ie. 1.18.10-1-amazon2
+# ------------------------------------------------------------------------------------------
+dockerPullImages() {
+  list="$1"
+
+  for n in $list; do
+    messagePrint " ▪ Pull Docker Image"    "$n"
+
+    cnt=0; ret=1
+    while [ $ret -ne 0 -a $cnt -lt 5 ]; do
+      docker pull $n > /dev/null 2>&1; ret=$?
+      sleep 60
+      let cnt=cnt+1
+    done
+  done
+}
+
+# ------------------------------------------------------------------------------------------
+# Function Name ......: runningPods
+# Function Purpose ...: Waiting for system Services to have completed starting
+# ------------------------------------------------------------------------------------------
+# Argument ($1) ......: Namespace
+# ------------------------------------------------------------------------------------------
+# Return Value .......: 0 - SUCCEED, 1 - FAILED
+# ------------------------------------------------------------------------------------------
+runningPods() {
+  NAMESPACE=$1
+
+  cnt=1; 
+  while [ $cnt -ne 0 ]; do
+    if [ "$NAMESPACE" == "" ]; then 
+      tot=$(kubectl get pods -A | wc -l | awk '{ print $1 }') 
+      cnt=$(kubectl get pods -A | sed '1d' | grep -vc Running)
+    else
+      messagePrint " ▪ Waiting for pods to start within namespace"               "$NAMESPACE"
+      tot=$(kubectl get pods -n $NAMESPACE | wc -l | awk '{ print $1 }') 
+      cnt=$(kubectl get pods -n $NAMESPACE | sed '1d' | grep -vc Running)
+    fi
+
+    [ $cnt -eq 0 ] && break
+
+    let bsy=tot-cnt
+
+    sleep 60
+  done
+}
+
+# ------------------------------------------------------------------------------------------
+# Function Name ......: waitForKappServices
+# Function Purpose ...: Waiting for Kapp Services to have completed starting
+# ------------------------------------------------------------------------------------------
+# Argument ($1) ......: Namespace
+#          ($2) ......: Kapp Service
+# ------------------------------------------------------------------------------------------
+# Return Value .......: 0 - SUCCEED, 1 - FAILED
+# ------------------------------------------------------------------------------------------
+waitForKappServices_old() {
+  SVC=$2
+  NAMESERVICE=$1
+
+  messagePrint " ▪ Waiting for kapp services completed starting"               "$SVC"
+  stt="false"; ret=0
+  while [ "$stt" != "true" -a $ret -lt 15 ]; do
+    stt=$(kapp list -n $NAMESERVICE --json | jq -r --arg key $SVC '.Tables[].Rows[] | select(.name == $key).last_change_successful')
+    [ "$stt" == "true" ] && break
+    sleep 60
+    let ret=ret+1
+  done
+
+  if [ "$stt" != "true"  ]; then
+    messageLine
+    echo "ERROR: Kapp service ($SVC) in namespace $NAMESERVICE failed to start"
+    if [ "$NATIVE" == "0" ]; then
+      echo "       => tools/${TDH_TOOLS}.sh"
+      echo "          tdh-tools:/$ kapp list -n $NAMESERVICE"
+      echo "          tdh-tools:/$ kapp inspect -n $NAMESERVICE -a $SVC"
+      echo "          tdh-tools:/$ kapp logs -n $NAMESERVICE -a $SVC"
+      echo "          tdh-tools:/$ exit"
+    else
+      echo "       => kapp list -n $NAMESERVICE"
+      echo "       => kapp inspect -n $NAMESERVICE -a $SVC"
+      echo "       => kapp logs -n $NAMESERVICE -a $SVC"
+    fi
+    messageLine
+    exit 1
+  fi
+}
+
+# ------------------------------------------------------------------------------------------
+# Function Name ......: waitForKappServices
+# Function Purpose ...: Waiting for Kapp Services to have completed starting
+# ------------------------------------------------------------------------------------------
+# Argument ($1) ......: Namespace
+#          ($2) ......: Kapp Service
+# ------------------------------------------------------------------------------------------
+# Return Value .......: 0 - SUCCEED, 1 - FAILED
+# ------------------------------------------------------------------------------------------
+waitForKappServices() {
+  SVC=$2
+  NAMESERVICE=$1
+
+  messagePrint " ▪ Waiting for kapp services completed starting"               "$SVC"
+
+  cnt=1; ret=0
+  while [ $cnt -ne 0 -a $ret -lt 15 ]; do
+    cnt=$(kapp inspect -a $SVC -n $NAMESERVICE --json | jq -r '.Tables[].Rows[] | select(.reconcile_state != "ok").name' | wc -l | awk '{ print $1 }')
+    [ $cnt -eq 0 ] && break
+    sleep 60
+    let ret=ret+1
+  done
+
+  if [ $cnt -ne 0 ]; then
+    messageLine
+    echo "ERROR: Kapp service ($SVC) in namespace $NAMESERVICE failed to start"
+    if [ "$NATIVE" == "0" ]; then
+      echo "       => tools/${TDH_TOOLS}.sh"
+      echo "          tdh-tools:/$ kapp list -n $NAMESERVICE"
+      echo "          tdh-tools:/$ kapp inspect -n $NAMESERVICE -a $SVC"
+      echo "          tdh-tools:/$ kapp logs -n $NAMESERVICE -a $SVC"
+      echo "          tdh-tools:/$ exit"
+    else
+      echo "       => kapp list -n $NAMESERVICE"
+      echo "       => kapp inspect -n $NAMESERVICE -a $SVC"
+      echo "       => kapp logs -n $NAMESERVICE -a $SVC"
+    fi
+    messageLine
+    exit 1
+  fi
+}
+
+
+
 
 
