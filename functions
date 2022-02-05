@@ -3139,7 +3139,7 @@ createTKGMCcluster() {
       cleanKubeconfig           $HOME/.kube-tkg/config
 
       # --- DELETE KIND CLUSTER ---
-      cnt=$(kind get clusters | wc -l | awk '{ print $1 }') 
+      cnt=$(kind get clusters 2>/dev/null | wc -l | awk '{ print $1 }') 
       if [ $cnt -gt 0 ]; then
         id=$(kind get clusters) 
         messagePrint " ▪ Manually delete leftover Kind Cluster"        "$id"
