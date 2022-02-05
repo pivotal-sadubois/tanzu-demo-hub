@@ -1453,6 +1453,9 @@ checkTMCintegration() {
   TDH_MANAGEMENT_CLUSTER=$(getConfigMap tanzu-demo-hub TDH_MANAGEMENT_CLUSTER)
   TDH_PROVISIONER_NAME=$(getConfigMap tanzu-demo-hub TDH_PROVISIONER_NAME)
 
+  # Clusters created NOT with aws_hosted management-clusters show as attached
+  [ "$TDH_DEPLOYMENT_TYPE" == "tmc" ] && MGMG_CLUSTER="$TDH_MANAGEMENT_CLUSTER" || MGMG_CLUSTER="attached"
+
   if [ "${TMC_INTEGRATION}" == "TO" ]; then
     if [ "${TDH_SERVICE_TANZU_OBSERVABILITY}" == "true" ]; then
       messageTitle "Tanzu Observability Integration into TMC"
@@ -1513,7 +1516,6 @@ checkTMCintegration() {
       cnt=$(tmc cluster integration list --cluster-name $TDH_CLUSTER_NAME -m $TDH_MANAGEMENT_CLUSTER  \
             -p $TDH_PROVISIONER_NAME --name tanzu-observability-saas 2>/dev/null | egrep -c "tanzu-observability-saas") 
       if [ $cnt -eq 0 ]; then 
-        [ "$TDH_DEPLOYMENT_TYPE" == "tmc" ] && MGMG_CLUSTER="$TDH_MANAGEMENT_CLUSTER" || MGMG_CLUSTER="attached"
 
         TANZU_OBSERVABILITY=/tmp/tanzu_observability.yaml; rm -f $TANZU_OBSERVABILITY
         echo ""                                                                      >  $TANZU_OBSERVABILITY
@@ -1563,17 +1565,36 @@ checkTMCintegration() {
   if [ "${TMC_INTEGRATION}" == "TDP" ]; then
     if [ "${TDH_SERVICE_TANZU_DATA_PROTECTION}" == "true" ]; then
       messageTitle "Data Protection Integration into TMC"
-      cnt=$(tmc cluster dataprotection list --cluster-name $TDH_CLUSTER_NAME -p TDH_PROVISIONER_NAME -m $TDH_MANAGEMENT_CLUSTER 2>/dev/null | grep -c " $TDH_CLUSTER_NAME ")
+      tmc cluster dataprotection get --cluster-name $TDH_CLUSTER_NAME -p $TDH_PROVISIONER_NAME -m $MGMG_CLUSTER  > /dev/null 2>&1; ret=$?
+      if [ $ret -ne 0 ]; then 
+        messagePrint " ▪ Enable Data Protection for cluster"  "$TDH_CLUSTER_NAME"      
+        tmc cluster dataprotection create --cluster-name $TDH_CLUSTER_NAME -p $TDH_PROVISIONER_NAME -m $MGMG_CLUSTER  > /tmp/error.log 2>&1; ret=$?
+        if [ $ret -ne 0 ]; then
+          logMessages /tmp/error.log
+          echo "ERROR: failed to enable Data Protection for cluster $TDH_CLUSTER_NAME"
+          if [ "$NATIVE" == "0" ]; then
+            echo "       => tools/${TDH_TOOLS}.sh"
+            echo "          tdh-tools:/$ tmc cluster dataprotection create --cluster-name $TDH_CLUSTER_NAME -p $TDH_PROVISIONER_NAME -m $MGMG_CLUSTER"
+            echo "          tdh-tools:/$ exit"
+          else
+            echo "       => tmc cluster dataprotection create --cluster-name $TDH_CLUSTER_NAME -p $TDH_PROVISIONER_NAME -m $MGMG_CLUSTER"
+          fi
+  
+          exit 1
+        fi
+      fi
+
+      cnt=$(tmc cluster dataprotection list --cluster-name $TDH_CLUSTER_NAME -p $TDH_PROVISIONER_NAME -m $MGMG_CLUSTER 2>/dev/null | grep -c " $TDH_CLUSTER_NAME ")
       if [ $cnt -eq 0 ]; then
         # --- VERIFY SERVICE CONFIGURATION ---
         checkKubernetesServices tanzu_data_protection
 
         # --- VERIFY BACKUP LOCATION ---
-        cnt=$(tmc cluster dataprotection backuplocation list --cluster-name $TDH_CLUSTER_NAME -p $TDH_PROVISIONER_NAME -m $TDH_MANAGEMENT_CLUSTER | grep -c " $TDH_CLUSTER_NAME ") 
+        cnt=$(tmc cluster dataprotection backuplocation list --cluster-name $TDH_CLUSTER_NAME -p $TDH_PROVISIONER_NAME -m $MGMG_CLUSTER | grep -c " $TDH_CLUSTER_NAME ") 
         if [ $cnt -eq 0 ]; then
           ret=1; cnt=0
           while [ $ret -ne 0 -a $cnt -lt 50 ]; do
-          tmc cluster dataprotection create -c $TDH_CLUSTER_NAME -m $TDH_MANAGEMENT_CLUSTER  -p $TDH_PROVISIONER_NAME \
+          tmc cluster dataprotection create -c $TDH_CLUSTER_NAME -m $MGMG_CLUSTER  -p $TDH_PROVISIONER_NAME \
               --backup-location-names $TDH_TANZU_DATA_PROTECTION_BACKUP_LOCATION > /dev/null 2>&1; ret=$?
             [ $ret -eq 0 ] && break
             let cnt=cnt+1
@@ -1585,11 +1606,11 @@ checkTMCintegration() {
             echo "ERROR: failed to enable dataprotection for cluster $TDH_CLUSTER_NAME"
             if [ "$NATIVE" == "0" ]; then
               echo "       => tools/${TDH_TOOLS}.sh"
-              echo "          tdh-tools:/$ tmc cluster dataprotection create -c $TDH_CLUSTER_NAME -m $TDH_MANAGEMENT_CLUSTER  \\"
+              echo "          tdh-tools:/$ tmc cluster dataprotection create -c $TDH_CLUSTER_NAME -m $MGMG_CLUSTER  \\"
               echo "                          -p $TDH_PROVISIONER_NAME --backup-location-names $TDH_TANZU_DATA_PROTECTION_BACKUP_LOCATION"
               echo "          tdh-tools:/$ exit"
             else
-              echo "       => tmc cluster dataprotection create -c $TDH_CLUSTER_NAME -m $TDH_MANAGEMENT_CLUSTER  \\"
+              echo "       => tmc cluster dataprotection create -c $TDH_CLUSTER_NAME -m $MGMG_CLUSTER  \\"
               echo "            -p $TDH_PROVISIONER_NAME --backup-location-names $TDH_TANZU_DATA_PROTECTION_BACKUP_LOCATION"
             fi
             messageLine
@@ -1608,12 +1629,12 @@ checkTMCintegration() {
       fi
 
       # --- CONFIGURE FULL BACKUP ---
-      cnt=$(tmc cluster dataprotection backup list --cluster-name $TDH_CLUSTER_NAME -p $TDH_PROVISIONER_NAME -m $TDH_MANAGEMENT_CLUSTER --name "full-backup" 2>/dev/null | egrep -c " full-backup ")
+      cnt=$(tmc cluster dataprotection backup list --cluster-name $TDH_CLUSTER_NAME -p $TDH_PROVISIONER_NAME -m $MGMG_CLUSTER --name "full-backup" 2>/dev/null | egrep -c " full-backup ")
       if [ $cnt -gt 0 ]; then 
-        stt=$(tmc cluster dataprotection backup list --cluster-name $TDH_CLUSTER_NAME -p $TDH_PROVISIONER_NAME -m $TDH_MANAGEMENT_CLUSTER --name "full-backup" | egrep " full-backup " | awk '{ print $NF }')
+        stt=$(tmc cluster dataprotection backup list --cluster-name $TDH_CLUSTER_NAME -p $TDH_PROVISIONER_NAME -m $MGMG_CLUSTER --name "full-backup" | egrep " full-backup " | awk '{ print $NF }')
         if [ "$stt" != "COMPLETED" -a "$stt" != "INPROGRESS" ]; then 
           # --- DELETE OLD BACKUP ---
-          tmc cluster dataprotection backup delete --cluster-name $TDH_CLUSTER_NAME -p $TDH_PROVISIONER_NAME -m $TDH_MANAGEMENT_CLUSTER "full-backup"  > /dev/null 2>&1
+          tmc cluster dataprotection backup delete --cluster-name $TDH_CLUSTER_NAME -p $TDH_PROVISIONER_NAME -m $MGMG_CLUSTER "full-backup"  > /dev/null 2>&1
           cnt=0
         fi
       fi
@@ -1625,7 +1646,7 @@ checkTMCintegration() {
 
         ret=1; cnt=0
         while [ $ret -ne 0 -a $cnt -lt 5 ]; do
-          tmc cluster dataprotection backup create -c $TDH_CLUSTER_NAME -p $TDH_PROVISIONER_NAME -m $TDH_MANAGEMENT_CLUSTER  \
+          tmc cluster dataprotection backup create -c $TDH_CLUSTER_NAME -p $TDH_PROVISIONER_NAME -m $MGMG_CLUSTER  \
             --name "full-backup" --backup-location-name $TDH_TANZU_DATA_PROTECTION_BACKUP_LOCATION > /dev/null 2>&1; ret=$?
           [ $ret -eq 0 ] && break
           let cnt=cnt+1
@@ -1638,11 +1659,11 @@ checkTMCintegration() {
           if [ "$NATIVE" == "0" ]; then
             echo "       => tools/${TDH_TOOLS}.sh"
             echo "          tdh-tools:/$ tmc cluster dataprotection backup create -c $TDH_CLUSTER_NAME -p $TDH_PROVISIONER_NAME \\"
-            echo "                          -m $TDH_MANAGEMENT_CLUSTER  --name \"full-backup\" --backup-location-name $TDH_TANZU_DATA_PROTECTION_BACKUP_LOCATION"
+            echo "                          -m $MGMG_CLUSTER  --name \"full-backup\" --backup-location-name $TDH_TANZU_DATA_PROTECTION_BACKUP_LOCATION"
             echo "          tdh-tools:/$ exit"
           else
             echo "       => tmc cluster dataprotection backup create -c $TDH_CLUSTER_NAME -p $TDH_PROVISIONER_NAME \\"
-            echo "            -m $TDH_MANAGEMENT_CLUSTER  --name \"full-backup\" --backup-location-name $TDH_TANZU_DATA_PROTECTION_BACKUP_LOCATION"
+            echo "            -m $MGMG_CLUSTER  --name \"full-backup\" --backup-location-name $TDH_TANZU_DATA_PROTECTION_BACKUP_LOCATION"
           fi
           messageLine
         fi
@@ -1670,47 +1691,47 @@ scanCluster() {
   [ "$TYPE" == "CIS" ]  && NAME=cis && TITLE="CIS Inspections"
   [ "$TYPE" == "CONFORMANCE" ] && NAME=conformance && TITLE="Conformance Inspections"
 
-  completed=$(tmc cluster inspection scan list --cluster-name $TDH_CLUSTER_NAME -p $TDH_PROVISIONER_NAME -m $TDH_MANAGEMENT_CLUSTER -o json | \
+  completed=$(tmc cluster inspection scan list --cluster-name $TDH_CLUSTER_NAME -p $TDH_PROVISIONER_NAME -m $MGMG_CLUSTER -o json | \
              jq -r '.scans[].status.report.info.scanType' | egrep -c "^$NAME")
 
   if [ $completed -eq 0 ]; then 
     # --- VERIFY ACRIVE SCANNS ---
-    cnt=$(tmc cluster inspection scan list --cluster-name $TDH_CLUSTER_NAME -p $TDH_PROVISIONER_NAME -m $TDH_MANAGEMENT_CLUSTER  -o json | \
+    cnt=$(tmc cluster inspection scan list --cluster-name $TDH_CLUSTER_NAME -p $TDH_PROVISIONER_NAME -m $MGMG_CLUSTER  -o json | \
        jq -r '.scans[].status.phase' | grep -v "COMPLETE" | wc -l | sed 's/  *//g')
     while [ $cnt -ne 0 ]; do
-      cnt=$(tmc cluster inspection scan list --cluster-name $TDH_CLUSTER_NAME -p $TDH_PROVISIONER_NAME -m $TDH_MANAGEMENT_CLUSTER  -o json | \
+      cnt=$(tmc cluster inspection scan list --cluster-name $TDH_CLUSTER_NAME -p $TDH_PROVISIONER_NAME -m $MGMG_CLUSTER  -o json | \
         jq -r '.scans[].status.phase' | grep -v "COMPLETE" | wc -l | sed 's/  *//g')
       sleep 10
     done
 
-    stt=$(tmc cluster inspection scan list --cluster-name $TDH_CLUSTER_NAME -p $TDH_PROVISIONER_NAME -m $TDH_MANAGEMENT_CLUSTER  -o json | \
+    stt=$(tmc cluster inspection scan list --cluster-name $TDH_CLUSTER_NAME -p $TDH_PROVISIONER_NAME -m $MGMG_CLUSTER  -o json | \
       jq -r --arg key $NAME '.scans[].status.report.info | select(.scanType == $key).result' | tail -1)
     if [ "$stt" == "" ]; then 
       messagePrint " ▪ Scan Cluster ($TDH_CLUSTER_NAME) with $TYPE"       "scanning"
-      tmc cluster inspection scan create -c $TDH_CLUSTER_NAME -p $TDH_PROVISIONER_NAME -m $TDH_MANAGEMENT_CLUSTER  --inspection-type $TYPE > /dev/null 2>&1
+      tmc cluster inspection scan create -c $TDH_CLUSTER_NAME -p $TDH_PROVISIONER_NAME -m $MGMG_CLUSTER  --inspection-type $TYPE > /dev/null 2>&1
       if [ $? -ne 0 ]; then 
         messageLine
         echo "ERROR: failed to scan cluster $TDH_CLUSTER_NAME"
         if [ "$NATIVE" == "0" ]; then
           echo "       => tools/${TDH_TOOLS}.sh"
           echo "          tdh-tools:/$ tmc cluster inspection scan create -c $TDH_CLUSTER_NAME -p $TDH_PROVISIONER_NAME \\"
-          echo "                         -m $TDH_MANAGEMENT_CLUSTER  --inspection-type $TYPE"
+          echo "                         -m $MGMG_CLUSTER  --inspection-type $TYPE"
           echo "          tdh-tools:/$ exit"
         else
           echo "       => tmc cluster inspection scan create -c $TDH_CLUSTER_NAME -p $TDH_PROVISIONER_NAME \\"
-          echo "             -m $TDH_MANAGEMENT_CLUSTER  --inspection-type $TYPE"
+          echo "             -m $MGMG_CLUSTER  --inspection-type $TYPE"
         fi
         messageLine
       fi
     else
-      dat=$(tmc cluster inspection scan list --cluster-name $TDH_CLUSTER_NAME -p $TDH_PROVISIONER_NAME -m $TDH_MANAGEMENT_CLUSTER  -o json | \
+      dat=$(tmc cluster inspection scan list --cluster-name $TDH_CLUSTER_NAME -p $TDH_PROVISIONER_NAME -m $MGMG_CLUSTER  -o json | \
         jq -r --arg key $NAME '.scans[].status.report.info | select(.scanType == $key).runDatetime' | sort -n | tail -1)
       messagePrint " ▪ Cluster Scan ($TDH_CLUSTER_NAME) with $TYPE completed"       "$dat"
     fi
   else
-    stt=$(tmc cluster inspection scan list --cluster-name $TDH_CLUSTER_NAME -p $TDH_PROVISIONER_NAME -m $TDH_MANAGEMENT_CLUSTER  -o json | \
+    stt=$(tmc cluster inspection scan list --cluster-name $TDH_CLUSTER_NAME -p $TDH_PROVISIONER_NAME -m $MGMG_CLUSTER  -o json | \
         jq -r --arg key $NAME '.scans[].status.report.info | select(.scanType == $key).result' | tail -1)
-    scd=$(tmc cluster inspection scan list --cluster-name $TDH_CLUSTER_NAME -p $TDH_PROVISIONER_NAME -m $TDH_MANAGEMENT_CLUSTER  -o json | \
+    scd=$(tmc cluster inspection scan list --cluster-name $TDH_CLUSTER_NAME -p $TDH_PROVISIONER_NAME -m $MGMG_CLUSTER  -o json | \
         jq -r --arg key $NAME '.scans[].status.report.info | select(.scanType == $key).runDatetime' | tail -1)
     [ "$stt" == "null" ] && stt="scanning"
 
@@ -3038,10 +3059,9 @@ createTKGMCcluster() {
     echo "CLUSTER_CIDR: $TDH_TKGMC_CLUSTER_CIDR"                                      >> $TKG_TEMPLATE
     echo "CLUSTER_PLAN: $TDH_TKGMC_PLAN"                                              >> $TKG_TEMPLATE
     echo "ENABLE_CEIP_PARTICIPATION: \"false\""                                       >> $TKG_TEMPLATE
-    echo "ENABLE_MHC: \"true\""                                                       >> $TKG_TEMPLATE
     echo "SERVICE_CIDR: $TDH_TKGMC_SERVICE_CIDR"                                      >> $TKG_TEMPLATE
 
-    echo "ENABLE_MHC: true"                                                           >> $TKG_TEMPLATE
+    echo "ENABLE_MHC: \"true\""                                                       >> $TKG_TEMPLATE
     echo "MHC_UNKNOWN_STATUS_TIMEOUT: 10m"                                            >> $TKG_TEMPLATE
     echo "MHC_FALSE_STATUS_TIMEOUT: 20m"                                              >> $TKG_TEMPLATE
 
@@ -3093,6 +3113,7 @@ createTKGMCcluster() {
       rm -f ~/.tanzu/config.yaml /tmp/$TDH_TKGMC_NAME.log
 
       messagePrint " ▪ Management Cluster Creating"        "This may take up to 15min ..."
+      echo "tanzu management-cluster create --file $TKG_TEMPLATE"
 
       if [ $DEBUG -gt 0 ]; then
         echo "-------------------------------------------------------------------------------------------------------------------------------------------------------"
@@ -7783,6 +7804,141 @@ installPackage() {
 }
 
 # ------------------------------------------------------------------------------------------
+# Function Name ......: messageCount
+# Function Category ..: messageCount 
+# Function Purpose ...: Print message text as counter on the same line
+# ------------------------------------------------------------------------------------------
+# Argument ($1) ......: Test Message Text (ie. "Deploy a Database") ............... (string)
+# Argument ($2) ......: Total count of Tests (ie. 20) ................................ (int)
+# Return Value .......: return 0 ..................................................... (int)
+# ------------------------------------------------------------------------------------------
+messageCount_old() {
+  _msg="$1"
+  _stt="$2"
+  _cnt=$(echo "${_msg}" | wc -c | sed 's/ //g')
+  _dat=$(date "+%Y%m%d-%H:%M:%S")
+
+  ttt=$(echo "$_msg" | egrep -c "^   ")
+  if [ $ttt -eq 1 ]; then MAX=62; else MAX=64; fi
+
+  _str=""
+  while [ $_cnt -lt $MAX ]; do
+    _str="${_str}."
+    let _cnt=_cnt+1
+  done
+
+  # --- INIZIALIZE VALUES IF EMPTY --- ---
+  [ "$DEBUG" == "" ] && DEBUG=0
+
+  [ $(uname) == "Linux" ] && HST="jump-host" || HST="localhost"
+
+  if [ "${PCF_DEPLOYMENT_DEBUG}" == "true" -o "${DEBUG}" == "1" ]; then
+    if [ "$HST" == "localhost" ]; then
+      printf "\e[37m[${_dat}-$HST] ${_msg} ${_str}: ${_stt}\e[0m\n"
+      #echo -e "[${_dat}-$HST] ${_msg} ${_str}: ${_stt}"
+    else
+      echo -e "\e[33m[${_dat}-$HST]\e[0m \e[37m${_msg} ${_str}: ${_stt}\e[0m"
+    fi
+    #echo "[${_dat}-$HST] ${_msg} ${_str}: ${_stt}"
+  else
+    printf "\e[37m${_msg} ${_str}: ${_stt}\e[0m\n"
+    #echo "${_msg} ${_str}: ${_stt}"
+  fi
+}
+
+# ------------------------------------------------------------------------------------------
+# Function Name ......: messageCountFine
+# Function Category ..: messageCount - Tanzu Demo Hub automated testing facility for Demos
+# Function Purpose ...: Finalize Counting and print the test Name
+# ------------------------------------------------------------------------------------------
+# Argument ($1) ......: Test Message Text (ie. "Deploy a Database") ............... (string)
+# Argument ($2) ......: Total count of Tests (ie. 20) ................................ (int)
+# Return Value .......: return 0 ..................................................... (int)
+# ------------------------------------------------------------------------------------------
+messageCountFine() {
+  printf "\b\b\b\b\b\b\b\e[37m$SELF_TEST_STATUS\e[0m\n"
+}
+
+# ------------------------------------------------------------------------------------------
+# Function Name ......: messageCountInit
+# Function Category ..: messageCount - Tanzu Demo Hub automated testing facility for Demos
+# Function Purpose ...: Initialize SelfTest Counting and print the test Name
+# ------------------------------------------------------------------------------------------
+# Argument ($1) ......: Test Message Text (ie. "Deploy a Database") ............... (string)
+# Argument ($2) ......: Total count of Tests (ie. 20) ................................ (int)
+# Return Value .......: return 0 ..................................................... (int)
+# ------------------------------------------------------------------------------------------
+messageCountInit() {
+  _stp=1
+  _tot=$2
+  _cnt=$3
+  _msg="$1"
+  _cnt=$(echo "${_msg}" | wc -c | sed 's/ //g')
+  _dat=$(date "+%Y%m%d-%H:%M:%S")
+  _num="       "
+
+  SELF_TEST_STATUS="completed"
+  [ "$first" == "" ] && first=1
+
+  if [ $first -eq 0 ]; then
+    #printf "\b\b\b\b\b\b\bcompleted\n"
+    #printf "\b\b\b\b\b\b\b\e[37mcompleted\e[0m\n"
+    printf "\b\b\b\b\b\e[37mcompleted1\e[0m\n"
+  else
+    first=0
+  fi
+
+  _str=""
+  while [ $_cnt -lt $MAX ]; do
+    _str="${_str}."
+    let _cnt=_cnt+1
+  done
+
+  [ $(uname) == "Linux" ] && HST="jump-host" || HST="localhost"
+
+  if [ "${PCF_DEPLOYMENT_DEBUG}" == "true" -o "${DEBUG}" == "1" ]; then
+    printf "\e[37m[${_dat}-$HST] - ${_msg} ${_str}: $_num\e[0m"
+  else
+    #printf " \e[37m- ${_msg} ${_str}: $_num\e[0m"
+    #printf "\e[37m${_msg} ${_str}: ${_stt}\e[0m"
+    #printf "\e[37m${_msg} ${_str}:       \e[0m"
+    printf "\e[37m${_msg} ${_str}: [%02d/%02d]\e[0m" $_cnt $_tot
+  fi
+}
+
+# ------------------------------------------------------------------------------------------
+# Function Name ......: messageCount
+# Function Category ..: selfTest - Tanzu Demo Hub automated testing facility for Demos
+# Function Purpose ...: Execute test and print result (sucessed / failed)
+# ------------------------------------------------------------------------------------------
+# Argument ($1) ......: Command to execute (ie. kubectl apply -f /tmp/<file>") .... (string)
+# Return Value .......: abort if ABORT_ON_FAILURE=1 otherwise only report the failed test
+# ------------------------------------------------------------------------------------------
+messageCount() {
+  num=$1
+  [ "$NATIVE" == "" ] && NATIVE=0
+  _msg="$SELF_TEST_NAME"
+  _cnt=$(echo "${_msg}" | wc -c | sed 's/ //g')
+  _dat=$(date "+%Y%m%d-%H:%M:%S")
+
+  _str=""
+  while [ $_cnt -lt 100 ]; do
+    _str="${_str}."
+    let _cnt=_cnt+1
+  done
+
+  _num=$(printf "[%02d/%02d]\n" $num $_tot)
+
+  printf "\b\b\b\b\b\b\b\e[37m${_num}\e[0m"
+  #printf "\b\b\b\b\e[37m${_num}\e[0m"
+
+  let _stp=_stp+1
+
+}
+
+
+
+# ------------------------------------------------------------------------------------------
 # Function Name ......: selfTestInit   
 # Function Category ..: selfTest - Tanzu Demo Hub automated testing facility for Demos
 # Function Purpose ...: Initialize SelfTest Counting and print the test Name
@@ -7847,6 +8003,7 @@ selfTestStep() {
 
   #[ $(uname) == "Linux" ] &&
 
+#guguseli
   if [ "$NATIVE" -eq 0 ]; then
     echo "$CMD" > /tmp/exec && chmod 777 /tmp/exec
     tools/${TDH_TOOLS}.sh --silent --cmd "bash /tmp/exec" >> /tmp/selffTest.log 2>&1; ret=$?
@@ -8337,8 +8494,9 @@ tdh_tools_build() {
 
       exit 1
     else
-      
       mv /tmp/kind-linux-amd64-${TDH_KIND} $TDH_DOCKER_CACHE/kind
+      cp $TDH_DOCKER_CACHE/kind/kind-linux-amd64-$TDH_KIND $TDH_DOCKER_FILES/kind
+      chmod +x $TDH_DOCKER_FILES/kind
     fi
 
     REBUILD_REQUIRED_SOFTWARE=1       ## REBUILD REQUIRED BECAUSE OF SOFTWARE CHANGE
@@ -10496,23 +10654,26 @@ dockerPullImages() {
 runningPods() {
   NAMESPACE=$1
 
+  messagePrint " ▪ Waiting for pods to start within namespace"               "$NAMESPACE"
+  tot=$(kubectl get pods -n $NAMESPACE | wc -l | awk '{ print $1 }')
+  cnt=$(kubectl get pods -n $NAMESPACE | sed '1d' | grep -vc Running)
+  let bsy=tot-cnt
+
+  messageCountInit " ▪ Waiting for pods to start within namespace $NAMESPACE" $tot $bsy
+
   cnt=1; 
   while [ $cnt -ne 0 ]; do
-    if [ "$NAMESPACE" == "" ]; then 
-      tot=$(kubectl get pods -A | wc -l | awk '{ print $1 }') 
-      cnt=$(kubectl get pods -A | sed '1d' | grep -vc Running)
-    else
-      messagePrint " ▪ Waiting for pods to start within namespace"               "$NAMESPACE"
-      tot=$(kubectl get pods -n $NAMESPACE | wc -l | awk '{ print $1 }') 
-      cnt=$(kubectl get pods -n $NAMESPACE | sed '1d' | grep -vc Running)
-    fi
+    tot=$(kubectl get pods -n $NAMESPACE | wc -l | awk '{ print $1 }') 
+    cnt=$(kubectl get pods -n $NAMESPACE | sed '1d' | grep -vc Running)
+    let bsy=tot-cnt
+    messageCount $bsy
 
     [ $cnt -eq 0 ] && break
 
-    let bsy=tot-cnt
-
     sleep 60
   done
+
+  messageCountFine
 }
 
 # ------------------------------------------------------------------------------------------
