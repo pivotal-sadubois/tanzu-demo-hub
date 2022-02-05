@@ -2613,14 +2613,21 @@ createTKGMCcluster() {
       rm -f ~/.tanzu/config.yaml /tmp/$TDH_TKGMC_NAME.log
 
       messagePrint " ▪ Management Cluster Creating"        "This may take up to 15min ..."
+      ret=1; cnt=0
+      while [ $ret -ne 0 -a $cnt -lt 3 ]; do
+        if [ $DEBUG -gt 0 ]; then
+          messageLine
+          tanzu management-cluster create --timeout 2h --file $TKG_TEMPLATE -v 0 --log-file=/tmp/${TDH_TKGMC_NAME}.log; ret=$?
+          messageLine
+        else
+          tanzu management-cluster create --timeout 2h --file $TKG_TEMPLATE -v 0 --log-file=/tmp/${TDH_TKGMC_NAME}.log > /dev/null 2>&1; ret=$?
+        fi
 
-      if [ $DEBUG -gt 0 ]; then
-        messageLine
-        tanzu management-cluster create --timeout 2h --file $TKG_TEMPLATE -v 0 --log-file=/tmp/${TDH_TKGMC_NAME}.log; ret=$?
-        messageLine
-      else
-        tanzu management-cluster create --timeout 2h --file $TKG_TEMPLATE -v 0 --log-file=/tmp/${TDH_TKGMC_NAME}.log > /dev/null 2>&1; ret=$?
-      fi
+        [ $ret -eq 0 ] && break
+
+        sleep 30
+        let cnt=cnt+1
+      done
 
       cnt=$(tanzu management-cluster get 2>/dev/null | grep -c Error)
       if [ ${ret} -ne 0 -o ${cnt} -gt 0 ]; then
@@ -2766,14 +2773,21 @@ createTKGMCcluster() {
       rm -rf /home/ubuntu/.config/tanzu
 
       messagePrint " ▪ Management Cluster Creating"        "This may take up to 15min ..."
+      ret=1; cnt=0
+      while [ $ret -ne 0 -a $cnt -lt 3 ]; do
+        if [ $DEBUG -gt 0 ]; then
+          messageLine
+          tanzu management-cluster create --file $TKG_TEMPLATE -v 0 --log-file=/tmp/$TDH_TKGMC_NAME.log; ret=$?
+          messageLine
+        else
+          tanzu management-cluster create --file $TKG_TEMPLATE -v 0 --log-file=/tmp/$TDH_TKGMC_NAME.log > /dev/null 2>&1; ret=$?
+        fi
 
-      if [ $DEBUG -gt 0 ]; then
-        echo "-------------------------------------------------------------------------------------------------------------------------------------------------------"
-        tanzu management-cluster create --file $TKG_TEMPLATE -v 0 --log-file=/tmp/$TDH_TKGMC_NAME.log; ret=$?
-        echo "-------------------------------------------------------------------------------------------------------------------------------------------------------"
-      else
-        tanzu management-cluster create --file $TKG_TEMPLATE -v 0 --log-file=/tmp/$TDH_TKGMC_NAME.log > /dev/null 2>&1; ret=$?
-      fi
+        [ $ret -eq 0 ] && break
+
+        sleep 30
+        let cnt=cnt+1
+      done
 
       cnt=$(tanzu management-cluster get | grep -c Error)
       if [ ${ret} -ne 0 -o ${cnt} -gt 0 ]; then
@@ -2951,14 +2965,21 @@ createTKGMCcluster() {
       rm -rf /home/ubuntu/.config/tanzu
 
       messagePrint " ▪ Management Cluster Creating"        "This may take up to 15min ..."
+      ret=1; cnt=0
+      while [ $ret -ne 0 -a $cnt -lt 3 ]; do
+        if [ $DEBUG -gt 0 ]; then
+          messageLine
+          tanzu management-cluster create --timeout 2h --file $TKG_TEMPLATE -v 0 --log-file=/tmp/$TDH_TKGMC_NAME.log; ret=$?
+          messageLine
+        else
+          tanzu management-cluster create --timeout 2h --file $TKG_TEMPLATE -v 0 --log-file=/tmp/$TDH_TKGMC_NAME.log > /dev/null 2>&1; ret=$?
+        fi
 
-      if [ $DEBUG -gt 0 ]; then
-        messageLine
-        tanzu management-cluster create --timeout 2h --file $TKG_TEMPLATE -v 0 --log-file=/tmp/$TDH_TKGMC_NAME.log; ret=$?
-        messageLine
-      else
-        tanzu management-cluster create --timeout 2h --file $TKG_TEMPLATE -v 0 --log-file=/tmp/$TDH_TKGMC_NAME.log > /dev/null 2>&1; ret=$?
-      fi
+        [ $ret -eq 0 ] && break
+
+        sleep 30
+        let cnt=cnt+1
+      done
 
       cnt=$(tanzu management-cluster get 2>/dev/null | grep -c Error)
       if [ ${ret} -ne 0 -o ${cnt} -gt 0 ]; then
@@ -3133,15 +3154,23 @@ createTKGMCcluster() {
 
       messagePrint " ▪ Management Cluster Creating"        "This may take up to 15min ..."
       echo "tanzu management-cluster create --file $TKG_TEMPLATE -v 0 --log-file=/tmp/$TDH_TKGMC_NAME.log"
-#gaga
 
-      if [ $DEBUG -gt 0 ]; then
-        echo "-------------------------------------------------------------------------------------------------------------------------------------------------------"
-        tanzu management-cluster create --file $TKG_TEMPLATE -v 0 --log-file=/tmp/$TDH_TKGMC_NAME.log; ret=$?
-        echo "-------------------------------------------------------------------------------------------------------------------------------------------------------"
-      else
-        tanzu management-cluster create --file $TKG_TEMPLATE -v 0 --log-file=/tmp/$TDH_TKGMC_NAME.log > /dev/null 2>&1; ret=$?
-      fi
+#gagadu
+      ret=1; cnt=0
+      while [ $ret -ne 0 -a $cnt -lt 3 ]; do
+        if [ $DEBUG -gt 0 ]; then
+          messageLine
+          tanzu management-cluster create --file $TKG_TEMPLATE -v 0 --log-file=/tmp/$TDH_TKGMC_NAME.log; ret=$?
+          messageLine
+        else
+          tanzu management-cluster create --file $TKG_TEMPLATE -v 0 --log-file=/tmp/$TDH_TKGMC_NAME.log > /dev/null 2>&1; ret=$?
+        fi
+
+        [ $ret -eq 0 ] && break
+
+        sleep 30
+        let cnt=cnt+1
+      done
 
       cnt=$(tanzu management-cluster get 2>/dev/null | grep -c Error)
       if [ ${ret} -ne 0 -o ${cnt} -gt 0 ]; then
