@@ -7934,6 +7934,7 @@ messageCountInit() {
   _cnt=$(echo "${_msg}" | wc -c | sed 's/ //g')
   _dat=$(date "+%Y%m%d-%H:%M:%S")
   _num="       "
+  first=1
 
   SELF_TEST_STATUS="completed"
   [ "$first" == "" ] && first=1
@@ -9872,13 +9873,24 @@ TanzuPackage_CertManager() {
     package_ver=$(tanzu package available list $PACKAGE_ID -A -o json | jq -r '.[]."version"' | tail -1)
     package_rel=$(tanzu package available list $PACKAGE_ID -A -o json | jq -r '.[]."released-at"' | tail -1)
 
+#gaga
     messageTitle "Installing $PACKAGE_DES in $PACKAGE_NAMESPACE"
     messagePrint " ▪ Tanzu Package ($PACKAGE_NAME)"   "$PACKAGE_ID ($package_ver/$package_rel)"
-    tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $PACKAGE_NAMESPACE --version $package_ver \
+
+    cnt=0; ret=1
+    while [ $ret -ne 0 -a $cnt -lt 5 ]; do
+      tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $PACKAGE_NAMESPACE --version $package_ver \
             --create-namespace --poll-timeout 10m --wait=true > /tmp/error.log 2>&1; ret=$?
+      [ $ret -eq 0 ] && break
+      tanzu package installed delete $PACKAGE_NAME --namespace $PACKAGE_NAMESPACE -y > /dev/null 2>&1
+
+      let cnt=cnt+1
+      sleep 30
+    done
+
     if [ $ret -ne 0 ]; then
       logMessages /tmp/error.log
-      echo "ERROR: failed to install Tanzu Package $PACKAGE_NAME)"
+      echo "ERROR: failed to install Tanzu Package $PACKAGE_NAME"
       if [ "$NATIVE" == "0" ]; then
         echo "       => tools/${TDH_TOOLS}.sh"
         echo "          tdh-tools:/$ tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $PACKAGE_NAMESPACE --version $package_ver --create-namespace"
@@ -10278,9 +10290,18 @@ TanzuPackage_Contour() {
 
     messageTitle "Installing $PACKAGE_DES"
     messagePrint " ▪ Tanzu Package ($PACKAGE_NAME)"   "$PACKAGE_ID ($package_ver/$package_rel)"
-    tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $PACKAGE_NAMESPACE \
+    cnt=0; ret=1
+    while [ $ret -ne 0 -a $cnt -lt 5 ]; do
+      tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $PACKAGE_NAMESPACE \
            --version $package_ver --create-namespace --poll-timeout 10m \
            --values-file /tmp/contour-data-values.yaml --wait=true > /tmp/contour.log 2>&1; ret=$?
+      [ $ret -eq 0 ] && break
+      tanzu package installed delete $PACKAGE_NAME --namespace $PACKAGE_NAMESPACE -y > /dev/null 2>&1
+
+      let cnt=cnt+1
+      sleep 30
+    done
+
     if [ $ret -ne 0 ]; then
       logMessages /tmp/contour.log
       echo "ERROR: failed to install Tanzu Package $PACKAGE_NAME)"
@@ -10712,7 +10733,6 @@ dockerPullImages() {
 runningPods() {
   NAMESPACE=$1
 
-  messagePrint " ▪ Waiting for pods to start within namespace"               "$NAMESPACE"
   tot=$(kubectl get pods -n $NAMESPACE | wc -l | awk '{ print $1 }')
   cnt=$(kubectl get pods -n $NAMESPACE | sed '1d' | grep -vc Running)
   let bsy=tot-cnt
