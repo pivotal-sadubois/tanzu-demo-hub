@@ -2763,6 +2763,7 @@ createTKGMCcluster() {
     if [ ${cnt} -eq 0 ]; then
       # --- CLEAN OLD MANAGEMENT CLUSTER CONFIG ---
       rm -f ~/.tanzu/config.yaml /tmp/$TDH_TKGMC_NAME.log $TKG_KUBECONFIG
+      rm -rf /home/ubuntu/.config/tanzu
 
       messagePrint " ▪ Management Cluster Creating"        "This may take up to 15min ..."
 
@@ -2947,6 +2948,7 @@ createTKGMCcluster() {
 
       # --- CLEAN OLD MANAGEMENT CLUSTER CONFIG ---
       rm -f ~/.tanzu/config.yaml /tmp/$TDH_TKGMC_NAME.log
+      rm -rf /home/ubuntu/.config/tanzu
 
       messagePrint " ▪ Management Cluster Creating"        "This may take up to 15min ..."
 
@@ -3111,9 +3113,27 @@ createTKGMCcluster() {
      
       # --- CLEAN OLD MANAGEMENT CLUSTER CONFIG ---
       rm -f ~/.tanzu/config.yaml /tmp/$TDH_TKGMC_NAME.log
+      rm -rf /home/ubuntu/.config/tanzu
+      cleanKubeconfig           $HOME/.kube/config
+      cleanKubeconfig           $HOME/.kube-tkg/config
+
+      # --- DELETE KIND CLUSTER ---
+      cnt=$(kind get clusters | wc -l | awk '{ print $1 }') 
+      if [ $cnt -gt 0 ]; then
+        id=$(kind get clusters) 
+        messagePrint " ▪ Manually delete leftover Kind Cluster"        "$id"
+        kind delete clusters -all
+      fi
+
+      id=$(az group list | jq -r --arg rg "$TDH_TKGMC_NAME" '.[] | select(.name == $rg).id') 
+      if [ "$id" != "" ]; then 
+        messagePrint " ▪ Manually delete leftover Azure Resource Group"        "$TDH_TKGMC_NAME"
+        az group delete -n $TDH_TKGMC_NAME -y
+      fi
 
       messagePrint " ▪ Management Cluster Creating"        "This may take up to 15min ..."
-      echo "tanzu management-cluster create --file $TKG_TEMPLATE"
+      echo "tanzu management-cluster create --file $TKG_TEMPLATE -v 0 --log-file=/tmp/$TDH_TKGMC_NAME.log"
+#gaga
 
       if [ $DEBUG -gt 0 ]; then
         echo "-------------------------------------------------------------------------------------------------------------------------------------------------------"
@@ -7709,16 +7729,25 @@ deleteManagementCluster() {
 
   cnt=$(tanzu management-cluster get 2>/dev/null | grep -c " $MGMT_CLUSTER ")
   if [ $cnt -gt 0 ]; then
-    tanzu management-cluster delete $MGMT_CLUSTER -y --force > /tmp/error.log 2>&1; ret=$?
+
+    ret=1; cnt=0
+    while [ $ret -ne 0 -a $cnt -lt 3 ]; do
+      tanzu management-cluster delete $MGMT_CLUSTER -y --force > /tmp/error.log 2>&1; ret=$?
+      [ $ret -eq 0 ] && break
+
+      sleep 30
+      let cnt=cnt+1
+    done
+
     if [ $ret -ne 0 ]; then
       logMessages /tmp/error.log
       echo "ERROR: failed to delete TKG Management Cluster: ${MGMT_CLUSTER}"
       if [ "$NATIVE" == "0" ]; then
         echo "       => tools/${TDH_TOOLS}.sh"
-        echo "          tdh-tools:/$ tmc managementcluster delete $MGMT_CLUSTER -f"
+        echo "          tdh-tools:/$ tmc managementcluster delete $MGMT_CLUSTER -f --force -t 30m"
         echo "          tdh-tools:/$ exit"
       else
-        echo "       => tmc managementcluster delete $MGMT_CLUSTER -f"
+        echo "       => tmc managementcluster delete $MGMT_CLUSTER -f --force -t 30m"
       fi
     fi
   fi
