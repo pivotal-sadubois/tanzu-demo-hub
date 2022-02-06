@@ -9796,7 +9796,16 @@ TanzuPackage_LocalStorage() {
 
     messageTitle "Installing $PACKAGE_DES"
     messagePrint " ▪ Tanzu Package ($PACKAGE_NAME)"   "$PACKAGE_ID ($package_ver/$package_rel)"
-    tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $PACKAGE_NAMESPACE --version $package_ver --create-namespace --wait=true > /tmp/error.log 2>&1; ret=$?
+    cnt=0; ret=1
+    while [ $ret -ne 0 -a $cnt -lt 5 ]; do
+      tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $PACKAGE_NAMESPACE --version $package_ver --create-namespace --wait=true > /tmp/error.log 2>&1; ret=$?
+      [ $ret -eq 0 ] && break
+      tanzu package installed delete $PACKAGE_NAME --namespace $PACKAGE_NAMESPACE -y > /dev/null 2>&1
+
+      let cnt=cnt+1
+      sleep 30
+    done
+
     if [ $ret -ne 0 ]; then
       logMessages /tmp/error.log
       echo "ERROR: failed to install Tanzu Package $PACKAGE_NAME)"
@@ -10062,9 +10071,17 @@ TanzuPackage_Harbor () {
 
     messageTitle "Installing $PACKAGE_DES"
     messagePrint " ▪ Tanzu Package ($PACKAGE_NAME)"   "$PACKAGE_ID ($package_ver/$package_rel)"
-    tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $PACKAGE_NAMESPACE \
-           --version $package_ver --create-namespace --poll-timeout 20m --poll-interval 10s --log-file /tmp/harbor.log \
-           --values-file $HARBOR_VALUES --wait=true --verbose 9 > /tmp/error.log 2>&1; ret=$?
+    cnt=0; ret=1
+    while [ $ret -ne 0 -a $cnt -lt 5 ]; do
+      tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $PACKAGE_NAMESPACE \
+             --version $package_ver --create-namespace --poll-timeout 20m --poll-interval 10s --log-file /tmp/harbor.log \
+             --values-file $HARBOR_VALUES --wait=true --verbose 9 > /tmp/error.log 2>&1; ret=$?
+      [ $ret -eq 0 ] && break
+      tanzu package installed delete $PACKAGE_NAME --namespace $PACKAGE_NAMESPACE -y > /dev/null 2>&1
+
+      let cnt=cnt+1
+      sleep 30
+    done
 
     # Ignore any install error because installation hits a timeout, but mostly succeeding, sdubois 14.01.2022
     ret=0
