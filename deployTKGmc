@@ -194,12 +194,14 @@ cleanupEnvironment() {
 
   cleanKindCluster
 
+
   # --- DEREGISTER TMC REGISTRATION
   tmc managementcluster get $TDH_TKGMC_NAME-$TDH_USER > /dev/null 2>&1; ret=$?
   if [ $ret -eq 0 ]; then
     stt=$(tmc managementcluster get $TDH_TKGMC_NAME-$TDH_USER -o json 2>/dev/null | jq -r '.status.phase')
     if [ "$stt" != "" ]; then
       messagePrint " ▪ TMC DeRegister Cluster"             "$TDH_TKGMC_NAME-$TDH_USER"
+      kubectl config use-context ${TDH_TKGMC_NAME}-${TDH_USER}-admin@${TDH_TKGMC_NAME}-${TDH_USER}
       tmc managementcluster deregister $TDH_TKGMC_NAME-$TDH_USER -k $HOME/.kube/config  > /tmp/error.log 2>&1; ret=$?
       if [ $ret -ne 0 ]; then
         logMessages /tmp/error.log
