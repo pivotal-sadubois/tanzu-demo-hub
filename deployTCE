@@ -385,6 +385,9 @@ installJenkins
 installArgoCD
 installGitLab
 
+echo hallodo
+echo "TDH_TANZU_MISSION_CONTROL_REGISTRATION:$TDH_TANZU_MISSION_CONTROL_REGISTRATION"
+
 if [ "$TDH_TANZU_MISSION_CONTROL_REGISTRATION" == "true" ]; then
   cnt=$(tmc cluster list --name $TDH_TKGWC_NAME 2>/dev/null | grep -c $TDH_TKGWC_NAME)
 echo "CNT:$cnt"
