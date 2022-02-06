@@ -409,7 +409,6 @@ tmcCheckLogin() {
   export TMC_API_TOKEN=$TMC_SERVICE_TOKEN
   ret=1; cnt=0
   while [ $ret -ne 0 -a $cnt -lt 5 ]; do
-echo "hallo tmc login --name $TMC_CONTEXT_NAME --no-configure"
     tmc login --name $TMC_CONTEXT_NAME --no-configure > /dev/null 2>&1; ret=$?
     [ $ret -eq 0 ] && break
     let cnt=cnt+1

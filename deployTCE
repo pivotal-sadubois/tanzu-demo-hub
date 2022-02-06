@@ -131,6 +131,7 @@ listDeployments() {
   echo "-----------------------------------------------------------------------------------------------------------"
 }
 
+echo gaga1
 if [ "${TKG_DEPLOYMENT}" == "" -o "${TDH_TKGMC_NAME}" == "" ]; then
   if [ "${TKG_DEPLOYMENT}" == "" ]; then
     listDeployments
@@ -155,6 +156,7 @@ fi
 if [ -f ~/.tanzu-demo-hub.cfg ]; then
   . ~/.tanzu-demo-hub.cfg
 fi
+echo gaga2
 
 # --- SOURCE MANAGEMENT CLUSTER VARIABLES ---
 if [ -f $HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.cfg ]; then
@@ -180,13 +182,17 @@ export TDH_TLS_CERT=tanzu-demo-hub
 export TDH_TLS_SECRET=${TDH_TLS_CERT}-tls
 export TDH_TLS_ISSUER_NAME=letsencrypt-staging
 export TDH_TLS_ISSUER_CONFIG=/tmp/issuer-dns-manager1.yaml
+echo gaga3
 
 # --- VERYFY ACCESS TO CLOUD ---
 checkTDHenvironment
 
+echo gaga4
 # --- VERIFY TOOLS AND ACCESS ---
 checkTanzuCLI
+echo gaga5
 checkCloudCLI
+echo gaga6
 checkCLIcommands TOOLS
 checkCLIcommands TKG
 checkCLIcommands TANZU
