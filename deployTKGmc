@@ -1873,7 +1873,7 @@ else
 #  fi
 
   printf "\e[1m3.) Delete the Management Cluster\e[0m\n"
-  echo "    => deployTKGmc $DEPLOY_TKG_TEMPLATE --delete"
+  echo "    => ./deployTKGmc $DEPLOY_TKG_TEMPLATE --delete"
 
   printf "\e[1m4.) Login to Jump Server: $JUMP_HOST (only if required)\e[0m\n"
   echo "    => $SSH_DISPLAY"

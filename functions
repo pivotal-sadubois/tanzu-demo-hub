@@ -2614,7 +2614,7 @@ createTKGMCcluster() {
 
       messagePrint " ▪ Management Cluster Creating"        "This may take up to 15min ..."
       ret=1; cnt=0
-      while [ $ret -ne 0 -a $cnt -lt 3 ]; do
+      while [ $ret -ne 0 -a $cnt -lt 5 ]; do
         if [ $DEBUG -gt 0 ]; then
           messageLine
           tanzu management-cluster create --timeout 2h --file $TKG_TEMPLATE -v 0 --log-file=/tmp/${TDH_TKGMC_NAME}.log; ret=$?
@@ -2625,7 +2625,7 @@ createTKGMCcluster() {
 
         [ $ret -eq 0 ] && break
 
-        sleep 30
+        sleep 300
         let cnt=cnt+1
       done
 
