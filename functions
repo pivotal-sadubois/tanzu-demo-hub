@@ -7940,11 +7940,11 @@ deleteManagementCluster() {
   if [ $cnt -gt 0 ]; then
 
     ret=1; cnt=0
-    while [ $ret -ne 0 -a $cnt -lt 3 ]; do
+    while [ $ret -ne 0 -a $cnt -lt 5 ]; do
       tanzu management-cluster delete $MGMT_CLUSTER -y --force > /tmp/error.log 2>&1; ret=$?
       [ $ret -eq 0 ] && break
 
-      sleep 30
+      sleep 300
       let cnt=cnt+1
     done
 
