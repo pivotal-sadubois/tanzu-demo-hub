@@ -326,6 +326,7 @@ tanzu cluster kubeconfig get $TDH_TKGWC_NAME --admin > /dev/null 2>&1
 # --- CLEANUP KUNECONFIG ---
 cleanKubeconfig
 setK8sEnvironment $TDH_TKGWC_NAME
+tmcCheckLogin
 
 export TDH_TKGWC_CONTEXT=$(kubectl config current-context)
 export TDH_ENVNAME=$TDH_TKGMC_ENVNAME
