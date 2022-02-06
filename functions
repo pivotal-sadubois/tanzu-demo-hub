@@ -5466,9 +5466,11 @@ installKubeapps() {
 }
 
 installMinio() {
+  NAMESPACE=minio
   if [ "$TDH_SERVICE_MINIO" != "true" ]; then
     uodateConfigMap tanzu-demo-hub TDH_SERVICE_MINIO        "false"
-    helm uninstall minio > /dev/null 2>&1
+    kubectl delete -n $NAMESPACE > /dev/null 2>&1
+    helm uninstall minio -n $NAMESPACE > /dev/null 2>&1
     return
   fi
 
@@ -5480,6 +5482,8 @@ installMinio() {
   cnt=$(helm list -q | egrep -c "^tdh-minio")
   if [ $cnt -eq 0 ]; then
     messagePrint " ▪ Installing Minio" "bitnami/minio"
+    kubectl create namespace $NAMESPACE > /dev/null 2>&1
+
     HELM_VALUES=/tmp/helm_values.yaml
     echo ""                                                                                                                     >  $HELM_VALUES
     echo "ingress:"                                                                                                             >> $HELM_VALUES
@@ -5505,7 +5509,8 @@ installMinio() {
 
     cnt=0; ret=1
     while [ $ret -ne 0 -a $cnt -lt 5 ]; do
-      helm install tdh-minio bitnami/minio -f ${HELM_VALUES} > /tmp/error.log 2>&1; ret=$?
+      helm install minio bitnami/minio --namespace $NAMESPACE -f ${HELM_VALUES} > /tmp/error.log 2>&1; ret=$?
+cat /tmp/error.log
       [ $ret -eq 0 ] && break
       let cnt=cnt+1
       sleep 30
@@ -5516,22 +5521,22 @@ installMinio() {
       echo "ERROR: Failed to deploy Minio Helm Chart"
       if [ "$NATIVE" == "0" ]; then
         echo "       => tools/${TDH_TOOLS}.sh"
-        echo "          tdh-tools:/$ helm install tdh-minio bitnami/minio -f ${HELM_VALUES}"
+        echo "          tdh-tools:/$ helm install minio --namespace $NAMESPACE bitnami/minio -f ${HELM_VALUES}"
         echo "          tdh-tools:/$ exit"
       else
-        echo "       =>  helm install tdh-minio bitnami/minio -f ${HELM_VALUES}"
+        echo "       =>  helm install minio bitnami/minio --namespace $NAMESPACE -f ${HELM_VALUES}"
       fi
 
       exit 1
     fi
   fi
 
-  ver=$(helm ls -o json | jq -r --arg chart "tdh-minio" '.[] | select(.name == $chart).app_version')
-  crt=$(helm ls -o json | jq -r --arg chart "tdh-minio" '.[] | select(.name == $chart).chart')
-  stt=$(helm ls -o json | jq -r --arg chart "tdh-minio" '.[] | select(.name == $chart).status')
-  dat=$(helm ls -o json | jq -r --arg chart "tdh-minio" '.[] | select(.name == $chart).updated')
-  ACCESS_KEY=$(kubectl get secret --namespace default tdh-minio -o jsonpath="{.data.access-key}" | base64 -d)
-  SECRET_KEY=$(kubectl get secret --namespace default tdh-minio -o jsonpath="{.data.secret-key}" | base64 -d)
+  ver=$(helm ls -A -o json | jq -r --arg chart "minio" '.[] | select(.name == $chart).app_version')
+  crt=$(helm ls -A -o json | jq -r --arg chart "minio" '.[] | select(.name == $chart).chart')
+  stt=$(helm ls -A -o json | jq -r --arg chart "minio" '.[] | select(.name == $chart).status')
+  dat=$(helm ls -A -o json | jq -r --arg chart "minio" '.[] | select(.name == $chart).updated')
+  ACCESS_KEY=$(kubectl get secret --namespace default minio -o jsonpath="{.data.access-key}" | base64 -d)
+  SECRET_KEY=$(kubectl get secret --namespace default minio -o jsonpath="{.data.secret-key}" | base64 -d)
 
   messagePrint " ▪ Verify Minio S3"                "$crt"
   messagePrint "   Helm Chart Name"                "minio"
@@ -5591,9 +5596,177 @@ installMinio() {
   
   # --- STORE SETTINGS IN CONFIGMAP ---
   uodateConfigMap tanzu-demo-hub TDH_SERVICE_MINIO                "true"
-  uodateConfigMap tanzu-demo-hub TDH_SERVICE_MINIO_INTERNAL_NAME  "tdh-minio.default.svc.cluster.local:9000"
+  uodateConfigMap tanzu-demo-hub TDH_SERVICE_MINIO_INTERNAL_NAME  "minio.default.svc.cluster.local:9000"
   uodateConfigMap tanzu-demo-hub TDH_SERVICE_MINIO_ACCESS_KEY     "$ACCESS_KEY"
   uodateConfigMap tanzu-demo-hub TDH_SERVICE_MINIO_SECRET_KEY     "$SECRET_KEY"
+}
+
+# ------------------------------------------------------------------------------------------
+# Function Name ......: installGitLab
+# Function Purpose ...: Installing GitLab Commnunity Edition
+# ------------------------------------------------------------------------------------------
+# Argument ($1) ......: 
+#          ($2) ......: 
+# ------------------------------------------------------------------------------------------
+# Return Value .......: 0 - SUCCEED, 1 - FAILED
+# ------------------------------------------------------------------------------------------
+# GitLab for Open Source.....: https://about.gitlab.com/install/?test=capabilities
+# GitLab Quick Start Guide ..: https://docs.gitlab.com/charts/quickstart/index.html 
+# GitLab API ................: https://docs.gitlab.com/ee/api/
+# ------------------------------------------------------------------------------------------
+installGitLab() {
+  NAMESPACE=gitlab
+
+  if [ "$TDH_SERVICE_GITLAB" != "true" ]; then
+    uodateConfigMap tanzu-demo-hub TDH_SERVICE_GITLAB        "false"
+    kubectl delete -n $NAMESPACE > /dev/null 2>&1
+    helm uninstall 1tdh-pgadmin > /dev/null 2>&1
+    helm uninstall 1postgres-operator > /dev/null 2>&1
+    return
+  fi
+
+  TDH_DOMAIN=$(getConfigMap tanzu-demo-hub TDH_DOMAIN)
+  TDH_ENVNAME=$(getConfigMap tanzu-demo-hub TDH_ENVNAME)
+  DOMAIN=$(getConfigMap tanzu-demo-hub TDH_INGRESS_CONTOUR_LB_DOMAIN)
+  DOMAIN="apps-nginx.${TDH_ENVNAME}.${TDH_DOMAIN}"
+
+  messageTitle "GitLab Commnunity Edition"
+  cnt=$(helm list -q | egrep -c "^gitlab")
+  if [ $cnt -eq 0 ]; then
+    messagePrint " ▪ Installing GitLab" "gitlab/gitlab"
+    kubectl create namespace $NAMESPACE > /dev/null 2>&1
+
+    # --- COPY SECRET TO NAMESPACE ---
+    kubectl get secret tanzu-demo-hub-tls --namespace=default  -oyaml | grep -v '^\s*namespace:\s' | \
+    kubectl apply --namespace=$NAMESPACE -f - > /dev/null 2>&1
+    kubectl get secret tanzu-demo-hub-tls --namespace=default  -oyaml | grep -v '^\s*namespace:\s' | \
+    sed 's/name: tanzu-demo-hub-tls/name: gitlab-wildcard-tls/g' | \
+    kubectl apply --namespace=$NAMESPACE -f - > /dev/null 2>&1
+
+    kubectl create secret generic tdh-gitlab-initial-root-password --from-literal=password=$TDH_HARBOR_ADMIN_PASSWORD -n $NAMESPACE > /dev/null 2>&1
+
+    HELM_VALUES=/tmp/gitlab_values.yaml
+    echo ""                                                                                                                     >  $HELM_VALUES
+    echo "global:"                                                                                                              >> $HELM_VALUES
+    echo "  imageRegistry: docker.io"                                                                                           >> $HELM_VALUES
+    echo "  imagePullSecrets:"                                                                                                  >> $HELM_VALUES
+    echo "    - tdh-docker-repo"                                                                                                >> $HELM_VALUES
+    echo "  edition: ee"                                                                                                        >> $HELM_VALUES
+    echo "  hosts:"                                                                                                             >> $HELM_VALUES
+    echo "    domain: $DOMAIN"                                                                                                  >> $HELM_VALUES
+    echo "  initialRootPassword:"                                                                                               >> $HELM_VALUES
+    echo "    secret: tdh-gitlab-initial-root-password"                                                                         >> $HELM_VALUES
+    echo "    key: password"                                                                                                    >> $HELM_VALUES
+    echo "  ingress:"                                                                                                           >> $HELM_VALUES
+    echo "    configureCertmanager: false"                                                                                      >> $HELM_VALUES
+
+    echo "ingress:"                                                                                                             >> $HELM_VALUES
+    echo "  apiVersion: \"\""                                                                                                   >> $HELM_VALUES
+    echo "  configureCertmanager: true"                                                                                         >> $HELM_VALUES
+    echo "  provider: nginx"                                                                                                    >> $HELM_VALUES
+    echo "  annotations:"                                                                                                       >> $HELM_VALUES
+    echo "    kubernetes.io/ingress.class: nginx"                                                                               >> $HELM_VALUES
+    echo "  enabled: true"                                                                                                      >> $HELM_VALUES
+    echo "  tls:"                                                                                                               >> $HELM_VALUES
+    echo "    enabled: true"                                                                                                    >> $HELM_VALUES
+    echo "    secretName: tanzu-demo-hub-tls"                                                                                   >> $HELM_VALUES
+    echo "  path: /"                                                                                                            >> $HELM_VALUES
+    echo "  pathType: Prefix"                                                                                                   >> $HELM_VALUES
+    echo "certmanager-issuer:"                                                                                                  >> $HELM_VALUES
+    echo "  email: $$TDH_CERTMANAGER_EMAIL"                                                                                     >> $HELM_VALUES
+    echo "certmanager:"                                                                                                         >> $HELM_VALUES
+    echo "  installCRDs: false"                                                                                                 >> $HELM_VALUES
+    echo "  install: false"                                                                                                     >> $HELM_VALUES
+
+    # --- ADD REPOSITORY --
+    helm repo add gitlab https://charts.gitlab.io/ > /dev/null 2>&1
+    helm repo update > /dev/null 2>&1
+
+    cnt=0; ret=1
+    while [ $ret -ne 0 -a $cnt -lt 5 ]; do
+      helm install gitlab gitlab/gitlab -f ${HELM_VALUES} --namespace $NAMESPACE > /tmp/error.log 2>&1; ret=$?
+      [ $ret -eq 0 ] && break
+      let cnt=cnt+1
+      sleep 30
+    done
+
+    if [ $ret -ne 0 ]; then
+      logMessages /tmp/error.log
+      echo "ERROR: Failed to deploy GitLab Helm Chart"
+      if [ "$NATIVE" == "0" ]; then
+        echo "       => tools/${TDH_TOOLS}.sh"
+        echo "          tdh-tools:/$ helm install gitlab gitlab/gitlab --namespace $NAMESPACE -f ${HELM_VALUES}"
+        echo "          tdh-tools:/$ exit"
+      else
+        echo "       =>  helm install gitlab gitlab/gitlab --namespace $NAMESPACE -f ${HELM_VALUES}"
+      fi
+
+      exit 1
+    fi
+
+    # --- WAIT FOR PODS TO GET STARTED ---
+    runningPods gitlab
+  fi
+
+  ver=$(helm ls -A -o json | jq -r --arg chart "gitlab" '.[] | select(.name == $chart).app_version')
+  crt=$(helm ls -A -o json | jq -r --arg chart "gitlab" '.[] | select(.name == $chart).chart')
+  stt=$(helm ls -A -o json | jq -r --arg chart "gitlab" '.[] | select(.name == $chart).status')
+  dat=$(helm ls -A -o json | jq -r --arg chart "gitlab" '.[] | select(.name == $chart).updated')
+  ACCESS_KEY=$(kubectl get secret --namespace default tdh-minio -o jsonpath="{.data.access-key}" | base64 -d)
+  SECRET_KEY=$(kubectl get secret --namespace default tdh-minio -o jsonpath="{.data.secret-key}" | base64 -d)
+
+  SECRET=$(kubectl get secret tdh-gitlab-initial-root-password  -n $NAMESPACE -o json | jq -r '.data.password' | base64 -d )
+
+  messagePrint " ▪ Verify GitLab CE Deployment"    "$crt"
+  messagePrint "   Helm Chart Name"                "minio"
+  messagePrint "   Helm Chart Version"             "$ver"
+  messagePrint "   Helm Chart Status"              "$stt"
+  messagePrint "   Helm Chart Installed/Updated"   "$dat"
+  messagePrint "   Gitlab Internal Name"           "gitlab.default.svc.cluster.local"
+  messagePrint "   Gitlab Management Portal"       "https://gitlab.$DOMAIN"
+  messagePrint "   Gitlab Admin User"              "root"
+  messagePrint "   Gitlab Admin Passwird"          "$SECRET"
+  echo "   -----------------------------------------------------------------------------------------------------------------------"
+  echo "   WARNING: If the login to GitLab is not working (Error 402), thatn try to clear browser history and cookies             "     
+  echo "   -----------------------------------------------------------------------------------------------------------------------"
+
+
+  # --- VERIFY DNS DOMAIN ---
+  verifyHostedZone ${TDH_ENVNAME}.$AWS_HOSTED_DNS_DOMAIN
+
+  ipa=""; cnt=0
+  while [ "$ipa" == "" -a $cnt -lt 15 ]; do
+    ipa=$(kubectl describe svc gitlab-nginx-ingress-controller --namespace $NAMESPACE | egrep "^LoadBalancer Ingress:" | awk '{ print $NF }')
+    [ "$ipa" != "" ] && break
+    let cnt=cnt+1
+    sleep 30
+  done
+
+  if [ "$ipa" == "" ]; then
+    echo "ERROR: Failed to gather IP Adress of the ingress-contour-envoy service in namespace ingress-contour"
+    echo "       Please check manually:"
+    messageLine
+    if [ "$NATIVE" == "0" ]; then
+      echo "       => tools/${TDH_TOOLS}.sh"
+      echo "          tdh-tools:/$ kubectl get svc --namespace $NAMESPACE"
+      echo "          tdh-tools:/$ exit"
+    else
+      echo "       => kubectl get svc --namespace $NAMESPACE"
+    fi
+
+    exit 1
+  fi
+
+  # --- SET DNS RECORD ---
+  if [ "$TDH_DEPLOYMENT_CLOUD" == "minikube" -o "$TDH_DEPLOYMENT_CLOUD" == "vSphere" -o "$TDH_DEPLOYMENT_CLOUD" == "Azure" -o "$TDH_DEPLOYMENT_CLOUD" == "docker" -o \
+       "$TDH_TKGMC_INFRASTRUCTURE" == "minikube" -o "$TDH_TKGMC_INFRASTRUCTURE" == "vSphere" -o "$TDH_TKGMC_INFRASTRUCTURE" == "Azure" -o "$TDH_TKGMC_INFRASTRUCTURE" == "docker" ]; then
+    setDNSrecord "$ipa" "${TDH_ENVNAME}" "${AWS_HOSTED_DNS_DOMAIN}" "*.apps-nginx" "A"
+  else
+    setDNSalias "$ipa" "${TDH_ENVNAME}" "${AWS_HOSTED_DNS_DOMAIN}" "*.apps-nginx" "A"
+  fi
+
+  # --- STORE SETTINGS IN CONFIGMAP ---
+  uodateConfigMap tanzu-demo-hub TDH_SERVICE_GITLAB                "true"
 }
 
 installTanzuDataPostgres() {
@@ -6501,6 +6674,7 @@ createClusterIssuer() {
     messagePrint " ▪ LetsEnscript Solver ZoneID"       "$AWS_HOSTED_ZONE_ID"
     messagePrint " ▪ LetsEnscript DNSZone"             "*.apps-contour.${TDH_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}"
     messagePrint " ▪ LetsEnscript DNSZone"             "*.apps-nginx.${TDH_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}"
+    messagePrint " ▪ LetsEnscript DNSZone"             "*.gitlab.${TDH_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}"
 
     if [ "${AWS_CERT_ACCESS_KEY}" == "" -o "${AWS_CERT_SECRET_KEY}" == "" ]; then
       messagePrint " ▪ LetsEnscript using AWS Route53 AccessKey" $(maskPassword "$AWS_ACCESS_KEY")
@@ -6530,6 +6704,7 @@ createClusterIssuer() {
     echo "          - \"$NOTARY_HOSTNAME\""                                        >> $TDH_TLS_ISSUER_FILE
     echo "          - \"*.apps-contour.${TDH_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}\""  >> $TDH_TLS_ISSUER_FILE
     echo "          - \"*.apps-nginx.${TDH_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}\""    >> $TDH_TLS_ISSUER_FILE
+    echo "          - \"*.gitlab.${TDH_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}\""        >> $TDH_TLS_ISSUER_FILE
     echo "      dns01:"                                                            >> $TDH_TLS_ISSUER_FILE
     echo "        route53:"                                                        >> $TDH_TLS_ISSUER_FILE
     echo "          region: $AWS_REGION"                                           >> $TDH_TLS_ISSUER_FILE
@@ -7937,6 +8112,7 @@ messageCountInit() {
   first=1
 
   SELF_TEST_STATUS="completed"
+  MAX=64
   [ "$first" == "" ] && first=1
 
   if [ $first -eq 0 ]; then
@@ -10750,7 +10926,7 @@ dockerPullImages() {
 runningPods() {
   NAMESPACE=$1
 
-  tot=$(kubectl get pods -n $NAMESPACE | wc -l | awk '{ print $1 }')
+  tot=$(kubectl get pods -n $NAMESPACE | sed '1d' | wc -l | awk '{ print $1 }')
   cnt=$(kubectl get pods -n $NAMESPACE | sed '1d' | grep -vc Running)
   let bsy=tot-cnt
 
@@ -10758,8 +10934,7 @@ runningPods() {
 
   cnt=1; 
   while [ $cnt -ne 0 ]; do
-    tot=$(kubectl get pods -n $NAMESPACE | wc -l | awk '{ print $1 }') 
-    cnt=$(kubectl get pods -n $NAMESPACE | sed '1d' | grep -vc Running)
+    cnt=$(kubectl get pods -n $NAMESPACE | sed '1d' | egrep -vc "Running|Completed")
     let bsy=tot-cnt
     messageCount $bsy
 

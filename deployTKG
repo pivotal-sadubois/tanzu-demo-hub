@@ -401,15 +401,18 @@ TanzuPackage_RepoSync     tanzu-package-repo-global
 
 TanzuPackage_CertManager  cert-manager-pkg     cert-manager.tanzu.vmware.com 
 TanzuPackage_Contour      contour-pkg          contour.tanzu.vmware.com
-exit
+#exit
 createClusterIssuer
 getRootCA                 tanzu-demo-hub-tls
 TanzuPackage_Harbor       harbor-pkg           harbor.tanzu.vmware.com
 
-installBuildService
 installTanzuDataPostgres
-#installSpringCloudGateway
+installSpringCloudGateway
 installMinio
+installKubeapps
+installJenkins
+installArgoCD
+installGitLab
 
 if [ "$TDH_TANZU_MISSION_CONTROL_REGISTRATION" == "true" ]; then
   cnt=$(tmc cluster list --name $TDH_TKGWC_NAME 2>/dev/null | grep -c $TDH_TKGWC_NAME)

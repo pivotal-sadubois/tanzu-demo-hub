@@ -365,10 +365,13 @@ createClusterIssuer
 getRootCA                 tanzu-demo-hub-tls
 TanzuPackage_Harbor       harbor-pkg           harbor.community.tanzu.vmware.com 
 
-installBuildService
 installTanzuDataPostgres
-#installSpringCloudGateway
+installSpringCloudGateway
 installMinio
+installKubeapps
+installJenkins
+installArgoCD
+installGitLab
 
 if [ "$TDH_TANZU_MISSION_CONTROL_REGISTRATION" == "true" ]; then
   cnt=$(tmc cluster list --name $TDH_TKGWC_NAME 2>/dev/null | grep -c $TDH_TKGWC_NAME)
