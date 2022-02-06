@@ -329,7 +329,6 @@ setK8sEnvironment $TDH_TKGWC_NAME
 
 export TDH_TKGWC_CONTEXT=$(kubectl config current-context)
 export TDH_ENVNAME=$TDH_TKGMC_ENVNAME
-echo "gaga TDH_TKGMC_ENVNAME:$TDH_TKGMC_ENVNAME"
 export TMC_PROVISIONER_NAME="attached"
 export TDH_MANAGEMENT_CLUSTER=$TDH_TKGMC_NAME
 
