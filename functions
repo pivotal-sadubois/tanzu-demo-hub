@@ -1513,10 +1513,9 @@ checkTMCintegration() {
         messagePrint " ▪ Verify Wavefront Helm Chart"  "installed"      
       fi
 
-      cnt=$(tmc cluster integration list --cluster-name $TDH_CLUSTER_NAME -m $TDH_MANAGEMENT_CLUSTER  \
+      cnt=$(tmc cluster integration list --cluster-name $TDH_CLUSTER_NAME -m $MGMG_CLUSTER  \
             -p $TDH_PROVISIONER_NAME --name tanzu-observability-saas 2>/dev/null | egrep -c "tanzu-observability-saas") 
       if [ $cnt -eq 0 ]; then 
-
         TANZU_OBSERVABILITY=/tmp/tanzu_observability.yaml; rm -f $TANZU_OBSERVABILITY
         echo ""                                                                      >  $TANZU_OBSERVABILITY
         echo "{"                                                                     >> $TANZU_OBSERVABILITY
@@ -5429,6 +5428,9 @@ installKubeapps() {
       exit 1
     fi
 
+    # --- WAIT FOR PODS TO GET STARTED ---
+    runningPods kubeapps
+
     messagePrint " ▪ Create Serviceaccount"              "kubeapps-operator"
     kubectl delete --namespace default serviceaccount kubeapps-operator > /dev/null 2>&1
     kubectl create --namespace default serviceaccount kubeapps-operator > /dev/null 2>&1
@@ -5479,10 +5481,14 @@ installMinio() {
   DOMAIN=$(getConfigMap tanzu-demo-hub TDH_INGRESS_CONTOUR_LB_DOMAIN)
 
   messageTitle "Minio S3 Object Storage"
-  cnt=$(helm list -q | egrep -c "^tdh-minio")
+  cnt=$(helm list -A -q | egrep -c "^minio")
   if [ $cnt -eq 0 ]; then
     messagePrint " ▪ Installing Minio" "bitnami/minio"
     kubectl create namespace $NAMESPACE > /dev/null 2>&1
+
+    # --- COPY SECRET TO NAMESPACE ---
+    kubectl get secret tanzu-demo-hub-tls --namespace=default  -oyaml | grep -v '^\s*namespace:\s' | \
+    kubectl apply --namespace=$NAMESPACE -f - > /dev/null 2>&1
 
     HELM_VALUES=/tmp/helm_values.yaml
     echo ""                                                                                                                     >  $HELM_VALUES
@@ -5504,13 +5510,12 @@ installMinio() {
     echo "    - name: tdh-postgres-backup.minio.$DOMAIN"                                                                        >> $HELM_VALUES
     echo "      path: /"                                                                                                        >> $HELM_VALUES
 
-    messagePrint " ▪ Deploy the Minio Helm Chart" "tdh-minio"
+    messagePrint " ▪ Deploy the Minio Helm Chart" "minio"
     helm repo add bitnami https://charts.bitnami.com/bitnami > /dev/null 2>&1
 
     cnt=0; ret=1
     while [ $ret -ne 0 -a $cnt -lt 5 ]; do
       helm install minio bitnami/minio --namespace $NAMESPACE -f ${HELM_VALUES} > /tmp/error.log 2>&1; ret=$?
-cat /tmp/error.log
       [ $ret -eq 0 ] && break
       let cnt=cnt+1
       sleep 30
@@ -5529,24 +5534,27 @@ cat /tmp/error.log
 
       exit 1
     fi
+
+    # --- WAIT FOR PODS TO GET STARTED ---
+    runningPods minio
   fi
 
   ver=$(helm ls -A -o json | jq -r --arg chart "minio" '.[] | select(.name == $chart).app_version')
   crt=$(helm ls -A -o json | jq -r --arg chart "minio" '.[] | select(.name == $chart).chart')
   stt=$(helm ls -A -o json | jq -r --arg chart "minio" '.[] | select(.name == $chart).status')
   dat=$(helm ls -A -o json | jq -r --arg chart "minio" '.[] | select(.name == $chart).updated')
-  ACCESS_KEY=$(kubectl get secret --namespace default minio -o jsonpath="{.data.access-key}" | base64 -d)
-  SECRET_KEY=$(kubectl get secret --namespace default minio -o jsonpath="{.data.secret-key}" | base64 -d)
+  ROOT_USER=$(kubectl get secret --namespace minio minio -o jsonpath="{.data.root-user}" | base64 --decode)
+  ROOT_PASSWORD=$(kubectl get secret --namespace minio minio -o jsonpath="{.data.root-password}" | base64 --decode)
 
   messagePrint " ▪ Verify Minio S3"                "$crt"
   messagePrint "   Helm Chart Name"                "minio"
   messagePrint "   Helm Chart Version"             "$ver"
   messagePrint "   Helm Chart Status"              "$stt"
   messagePrint "   Helm Chart Installed/Updated"   "$dat"
-  messagePrint "   Minio Internal Name"            "tdh-minio.default.svc.cluster.local"
+  messagePrint "   Minio Internal Name"            "minio.default.svc.cluster.local"
   messagePrint "   Minio Management Portal"        "https://minio.$DOMAIN"
-  messagePrint "   Minio Access Key"               "$ACCESS_KEY"
-  messagePrint "   Minio Secret Key"               "$SECRET_KEY"
+  messagePrint "   Minio Admin User"               "$ROOT_USER"
+  messagePrint "   Minio Admin Password"           "$ROOT_PASSWORD"
 
   echo "   -----------------------------------------------------------------------------------------------------------"
   messageTitle "   Test Minio S3 Access: (https://docs.min.io/docs/minio-client-complete-guide)"
@@ -5631,7 +5639,7 @@ installGitLab() {
   DOMAIN="apps-nginx.${TDH_ENVNAME}.${TDH_DOMAIN}"
 
   messageTitle "GitLab Commnunity Edition"
-  cnt=$(helm list -q | egrep -c "^gitlab")
+  cnt=$(helm list -A -q | egrep -c "^gitlab")
   if [ $cnt -eq 0 ]; then
     messagePrint " ▪ Installing GitLab" "gitlab/gitlab"
     kubectl create namespace $NAMESPACE > /dev/null 2>&1
@@ -5712,9 +5720,6 @@ installGitLab() {
   crt=$(helm ls -A -o json | jq -r --arg chart "gitlab" '.[] | select(.name == $chart).chart')
   stt=$(helm ls -A -o json | jq -r --arg chart "gitlab" '.[] | select(.name == $chart).status')
   dat=$(helm ls -A -o json | jq -r --arg chart "gitlab" '.[] | select(.name == $chart).updated')
-  ACCESS_KEY=$(kubectl get secret --namespace default tdh-minio -o jsonpath="{.data.access-key}" | base64 -d)
-  SECRET_KEY=$(kubectl get secret --namespace default tdh-minio -o jsonpath="{.data.secret-key}" | base64 -d)
-
   SECRET=$(kubectl get secret tdh-gitlab-initial-root-password  -n $NAMESPACE -o json | jq -r '.data.password' | base64 -d )
 
   messagePrint " ▪ Verify GitLab CE Deployment"    "$crt"
