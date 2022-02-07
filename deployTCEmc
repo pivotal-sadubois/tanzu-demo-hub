@@ -1066,6 +1066,31 @@ if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "docker" ]; then
     fi
   fi
 
+  # --- VERIFY TMC REGISTRATION
+  tmc managementcluster get $TDH_TKGMC_NAME > /dev/null 2>&1
+  if [ $? -eq 0 ]; then
+    #tmc managementcluster get aws-hosted -o json | jq -r '.status.phase'
+    stt=$(tmc managementcluster get $TDH_TKGMC_NAME -o json 2>/dev/null | jq -r '.status.phase')
+    if [ "$stt" != "READY" ]; then
+      messagePrint " ▪ TMC DeRegister Cluster"             "$TDH_TKGMC_NAME"
+      #tmc managementcluster deregister $TDH_TKGMC_NAME -k $HOME/.kube/config -f > /tmp/error.log 2>&1; ret=$?
+      tmc managementcluster deregister $TDH_TKGMC_NAME -k $HOME/.kube/config > /tmp/error.log 2>&1; ret=$?
+      if [ $ret -ne 0 ]; then
+        logMessages /tmp/error.log
+        echo "ERROR: failed to deregister Management Cluster $TDH_TKGMC_NAME, please try manually"
+        if [ "$NATIVE" == "0" ]; then
+          echo "       => tools/${TDH_TOOLS}.sh"
+          echo "          tdh-tools:/$ tmc managementcluster deregister $TDH_TKGMC_NAME -k $HOME/.kube/config -f"
+          echo "          tdh-tools:/$ exit"
+        else
+          echo "       => tmc managementcluster deregister $TDH_TKGMC_NAME -k $HOME/.kube/config -f"
+        fi
+
+        exit 1
+      fi
+    fi
+  fi
+
 
   tmc managementcluster get $TDH_TKGMC_NAME > /dev/null 2>&1
   if [ $? -ne 0 ]; then
