@@ -1627,16 +1627,23 @@ checkTMCintegration() {
         messagePrint " ▪ AWS CloudFormation ARN"                                   "$TDH_TANZU_DATA_PROTECTION_ARN" 
       fi
 
+echo "tmc cluster dataprotection backup list --cluster-name tdh-azure-sadubois -p attached -m attached --name \"full-backup\""
       # --- CONFIGURE FULL BACKUP ---
       cnt=$(tmc cluster dataprotection backup list --cluster-name $TDH_CLUSTER_NAME -p $TDH_PROVISIONER_NAME -m $MGMG_CLUSTER --name "full-backup" 2>/dev/null | egrep -c " full-backup ")
+echo "CNT:$cnt"
       if [ $cnt -gt 0 ]; then 
         stt=$(tmc cluster dataprotection backup list --cluster-name $TDH_CLUSTER_NAME -p $TDH_PROVISIONER_NAME -m $MGMG_CLUSTER --name "full-backup" | egrep " full-backup " | awk '{ print $NF }')
+echo "STT:$stt"
         if [ "$stt" != "COMPLETED" -a "$stt" != "INPROGRESS" ]; then 
           # --- DELETE OLD BACKUP ---
+echo "tmc cluster dataprotection backup delete --cluster-name $TDH_CLUSTER_NAME -p $TDH_PROVISIONER_NAME -m $MGMG_CLUSTER \"full-backup\""
           tmc cluster dataprotection backup delete --cluster-name $TDH_CLUSTER_NAME -p $TDH_PROVISIONER_NAME -m $MGMG_CLUSTER "full-backup"  > /dev/null 2>&1
+          #tmc cluster dataprotection delete --cluster-name tdh-azure-sadubois -p attached -m attached --delete-backups 
           cnt=0
         fi
       fi
+
+exit
 
       sleep 300
 
@@ -2574,26 +2581,26 @@ createTKGMCcluster() {
 
     # --- LDAP IDENTITY PROVIDOR AVAILABLE ON THE JUMP SERVER ---
     # https://docs.vmware.com/en/VMware-Tanzu-Kubernetes-Grid/1.3/vmware-tanzu-kubernetes-grid-13/GUID-mgmt-clusters-create-config-file.html#identity-mgmt
-    if [ "$TDH_TKGMC_IDENTITY_MANAGEMENT_TYPE" == "ldap" ]; then
-      echo "IDENTITY_MANAGEMENT_TYPE: ldap"                                                          >> $TKG_TEMPLATE
-      echo "LDAP_GROUP_SEARCH_BASE_DN: ${LDAP_DOMAIN}"                                               >> $TKG_TEMPLATE
-      echo "LDAP_HOST: jump.${TDH_TKGMC_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}"                           >> $TKG_TEMPLATE
-      echo "LDAP_GROUP_SEARCH_NAME_ATTRIBUTE: cn"                                                    >> $TKG_TEMPLATE
-      echo "LDAP_GROUP_SEARCH_USER_ATTRIBUTE: DN"                                                    >> $TKG_TEMPLATE
-      cho "LDAP_USER_SEARCH_USERNAME: userPrincipalName"                                            >> $TKG_TEMPLATE
-      echo "TKG_HTTP_PROXY_ENABLED: \"false\""                                                       >> $TKG_TEMPLATE
-    fi
+    #if [ "$TDH_TKGMC_IDENTITY_MANAGEMENT_TYPE" == "ldap" ]; then
+    #  echo "IDENTITY_MANAGEMENT_TYPE: ldap"                                                          >> $TKG_TEMPLATE
+    #  echo "LDAP_GROUP_SEARCH_BASE_DN: ${LDAP_DOMAIN}"                                               >> $TKG_TEMPLATE
+    #  echo "LDAP_HOST: jump.${TDH_TKGMC_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}"                           >> $TKG_TEMPLATE
+    #  echo "LDAP_GROUP_SEARCH_NAME_ATTRIBUTE: cn"                                                    >> $TKG_TEMPLATE
+    #  echo "LDAP_GROUP_SEARCH_USER_ATTRIBUTE: DN"                                                    >> $TKG_TEMPLATE
+    #  cho "LDAP_USER_SEARCH_USERNAME: userPrincipalName"                                            >> $TKG_TEMPLATE
+    #  echo "TKG_HTTP_PROXY_ENABLED: \"false\""                                                       >> $TKG_TEMPLATE
+    #fi
 
     # --- OIDC IDENTITY PROVIDOR WITH (OKTA) ---
-    if [ "$TDH_TKGMC_IDENTITY_MANAGEMENT_TYPE" == "oidc" ]; then
-      echo "IDENTITY_MANAGEMENT_TYPE: oidc"                                              >> $TKG_TEMPLATE
-      echo "OIDC_IDENTITY_PROVIDER_CLIENT_ID: \"$TDH_OKTA_SECRET_ID\""                   >> $TKG_TEMPLATE
-      echo "OIDC_IDENTITY_PROVIDER_CLIENT_SECRET: \"$TDH_OKTA_CLIENT_SECRET\""           >> $TKG_TEMPLATE
-      echo "OIDC_IDENTITY_PROVIDER_ISSUER_URL: \"$TDH_OKTA_URL\""                        >> $TKG_TEMPLATE
-      echo "OIDC_IDENTITY_PROVIDER_SCOPES: \"$TDH_OKTA_SCOPES\""                         >> $TKG_TEMPLATE
-      echo "OIDC_IDENTITY_PROVIDER_GROUPS_CLAIM:: \"$TDH_OKTA_GROUP_CLAIM\""             >> $TKG_TEMPLATE
-      echo "OIDC_IDENTITY_PROVIDER_USERNAME_CLAIM: \"$TDH_OKTA_USERNAME_CLAIM\""         >> $TKG_TEMPLATE
-    fi
+    #if [ "$TDH_TKGMC_IDENTITY_MANAGEMENT_TYPE" == "oidc" ]; then
+    #  echo "IDENTITY_MANAGEMENT_TYPE: oidc"                                              >> $TKG_TEMPLATE
+    #  echo "OIDC_IDENTITY_PROVIDER_CLIENT_ID: \"$TDH_OKTA_SECRET_ID\""                   >> $TKG_TEMPLATE
+    #  echo "OIDC_IDENTITY_PROVIDER_CLIENT_SECRET: \"$TDH_OKTA_CLIENT_SECRET\""           >> $TKG_TEMPLATE
+    #  echo "OIDC_IDENTITY_PROVIDER_ISSUER_URL: \"$TDH_OKTA_URL\""                        >> $TKG_TEMPLATE
+    #  echo "OIDC_IDENTITY_PROVIDER_SCOPES: \"$TDH_OKTA_SCOPES\""                         >> $TKG_TEMPLATE
+    #  echo "OIDC_IDENTITY_PROVIDER_GROUPS_CLAIM:: \"$TDH_OKTA_GROUP_CLAIM\""             >> $TKG_TEMPLATE
+    #  echo "OIDC_IDENTITY_PROVIDER_USERNAME_CLAIM: \"$TDH_OKTA_USERNAME_CLAIM\""         >> $TKG_TEMPLATE
+    #fi
 
     if [ "$TDH_TKGMC_IDENTITY_MANAGEMENT_TYPE" == "none" ]; then
       echo "IDENTITY_MANAGEMENT_TYPE: none"                                              >> $TKG_TEMPLATE
@@ -2609,7 +2616,21 @@ createTKGMCcluster() {
       kubectl config unset users.${TDH_TKGMC_NAME}-admin > /dev/null 2>&1
 
       # --- CLEAN OLD MANAGEMENT CLUSTER CONFIG ---
+      rm -f ~/.tanzu/config.yaml /tmp/$TDH_TKGMC_NAME.log ~/.config/tanzu ~/.kube-tkg/config
+
+      # --- CLEAN OLD MANAGEMENT CLUSTER CONFIG ---
       rm -f ~/.tanzu/config.yaml /tmp/$TDH_TKGMC_NAME.log
+      rm -rf $HOME/.config/tanzu
+      cleanKubeconfig           $HOME/.kube/config
+      cleanKubeconfig           $HOME/.kube-tkg/config
+
+      # --- DELETE KIND CLUSTER ---
+      cnt=$(kind get clusters 2>/dev/null | wc -l | awk '{ print $1 }')
+      if [ $cnt -gt 0 ]; then
+        id=$(kind get clusters)
+        messagePrint " ▪ Manually delete leftover Kind Cluster"        "$id"
+        kind delete clusters -all
+      fi
 
       messagePrint " ▪ Management Cluster Creating"        "This may take up to 15min ..."
       ret=1; cnt=0
@@ -2617,10 +2638,10 @@ createTKGMCcluster() {
 echo "tanzu management-cluster create --timeout 2h --file $TKG_TEMPLATE -v 0 --log-file=/tmp/${TDH_TKGMC_NAME}.log"
         if [ $DEBUG -gt 0 ]; then
           messageLine
-          tanzu management-cluster create --timeout 2h --file $TKG_TEMPLATE -v 0 --log-file=/tmp/${TDH_TKGMC_NAME}.log; ret=$?
+          tanzu management-cluster create --file $TKG_TEMPLATE -v 0 --log-file=/tmp/${TDH_TKGMC_NAME}.log; ret=$?
           messageLine
         else
-          tanzu management-cluster create --timeout 2h --file $TKG_TEMPLATE -v 0 --log-file=/tmp/${TDH_TKGMC_NAME}.log > /tmp/error.log 2>&1; ret=$?
+          tanzu management-cluster create --file $TKG_TEMPLATE -v 0 --log-file=/tmp/${TDH_TKGMC_NAME}.log > /tmp/error.log 2>&1; ret=$?
         fi
 echo "one more try ..."
 
