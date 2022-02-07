@@ -2629,9 +2629,14 @@ createTKGMCcluster() {
         kind delete clusters -all
       fi
 
+      # --- PREFETCH DOCKER INAGES ---
+      prefetchDockerImages
+
       messagePrint " ▪ Management Cluster Creating"        "This may take up to 15min ..."
       ret=1; cnt=0
       while [ $ret -ne 0 -a $cnt -lt 5 ]; do
+        docker kill $(docker ps -q) > /dev/null 2>&1
+        docker system prune -a --volumes -f > /dev/null 2>&1
 echo "tanzu management-cluster create --timeout 1h --file $TKG_TEMPLATE -v 0 --log-file=/tmp/${TDH_TKGMC_NAME}.log"
         if [ $DEBUG -gt 0 ]; then
           messageLine
@@ -11054,7 +11059,21 @@ waitForKappServices() {
   fi
 }
 
+# ------------------------------------------------------------------------------------------
+# Function Name ......: prefetchDockerImages
+# Function Purpose ...: Waiting for Kapp Services to have completed starting
+# ------------------------------------------------------------------------------------------
+# Argument ($1) ......: Namespace
+#          ($2) ......: Kapp Service
+# ------------------------------------------------------------------------------------------
+# Return Value .......: 0 - SUCCEED, 1 - FAILED
+# ------------------------------------------------------------------------------------------
+prefetchDockerImages() {
 
-
-
-
+  CONFIG_FILE=$(ls -1 $HOME/.config/tanzu/tkg/bom/tkg-bom-*.yaml) 
+  if [ "$CONFIG_FILE" != "" -a -f $CONFIG_FILE ]; then 
+    for n in $(egrep "imagePath|tag:" $CONFIG_FILE | paste - - | awk '{ printf("projects.registry.vmware.com/tkg/%s:%s\n",$2,$4)}'); do
+echo "docker pull $n"
+      docker pull $n
+    done
+}
