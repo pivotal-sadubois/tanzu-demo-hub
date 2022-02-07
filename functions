@@ -2613,11 +2613,11 @@ createTKGMCcluster() {
       kubectl config unset users.${TDH_TKGMC_NAME}-admin > /dev/null 2>&1
 
       # --- CLEAN OLD MANAGEMENT CLUSTER CONFIG ---
-      rm -f ~/.tanzu/config.yaml /tmp/$TDH_TKGMC_NAME.log ~/.config/tanzu ~/.kube-tkg/config
+      rm -f ~/.tanzu/config.yaml /tmp/$TDH_TKGMC_NAME.log
 
       # --- CLEAN OLD MANAGEMENT CLUSTER CONFIG ---
       rm -f ~/.tanzu/config.yaml /tmp/$TDH_TKGMC_NAME.log
-      rm -rf $HOME/.config/tanzu
+      rm -rf $HOME/.config/tanzu $HOME/.kube-tkg/config
       cleanKubeconfig           $HOME/.kube/config
       cleanKubeconfig           $HOME/.kube-tkg/config
 

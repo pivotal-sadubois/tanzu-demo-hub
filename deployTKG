@@ -10,6 +10,7 @@ export TANZU_DEMO_HUB=$(cd "$(pwd)/$(dirname $0)"; pwd)
 export TDHPATH=$(cd "$(pwd)/$(dirname $0)"; pwd)
 export DEBUG=0
 export NATIVE=0
+export DEPLOY_TKG_CLEAN=0
 export TDH_TKGWC_K8S_VERSION=""
 export TDH_TANZU_MISSION_CONTROL_REGISTRATION=true
 export TDH_TOOLS=tdh-tools
@@ -32,6 +33,7 @@ while [ "$1" != "" ]; do
     -k)   TDH_TKGWC_K8S_VERSION=$2;;
     -tag) TDH_TKGWC_NAME_TAG=$2;;
     --debug)       DEBUG=1;;
+    --delete)      DEPLOY_TKG_CLEAN=1;;
     --native)      NATIVE=1;;
   esac
   shift
@@ -58,6 +60,7 @@ usage() {
   echo "                      -k  <controlplane-ip>     # default (latest)"
   echo "                                                # use 'tanzu kubernetes-release get' to see available"
   echo ""
+  echo "                      --delete                  # Delete Workload Cluster"
   echo "                      --debug                   # default (disabled)"
   echo "                      --native                  # Use 'native' installed tools instead of the tdh-tools container"
   echo ""
@@ -178,6 +181,51 @@ export TDH_TLS_CERT=tanzu-demo-hub
 export TDH_TLS_SECRET=${TDH_TLS_CERT}-tls
 export TDH_TLS_ISSUER_NAME=letsencrypt-staging
 export TDH_TLS_ISSUER_CONFIG=/tmp/issuer-dns-manager1.yaml
+
+if [ "$DEPLOY_TKG_CLEAN" -eq 1 ]; then
+  nam=$(tanzu cluster list $TDH_TKGWC_NAME -o json | jq -r '.[].name') 
+  if [ "$nam" == "$TDH_TKGWC_NAME" ]; then
+    messageTitle "Deleting TKG Workload Cluster $TDH_TKGWC_NAME"
+    ret=1; cnt=0
+    while [ $ret -ne 0 -a $cnt -lt 5 ]; do
+      tanzu cluster delete $TDH_TKGWC_NAME -y > /tmp/error.log 2>&1; ret=$? 
+      [ $ret -eq 0 ] && break
+
+      sleep 300
+      let cnt=cnt+1
+    done
+
+    if [ $ret -ne 0 ]; then
+      logMessages /tmp/error.log
+      echo "ERROR: failed to delete TKG Cluster $TDH_TKGWC_NAME"
+      if [ "$NATIVE" == "0" ]; then
+        echo "       => tools/${TDH_TOOLS}.sh"
+        echo "          tdh-tools:/$ tanzu cluster delete $TDH_TKGWC_NAME -y"
+        echo "          tdh-tools:/$ exit"
+      else
+        echo "       => tanzu cluster delete $TDH_TKGWC_NAME -y"
+      fi
+      exit 1
+    fi
+
+    # --- WAIT FOR CLUSTER TO BE DELETED ---
+    messagePrint " ▪ Wait for cluster to be deleted"     "$TDH_TKGWC_NAME"
+
+    stt="deleting"; cnt=0
+    while [ "$stt" != "" -a $cnt -lt 5 ]; do
+      stt=$(tanzu cluster list $TDH_TKGWC_NAME -o json | jq -r '.[].status') 
+      [ "$stt" == "" ] && break
+
+      sleep 30
+      let cnt=cnt+1
+    done
+  fi
+
+  cleanKubeconfig
+
+  exit 0
+fi
+
 
 # --- VERYFY ACCESS TO CLOUD ---
 checkTDHenvironment
@@ -401,7 +449,7 @@ TanzuPackage_RepoSync     tanzu-package-repo-global
 
 TanzuPackage_CertManager  cert-manager-pkg     cert-manager.tanzu.vmware.com 
 TanzuPackage_Contour      contour-pkg          contour.tanzu.vmware.com
-#exit
+exit
 createClusterIssuer
 getRootCA                 tanzu-demo-hub-tls
 TanzuPackage_Harbor       harbor-pkg           harbor.tanzu.vmware.com
