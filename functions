@@ -2553,20 +2553,15 @@ createTKGMCcluster() {
 
   cleanKindCluster
 
-  messageTitle "Download docker images to prevent (ImagePullBackOff)"
-  list="projects.registry.vmware.com/tkg/antrea/antrea-debian:v0.13.3_vmware.1 projects.registry.vmware.com/tkg/tanzu_core/capabilities/capabilities-controller-manager:v1.4.1"
-  for n in $list; do
-    messagePrint " ▪ Pull Docker Image"    "$n"
-
-    cnt=0; ret=1
-    while [ $ret -ne 0 -a $cnt -lt 5 ]; do
-      docker pull $n > /dev/null 2>&1; ret=$?
-      sleep 60
-      let cnt=cnt+1
-    done
-  done
-
   if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "docker" ]; then
+    messageTitle "Download docker images to prevent (ImagePullBackOff)"
+    CONFIG_FILE=$(ls -1 $HOME/.config/tanzu/tkg/bom/tkg-bom-*.yaml)
+    if [ "$CONFIG_FILE" != "" -a -f $CONFIG_FILE ]; then
+      for n in $(egrep "imagePath|tag:" $CONFIG_FILE | paste - - | awk '{ printf("projects.registry.vmware.com/tkg/%s:%s\n",$2,$4)}'); do
+        dockerPullImages $n
+      done
+    fi
+
     echo "CLUSTER_NAME: $TDH_TKGMC_NAME"                                               >  $TKG_TEMPLATE
     echo "CLUSTER_PLAN: \"dev\""                                                       >> $TKG_TEMPLATE
     echo "ENABLE_MHC: \"false\""                                                       >> $TKG_TEMPLATE
@@ -10939,6 +10934,7 @@ dockerPullImages() {
     cnt=0; ret=1
     while [ $ret -ne 0 -a $cnt -lt 5 ]; do
       docker pull $n > /dev/null 2>&1; ret=$?
+      [ $ret -eq 0 ] && break
       sleep 60
       let cnt=cnt+1
     done
@@ -11059,21 +11055,3 @@ waitForKappServices() {
   fi
 }
 
-# ------------------------------------------------------------------------------------------
-# Function Name ......: prefetchDockerImages
-# Function Purpose ...: Waiting for Kapp Services to have completed starting
-# ------------------------------------------------------------------------------------------
-# Argument ($1) ......: Namespace
-#          ($2) ......: Kapp Service
-# ------------------------------------------------------------------------------------------
-# Return Value .......: 0 - SUCCEED, 1 - FAILED
-# ------------------------------------------------------------------------------------------
-prefetchDockerImages() {
-
-  CONFIG_FILE=$(ls -1 $HOME/.config/tanzu/tkg/bom/tkg-bom-*.yaml) 
-  if [ "$CONFIG_FILE" != "" -a -f $CONFIG_FILE ]; then 
-    for n in $(egrep "imagePath|tag:" $CONFIG_FILE | paste - - | awk '{ printf("projects.registry.vmware.com/tkg/%s:%s\n",$2,$4)}'); do
-echo "docker pull $n"
-      docker pull $n
-    done
-}
