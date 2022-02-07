@@ -127,12 +127,12 @@ cleanupEnvironment() {
   # --- CHECK FOR WORKLOAD CLUSTERS ---
   tanzu cluster list >/dev/null 2>&1; ret=$?
   if [ $ret -eq 0 ]; then
-    cnt=$(tanzu cluster list 2>/dev/null | sed '1d' | wc -l | sed 's/  *//g') 
+    cnt=$(tanzu cluster list 2>/dev/null | grep -v "tkgmc" | sed '1d' | wc -l | sed 's/  *//g') 
     if [ $cnt -gt 0 ]; then
       tanzu cluster list
       messageLine
       echo "ERROR: TCE Workload Clusters are still running, please delete them first."
-      for n in $(tanzu cluster list | sed '1d' | awk '{ print $1 }'); do
+      for n in $(tanzu cluster list | grep -v "tkgmc" | sed '1d' | awk '{ print $1 }'); do
         echo "       => tanzu cluster delete $n -y"
       done
       exit 1
@@ -994,8 +994,9 @@ checkCLIcommands VSPHERE
 
 if [ "$DEPLOY_TKG_CLEAN" -eq 1 ]; then
   cleanupEnvironment
-  cleanKubeconfig
   cleanManagementCluster
+  cleanKubeconfig $HOME/.kube/config
+  cleanKubeconfig $HOME/.kube-tkg/config
 
   exit 0
 fi
