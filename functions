@@ -2626,9 +2626,6 @@ createTKGMCcluster() {
         kind delete clusters -all
       fi
 
-      # --- PREFETCH DOCKER INAGES ---
-      prefetchDockerImages
-
       messagePrint " ▪ Management Cluster Creating"        "This may take up to 15min ..."
       ret=1; cnt=0
       while [ $ret -ne 0 -a $cnt -lt 5 ]; do
