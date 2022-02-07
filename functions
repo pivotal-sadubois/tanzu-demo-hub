@@ -2554,17 +2554,6 @@ createTKGMCcluster() {
   cleanKindCluster
 
   if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "docker" ]; then
-    messageTitle "Download docker images to prevent (ImagePullBackOff)"
-    CONFIG_FILE=$(ls -1 $HOME/.config/tanzu/tkg/bom/tkg-bom-*.yaml)
-echo "CONFIG_FILE:$CONFIG_FILE"
-    if [ "$CONFIG_FILE" != "" -a -f $CONFIG_FILE ]; then
-      for n in $(egrep "imagePath|tag:" $CONFIG_FILE | paste - - | awk '{ printf("projects.registry.vmware.com/tkg/%s:%s\n",$2,$4)}' | \
-                 egrep "cluster-api" | egrep -v "azure|aws|vsphere"); do
-
-        dockerPullImages $n
-      done
-    fi
-
     echo "CLUSTER_NAME: $TDH_TKGMC_NAME"                                               >  $TKG_TEMPLATE
     echo "CLUSTER_PLAN: \"dev\""                                                       >> $TKG_TEMPLATE
     echo "ENABLE_MHC: \"false\""                                                       >> $TKG_TEMPLATE
@@ -2627,12 +2616,21 @@ echo "CONFIG_FILE:$CONFIG_FILE"
         kind delete clusters -all
       fi
 
-      messagePrint " ▪ Management Cluster Creating"        "This may take up to 15min ..."
       ret=1; cnt=0
       while [ $ret -ne 0 -a $cnt -lt 5 ]; do
-        docker kill $(docker ps -q) > /dev/null 2>&1
-        docker system prune -a --volumes -f > /dev/null 2>&1
-echo "tanzu management-cluster create --timeout 1h --file $TKG_TEMPLATE -v 0 --log-file=/tmp/${TDH_TKGMC_NAME}.log"
+        messagePrint " ▪ Management Cluster Creating (Take-$cnt)"        "This may take up to 25min ..."
+        CONFIG_FILE=$(ls -1 $HOME/.config/tanzu/tkg/bom/tkg-bom-*.yaml 2>/dev/null)
+        if [ "$CONFIG_FILE" != "" ]; then 
+          messageTitle "Download docker images to prevent (ImagePullBackOff)"
+          if [ -f "$CONFIG_FILE" ]; then
+            for n in $(egrep "imagePath|tag:" $CONFIG_FILE | paste - - | awk '{ printf("projects.registry.vmware.com/tkg/%s:%s\n",$2,$4)}' | \
+                       egrep "cluster-api" | egrep -v "azure|aws|vsphere"); do
+    
+              dockerPullImages $n
+            done
+          fi
+        fi
+
         if [ $DEBUG -gt 0 ]; then
           messageLine
           tanzu management-cluster create --timeout 1h -i docker --file $TKG_TEMPLATE -v 0 --log-file=/tmp/${TDH_TKGMC_NAME}.log; ret=$?
@@ -2640,7 +2638,6 @@ echo "tanzu management-cluster create --timeout 1h --file $TKG_TEMPLATE -v 0 --l
         else
           tanzu management-cluster create --timeout 1h -i docker --file $TKG_TEMPLATE -v 0 --log-file=/tmp/${TDH_TKGMC_NAME}.log > /tmp/error.log 2>&1; ret=$?
         fi
-echo "one more try ..."
 
         [ $ret -eq 0 ] && break
 
