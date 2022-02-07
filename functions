@@ -2557,7 +2557,9 @@ createTKGMCcluster() {
     messageTitle "Download docker images to prevent (ImagePullBackOff)"
     CONFIG_FILE=$(ls -1 $HOME/.config/tanzu/tkg/bom/tkg-bom-*.yaml)
     if [ "$CONFIG_FILE" != "" -a -f $CONFIG_FILE ]; then
-      for n in $(egrep "imagePath|tag:" $CONFIG_FILE | paste - - | awk '{ printf("projects.registry.vmware.com/tkg/%s:%s\n",$2,$4)}'); do
+      for n in $(egrep "imagePath|tag:" $CONFIG_FILE | paste - - | awk '{ printf("projects.registry.vmware.com/tkg/%s:%s\n",$2,$4)}' | \
+                 egrep "cluster-api" | egrep -v "azure|aws|vsphere"); do
+
         dockerPullImages $n
       done
     fi
