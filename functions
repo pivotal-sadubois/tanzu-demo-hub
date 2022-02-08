@@ -9908,11 +9908,19 @@ TanzuPackage_AddRepo() {
   stt=$(tanzu package repository list -n tanzu-package-repo-global -o json 2>/dev/null | \
         jq -r --arg pkg tce-repo '.[] | select(.name == $pkg).status' 2>/dev/null) 
   if [ "$stt" == "" ]; then 
-    messagePrint " ▪ Adding Tanzu Package Repository"   "$TANUU_REPO"
-    tanzu package repository add $TANZU_REPO_NAME --url $TANZU_REPO_URL \
-    --namespace $NAMESPACE > /dev/null 2>&1; ret=$? 
+    messagePrint " ▪ Adding Tanzu Package Repository"   "$TANZU_REPO_NAME"
+    cnt=0; ret=1
+    while [ $ret -ne 0 -a $cnt -lt 5 ]; do
+      tanzu package repository add $TANZU_REPO_NAME --url $TANZU_REPO_URL \
+           --namespace $NAMESPACE > /tmp/error.log 2>&1; ret=$?
+
+      [ $ret -eq 0 ] && break
+      let cnt=cnt+1
+      sleep 30
+    done
 
     if [ $ret -ne 0 ]; then
+      logMessages /tmp/error.log
       echo "ERROR: failed to reconsilte Tanzu Packages in $NAMESPACE"
       if [ "$NATIVE" == "0" ]; then
         echo "       => tools/${TDH_TOOLS}.sh"
