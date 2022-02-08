@@ -5465,7 +5465,30 @@ installKubeapps() {
   dat=$(helm ls -n $NAMESPACE -o json | jq -r --arg chart "kubeapps" '.[] | select(.name == $chart).updated')
 
   secret_name=$(kubectl get serviceaccount kubeapps-operator -o jsonpath='{range .secrets[*]}{.name}{"\n"}{end}' | grep kubeapps-operator-token)
-  KUBEAPPS_TOKEN=$(kubectl get secret $secret_name -o jsonpath='{.data.token}' -o go-template='{{.data.token | base64decode}}')
+
+  cnt=0; ret=1
+  while [ $ret -ne 0 -a $cnt -lt 5 ]; do
+    KUBEAPPS_TOKEN=$(kubectl get secret $secret_name -o jsonpath='{.data.token}' -o go-template='{{.data.token | base64decode}}' 2>/tmp/error.log); ret=$?
+
+    [ $ret -eq 0 ] && break
+    let cnt=cnt+1
+    sleep 30
+  done
+
+  if [ $ret -ne 0 ]; then
+    logMessages /tmp/error.log
+    echo "ERROR: Failed to get Kubeapps Token
+    if [ "$NATIVE" == "0" ]; then
+      echo "       => tools/${TDH_TOOLS}.sh"
+      echo "          tdh-tools:/$ kubectl get secret $secret_name -o jsonpath='{.data.token}' -o go-template='{{.data.token | base64decode}}'"
+      echo "          tdh-tools:/$ exit"
+    else
+      echo "       => kubectl get secret $secret_name -o jsonpath='{.data.token}' -o go-template='{{.data.token | base64decode}}'"
+    fi
+
+    exit 1
+  fi
+
 
   messagePrint " ▪ Verify Kubeapps"                "$crt"
   messagePrint "   Helm Chart Name"                "minio"
