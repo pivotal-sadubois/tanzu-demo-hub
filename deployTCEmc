@@ -1041,31 +1041,8 @@ if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "docker" ]; then
     kubectl config use-context ${TDH_TKGMC_NAME}-admin@$TDH_TKGMC_NAME > /dev/null 2>&1
   fi
 
-  # --- VERIFY TMC REGISTRATION
-  tmc managementcluster get $TDH_TKGMC_NAME > /dev/null 2>&1
-  if [ $? -eq 0 ]; then
-    #tmc managementcluster get aws-hosted -o json | jq -r '.status.phase'
-    stt=$(tmc managementcluster get $TDH_TKGMC_NAME -o json 2>/dev/null | jq -r '.status.phase')
-    if [ "$stt" != "READY" ]; then
-      messagePrint " ▪ TMC DeRegister Cluster"             "$TDH_TKGMC_NAME"
-      #tmc managementcluster reregister $TDH_TKGMC_NAME -o /tmp/k8s-register-manifest.yaml > /dev/null 2>&1; ret=$?
-      tmc managementcluster deregister $TDH_TKGMC_NAME > /tmp/error.log 2>&1; ret=$?
-      if [ $ret -ne 0 ]; then
-        logMessages /tmp/error.log
-        echo "ERROR: failed to deregister Management Cluster $TDH_TKGMC_NAME, please try manually"
-        if [ "$NATIVE" == "0" ]; then
-          echo "       => tools/${TDH_TOOLS}.sh"
-          echo "          tdh-tools:/$ tmc managementcluster deregister $TDH_TKGMC_NAME"
-          echo "          tdh-tools:/$ exit"
-        else
-          echo "       => tmc managementcluster deregister $TDH_TKGMC_NAME"
-        fi
-
-        exit 1
-      fi
-    fi
-  fi
-
+# TMC Registation does not yet work with TCE
+if [ 1 -eq 2 ]; then
   # --- VERIFY TMC REGISTRATION
   tmc managementcluster get $TDH_TKGMC_NAME > /dev/null 2>&1
   if [ $? -eq 0 ]; then
@@ -1091,7 +1068,6 @@ if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "docker" ]; then
     fi
   fi
 
-
   tmc managementcluster get $TDH_TKGMC_NAME > /dev/null 2>&1
   if [ $? -ne 0 ]; then
     messagePrint " ▪ TMC Register Cluster"             "$TDH_TKGMC_NAME"
@@ -1109,7 +1085,7 @@ if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "docker" ]; then
 
     if [ $ret -ne 0 ]; then
       logMessages /tmp/error.log
-      echo "ERROR: ailed to register TKG Management Cluster: $TDH_TKGMC_NAME to TMC"
+      echo "ERROR: failed to register TKG Management Cluster: $TDH_TKGMC_NAME to TMC"
       if [ "$NATIVE" == "0" ]; then
         echo "       => tools/${TDH_TOOLS}.sh"
         echo "          tdh-tools:/$ tmc managementcluster register $TDH_TKGMC_NAME -c tanzu-demo-hub -p TKG -k $HOME/.kube-tkg/config"
@@ -1129,6 +1105,7 @@ if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "docker" ]; then
       let cnt=cnt+1
     done
   fi
+fi
 
   # --- CLEANUP OLD MANAGEMENT CLUSTERS ---
   #cleanKubeconfig $HOME/.tanzu/config.yaml  => cleanManagementCluster
