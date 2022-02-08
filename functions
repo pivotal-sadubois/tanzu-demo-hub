@@ -5301,7 +5301,6 @@ installJenkins() {
     messagePrint " ▪ Deploy the Jenkins Helm Chart" "jenkins"
     cnt=0; ret=1
     while [ $ret -ne 0 -a $cnt -lt 5 ]; do
-      helm install kubeapps --namespace $NAMESPACE bitnami/kubeapps -f $HELM_VALUES --version $HELM_KUBEAPPS_VERSION > /tmp/error.log 2>&1; ret=$?
       helm install jenkins --namespace $NAMESPACE bitnami/jenkins -f $HELM_VALUES --wait > /tmp/error.log 2>&1; ret=$?
 
       [ $ret -eq 0 ] && break
