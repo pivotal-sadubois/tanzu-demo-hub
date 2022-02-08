@@ -1201,7 +1201,7 @@ else
   fi
 fi
 
-if [ 1 -qe 2 ]; then
+if [ 1 -eq 2 ]; then
   # --- VERIFY TMC REGISTRATION
   tmc managementcluster get $TDH_TKGMC_NAME > /dev/null 2>&1
   if [ $? -eq 0 ]; then
