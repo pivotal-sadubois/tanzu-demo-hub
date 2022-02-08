@@ -245,10 +245,13 @@ checkCLIcommands TMC
 echo gaga5
 
 if [ "$TDH_TKGWC_K8S_VERSION" != "" ]; then 
+echo gaga61
   tanzu kubernetes-release get 2323 | sed '1d'
   cnt=$(tanzu kubernetes-release get $TDH_TKGWC_K8S_VERSION | sed '1d' | wc -l | sed 's/  *//g') 
+echo "gaga62 CNT:$cnt"
   if [ $cnt -eq 0 ]; then 
     cnt=$(tanzu kubernetes-release get | grep -c " $TDH_TKGWC_K8S_VERSION ")
+echo gaga63
     if [ $cnt -gt 0 ]; then 
       echo "ERROR: Kubernetes Version ($TDH_TKGWC_K8S_VERSION) not found, Please take the 'NAME'"
       echo "       instead of the 'VERSION'."
@@ -298,6 +301,7 @@ if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "vSphere" ]; then
   #TDH_TKGWC_CPIP_ADDRESS
   #TDH_TKGWC_NAME_TAG
 fi
+exit
 
 messageTitle "Tanzu Kubernetes Grid Deployment"
 messagePrint " ▪ Management Cluster Name"               "$TDH_TKGMC_NAME"
