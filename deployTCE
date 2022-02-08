@@ -301,7 +301,6 @@ if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "vSphere" ]; then
   #TDH_TKGWC_CPIP_ADDRESS
   #TDH_TKGWC_NAME_TAG
 fi
-exit
 
 messageTitle "Tanzu Kubernetes Grid Deployment"
 messagePrint " ▪ Management Cluster Name"               "$TDH_TKGMC_NAME"
@@ -427,8 +426,8 @@ installTanzuDataPostgres
 installSpringCloudGateway
 installMinio
 installKubeapps
-exit
 installJenkins
+exit
 installArgoCD
 installGitLab
 
