@@ -423,7 +423,6 @@ TanzuPackage_Harbor       harbor-pkg           harbor.community.tanzu.vmware.com
 
 installTanzuDataPostgres
 installSpringCloudGateway
-exit
 installMinio
 installKubeapps
 installJenkins
