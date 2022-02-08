@@ -274,6 +274,7 @@ else
   TDH_TKGWC_K8S_VERSION=$(tanzu kubernetes-release get | tail -1 | awk '{ print $1 }')
 fi
 
+echo gaga6
 # --- GET TDH_TKGWC_CPIP_ADDRESS FROM NAME TAG ---
 if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "vSphere" ]; then
   if [ "$TDH_TKGWC_NAME_TAG" == "TKG_CLUSTER_01" -o "$TDH_TKGWC_NAME_TAG" == "TKG_CLUSTER_02" -o \
@@ -301,6 +302,7 @@ if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "vSphere" ]; then
   #TDH_TKGWC_CPIP_ADDRESS
   #TDH_TKGWC_NAME_TAG
 fi
+echo gaga7
 
 messageTitle "Tanzu Kubernetes Grid Deployment"
 messagePrint " ▪ Management Cluster Name"               "$TDH_TKGMC_NAME"
