@@ -5215,7 +5215,7 @@ installArgoCD() {
       exit 1
     fi
 
-    messagePrint " ▪ Kubeapps Dashboard deployed"        "https://argocd.$DOMAIN"
+    messagePrint " ▪ ArgoCD Dashboard deployed"        "https://argocd.$DOMAIN"
 
     messagePrint " ▪ Create Serviceaccount"              "argocd"
     kubectl delete serviceaccount argocd > /dev/null 2>&1
@@ -5297,14 +5297,34 @@ installJenkins() {
     echo "      - jenkins.$DOMAIN"                                                                                              >> $HELM_VALUES
     echo "    secretName: tanzu-demo-hub-tls"                                                                                   >> $HELM_VALUES
 
+#gaga
     messagePrint " ▪ Deploy the Jenkins Helm Chart" "jenkins"
-    helm install jenkins --namespace $NAMESPACE bitnami/jenkins -f $HELM_VALUES --wait > /dev/null 2>&1
-    #helm install jenkins --namespace $NAMESPACE bitnami/jenkins -f $HELM_VALUES --wait  
-    if [ $? -ne 0 ]; then
+    cnt=0; ret=1
+    while [ $ret -ne 0 -a $cnt -lt 5 ]; do
+      helm install kubeapps --namespace $NAMESPACE bitnami/kubeapps -f $HELM_VALUES --version $HELM_KUBEAPPS_VERSION > /tmp/error.log 2>&1; ret=$?
+      helm install jenkins --namespace $NAMESPACE bitnami/jenkins -f $HELM_VALUES --wait > /tmp/error.log 2>&1; ret=$?
+
+      [ $ret -eq 0 ] && break
+      let cnt=cnt+1
+      sleep 30
+    done
+
+    if [ $ret -ne 0 ]; then
+      logMessages /tmp/error.log
       echo "ERROR: Failed to deploy Jenkins Helm Chart"
-      echo "       => helm install jenkins --namespace $NAMESPACE bitnami/jenkins -f $HELM_VALUES --wait"
+      if [ "$NATIVE" == "0" ]; then
+        echo "       => tools/${TDH_TOOLS}.sh"
+        echo "          tdh-tools:/$ helm install jenkins --namespace $NAMESPACE bitnami/jenkins -f $HELM_VALUES"
+        echo "          tdh-tools:/$ exit"
+      else
+        echo "       => helm install jenkins --namespace $NAMESPACE bitnami/jenkins -f $HELM_VALUES"
+      fi
+
       exit 1
     fi
+
+    # --- WAIT FOR PODS TO GET STARTED ---
+    runningPods $NAMESPACE
 
     #java -jar ~/Downloads/jenkins-cli.jar -s https://jenkins.apps-contour.local.pcfsdu.com/ -auth user:Idh5k5eZts 2>&1"
     #curl -X GET https://jenkins.apps-contour.local.pcfsdu.com/job/sacha_xxx1/config.xml -u user:Idh5k5eZts -o mylocalconfig.xml
@@ -5441,6 +5461,7 @@ installKubeapps() {
       else
         echo "       => helm install kubeapps --namespace $NAMESPACE bitnami/kubeapps -f $HELM_VALUES"
       fi
+#gaga
 
       exit 1
     fi
