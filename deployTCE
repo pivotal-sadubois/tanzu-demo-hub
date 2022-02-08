@@ -228,16 +228,21 @@ if [ "$DEPLOY_TKG_CLEAN" -eq 1 ]; then
   exit 0
 fi
 
+echo gaga1
 # --- VERYFY ACCESS TO CLOUD ---
 checkTDHenvironment
+echo gaga2
 
 # --- VERIFY TOOLS AND ACCESS ---
 checkTanzuCLI
+echo gaga3
 checkCloudCLI
+echo gaga4
 checkCLIcommands TOOLS
 checkCLIcommands TKG
 checkCLIcommands TANZU
 checkCLIcommands TMC
+echo gaga5
 
 if [ "$TDH_TKGWC_K8S_VERSION" != "" ]; then 
   tanzu kubernetes-release get 2323 | sed '1d'
