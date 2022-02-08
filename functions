@@ -5206,7 +5206,7 @@ installArgoCD() {
     echo "      secretName: tanzu-demo-hub-tls"                                                                                   >> $HELM_VALUES
 
     export TZ=UTC
-    messagePrint " ▪ Deploy the Kubeapps Helm Chart" "argo-cd"
+    messagePrint " ▪ Deploy the ArgoCD Helm Chart" "argo-cd"
     #helm install argo-cd --namespace $NAMESPACE bitnami/argo-cd -f $HELM_VALUES --wait > /dev/null 2>&1
     helm install argo-cd --namespace $NAMESPACE bitnami/argo-cd -f $HELM_VALUES --wait
     if [ $? -ne 0 ]; then
@@ -5230,13 +5230,13 @@ echo "argocd login 127.0.0.1:8443 --password admin --username admin --plaintext"
   stt=$(helm ls -n $NAMESPACE -o json | jq -r --arg chart "argo-cd" '.[] | select(.name == $chart).status')
   dat=$(helm ls -n $NAMESPACE -o json | jq -r --arg chart "argo-cd" '.[] | select(.name == $chart).updated')
 
-  messagePrint " ▪ Verify Kubeapps"                "$crt"
+  messagePrint " ▪ Verify ArgoCD"                "$crt"
   messagePrint "   Helm Chart Name"                "argo-cd"
   messagePrint "   Helm Chart Version"             "$ver"
   messagePrint "   Helm Chart Status"              "$stt"
   messagePrint "   Helm Chart Installed/Updated"   "$dat"
-  messagePrint "   Kubeapps Internal Name"         "argocd.argo-cd.svc.cluster.local"
-  messagePrint "   Kubeapps Management Portal"     "https://argocd.$DOMAIN"
+  messagePrint "   ArgoCD Internal Name"         "argocd.argo-cd.svc.cluster.local"
+  messagePrint "   ArgoCD Management Portal"     "https://argocd.$DOMAIN"
 
   # --- STORE SETTINGS IN CONFIGMAP ---
   uodateConfigMap tanzu-demo-hub TDH_SERVICE_ARGOCD             "true"
@@ -5477,7 +5477,7 @@ installKubeapps() {
 
   if [ $ret -ne 0 ]; then
     logMessages /tmp/error.log
-    echo "ERROR: Failed to get Kubeapps Token
+    echo "ERROR: Failed to get Kubeapps Token"
     if [ "$NATIVE" == "0" ]; then
       echo "       => tools/${TDH_TOOLS}.sh"
       echo "          tdh-tools:/$ kubectl get secret $secret_name -o jsonpath='{.data.token}' -o go-template='{{.data.token | base64decode}}'"
