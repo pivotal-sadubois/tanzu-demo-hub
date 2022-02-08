@@ -134,7 +134,6 @@ listDeployments() {
   echo "-----------------------------------------------------------------------------------------------------------"
 }
 
-echo gaga1
 if [ "${TKG_DEPLOYMENT}" == "" -o "${TDH_TKGMC_NAME}" == "" ]; then
   if [ "${TKG_DEPLOYMENT}" == "" ]; then
     listDeployments
@@ -159,7 +158,6 @@ fi
 if [ -f ~/.tanzu-demo-hub.cfg ]; then
   . ~/.tanzu-demo-hub.cfg
 fi
-echo gaga2
 
 # --- SOURCE MANAGEMENT CLUSTER VARIABLES ---
 if [ -f $HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.cfg ]; then
@@ -295,7 +293,6 @@ if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "vSphere" ]; then
   #TDH_TKGWC_CPIP_ADDRESS
   #TDH_TKGWC_NAME_TAG
 fi
-echo gaga12
 
 messageTitle "Tanzu Kubernetes Grid Deployment"
 messagePrint " ▪ Management Cluster Name"               "$TDH_TKGMC_NAME"
@@ -383,6 +380,10 @@ export TDH_ENVNAME=$TDH_TKGMC_ENVNAME
 export TMC_PROVISIONER_NAME="attached"
 export TDH_MANAGEMENT_CLUSTER=$TDH_TKGMC_NAME
 
+messageTitle "Waiting for system pods to have completed starting"
+runningPods kube-system
+runningPods tkg-system
+
 uodateConfigMap tanzu-demo-hub TDH_DOMAIN                         $AWS_HOSTED_DNS_DOMAIN
 uodateConfigMap tanzu-demo-hub TDH_ENVNAME                        $TDH_TKGMC_ENVNAME
 uodateConfigMap tanzu-demo-hub TDH_DEPLOYMENT_TYPE                "tkg"
@@ -393,8 +394,11 @@ uodateConfigMap tanzu-demo-hub TDH_MANAGEMENT_CLUSTER             "$TDH_TKGMC_NA
 uodateConfigMap tanzu-demo-hub TDH_PROVISIONER_NAME               "$TMC_PROVISIONER_NAME"
 uodateConfigMap tanzu-demo-hub TDH_MISSION_CONTROL_ACCOUNT_NAME   "ukn"
 
+if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "docker" ]; then
+  InstallMetallLB
+fi
+
 # --- INSTALL K8 SERVICES ---
-InstallMetallLB
 #InstallCertManager
 #InstallContour
 #InstallHarborRegistry
@@ -418,21 +422,14 @@ installJenkins
 installArgoCD
 installGitLab
 
-echo hallodo
-echo "TDH_TANZU_MISSION_CONTROL_REGISTRATION:$TDH_TANZU_MISSION_CONTROL_REGISTRATION"
-
 if [ "$TDH_TANZU_MISSION_CONTROL_REGISTRATION" == "true" ]; then
   cnt=$(tmc cluster list --name $TDH_TKGWC_NAME 2>/dev/null | grep -c $TDH_TKGWC_NAME)
-echo "CNT:$cnt"
   if [ $cnt -gt 0 ]; then
     stt=$(tmc cluster list --name $TDH_TKGWC_NAME -o json | jq -r '.clusters[].status.conditions."Agent-READY".status')
-echo "STT:$stt"
     if [ "$stt" != "TRUE" ]; then 
       #tmc cluster reattach --name $TDH_TKGWC_NAME -p tanzu-demo-hub -m $TDH_TKGMC_NAME > /dev/null 2>&1; ret=$?
       tmc cluster reattach --name $TDH_TKGWC_NAME -p attached -m attached > /dev/null 2>&1; ret=$?
-echo "RET:$ret"
       if [ $ret -ne 0 ]; then
-echo hallo
         MGMT=$(tmc cluster list --name $TDH_TKGWC_NAME | grep $TDH_TKGWC_NAME | awk '{ print $2 }')
         PROV=$(tmc cluster list --name $TDH_TKGWC_NAME | grep $TDH_TKGWC_NAME | awk '{ print $3 }')
         tmc cluster delete $TDH_TKGWC_NAME -p $PROV -m $MGMT -f > /dev/null 2>&1; ret=$?
