@@ -5685,8 +5685,6 @@ installMinio() {
 installGitLab() {
   NAMESPACE=gitlab
 
-echo "TDH_SERVICE_GITLAB:$TDH_SERVICE_GITLAB"
-
   if [ "$TDH_SERVICE_GITLAB" != "true" ]; then
     uodateConfigMap tanzu-demo-hub TDH_SERVICE_GITLAB        "false"
     kubectl delete -n $NAMESPACE > /dev/null 2>&1
@@ -5704,16 +5702,28 @@ echo "TDH_SERVICE_GITLAB:$TDH_SERVICE_GITLAB"
   cnt=$(helm list -A -q | egrep -c "^gitlab")
   if [ $cnt -eq 0 ]; then
     messagePrint " ▪ Installing GitLab" "gitlab/gitlab"
-    kubectl create namespace $NAMESPACE > /dev/null 2>&1
+    loopCmd kubectl create namespace $NAMESPACE
+echo gaga1
+#gugu
 
     # --- COPY SECRET TO NAMESPACE ---
-    kubectl get secret tanzu-demo-hub-tls --namespace=default  -oyaml | grep -v '^\s*namespace:\s' | \
-    kubectl apply --namespace=$NAMESPACE -f - > /dev/null 2>&1
-    kubectl get secret tanzu-demo-hub-tls --namespace=default  -oyaml | grep -v '^\s*namespace:\s' | \
-    sed 's/name: tanzu-demo-hub-tls/name: gitlab-wildcard-tls/g' | \
-    kubectl apply --namespace=$NAMESPACE -f - > /dev/null 2>&1
+    loopCmd kubectl get secret tanzu-demo-hub-tls --namespace=default  -oyaml | grep -v '^\s*namespace:\s' | \
+            kubectl apply --namespace=$NAMESPACE -f -
+echo gaga2
+    loopCmd kubectl get secret tanzu-demo-hub-tls --namespace=default  -oyaml | grep -v '^\s*namespace:\s' | \
+            sed 's/name: tanzu-demo-hub-tls/name: gitlab-wildcard-tls/g' | \
+            kubectl apply --namespace=$NAMESPACE -f - 
+echo gaga3
+    loopCmd kubectl create secret generic tdh-gitlab-initial-root-password \
+            --from-literal=password=$TDH_HARBOR_ADMIN_PASSWORD -n $NAMESPACE
+echo gaga4
 
-    kubectl create secret generic tdh-gitlab-initial-root-password --from-literal=password=$TDH_HARBOR_ADMIN_PASSWORD -n $NAMESPACE > /dev/null 2>&1
+    #kubectl get secret tanzu-demo-hub-tls --namespace=default  -oyaml | grep -v '^\s*namespace:\s' | \
+    #kubectl apply --namespace=$NAMESPACE -f - > /dev/null 2>&1
+    #kubectl get secret tanzu-demo-hub-tls --namespace=default  -oyaml | grep -v '^\s*namespace:\s' | \
+    #sed 's/name: tanzu-demo-hub-tls/name: gitlab-wildcard-tls/g' | \
+    #kubectl apply --namespace=$NAMESPACE -f - > /dev/null 2>&1
+    #kubectl create secret generic tdh-gitlab-initial-root-password --from-literal=password=$TDH_HARBOR_ADMIN_PASSWORD -n $NAMESPACE > /dev/null 2>&1
 
     HELM_VALUES=/tmp/gitlab_values.yaml
     echo ""                                                                                                                     >  $HELM_VALUES
@@ -11105,3 +11115,28 @@ waitForKappServices() {
   fi
 }
 
+loopCmd() {
+  CND=$*
+  cnt=0; ret=1
+  while [ $ret -ne 0 -a $cnt -lt 5 ]; do
+    $CMD > /tmp/error.log 2>&1; ret=$?
+    [ $ret -eq 0 ] && break
+    let cnt=cnt+1
+    sleep 30
+  done
+
+  if [ $ret -ne 0 ]; then
+    logMessages /tmp/error.log
+    echo "ERROR: Failed to run command, please try manually"
+    if [ "$NATIVE" == "0" ]; then
+      echo "       => tools/${TDH_TOOLS}.sh"
+      echo "          tdh-tools:/$ $CMD"
+      echo "          tdh-tools:/$ exit"
+    else
+      echo "       =>  $CMD"
+    fi
+
+    exit 1
+  fi
+
+}
