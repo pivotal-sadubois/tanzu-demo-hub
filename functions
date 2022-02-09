@@ -11264,9 +11264,10 @@ copySecretObject() {
   SECRET_NAME=$3
   NEW_SECRET_NAME=$4
 
+echo gaga1
   if [ "$NEW_SECRET_NAME" == "" ]; then
     # --- VERIFY IF SECRET ALREADY EXISTS --
-    cmdLoop kubectl get secret -n $NAMESPACE -o json > /tmp/output.yaml
+    cmdLoop kubectl get secret -n $TARGET_NAMESPACE -o json > /tmp/output.yaml
     if [ -s /tmp/output.yaml ]; then 
       nam=$(jq -r --arg key $SECRET_NAME '.items[].metadata | select(.name == $key).name' /tmp/output.yaml) 
       if [ "$nam" == "$SECRET_NAME" ]; then 
@@ -11279,15 +11280,16 @@ copySecretObject() {
             grep -v '^\s*namespace:\s' > /tmp/tmpfile.yaml
 
     if [ -s /tmp/tmpfile.yaml ]; then 
-      cmdLoop kubectl apply --namespace=$NAMESPACE -f /tmp/tmpfile.yaml
+      cmdLoop kubectl apply --namespace=$TARGET_NAMESPACE -f /tmp/tmpfile.yaml
     fi
   else
+echo gaga2
     # --- VERIFY IF SECRET ALREADY EXISTS --
-    cmdLoop kubectl get secret -n $NAMESPACE -o json > /tmp/output.yaml
+    cmdLoop kubectl get secret -n $TARGET_NAMESPACE -o json > /tmp/output.yaml
     if [ -s /tmp/output.yaml ]; then
       nam=$(jq -r --arg key $NEW_SECRET_NAME '.items[].metadata | select(.name == $key).name' /tmp/output.yaml)
       if [ "$nam" == "$NEW_SECRET_NAME" ]; then
-        cmdLoop kubectl -n $NEW_SECRET_NAME delete secret $SECRET_NAME > /dev/null 2>&1
+        cmdLoop kubectl -n $TARGET_NAMESPACE delete secret $NEW_SECRET_NAME > /dev/null 2>&1
       fi
     fi
 
@@ -11296,7 +11298,7 @@ copySecretObject() {
             grep -v '^\s*namespace:\s' | sed "s/name: $SECRET_NAME/name: $NEW_SECRET_NAME/g" > /tmp/tmpfile.yaml
 
     if [ -s /tmp/tmpfile.yaml ]; then
-      cmdLoop kubectl apply --namespace=$NAMESPACE -f /tmp/tmpfile.yaml
+      cmdLoop kubectl apply --namespace=$TARGET_NAMESPACE -f /tmp/tmpfile.yaml
     fi
   fi
 }
