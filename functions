@@ -11282,16 +11282,23 @@ createClusterRoleBinding() {
   CLUSTER_ROLE=$2
   SERVICE_ACCOUNT=$3
 
+echo gogo1 1>&2
   cmdLoop kubectl get clusterrolebinding $CLUSTER_TOLE_BINDING -o json > /tmp/output.json
+echo gogo2 1>&2
   if [ -s /tmp/output.json ]; then
     crb=$(jq -r '.metadata.name' /tmp/output.json)
+echo gogo3 1>&2
     if [ "crb" != "" ]; then
+echo gogo4 1>&2
       cmdLoop kubectl delete clusterrolebinding $CLUSTER_TOLE_BINDING > /dev/null 2>&1
+echo gogo5 1>&2
     fi
   fi
+echo gogo6 1>&2
 
-echo "cmdLoop kubectl create clusterrolebinding $CLUSTER_TOLE_BINDING --clusterrole=$CLUSTER_ROLE --serviceaccount=$SERVICE_ACCOUNT"
-  cmdLoop kubectl create clusterrolebinding $CLUSTER_TOLE_BINDING --clusterrole=$CLUSTER_ROLE --serviceaccount=$SERVICE_ACCOUNT > /dev/null 
+#gogo
+echo "cmdLoop kubectl create clusterrolebinding $CLUSTER_TOLE_BINDING --clusterrole=$CLUSTER_ROLE --serviceaccount=$SERVICE_ACCOUNT" 1>&2
+  cmdLoop kubectl create clusterrolebinding $CLUSTER_TOLE_BINDING --clusterrole=$CLUSTER_ROLE --serviceaccount=$SERVICE_ACCOUNT 
 }
 
 # ------------------------------------------------------------------------------------------
@@ -11481,6 +11488,7 @@ cmdLoop() {
     sleep 30
   done
 
+#gogo
   if [ $ret -ne 0 ]; then
     logMessages /tmp/error.log
     echo "ERROR: Failed to run command, please try manually"
