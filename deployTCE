@@ -427,7 +427,9 @@ installMinio
 installKubeapps
 installJenkins
 installArgoCD
+echo gaga1
 installGitLab
+echo gaga1
 
 if [ "$TDH_TANZU_MISSION_CONTROL_REGISTRATION" == "true" ]; then
   cnt=$(tmc cluster list --name $TDH_TKGWC_NAME 2>/dev/null | grep -c $TDH_TKGWC_NAME)
@@ -470,7 +472,7 @@ if [ "$TDH_TANZU_MISSION_CONTROL_REGISTRATION" == "true" ]; then
 fi
 
 # --- NO CONNECTION FROM A PEZ-INTERNAL CLUSTER ---
-if [ "${TDH_TKGMC_INFRASTRUCTURE}" != "vSphere1" ]; then
+if [ "${TDH_TKGMC_INFRASTRUCTURE}" != "docker" ]; then
   checkTMCintegration      TO    ## Tanzu Observability (Wavefront)
   checkTMCintegration      TDP   ## Tanzu Data Protection
   checkTMCintegration      TCI   ## Tanzu Cluster Inspection
