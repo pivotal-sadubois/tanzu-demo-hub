@@ -5171,8 +5171,9 @@ installArgoCD() {
 
     # --- COPY SECRET TO NAMESPACE ---
     messagePrint " ▪ Copy TLS Secret" "tanzu-demo-hub-tls"
-    kubectl get secret tanzu-demo-hub-tls --namespace=default  -oyaml | grep -v '^\s*namespace:\s' | \
-    kubectl apply --namespace=$NAMESPACE -f - > /dev/null 2>&1
+    copySecretObject default $NAMESPACE tanzu-demo-hub-tls
+    #kubectl get secret tanzu-demo-hub-tls --namespace=default  -oyaml | grep -v '^\s*namespace:\s' | \
+    #kubectl apply --namespace=$NAMESPACE -f - > /dev/null 2>&1
 
     HELM_VALUES=/tmp/helm_argocd_values.yaml
 
@@ -5272,8 +5273,9 @@ installJenkins() {
 
     # --- COPY SECRET TO NAMESPACE ---
     messagePrint " ▪ Copy TLS Secret" "tanzu-demo-hub-tls"
-    kubectl get secret tanzu-demo-hub-tls --namespace=default  -oyaml | grep -v '^\s*namespace:\s' | \
-    kubectl apply --namespace=$NAMESPACE -f - > /dev/null 2>&1
+    copySecretObject default $NAMESPACE tanzu-demo-hub-tls
+    #kubectl get secret tanzu-demo-hub-tls --namespace=default  -oyaml | grep -v '^\s*namespace:\s' | \
+    #kubectl apply --namespace=$NAMESPACE -f - > /dev/null 2>&1
 
     HELM_VALUES=/tmp/helm_jenkins_values.yaml
 
@@ -5414,9 +5416,9 @@ installKubeapps() {
 
     # --- COPY SECRET TO NAMESPACE ---
     messagePrint " ▪ Copy TLS Secret" "tanzu-demo-hub-tls"
-#hallo
-    kubectl get secret tanzu-demo-hub-tls --namespace=default -oyaml | grep -v '^\s*namespace:\s' | \
-    kubectl apply --namespace=$NAMESPACE -f - > /dev/null 2>&1
+    copySecretObject default $NAMESPACE tanzu-demo-hub-tls
+    #kubectl get secret tanzu-demo-hub-tls --namespace=default -oyaml | grep -v '^\s*namespace:\s' | \
+    #kubectl apply --namespace=$NAMESPACE -f - > /dev/null 2>&1
 
     if [ "$TDH_SERVICE_KUBEAPPS_VERSION" == "" -o "$TDH_SERVICE_KUBEAPPS_VERSION" == "latest" ]; then
       HELM_KUBEAPPS_VERSION=$(helm search repo bitnami/kubeapps | egrep "^bitnami/kubeapps" | tail -1 | awk '{ print $2 }')
@@ -5575,8 +5577,9 @@ installMinio() {
     kubectl create namespace $NAMESPACE > /dev/null 2>&1
 
     # --- COPY SECRET TO NAMESPACE ---
-    kubectl get secret tanzu-demo-hub-tls --namespace=default  -oyaml | grep -v '^\s*namespace:\s' | \
-    kubectl apply --namespace=$NAMESPACE -f - > /dev/null 2>&1
+    copySecretObject default $NAMESPACE tanzu-demo-hub-tls
+    #kubectl get secret tanzu-demo-hub-tls --namespace=default  -oyaml | grep -v '^\s*namespace:\s' | \
+    #kubectl apply --namespace=$NAMESPACE -f - > /dev/null 2>&1
 
     HELM_VALUES=/tmp/helm_values.yaml
     echo ""                                                                                                                     >  $HELM_VALUES
@@ -5738,13 +5741,15 @@ installGitLab() {
   if [ $cnt -eq 0 ]; then
     messagePrint " ▪ Installing GitLab" "gitlab/gitlab"
     cmdLoop kubectl create namespace $NAMESPACE
-echo gaga1
 #gugu
 
     # --- COPY SECRET TO NAMESPACE ---
-    cmdLoop kubectl get secret tanzu-demo-hub-tls --namespace=default  -oyaml | grep -v '^\s*namespace:\s' | \
-            kubectl apply --namespace=$NAMESPACE -f -
-echo gaga2
+    copySecretObject default $NAMESPACE tanzu-demo-hub-tls
+    #kubectl get secret tanzu-demo-hub-tls --namespace=default  -oyaml | grep -v '^\s*namespace:\s' | \
+    #kubectl apply --namespace=$NAMESPACE -f -
+
+#hallo
+    copySecretObject default $NAMESPACE tanzu-demo-hub-tls gitlab-wildcard-tls
     cmdLoop kubectl get secret tanzu-demo-hub-tls --namespace=default  -oyaml | grep -v '^\s*namespace:\s' | \
             sed 's/name: tanzu-demo-hub-tls/name: gitlab-wildcard-tls/g' | \
             kubectl apply --namespace=$NAMESPACE -f - 
@@ -11246,7 +11251,10 @@ getServiceAccountSecret() {
 # Function Name ......: copySecretObject
 # Function Purpose ...: Copy a secret Object to another namespace
 # ------------------------------------------------------------------------------------------
-# Argument ($1) ......: Service Account name
+# Argument ($1) ......: Source Namespace Name
+#          ($2) ......: Target Namespace Name
+#          ($3) ......: Secret Name
+#          ($4) ......: New Secret Name
 # ------------------------------------------------------------------------------------------
 # Return Value .......: Service Account Secret
 # ------------------------------------------------------------------------------------------
@@ -11254,26 +11262,49 @@ copySecretObject() {
   SOURCE_NAMESPACE=$1
   TARGET_NAMESPACE=$2
   SECRET_NAME=$3
+  NEW_SECRET_NAME=$5
 
-  # --- VERIFY IF SECRET ALREADY EXISTS --
-  cmdLoop kubectl get secret -n $NAMESPACE -o json > /tmp/output.yaml
-  if [ -s /tmp/output.yaml ]; then 
-    nam=$(jq -r --arg key $SECRET_NAME '.items[].metadata | select(.name == $key).name' /tmp/output.yaml) 
-    if [ "$nam" == "$SECRET_NAME" ]; then 
-      cmdLoop kubectl -n $TARGET_NAMESPACE delete secret $SECRET_NAME > /dev/null 2>&1
+    cmdLoop kubectl get secret tanzu-demo-hub-tls --namespace=default  -oyaml | grep -v '^\s*namespace:\s' | \
+            sed 's/name: tanzu-demo-hub-tls/name: gitlab-wildcard-tls/g' | \
+            kubectl apply --namespace=$NAMESPACE -f -
+
+  if [ "$NEW_SECRET_NAME" == "" ]; then
+    # --- VERIFY IF SECRET ALREADY EXISTS --
+    cmdLoop kubectl get secret -n $NAMESPACE -o json > /tmp/output.yaml
+    if [ -s /tmp/output.yaml ]; then 
+      nam=$(jq -r --arg key $SECRET_NAME '.items[].metadata | select(.name == $key).name' /tmp/output.yaml) 
+      if [ "$nam" == "$SECRET_NAME" ]; then 
+        cmdLoop kubectl -n $TARGET_NAMESPACE delete secret $SECRET_NAME > /dev/null 2>&1
+      fi
     fi
-  fi
 
-  # --- COPY SECRET ---
-  cmdLoop kubectl get secret tanzu-demo-hub-tls --namespace=default -oyaml | \
-          grep -v '^\s*namespace:\s' > /tmp/tmpfile.yaml
+    # --- COPY SECRET ---
+    cmdLoop kubectl get secret $SECRET_NAME --namespace=default -oyaml | \
+            grep -v '^\s*namespace:\s' > /tmp/tmpfile.yaml
 
-  if [ -s /tmp/tmpfile.yaml ]; then 
-    cmdLoop kubectl apply --namespace=$NAMESPACE -f /tmp/tmpfile.yaml
+    if [ -s /tmp/tmpfile.yaml ]; then 
+      cmdLoop kubectl apply --namespace=$NAMESPACE -f /tmp/tmpfile.yaml
+    fi
+  else
+    # --- VERIFY IF SECRET ALREADY EXISTS --
+    cmdLoop kubectl get secret -n $NAMESPACE -o json > /tmp/output.yaml
+    if [ -s /tmp/output.yaml ]; then
+      nam=$(jq -r --arg key $NEW_SECRET_NAME '.items[].metadata | select(.name == $key).name' /tmp/output.yaml)
+      if [ "$nam" == "$NEW_SECRET_NAME" ]; then
+        cmdLoop kubectl -n $NEW_SECRET_NAME delete secret $SECRET_NAME > /dev/null 2>&1
+      fi
+    fi
+
+    # --- COPY SECRET ---
+    cmdLoop kubectl get secret $SECRET_NAME --namespace=default -oyaml | \
+            grep -v '^\s*namespace:\s' | sed "s/name: $SECRET_NAME/name: $NEW_SECRET_NAME/g" > /tmp/tmpfile.yaml
+
+    if [ -s /tmp/tmpfile.yaml ]; then
+      cmdLoop kubectl apply --namespace=$NAMESPACE -f /tmp/tmpfile.yaml
+    fi
   fi
 }
 
-#copySecretObject default $NAMESPACE tanzu-demo-hub-tls
 
 #  ROOT_USER=$(kubectl get secret --namespace minio minio -o jsonpath="{.data.root-user}" | base64 --decode)
 #  ROOT_PASSWORD=$(kubectl get secret --namespace minio minio -o jsonpath="{.data.root-password}" | base64 --decode)
