@@ -5750,20 +5750,12 @@ installGitLab() {
 
 #hallo
     copySecretObject default $NAMESPACE tanzu-demo-hub-tls gitlab-wildcard-tls
-    cmdLoop kubectl get secret tanzu-demo-hub-tls --namespace=default  -oyaml | grep -v '^\s*namespace:\s' | \
-            sed 's/name: tanzu-demo-hub-tls/name: gitlab-wildcard-tls/g' | \
-            kubectl apply --namespace=$NAMESPACE -f - 
-echo gaga3
-    cmdLoop kubectl create secret generic tdh-gitlab-initial-root-password \
-            --from-literal=password=$TDH_HARBOR_ADMIN_PASSWORD -n $NAMESPACE
-echo gaga4
-
-    #kubectl get secret tanzu-demo-hub-tls --namespace=default  -oyaml | grep -v '^\s*namespace:\s' | \
-    #kubectl apply --namespace=$NAMESPACE -f - > /dev/null 2>&1
     #kubectl get secret tanzu-demo-hub-tls --namespace=default  -oyaml | grep -v '^\s*namespace:\s' | \
     #sed 's/name: tanzu-demo-hub-tls/name: gitlab-wildcard-tls/g' | \
-    #kubectl apply --namespace=$NAMESPACE -f - > /dev/null 2>&1
-    #kubectl create secret generic tdh-gitlab-initial-root-password --from-literal=password=$TDH_HARBOR_ADMIN_PASSWORD -n $NAMESPACE > /dev/null 2>&1
+    #kubectl apply --namespace=$NAMESPACE -f - 
+
+    cmdLoop kubectl create secret generic tdh-gitlab-initial-root-password \
+            --from-literal=password=$TDH_HARBOR_ADMIN_PASSWORD -n $NAMESPACE
 
     HELM_VALUES=/tmp/gitlab_values.yaml
     echo ""                                                                                                                     >  $HELM_VALUES
@@ -11248,6 +11240,31 @@ getServiceAccountSecret() {
 }
 
 # ------------------------------------------------------------------------------------------
+# Function Name ......: createNamespace
+# Function Purpose ...: Create a Kubernetes Namespace
+# ------------------------------------------------------------------------------------------
+# Argument ($1) ......: Namespace
+# ------------------------------------------------------------------------------------------
+# Return Value .......: Service Account Secret
+# ------------------------------------------------------------------------------------------
+createNamespace() {
+  NAMESPACE=$1
+
+  kubectl get ns -o json > /tmp/output.json
+
+  cmdLoop kubectl get serviceaccount $SERVICE_ACCOUNT -o json > /tmp/output.json
+  if [ -s /tmp/output.json ]; then
+    nam=$(jq -r --arg key "$NAMESPACE" '.items[] | select(.metadata.name == $key).metadata.name' /tmp/output.json) 
+
+    if [ "$nam" == "" ]; then 
+      cmdLoop kubectl create ns $NAMESPACE
+    fi
+  fi
+
+  echo $sec
+}
+
+# ------------------------------------------------------------------------------------------
 # Function Name ......: copySecretObject
 # Function Purpose ...: Copy a secret Object to another namespace
 # ------------------------------------------------------------------------------------------
@@ -11264,7 +11281,6 @@ copySecretObject() {
   SECRET_NAME=$3
   NEW_SECRET_NAME=$4
 
-echo gaga1
   if [ "$NEW_SECRET_NAME" == "" ]; then
     # --- VERIFY IF SECRET ALREADY EXISTS --
     cmdLoop kubectl get secret -n $TARGET_NAMESPACE -o json > /tmp/output.yaml
@@ -11283,7 +11299,6 @@ echo gaga1
       cmdLoop kubectl apply --namespace=$TARGET_NAMESPACE -f /tmp/tmpfile.yaml
     fi
   else
-echo gaga2
     # --- VERIFY IF SECRET ALREADY EXISTS --
     cmdLoop kubectl get secret -n $TARGET_NAMESPACE -o json > /tmp/output.yaml
     if [ -s /tmp/output.yaml ]; then
