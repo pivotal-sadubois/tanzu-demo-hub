@@ -5759,6 +5759,7 @@ installGitLab() {
     #sed 's/name: tanzu-demo-hub-tls/name: gitlab-wildcard-tls/g' | \
     #kubectl apply --namespace=$NAMESPACE -f - 
 
+    deleteSecret $NAMESPACE tdh-gitlab-initial-root-password
     cmdLoop kubectl create secret generic tdh-gitlab-initial-root-password \
             --from-literal=password=$TDH_HARBOR_ADMIN_PASSWORD -n $NAMESPACE
 
