@@ -11270,7 +11270,8 @@ echo "kubectl -n $TARGET_NAMESPACE delete secret $SECRET_NAME" 1>&2
   fi
 echo gaga7 1>&1
 
-kubectl get secret -n $NAMESPACE 
+echo "kubectl get secret tanzu-demo-hub-tls "
+kubectl get secret tanzu-demo-hub-tls 
 sleep 1000
 
   # --- COPY SECRET ---
