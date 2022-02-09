@@ -5470,12 +5470,12 @@ installKubeapps() {
 
     messagePrint " ▪ Create Serviceaccount"              "kubeapps-operator"
 #hallo
-    loopCmd kubectl delete --namespace default serviceaccount kubeapps-operator > /dev/null 2>&1
-    loopCmd kubectl create --namespace default serviceaccount kubeapps-operator > /dev/null 2>&1
+    cmdLoop kubectl delete --namespace default serviceaccount kubeapps-operator > /dev/null 2>&1
+    cmdLoop kubectl create --namespace default serviceaccount kubeapps-operator > /dev/null 2>&1
 
     messagePrint " ▪ Create Cluster Role Binding"        "default:kubeapps-operator"
-    loopCmd delete clusterrolebinding kubeapps-operator > /dev/null 2>&1
-    loopCmd create clusterrolebinding kubeapps-operator --clusterrole=cluster-admin --serviceaccount=default:kubeapps-operator
+    cmdLoop delete clusterrolebinding kubeapps-operator > /dev/null 2>&1
+    cmdLoop create clusterrolebinding kubeapps-operator --clusterrole=cluster-admin --serviceaccount=default:kubeapps-operator
 
     messagePrint " ▪ Kubeapps Dashboard deployed"        "https://kubeapps.$DOMAIN"
   fi
@@ -5703,19 +5703,19 @@ installGitLab() {
   cnt=$(helm list -A -q | egrep -c "^gitlab")
   if [ $cnt -eq 0 ]; then
     messagePrint " ▪ Installing GitLab" "gitlab/gitlab"
-    loopCmd kubectl create namespace $NAMESPACE
+    cmdLoop kubectl create namespace $NAMESPACE
 echo gaga1
 #gugu
 
     # --- COPY SECRET TO NAMESPACE ---
-    loopCmd kubectl get secret tanzu-demo-hub-tls --namespace=default  -oyaml | grep -v '^\s*namespace:\s' | \
+    cmdLoop kubectl get secret tanzu-demo-hub-tls --namespace=default  -oyaml | grep -v '^\s*namespace:\s' | \
             kubectl apply --namespace=$NAMESPACE -f -
 echo gaga2
-    loopCmd kubectl get secret tanzu-demo-hub-tls --namespace=default  -oyaml | grep -v '^\s*namespace:\s' | \
+    cmdLoop kubectl get secret tanzu-demo-hub-tls --namespace=default  -oyaml | grep -v '^\s*namespace:\s' | \
             sed 's/name: tanzu-demo-hub-tls/name: gitlab-wildcard-tls/g' | \
             kubectl apply --namespace=$NAMESPACE -f - 
 echo gaga3
-    loopCmd kubectl create secret generic tdh-gitlab-initial-root-password \
+    cmdLoop kubectl create secret generic tdh-gitlab-initial-root-password \
             --from-literal=password=$TDH_HARBOR_ADMIN_PASSWORD -n $NAMESPACE
 echo gaga4
 
@@ -11116,8 +11116,8 @@ waitForKappServices() {
   fi
 }
 
-#    loopCmd kubectl delete --namespace default serviceaccount kubeapps-operator > /dev/null 2>&1
-#    loopCmd kubectl create --namespace default serviceaccount kubeapps-operator > /dev/null 2>&1
+#    cmdLoop kubectl delete --namespace default serviceaccount kubeapps-operator > /dev/null 2>&1
+#    cmdLoop kubectl create --namespace default serviceaccount kubeapps-operator > /dev/null 2>&1
 
 # ------------------------------------------------------------------------------------------
 # Function Name ......: createServiceAccount
@@ -11132,25 +11132,26 @@ createServiceAccount() {
   NAMESPACE=$1
   SERVICE_ACCOUNT=$2
 
-  loopCmd kubectl --namespace $NAMESPACE get serviceaccount SERVICE_ACCOUNT > /tmp/output.json
+  cmdLoop kubectl --namespace $NAMESPACE get serviceaccount SERVICE_ACCOUNT > /tmp/output.json
 
 echo "/tmp/output.json"
 
 }
 
 # ------------------------------------------------------------------------------------------
-# Function Name ......: loopCmd
+# Function Name ......: cmdLoop
 # Function Purpose ...: Execute Command in a Loop until its working
 # ------------------------------------------------------------------------------------------
 # Argument ($1) ......: Command to execure
 # ------------------------------------------------------------------------------------------
 # Return Value .......: 0 - SUCCEED, 1 - FAILED
 # ------------------------------------------------------------------------------------------
-loopCmd() {
+cmdLoop() {
   CMD="$*"
 
   cnt=0; ret=1
   while [ $ret -ne 0 -a $cnt -lt 5 ]; do
+echo "$CMD > /tmp/loopCmdIgnore.out 2>/tmp/error.log" 1>&2
     $CMD > /tmp/loopCmdIgnore.out 2>/tmp/error.log; ret=$?
     [ $ret -eq 0 ] && break
     let cnt=cnt+1
