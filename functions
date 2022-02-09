@@ -5257,6 +5257,7 @@ installJenkins() {
   TDH_ENVNAME=$(getConfigMap tanzu-demo-hub TDH_ENVNAME)
   DOMAIN=$(getConfigMap tanzu-demo-hub TDH_INGRESS_CONTOUR_LB_DOMAIN)
   NAMESPACE=jenkins
+  HELMCHART=jenkins
 
   messageTitle "Jenkins Automation Server"
   cnt=$(helm list -q -n $NAMESPACE | egrep -c "^jenkins")
@@ -5303,17 +5304,27 @@ installJenkins() {
     echo "    secretName: tanzu-demo-hub-tls"                                                                                   >> $HELM_VALUES
 
 #gaga
-    messagePrint " ▪ Deploy the Jenkins Helm Chart" "jenkins"
-    cnt=0; ret=1
-    while [ $ret -ne 0 -a $cnt -lt 5 ]; do
-      helm install jenkins --namespace $NAMESPACE bitnami/jenkins -f $HELM_VALUES --wait > /tmp/error.log 2>&1; ret=$?
+    messagePrint " ▪ Deploy the Jenkins Helm Chart" "$HELMCHART"
+    cnt=0; ret=1; stt="notdeployed"
+    while [ $ret -ne 0 -a $cnt -lt 5 -a "$stt" != "deployed" ]; do
+      helm install $HELMCHART --namespace $NAMESPACE bitnami/$HELMCHART -f $HELM_VALUES --wait > /tmp/error.log 2>&1; ret=$?
 
-      [ $ret -eq 0 ] && break
+      # --- WAIT FOR PODS TO GET STARTED ---
+      runningPods $NAMESPACE
+
+      cmdLoop helm ls -n $NAMESPACE -o json > /tmp/output.json
+      stt=$(jq -r --arg chart "$HELMCHART" '.[] | select(.name == $chart).status' /tmp/output.json)
+
+      [ $ret -eq 0 -a "$stt" == "deployed" ] && break
+
+      # --- DELTE FAILED HELM CHART ---
+      cmdLoop helm uninstall $HELMCHART --namespace $NAMESPACE > /dev/null 2>&1
+      
       let cnt=cnt+1
       sleep 30
     done
 
-    if [ $ret -ne 0 ]; then
+    if [ $ret -ne 0 -o "$stt" != "deployed" ]; then
       logMessages /tmp/error.log
       echo "ERROR: Failed to deploy Jenkins Helm Chart"
       if [ "$NATIVE" == "0" ]; then
@@ -5362,9 +5373,9 @@ installJenkins() {
   if [ -s /tmp/output.json ]; then 
     jenkins_pass=$(jq -r '.data."jenkins-password"' /tmp/output.json | base64 --decode)
   fi
-  #jenkins_pass=$(kubectl get secret --namespace jenkins jenkins -o jsonpath="{.data.jenkins-password}" | base64 --decode)
 
-echo "hallo jenkins_pass:$jenkins_pass"
+  #DELETEME
+  #jenkins_pass=$(kubectl get secret --namespace jenkins jenkins -o jsonpath="{.data.jenkins-password}" | base64 --decode)
 
   messagePrint " ▪ Verify Jenkins"                 "$crt"
   messagePrint "   Helm Chart Name"                "jenkins"
