@@ -11290,7 +11290,8 @@ createClusterRoleBinding() {
     fi
   fi
 
-  cmdLoop kubectl create clusterrolebinding $CLUSTER_TOLE_BINDING --clusterrole=$CLUSTER_ROLE --serviceaccount=$SERVICE_ACCOUNT > /dev/null 2>&1
+echo "cmdLoop kubectl create clusterrolebinding $CLUSTER_TOLE_BINDING --clusterrole=$CLUSTER_ROLE --serviceaccount=$SERVICE_ACCOUNT"
+  cmdLoop kubectl create clusterrolebinding $CLUSTER_TOLE_BINDING --clusterrole=$CLUSTER_ROLE --serviceaccount=$SERVICE_ACCOUNT > /dev/null 
 }
 
 # ------------------------------------------------------------------------------------------
