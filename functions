@@ -4858,7 +4858,7 @@ installTAP() {
   export INSTALL_REGISTRY_HOSTNAME=registry.tanzu.vmware.com
 
   createNamespace $NAMESPACE > /dev/null 2>&1
-  cnt=$(kubectl get secrets -n $NAMESPACE | egrep -c "^tap-registry") 
+  cnt=$(cmdLoop kubectl get secrets -n $NAMESPACE | egrep -c "^tap-registry") 
 
   # --- CREATE A REGISTRY SECRET ---
   tanzu secret registry add tap-registry \
@@ -5638,9 +5638,13 @@ installMinio() {
     ver=""; crt=""; stt=""; dat=""
   fi
 
+  cmdLoop kubectl -n $NAMESPACE get secrets minio -o json > /tmp/output.json
+  ROOT_USER=$(jq -r '.data."root-user"' /tmp/output.json | base64 --decode)
+  ROOT_PASSWORD=$(jq -r '.data."root-password"' /tmp/output.json | base64 --decode)
+
+  # DELETEME
   ROOT_USER=$(kubectl get secret --namespace minio minio -o jsonpath="{.data.root-user}" | base64 --decode)
   ROOT_PASSWORD=$(kubectl get secret --namespace minio minio -o jsonpath="{.data.root-password}" | base64 --decode)
-#hallo
 
   messagePrint " ▪ Verify Minio S3"                "$crt"
   messagePrint "   Helm Chart Name"                "minio"
@@ -5742,11 +5746,15 @@ installGitLab() {
 
     # --- COPY SECRET TO NAMESPACE ---
     copySecretObject default $NAMESPACE tanzu-demo-hub-tls
+
+    #DELETEME
     #kubectl get secret tanzu-demo-hub-tls --namespace=default  -oyaml | grep -v '^\s*namespace:\s' | \
     #kubectl apply --namespace=$NAMESPACE -f -
 
 #hallo
     copySecretObject default $NAMESPACE tanzu-demo-hub-tls gitlab-wildcard-tls
+
+    #DELETEME
     #kubectl get secret tanzu-demo-hub-tls --namespace=default  -oyaml | grep -v '^\s*namespace:\s' | \
     #sed 's/name: tanzu-demo-hub-tls/name: gitlab-wildcard-tls/g' | \
     #kubectl apply --namespace=$NAMESPACE -f - 
@@ -5828,7 +5836,7 @@ installGitLab() {
   fi
 
 #hallo
-  SECRET=$(kubectl get secret tdh-gitlab-initial-root-password  -n $NAMESPACE -o json | jq -r '.data.password' | base64 -d )
+  SECRET=$(cmdLoop kubectl get secret tdh-gitlab-initial-root-password  -n $NAMESPACE -o json | jq -r '.data.password' | base64 -d )
 
   messagePrint " ▪ Verify GitLab CE Deployment"    "$crt"
   messagePrint "   Helm Chart Name"                "minio"
@@ -6455,8 +6463,13 @@ getRootCA() {
   [ ! -d $CERT_DIR ] && mkdir $CERT_DIR
 
   if [ ! -f $CERT_DIR/ca.pem -o $CERT_DIR/$THD_TLS_CERTIFICATE -o $CERT_DIR/$THD_TLS_KEY ]; then 
-    kubectl get secret $SECRET -o json | jq -r '.data."tls.crt"' | base64 -d > $CERT_DIR/$THD_TLS_CERTIFICATE
-    kubectl get secret $SECRET -o json | jq -r '.data."tls.key"' | base64 -d > $CERT_DIR/$THD_TLS_KEY
+    cmdLoop kubectl get secrets $SECRET -o json > /tmp/output.json
+    jq -r '.data."tls.crt"' /tmp/output.json | base64 -d > $CERT_DIR/$THD_TLS_CERTIFICATE
+    jq -r '.data."tls.key"' /tmp/output.json | base64 -d > $CERT_DIR/$THD_TLS_KEY
+
+    #DELETEME
+    #kubectl get secret $SECRET -o json | jq -r '.data."tls.crt"' | base64 -d > $CERT_DIR/$THD_TLS_CERTIFICATE
+    #kubectl get secret $SECRET -o json | jq -r '.data."tls.key"' | base64 -d > $CERT_DIR/$THD_TLS_KEY
 
     if [ ! -f $CERT_DIR/$THD_TLS_CERTIFICATE ]; then 
       echo "ERROR: Failed to get tdh-cert.pem"
@@ -6470,7 +6483,12 @@ getRootCA() {
       exit 1
     fi
 
+    cmdLoop kubectl get secrets $SECRET -o json > /tmp/output.json
+    txt=$(jq -r '.data."tls.crt"' /tmp/output.json | base64 -d | openssl x509 -noout -issuer)
+
+    #DELETEME
     txt=$(kubectl get secret $SECRET -o json | jq -r '.data."tls.crt"' | base64 -d | openssl x509 -noout -issuer) 
+
     if [ $(uname) == "Darwin" ]; then 
       # issuer= /C=US/O=Let's Encrypt/CN=R3
       ca_country=$(echo $txt | awk -F'/' '{ print $2 }' | awk -F'=' '{ print $2 }') 
@@ -6649,7 +6667,7 @@ InstallContour() {
     helm repo add bitnami https://charts.bitnami.com/bitnami > /dev/null 2>&1
 
     messagePrint " ▪ Create Docker secret"  "tdh-docker-repo"
-    kubectl -n $NAMESPACE create secret docker-registry tdh-docker-repo \
+    cndLoop kubectl -n $NAMESPACE create secret docker-registry tdh-docker-repo \
             --docker-server $TDH_REGISTRY_DOCKER_NAME \
             --docker-username $TDH_REGISTRY_DOCKER_USER \
             --docker-password $TDH_REGISTRY_DOCKER_PASS
@@ -6844,11 +6862,15 @@ createClusterIssuer() {
     echo "          hostedZoneID: $AWS_HOSTED_ZONE_ID"                             >> $TDH_TLS_ISSUER_FILE
 
     # --- CREATE/RECREATE AWS ROUTE53 SECRET ---
+    deleteSecret cert-manager route53-credentials-secret
+    deleteSecret default route53-credentials-secret
+
+    #DELETEME
     kubectl -n cert-manager delete secret route53-credentials-secret > /dev/null 2>&1
     kubectl -n default delete secret route53-credentials-secret > /dev/null 2>&1
 
     echo "$AWS_CERT_SECRET_KEY" > /tmp/aws-credentials
-    kubectl -n cert-manager create secret generic route53-credentials-secret \
+    cndLoop kubectl -n cert-manager create secret generic route53-credentials-secret \
             --from-file=aws-credentials=/tmp/aws-credentials > /dev/null 2>&1
 
     # --- VERIFY CERTIFICATE ---
@@ -6904,14 +6926,31 @@ createClusterIssuer() {
   fi
 
   # --- CREATE CERTIFICATE ---
-  stt_rdy=$(kubectl get certificate $TDH_TLS_CERT -o json 2>/dev/null | jq -r '.status.conditions[] | select(.type == "Ready").status')
-  kubectl get secret $TDH_TLS_SECRET > /dev/null 2>&1; stt_sec=$?
-  kubectl get certificate $TDH_TLS_CERT > /dev/null 2>&1; stt_crt=$?
+  cmdLoop kubectl get certificate $TDH_TLS_CERT -o json > /tmp/output.json
+  stt_rdy=$(jq -r '.status.conditions[] | select(.type == "Ready").status' /tmp/output.json)
+
+  # --- CHECK IF SECRET (tanzu-demo-hub) IS THERE ---
+  cmdLoop kubectl get secret $TDH_TLS_SECRET -o json > /tmp/output.json
+  stt_sec=$(jq -r '.metadata.name' /tmp/output.json) 
+  [ "$(jq -r '.metadata.name' /tmp/output.json)" != "" ] && stt_sec=0 || stt_sec=1
+
+  # --- CHECK IF CERTIFICATE (tanzu-demo-hub) IS THERE ---
+  cmdLoop kubectl get certificate $TDH_TLS_CERT -o json > /tmp/output.json
+  [ "$(jq -r '.metadata.name' /tmp/output.json)" != "" ] && stt_crt=0 || stt_crt=1
+
+  #DELETEME
+  #stt_rdy=$(kubectl get certificate $TDH_TLS_CERT -o json 2>/dev/null | jq -r '.status.conditions[] | select(.type == "Ready").status')
+  #kubectl get secret $TDH_TLS_SECRET > /dev/null 2>&1; stt_sec=$?
+  #kubectl get certificate $TDH_TLS_CERT > /dev/null 2>&1; stt_crt=$?
 
   if [ "${stt_rdy}" == "False" -o $stt_sec -ne 0 -o $stt_crt -ne 0 ]; then
     # --- CLEANUP OLD STUFF ---
-    kubectl delete secret $TDH_TLS_SECRET > /dev/null 2>&1
-    kubectl delete certificate $TDH_TLS_CERT > /dev/null 2>&1
+    deleteSecret default $TDH_TLS_SECRET
+    deleteCertificate default $TDH_TLS_CERT 
+
+    #DELETEME
+    #kubectl delete secret $TDH_TLS_SECRET > /dev/null 2>&1
+    #kubectl delete certificate $TDH_TLS_CERT > /dev/null 2>&1
 
     messageTitle "Create LetsEnscript Certificate"
     CERTIFICATE_CONFIG=/tmp/certificate.yaml
@@ -7105,7 +7144,7 @@ InstallHarborRegistry() {
     patchServiceAccount default $NAMESPACE
 
     messagePrint " ▪ Create Docker secret"  "tdh-docker-repo"
-    kubectl -n $NAMESPACE create secret docker-registry tdh-docker-repo \
+    cndLoop kubectl -n $NAMESPACE create secret docker-registry tdh-docker-repo \
             --docker-server $TDH_REGISTRY_DOCKER_NAME \
             --docker-username $TDH_REGISTRY_DOCKER_USER \
             --docker-password $TDH_REGISTRY_DOCKER_PASS > /dev/null 2>&1
@@ -9334,7 +9373,7 @@ patchServiceAccount() {
 
   messagePrint " ▪ Patch Docker RateLimit in ServiceAccount"  "$NAMESPACE/$SERVICE_ACCOUNT"
   kubectl -n $NAMESPACE delete secret tdh-docker-repo >/dev/null 2>&1
-  kubectl -n $NAMESPACE create secret docker-registry tdh-docker-repo \
+  cndLoop kubectl -n $NAMESPACE create secret docker-registry tdh-docker-repo \
           --docker-server $TDH_REGISTRY_DOCKER_NAME \
           --docker-username $TDH_REGISTRY_DOCKER_USER \
           --docker-password $TDH_REGISTRY_DOCKER_PASS >/dev/null 2>&1
@@ -10302,24 +10341,33 @@ TanzuPackage_Harbor () {
     createNamespace $NAMESPACE > /dev/null 2>&1
 
     messagePrint " ▪ Create Docker secret"  "tdh-docker-repo"
-    kubectl -n $NAMESPACE create secret docker-registry tdh-docker-repo \
+    cndLoop kubectl -n $NAMESPACE create secret docker-registry tdh-docker-repo \
             --docker-server $TDH_REGISTRY_DOCKER_NAME \
             --docker-username $TDH_REGISTRY_DOCKER_USER \
             --docker-password $TDH_REGISTRY_DOCKER_PASS > /dev/null 2>&1
 
     # --- COPY SECRET TO NAMESPACE ---
-    kubectl get secret tanzu-demo-hub-tls --namespace=default  -oyaml | grep -v '^\s*namespace:\s' | \
-    kubectl apply --namespace=$NAMESPACE -f - > /dev/null 2>&1
+    copySecretObject default $NAMESPACE tanzu-demo-hub-tls
+    #kubectl get secret tanzu-demo-hub-tls --namespace=default  -oyaml | grep -v '^\s*namespace:\s' | \
+    #kubectl apply --namespace=$NAMESPACE -f - > /dev/null 2>&1
 #hallo
 
-    tls_crt=$(kubectl get secrets tanzu-demo-hub-tls -n $NAMESPACE -o json | jq -r '.data."tls.crt"') 
-    tls_key=$(kubectl get secrets tanzu-demo-hub-tls -n $NAMESPACE -o json | jq -r '.data."tls.key"') 
+    cmdLoop kubectl get secrets tanzu-demo-hub-tls -n $NAMESPACE -o json > /tmp/output.json
+    tls_crt=$(jq -r '.data."tls.crt"' /tmp/output.json) 
+    tls_crt=$(jq -r '.data."tls.key"' /tmp/output.json) 
     ca_crt=$(cat $HOME/.tanzu-demo-hub/certificates/tdh-cert.pem | base64 -w 10000)
 
+    #DELETEME
+    #tls_crt=$(kubectl get secrets tanzu-demo-hub-tls -n $NAMESPACE -o json | jq -r '.data."tls.crt"') 
+    #tls_key=$(kubectl get secrets tanzu-demo-hub-tls -n $NAMESPACE -o json | jq -r '.data."tls.key"') 
 
+    cmdLoop tanzu package available list $PACKAGE_ID -A -o json > /tmp/output.json
+    package_ver=$(jq -r '.[]."version"' /tmp/output.json | tail -1)
+    package_rel=$(jq -r '.[]."released-at"' /tmp/output.json | tail -1)
 
-    package_ver=$(tanzu package available list $PACKAGE_ID -A -o json | jq -r '.[]."version"' | tail -1)
-    package_rel=$(tanzu package available list $PACKAGE_ID -A -o json | jq -r '.[]."released-at"' | tail -1)
+    #DELETEME
+    #package_ver=$(tanzu package available list $PACKAGE_ID -A -o json | jq -r '.[]."version"' | tail -1)
+    #package_rel=$(tanzu package available list $PACKAGE_ID -A -o json | jq -r '.[]."released-at"' | tail -1)
 
     HARBOR_VALUES=/tmp/harbor_values.yaml
     #echo "namespace: $NAMESPACE"                                                                                     >  $HARBOR_VALUES
@@ -11284,6 +11332,51 @@ deleteNamespace() {
 
   echo $sec
 }
+
+# ------------------------------------------------------------------------------------------
+# Function Name ......: deleteSecret
+# Function Purpose ...: Delete a Kubernetes Secret
+# ------------------------------------------------------------------------------------------
+# Argument ($1) ......: Namespace
+#          ($2) ......: Secret
+# ------------------------------------------------------------------------------------------
+# Return Value .......: Service Account Secret
+# ------------------------------------------------------------------------------------------
+deleteSecret() {
+  NAMESPACE=$1
+  SECRET=$2
+
+  cmdLoop kubectl -n $NAMESPACE get secrets -o json > /tmp/output.json
+  if [ -s /tmp/output.json ]; then
+    nam=$(jq -r --arg key "$SECRET" '.items[] | select(.metadata.name == $key).metadata.name') 
+    if [ "$nam" != "" ]; then
+      cmdLoop kubectl -n $NAMESPACE delete secret $SECRET
+    fi
+  fi
+}
+
+# ------------------------------------------------------------------------------------------
+# Function Name ......: deleteCertificate
+# Function Purpose ...: Delete a Kubernetes Secret
+# ------------------------------------------------------------------------------------------
+# Argument ($1) ......: Namespace
+#          ($2) ......: Certificate
+# ------------------------------------------------------------------------------------------
+# Return Value .......: 0 - SUCCESS, 1 - FAILURE
+# ------------------------------------------------------------------------------------------
+deleteCertificate() {
+  NAMESPACE=$1
+  CERTIFICATE=$2
+
+  cmdLoop kubectl -n $NAMESPACE get certificate -o json > /tmp/output.json
+  if [ -s /tmp/output.json ]; then
+    nam=$(jq -r --arg key "$CERTIFICATE" '.items[] | select(.metadata.name == $key).metadata.name')
+    if [ "$nam" != "" ]; then
+      cmdLoop kubectl -n $NAMESPACE delete certificate $CERTIFICATE
+    fi
+  fi
+}
+
 
 # ------------------------------------------------------------------------------------------
 # Function Name ......: copySecretObject
