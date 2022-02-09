@@ -11264,6 +11264,7 @@ echo gaga3 1>&2
     nam=$(jq -r --arg key $SECRET_NAME '.items[].metadata | select(.name == $key).name' /tmp/output.yaml) 
     if [ "$nam" == "$SECRET_NAME" ]; then 
 echo gaga4 1>&2
+echo "kubectl -n $TARGET_NAMESPACE delete secret $SECRET_NAME" 1>&2
       cndLoop kubectl -n $TARGET_NAMESPACE delete secret $SECRET_NAME > /dev/null 2>&1
     fi
   fi
