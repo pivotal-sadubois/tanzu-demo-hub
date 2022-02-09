@@ -11269,6 +11269,9 @@ echo gaga4 1>&2
   fi
 echo gaga7 1>&1
 
+kubectl get secret -n $NAMESPACE 
+sleep 1000
+
   # --- COPY SECRET ---
   cmdLoop kubectl get secret tanzu-demo-hub-tls --namespace=default -oyaml | \
           grep -v '^\s*namespace:\s' > /tmp/tmpfile.yaml
