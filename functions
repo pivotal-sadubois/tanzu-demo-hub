@@ -11264,10 +11264,6 @@ copySecretObject() {
   SECRET_NAME=$3
   NEW_SECRET_NAME=$5
 
-    cmdLoop kubectl get secret tanzu-demo-hub-tls --namespace=default  -oyaml | grep -v '^\s*namespace:\s' | \
-            sed 's/name: tanzu-demo-hub-tls/name: gitlab-wildcard-tls/g' | \
-            kubectl apply --namespace=$NAMESPACE -f -
-
   if [ "$NEW_SECRET_NAME" == "" ]; then
     # --- VERIFY IF SECRET ALREADY EXISTS --
     cmdLoop kubectl get secret -n $NAMESPACE -o json > /tmp/output.yaml
