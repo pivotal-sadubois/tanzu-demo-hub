@@ -5754,16 +5754,20 @@ installGitLab() {
   if [ $cnt -eq 0 ]; then
     messagePrint " ▪ Installing GitLab" "gitlab/gitlab"
     createNamespace $NAMESPACE > /dev/null 2>&1
+echo gaga1
 
     # --- COPY SECRET TO NAMESPACE ---
     copySecretObject default $NAMESPACE tanzu-demo-hub-tls
+echo gaga2
 
     #DELETEME
     #kubectl get secret tanzu-demo-hub-tls --namespace=default  -oyaml | grep -v '^\s*namespace:\s' | \
     #kubectl apply --namespace=$NAMESPACE -f -
+echo gaga3
 
 #hallo
     copySecretObject default $NAMESPACE tanzu-demo-hub-tls gitlab-wildcard-tls
+echo gaga4
 
     #DELETEME
     #kubectl get secret tanzu-demo-hub-tls --namespace=default  -oyaml | grep -v '^\s*namespace:\s' | \
@@ -5773,6 +5777,7 @@ installGitLab() {
     deleteSecret $NAMESPACE tdh-gitlab-initial-root-password
     cmdLoop kubectl create secret generic tdh-gitlab-initial-root-password \
             --from-literal=password=$TDH_HARBOR_ADMIN_PASSWORD -n $NAMESPACE
+echo gaga5
 
     HELM_VALUES=/tmp/gitlab_values.yaml
     echo ""                                                                                                                     >  $HELM_VALUES
@@ -5811,6 +5816,7 @@ installGitLab() {
     helm repo add gitlab https://charts.gitlab.io/ > /dev/null 2>&1
     helm repo update > /dev/null 2>&1
 
+echo gaga6
     cnt=0; ret=1
     while [ $ret -ne 0 -a $cnt -lt 5 ]; do
       helm install gitlab gitlab/gitlab -f ${HELM_VALUES} --namespace $NAMESPACE > /tmp/error.log 2>&1; ret=$?
