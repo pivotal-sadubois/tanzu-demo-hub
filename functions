@@ -11250,9 +11250,7 @@ getServiceAccountSecret() {
 createNamespace() {
   NAMESPACE=$1
 
-  kubectl get ns -o json > /tmp/output.json
-
-  cmdLoop kubectl get serviceaccount $SERVICE_ACCOUNT -o json > /tmp/output.json
+  cmdLoop kubectl get ns -o json > /tmp/output.json
   if [ -s /tmp/output.json ]; then
     nam=$(jq -r --arg key "$NAMESPACE" '.items[] | select(.metadata.name == $key).metadata.name' /tmp/output.json) 
 
