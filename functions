@@ -5359,7 +5359,6 @@ installJenkins() {
     #kubectl create serviceaccount jenkins-tbs > /dev/null 2>&1
   fi
 
-echo hallo10
   cmdLoop helm ls -n $NAMESPACE -o json > /tmp/output.json
   if [ -s /tmp/output.json ]; then
     ver=$(jq -r --arg chart "jenkins" '.[] | select(.name == $chart).app_version' /tmp/output.json)
@@ -5369,14 +5368,11 @@ echo hallo10
   else 
     ver=""; crt=""; stt=""; dat=""
   fi
-echo hallo11
 
-#hallo
   cmdLoop kubectl get secret --namespace jenkins jenkins -o json > /tmp/output.json
   if [ -s /tmp/output.json ]; then 
     jenkins_pass=$(jq -r '.data."jenkins-password"' /tmp/output.json | base64 --decode)
   fi
-echo hallo13
 
   #DELETEME
   #jenkins_pass=$(kubectl get secret --namespace jenkins jenkins -o jsonpath="{.data.jenkins-password}" | base64 --decode)
@@ -5398,12 +5394,9 @@ echo hallo13
 
   #java -jar ~/Downloads/jenkins-cli.jar -s https://jenkins.apps-contour.local.pcfsdu.com/ -auth admin:Password12345 list-credentials-as-xml "system::system::jenkins"
   #java -jar ~/Downloads/jenkins-cli.jar -s https://jenkins.apps-contour.local.pcfsdu.com/ -auth admin:Password12345 get-credentials-as-xml "system::system::jenkins" _ 0c60eb5e-310b-4f57-8f77-62acff64921f 
-echo hallo14
 
   # --- STORE SETTINGS IN CONFIGMAP ---
   uodateConfigMap tanzu-demo-hub TDH_SERVICE_JENKINS             "true"
-
-echo hallo15
 }
 
 installKubeapps() {
@@ -5780,7 +5773,10 @@ echo gaga4
     #sed 's/name: tanzu-demo-hub-tls/name: gitlab-wildcard-tls/g' | \
     #kubectl apply --namespace=$NAMESPACE -f - 
 
+echo "deleteSecret $NAMESPACE tdh-gitlab-initial-root-password"
     deleteSecret $NAMESPACE tdh-gitlab-initial-root-password
+echo gaga41
+echo "kubectl create secret generic tdh-gitlab-initial-root-password --from-literal=password=$TDH_HARBOR_ADMIN_PASSWORD -n $NAMESPACE"
     cmdLoop kubectl create secret generic tdh-gitlab-initial-root-password \
             --from-literal=password=$TDH_HARBOR_ADMIN_PASSWORD -n $NAMESPACE
 echo gaga5
