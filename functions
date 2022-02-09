@@ -11118,6 +11118,8 @@ waitForKappServices() {
 loopCmd() {
   CND=$*
 
+echo "CMD:$0" 1>&2
+echo "CMD:$*" 1>&2
 echo "CMD:$CMD" 1>&2
   cnt=0; ret=1
   while [ $ret -ne 0 -a $cnt -lt 5 ]; do
