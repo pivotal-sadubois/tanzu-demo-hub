@@ -1474,7 +1474,7 @@ checkTMCintegration() {
         helm repo update > /dev/null 2>&1
 
         helm uninstall wavefront -n $NAMESPACE > /dev/null 2>&1
-        kubectl create ns $NAMESPACE > /dev/null 2>&1
+        createNamespace $NAMESPACE > /dev/null 2>&1
         patchServiceAccount default $NAMESPACE
         # kubectl patch serviceaccount wavefront-collector  -p '{"imagePullSecrets": [{"name": "tdh-docker-repo"}]}' -n -n wavefront
         patchServiceAccount wavefront-collector $NAMESPACE
@@ -3925,8 +3925,7 @@ VerifyServiceDependancies() {
     fi
 
     messagePrint " ▪ Install Cert Manager" "bitnami/nginx-ingress-controller"
-    kubectl get namespace $INGRESS_NAMESPACE > /dev/null 2>&1
-    if [ $? -ne 0 ]; then kubectl create namespace $INGRESS_NAMESPACE > /dev/null 2>&1; fi
+    createNamespace $INGRESS_NAMESPACE > /dev/null 2>&1
 
     stt=$(helm list -n $INGRESS_NAMESPACE -o json | jq -r --arg key "cert-manager-" '.[] | select(.chart | contains($key)).status')
     if [ "$stt" != "deployed" ]; then
@@ -3964,8 +3963,7 @@ VerifyServiceDependancies() {
     fi
 
     messagePrint " ▪ Install Ingress Controller" "$HELM_CHART"
-    kubectl get namespace $INGRESS_NAMESPACE > /dev/null 2>&1
-    if [ $? -ne 0 ]; then kubectl create namespace $INGRESS_NAMESPACE > /dev/null 2>&1; fi
+    createNamespace $INGRESS_NAMESPACE > /dev/null 2>&1
 
     stt=$(helm list -n nginx-ingress -o json | jq -r --arg key "ngress-controller" '.[] | select(.chart | contains($key)).status')
     if [ "$stt" != "deployed" ]; then
@@ -4014,7 +4012,7 @@ VerifyServiceDependancies() {
 
     stt=$(kubectl get ns -o json | jq -r --arg key "$INGRESS_NAMESPACE" '.items[] | select(.metadata.name == $key).status.phase')
     if [ "${stt}" == "" ]; then
-      kubectl create ns $INGRESS_NAMESPACE > /dev/null 2>&1
+      createNamespace $INGRESS_NAMESPACE > /dev/null 2>&1
     fi
 
     helm repo add bitnami https://charts.bitnami.com/bitnami > /dev/null 2>&1
@@ -4859,8 +4857,8 @@ installTAP() {
   export INSTALL_REGISTRY_PASSWORD=$TDH_REGISTRY_VMWARE_PASS
   export INSTALL_REGISTRY_HOSTNAME=registry.tanzu.vmware.com
 
-  kubectl create ns $NAMESPACE > /dev/null 2>&1
-    cnt=$(kubectl get secrets -n $NAMESPACE | egrep -c "^tap-registry") 
+  createNamespace $NAMESPACE > /dev/null 2>&1
+  cnt=$(kubectl get secrets -n $NAMESPACE | egrep -c "^tap-registry") 
 
   # --- CREATE A REGISTRY SECRET ---
   tanzu secret registry add tap-registry \
@@ -5167,7 +5165,7 @@ installArgoCD() {
 
     # --- CREATE NAMESPACE ---
     messagePrint " ▪ Create Namespace" "$NAMESPACE"
-    kubectl create namespace $NAMESPACE > /dev/null 2>&1
+    createNamespace $NAMESPACE > /dev/null 2>&1
 
     # --- COPY SECRET TO NAMESPACE ---
     messagePrint " ▪ Copy TLS Secret" "tanzu-demo-hub-tls"
@@ -5269,7 +5267,7 @@ installJenkins() {
 
     # --- CREATE NAMESPACE ---
     messagePrint " ▪ Create Namespace" "$NAMESPACE"
-    kubectl create namespace $NAMESPACE > /dev/null 2>&1
+    createNamespace $NAMESPACE > /dev/null 2>&1
 
     # --- COPY SECRET TO NAMESPACE ---
     messagePrint " ▪ Copy TLS Secret" "tanzu-demo-hub-tls"
@@ -5412,7 +5410,7 @@ installKubeapps() {
 
     # --- CREATE NAMESPACE ---
     messagePrint " ▪ Create Namespace" "kubeapps"
-    kubectl create namespace $NAMESPACE > /dev/null 2>&1
+    createNamespace $NAMESPACE > /dev/null 2>&1
 
     # --- COPY SECRET TO NAMESPACE ---
     messagePrint " ▪ Copy TLS Secret" "tanzu-demo-hub-tls"
@@ -5574,7 +5572,7 @@ installMinio() {
   cnt=$(helm list -A -q | egrep -c "^minio")
   if [ $cnt -eq 0 ]; then
     messagePrint " ▪ Installing Minio" "bitnami/minio"
-    kubectl create namespace $NAMESPACE > /dev/null 2>&1
+    createNamespace $NAMESPACE > /dev/null 2>&1
 
     # --- COPY SECRET TO NAMESPACE ---
     copySecretObject default $NAMESPACE tanzu-demo-hub-tls
@@ -5740,8 +5738,7 @@ installGitLab() {
   cnt=$(helm list -A -q | egrep -c "^gitlab")
   if [ $cnt -eq 0 ]; then
     messagePrint " ▪ Installing GitLab" "gitlab/gitlab"
-    cmdLoop kubectl create namespace $NAMESPACE
-#gugu
+    createNamespace $NAMESPACE > /dev/null 2>&1
 
     # --- COPY SECRET TO NAMESPACE ---
     copySecretObject default $NAMESPACE tanzu-demo-hub-tls
@@ -5955,7 +5952,7 @@ installTanzuDataPostgres() {
         messagePrint " ▪ Install Postgres Operator" "$TDH_SERVICE_TANZU_DATA_POSTGRES_VERSION"
   
         # --- CREATE NAMESPACE ---
-        #kubectl create namespace $NAMESPACE > /dev/null 2>&1
+        createNamespace $NAMESPACE > /dev/null 2>&1
   
         # --- INSTALL POSTGRES ---
         POSTGRES_INSTALL_PATH="/tmp/postgres-for-kubernetes/postgres-for-kubernetes-v$TDH_SERVICE_TANZU_DATA_POSTGRES_VERSION"
@@ -6121,7 +6118,9 @@ installBuildService() {
     done
 
     kapp delete -a tanzu-build-service -y > /dev/null 2>&1
-    kubectl delete ns build-service kpack > /dev/null 2>&1
+    deleteNamespace build-service > /dev/null 2>&1
+    deleteNamespace kpack > /dev/null 2>&1
+
     export TDH_SERVICE_BUILD_SERVICE_INSTALLED=""
   fi
 
@@ -6573,8 +6572,7 @@ InstallMetallLB() {
   #fi
 
   NAMESPACE=metallb
-  kubectl get namespace $NAMESPACE > /dev/null 2>&1
-  if [ $? -ne 0 ]; then kubectl create namespace $NAMESPACE > /dev/null 2>&1; fi
+  createNamespace $NAMESPACE > /dev/null 2>&1
 
   cnt=$(helm list -q -n $NAMESPACE | egrep -c "^metallb")
   if [ $cnt -eq 0 ]; then
@@ -6588,11 +6586,11 @@ InstallMetallLB() {
     kubectl get namespace $NAMESPACE > /dev/null 2>&1
     if [ $? -ne 0 ]; then 
       messagePrint " ▪ Cleanup from privious installation"
-      kubectl delete namespace $NAMESPACE > /dev/null 2>&1
+      deleteNamespace $NAMESPACE > /dev/null 2>&1
     fi
 
     messagePrint " ▪ Create Namespace" "$NAMESPACE"
-    kubectl create namespace $NAMESPACE > /dev/null 2>&1
+    createNamespace $NAMESPACE > /dev/null 2>&1
     patchServiceAccount default $NAMESPACE
 
     HELM_VALUES=/tmp/metallb_values.yaml
@@ -6646,8 +6644,8 @@ InstallContour() {
     # --- INSTALL CONTOUR INGRESS ---
     messageTitle "Install Ingress Contour"
     messagePrint " ▪ Create Namespace" "$NAMESPACE" 
-    kubectl delete ns $NAMESPACE > /dev/null 2>&1
-    kubectl create ns $NAMESPACE > /dev/null 2>&1
+    deleteNamespace $NAMESPACE > /dev/null 2>&1
+    createNamespace $NAMESPACE > /dev/null 2>&1
     helm repo add bitnami https://charts.bitnami.com/bitnami > /dev/null 2>&1
 
     messagePrint " ▪ Create Docker secret"  "tdh-docker-repo"
@@ -7024,8 +7022,8 @@ InstallCertManager() {
     # --- INSTALL CONTOUR INGRESS ---
     messageTitle "Cert Manager"
 
-    kubectl delete ns $NAMESPACE > /dev/null 2>&1
-    kubectl create ns $NAMESPACE > /dev/null 2>&1
+    deleteNamespace $NAMESPACE > /dev/null 2>&1
+    createNamespace $NAMESPACE > /dev/null 2>&1
     helm repo add jetstack https://charts.jetstack.io -n $NAMESPACE > /dev/null 2>&1
     #helm install cert-manager jetstack/cert-manager --namespace cert-manager \
     #   --version v1.0.2 --set installCRDs=true > /dev/null 2>&1
@@ -7101,8 +7099,8 @@ InstallHarborRegistry() {
 
     # --- INSTALL CONTOUR INGRESS ---
     messagePrint " ▪ Create Namespace" "$NAMESPACE"
-    kubectl delete ns $NAMESPACE > /dev/null 2>&1
-    kubectl create ns $NAMESPACE > /dev/null 2>&1
+    deleteNamespace $NAMESPACE > /dev/null 2>&1
+    createNamespace $NAMESPACE > /dev/null 2>&1
     helm uninstall harbor -n $NAMESPACE > /dev/null 2>&1
     patchServiceAccount default $NAMESPACE
 
@@ -10054,7 +10052,8 @@ TanzuPackage_RepoSync() {
   PACKAGE_NAMESPACE=tanzu-system-packages
 
   # --- CREATE PACKAGE_NAMESPACE NAMESPACE ---
-  kubectl create ns $PACKAGE_NAMESPACE > /dev/null 2>&1
+  createNamespace $PACKAGE_NAMESPACE > /dev/null 2>&1
+  createNamespace $NAMESPACE > /dev/null 2>&1
 
   messagePrint " ▪ Wait for Tanzu Package Reconsile"   "$NAMESPACE"
 
@@ -10299,8 +10298,8 @@ TanzuPackage_Harbor () {
   pkg=$(tanzu package installed get $PACKAGE_NAME -n $PACKAGE_NAMESPACE -o json 2>/dev/null | jq -r '.[].name')
   if [ "$pkg" != "$PACKAGE_NAME" ]; then
     messagePrint " ▪ Create Namespace"  "$NAMESPACE"
-    kubectl delete namespace $NAMESPACE > /dev/null 2>&1
-    kubectl create namespace $NAMESPACE > /dev/null 2>&1
+    deleteNamespace $NAMESPACE > /dev/null 2>&1
+    createNamespace $NAMESPACE > /dev/null 2>&1
 
     messagePrint " ▪ Create Docker secret"  "tdh-docker-repo"
     kubectl -n $NAMESPACE create secret docker-registry tdh-docker-repo \
@@ -10311,6 +10310,7 @@ TanzuPackage_Harbor () {
     # --- COPY SECRET TO NAMESPACE ---
     kubectl get secret tanzu-demo-hub-tls --namespace=default  -oyaml | grep -v '^\s*namespace:\s' | \
     kubectl apply --namespace=$NAMESPACE -f - > /dev/null 2>&1
+#hallo
 
     tls_crt=$(kubectl get secrets tanzu-demo-hub-tls -n $NAMESPACE -o json | jq -r '.data."tls.crt"') 
     tls_key=$(kubectl get secrets tanzu-demo-hub-tls -n $NAMESPACE -o json | jq -r '.data."tls.key"') 
@@ -11256,6 +11256,29 @@ createNamespace() {
 
     if [ "$nam" == "" ]; then 
       cmdLoop kubectl create ns $NAMESPACE
+    fi
+  fi
+
+  echo $sec
+}
+
+# ------------------------------------------------------------------------------------------
+# Function Name ......: deleteNamespace
+# Function Purpose ...: Delete a Kubernetes Namespace
+# ------------------------------------------------------------------------------------------
+# Argument ($1) ......: Namespace
+# ------------------------------------------------------------------------------------------
+# Return Value .......: Service Account Secret
+# ------------------------------------------------------------------------------------------
+deleteNamespace() {
+  NAMESPACE=$1
+
+  cmdLoop kubectl get ns -o json > /tmp/output.json
+  if [ -s /tmp/output.json ]; then
+    nam=$(jq -r --arg key "$NAMESPACE" '.items[] | select(.metadata.name == $key).metadata.name' /tmp/output.json)
+
+    if [ "$nam" != "" ]; then
+      cmdLoop kubectl delete ns $NAMESPACE
     fi
   fi
 
