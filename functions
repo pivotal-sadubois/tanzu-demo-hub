@@ -5266,16 +5266,19 @@ installJenkins() {
     helm repo add bitnami https://charts.bitnami.com/bitnami > /dev/null 2>&1
     helm repo update > /dev/null 2>&1
 
+echo hallo1
     # --- CREATE NAMESPACE ---
     messagePrint " ▪ Create Namespace" "$NAMESPACE"
     createNamespace $NAMESPACE > /dev/null 2>&1
 
+echo hallo2
     # --- COPY SECRET TO NAMESPACE ---
     messagePrint " ▪ Copy TLS Secret" "tanzu-demo-hub-tls"
     copySecretObject default $NAMESPACE tanzu-demo-hub-tls
     #kubectl get secret tanzu-demo-hub-tls --namespace=default  -oyaml | grep -v '^\s*namespace:\s' | \
     #kubectl apply --namespace=$NAMESPACE -f - > /dev/null 2>&1
 
+echo hallo3
     HELM_VALUES=/tmp/helm_jenkins_values.yaml
 
     echo "global:"                                                                                                              >  $HELM_VALUES
@@ -5338,9 +5341,6 @@ installJenkins() {
       exit 1
     fi
 
-    # --- WAIT FOR PODS TO GET STARTED ---
-    runningPods $NAMESPACE
-
     #java -jar ~/Downloads/jenkins-cli.jar -s https://jenkins.apps-contour.local.pcfsdu.com/ -auth user:Idh5k5eZts 2>&1"
     #curl -X GET https://jenkins.apps-contour.local.pcfsdu.com/job/sacha_xxx1/config.xml -u user:Idh5k5eZts -o mylocalconfig.xml
 
@@ -5358,6 +5358,7 @@ installJenkins() {
     #kubectl create serviceaccount jenkins-tbs > /dev/null 2>&1
   fi
 
+echo hallo10
   cmdLoop helm ls -n $NAMESPACE -o json > /tmp/output.json
   if [ -s /tmp/output.json ]; then
     ver=$(jq -r --arg chart "jenkins" '.[] | select(.name == $chart).app_version' /tmp/output.json)
@@ -5367,12 +5368,14 @@ installJenkins() {
   else 
     ver=""; crt=""; stt=""; dat=""
   fi
+echo hallo11
 
 #hallo
   cmdLoop kubectl get secret --namespace jenkins jenkins -o json > /tmp/output.json
   if [ -s /tmp/output.json ]; then 
     jenkins_pass=$(jq -r '.data."jenkins-password"' /tmp/output.json | base64 --decode)
   fi
+echo hallo13
 
   #DELETEME
   #jenkins_pass=$(kubectl get secret --namespace jenkins jenkins -o jsonpath="{.data.jenkins-password}" | base64 --decode)
@@ -5394,10 +5397,12 @@ installJenkins() {
 
   #java -jar ~/Downloads/jenkins-cli.jar -s https://jenkins.apps-contour.local.pcfsdu.com/ -auth admin:Password12345 list-credentials-as-xml "system::system::jenkins"
   #java -jar ~/Downloads/jenkins-cli.jar -s https://jenkins.apps-contour.local.pcfsdu.com/ -auth admin:Password12345 get-credentials-as-xml "system::system::jenkins" _ 0c60eb5e-310b-4f57-8f77-62acff64921f 
+echo hallo14
 
   # --- STORE SETTINGS IN CONFIGMAP ---
   uodateConfigMap tanzu-demo-hub TDH_SERVICE_JENKINS             "true"
 
+echo hallo15
 }
 
 installKubeapps() {
@@ -5819,6 +5824,7 @@ echo gaga5
 echo gaga6
     cnt=0; ret=1
     while [ $ret -ne 0 -a $cnt -lt 5 ]; do
+echo "helm install gitlab gitlab/gitlab -f ${HELM_VALUES} --namespace $NAMESPACE"
       helm install gitlab gitlab/gitlab -f ${HELM_VALUES} --namespace $NAMESPACE > /tmp/error.log 2>&1; ret=$?
       [ $ret -eq 0 ] && break
       let cnt=cnt+1
