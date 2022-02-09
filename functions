@@ -5685,6 +5685,8 @@ installMinio() {
 installGitLab() {
   NAMESPACE=gitlab
 
+echo "TDH_SERVICE_GITLAB:$TDH_SERVICE_GITLAB"
+
   if [ "$TDH_SERVICE_GITLAB" != "true" ]; then
     uodateConfigMap tanzu-demo-hub TDH_SERVICE_GITLAB        "false"
     kubectl delete -n $NAMESPACE > /dev/null 2>&1
