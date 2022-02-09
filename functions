@@ -5331,13 +5331,16 @@ installJenkins() {
     #java -jar ~/Downloads/jenkins-cli.jar -s https://jenkins.apps-contour.local.pcfsdu.com/ -auth user:Idh5k5eZts get-job sacha_xxx1 > template.xml
     #java -jar ~/Downloads/jenkins-cli.jar -s https://jenkins.apps-contour.local.pcfsdu.com/ -auth user:Idh5k5eZts create-job sacha_xxx2 < template.xml
 
+#hallo
     messagePrint " ▪ Create Cluster Role Binding"        "default:jenkins-operator"
-    kubectl delete clusterrolebinding jenkins-tbs > /dev/null 2>&1
-    kubectl create clusterrolebinding jenkins-tbs --clusterrole=build-service-user-role --serviceaccount=default:jenkins-tbs > /dev/null 2>&1
+    createClusterRoleBinding jenkins-tbs $build-service-user-role  default:default:jenkins-tbs
+    #kubectl delete clusterrolebinding jenkins-tbs > /dev/null 2>&1
+    #kubectl create clusterrolebinding jenkins-tbs --clusterrole=build-service-user-role --serviceaccount=default:jenkins-tbs > /dev/null 2>&1
 
     messagePrint " ▪ Create Serviceaccount"              "jenkins-operator"
-    kubectl delete serviceaccount jenkins-tbs > /dev/null 2>&1
-    kubectl create serviceaccount jenkins-tbs > /dev/null 2>&1
+    createServiceAccount default jenkins-tbs
+    #kubectl delete serviceaccount jenkins-tbs > /dev/null 2>&1
+    #kubectl create serviceaccount jenkins-tbs > /dev/null 2>&1
   fi
 
   ver=$(helm ls -n $NAMESPACE -o json | jq -r --arg chart "jenkins" '.[] | select(.name == $chart).app_version')
@@ -5468,14 +5471,12 @@ installKubeapps() {
     # --- WAIT FOR PODS TO GET STARTED ---
     runningPods kubeapps
 
-    messagePrint " ▪ Create Serviceaccount"              "kubeapps-operator"
 #hallo
-    cmdLoop kubectl delete --namespace default serviceaccount kubeapps-operator > /dev/null 2>&1
-    cmdLoop kubectl create --namespace default serviceaccount kubeapps-operator > /dev/null 2>&1
+    messagePrint " ▪ Create Serviceaccount"              "kubeapps-operator"
+    createServiceAccount default kubeapps-operator
 
     messagePrint " ▪ Create Cluster Role Binding"        "default:kubeapps-operator"
-    cmdLoop delete clusterrolebinding kubeapps-operator > /dev/null 2>&1
-    cmdLoop create clusterrolebinding kubeapps-operator --clusterrole=cluster-admin --serviceaccount=default:kubeapps-operator
+    createClusterRoleBinding kubeapps-operator cluster-admin default:kubeapps-operator
 
     messagePrint " ▪ Kubeapps Dashboard deployed"        "https://kubeapps.$DOMAIN"
   fi
@@ -11116,9 +11117,6 @@ waitForKappServices() {
   fi
 }
 
-#    cmdLoop kubectl delete --namespace default serviceaccount kubeapps-operator > /dev/null 2>&1
-#    cmdLoop kubectl create --namespace default serviceaccount kubeapps-operator > /dev/null 2>&1
-
 # ------------------------------------------------------------------------------------------
 # Function Name ......: createServiceAccount
 # Function Purpose ...: Create a new Service Account (delete if it already exists)
@@ -11133,11 +11131,45 @@ createServiceAccount() {
   SERVICE_ACCOUNT=$2
 
   cmdLoop kubectl --namespace $NAMESPACE get serviceaccount $SERVICE_ACCOUNT -o json > /tmp/output.json
+  if [ -s /tmp/output.json ]; then 
+    sa=$(jq -r '.metadata.name' /tmp/output.json) 
+    if [ "sa" != "" ]; then 
+      cmdLoop kubectl delete --namespace $NAMESPACE serviceaccount $SERVICE_ACCOUNT > /dev/null 2>&1
+    fi
+  fi
 
-
-echo "/tmp/output.json"
-
+  cmdLoop kubectl create --namespace $NAMESPACE serviceaccount $SERVICE_ACCOUNT > /dev/null 2>&1
 }
+
+#    cmdLoop delete clusterrolebinding kubeapps-operator > /dev/null 2>&1
+#    cmdLoop create clusterrolebinding kubeapps-operator --clusterrole=cluster-admin --serviceaccount=default:kubeapps-operator
+
+# ------------------------------------------------------------------------------------------
+# Function Name ......: createClusterRoleBinding
+# Function Purpose ...: Create a new Cluster Role Binding  (delete if it already exists)
+# ------------------------------------------------------------------------------------------
+# Argument ($1) ......: Namespace
+#          ($2) ......: Service Account name
+# ------------------------------------------------------------------------------------------
+# Return Value .......: 0 - SUCCEED, 1 - FAILED
+# ------------------------------------------------------------------------------------------
+createClusterRoleBinding() {
+  CLUSTER_TOLE_BINDING=$1
+  CLUSTER_ROLE=$2
+  SERVICE_ACCOUNT=$3
+
+  cmdLoop kubectl get clusterrolebinding $CLUSTER_TOLE_BINDING -o json > /tmp/output.json
+  if [ -s /tmp/output.json ]; then
+    crb=$(jq -r '.metadata.name' /tmp/output.json)
+    if [ "crb" != "" ]; then
+      cmdLoop kubectl delete clusterrolebinding $CLUSTER_TOLE_BINDING > /dev/null 2>&1
+    fi
+  fi
+
+  cmdLoop kubectl create clusterrolebinding $CLUSTER_TOLE_BINDING --clusterrole=$CLUSTER_ROLE --serviceaccount=$SERVICE_ACCOUNT > /dev/null 2>&1
+}
+
+
 
 # ------------------------------------------------------------------------------------------
 # Function Name ......: cmdLoop
@@ -11152,7 +11184,6 @@ cmdLoop() {
 
   cnt=0; ret=1
   while [ $ret -ne 0 -a $cnt -lt 5 ]; do
-echo "$CMD > /tmp/loopCmdIgnore.out 2>/tmp/error.log" 1>&2
     $CMD > /tmp/loopCmdIgnore.out 2>/tmp/error.log; ret=$?
     [ $ret -eq 0 ] && break
     let cnt=cnt+1
@@ -11176,3 +11207,4 @@ echo "$CMD > /tmp/loopCmdIgnore.out 2>/tmp/error.log" 1>&2
   cat /tmp/loopCmdIgnore.out
 }
 
+createClusterRoleBinding kubeapps-operator cluster-admin default:kubeapps-operator
