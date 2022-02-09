@@ -11410,7 +11410,7 @@ copySecretObject() {
             grep -v '^\s*namespace:\s' > /tmp/tmpfile.yaml
 
     if [ -s /tmp/tmpfile.yaml ]; then 
-      cmdLoop kubectl apply --namespace=$TARGET_NAMESPACE -f /tmp/tmpfile.yaml
+      cmdLoop kubectl apply --namespace=$TARGET_NAMESPACE -f /tmp/tmpfile.yaml > /dev/null 2>&1
     fi
   else
     # --- VERIFY IF SECRET ALREADY EXISTS --
@@ -11427,7 +11427,7 @@ copySecretObject() {
             grep -v '^\s*namespace:\s' | sed "s/name: $SECRET_NAME/name: $NEW_SECRET_NAME/g" > /tmp/tmpfile.yaml
 
     if [ -s /tmp/tmpfile.yaml ]; then
-      cmdLoop kubectl apply --namespace=$TARGET_NAMESPACE -f /tmp/tmpfile.yaml
+      cmdLoop kubectl apply --namespace=$TARGET_NAMESPACE -f /tmp/tmpfile.yaml > /dev/null 2>&1
     fi
   fi
 }
