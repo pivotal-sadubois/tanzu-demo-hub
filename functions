@@ -11117,6 +11117,8 @@ waitForKappServices() {
 
 loopCmd() {
   CND=$*
+
+echo "CMD:$CMD" 1>&2
   cnt=0; ret=1
   while [ $ret -ne 0 -a $cnt -lt 5 ]; do
     $CMD > /tmp/error.log 2>&1; ret=$?
