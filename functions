@@ -11254,36 +11254,23 @@ copySecretObject() {
   SOURCE_NAMESPACE=$1
   TARGET_NAMESPACE=$2
   SECRET_NAME=$3
-echo gaga1 1>&2
 
   # --- VERIFY IF SECRET ALREADY EXISTS --
   cmdLoop kubectl get secret -n $NAMESPACE -o json > /tmp/output.yaml
-echo gaga2 1>&2
   if [ -s /tmp/output.yaml ]; then 
-echo gaga3 1>&2
     nam=$(jq -r --arg key $SECRET_NAME '.items[].metadata | select(.name == $key).name' /tmp/output.yaml) 
     if [ "$nam" == "$SECRET_NAME" ]; then 
-echo gaga4 1>&2
-echo "kubectl -n $TARGET_NAMESPACE delete secret $SECRET_NAME" 1>&2
-      #cndLoop kubectl -n $TARGET_NAMESPACE delete secret $SECRET_NAME > /dev/null 2>&1
-      cndLoop kubectl -n $TARGET_NAMESPACE delete secret $SECRET_NAME 
+      cmdLoop kubectl -n $TARGET_NAMESPACE delete secret $SECRET_NAME > /dev/null 2>&1
     fi
   fi
-echo gaga7 1>&1
-
-echo "kubectl -n $TARGET_NAMESPACE get secret tanzu-demo-hub-tls "
-kubectl -n $TARGET_NAMESPACE get secret tanzu-demo-hub-tls 
-sleep 1000
 
   # --- COPY SECRET ---
   cmdLoop kubectl get secret tanzu-demo-hub-tls --namespace=default -oyaml | \
           grep -v '^\s*namespace:\s' > /tmp/tmpfile.yaml
-echo gaga8 1>&1
 
   if [ -s /tmp/tmpfile.yaml ]; then 
     cmdLoop kubectl apply --namespace=$NAMESPACE -f /tmp/tmpfile.yaml
   fi
-echo gaga9 1>&2
 }
 
 #copySecretObject default $NAMESPACE tanzu-demo-hub-tls
