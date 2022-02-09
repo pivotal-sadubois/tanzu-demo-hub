@@ -5263,8 +5263,8 @@ installJenkins() {
   cnt=$(helm list -q -n $NAMESPACE | egrep -c "^jenkins")
   if [ $cnt -eq 0 ]; then
     messagePrint " ▪ Add the Bintnami Repository"   "https://charts.bitnami.com/bitnami"
-    helm repo add bitnami https://charts.bitnami.com/bitnami > /dev/null 2>&1
-    helm repo update > /dev/null 2>&1
+    cmdLoop helm repo add bitnami https://charts.bitnami.com/bitnami > /dev/null 2>&1
+    cmdLoop helm repo update > /dev/null 2>&1
 
 echo hallo1
     # --- CREATE NAMESPACE ---
@@ -5347,8 +5347,10 @@ echo hallo3
     #java -jar ~/Downloads/jenkins-cli.jar -s https://jenkins.apps-contour.local.pcfsdu.com/ -auth user:Idh5k5eZts get-job sacha_xxx1 > template.xml
     #java -jar ~/Downloads/jenkins-cli.jar -s https://jenkins.apps-contour.local.pcfsdu.com/ -auth user:Idh5k5eZts create-job sacha_xxx2 < template.xml
 
-    messagePrint " ▪ Create Cluster Role Binding"        "default:jenkins-operator"
-    createClusterRoleBinding jenkins-tbs $build-service-user-role  default:default:jenkins-tbs
+    messagePrint " ▪ Create Cluster Role Binding"                 "default:jenkins-operator"
+    createClusterRoleBinding jenkins-tbs build-service-user-role  default:default:jenkins-tbs
+
+    #DELETEME
     #kubectl delete clusterrolebinding jenkins-tbs > /dev/null 2>&1
     #kubectl create clusterrolebinding jenkins-tbs --clusterrole=build-service-user-role --serviceaccount=default:jenkins-tbs > /dev/null 2>&1
 
