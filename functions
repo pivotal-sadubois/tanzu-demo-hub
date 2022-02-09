@@ -5225,10 +5225,15 @@ echo "kubectl port-forward -n argo-cd svc/argo-cd-server 8443:443 2>&1 > /dev/nu
 echo "argocd login 127.0.0.1:8443 --password admin --username admin --plaintext"
   fi
 
-  ver=$(helm ls -n $NAMESPACE -o json | jq -r --arg chart "argo-cd" '.[] | select(.name == $chart).app_version')
-  crt=$(helm ls -n $NAMESPACE -o json | jq -r --arg chart "argo-cd" '.[] | select(.name == $chart).chart')
-  stt=$(helm ls -n $NAMESPACE -o json | jq -r --arg chart "argo-cd" '.[] | select(.name == $chart).status')
-  dat=$(helm ls -n $NAMESPACE -o json | jq -r --arg chart "argo-cd" '.[] | select(.name == $chart).updated')
+  cmdLoop helm ls -n $NAMESPACE -o json > /tmp/output.json
+  if [ -s /tmp/output.json ]; then
+    ver=$(jq -r --arg chart "argo-cd"" '.[] /tmp/output.json | select(.name == $chart).app_version')
+    crt=$(jq -r --arg chart "argo-cd"" '.[] /tmp/output.json | select(.name == $chart).chart')
+    stt=$(jq -r --arg chart "argo-cd"" '.[] /tmp/output.json | select(.name == $chart).status')
+    dat=$(jq -r --arg chart "argo-cd"" '.[] /tmp/output.json | select(.name == $chart).updated')
+  else
+    ver=""; crt=""; stt=""; dat=""
+  fi
 
   messagePrint " ▪ Verify ArgoCD"                "$crt"
   messagePrint "   Helm Chart Name"                "argo-cd"
@@ -5331,7 +5336,6 @@ installJenkins() {
     #java -jar ~/Downloads/jenkins-cli.jar -s https://jenkins.apps-contour.local.pcfsdu.com/ -auth user:Idh5k5eZts get-job sacha_xxx1 > template.xml
     #java -jar ~/Downloads/jenkins-cli.jar -s https://jenkins.apps-contour.local.pcfsdu.com/ -auth user:Idh5k5eZts create-job sacha_xxx2 < template.xml
 
-#hallo
     messagePrint " ▪ Create Cluster Role Binding"        "default:jenkins-operator"
     createClusterRoleBinding jenkins-tbs $build-service-user-role  default:default:jenkins-tbs
     #kubectl delete clusterrolebinding jenkins-tbs > /dev/null 2>&1
@@ -5343,11 +5347,17 @@ installJenkins() {
     #kubectl create serviceaccount jenkins-tbs > /dev/null 2>&1
   fi
 
-  ver=$(helm ls -n $NAMESPACE -o json | jq -r --arg chart "jenkins" '.[] | select(.name == $chart).app_version')
-  crt=$(helm ls -n $NAMESPACE -o json | jq -r --arg chart "jenkins" '.[] | select(.name == $chart).chart')
-  stt=$(helm ls -n $NAMESPACE -o json | jq -r --arg chart "jenkins" '.[] | select(.name == $chart).status')
-  dat=$(helm ls -n $NAMESPACE -o json | jq -r --arg chart "jenkins" '.[] | select(.name == $chart).updated')
+  cmdLoop helm ls -n $NAMESPACE -o json > /tmp/output.json
+  if [ -s /tmp/output.json ]; then
+    ver=$(jq -r --arg chart "jenkins" '.[] /tmp/output.json | select(.name == $chart).app_version')
+    crt=$(jq -r --arg chart "jenkins" '.[] /tmp/output.json | select(.name == $chart).chart')
+    stt=$(jq -r --arg chart "jenkins" '.[] /tmp/output.json | select(.name == $chart).status')
+    dat=$(jq -r --arg chart "jenkins" '.[] /tmp/output.json | select(.name == $chart).updated')
+  else 
+    ver=""; crt=""; stt=""; dat=""
+  fi
 
+#hallo
   jenkins_pass=$(kubectl get secret --namespace jenkins jenkins -o jsonpath="{.data.jenkins-password}" | base64 --decode)
   messagePrint " ▪ Verify Jenkins"                 "$crt"
   messagePrint "   Helm Chart Name"                "jenkins"
@@ -5471,7 +5481,6 @@ installKubeapps() {
     # --- WAIT FOR PODS TO GET STARTED ---
     runningPods kubeapps
 
-#hallo
     messagePrint " ▪ Create Serviceaccount"              "kubeapps-operator"
     createServiceAccount default kubeapps-operator
 
@@ -5481,12 +5490,21 @@ installKubeapps() {
     messagePrint " ▪ Kubeapps Dashboard deployed"        "https://kubeapps.$DOMAIN"
   fi
 
-  ver=$(helm ls -n $NAMESPACE -o json | jq -r --arg chart "kubeapps" '.[] | select(.name == $chart).app_version')
-  crt=$(helm ls -n $NAMESPACE -o json | jq -r --arg chart "kubeapps" '.[] | select(.name == $chart).chart')
-  stt=$(helm ls -n $NAMESPACE -o json | jq -r --arg chart "kubeapps" '.[] | select(.name == $chart).status')
-  dat=$(helm ls -n $NAMESPACE -o json | jq -r --arg chart "kubeapps" '.[] | select(.name == $chart).updated')
+  cmdLoop helm ls -n $NAMESPACE -o json > /tmp/output.json
+  if [ -s /tmp/output.json ]; then
+    ver=$(jq -r --arg chart "kubeapps" '.[] /tmp/output.json | select(.name == $chart).app_version')
+    crt=$(jq -r --arg chart "kubeapps" '.[] /tmp/output.json | select(.name == $chart).chart')
+    stt=$(jq -r --arg chart "kubeapps" '.[] /tmp/output.json | select(.name == $chart).status')
+    dat=$(jq -r --arg chart "kubeapps" '.[] /tmp/output.json | select(.name == $chart).updated')
+  else  
+    ver=""; crt=""; stt=""; dat=""
+  fi
 
-  secret_name=$(kubectl get serviceaccount kubeapps-operator -o jsonpath='{range .secrets[*]}{.name}{"\n"}{end}' | grep kubeapps-operator-token)
+#hallo
+  secret_name=$(getServiceAccountSecret kubeapps-operator)
+  #secret_name=$(kubectl get serviceaccount kubeapps-operator -o jsonpath='{range .secrets[*]}{.name}{"\n"}{end}' | grep kubeapps-operator-token)
+
+echo "hallo secret_name:$secret_name"
 
   cnt=0; ret=1
   while [ $ret -ne 0 -a $cnt -lt 5 ]; do
@@ -5601,12 +5619,19 @@ installMinio() {
     runningPods minio
   fi
 
-  ver=$(helm ls -A -o json | jq -r --arg chart "minio" '.[] | select(.name == $chart).app_version')
-  crt=$(helm ls -A -o json | jq -r --arg chart "minio" '.[] | select(.name == $chart).chart')
-  stt=$(helm ls -A -o json | jq -r --arg chart "minio" '.[] | select(.name == $chart).status')
-  dat=$(helm ls -A -o json | jq -r --arg chart "minio" '.[] | select(.name == $chart).updated')
+  cmdLoop helm ls -n $NAMESPACE -o json > /tmp/output.json
+  if [ -s /tmp/output.json ]; then
+    ver=$(jq -r --arg chart "minio" '.[] /tmp/output.json | select(.name == $chart).app_version')
+    crt=$(jq -r --arg chart "minio" '.[] /tmp/output.json | select(.name == $chart).chart')
+    stt=$(jq -r --arg chart "minio" '.[] /tmp/output.json | select(.name == $chart).status')
+    dat=$(jq -r --arg chart "minio" '.[] /tmp/output.json | select(.name == $chart).updated')
+  else
+    ver=""; crt=""; stt=""; dat=""
+  fi
+
   ROOT_USER=$(kubectl get secret --namespace minio minio -o jsonpath="{.data.root-user}" | base64 --decode)
   ROOT_PASSWORD=$(kubectl get secret --namespace minio minio -o jsonpath="{.data.root-password}" | base64 --decode)
+#hallo
 
   messagePrint " ▪ Verify Minio S3"                "$crt"
   messagePrint "   Helm Chart Name"                "minio"
@@ -5790,10 +5815,17 @@ echo gaga4
     runningPods gitlab
   fi
 
-  ver=$(helm ls -A -o json | jq -r --arg chart "gitlab" '.[] | select(.name == $chart).app_version')
-  crt=$(helm ls -A -o json | jq -r --arg chart "gitlab" '.[] | select(.name == $chart).chart')
-  stt=$(helm ls -A -o json | jq -r --arg chart "gitlab" '.[] | select(.name == $chart).status')
-  dat=$(helm ls -A -o json | jq -r --arg chart "gitlab" '.[] | select(.name == $chart).updated')
+  cmdLoop helm ls -n $NAMESPACE -o json > /tmp/output.json
+  if [ -s /tmp/output.json ]; then
+    ver=$(jq -r --arg chart "gitlab"" '.[] /tmp/output.json | select(.name == $chart).app_version')
+    crt=$(jq -r --arg chart "gitlab"" '.[] /tmp/output.json | select(.name == $chart).chart')
+    stt=$(jq -r --arg chart "gitlab"" '.[] /tmp/output.json | select(.name == $chart).status')
+    dat=$(jq -r --arg chart "gitlab"" '.[] /tmp/output.json | select(.name == $chart).updated')
+  else
+    ver=""; crt=""; stt=""; dat=""
+  fi
+
+#hallo
   SECRET=$(kubectl get secret tdh-gitlab-initial-root-password  -n $NAMESPACE -o json | jq -r '.data.password' | base64 -d )
 
   messagePrint " ▪ Verify GitLab CE Deployment"    "$crt"
@@ -5978,17 +6010,31 @@ installTanzuDataPostgres() {
     fi
   fi
 
-  ver=$(helm ls -o json | jq -r --arg chart "postgres-operator" '.[] | select(.name == $chart).app_version')
-  crt=$(helm ls -o json | jq -r --arg chart "postgres-operator" '.[] | select(.name == $chart).chart')
-  stt=$(helm ls -o json | jq -r --arg chart "postgres-operator" '.[] | select(.name == $chart).status')
-  dat=$(helm ls -o json | jq -r --arg chart "postgres-operator" '.[] | select(.name == $chart).updated')
-    
+  cmdLoop helm ls -n $NAMESPACE -o json > /tmp/output.json
+  if [ -s /tmp/output.json ]; then
+    ver=$(jq -r --arg chart "postgres-operator"" '.[] /tmp/output.json | select(.name == $chart).app_version')
+    crt=$(jq -r --arg chart "postgres-operator"" '.[] /tmp/output.json | select(.name == $chart).chart')
+    stt=$(jq -r --arg chart "postgres-operator"" '.[] /tmp/output.json | select(.name == $chart).status')
+    dat=$(jq -r --arg chart "postgres-operator"" '.[] /tmp/output.json | select(.name == $chart).updated')
+  else
+    ver=""; crt=""; stt=""; dat=""
+  fi
+
   messagePrint " ▪ Verify Postgres Operator" "$crt"
   messagePrint "   Helm Chart Name"                "postgres-operator"
   messagePrint "   Helm Chart Version"             "$ver"
   messagePrint "   Helm Chart Status"              "$stt"
   messagePrint "   Helm Chart Installed/Updated"   "$dat"
 
+  cmdLoop helm ls -n $NAMESPACE -o json > /tmp/output.json
+  if [ -s /tmp/output.json ]; then
+    ver=$(jq -r --arg chart "tdh-pgadmin"" '.[] /tmp/output.json | select(.name == $chart).app_version')
+    crt=$(jq -r --arg chart "tdh-pgadmin"" '.[] /tmp/output.json | select(.name == $chart).chart')
+    stt=$(jq -r --arg chart "tdh-pgadmin"" '.[] /tmp/output.json | select(.name == $chart).status')
+    dat=$(jq -r --arg chart "tdh-pgadmin"" '.[] /tmp/output.json | select(.name == $chart).updated')
+  else
+    ver=""; crt=""; stt=""; dat=""
+  fi
   #ver=$(helm ls -o json | jq -r --arg chart "tdh-pgadmin" '.[] | select(.name == $chart).app_version')
   #crt=$(helm ls -o json | jq -r --arg chart "tdh-pgadmin" '.[] | select(.name == $chart).chart')
   #stt=$(helm ls -o json | jq -r --arg chart "tdh-pgadmin" '.[] | select(.name == $chart).status')
@@ -11169,7 +11215,46 @@ createClusterRoleBinding() {
   cmdLoop kubectl create clusterrolebinding $CLUSTER_TOLE_BINDING --clusterrole=$CLUSTER_ROLE --serviceaccount=$SERVICE_ACCOUNT > /dev/null 2>&1
 }
 
+# ------------------------------------------------------------------------------------------
+# Function Name ......: getServiceAccountSecret
+# Function Purpose ...: Get ServiceAccount Secret
+# ------------------------------------------------------------------------------------------
+# Argument ($1) ......: Service Account name
+# ------------------------------------------------------------------------------------------
+# Return Value .......: Service Account Secret
+# ------------------------------------------------------------------------------------------
+getServiceAccountSecret() {
+  SERVICE_ACCOUNT=$1
 
+  cmdLoop kubectl get serviceaccount $SERVICE_ACCOUNT -o json > /tmp/output.json
+  if [ -s /tmp/output.json ]; then
+    sec=$(jq -r --arg key "$SERVICE_ACCOUNT" 'select(.metadata.name == $key).secrets[].name' /tmp/output.json)
+  fi
+
+  echo $sec
+}
+
+# ------------------------------------------------------------------------------------------
+# Function Name ......: getSecretObject
+# Function Purpose ...: Get ServiceAccount Secret
+# ------------------------------------------------------------------------------------------
+# Argument ($1) ......: Service Account name
+# ------------------------------------------------------------------------------------------
+# Return Value .......: Service Account Secret
+# ------------------------------------------------------------------------------------------
+getSecretObject() {
+  SECRET=$1
+
+  cmdLoop kubectl get serviceaccount $SERVICE_ACCOUNT -o json > /tmp/output.json
+  if [ -s /tmp/output.json ]; then
+    sec=$(jq -r --arg key "$SERVICE_ACCOUNT" 'select(.metadata.name == $key).secrets[].name' /tmp/output.json)
+  fi
+
+  echo $sec
+}
+
+#  ROOT_USER=$(kubectl get secret --namespace minio minio -o jsonpath="{.data.root-user}" | base64 --decode)
+#  ROOT_PASSWORD=$(kubectl get secret --namespace minio minio -o jsonpath="{.data.root-password}" | base64 --decode)
 
 # ------------------------------------------------------------------------------------------
 # Function Name ......: cmdLoop
