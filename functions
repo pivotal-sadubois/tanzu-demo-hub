@@ -5345,7 +5345,7 @@ installJenkins() {
     #java -jar ~/Downloads/jenkins-cli.jar -s https://jenkins.apps-contour.local.pcfsdu.com/ -auth user:Idh5k5eZts create-job sacha_xxx2 < template.xml
 
     messagePrint " ▪ Create Cluster Role Binding"                 "default:jenkins-operator"
-    createClusterRoleBinding jenkins-tbs build-service-user-role  default:default:jenkins-tbs
+    createClusterRoleBinding jenkins-tbs build-service-user-role  default:jenkins-tbs
 
     #DELETEME
     #kubectl delete clusterrolebinding jenkins-tbs > /dev/null 2>&1
@@ -11281,22 +11281,14 @@ createClusterRoleBinding() {
   CLUSTER_TOLE_BINDING=$1
   CLUSTER_ROLE=$2
   SERVICE_ACCOUNT=$3
-echo gaga1
 
   cmdLoop kubectl get clusterrolebinding -o json > /tmp/output.json
-echo gaga2
   if [ -s /tmp/output.json ]; then
-echo gaga3
     crb=$(jq -r --arg key "$CLUSTER_TOLE_BINDING" '.items[] | select(.metadata.name == $key).metadata.name' /tmp/output.json) 
-echo gaga4
     if [ "$crb" != "" ]; then
-echo gaga5
       cmdLoop kubectl delete clusterrolebinding $CLUSTER_TOLE_BINDING > /dev/null 2>&1
-echo gaga6
     fi
   fi
-echo gaga7
-echo "cmdLoop kubectl create clusterrolebinding $CLUSTER_TOLE_BINDING --clusterrole=$CLUSTER_ROLE --serviceaccount=$SERVICE_ACCOUNT"
 
   cmdLoop kubectl create clusterrolebinding $CLUSTER_TOLE_BINDING --clusterrole=$CLUSTER_ROLE --serviceaccount=$SERVICE_ACCOUNT 
 }
