@@ -5304,6 +5304,7 @@ installJenkins() {
     echo "    secretName: tanzu-demo-hub-tls"                                                                                   >> $HELM_VALUES
 
 #gaga
+#gogo
     messagePrint " ▪ Deploy the Jenkins Helm Chart" "$HELMCHART"
     cnt=0; ret=1; stt="notdeployed"
     while [ $ret -ne 0 -a $cnt -lt 5 -a "$stt" != "deployed" ]; do
@@ -5753,33 +5754,24 @@ installGitLab() {
   if [ $cnt -eq 0 ]; then
     messagePrint " ▪ Installing GitLab" "gitlab/gitlab"
     createNamespace $NAMESPACE > /dev/null 2>&1
-echo gaga1
 
     # --- COPY SECRET TO NAMESPACE ---
     copySecretObject default $NAMESPACE tanzu-demo-hub-tls
-echo gaga2
 
     #DELETEME
     #kubectl get secret tanzu-demo-hub-tls --namespace=default  -oyaml | grep -v '^\s*namespace:\s' | \
     #kubectl apply --namespace=$NAMESPACE -f -
-echo gaga3
 
-#hallo
     copySecretObject default $NAMESPACE tanzu-demo-hub-tls gitlab-wildcard-tls
-echo gaga4
 
     #DELETEME
     #kubectl get secret tanzu-demo-hub-tls --namespace=default  -oyaml | grep -v '^\s*namespace:\s' | \
     #sed 's/name: tanzu-demo-hub-tls/name: gitlab-wildcard-tls/g' | \
     #kubectl apply --namespace=$NAMESPACE -f - 
 
-echo "deleteSecret $NAMESPACE tdh-gitlab-initial-root-password"
     deleteSecret $NAMESPACE tdh-gitlab-initial-root-password
-echo gaga41
-echo "kubectl create secret generic tdh-gitlab-initial-root-password --from-literal=password=$TDH_HARBOR_ADMIN_PASSWORD -n $NAMESPACE"
     cmdLoop kubectl create secret generic tdh-gitlab-initial-root-password \
             --from-literal=password=$TDH_HARBOR_ADMIN_PASSWORD -n $NAMESPACE
-echo gaga5
 
     HELM_VALUES=/tmp/gitlab_values.yaml
     echo ""                                                                                                                     >  $HELM_VALUES
@@ -5818,17 +5810,27 @@ echo gaga5
     helm repo add gitlab https://charts.gitlab.io/ > /dev/null 2>&1
     helm repo update > /dev/null 2>&1
 
-echo gaga6
-    cnt=0; ret=1
-    while [ $ret -ne 0 -a $cnt -lt 5 ]; do
-echo "helm install gitlab gitlab/gitlab -f ${HELM_VALUES} --namespace $NAMESPACE"
+#gogo
+    cnt=0; ret=1; stt="notdeployed"
+    while [ $ret -ne 0 -a $cnt -lt 5 -a "$stt" != "deployed" ]; do
       helm install gitlab gitlab/gitlab -f ${HELM_VALUES} --namespace $NAMESPACE > /tmp/error.log 2>&1; ret=$?
-      [ $ret -eq 0 ] && break
+
+      # --- WAIT FOR PODS TO GET STARTED ---
+      runningPods $NAMESPACE
+
+      cmdLoop helm ls -n $NAMESPACE -o json > /tmp/output.json
+      stt=$(jq -r --arg chart "$HELMCHART" '.[] | select(.name == $chart).status' /tmp/output.json)
+
+      [ $ret -eq 0 -a "$stt" == "deployed" ] && break
+
+      # --- DELTE FAILED HELM CHART ---
+      cmdLoop helm uninstall $HELMCHART --namespace $NAMESPACE > /dev/null 2>&1
+
       let cnt=cnt+1
       sleep 30
     done
 
-    if [ $ret -ne 0 ]; then
+    if [ $ret -ne 0 -o "$stt" != "deployed" ]; then
       logMessages /tmp/error.log
       echo "ERROR: Failed to deploy GitLab Helm Chart"
       if [ "$NATIVE" == "0" ]; then
@@ -5841,9 +5843,6 @@ echo "helm install gitlab gitlab/gitlab -f ${HELM_VALUES} --namespace $NAMESPACE
 
       exit 1
     fi
-
-    # --- WAIT FOR PODS TO GET STARTED ---
-    runningPods gitlab
   fi
 
   cmdLoop helm ls -n $NAMESPACE -o json > /tmp/output.json
@@ -11134,15 +11133,15 @@ dockerPullImages() {
 runningPods() {
   NAMESPACE=$1
 
-  tot=$(kubectl get pods -n $NAMESPACE | sed '1d' | wc -l | awk '{ print $1 }')
-  cnt=$(kubectl get pods -n $NAMESPACE | sed '1d' | grep -vc Running)
+  tot=$(cmdLoop kubectl get pods -n $NAMESPACE | sed '1d' | wc -l | awk '{ print $1 }')
+  cnt=$(cmdLoop kubectl get pods -n $NAMESPACE | sed '1d' | grep -vc Running)
   let bsy=tot-cnt
 
   messageCountInit " ▪ Waiting for pods to start within namespace $NAMESPACE" $tot $bsy
 
   cnt=1; 
   while [ $cnt -ne 0 ]; do
-    cnt=$(kubectl get pods -n $NAMESPACE | sed '1d' | egrep -vc "Running|Completed")
+    cnt=$(cmdLoop kubectl get pods -n $NAMESPACE | sed '1d' | egrep -vc "Running|Completed")
     let bsy=tot-cnt
     messageCount $bsy
 
@@ -11476,7 +11475,6 @@ cmdLoop() {
     sleep 30
   done
 
-#gogo
   if [ $ret -ne 0 ]; then
     logMessages /tmp/error.log
     echo "ERROR: Failed to run command, please try manually"
