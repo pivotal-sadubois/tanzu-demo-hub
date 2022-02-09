@@ -11132,7 +11132,8 @@ createServiceAccount() {
   NAMESPACE=$1
   SERVICE_ACCOUNT=$2
 
-  cmdLoop kubectl --namespace $NAMESPACE get serviceaccount $SERVICE_ACCOUNT > /tmp/output.json
+  cmdLoop kubectl --namespace $NAMESPACE get serviceaccount $SERVICE_ACCOUNT -o json > /tmp/output.json
+
 
 echo "/tmp/output.json"
 
