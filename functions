@@ -11290,6 +11290,8 @@ echo xxxx2
     crb=$(jq -r --arg key "$CLUSTER_TOLE_BINDING" '.items[] | select(.metadata.name == $key).metadata.name' /tmp/output.json) 
 echo "xxxx3 CRB:$crb"
     if [ "crb" != "" ]; then
+echo xxxx21
+echo "cmdLoop kubectl delete clusterrolebinding $CLUSTER_TOLE_BINDING > /dev/null 2>&1"
       cmdLoop kubectl delete clusterrolebinding $CLUSTER_TOLE_BINDING > /dev/null 2>&1
     fi
   fi
