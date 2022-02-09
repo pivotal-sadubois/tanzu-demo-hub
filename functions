@@ -5266,19 +5266,16 @@ installJenkins() {
     cmdLoop helm repo add bitnami https://charts.bitnami.com/bitnami > /dev/null 2>&1
     cmdLoop helm repo update > /dev/null 2>&1
 
-echo hallo1
     # --- CREATE NAMESPACE ---
     messagePrint " ▪ Create Namespace" "$NAMESPACE"
     createNamespace $NAMESPACE > /dev/null 2>&1
 
-echo hallo2
     # --- COPY SECRET TO NAMESPACE ---
     messagePrint " ▪ Copy TLS Secret" "tanzu-demo-hub-tls"
     copySecretObject default $NAMESPACE tanzu-demo-hub-tls
     #kubectl get secret tanzu-demo-hub-tls --namespace=default  -oyaml | grep -v '^\s*namespace:\s' | \
     #kubectl apply --namespace=$NAMESPACE -f - > /dev/null 2>&1
 
-echo hallo3
     HELM_VALUES=/tmp/helm_jenkins_values.yaml
 
     echo "global:"                                                                                                              >  $HELM_VALUES
@@ -5356,6 +5353,8 @@ echo hallo3
 
     messagePrint " ▪ Create Serviceaccount"              "jenkins-operator"
     createServiceAccount default jenkins-tbs
+
+    #DELETEME
     #kubectl delete serviceaccount jenkins-tbs > /dev/null 2>&1
     #kubectl create serviceaccount jenkins-tbs > /dev/null 2>&1
   fi
