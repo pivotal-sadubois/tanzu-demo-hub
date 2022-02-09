@@ -11282,10 +11282,6 @@ createClusterRoleBinding() {
   CLUSTER_ROLE=$2
   SERVICE_ACCOUNT=$3
 
-  cmdLoop kubectl get ns -o json > /tmp/output.json
-  if [ -s /tmp/output.json ]; then
-    nam=$(jq -r --arg key "$NAMESPACE" '.items[] | select(.metadata.name == $key).metadata.name' /tmp/output.json) 
-
   cmdLoop kubectl get clusterrolebinding -o json > /tmp/output.json
   if [ -s /tmp/output.json ]; then
     crb=$(jq -r --arg key "$CLUSTER_TOLE_BINDING" '.items[] | select(.metadata.name == $key).metadata.name' /tmp/output.json) 
