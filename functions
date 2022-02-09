@@ -11369,7 +11369,7 @@ deleteSecret() {
 
   cmdLoop kubectl -n $NAMESPACE get secrets -o json > /tmp/output.json
   if [ -s /tmp/output.json ]; then
-    nam=$(jq -r --arg key "$SECRET" '.items[] | select(.metadata.name == $key).metadata.name') 
+    nam=$(jq -r --arg key "$SECRET" '.items[] | select(.metadata.name == $key).metadata.name' /tmp/output.json) 
     if [ "$nam" != "" ]; then
       cmdLoop kubectl -n $NAMESPACE delete secret $SECRET
     fi
