@@ -5227,10 +5227,10 @@ echo "argocd login 127.0.0.1:8443 --password admin --username admin --plaintext"
 
   cmdLoop helm ls -n $NAMESPACE -o json > /tmp/output.json
   if [ -s /tmp/output.json ]; then
-    ver=$(jq -r --arg chart "argo-cd" '.[] /tmp/output.json | select(.name == $chart).app_version')
-    crt=$(jq -r --arg chart "argo-cd" '.[] /tmp/output.json | select(.name == $chart).chart')
-    stt=$(jq -r --arg chart "argo-cd" '.[] /tmp/output.json | select(.name == $chart).status')
-    dat=$(jq -r --arg chart "argo-cd" '.[] /tmp/output.json | select(.name == $chart).updated')
+    ver=$(jq -r --arg chart "argo-cd" '.[] | select(.name == $chart).app_version' /tmp/output.json)
+    crt=$(jq -r --arg chart "argo-cd" '.[] | select(.name == $chart).chart' /tmp/output.json)
+    stt=$(jq -r --arg chart "argo-cd" '.[] | select(.name == $chart).status' /tmp/output.json)
+    dat=$(jq -r --arg chart "argo-cd" '.[] | select(.name == $chart).updated' /tmp/output.json)
   else
     ver=""; crt=""; stt=""; dat=""
   fi
@@ -5349,16 +5349,23 @@ installJenkins() {
 
   cmdLoop helm ls -n $NAMESPACE -o json > /tmp/output.json
   if [ -s /tmp/output.json ]; then
-    ver=$(jq -r --arg chart "jenkins" '.[] /tmp/output.json | select(.name == $chart).app_version')
-    crt=$(jq -r --arg chart "jenkins" '.[] /tmp/output.json | select(.name == $chart).chart')
-    stt=$(jq -r --arg chart "jenkins" '.[] /tmp/output.json | select(.name == $chart).status')
-    dat=$(jq -r --arg chart "jenkins" '.[] /tmp/output.json | select(.name == $chart).updated')
+    ver=$(jq -r --arg chart "jenkins" '.[] | select(.name == $chart).app_version' /tmp/output.json)
+    crt=$(jq -r --arg chart "jenkins" '.[] | select(.name == $chart).chart' /tmp/output.json)
+    stt=$(jq -r --arg chart "jenkins" '.[] | select(.name == $chart).status' /tmp/output.json)
+    dat=$(jq -r --arg chart "jenkins" '.[] | select(.name == $chart).updated' /tmp/output.json)
   else 
     ver=""; crt=""; stt=""; dat=""
   fi
 
 #hallo
-  jenkins_pass=$(kubectl get secret --namespace jenkins jenkins -o jsonpath="{.data.jenkins-password}" | base64 --decode)
+  cmdLoop kubectl get secret --namespace jenkins jenkins -o json > /tmp/output.json
+  if [ -s /tmp/output.json ]; then 
+    jenkins_pass=$(jq -r '.data."jenkins-password"' /tmp/output.json | base64 --decode)
+  fi
+  #jenkins_pass=$(kubectl get secret --namespace jenkins jenkins -o jsonpath="{.data.jenkins-password}" | base64 --decode)
+
+echo "hallo jenkins_pass:$jenkins_pass"
+
   messagePrint " ▪ Verify Jenkins"                 "$crt"
   messagePrint "   Helm Chart Name"                "jenkins"
   messagePrint "   Helm Chart Version"             "$ver"
@@ -5407,7 +5414,8 @@ installKubeapps() {
 
     # --- COPY SECRET TO NAMESPACE ---
     messagePrint " ▪ Copy TLS Secret" "tanzu-demo-hub-tls"
-    kubectl get secret tanzu-demo-hub-tls --namespace=default  -oyaml | grep -v '^\s*namespace:\s' | \
+#hallo
+    kubectl get secret tanzu-demo-hub-tls --namespace=default -oyaml | grep -v '^\s*namespace:\s' | \
     kubectl apply --namespace=$NAMESPACE -f - > /dev/null 2>&1
 
     if [ "$TDH_SERVICE_KUBEAPPS_VERSION" == "" -o "$TDH_SERVICE_KUBEAPPS_VERSION" == "latest" ]; then
@@ -5492,10 +5500,10 @@ installKubeapps() {
 
   cmdLoop helm ls -n $NAMESPACE -o json > /tmp/output.json
   if [ -s /tmp/output.json ]; then
-    ver=$(jq -r --arg chart "kubeapps" '.[] /tmp/output.json | select(.name == $chart).app_version')
-    crt=$(jq -r --arg chart "kubeapps" '.[] /tmp/output.json | select(.name == $chart).chart')
-    stt=$(jq -r --arg chart "kubeapps" '.[] /tmp/output.json | select(.name == $chart).status')
-    dat=$(jq -r --arg chart "kubeapps" '.[] /tmp/output.json | select(.name == $chart).updated')
+    ver=$(jq -r --arg chart "kubeapps" '.[] | select(.name == $chart).app_version' /tmp/output.json)
+    crt=$(jq -r --arg chart "kubeapps" '.[] | select(.name == $chart).chart' /tmp/output.json)
+    stt=$(jq -r --arg chart "kubeapps" '.[] | select(.name == $chart).status' /tmp/output.json)
+    dat=$(jq -r --arg chart "kubeapps" '.[] | select(.name == $chart).updated' /tmp/output.json)
   else  
     ver=""; crt=""; stt=""; dat=""
   fi
@@ -5621,10 +5629,10 @@ installMinio() {
 
   cmdLoop helm ls -n $NAMESPACE -o json > /tmp/output.json
   if [ -s /tmp/output.json ]; then
-    ver=$(jq -r --arg chart "minio" '.[] /tmp/output.json | select(.name == $chart).app_version')
-    crt=$(jq -r --arg chart "minio" '.[] /tmp/output.json | select(.name == $chart).chart')
-    stt=$(jq -r --arg chart "minio" '.[] /tmp/output.json | select(.name == $chart).status')
-    dat=$(jq -r --arg chart "minio" '.[] /tmp/output.json | select(.name == $chart).updated')
+    ver=$(jq -r --arg chart "minio" '.[] | select(.name == $chart).app_version' /tmp/output.json)
+    crt=$(jq -r --arg chart "minio" '.[] | select(.name == $chart).chart' /tmp/output.json)
+    stt=$(jq -r --arg chart "minio" '.[] | select(.name == $chart).status' /tmp/output.json)
+    dat=$(jq -r --arg chart "minio" '.[] | select(.name == $chart).updated' /tmp/output.json)
   else
     ver=""; crt=""; stt=""; dat=""
   fi
@@ -5817,10 +5825,10 @@ echo gaga4
 
   cmdLoop helm ls -n $NAMESPACE -o json > /tmp/output.json
   if [ -s /tmp/output.json ]; then
-    ver=$(jq -r --arg chart "gitlab" '.[] /tmp/output.json | select(.name == $chart).app_version')
-    crt=$(jq -r --arg chart "gitlab" '.[] /tmp/output.json | select(.name == $chart).chart')
-    stt=$(jq -r --arg chart "gitlab" '.[] /tmp/output.json | select(.name == $chart).status')
-    dat=$(jq -r --arg chart "gitlab" '.[] /tmp/output.json | select(.name == $chart).updated')
+    ver=$(jq -r --arg chart "gitlab" '.[] | select(.name == $chart).app_version' /tmp/output.json)
+    crt=$(jq -r --arg chart "gitlab" '.[] | select(.name == $chart).chart' /tmp/output.json)
+    stt=$(jq -r --arg chart "gitlab" '.[] | select(.name == $chart).status' /tmp/output.json)
+    dat=$(jq -r --arg chart "gitlab" '.[] | select(.name == $chart).updated' /tmp/output.json)
   else
     ver=""; crt=""; stt=""; dat=""
   fi
@@ -6012,10 +6020,10 @@ installTanzuDataPostgres() {
 
   cmdLoop helm ls -n $NAMESPACE -o json > /tmp/output.json
   if [ -s /tmp/output.json ]; then
-    ver=$(jq -r --arg chart "postgres-operator" '.[] /tmp/output.json | select(.name == $chart).app_version')
-    crt=$(jq -r --arg chart "postgres-operator" '.[] /tmp/output.json | select(.name == $chart).chart')
-    stt=$(jq -r --arg chart "postgres-operator" '.[] /tmp/output.json | select(.name == $chart).status')
-    dat=$(jq -r --arg chart "postgres-operator" '.[] /tmp/output.json | select(.name == $chart).updated')
+    ver=$(jq -r --arg chart "postgres-operator" '.[] | select(.name == $chart).app_version' /tmp/output.json)
+    crt=$(jq -r --arg chart "postgres-operator" '.[] | select(.name == $chart).chart' /tmp/output.json)
+    stt=$(jq -r --arg chart "postgres-operator" '.[] | select(.name == $chart).status' /tmp/output.json)
+    dat=$(jq -r --arg chart "postgres-operator" '.[] | select(.name == $chart).updated' /tmp/output.json)
   else
     ver=""; crt=""; stt=""; dat=""
   fi
@@ -6028,10 +6036,10 @@ installTanzuDataPostgres() {
 
   cmdLoop helm ls -n $NAMESPACE -o json > /tmp/output.json
   if [ -s /tmp/output.json ]; then
-    ver=$(jq -r --arg chart "tdh-pgadmin" '.[] /tmp/output.json | select(.name == $chart).app_version')
-    crt=$(jq -r --arg chart "tdh-pgadmin" '.[] /tmp/output.json | select(.name == $chart).chart')
-    stt=$(jq -r --arg chart "tdh-pgadmin" '.[] /tmp/output.json | select(.name == $chart).status')
-    dat=$(jq -r --arg chart "tdh-pgadmin" '.[] /tmp/output.json | select(.name == $chart).updated')
+    ver=$(jq -r --arg chart "tdh-pgadmin" '.[] | select(.name == $chart).app_version' /tmp/output.json)
+    crt=$(jq -r --arg chart "tdh-pgadmin" '.[] | select(.name == $chart).chart' /tmp/output.json)
+    stt=$(jq -r --arg chart "tdh-pgadmin" '.[] | select(.name == $chart).status' /tmp/output.json)
+    dat=$(jq -r --arg chart "tdh-pgadmin" '.[] | select(.name == $chart).updated' /tmp/output.json)
   else
     ver=""; crt=""; stt=""; dat=""
   fi
@@ -11235,23 +11243,37 @@ getServiceAccountSecret() {
 }
 
 # ------------------------------------------------------------------------------------------
-# Function Name ......: getSecretObject
-# Function Purpose ...: Get ServiceAccount Secret
+# Function Name ......: copySecretObject
+# Function Purpose ...: Copy a secret Object to another namespace
 # ------------------------------------------------------------------------------------------
 # Argument ($1) ......: Service Account name
 # ------------------------------------------------------------------------------------------
 # Return Value .......: Service Account Secret
 # ------------------------------------------------------------------------------------------
-getSecretObject() {
-  SECRET=$1
+copySecretObject() {
+  SOURCE_NAMESPACE=$1
+  TARGET_NAMESPACE=$2
+  SECRET_NAME=$3
 
-  cmdLoop kubectl get serviceaccount $SERVICE_ACCOUNT -o json > /tmp/output.json
-  if [ -s /tmp/output.json ]; then
-    sec=$(jq -r --arg key "$SERVICE_ACCOUNT" 'select(.metadata.name == $key).secrets[].name' /tmp/output.json)
+  # --- VERIFY IF SECRET ALREADY EXISTS --
+  cmdLoop kubectl get secret -n $NAMESPACE -o json > /tmp/output.yaml
+  if [ -s /tmp/output.yaml ]; then 
+    nam=$(jq -r --arg key $SECRET_NAME '.items[].metadata | select(.name == $key).name' /tmp/output.yaml) 
+    if [ "$nam" == "$SECRET_NAME" ]; then 
+      cndLoop kubectl -n $TARGET_NAMESPACE delete secret $SECRET_NAME > /dev/null 2>&1
+    fi
   fi
 
-  echo $sec
+  # --- COPY SECRET ---
+  cmdLoop kubectl get secret tanzu-demo-hub-tls --namespace=default -oyaml | \
+          grep -v '^\s*namespace:\s' > /tmp/tmpfile.yaml
+
+  if [ -s /tmp/tmpfile.yaml ]; then 
+    cmdLoop kubectl apply --namespace=$NAMESPACE -f /tmp/tmpfile.yaml
+  fi
 }
+
+#copySecretObject default $NAMESPACE tanzu-demo-hub-tls
 
 #  ROOT_USER=$(kubectl get secret --namespace minio minio -o jsonpath="{.data.root-user}" | base64 --decode)
 #  ROOT_PASSWORD=$(kubectl get secret --namespace minio minio -o jsonpath="{.data.root-password}" | base64 --decode)
