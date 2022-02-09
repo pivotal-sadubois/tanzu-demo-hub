@@ -11282,22 +11282,14 @@ createClusterRoleBinding() {
   CLUSTER_ROLE=$2
   SERVICE_ACCOUNT=$3
 
-echo "cmdLoop kubectl get clusterrolebinding -o json > /tmp/output.json"
   cmdLoop kubectl get clusterrolebinding -o json > /tmp/output.json
-echo xxxx1
   if [ -s /tmp/output.json ]; then
-echo xxxx2
     crb=$(jq -r --arg key "$CLUSTER_TOLE_BINDING" '.items[] | select(.metadata.name == $key).metadata.name' /tmp/output.json) 
-echo "xxxx3 CRB:$crb"
-    if [ "crb" != "" ]; then
-echo xxxx21
-echo "cmdLoop kubectl delete clusterrolebinding $CLUSTER_TOLE_BINDING > /dev/null 2>&1"
+    if [ "$crb" != "" ]; then
       cmdLoop kubectl delete clusterrolebinding $CLUSTER_TOLE_BINDING > /dev/null 2>&1
     fi
   fi
 
-echo xxxx4
-echo "cmdLoop kubectl create clusterrolebinding $CLUSTER_TOLE_BINDING --clusterrole=$CLUSTER_ROLE --serviceaccount=$SERVICE_ACCOUNT"
   cmdLoop kubectl create clusterrolebinding $CLUSTER_TOLE_BINDING --clusterrole=$CLUSTER_ROLE --serviceaccount=$SERVICE_ACCOUNT 
 }
 
