@@ -5469,12 +5469,13 @@ installKubeapps() {
     runningPods kubeapps
 
     messagePrint " ▪ Create Serviceaccount"              "kubeapps-operator"
-    kubectl delete --namespace default serviceaccount kubeapps-operator > /dev/null 2>&1
-    kubectl create --namespace default serviceaccount kubeapps-operator > /dev/null 2>&1
+#hallo
+    loopCmd kubectl delete --namespace default serviceaccount kubeapps-operator > /dev/null 2>&1
+    loopCmd kubectl create --namespace default serviceaccount kubeapps-operator > /dev/null 2>&1
 
     messagePrint " ▪ Create Cluster Role Binding"        "default:kubeapps-operator"
-    kubectl delete clusterrolebinding kubeapps-operator > /dev/null 2>&1
-    kubectl create clusterrolebinding kubeapps-operator --clusterrole=cluster-admin --serviceaccount=default:kubeapps-operator
+    loopCmd delete clusterrolebinding kubeapps-operator > /dev/null 2>&1
+    loopCmd create clusterrolebinding kubeapps-operator --clusterrole=cluster-admin --serviceaccount=default:kubeapps-operator
 
     messagePrint " ▪ Kubeapps Dashboard deployed"        "https://kubeapps.$DOMAIN"
   fi
@@ -11115,12 +11116,40 @@ waitForKappServices() {
   fi
 }
 
+#    loopCmd kubectl delete --namespace default serviceaccount kubeapps-operator > /dev/null 2>&1
+#    loopCmd kubectl create --namespace default serviceaccount kubeapps-operator > /dev/null 2>&1
+
+# ------------------------------------------------------------------------------------------
+# Function Name ......: createServiceAccount
+# Function Purpose ...: Create a new Service Account (delete if it already exists)
+# ------------------------------------------------------------------------------------------
+# Argument ($1) ......: Namespace
+#          ($2) ......: Service Account name
+# ------------------------------------------------------------------------------------------
+# Return Value .......: 0 - SUCCEED, 1 - FAILED
+# ------------------------------------------------------------------------------------------
+createServiceAccount() {
+  NAMESPACE=$1
+  SERVICE_ACCOUNT=$2
+
+  loopCmd kubectl delete --namespace default serviceaccount kubeapps-operator > /tmp/output.json
+
+}
+
+# ------------------------------------------------------------------------------------------
+# Function Name ......: loopCmd
+# Function Purpose ...: Execute Command in a Loop until its working
+# ------------------------------------------------------------------------------------------
+# Argument ($1) ......: Command to execure
+# ------------------------------------------------------------------------------------------
+# Return Value .......: 0 - SUCCEED, 1 - FAILED
+# ------------------------------------------------------------------------------------------
 loopCmd() {
   CMD="$*"
 
   cnt=0; ret=1
   while [ $ret -ne 0 -a $cnt -lt 5 ]; do
-    $CMD > /tmp/error.log 2>&1; ret=$?
+    $CMD > /tmp/loopCmdIgnore.out 2>/tmp/error.log; ret=$?
     [ $ret -eq 0 ] && break
     let cnt=cnt+1
     sleep 30
@@ -11140,4 +11169,6 @@ loopCmd() {
     exit 1
   fi
 
+  cat /tmp/loopCmdIgnore.out
 }
+
