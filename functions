@@ -10078,7 +10078,7 @@ TanzuPackage_LocalStorage() {
   pkg_ver=$(jq -r '.[]."package-version"' /tmp/pkg.json)
 
   if [ "$pkg_stt" != "Reconcile succeeded" -a "$pkg_stt" != "Reconciling" ]; then
-    echo "ERROR: failed to reconsile Tanzu Package ($PACKAGE_NAME)"
+    echo "ERROR: failed to reconsile Tanzu Package ($PACKAGE_NAME) status $pkg_stt"
     messageLine
     tanzu package installed get $PACKAGE_NAME -n $PACKAGE_NAMESPACE
     messageLine
