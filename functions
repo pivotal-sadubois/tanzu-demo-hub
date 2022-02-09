@@ -11132,7 +11132,9 @@ createServiceAccount() {
   NAMESPACE=$1
   SERVICE_ACCOUNT=$2
 
-  loopCmd kubectl delete --namespace default serviceaccount kubeapps-operator > /tmp/output.json
+  loopCmd kubectl --namespace $NAMESPACE get serviceaccount SERVICE_ACCOUNT > /tmp/output.json
+
+echo "/tmp/output.json"
 
 }
 
