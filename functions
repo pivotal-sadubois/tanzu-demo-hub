@@ -10203,10 +10203,24 @@ TanzuPackage_LocalStorage() {
     fi
   fi
 
-  tanzu package installed get $PACKAGE_NAME -n $PACKAGE_NAMESPACE -o json > /tmp/pkg.json
-  pkg_stt=$(jq -r '.[]."status"' /tmp/pkg.json)
-  pkg_nam=$(jq -r '.[]."package-name"' /tmp/pkg.json)
-  pkg_ver=$(jq -r '.[]."package-version"' /tmp/pkg.json)
+  cnt=0
+  while [ $cnt -lt 5 ]; do
+    cmdLoop tanzu package installed get $PACKAGE_NAME -n $PACKAGE_NAMESPACE -o json > /tmp/pkg.json
+    pkg_stt=$(jq -r '.[]."status"' /tmp/pkg.json)
+    pkg_nam=$(jq -r '.[]."package-name"' /tmp/pkg.json)
+    pkg_ver=$(jq -r '.[]."package-version"' /tmp/pkg.json)
+
+    [ "$pkg_stt" == "Reconcile succeeded" -o "$pkg_stt" == "Reconciling" ] && break
+
+    let cnt=cnt+1
+    sleep 60
+  done
+
+  messageTitle "Verify $PACKAGE_DES"
+  messagePrint " ▪ Tanzu Package ($PACKAGE_NAME)"                 "$pkg_nam"
+  messagePrint " ▪ Tanzu Package ($PACKAGE_NAME) Namespace"       "$NAMESPACE"
+  messagePrint " ▪ Tanzu Package ($PACKAGE_NAME) Version"         "$pkg_ver"
+  messagePrint " ▪ Tanzu Package ($PACKAGE_NAME) Status"          "$pkg_stt"
 
   if [ "$pkg_stt" != "Reconcile succeeded" -a "$pkg_stt" != "Reconciling" ]; then
     echo "ERROR: failed to reconsile Tanzu Package ($PACKAGE_NAME) status $pkg_stt"
@@ -10223,12 +10237,6 @@ TanzuPackage_LocalStorage() {
 
     exit 1
   fi
-
-  messageTitle "Verify $PACKAGE_DES"
-  messagePrint " ▪ Tanzu Package ($PACKAGE_NAME)"                 "$pkg_nam"
-  messagePrint " ▪ Tanzu Package ($PACKAGE_NAME) Namespace"       "$NAMESPACE"
-  messagePrint " ▪ Tanzu Package ($PACKAGE_NAME) Version"         "$pkg_ver"
-  messagePrint " ▪ Tanzu Package ($PACKAGE_NAME) Status"          "$pkg_stt"
 
   # --- STORE SETTINGS IN CONFIGMAP ---
   uodateConfigMap tanzu-demo-hub TDH_CERTMANAGER_ENABLED          "true"
@@ -10259,12 +10267,11 @@ TanzuPackage_CertManager() {
   PACKAGE_ID=$2
   PACKAGE_DES="Certificate management (cert-manager)"
 
-  pkg=$(tanzu package installed get $PACKAGE_NAME -n $PACKAGE_NAMESPACE -o json 2>/dev/null | jq -r '.[].name')
+  pkg=$(cmdLoop tanzu package installed get $PACKAGE_NAME -n $PACKAGE_NAMESPACE -o json 2>/dev/null | jq -r '.[].name')
   if [ "$pkg" != "$PACKAGE_NAME" ]; then
     package_ver=$(tanzu package available list $PACKAGE_ID -A -o json | jq -r '.[]."version"' | tail -1)
     package_rel=$(tanzu package available list $PACKAGE_ID -A -o json | jq -r '.[]."released-at"' | tail -1)
 
-#gaga
     messageTitle "Installing $PACKAGE_DES in $PACKAGE_NAMESPACE"
     messagePrint " ▪ Tanzu Package ($PACKAGE_NAME)"   "$PACKAGE_ID ($package_ver/$package_rel)"
 
@@ -10296,10 +10303,24 @@ TanzuPackage_CertManager() {
     fi
   fi
 
-  tanzu package installed get $PACKAGE_NAME -n $PACKAGE_NAMESPACE -o json > /tmp/pkg.json
-  pkg_stt=$(jq -r '.[]."status"' /tmp/pkg.json)
-  pkg_nam=$(jq -r '.[]."package-name"' /tmp/pkg.json)
-  pkg_ver=$(jq -r '.[]."package-version"' /tmp/pkg.json)
+  cnt=0
+  while [ $cnt -lt 5 ]; do
+    cmdLoop tanzu package installed get $PACKAGE_NAME -n $PACKAGE_NAMESPACE -o json > /tmp/pkg.json
+    pkg_stt=$(jq -r '.[]."status"' /tmp/pkg.json)
+    pkg_nam=$(jq -r '.[]."package-name"' /tmp/pkg.json)
+    pkg_ver=$(jq -r '.[]."package-version"' /tmp/pkg.json)
+
+    [ "$pkg_stt" == "Reconcile succeeded" -o "$pkg_stt" == "Reconciling" ] && break
+
+    let cnt=cnt+1
+    sleep 60
+  done
+
+  messageTitle "Verify $PACKAGE_DES"
+  messagePrint " ▪ Tanzu Package ($PACKAGE_NAME)"                 "$pkg_nam"
+  messagePrint " ▪ Tanzu Package ($PACKAGE_NAME) Namespace"       "$NAMESPACE"
+  messagePrint " ▪ Tanzu Package ($PACKAGE_NAME) Version"         "$pkg_ver"
+  messagePrint " ▪ Tanzu Package ($PACKAGE_NAME) Status"          "$pkg_stt"
 
   if [ "$pkg_stt" != "Reconcile succeeded" -a "$pkg_stt" != "Reconciling" ]; then
     echo "ERROR: failed to reconsile Tanzu Package ($PACKAGE_NAME)"
@@ -10316,12 +10337,6 @@ TanzuPackage_CertManager() {
 
     exit 1
   fi
-
-  messageTitle "Verify $PACKAGE_DES"
-  messagePrint " ▪ Tanzu Package ($PACKAGE_NAME)"                 "$pkg_nam"
-  messagePrint " ▪ Tanzu Package ($PACKAGE_NAME) Namespace"       "$NAMESPACE"
-  messagePrint " ▪ Tanzu Package ($PACKAGE_NAME) Version"         "$pkg_ver"
-  messagePrint " ▪ Tanzu Package ($PACKAGE_NAME) Status"          "$pkg_stt"
 
   # --- STORE SETTINGS IN CONFIGMAP ---
   uodateConfigMap tanzu-demo-hub TDH_CERTMANAGER_ENABLED          "true"
@@ -10500,10 +10515,27 @@ TanzuPackage_Harbor () {
     fi
   fi
 
-  tanzu package installed get $PACKAGE_NAME -n $PACKAGE_NAMESPACE -o json > /tmp/pkg.json
-  pkg_stt=$(jq -r '.[]."status"' /tmp/pkg.json)
-  pkg_nam=$(jq -r '.[]."package-name"' /tmp/pkg.json)
-  pkg_ver=$(jq -r '.[]."package-version"' /tmp/pkg.json)
+  cnt=0
+  while [ $cnt -lt 5 ]; do
+    cmdLoop tanzu package installed get $PACKAGE_NAME -n $PACKAGE_NAMESPACE -o json > /tmp/pkg.json
+    pkg_stt=$(jq -r '.[]."status"' /tmp/pkg.json)
+    pkg_nam=$(jq -r '.[]."package-name"' /tmp/pkg.json)
+    pkg_ver=$(jq -r '.[]."package-version"' /tmp/pkg.json)
+
+    [ "$pkg_stt" == "Reconcile succeeded" -o "$pkg_stt" == "Reconciling" ] && break
+
+    let cnt=cnt+1
+    sleep 60
+  done
+
+  messageTitle "Verify $PACKAGE_DES"
+  messagePrint " ▪ Tanzu Package ($PACKAGE_NAME)"               "$pkg_nam"
+  messagePrint " ▪ Tanzu Package ($PACKAGE_NAME) Namespace"     "$NAMESPACE"
+  messagePrint " ▪ Tanzu Package ($PACKAGE_NAME) Version"       "$pkg_ver"
+  messagePrint " ▪ Tanzu Package ($PACKAGE_NAME) Status"        "$pkg_stt"
+  messagePrint " ▪ Tanzu Package ($PACKAGE_NAME) FQDN"          "https://harbor.apps-contour.$TDH_ENVNAME.$AWS_HOSTED_DNS_DOMAIN"
+  messagePrint " ▪ Tanzu Package ($PACKAGE_NAME) USer:    "     "admin"
+  messagePrint " ▪ Tanzu Package ($PACKAGE_NAME) Password:"     "$TDH_HARBOR_ADMIN_PASSWORD"
 
   pkg_stt="Reconciling" ### sdubois 12-01-3033 beacuse of problems witj Reconsiling
   if [ "$pkg_stt" != "Reconcile succeeded" -a "$pkg_stt" != "Reconciling" ]; then
@@ -10521,44 +10553,6 @@ TanzuPackage_Harbor () {
 
     exit 1
   fi
-
-  messageTitle "Verify $PACKAGE_DES"
-  messagePrint " ▪ Tanzu Package ($PACKAGE_NAME)"               "$pkg_nam"
-  messagePrint " ▪ Tanzu Package ($PACKAGE_NAME) Namespace"     "$NAMESPACE"
-  messagePrint " ▪ Tanzu Package ($PACKAGE_NAME) Version"       "$pkg_ver"
-  messagePrint " ▪ Tanzu Package ($PACKAGE_NAME) Status"        "$pkg_stt"
-  messagePrint " ▪ Tanzu Package ($PACKAGE_NAME) FQDN"          "https://harbor.apps-contour.$TDH_ENVNAME.$AWS_HOSTED_DNS_DOMAIN"
-  messagePrint " ▪ Tanzu Package ($PACKAGE_NAME) USer:    "     "admin"
-  messagePrint " ▪ Tanzu Package ($PACKAGE_NAME) Password:"     "$TDH_HARBOR_ADMIN_PASSWORD"
-
-#  # --- VERIFY DNS DOMAIN ---
-#  verifyHostedZone ${TDH_ENVNAME}.$AWS_HOSTED_DNS_DOMAIN
-#
-#  [ "$TDH_TOOLS" == "tdh-tools" ] && CONTOUR_NS=tanzu-system-ingress || CONTOUR_NS=projectcontour
-#  [ "$TDH_TOOLS" == "tdh-tools" ] && CONTOUR_NS=$NAMESPACE || CONTOUR_NS=projectcontour
-#
-#  ipa=""; cnt=0
-#  while [ "$ipa" == "" -a $cnt -lt 15 ]; do
-#    #ipa=$(kubectl describe svc envoy --namespace $CONTOUR_NS | egrep "^LoadBalancer Ingress:" | awk '{ print $NF }')
-#    ipa=$(kubectl get httpproxy harbor-httpproxy -n $NAMESPACE -o json | jq -r '.status.loadBalancer.ingress[].hostname') 
-#    [ "$ipa" != "" ] && break
-#    let cnt=cnt+1
-#    sleep 30
-#  done
-#
-#  if [ "$ipa" == "" ]; then
-#    echo "ERROR: Failed to gather IP Adress of the ingress-contour-envoy service in namespace ingress-contour"
-#    echo "       Please check manually:"
-#    echo "       => kubectl get svc --namespace $NAMESPACE"
-#    exit 1
-#  fi
-#
-#  # --- SET DNS RECORD ---
-#  if [ "$TDH_INFRASTRUCTURE" == "minikube" -o "$TDH_INFRASTRUCTURE" == "vSphere" -o "$TDH_INFRASTRUCTURE" == "Azure" -o "$TDH_INFRASTRUCTURE" == "docker" ]; then
-#    setDNSrecord "$ipa" "${TDH_ENVNAME}" "${AWS_HOSTED_DNS_DOMAIN}" "*.apps-contour" "A"
-#  else
-#    setDNSalias "$ipa" "${TDH_ENVNAME}" "${AWS_HOSTED_DNS_DOMAIN}" "*.apps-contour" "A"
-#  fi
 
   # --- STORE SETTINGS IN CONFIGMAP ---
   uodateConfigMap tanzu-demo-hub TDH_HARBOR_REGISTRY_ENABLED          "true"
@@ -10734,10 +10728,18 @@ TanzuPackage_Contour() {
     fi
   fi
 
-  tanzu package installed get $PACKAGE_NAME -n $PACKAGE_NAMESPACE -o json > /tmp/pkg.json
-  pkg_stt=$(jq -r '.[]."status"' /tmp/pkg.json)
-  pkg_nam=$(jq -r '.[]."package-name"' /tmp/pkg.json)
-  pkg_ver=$(jq -r '.[]."package-version"' /tmp/pkg.json)
+  cnt=0
+  while [ $cnt -lt 5 ]; do
+    cmdLoop tanzu package installed get $PACKAGE_NAME -n $PACKAGE_NAMESPACE -o json > /tmp/pkg.json
+    pkg_stt=$(jq -r '.[]."status"' /tmp/pkg.json)
+    pkg_nam=$(jq -r '.[]."package-name"' /tmp/pkg.json)
+    pkg_ver=$(jq -r '.[]."package-version"' /tmp/pkg.json)
+
+    [ "$pkg_stt" == "Reconcile succeeded" -o "$pkg_stt" == "Reconciling" ] && break
+
+    let cnt=cnt+1
+    sleep 60
+  done
 
   messageTitle "Verify $PACKAGE_DES"      
   messagePrint " ▪ Tanzu Package ($PACKAGE_NAME)"               "$pkg_nam"
