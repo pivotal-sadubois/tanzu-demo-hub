@@ -11133,15 +11133,25 @@ dockerPullImages() {
 runningPods() {
   NAMESPACE=$1
 
-  tot=$(cmdLoop kubectl get pods -n $NAMESPACE | sed '1d' | wc -l | awk '{ print $1 }')
-  cnt=$(cmdLoop kubectl get pods -n $NAMESPACE | sed '1d' | grep -vc Running)
+  cmdLoop kubectl get pods -A -o json > /tmp/output.yaml
+  tot=$(jq -r --arg key "$NAMESPACE" '.items[] | select(.metadata.namespace == $key).status.phase' /tmp/output.yaml | \
+        wc -l | awk '{ print $1 }')
+  cnt=$(jq -r --arg key "$NAMESPACE" '.items[] | select(.metadata.namespace == $key).status.phase' /tmp/output.yaml | \
+        egrep -vc "Running|Completed")
+
+  #DELETEME
+  #tot=$(cmdLoop kubectl get pods -n $NAMESPACE | sed '1d' | wc -l | awk '{ print $1 }')
+  #cnt=$(cmdLoop kubectl get pods -n $NAMESPACE | sed '1d' | grep -vc Running)
   let bsy=tot-cnt
 
   messageCountInit " ▪ Waiting for pods to start within namespace $NAMESPACE" $tot $bsy
 
   cnt=1; 
   while [ $cnt -ne 0 ]; do
-    cnt=$(cmdLoop kubectl get pods -n $NAMESPACE | sed '1d' | egrep -vc "Running|Completed")
+    cmdLoop kubectl get pods -A -o json > /tmp/output.yaml
+    cnt=$(jq -r --arg key "$NAMESPACE" '.items[] | select(.metadata.namespace == $key).status.phase' /tmp/output.yaml | \
+        egrep -vc "Running|Completed")
+
     let bsy=tot-cnt
     messageCount $bsy
 
