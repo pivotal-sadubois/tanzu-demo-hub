@@ -5358,14 +5358,18 @@ installJenkins() {
   fi
 
   cmdLoop helm ls -n $NAMESPACE -o json > /tmp/output.json
+echo gaga1
   if [ -s /tmp/output.json ]; then
-    ver=$(jq -r --arg chart "jenkins" '.[] | select(.name == $chart).app_version' /tmp/output.json)
-    crt=$(jq -r --arg chart "jenkins" '.[] | select(.name == $chart).chart' /tmp/output.json)
-    stt=$(jq -r --arg chart "jenkins" '.[] | select(.name == $chart).status' /tmp/output.json)
-    dat=$(jq -r --arg chart "jenkins" '.[] | select(.name == $chart).updated' /tmp/output.json)
+echo gaga2
+    ver=$(jq -r --arg chart "$HELMCHART" '.[] | select(.name == $chart).app_version' /tmp/output.json)
+    crt=$(jq -r --arg chart "$HELMCHART" '.[] | select(.name == $chart).chart' /tmp/output.json)
+    stt=$(jq -r --arg chart "$HELMCHART" '.[] | select(.name == $chart).status' /tmp/output.json)
+    dat=$(jq -r --arg chart "$HELMCHART" '.[] | select(.name == $chart).updated' /tmp/output.json)
   else 
     ver=""; crt=""; stt=""; dat=""
   fi
+#hallo
+echo "daga stt:$stt"
 
   cmdLoop kubectl get secret --namespace jenkins jenkins -o json > /tmp/output.json
   if [ -s /tmp/output.json ]; then 
@@ -5629,21 +5633,22 @@ installMinio() {
 
   cmdLoop helm ls -n $NAMESPACE -o json > /tmp/output.json
   if [ -s /tmp/output.json ]; then
-    ver=$(jq -r --arg chart "minio" '.[] | select(.name == $chart).app_version' /tmp/output.json)
-    crt=$(jq -r --arg chart "minio" '.[] | select(.name == $chart).chart' /tmp/output.json)
-    stt=$(jq -r --arg chart "minio" '.[] | select(.name == $chart).status' /tmp/output.json)
-    dat=$(jq -r --arg chart "minio" '.[] | select(.name == $chart).updated' /tmp/output.json)
+    ver=$(jq -r --arg chart "$HELMCHART" '.[] | select(.name == $chart).app_version' /tmp/output.json)
+    crt=$(jq -r --arg chart "$HELMCHART" '.[] | select(.name == $chart).chart' /tmp/output.json)
+    stt=$(jq -r --arg chart "$HELMCHART" '.[] | select(.name == $chart).status' /tmp/output.json)
+    dat=$(jq -r --arg chart "$HELMCHART" '.[] | select(.name == $chart).updated' /tmp/output.json)
   else
     ver=""; crt=""; stt=""; dat=""
   fi
+#hallo
 
   cmdLoop kubectl -n $NAMESPACE get secrets minio -o json > /tmp/output.json
   ROOT_USER=$(jq -r '.data."root-user"' /tmp/output.json | base64 --decode)
   ROOT_PASSWORD=$(jq -r '.data."root-password"' /tmp/output.json | base64 --decode)
 
   # DELETEME
-  ROOT_USER=$(kubectl get secret --namespace minio minio -o jsonpath="{.data.root-user}" | base64 --decode)
-  ROOT_PASSWORD=$(kubectl get secret --namespace minio minio -o jsonpath="{.data.root-password}" | base64 --decode)
+  #ROOT_USER=$(kubectl get secret --namespace minio minio -o jsonpath="{.data.root-user}" | base64 --decode)
+  #ROOT_PASSWORD=$(kubectl get secret --namespace minio minio -o jsonpath="{.data.root-password}" | base64 --decode)
 
   messagePrint " ▪ Verify Minio S3"                "$crt"
   messagePrint "   Helm Chart Name"                "minio"
@@ -11516,10 +11521,6 @@ copySecretObject() {
     fi
   fi
 }
-
-
-#  ROOT_USER=$(kubectl get secret --namespace minio minio -o jsonpath="{.data.root-user}" | base64 --decode)
-#  ROOT_PASSWORD=$(kubectl get secret --namespace minio minio -o jsonpath="{.data.root-password}" | base64 --decode)
 
 # ------------------------------------------------------------------------------------------
 # Function Name ......: cmdLoop
