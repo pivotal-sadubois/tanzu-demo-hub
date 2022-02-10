@@ -6003,7 +6003,7 @@ installTanzuDataPostgres() {
         fi
 
         messagePrint " ▪ Create Kubernetes Namespace" "postgres-operator"
-        deleteNAmespace $NAMESPACE
+        deleteNamespace $NAMESPACE
         createNamespace $NAMESPACE
 
         messagePrint " ▪ Deploy the Postgres operator" "postgres-operator"
