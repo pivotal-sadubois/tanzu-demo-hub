@@ -11154,7 +11154,7 @@ runningPods() {
   tot=$(jq -r --arg key "$NAMESPACE" '.items[] | select(.metadata.namespace == $key).status.phase' /tmp/output.yaml | \
         wc -l | awk '{ print $1 }')
   cnt=$(jq -r --arg key "$NAMESPACE" '.items[] | select(.metadata.namespace == $key).status.phase' /tmp/output.yaml | \
-        egrep -vc "Running|Completed")
+        egrep -vc "Running|Completed|Succeeded")
 
   #DELETEME
   #tot=$(cmdLoop kubectl get pods -n $NAMESPACE | sed '1d' | wc -l | awk '{ print $1 }')
@@ -11167,7 +11167,7 @@ runningPods() {
   while [ $cnt -ne 0 ]; do
     cmdLoop kubectl get pods -A -o json > /tmp/output.yaml
     cnt=$(jq -r --arg key "$NAMESPACE" '.items[] | select(.metadata.namespace == $key).status.phase' /tmp/output.yaml | \
-        egrep -vc "Running|Completed")
+        egrep -vc "Running|Completed|Succeeded")
 
     let bsy=tot-cnt
     messageCount $bsy
