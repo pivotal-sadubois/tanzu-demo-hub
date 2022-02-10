@@ -1472,7 +1472,6 @@ checkTMCintegration() {
         deleteHelmChart $NAMESPACE wavefront
         createNamespace $NAMESPACE > /dev/null 2>&1
         patchServiceAccount default $NAMESPACE
-        # kubectl patch serviceaccount wavefront-collector  -p '{"imagePullSecrets": [{"name": "tdh-docker-repo"}]}' -n -n wavefront
         patchServiceAccount wavefront-collector $NAMESPACE
 
         # --- GRACE TIME ---
@@ -3907,20 +3906,8 @@ VerifyServiceDependancies() {
     INGRESS_NAMESPACE=cert-manager
     HELM_CHART=jetstack/cert-manager
 
-    helm repo add bitnami https://charts.bitnami.com/bitnami > /dev/null 2>&1
-    if [ $? -ne 0 ]; then
-      echo "ERROR: failed to add helm registry https://charts.bitnami.com/bitnami"
-      if [ "$NATIVE" == "0" ]; then
-        echo "       => tools/${TDH_TOOLS}.sh" 
-        echo "          tdh-tools:/$ helm repo add bitnami https://charts.bitnami.com/bitnami"
-        echo "          tdh-tools:/$ exit"
-      else
-        echo "       => helm repo add bitnami https://charts.bitnami.com/bitnami"
-      fi
-      exit 1
-    fi
-
     messagePrint " ▪ Install Cert Manager" "bitnami/nginx-ingress-controller"
+    helmRepoAdd bitnami https://charts.bitnami.com/bitnami
     createNamespace $INGRESS_NAMESPACE > /dev/null 2>&1
 
     stt=$(helm list -n $INGRESS_NAMESPACE -o json | jq -r --arg key "cert-manager-" '.[] | select(.chart | contains($key)).status')
@@ -3944,21 +3931,8 @@ VerifyServiceDependancies() {
     INGRESS_NAMESPACE=ingress-nginx
     HELM_CHART=bitnami/nginx-ingress-controller
 
-    helm repo add bitnami https://charts.bitnami.com/bitnami > /dev/null 2>&1
-    if [ $? -ne 0 ]; then
-      echo "ERROR: failed to add helm registry https://charts.bitnami.com/bitnami"
-      if [ "$NATIVE" == "0" ]; then
-        echo "       => tools/${TDH_TOOLS}.sh" 
-        echo "          tdh-tools:/$ helm repo add bitnami https://charts.bitnami.com/bitnami"
-        echo "          tdh-tools:/$ exit"
-      else
-        echo "       => helm repo add bitnami https://charts.bitnami.com/bitnami"
-      fi
-
-      exit 1
-    fi
-
     messagePrint " ▪ Install Ingress Controller" "$HELM_CHART"
+    helmRepoAdd bitnami https://charts.bitnami.com/bitnami
     createNamespace $INGRESS_NAMESPACE > /dev/null 2>&1
 
     stt=$(helm list -n nginx-ingress -o json | jq -r --arg key "ngress-controller" '.[] | select(.chart | contains($key)).status')
@@ -4011,18 +3985,7 @@ VerifyServiceDependancies() {
       createNamespace $INGRESS_NAMESPACE > /dev/null 2>&1
     fi
 
-    helm repo add bitnami https://charts.bitnami.com/bitnami > /dev/null 2>&1
-    if [ $? -ne 0 ]; then
-      if [ "$NATIVE" == "0" ]; then
-        echo "       => tools/${TDH_TOOLS}.sh"
-        echo "          tdh-tools:/$ helm repo add bitnami https://charts.bitnami.com/bitnami"
-        echo "          tdh-tools:/$ exit"
-      else
-        echo "       => helm repo add bitnami https://charts.bitnami.com/bitnami"
-      fi
-
-      exit 1
-    fi
+    helmRepoAdd bitnami https://charts.bitnami.com/bitnami
 
     stt=$(helm list -n $INGRESS_NAMESPACE -o json | jq -r --arg key "contour-3" '.[] | select(.chart | contains($key)).status')
     if [ "$stt" != "deployed" ]; then
@@ -5458,7 +5421,7 @@ installKubeapps() {
     echo "      - kubeapps.$DOMAIN"                                                                                             >> $HELM_VALUES
     echo "    secretName: tanzu-demo-hub-tls"                                                                                   >> $HELM_VALUES
 
-    helm repo add bitnami https://charts.bitnami.com/bitnami > /dev/null 2>&1
+    helmRepoAdd bitnami https://charts.bitnami.com/bitnami
 
     messagePrint " ▪ Deploy the Kubeapps Helm Chart" "kubeapps"
     cnt=0; ret=1; stt="notdeployed"
@@ -5525,6 +5488,14 @@ installKubeapps() {
     sleep 30
   done
 
+  messagePrint " ▪ Verify Helm Chart $HELMCHART"   "$crt"
+  messagePrint "   Helm Chart Name"                "$HELMCHART"
+  messagePrint "   Helm Chart Version"             "$ver"
+  messagePrint "   Helm Chart Status"              "$stt"
+  messagePrint "   Helm Chart Installed/Updated"   "$dat"
+  messagePrint "   Kubeapps Internal Name"         "kubeapps.kubeapps.svc.cluster.local"
+  messagePrint "   Kubeapps Management Portal"     "https://kubeapps.$DOMAIN"
+
   if [ $ret -ne 0 ]; then
     logMessages /tmp/error.log
     echo "ERROR: Failed to get Kubeapps Token"
@@ -5538,14 +5509,6 @@ installKubeapps() {
 
     exit 1
   fi
-
-  messagePrint " ▪ Verify Helm Chart $HELMCHART"   "$crt"
-  messagePrint "   Helm Chart Name"                "minio"
-  messagePrint "   Helm Chart Version"             "$ver"
-  messagePrint "   Helm Chart Status"              "$stt"
-  messagePrint "   Helm Chart Installed/Updated"   "$dat"
-  messagePrint "   Kubeapps Internal Name"         "kubeapps.kubeapps.svc.cluster.local"
-  messagePrint "   Kubeapps Management Portal"     "https://kubeapps.$DOMAIN"
 
   messageLine
   echo "KUBEAPP TOKEN: $KUBEAPPS_TOKEN"
@@ -5574,7 +5537,7 @@ installMinio() {
   messageTitle "Minio S3 Object Storage"
   cnt=$(helm list -A -q | egrep -c "^minio")
   if [ $cnt -eq 0 ]; then
-    messagePrint " ▪ Installing Minio" "bitnami/minio"
+    messagePrint " ▪ Installing Minio" "bitnami/$HELMCHART"
     createNamespace $NAMESPACE > /dev/null 2>&1
 
     # --- COPY SECRET TO NAMESPACE ---
@@ -5602,20 +5565,32 @@ installMinio() {
     echo "    - name: tdh-postgres-backup.minio.$DOMAIN"                                                                        >> $HELM_VALUES
     echo "      path: /"                                                                                                        >> $HELM_VALUES
 
-    messagePrint " ▪ Deploy the Minio Helm Chart" "minio"
-    helm repo add bitnami https://charts.bitnami.com/bitnami > /dev/null 2>&1
+    # --- ADD REPOSITORY --
+    helmRepoAdd bitnami https://charts.bitnami.com/bitnami
 
-    cnt=0; ret=1
-    while [ $ret -ne 0 -a $cnt -lt 5 ]; do
-      helm install minio bitnami/minio --namespace $NAMESPACE -f ${HELM_VALUES} > /tmp/error.log 2>&1; ret=$?
-      [ $ret -eq 0 ] && break
+    messagePrint " ▪ Deploy the Minio Helm Chart" "minio"
+    cnt=0; ret=1; stt="notdeployed"
+    while [ $ret -ne 0 -a $cnt -lt 5 -a "$stt" != "deployed" ]; do
+      helm install $HELMCHART bitnami/$HELMCHART --namespace $NAMESPACE -f ${HELM_VALUES} > /tmp/error.log 2>&1; ret=$?
+
+      # --- WAIT FOR PODS TO GET STARTED ---
+      runningPods $NAMESPACE
+
+      cmdLoop helm ls -n $NAMESPACE -o json > /tmp/output.json
+      stt=$(jq -r --arg chart "$HELMCHART" '.[] | select(.name == $chart).status' /tmp/output.json)
+
+      [ $ret -eq 0 -a "$stt" == "deployed" ] && break
+
+      # --- DELTE FAILED HELM CHART ---
+      deleteHelmChart $NAMESPACE $HELMCHART
+
       let cnt=cnt+1
       sleep 30
     done
 
-    if [ $ret -ne 0 ]; then
+    if [ $ret -ne 0 -o "$stt" != "deployed" ]; then
       logMessages /tmp/error.log
-      echo "ERROR: Failed to deploy Minio Helm Chart"
+      echo "ERROR: Failed to deploy $HELMCHART Helm Chart"
       if [ "$NATIVE" == "0" ]; then
         echo "       => tools/${TDH_TOOLS}.sh"
         echo "          tdh-tools:/$ helm install minio --namespace $NAMESPACE bitnami/minio -f ${HELM_VALUES}"
@@ -6629,18 +6604,11 @@ InstallMetallLB() {
   if [ $cnt -eq 0 ]; then
     messageTitle "Installing MetallLB Loadbalancer"
     
-    helm repo add metallb https://metallb.github.io/metallb > /dev/null 2>&1
-    if [ $? -ne 0 ]; then
-      echo "ERROR: failed to add helm registry https://metallb.github.io/metallb"; exit 1
-    fi
-
-    kubectl get namespace $NAMESPACE > /dev/null 2>&1
-    if [ $? -ne 0 ]; then 
-      messagePrint " ▪ Cleanup from privious installation"
-      deleteNamespace $NAMESPACE > /dev/null 2>&1
-    fi
+    messagePrint " ▪ Add Helm Repo (metallb)" "https://metallb.github.io/metallb"
+    helmRepoAdd metallb https://metallb.github.io/metallb
 
     messagePrint " ▪ Create Namespace" "$NAMESPACE"
+    deleteNamespace $NAMESPACE 
     createNamespace $NAMESPACE > /dev/null 2>&1
     patchServiceAccount default $NAMESPACE
 
@@ -6697,7 +6665,7 @@ InstallContour() {
     messagePrint " ▪ Create Namespace" "$NAMESPACE" 
     deleteNamespace $NAMESPACE > /dev/null 2>&1
     createNamespace $NAMESPACE > /dev/null 2>&1
-    helm repo add bitnami https://charts.bitnami.com/bitnami > /dev/null 2>&1
+    helmRepoAdd bitnami https://charts.bitnami.com/bitnami
 
     messagePrint " ▪ Create Docker secret"  "tdh-docker-repo"
     cndLoop kubectl -n $NAMESPACE create secret docker-registry tdh-docker-repo \
@@ -7096,7 +7064,10 @@ InstallCertManager() {
 
     deleteNamespace $NAMESPACE > /dev/null 2>&1
     createNamespace $NAMESPACE > /dev/null 2>&1
-    helm repo add jetstack https://charts.jetstack.io -n $NAMESPACE > /dev/null 2>&1
+    helmRepoAdd jetstack https://charts.jetstack.io
+
+    #DELETEME
+    #helm repo add jetstack https://charts.jetstack.io -n $NAMESPACE > /dev/null 2>&1
     #helm install cert-manager jetstack/cert-manager --namespace cert-manager \
     #   --version v1.0.2 --set installCRDs=true > /dev/null 2>&1
 
@@ -11462,7 +11433,8 @@ helmRepoAdd() {
   if [ -s /tmp/output.json ]; then
     nam=$(jq -r --arg key "$REPO_NAME" '.[] | select(.name == $key).name' /tmp/output.json)
     if [ "$nam" == "" ]; then
-      cmdLoop helm repo add $REPO_NAME REPO_URL
+      messagePrint " ▪ Add Helm Repo ($REPO_NAME)" "$REPO_URL"
+      cmdLoop helm repo add $REPO_NAME $REPO_URL
       cmdLoop helm repo update
     fi
   fi
