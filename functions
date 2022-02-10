@@ -6863,15 +6863,15 @@ createClusterIssuer() {
     echo "          hostedZoneID: $AWS_HOSTED_ZONE_ID"                             >> $TDH_TLS_ISSUER_FILE
 
     # --- CREATE/RECREATE AWS ROUTE53 SECRET ---
-    deleteSecret cert-manager route53-credentials-secret
-    deleteSecret default route53-credentials-secret
+    #deleteSecret cert-manager route53-credentials-secret
+    #deleteSecret default route53-credentials-secret
 
     #DELETEME
     kubectl -n cert-manager delete secret route53-credentials-secret > /dev/null 2>&1
     kubectl -n default delete secret route53-credentials-secret > /dev/null 2>&1
 
     echo "$AWS_CERT_SECRET_KEY" > /tmp/aws-credentials
-    cndLoop kubectl -n cert-manager create secret generic route53-credentials-secret \
+    kubectl -n cert-manager create secret generic route53-credentials-secret \
             --from-file=aws-credentials=/tmp/aws-credentials > /dev/null 2>&1
 
     # --- VERIFY CERTIFICATE ---
