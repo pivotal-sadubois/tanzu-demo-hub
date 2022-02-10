@@ -5322,6 +5322,7 @@ installJenkins() {
 
   cmdLoop helm ls -n $NAMESPACE -o json > /tmp/output.json
 echo gaga1
+ls -la /tmp/output.json
   if [ -s /tmp/output.json ]; then
 echo gaga2
     ver=$(jq -r --arg chart "$HELMCHART" '.[] | select(.name == $chart).app_version' /tmp/output.json)
@@ -6926,25 +6927,34 @@ createClusterIssuer() {
     messagePrint " ▪ LetsEnscript Request Status"      "$issuer_status"
   fi
 
+echo gaga10
   # --- CREATE CERTIFICATE ---
+echo "cmdLoop kubectl get certificate $TDH_TLS_CERT -o json > /tmp/output.json"
   cmdLoop kubectl get certificate $TDH_TLS_CERT -o json > /tmp/output.json
+echo gaga11
+
   stt_rdy=$(jq -r '.status.conditions[] | select(.type == "Ready").status' /tmp/output.json)
+echo gaga2
 
   # --- CHECK IF SECRET (tanzu-demo-hub) IS THERE ---
   cmdLoop kubectl get secret $TDH_TLS_SECRET -o json > /tmp/output.json
   stt_sec=$(jq -r '.metadata.name' /tmp/output.json) 
   [ "$(jq -r '.metadata.name' /tmp/output.json)" != "" ] && stt_sec=0 || stt_sec=1
+echo gaga3
 
   # --- CHECK IF CERTIFICATE (tanzu-demo-hub) IS THERE ---
   cmdLoop kubectl get certificate $TDH_TLS_CERT -o json > /tmp/output.json
   [ "$(jq -r '.metadata.name' /tmp/output.json)" != "" ] && stt_crt=0 || stt_crt=1
+echo gaga4
 
   #DELETEME
   #stt_rdy=$(kubectl get certificate $TDH_TLS_CERT -o json 2>/dev/null | jq -r '.status.conditions[] | select(.type == "Ready").status')
   #kubectl get secret $TDH_TLS_SECRET > /dev/null 2>&1; stt_sec=$?
   #kubectl get certificate $TDH_TLS_CERT > /dev/null 2>&1; stt_crt=$?
+echo gaga5
 
   if [ "${stt_rdy}" == "False" -o $stt_sec -ne 0 -o $stt_crt -ne 0 ]; then
+echo gaga51
     # --- CLEANUP OLD STUFF ---
     deleteSecret default $TDH_TLS_SECRET
     deleteCertificate default $TDH_TLS_CERT 
@@ -6971,6 +6981,7 @@ createClusterIssuer() {
     echo "  - '*.apps-contour.${TDH_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}'"     >> $CERTIFICATE_CONFIG
     echo "  - '*.apps-nginx.${TDH_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}'"       >> $CERTIFICATE_CONFIG
 
+echo gaga52
     messageTitle " - This may take a couple of minutes ...."
     kubectl create -f $CERTIFICATE_CONFIG > /dev/null 2>&1
     if [ $? -ne 0 ]; then
@@ -7004,6 +7015,7 @@ createClusterIssuer() {
          exit 1
       fi
     fi
+echo gaga53
 
     if [ "$stt" == "True" ]; then
       tim=$(kubectl get certificate $TDH_TLS_CERT -o json 2>/dev/null | jq -r '.status.conditions[].lastTransitionTime')
@@ -7039,6 +7051,7 @@ createClusterIssuer() {
       exit 1
     fi
   fi
+echo gaga56
 
   messageTitle "Verify LetsEnscript Certificate"
   messagePrint " ▪ LetsEnscript Certificate Name"       "$TDH_TLS_CERT"
@@ -7047,11 +7060,13 @@ createClusterIssuer() {
   # --- STORE SETTINGS IN CONFIGMAP ---
   uodateConfigMap tanzu-demo-hub TDH_CERTIFICATE_NAME   "$TDH_TLS_CERT"
   uodateConfigMap tanzu-demo-hub TDH_CERTIFICATE_SECRET "$TDH_TLS_SECRET"
+echo gaga57
 
   echo "------------------------------------------------------------------------------------------------------------------------"
   kubectl get secret tanzu-demo-hub-tls -o json | jq -r '.data."tls.crt"' | base64 -d | \
           openssl x509 -inform pem -noout -text | grep $AWS_HOSTED_DNS_DOMAIN
   echo "------------------------------------------------------------------------------------------------------------------------"
+echo gaga8
 }
 
 InstallCertManager() {
