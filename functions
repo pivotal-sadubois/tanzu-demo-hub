@@ -1467,13 +1467,9 @@ checkTMCintegration() {
         checkKubernetesServices tanzu_observability
 
         # --- INSTALL WAVEFRONT HELM CHART ---
-        helm repo add wavefront https://wavefronthq.github.io/helm/ > /dev/null 2>&1
-        if [ $? -ne 0 ]; then
-          echo "ERROR: failed to add helm registry https://wavefronthq.github.io/helm/"; exit 1
-        fi
-        helm repo update > /dev/null 2>&1
+        helmRepoAdd wavefront https://wavefronthq.github.io/helm/
 
-        helm uninstall wavefront -n $NAMESPACE > /dev/null 2>&1
+        deleteHelmChart $NAMESPACE wavefront
         createNamespace $NAMESPACE > /dev/null 2>&1
         patchServiceAccount default $NAMESPACE
         # kubectl patch serviceaccount wavefront-collector  -p '{"imagePullSecrets": [{"name": "tdh-docker-repo"}]}' -n -n wavefront
@@ -5145,23 +5141,24 @@ installSpringCloudGateway() {
 }
 
 installArgoCD() {
+  NAMESPACE=argo-cd
+  HELMCHART=argo-cd
+
   if [ "$TDH_SERVICE_ARGOCD" != "true" ]; then
     uodateConfigMap tanzu-demo-hub TDH_SERVICE_ARGOCD        "false"
-    helm uninstall argo-cd > /dev/null 2>&1
+    deleteHelmChart $NAMESPACE $HELMCHART
     return
   fi
 
   TDH_DOMAIN=$(getConfigMap tanzu-demo-hub TDH_DOMAIN)
   TDH_ENVNAME=$(getConfigMap tanzu-demo-hub TDH_ENVNAME)
   DOMAIN=$(getConfigMap tanzu-demo-hub TDH_INGRESS_CONTOUR_LB_DOMAIN)
-  NAMESPACE=argo-cd
 
   messageTitle "ArgoCD Continuous Delivery for Kubernetes"
   cnt=$(helm list -q -n $NAMESPACE | egrep -c "^argo-cd")
   if [ $cnt -eq 0 ]; then
     messagePrint " ▪ Add the Bintnami Repository"   "https://charts.bitnami.com/bitnami"
-    helm repo add bitnami https://charts.bitnami.com/bitnami > /dev/null 2>&1
-    helm repo update > /dev/null 2>&1
+    helmRepoAdd bitnami https://charts.bitnami.com/bitnami
 
     # --- CREATE NAMESPACE ---
     messagePrint " ▪ Create Namespace" "$NAMESPACE"
@@ -5247,24 +5244,24 @@ echo "argocd login 127.0.0.1:8443 --password admin --username admin --plaintext"
 }
 
 installJenkins() {
+  NAMESPACE=jenkins
+  HELMCHART=jenkins
+
   if [ "$TDH_SERVICE_JENKINS" != "true" ]; then
     uodateConfigMap tanzu-demo-hub TDH_SERVICE_JENKINS        "false"
-    helm uninstall jenkins > /dev/null 2>&1
+    deleteHelmChart $NAMESPACE $HELMCHART
     return
   fi
 
   TDH_DOMAIN=$(getConfigMap tanzu-demo-hub TDH_DOMAIN)
   TDH_ENVNAME=$(getConfigMap tanzu-demo-hub TDH_ENVNAME)
   DOMAIN=$(getConfigMap tanzu-demo-hub TDH_INGRESS_CONTOUR_LB_DOMAIN)
-  NAMESPACE=jenkins
-  HELMCHART=jenkins
 
   messageTitle "Jenkins Automation Server"
   cnt=$(helm list -q -n $NAMESPACE | egrep -c "^jenkins")
   if [ $cnt -eq 0 ]; then
     messagePrint " ▪ Add the Bintnami Repository"   "https://charts.bitnami.com/bitnami"
-    cmdLoop helm repo add bitnami https://charts.bitnami.com/bitnami > /dev/null 2>&1
-    cmdLoop helm repo update > /dev/null 2>&1
+    helmRepoAdd bitnami https://charts.bitnami.com/bitnami
 
     # --- CREATE NAMESPACE ---
     messagePrint " ▪ Create Namespace" "$NAMESPACE"
@@ -5319,7 +5316,7 @@ installJenkins() {
       [ $ret -eq 0 -a "$stt" == "deployed" ] && break
 
       # --- DELTE FAILED HELM CHART ---
-      cmdLoop helm uninstall $HELMCHART --namespace $NAMESPACE > /dev/null 2>&1
+      deleteHelmChart $NAMESPACE $HELMCHART
       
       let cnt=cnt+1
       sleep 30
@@ -5401,27 +5398,29 @@ installJenkins() {
 }
 
 installKubeapps() {
+  NAMESPACE=kubeapps
+  HELMCHART=kubeapps
+
   if [ "$TDH_SERVICE_KUBEAPPS" != "true" ]; then
     uodateConfigMap tanzu-demo-hub TDH_SERVICE_KUBEAPPS        "false"
-    helm uninstall kubeapps > /dev/null 2>&1
+    deleteHelmChart $NAMESPACE $HELMCHART
     return
   fi
 
   TDH_DOMAIN=$(getConfigMap tanzu-demo-hub TDH_DOMAIN)
   TDH_ENVNAME=$(getConfigMap tanzu-demo-hub TDH_ENVNAME)
   DOMAIN=$(getConfigMap tanzu-demo-hub TDH_INGRESS_CONTOUR_LB_DOMAIN)
-  NAMESPACE=kubeapps
 
   messageTitle "Application Dashboard for Kubernetes (Kupeapps)"
   cnt=$(helm list -q -n $NAMESPACE | egrep -c "^kubeapps")
   if [ $cnt -eq 0 ]; then
     messagePrint " ▪ Add the Bintnami Repository"   "https://charts.bitnami.com/bitnami"
-    helm repo add bitnami https://charts.bitnami.com/bitnami > /dev/null 2>&1
-    helm repo update > /dev/null 2>&1
+    helmRepoAdd bitnami https://charts.bitnami.com/bitnami
 
     # --- CREATE NAMESPACE ---
     messagePrint " ▪ Create Namespace" "kubeapps"
-    createNamespace $NAMESPACE > /dev/null 2>&1
+    deleteNamespace $NAMESPACE
+    createNamespace $NAMESPACE
 
     # --- COPY SECRET TO NAMESPACE ---
     messagePrint " ▪ Copy TLS Secret" "tanzu-demo-hub-tls"
@@ -5434,7 +5433,6 @@ installKubeapps() {
     else
       HELM_KUBEAPPS_VERSION=$TDH_SERVICE_KUBEAPPS_VERSION
     fi
-
 
     HELM_VALUES=/tmp/helm_kubeapps_values.yaml
 
@@ -5456,49 +5454,41 @@ installKubeapps() {
     echo "      - kubeapps.$DOMAIN"                                                                                             >> $HELM_VALUES
     echo "    secretName: tanzu-demo-hub-tls"                                                                                   >> $HELM_VALUES
 
-#    # https://liveandletlearn.net/post/kubeapps-on-tkg-management-cluster/
-#    echo "# Setup the oauth2-proxy running on the frontend to handle the OIDC authentication"                                   >> $HELM_VALUES
-#    echo "authProxy:"                                                                                                           >> $HELM_VALUES
-#    echo "  enabled: true"                                                                                                      >> $HELM_VALUES
-#    echo "  provider: oidc"                                                                                                     >> $HELM_VALUES
-#    echo "  clientID: kubeapps-oauth2-proxy"                                                                                    >> $HELM_VALUES
-#    echo "  clientSecret: KUBEAPPS_CLIENT_SECRET"                                                                               >> $HELM_VALUES
-#    echo "  cookieSecret: KUBEAPPS_COOKIE_SECRET"                                                                               >> $HELM_VALUES
-#    echo "  additionalFlags:"                                                                                                   >> $HELM_VALUES
-#    echo "    - --oidc-issuer-url=https://DEX_SVC_LB_HOSTNAME"                                                                  >> $HELM_VALUES
-#    echo "    - --scope=openid email groups audience:server:client_id:my-oidc-cluster audience:server:client_id:second-oidc-cluster" >> $HELM_VALUES
-#    echo "    - --ssl-insecure-skip-verify=true"                                                                                     >> $HELM_VALUES
-#    echo "    - --cookie-secure=false"                                                                                               >> $HELM_VALUES
-
-    messagePrint " ▪ Deploy the Kubeapps Helm Chart" "kubeapps"
     helm repo add bitnami https://charts.bitnami.com/bitnami > /dev/null 2>&1
 
-    cnt=0; ret=1
-    while [ $ret -ne 0 -a $cnt -lt 5 ]; do
-      helm install kubeapps --namespace $NAMESPACE bitnami/kubeapps -f $HELM_VALUES --version $HELM_KUBEAPPS_VERSION > /tmp/error.log 2>&1; ret=$?
+    messagePrint " ▪ Deploy the Kubeapps Helm Chart" "kubeapps"
+    cnt=0; ret=1; stt="notdeployed"
+    while [ $ret -ne 0 -a $cnt -lt 5 -a "$stt" != "deployed" ]; do
+      helm install $HELMCHART --namespace $NAMESPACE bitnami/$HELMCHART -f $HELM_VALUES --version $HELM_KUBEAPPS_VERSION > /tmp/error.log 2>&1; ret=$?
 
-      [ $ret -eq 0 ] && break
+      # --- WAIT FOR PODS TO GET STARTED ---
+      runningPods $NAMESPACE
+
+      cmdLoop helm ls -n $NAMESPACE -o json > /tmp/output.json
+      stt=$(jq -r --arg chart "$HELMCHART" '.[] | select(.name == $chart).status' /tmp/output.json)
+
+      [ $ret -eq 0 -a "$stt" == "deployed" ] && break
+
+      # --- DELTE FAILED HELM CHART ---
+      deleteHelmChart $NAMESPACE $HELMCHART
+
       let cnt=cnt+1
       sleep 30
     done
 
-    if [ $ret -ne 0 ]; then
+    if [ $ret -ne 0 -o "$stt" != "deployed" ]; then
       logMessages /tmp/error.log
-      echo "ERROR: Failed to deploy Kubeapps Helm Chart"
+      echo "ERROR: Failed to deploy $HELMCHART Helm Chart"
       if [ "$NATIVE" == "0" ]; then
         echo "       => tools/${TDH_TOOLS}.sh"
-        echo "          tdh-tools:/$ helm install kubeapps --namespace $NAMESPACE bitnami/kubeapps -f $HELM_VALUES"
+        echo "          tdh-tools:/$ helm install $HELMCHART --namespace $NAMESPACE bitnami/$HELMCHART -f $HELM_VALUES --version $HELM_KUBEAPPS_VERSION"
         echo "          tdh-tools:/$ exit"
       else
-        echo "       => helm install kubeapps --namespace $NAMESPACE bitnami/kubeapps -f $HELM_VALUES"
+        echo "       => helm install $HELMCHART --namespace $NAMESPACE bitnami/$HELMCHART -f $HELM_VALUES --version $HELM_KUBEAPPS_VERSION"
       fi
-#gaga
 
       exit 1
     fi
-
-    # --- WAIT FOR PODS TO GET STARTED ---
-    runningPods kubeapps
 
     messagePrint " ▪ Create Serviceaccount"              "kubeapps-operator"
     createServiceAccount default kubeapps-operator
@@ -5511,19 +5501,16 @@ installKubeapps() {
 
   cmdLoop helm ls -n $NAMESPACE -o json > /tmp/output.json
   if [ -s /tmp/output.json ]; then
-    ver=$(jq -r --arg chart "kubeapps" '.[] | select(.name == $chart).app_version' /tmp/output.json)
-    crt=$(jq -r --arg chart "kubeapps" '.[] | select(.name == $chart).chart' /tmp/output.json)
-    stt=$(jq -r --arg chart "kubeapps" '.[] | select(.name == $chart).status' /tmp/output.json)
-    dat=$(jq -r --arg chart "kubeapps" '.[] | select(.name == $chart).updated' /tmp/output.json)
+    ver=$(jq -r --arg chart "$HELMCHART" '.[] | select(.name == $chart).app_version' /tmp/output.json)
+    crt=$(jq -r --arg chart "$HELMCHART" '.[] | select(.name == $chart).chart' /tmp/output.json)
+    stt=$(jq -r --arg chart "$HELMCHART" '.[] | select(.name == $chart).status' /tmp/output.json)
+    dat=$(jq -r --arg chart "$HELMCHART" '.[] | select(.name == $chart).updated' /tmp/output.json)
   else  
     ver=""; crt=""; stt=""; dat=""
   fi
 
-#hallo
   secret_name=$(getServiceAccountSecret kubeapps-operator)
   #secret_name=$(kubectl get serviceaccount kubeapps-operator -o jsonpath='{range .secrets[*]}{.name}{"\n"}{end}' | grep kubeapps-operator-token)
-
-echo "hallo secret_name:$secret_name"
 
   cnt=0; ret=1
   while [ $ret -ne 0 -a $cnt -lt 5 ]; do
@@ -5548,8 +5535,7 @@ echo "hallo secret_name:$secret_name"
     exit 1
   fi
 
-
-  messagePrint " ▪ Verify Kubeapps"                "$crt"
+  messagePrint " ▪ Verify Helm Chart $HELMCHART"   "$crt"
   messagePrint "   Helm Chart Name"                "minio"
   messagePrint "   Helm Chart Version"             "$ver"
   messagePrint "   Helm Chart Status"              "$stt"
@@ -5568,10 +5554,12 @@ echo "hallo secret_name:$secret_name"
 
 installMinio() {
   NAMESPACE=minio
+  HELMCHART=minio
+
   if [ "$TDH_SERVICE_MINIO" != "true" ]; then
     uodateConfigMap tanzu-demo-hub TDH_SERVICE_MINIO        "false"
     kubectl delete -n $NAMESPACE > /dev/null 2>&1
-    helm uninstall minio -n $NAMESPACE > /dev/null 2>&1
+    deleteHelmChart $NAMESPACE $HELMCHART
     return
   fi
 
@@ -5735,12 +5723,12 @@ installMinio() {
 # ------------------------------------------------------------------------------------------
 installGitLab() {
   NAMESPACE=gitlab
+  HELMCHART=gitlab
 
   if [ "$TDH_SERVICE_GITLAB" != "true" ]; then
     uodateConfigMap tanzu-demo-hub TDH_SERVICE_GITLAB        "false"
-    kubectl delete -n $NAMESPACE > /dev/null 2>&1
-    helm uninstall 1tdh-pgadmin > /dev/null 2>&1
-    helm uninstall 1postgres-operator > /dev/null 2>&1
+    deleteHelmChart $NAMESPACE $HELMCHART
+    deleteNamespace $NAMESPACE
     return
   fi
 
@@ -5807,8 +5795,7 @@ installGitLab() {
     echo "  install: false"                                                                                                     >> $HELM_VALUES
 
     # --- ADD REPOSITORY --
-    helm repo add gitlab https://charts.gitlab.io/ > /dev/null 2>&1
-    helm repo update > /dev/null 2>&1
+    helmRepoAdd gitlab https://charts.gitlab.io/
 
 #gogo
     cnt=0; ret=1; stt="notdeployed"
@@ -5824,7 +5811,7 @@ installGitLab() {
       [ $ret -eq 0 -a "$stt" == "deployed" ] && break
 
       # --- DELTE FAILED HELM CHART ---
-      cmdLoop helm uninstall $HELMCHART --namespace $NAMESPACE > /dev/null 2>&1
+      deleteHelmChart $NAMESPACE $HELMCHART
 
       let cnt=cnt+1
       sleep 30
@@ -5912,17 +5899,17 @@ installGitLab() {
 
 installTanzuDataPostgres() {
   NAMESPACE=postgres-operator
+  HELMCHART=postgres-operator
 
   if [ "$TDH_SERVICE_TANZU_DATA_POSTGRES" != "true" ]; then
     uodateConfigMap tanzu-demo-hub TDH_SERVICE_TANZU_DATA_POSTGRES        "false"
-    kubectl delete -n $NAMESPACE > /dev/null 2>&1
-    helm uninstall tdh-pgadmin > /dev/null 2>&1
-    helm uninstall postgres-operator > /dev/null 2>&1
+    deleteHelmChart $NAMESPACE $HELMCHART
+    deleteNamespace $NAMESPACE
     return
   fi
 
   messageTitle "VMware Tanzu Postgres"
-  cnt=$(helm list --all-namespaces -q | egrep -c "^postgres-operator")
+  cnt=$(cmdLoop helm list --all-namespaces -q | egrep -c "^postgres-operator")
   if [ $cnt -eq 0 ]; then
     # --- DOWNLOAD POSTGRES BINARIES ---
     TBS_FILE="/tmp/postgres-for-kubernetes-v${TDH_SERVICE_TANZU_DATA_POSTGRES_VERSION}.tar.gz"
@@ -5975,7 +5962,7 @@ installTanzuDataPostgres() {
       fi
   
       messageTitle "Tanzu Postgres Operator"
-      cnt=$(helm list --all-namespaces -q | egrep -c "^postgres-operator") 
+      cnt=$(cmdLoop helm list --all-namespaces -q | egrep -c "^postgres-operator") 
       if [ $cnt -eq 0 ]; then
         messagePrint " ▪ Install Postgres Operator" "$TDH_SERVICE_TANZU_DATA_POSTGRES_VERSION"
   
@@ -5986,19 +5973,19 @@ installTanzuDataPostgres() {
         POSTGRES_INSTALL_PATH="/tmp/postgres-for-kubernetes/postgres-for-kubernetes-v$TDH_SERVICE_TANZU_DATA_POSTGRES_VERSION"
         # REGISTRY="harbor.apps-contour.local.pcfsdu.com/library"
   
-        docker load -i ${POSTGRES_INSTALL_PATH}/images/postgres-instance  > /dev/null 2>&1
-        docker load -i ${POSTGRES_INSTALL_PATH}/images/postgres-operator  > /dev/null 2>&1
+        cmdLoop docker load -i ${POSTGRES_INSTALL_PATH}/images/postgres-instance  > /dev/null 2>&1
+        cmdLoop docker load -i ${POSTGRES_INSTALL_PATH}/images/postgres-operator  > /dev/null 2>&1
   
         messagePrint " ▪ Relocate Images (postgres-instance) to Harbor" "$REGISTRY/postgres-instance"
   
         INSTANCE_IMAGE_NAME="${TDH_HARBOR_REGISTRY_DNS_HARBOR}/library/postgres-instance:$(cat $POSTGRES_INSTALL_PATH/images/postgres-instance-tag)"
-        docker tag $(cat $POSTGRES_INSTALL_PATH/images/postgres-instance-id) ${INSTANCE_IMAGE_NAME}  > /dev/null 2>&1
-        docker push ${INSTANCE_IMAGE_NAME}  > /dev/null 2>&1
+        cmdLoop docker tag $(cat $POSTGRES_INSTALL_PATH/images/postgres-instance-id) ${INSTANCE_IMAGE_NAME}  > /dev/null 2>&1
+        cmdLoop docker push ${INSTANCE_IMAGE_NAME}  > /dev/null 2>&1
   
         messagePrint " ▪ Reocate Images (postgres-operator) to Harbor" "$TDH_HARBOR_REGISTRY_DNS_HARBOR/postgres-operator"
         OPERATOR_IMAGE_NAME="${TDH_HARBOR_REGISTRY_DNS_HARBOR}/library/postgres-operator:$(cat $POSTGRES_INSTALL_PATH/images/postgres-operator-tag)"
-        docker tag $(cat $POSTGRES_INSTALL_PATH/images/postgres-operator-id) ${OPERATOR_IMAGE_NAME}  > /dev/null 2>&1
-        docker push ${OPERATOR_IMAGE_NAME}  > /dev/null 2>&1
+        cmdLoop docker tag $(cat $POSTGRES_INSTALL_PATH/images/postgres-operator-id) ${OPERATOR_IMAGE_NAME}  > /dev/null 2>&1
+        cmdLoop docker push ${OPERATOR_IMAGE_NAME}  > /dev/null 2>&1
   
         # --- CLEANUP DOCKER IMAGES ---
         #for n in $(docker images | egrep "postgres-(operator|instance) " | awk '{ print $3 }'); do
@@ -6015,20 +6002,41 @@ installTanzuDataPostgres() {
           echo "-----------------------------------------------------------------------------------------------------------"
         fi
 
+        messagePrint " ▪ Create Kubernetes Namespace" "postgres-operator"
+        deleteNAmespace $NAMESPACE
+        createNamespace $NAMESPACE
+
         messagePrint " ▪ Deploy the Postgres operator" "postgres-operator"
-        #helm install postgres-operator -n $NAMESPACE -f /tmp/values-overrides.yaml ${POSTGRES_INSTALL_PATH}/operator/ > /dev/null 2>&1
-        helm install postgres-operator -f /tmp/values-overrides.yaml ${POSTGRES_INSTALL_PATH}/operator/ > /tmp/error.log 2>&1; ret=$?
-        if [ $ret -ne 0 ]; then
+        cnt=0; ret=1; stt="notdeployed"
+        while [ $ret -ne 0 -a $cnt -lt 5 -a "$stt" != "deployed" ]; do
+          helm install $HELMCHART --namespace $NAMESPACE -f /tmp/values-overrides.yaml ${POSTGRES_INSTALL_PATH}/operator/ > /tmp/error.log 2>&1; ret=$?
+
+          # --- WAIT FOR PODS TO GET STARTED ---
+          runningPods $NAMESPACE
+
+          cmdLoop helm ls -n $NAMESPACE -o json > /tmp/output.json
+          stt=$(jq -r --arg chart "$HELMCHART" '.[] | select(.name == $chart).status' /tmp/output.json)
+
+          [ $ret -eq 0 -a "$stt" == "deployed" ] && break
+
+          # --- DELTE FAILED HELM CHART ---
+          deleteHelmChart $NAMESPACE $HELMCHART
+
+          let cnt=cnt+1
+          sleep 30
+        done
+
+        if [ $ret -ne 0 -o "$stt" != "deployed" ]; then
           logMessages /tmp/error.log
-          echo "ERROR: Failed to deploy Postgres Helm Chart"
+          echo "ERROR: Failed to deploy $HELMCHART Helm Chart"
           if [ "$NATIVE" == "0" ]; then
             echo "       => tools/${TDH_TOOLS}.sh"
-            echo "          tdh-tools:/$ ERROR: Failed to deploy Postgres Helm Chart"
+            echo "          tdh-tools:/$ helm install $HELMCHART --namespace $NAMESPACE -f /tmp/values-overrides.yaml ${POSTGRES_INSTALL_PATH}/operator/ > /tmp/error.log 2>&1; ret=$?
             echo "          tdh-tools:/$ exit"
           else
-            echo "       => ERROR: Failed to deploy Postgres Helm Chart"
+            echo "       => helm install $HELMCHART --namespace $NAMESPACE -f /tmp/values-overrides.yaml ${POSTGRES_INSTALL_PATH}/operator/ > /tmp/error.log 2>&1; ret=$?"
           fi
-  
+    
           exit 1
         fi
 
@@ -6056,26 +6064,26 @@ installTanzuDataPostgres() {
   messagePrint "   Helm Chart Status"              "$stt"
   messagePrint "   Helm Chart Installed/Updated"   "$dat"
 
-  cmdLoop helm ls -n $NAMESPACE -o json > /tmp/output.json
-  if [ -s /tmp/output.json ]; then
-    ver=$(jq -r --arg chart "tdh-pgadmin" '.[] | select(.name == $chart).app_version' /tmp/output.json)
-    crt=$(jq -r --arg chart "tdh-pgadmin" '.[] | select(.name == $chart).chart' /tmp/output.json)
-    stt=$(jq -r --arg chart "tdh-pgadmin" '.[] | select(.name == $chart).status' /tmp/output.json)
-    dat=$(jq -r --arg chart "tdh-pgadmin" '.[] | select(.name == $chart).updated' /tmp/output.json)
-  else
-    ver=""; crt=""; stt=""; dat=""
-  fi
-  #ver=$(helm ls -o json | jq -r --arg chart "tdh-pgadmin" '.[] | select(.name == $chart).app_version')
-  #crt=$(helm ls -o json | jq -r --arg chart "tdh-pgadmin" '.[] | select(.name == $chart).chart')
-  #stt=$(helm ls -o json | jq -r --arg chart "tdh-pgadmin" '.[] | select(.name == $chart).status')
-  #dat=$(helm ls -o json | jq -r --arg chart "tdh-pgadmin" '.[] | select(.name == $chart).updated')
-
-  #messageTitle "Verify pgAdmin" 
-  #messagePrint " ▪ Helm Chart"                     "$crt"
-  #messagePrint " ▪ Helm Chart Name"                "tdh-pgadmin"
-  #messagePrint " ▪ Helm Chart Version"             "$ver"
-  #messagePrint " ▪ Helm Chart Status"              "$stt"
-  #messagePrint " ▪ Helm Chart Installed/Updated"   "$dat"
+#  cmdLoop helm ls -n $NAMESPACE -o json > /tmp/output.json
+#  if [ -s /tmp/output.json ]; then
+#    ver=$(jq -r --arg chart "tdh-pgadmin" '.[] | select(.name == $chart).app_version' /tmp/output.json)
+#    crt=$(jq -r --arg chart "tdh-pgadmin" '.[] | select(.name == $chart).chart' /tmp/output.json)
+#    stt=$(jq -r --arg chart "tdh-pgadmin" '.[] | select(.name == $chart).status' /tmp/output.json)
+#    dat=$(jq -r --arg chart "tdh-pgadmin" '.[] | select(.name == $chart).updated' /tmp/output.json)
+#  else
+#    ver=""; crt=""; stt=""; dat=""
+#  fi
+#  #ver=$(helm ls -o json | jq -r --arg chart "tdh-pgadmin" '.[] | select(.name == $chart).app_version')
+#  #crt=$(helm ls -o json | jq -r --arg chart "tdh-pgadmin" '.[] | select(.name == $chart).chart')
+#  #stt=$(helm ls -o json | jq -r --arg chart "tdh-pgadmin" '.[] | select(.name == $chart).status')
+#  #dat=$(helm ls -o json | jq -r --arg chart "tdh-pgadmin" '.[] | select(.name == $chart).updated')
+#
+#  #messageTitle "Verify pgAdmin" 
+#  #messagePrint " ▪ Helm Chart"                     "$crt"
+#  #messagePrint " ▪ Helm Chart Name"                "tdh-pgadmin"
+#  #messagePrint " ▪ Helm Chart Version"             "$ver"
+#  #messagePrint " ▪ Helm Chart Status"              "$stt"
+#  #messagePrint " ▪ Helm Chart Installed/Updated"   "$dat"
 
   CURRENT_DATE=$(date "+%Y-%m-%d %M:%H:%S")
   uodateConfigMap tanzu-demo-hub TDH_SERVICE_TANZU_DATA_POSTGRES                "true"
@@ -6714,7 +6722,7 @@ InstallContour() {
     fi
 
     messagePrint " ▪ Install Contour Helm Chart" "bitnami/contour"
-    helm repo update > /dev/null 2>&1
+    helmRepoAdd bitnami https://charts.bitnami.com/bitnami
 
     if [ "$TDH_SERVICE_INGRESS_CONTOUR_VERSION" == "" -o "$TDH_SERVICE_INGRESS_CONTOUR_VERSION" == "latest" ]; then 
       HELM_CONTOUR_VERSION=$(helm search repo bitnami/contour | egrep "^bitnami/contour " | tail -1 | awk '{ print $2 }') 
@@ -7133,12 +7141,14 @@ InstallCertManager() {
 }
 
 InstallHarborRegistry() {
+  NAMESPACE=registry-harbor
+  HELMCHART=harbor
+
   if [ "$TDH_SERVICE_REGISTRY_HARBOR" != "true" ]; then
     uodateConfigMap tanzu-demo-hub TDH_SERVICE_REGISTRY_HARBOR        "false"
     return
   fi
 
-  NAMESPACE=registry-harbor
   HARBOR_TLS_SECRET=$TDH_TLS_SECRET
   NOTARY_TLS_SECRET=$TDH_TLS_SECRET
   HARBOR_HOSTNAME="harbor.apps-contour.$TDH_ENVNAME.$AWS_HOSTED_DNS_DOMAIN"
@@ -7160,7 +7170,7 @@ InstallHarborRegistry() {
     messagePrint " ▪ Create Namespace" "$NAMESPACE"
     deleteNamespace $NAMESPACE > /dev/null 2>&1
     createNamespace $NAMESPACE > /dev/null 2>&1
-    helm uninstall harbor -n $NAMESPACE > /dev/null 2>&1
+    deleteHelmChart $NAMESPACE $HELMCHART
     patchServiceAccount default $NAMESPACE
 
     messagePrint " ▪ Create Docker secret"  "tdh-docker-repo"
@@ -7170,8 +7180,8 @@ InstallHarborRegistry() {
             --docker-password $TDH_REGISTRY_DOCKER_PASS > /dev/null 2>&1
 
     # --- COPY SECRET TO NAMESPACE ---
-    kubectl get secret tanzu-demo-hub-tls --namespace=default  -oyaml | grep -v '^\s*namespace:\s' | \
-    kubectl apply --namespace=$NAMESPACE -f - > /dev/null 2>&1
+    cmdLoop kubectl get secret tanzu-demo-hub-tls --namespace=default  -oyaml | grep -v '^\s*namespace:\s' | \
+    cmdLoop kubectl apply --namespace=$NAMESPACE -f - > /dev/null 2>&1
 
     HARBOR_VALUES=/tmp/harbor_values.yaml
     echo "harborAdminPassword: $TDH_HARBOR_ADMIN_PASSWORD"                                                                      >  $HARBOR_VALUES
@@ -7235,8 +7245,8 @@ InstallHarborRegistry() {
     echo "      accessMode: ReadWriteOnce"                                                                                      >> $HARBOR_VALUES
     echo "      size: 10Gi"                                                                                                     >> $HARBOR_VALUES
 
-    helm repo add bitnami https://charts.bitnami.com/bitnami > /dev/null 2>&1
-    helm repo update > /dev/null 2>&1
+    messagePrint " ▪ Add the Bintnami Repository"   "https://charts.bitnami.com/bitnami"
+    helmRepoAdd bitnami https://charts.bitnami.com/bitnami
     HELM_HARBOR_VERSION=$(helm search repo bitnami/harbor | tail -1 | awk '{ print $2 }')
 
     messagePrint " ▪ Install Harbor Helm Chart"           "bitnami/contour"
@@ -11346,7 +11356,7 @@ createNamespace() {
 # ------------------------------------------------------------------------------------------
 # Argument ($1) ......: Namespace
 # ------------------------------------------------------------------------------------------
-# Return Value .......: Service Account Secret
+# Return Value .......: 0 - Success, 1 - Failed
 # ------------------------------------------------------------------------------------------
 deleteNamespace() {
   NAMESPACE=$1
@@ -11359,8 +11369,29 @@ deleteNamespace() {
       cmdLoop kubectl delete ns $NAMESPACE
     fi
   fi
+}
 
-  echo $sec
+# ------------------------------------------------------------------------------------------
+# Function Name ......: deleteHelmChart
+# Function Purpose ...: Delete a Helm Chart
+# ------------------------------------------------------------------------------------------
+# Argument ($1) ......: Namespace
+#          ($2) ......: Helm Chart
+# ------------------------------------------------------------------------------------------
+# Return Value .......: 0 - Success, 1 - Failed
+# ------------------------------------------------------------------------------------------
+deleteHelmChart() {
+  NAMESPACE=$1
+  HELMCHART=$2
+
+  cmdLoop helm list -A -o json > /tmp/output.json
+  if [ -s /tmp/output.json ]; then
+    nam=$(jq -r --arg ns "$NAMESPACE" --arg chart "$HELMCHART" '.[] | select(.namespace == $ns and .name == $chart).name' /tmp/output.json)
+
+    if [ "$nam" != "" ]; then
+      cmdLoop helm uninstall -n $NAMESPACE $HELMCHART
+    fi
+  fi
 }
 
 # ------------------------------------------------------------------------------------------
@@ -11400,13 +11431,35 @@ deleteCertificate() {
 
   cmdLoop kubectl -n $NAMESPACE get certificate -o json > /tmp/output.json
   if [ -s /tmp/output.json ]; then
-    nam=$(jq -r --arg key "$CERTIFICATE" '.items[] | select(.metadata.name == $key).metadata.name')
+    nam=$(jq -r --arg key "$CERTIFICATE" '.items[] | select(.metadata.name == $key).metadata.name' /tmp/output.json)
     if [ "$nam" != "" ]; then
       cmdLoop kubectl -n $NAMESPACE delete certificate $CERTIFICATE
     fi
   fi
 }
 
+# ------------------------------------------------------------------------------------------
+# Function Name ......: helmRepoAdd
+# Function Purpose ...: Add an Helm Repository
+# ------------------------------------------------------------------------------------------
+# Argument ($1) ......: Repo NAme
+#          ($2) ......: Repo URL
+# ------------------------------------------------------------------------------------------
+# Return Value .......: 0 - SUCCESS, 1 - FAILURE
+# ------------------------------------------------------------------------------------------
+helmRepoAdd() {
+  REPO_NAME=$1
+  REPO_URL=$1
+
+  cmdLoop helm repo list -o json > /tmp/output.json
+  if [ -s /tmp/output.json ]; then
+    nam=$(jq -r --arg key "$REPO_NAME" '.[] | select(.name == $key).name' /tmp/output.json)
+    if [ "$nam" == "" ]; then
+      cmdLoop helm repo add $REPO_NAME REPO_URL
+      cmdLoop helm repo update
+    fi
+  fi
+}
 
 # ------------------------------------------------------------------------------------------
 # Function Name ......: copySecretObject
