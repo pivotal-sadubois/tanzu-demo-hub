@@ -6031,10 +6031,10 @@ installTanzuDataPostgres() {
           echo "ERROR: Failed to deploy $HELMCHART Helm Chart"
           if [ "$NATIVE" == "0" ]; then
             echo "       => tools/${TDH_TOOLS}.sh"
-            echo "          tdh-tools:/$ helm install $HELMCHART --namespace $NAMESPACE -f /tmp/values-overrides.yaml ${POSTGRES_INSTALL_PATH}/operator/ > /tmp/error.log 2>&1; ret=$?
+            echo "          tdh-tools:/$ helm install $HELMCHART --namespace $NAMESPACE -f /tmp/values-overrides.yaml ${POSTGRES_INSTALL_PATH}/operator/"
             echo "          tdh-tools:/$ exit"
           else
-            echo "       => helm install $HELMCHART --namespace $NAMESPACE -f /tmp/values-overrides.yaml ${POSTGRES_INSTALL_PATH}/operator/ > /tmp/error.log 2>&1; ret=$?"
+            echo "       => helm install $HELMCHART --namespace $NAMESPACE -f /tmp/values-overrides.yaml ${POSTGRES_INSTALL_PATH}/operator/"
           fi
     
           exit 1
@@ -6090,7 +6090,7 @@ installTanzuDataPostgres() {
   uodateConfigMap tanzu-demo-hub TDH_SERVICE_TANZU_DATA_POSTGRES_VERSION        $TDH_SERVICE_TANZU_DATA_POSTGRES_VERSION
   uodateConfigMap tanzu-demo-hub TDH_SERVICE_TANZU_DATA_POSTGRES_INSTALLED      "$CURRENT_DATE"
   uodateConfigMap tanzu-demo-hub TDH_SERVICE_TANZU_DATA_POSTGRES_VALIDATED      "$CURRENT_DATE"
-} 
+}
 
 installBuildService() {
   tbs_cleanup=0
