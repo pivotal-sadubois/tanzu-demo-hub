@@ -10176,9 +10176,9 @@ echo "package_rel:$package_rel"
     #package_ver=$(tanzu package available list $PACKAGE_ID -A -o json 2>/dev/null | jq -r '.[]."version"' | tail -1)
     #package_rel=$(tanzu package available list $PACKAGE_ID -A -o json 2>/dev/null | jq -r '.[]."released-at"' | tail -1)
 
-    echo "SA:${PACKAGE_ID}-${PACKAGE_NAMESPACE}-sa"
+    echo "SA:${PACKAGE_NAME}-${PACKAGE_NAMESPACE}-sa"
     cmdLoop kubectl get serviceaccount -n tanzu-system-packages -o json > /tmp/output.json
-    nam=$(jq -r --arg key "${PACKAGE_ID}-${PACKAGE_NAMESPACE}-sa" '.items[] | select(.metadata.name == $key).metadata.name' /tmp/output.json) 
+    nam=$(jq -r --arg key "${PACKAGE_NAME}-${PACKAGE_NAMESPACE}-sa" '.items[] | select(.metadata.name == $key).metadata.name' /tmp/output.json) 
 echo "NAM:$nam"
 echo "kubectl -n tanzu-system-packages delete serviceaccount $nam"
     cmdLoop kubectl -n tanzu-system-packages delete serviceaccount $nam
