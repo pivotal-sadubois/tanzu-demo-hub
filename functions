@@ -10091,18 +10091,18 @@ TanzuPackage_AddRepo() {
 # Return Value .......: 0 on Success, 1 on failure
 # ------------------------------------------------------------------------------------------
 TanzuPackage_RepoSync() {
-  NAMESPACE=$1
+  PACKAGE_REPOSITORY=$1
   PACKAGE_NAMESPACE=tanzu-system-packages
 
   # --- CREATE PACKAGE_NAMESPACE NAMESPACE ---
   createNamespace $PACKAGE_NAMESPACE > /dev/null 2>&1
-  createNamespace $NAMESPACE > /dev/null 2>&1
+  createNamespace $PACKAGE_REPOSITORY > /dev/null 2>&1
 
-  messagePrint " ▪ Wait for Tanzu Package Reconsile"   "$NAMESPACE"
+  messagePrint " ▪ Wait for Tanzu Package Reconsile"   "$PACKAGE_REPOSITORY"
 
   ret=""; cnt=0
   while [ "$ret" != "Reconcile succeeded" -a $cnt -lt 10 ]; do
-    ret=$(tanzu package repository list -n $NAMESPACE -o json 2>/dev/null | jq -r '.[] | select(.status != "Reconcile succeeded").status' | wc -l) 
+    ret=$(tanzu package repository list -n $PACKAGE_REPOSITORY -o json 2>/dev/null | jq -r '.[] | select(.status != "Reconcile succeeded").status' | wc -l) 
 
     [ $ret -eq 0 ] && break
     sleep 60
@@ -10110,13 +10110,13 @@ TanzuPackage_RepoSync() {
   done
 
   if [ $ret -gt 0 ]; then
-    echo "ERROR: failed to reconsilte Tanzu Packages in $NAMESPACE"
+    echo "ERROR: failed to reconsilte Tanzu Packages in $PACKAGE_REPOSITORY"
     if [ "$NATIVE" == "0" ]; then
       echo "       => tools/${TDH_TOOLS}.sh"
-      echo "          tdh-tools:/$ tanzu package repository list -n tanzu-package-repo-global"
+      echo "          tdh-tools:/$ tanzu package repository list -n $PACKAGE_REPOSITORY"
       echo "          tdh-tools:/$ exit"
     else
-      echo "       => tanzu package repository list -n tanzu-package-repo-global"
+      echo "       => tanzu package repository list -n $PACKAGE_REPOSITORY"
     fi
 
     exit 1
@@ -10127,8 +10127,8 @@ TanzuPackage_RepoSync() {
   fi
 
 echo gggggggggg1
-echo "tanzu package repository list -n $NAMESPACE"
-tanzu package repository list -n $NAMESPACE 
+echo "tanzu package repository list -n $PACKAGE_REPOSITORY"
+tanzu package repository list -n $PACKAGE_REPOSITORY 
 echo "tanzu package repository list -A"
 tanzu package repository list -A
 }
