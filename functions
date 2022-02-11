@@ -10158,9 +10158,13 @@ TanzuPackage_LocalStorage() {
   #pkg=$(tanzu package installed get $PACKAGE_NAME -n $NAMESPACE -o json 2>/dev/null | jq -r '.[].name')
   if [ "$pkg" != "$PACKAGE_NAME" ]; then
     cmdLoop tanzu package available list $PACKAGE_ID -A -o json > /tmp/output.json
+echo gaga01
+cat /tmp/output.json
     if [ -s /tmp/output.json ]; then 
+echo gaga02
       package_ver=$(jq -r '.[]."version"' /tmp/output.json | tail -1)
       package_rel=$(jq -r '.[]."released-at"' /tmp/output.json | tail -1)
+echo gaga03
     else
       package_ver=""; package_rel=""
     fi
@@ -10177,6 +10181,7 @@ echo "package_rel:$package_rel"
     cnt=0; ret=1
     while [ $ret -ne 0 -a $cnt -lt 5 ]; do
 echo gaga1
+echo "tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $PACKAGE_NAMESPACE --version $package_ver --create-namespace --wait=true"
       tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $PACKAGE_NAMESPACE --version $package_ver --create-namespace --wait=true > /tmp/error.log 2>&1; ret=$?
 echo gaga2
 
