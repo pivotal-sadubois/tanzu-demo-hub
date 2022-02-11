@@ -414,13 +414,9 @@ messageTitle "Tanzu Package Management"
 TanzuPackage_AddRepo      tanzu-package-repo-global tce-repo projects.registry.vmware.com/tce/main:0.9.1
 TanzuPackage_RepoSync     tanzu-package-repo-global
 
-echo hhhh1
 TanzuPackage_CertManager  cert-manager-pkg     cert-manager.community.tanzu.vmware.com
-echo hhhh2
 TanzuPackage_Contour      contour-pkg          contour.community.tanzu.vmware.com
-echo hhhh3
 TanzuPackage_LocalStorage local-storage-pkg    local-path-storage.community.tanzu.vmware.com
-echo hhhh4
 
 echo ende
 exit

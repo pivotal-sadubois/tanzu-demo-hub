@@ -5321,10 +5321,7 @@ installJenkins() {
   fi
 
   cmdLoop helm ls -n $NAMESPACE -o json > /tmp/output.json
-echo gaga1
-ls -la /tmp/output.json
   if [ -s /tmp/output.json ]; then
-echo gaga2
     ver=$(jq -r --arg chart "$HELMCHART" '.[] | select(.name == $chart).app_version' /tmp/output.json)
     crt=$(jq -r --arg chart "$HELMCHART" '.[] | select(.name == $chart).chart' /tmp/output.json)
     stt=$(jq -r --arg chart "$HELMCHART" '.[] | select(.name == $chart).status' /tmp/output.json)
@@ -5332,8 +5329,6 @@ echo gaga2
   else 
     ver=""; crt=""; stt=""; dat=""
   fi
-#hallo
-echo "daga stt:$stt"
 
   cmdLoop kubectl get secret --namespace jenkins jenkins -o json > /tmp/output.json
   if [ -s /tmp/output.json ]; then 
@@ -10306,7 +10301,6 @@ TanzuPackage_CertManager() {
       rm -f /tmp/error.log
     fi
   fi
-echo gaga111
 
   cnt=0
   while [ $cnt -lt 5 ]; do
@@ -10320,7 +10314,6 @@ echo gaga111
     let cnt=cnt+1
     sleep 60
   done
-echo gaga112
 
   messageTitle "Verify $PACKAGE_DES"
   messagePrint " ▪ Tanzu Package ($PACKAGE_NAME)"                 "$pkg_nam"
@@ -10343,7 +10336,6 @@ echo gaga112
 
     exit 1
   fi
-echo gaga113
 
   # --- STORE SETTINGS IN CONFIGMAP ---
   uodateConfigMap tanzu-demo-hub TDH_CERTMANAGER_ENABLED          "true"
@@ -10707,23 +10699,19 @@ TanzuPackage_Contour() {
       echo " renewBefore: 360h"                                                         >> $VALUE_FILE
     fi
 
-echo pppppppp3
     messageTitle "Installing $PACKAGE_DES"
     messagePrint " ▪ Tanzu Package ($PACKAGE_NAME)"   "$PACKAGE_ID ($package_ver/$package_rel)"
     cnt=0; ret=1
     while [ $ret -ne 0 -a $cnt -lt 5 ]; do
-echo pppppppp4
       tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $PACKAGE_NAMESPACE \
            --version $package_ver --create-namespace --poll-timeout 10m \
            --values-file /tmp/contour-data-values.yaml --wait=true > /tmp/contour.log 2>&1; ret=$?
-echo pppppppp5
       [ $ret -eq 0 ] && break
       tanzu package installed delete $PACKAGE_NAME --namespace $PACKAGE_NAMESPACE -y > /dev/null 2>&1
 
       let cnt=cnt+1
       sleep 30
     done
-echo pppppppp6
 
     if [ $ret -ne 0 ]; then
       logMessages /tmp/contour.log
