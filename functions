@@ -4734,7 +4734,6 @@ alignStr() {
 }
 
 getTDHClusterCredentials() {
-echo gugus1
   cnt=$(kubectl config get-clusters | egrep -c "^$TDH_CLUSTER_NAME$")
   if [ $cnt -eq 0 ]; then 
     messageTitle "Request TKG Cluster Credentials from TMC"
@@ -6814,24 +6813,21 @@ TDH_HARBOR_STAGING_TLS_CERT=true
   fi
 
   # --- NOT CERTIFICATE CLEANUP ALL AND START OVER ---
-  stt=$(cmdLoop kubectl get certificate $TDH_TLS_CERT -o json 2>/dev/null | jq -r '.status.conditions[] | select(.type == "Ready").status' 2>/dev/null)
-echo "gaga11 STT:$stt"
-  stt=$(kubectl get certificate $TDH_TLS_CERT -o json 2>/dev/null | jq -r '.status.conditions[] | select(.type == "Ready").status' 2>/dev/null)
-echo "gaga12 STT:$stt"
+  cmdLoop kubectl get certificate -o json > /tmp/output.json
+  stt=$(jq -r --arg key "$TDH_TLS_CERT" '.items[] | select(.metadata.name == $key).status.conditions[].type' /tmp/output.json)
   if [ "${stt}" == "" -o "${stt}" == "False" ]; then
     messageTitle "Cleaning up Let's Enscript objects"
     cmdLoop kubectl delete clusterissuer,order,challenge,certificate --all > /dev/null 2>&1
   fi
 
-exit
-
-  kubectl get clusterissuer $TDH_TLS_ISSUER_NAME -n kube-system > /dev/null 2>&1
-  if [ $? -ne 0 ]; then
-    AWS_HOSTED_ZONE=$(aws route53 list-hosted-zones-by-name --dns-name ${TDH_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN} | \
-                      jq -r ".HostedZones[] | select(.Name | scan(\"^${zone}.\")).Id")
-    AWS_HOSTED_ZONE_ID=$(aws route53 list-hosted-zones \
-                        --query "HostedZones[?starts_with(to_string(Name), '${TDH_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}.')]" | \
-                        jq -r '.[].Id' | awk -F '/' '{ print $NF }')
+  cmdLoop kubectl get clusterissuer -o json > /tmp/output.json
+  stt=$(jq -r --arg key "$TDH_TLS_ISSUER_NAME" '.items[] | select(.metadata.name == $key).status.conditions[].type' /tmp/output.json) 
+  if [ "${stt}" == "" -o "${stt}" == "False" ]; then
+    cmdLoop aws route53 list-hosted-zones-by-name --dns-name ${TDH_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN} > /tmp/output.json
+    AWS_HOSTED_ZONE=$(jq -r ".HostedZones[] | select(.Name | scan(\"^${zone}.\")).Id" /tmp/output.json)
+    cmdLoop aws route53 list-hosted-zones --output json > /tmp/output.json
+    AWS_HOSTED_ZONE_ID=$(jq -r --arg key "awstkg.pcfsdu.com." '.HostedZones[] | select(.Name == $key).Id' /tmp/output.json | \
+                         awk -F '/' '{ print $NF }')
 
     messageTitle "Create LetsEnscript ClusterIssuer"
     messagePrint " ▪ LetsEnscript Issuer Name"         "$TDH_TLS_ISSUER_NAME"
@@ -8419,7 +8415,6 @@ selfTestStep() {
 
   #[ $(uname) == "Linux" ] &&
 
-#guguseli
   if [ "$NATIVE" -eq 0 ]; then
     echo "$CMD" > /tmp/exec && chmod 777 /tmp/exec
     tools/${TDH_TOOLS}.sh --silent --cmd "bash /tmp/exec" >> /tmp/selffTest.log 2>&1; ret=$?
@@ -11512,7 +11507,7 @@ copySecretObject() {
 # Return Value .......: 0 - SUCCEED, 1 - FAILED
 # ------------------------------------------------------------------------------------------
 cmdLoop() {
-  CMD="$*"
+  CMD=$*
 
   cnt=0; ret=1
   while [ $ret -ne 0 -a $cnt -lt 5 ]; do
