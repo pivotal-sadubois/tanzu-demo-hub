@@ -10127,7 +10127,10 @@ TanzuPackage_RepoSync() {
   fi
 
 echo gggggggggg1
+echo "tanzu package repository list -n $NAMESPACE"
 tanzu package repository list -n $NAMESPACE 
+echo "tanzu package repository list -A"
+tanzu package repository list -A
 }
 
 # ------------------------------------------------------------------------------------------
