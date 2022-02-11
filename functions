@@ -10275,10 +10275,14 @@ echo gaga102
 echo gaga103
 
     # --- DELETE SERVICE ACCOUNT IF IT EXIST ----
+echo "kubectl get serviceaccount -n tanzu-system-packages -o json"
     cmdLoop kubectl get serviceaccount -n tanzu-system-packages -o json > /tmp/output.json
-    nam=$(jq -r --arg key "${PACKAGE_NAME}-${PACKAGE_NAMESPACE}-sa" '.items[] | select(.metadata.name == $key).metadata.name' /tmp/output.json)
-    cmdLoop kubectl -n tanzu-system-packages delete serviceaccount $nam
+cp /tmp/output.json /tmp/output1.json
 echo gaga104
+    nam=$(jq -r --arg key "${PACKAGE_NAME}-${PACKAGE_NAMESPACE}-sa" '.items[] | select(.metadata.name == $key).metadata.name' /tmp/output.json)
+echo "gaga106 NAM:$nam"
+    cmdLoop kubectl -n tanzu-system-packages delete serviceaccount $nam
+echo gaga107
    
     messageTitle "Installing $PACKAGE_DES in $PACKAGE_NAMESPACE"
     messagePrint " ▪ Tanzu Package ($PACKAGE_NAME)"   "$PACKAGE_ID ($package_ver/$package_rel)"
