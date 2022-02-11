@@ -4736,9 +4736,7 @@ alignStr() {
 getTDHClusterCredentials() {
 echo gugus1
   cnt=$(kubectl config get-clusters | egrep -c "^$TDH_CLUSTER_NAME$")
-echo "gugus1 CNT:$cnt"
   if [ $cnt -eq 0 ]; then 
-echo gugus3
     messageTitle "Request TKG Cluster Credentials from TMC"
     messagePrint " ▪ Cluster Name"           "$TDH_CLUSTER_NAME"
     messagePrint " ▪ Kubeconfig File"        "/tmp/${TDH_CLUSTER_NAME}.kubeconfig"
@@ -4752,8 +4750,6 @@ echo gugus3
       sleep 60
       let cnt=cnt+1
     done
-echo gugus5
-kubectl config current-context
   
     if [ $ret -ne 0 ]; then 
       echo "ERROR: Failled to retrieve cluster credentials, aborting"
@@ -4770,8 +4766,6 @@ kubectl config current-context
       sleep 60
       let cnt=cnt+1
     done
-echo gugus6
-kubectl config current-context
   
     if [ $ret -ne 0 ]; then
       echo "ERROR: Failled to retrieve cluster credentials, aborting"
@@ -4793,8 +4787,6 @@ kubectl config current-context
     #echo "kubectl config get-contexts"
     #echo "----------------------------------------------------------------------------------------"
   else
-echo gugus7
-kubectl config current-context
     messageTitle "Verify TKG Cluster Credentials"
     messagePrint " ▪ Cluster Name"           "$TDH_CLUSTER_NAME"
     messagePrint " ▪ Kubeconfig File"        "/tmp/${TDH_CLUSTER_NAME}.kubeconfig"
@@ -4802,8 +4794,6 @@ kubectl config current-context
 
     kubectl config use-context ${TDH_CLUSTER_NAME}-admin@$TDH_CLUSTER_NAME
   fi
-echo gugus8
-kubectl config current-context
 }
 
 verifyDockerRegistry() {
@@ -6816,7 +6806,6 @@ createClusterIssuer() {
   #https://cert-manager.io/docs/tutorials/acme/dns-validation/
   NAMESPACE=cert-manager
 
-#gaga
 TDH_HARBOR_STAGING_TLS_CERT=true
   if [ "${TDH_HARBOR_STAGING_TLS_CERT}" == "true" ]; then
     LETSENSCRIPT_SERVER="https://acme-staging-v02.api.letsencrypt.org/directory"
@@ -6825,11 +6814,16 @@ TDH_HARBOR_STAGING_TLS_CERT=true
   fi
 
   # --- NOT CERTIFICATE CLEANUP ALL AND START OVER ---
+  stt=$(cmdLoop kubectl get certificate $TDH_TLS_CERT -o json 2>/dev/null | jq -r '.status.conditions[] | select(.type == "Ready").status' 2>/dev/null)
+echo "gaga11 STT:$stt"
   stt=$(kubectl get certificate $TDH_TLS_CERT -o json 2>/dev/null | jq -r '.status.conditions[] | select(.type == "Ready").status' 2>/dev/null)
+echo "gaga12 STT:$stt"
   if [ "${stt}" == "" -o "${stt}" == "False" ]; then
     messageTitle "Cleaning up Let's Enscript objects"
-    kubectl delete clusterissuer,order,challenge,certificate --all > /dev/null 2>&1
+    cmdLoop kubectl delete clusterissuer,order,challenge,certificate --all > /dev/null 2>&1
   fi
+
+exit
 
   kubectl get clusterissuer $TDH_TLS_ISSUER_NAME -n kube-system > /dev/null 2>&1
   if [ $? -ne 0 ]; then
@@ -6896,6 +6890,7 @@ echo "TDH_TLS_ISSUER_FILE:$TDH_TLS_ISSUER_FILE"
 echo "/tmp/aws-credentials"
 
     echo "$AWS_CERT_SECRET_KEY" > /tmp/aws-credentials
+cp /tmp/aws-credentials /tmp/aws-credentials1
     kubectl -n cert-manager create secret generic route53-credentials-secret \
             --from-file=aws-credentials=/tmp/aws-credentials > /dev/null 2>&1
 
@@ -6952,47 +6947,19 @@ echo "kubectl -n $NAMESPACE apply -f $TDH_TLS_ISSUER_FILE "
     messagePrint " ▪ LetsEnscript Request Status"      "$issuer_status"
   fi
 
-echo gaga10
-kubectl config current-context
   # --- CREATE CERTIFICATE ---
-echo "cmdLoop kubectl get certificate $TDH_TLS_CERT -o json > /tmp/output.json"
-  kubectl get certificate $TDH_TLS_CERT -o json > /tmp/output.json
-cp /tmp/output.json /tmp/output1.json
-echo gaga11
-  kubectl get certificate $TDH_TLS_CERT -o json > /tmp/output.json
-cp /tmp/output.json /tmp/output2.json
-echo gaga12
-
-  stt_rdy=$(jq -r '.status.conditions[] | select(.type == "Ready").status' /tmp/output.json)
-echo "stt_rdy:$stt_rdy"
-echo gaga2
-
-  # --- CHECK IF SECRET (tanzu-demo-hub) IS THERE ---
-  cmdLoop kubectl get secret $TDH_TLS_SECRET -o json > /tmp/output.json
-  stt_sec=$(jq -r '.metadata.name' /tmp/output.json) 
-  [ "$(jq -r '.metadata.name' /tmp/output.json)" != "" ] && stt_sec=0 || stt_sec=1
-echo gaga3
-
-  # --- CHECK IF CERTIFICATE (tanzu-demo-hub) IS THERE ---
-  cmdLoop kubectl get certificate $TDH_TLS_CERT -o json > /tmp/output.json
-  [ "$(jq -r '.metadata.name' /tmp/output.json)" != "" ] && stt_crt=0 || stt_crt=1
-echo gaga4
-
-  #DELETEME
-  #stt_rdy=$(kubectl get certificate $TDH_TLS_CERT -o json 2>/dev/null | jq -r '.status.conditions[] | select(.type == "Ready").status')
-  #kubectl get secret $TDH_TLS_SECRET > /dev/null 2>&1; stt_sec=$?
-  #kubectl get certificate $TDH_TLS_CERT > /dev/null 2>&1; stt_crt=$?
-echo gaga5
-
+  stt_rdy=$(kubectl get certificate $TDH_TLS_CERT -o json 2>/dev/null | \
+            jq -r '.status.conditions[] | select(.type == "Ready").status')
+  kubectl get secret $TDH_TLS_SECRET > /dev/null 2>&1; stt_sec=$?
+  kubectl get certificate $TDH_TLS_CERT > /dev/null 2>&1; stt_crt=$?
   if [ "${stt_rdy}" == "False" -o $stt_sec -ne 0 -o $stt_crt -ne 0 ]; then
-echo gaga51
     # --- CLEANUP OLD STUFF ---
-    deleteSecret default $TDH_TLS_SECRET
-    deleteCertificate default $TDH_TLS_CERT 
+    #deleteSecret default $TDH_TLS_SECRET
+    #deleteCertificate default $TDH_TLS_CERT 
 
     #DELETEME
-    #kubectl delete secret $TDH_TLS_SECRET > /dev/null 2>&1
-    #kubectl delete certificate $TDH_TLS_CERT > /dev/null 2>&1
+    kubectl delete secret $TDH_TLS_SECRET > /dev/null 2>&1
+    kubectl delete certificate $TDH_TLS_CERT > /dev/null 2>&1
 
     messageTitle "Create LetsEnscript Certificate"
     CERTIFICATE_CONFIG=/tmp/certificate.yaml
@@ -7012,7 +6979,6 @@ echo gaga51
     echo "  - '*.apps-contour.${TDH_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}'"     >> $CERTIFICATE_CONFIG
     echo "  - '*.apps-nginx.${TDH_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}'"       >> $CERTIFICATE_CONFIG
 
-echo gaga52
     messageTitle " - This may take a couple of minutes ...."
     kubectl create -f $CERTIFICATE_CONFIG > /dev/null 2>&1
     if [ $? -ne 0 ]; then
@@ -7046,7 +7012,6 @@ echo gaga52
          exit 1
       fi
     fi
-echo gaga53
 
     if [ "$stt" == "True" ]; then
       tim=$(kubectl get certificate $TDH_TLS_CERT -o json 2>/dev/null | jq -r '.status.conditions[].lastTransitionTime')
@@ -7082,7 +7047,6 @@ echo gaga53
       exit 1
     fi
   fi
-echo gaga56
 
   messageTitle "Verify LetsEnscript Certificate"
   messagePrint " ▪ LetsEnscript Certificate Name"       "$TDH_TLS_CERT"
@@ -7091,13 +7055,11 @@ echo gaga56
   # --- STORE SETTINGS IN CONFIGMAP ---
   uodateConfigMap tanzu-demo-hub TDH_CERTIFICATE_NAME   "$TDH_TLS_CERT"
   uodateConfigMap tanzu-demo-hub TDH_CERTIFICATE_SECRET "$TDH_TLS_SECRET"
-echo gaga57
 
   echo "------------------------------------------------------------------------------------------------------------------------"
   kubectl get secret tanzu-demo-hub-tls -o json | jq -r '.data."tls.crt"' | base64 -d | \
           openssl x509 -inform pem -noout -text | grep $AWS_HOSTED_DNS_DOMAIN
   echo "------------------------------------------------------------------------------------------------------------------------"
-echo gaga8
 }
 
 InstallCertManager() {
