@@ -10609,12 +10609,30 @@ TanzuPackage_Contour() {
   # deployTMC set: ie. TDH_DEPLOYMENT_CLOUD=Azure
   # deployTKG set: ie. TDH_TKGMC_INFRASTRUCTURE=Azure
 
+#gagagag
 echo pppppppp1
-  pkg=$(tanzu package installed get $PACKAGE_NAME -n $PACKAGE_NAMESPACE -o json 2>/dev/null | jq -r '.[].name')
+echo "tanzu package installed get $PACKAGE_NAME -n $PACKAGE_NAMESPACE -o json"
+
+  cmdLoop tanzu package installed get $PACKAGE_NAME -n $PACKAGE_NAMESPACE -o json > /tmp/output.json
+  pkg=$(jq -r '.[].name' /tmp/output.json)
+
+
+  #DELETEME
+  #pkg=$(tanzu package installed get $PACKAGE_NAME -n $PACKAGE_NAMESPACE -o json 2>/dev/null | jq -r '.[].name')
+echo "PKG:$pkg PACKAGE_NAME:$PACKAGE_NAME"
   if [ "$pkg" != "$PACKAGE_NAME" ]; then
+    cmdLoop tanzu package available list $PACKAGE_ID -A -o json > /tmp/output.json
+    if [ -s /tmp/output.json ]; then
+      package_ver=$(jq -r '.[]."version"' /tmp/output.json | tail -1)
+      package_rel=$(jq -r '.[]."released-at"' /tmp/output.json | tail -1)
+    else
+      package_ver=""; package_rel=""
+    fi
 echo pppppppp2
-    package_ver=$(tanzu package available list $PACKAGE_ID -A -o json | jq -r '.[]."version"' | tail -1)
-    package_rel=$(tanzu package available list $PACKAGE_ID -A -o json | jq -r '.[]."released-at"' | tail -1)
+
+    #DELETEME
+    #package_ver=$(tanzu package available list $PACKAGE_ID -A -o json | jq -r '.[]."version"' | tail -1)
+    #package_rel=$(tanzu package available list $PACKAGE_ID -A -o json | jq -r '.[]."released-at"' | tail -1)
 
     if [ "${TDH_DEPLOYMENT_CLOUD}" == "docker" -o "${TDH_TKGMC_INFRASTRUCTURE}" == "docker" ]; then
       VALUE_FILE=/tmp/contour-data-values.yaml; rm -f $VALUE_FILE
