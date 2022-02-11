@@ -4734,8 +4734,11 @@ alignStr() {
 }
 
 getTDHClusterCredentials() {
+echo gugus1
   cnt=$(kubectl config get-clusters | egrep -c "^$TDH_CLUSTER_NAME$")
+echo "gugus1 CNT:$cnt"
   if [ $cnt -eq 0 ]; then 
+echo gugus3
     messageTitle "Request TKG Cluster Credentials from TMC"
     messagePrint " ▪ Cluster Name"           "$TDH_CLUSTER_NAME"
     messagePrint " ▪ Kubeconfig File"        "/tmp/${TDH_CLUSTER_NAME}.kubeconfig"
@@ -4749,6 +4752,8 @@ getTDHClusterCredentials() {
       sleep 60
       let cnt=cnt+1
     done
+echo gugus5
+kubectl config current-context
   
     if [ $ret -ne 0 ]; then 
       echo "ERROR: Failled to retrieve cluster credentials, aborting"
@@ -4765,6 +4770,8 @@ getTDHClusterCredentials() {
       sleep 60
       let cnt=cnt+1
     done
+echo gugus6
+kubectl config current-context
   
     if [ $ret -ne 0 ]; then
       echo "ERROR: Failled to retrieve cluster credentials, aborting"
@@ -4786,6 +4793,8 @@ getTDHClusterCredentials() {
     #echo "kubectl config get-contexts"
     #echo "----------------------------------------------------------------------------------------"
   else
+echo gugus7
+kubectl config current-context
     messageTitle "Verify TKG Cluster Credentials"
     messagePrint " ▪ Cluster Name"           "$TDH_CLUSTER_NAME"
     messagePrint " ▪ Kubeconfig File"        "/tmp/${TDH_CLUSTER_NAME}.kubeconfig"
@@ -4793,6 +4802,8 @@ getTDHClusterCredentials() {
 
     kubectl config use-context ${TDH_CLUSTER_NAME}-admin@$TDH_CLUSTER_NAME
   fi
+echo gugus8
+kubectl config current-context
 }
 
 verifyDockerRegistry() {
@@ -6791,10 +6802,22 @@ InstallContour() {
   uodateConfigMap tanzu-demo-hub TDH_INGRESS_CONTOUR_CHART_UPDATE   "$dat"
 }
 
+# ------------------------------------------------------------------------------------------
+# Function Name ......: cmdLoop
+# Function Purpose ...: Execute Command in a Loop until its working
+# ------------------------------------------------------------------------------------------
+# Argument ($1) ......: Command to execure
+# ------------------------------------------------------------------------------------------
+# Return Value .......: 0 - SUCCEED, 1 - FAILED
+# ------------------------------------------------------------------------------------------
+# References: https://cert-manager.io/docs/faq/acme ................. Debugging Cert Manager
+# ------------------------------------------------------------------------------------------
 createClusterIssuer() {
   #https://cert-manager.io/docs/tutorials/acme/dns-validation/
   NAMESPACE=cert-manager
 
+#gaga
+TDH_HARBOR_STAGING_TLS_CERT=true
   if [ "${TDH_HARBOR_STAGING_TLS_CERT}" == "true" ]; then
     LETSENSCRIPT_SERVER="https://acme-staging-v02.api.letsencrypt.org/directory"
   else
@@ -6848,11 +6871,9 @@ createClusterIssuer() {
     echo "    solvers:"                                                            >> $TDH_TLS_ISSUER_FILE
     echo "    - selector:"                                                         >> $TDH_TLS_ISSUER_FILE
     echo "        dnsZones:"                                                       >> $TDH_TLS_ISSUER_FILE
-    echo "          - \"$HARBOR_HOSTNAME\""                                        >> $TDH_TLS_ISSUER_FILE
-    echo "          - \"$NOTARY_HOSTNAME\""                                        >> $TDH_TLS_ISSUER_FILE
     echo "          - \"*.apps-contour.${TDH_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}\""  >> $TDH_TLS_ISSUER_FILE
     echo "          - \"*.apps-nginx.${TDH_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}\""    >> $TDH_TLS_ISSUER_FILE
-    echo "          - \"*.gitlab.${TDH_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}\""        >> $TDH_TLS_ISSUER_FILE
+    #echo "          - \"*.gitlab.${TDH_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}\""        >> $TDH_TLS_ISSUER_FILE
     echo "      dns01:"                                                            >> $TDH_TLS_ISSUER_FILE
     echo "        route53:"                                                        >> $TDH_TLS_ISSUER_FILE
     echo "          region: $AWS_REGION"                                           >> $TDH_TLS_ISSUER_FILE
@@ -6863,6 +6884,8 @@ createClusterIssuer() {
     echo "          # you can also assume a role with these credentials"           >> $TDH_TLS_ISSUER_FILE
     echo "          hostedZoneID: $AWS_HOSTED_ZONE_ID"                             >> $TDH_TLS_ISSUER_FILE
 
+echo "TDH_TLS_ISSUER_FILE:$TDH_TLS_ISSUER_FILE"
+
     # --- CREATE/RECREATE AWS ROUTE53 SECRET ---
     #deleteSecret cert-manager route53-credentials-secret
     #deleteSecret default route53-credentials-secret
@@ -6870,6 +6893,7 @@ createClusterIssuer() {
     #DELETEME
     kubectl -n cert-manager delete secret route53-credentials-secret > /dev/null 2>&1
     kubectl -n default delete secret route53-credentials-secret > /dev/null 2>&1
+echo "/tmp/aws-credentials"
 
     echo "$AWS_CERT_SECRET_KEY" > /tmp/aws-credentials
     kubectl -n cert-manager create secret generic route53-credentials-secret \
@@ -6889,6 +6913,7 @@ createClusterIssuer() {
     # --- RECREATE ISSUER ---
     kubectl -n $NAMESPACE delete --all clusterissuer,certificate,order,challenge > /dev/null 2>&1
     sleep 120
+echo "kubectl -n $NAMESPACE apply -f $TDH_TLS_ISSUER_FILE "
     kubectl -n $NAMESPACE apply -f $TDH_TLS_ISSUER_FILE > /dev/null 2>&1
     if [ $? -ne 0 ]; then
       echo "ERROR: failed to deploy letsenscript issuer"
@@ -6928,12 +6953,18 @@ createClusterIssuer() {
   fi
 
 echo gaga10
+kubectl config current-context
   # --- CREATE CERTIFICATE ---
 echo "cmdLoop kubectl get certificate $TDH_TLS_CERT -o json > /tmp/output.json"
-  cmdLoop kubectl get certificate $TDH_TLS_CERT -o json > /tmp/output.json
+  kubectl get certificate $TDH_TLS_CERT -o json > /tmp/output.json
+cp /tmp/output.json /tmp/output1.json
 echo gaga11
+  kubectl get certificate $TDH_TLS_CERT -o json > /tmp/output.json
+cp /tmp/output.json /tmp/output2.json
+echo gaga12
 
   stt_rdy=$(jq -r '.status.conditions[] | select(.type == "Ready").status' /tmp/output.json)
+echo "stt_rdy:$stt_rdy"
 echo gaga2
 
   # --- CHECK IF SECRET (tanzu-demo-hub) IS THERE ---
@@ -10651,6 +10682,7 @@ TanzuPackage_Contour() {
     if [ "${TDH_DEPLOYMENT_CLOUD}" == "AWS" -o "${TDH_TKGMC_INFRASTRUCTURE}" == "AWS" ]; then
       VALUE_FILE=/tmp/contour-data-values.yaml; rm -f $VALUE_FILE
       echo "---"                                                                        >  $VALUE_FILE
+      echo "infrastructure_provider: aws"                                               >> $VALUE_FILE
       echo "namespace: tanzu-system-ingress"                                            >> $VALUE_FILE
       echo "contour:"                                                                   >> $VALUE_FILE
       echo " configFileContents: {}"                                                    >> $VALUE_FILE
