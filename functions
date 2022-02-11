@@ -10264,7 +10264,12 @@ TanzuPackage_CertManager() {
   cmdLoop tanzu package installed get $PACKAGE_NAME -n $PACKAGE_NAMESPACE -o json > /tmp/output.json
   pkg=$(jq -r '.[].name' /tmp/output.json) 
   if [ "$pkg" != "$PACKAGE_NAME" ]; then
+echo kkkkkkkk
+tanzu package available list -n tanzu-package-repo-global  
+echo jjjjjjjjj
 echo "tanzu package available list $PACKAGE_ID -A"
+tanzu package available list $PACKAGE_ID -A
+echo wwwwwwwwww
     cmdLoop tanzu package available list $PACKAGE_ID -A -o json > /tmp/output.json
 cp /tmp/output.json /tmp/output1.json
 echo "/tmp/output1.json"
