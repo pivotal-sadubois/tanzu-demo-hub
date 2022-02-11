@@ -6800,7 +6800,6 @@ createClusterIssuer() {
   #https://cert-manager.io/docs/tutorials/acme/dns-validation/
   NAMESPACE=cert-manager
 
-TDH_HARBOR_STAGING_TLS_CERT=true
   if [ "${TDH_HARBOR_STAGING_TLS_CERT}" == "true" ]; then
     LETSENSCRIPT_SERVER="https://acme-staging-v02.api.letsencrypt.org/directory"
   else
