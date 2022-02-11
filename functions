@@ -6800,6 +6800,7 @@ createClusterIssuer() {
   #https://cert-manager.io/docs/tutorials/acme/dns-validation/
   NAMESPACE=cert-manager
 
+TDH_HARBOR_STAGING_TLS_CERT=true
   if [ "${TDH_HARBOR_STAGING_TLS_CERT}" == "true" ]; then
     LETSENSCRIPT_SERVER="https://acme-staging-v02.api.letsencrypt.org/directory"
   else
@@ -10275,6 +10276,7 @@ TanzuPackage_CertManager() {
 
     cnt=0; ret=1
     while [ $ret -ne 0 -a $cnt -lt 5 ]; do
+echo "tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $PACKAGE_NAMESPACE --version $package_ver --create-namespace"
       tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $PACKAGE_NAMESPACE --version $package_ver \
             --create-namespace --poll-timeout 10m --wait=true > /tmp/error.log 2>&1; ret=$?
       [ $ret -eq 0 ] && break
