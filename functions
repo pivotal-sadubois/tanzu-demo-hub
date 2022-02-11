@@ -10259,11 +10259,14 @@ TanzuPackage_CertManager() {
   pkg=$(jq -r '.[].name' /tmp/output.json) 
   if [ "$pkg" != "$PACKAGE_NAME" ]; then
     cmdLoop tanzu package available list $PACKAGE_ID -A -o json > /tmp/output.json
+cp /tmp/output.json /tmp/output1.json
     if [ -s /tmp/output.json ]; then 
       package_ver=$(jq -r '.[]."version"' /tmp/output.json | tail -1)
       package_rel=$(jq -r '.[]."released-at"' /tmp/output.json | tail -1)
     else
       package_ver=""; package_rel=""
+echo "no version"
+exit
     fi
 
     # --- DELETE SERVICE ACCOUNT IF IT EXIST ----
