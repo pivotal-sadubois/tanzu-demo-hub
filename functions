@@ -10609,8 +10609,10 @@ TanzuPackage_Contour() {
   # deployTMC set: ie. TDH_DEPLOYMENT_CLOUD=Azure
   # deployTKG set: ie. TDH_TKGMC_INFRASTRUCTURE=Azure
 
+echo pppppppp1
   pkg=$(tanzu package installed get $PACKAGE_NAME -n $PACKAGE_NAMESPACE -o json 2>/dev/null | jq -r '.[].name')
   if [ "$pkg" != "$PACKAGE_NAME" ]; then
+echo pppppppp2
     package_ver=$(tanzu package available list $PACKAGE_ID -A -o json | jq -r '.[]."version"' | tail -1)
     package_rel=$(tanzu package available list $PACKAGE_ID -A -o json | jq -r '.[]."released-at"' | tail -1)
 
@@ -10710,19 +10712,23 @@ TanzuPackage_Contour() {
       echo " renewBefore: 360h"                                                         >> $VALUE_FILE
     fi
 
+echo pppppppp3
     messageTitle "Installing $PACKAGE_DES"
     messagePrint " ▪ Tanzu Package ($PACKAGE_NAME)"   "$PACKAGE_ID ($package_ver/$package_rel)"
     cnt=0; ret=1
     while [ $ret -ne 0 -a $cnt -lt 5 ]; do
+echo pppppppp4
       tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $PACKAGE_NAMESPACE \
            --version $package_ver --create-namespace --poll-timeout 10m \
            --values-file /tmp/contour-data-values.yaml --wait=true > /tmp/contour.log 2>&1; ret=$?
+echo pppppppp5
       [ $ret -eq 0 ] && break
       tanzu package installed delete $PACKAGE_NAME --namespace $PACKAGE_NAMESPACE -y > /dev/null 2>&1
 
       let cnt=cnt+1
       sleep 30
     done
+echo pppppppp6
 
     if [ $ret -ne 0 ]; then
       logMessages /tmp/contour.log
