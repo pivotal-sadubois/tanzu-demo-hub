@@ -412,9 +412,7 @@ fi
 
 messageTitle "Tanzu Package Management"
 TanzuPackage_AddRepo      tanzu-package-repo-global tce-repo projects.registry.vmware.com/tce/main:0.9.1
-echo "=> TanzuPackage_RepoSync     tanzu-package-repo-global"
 TanzuPackage_RepoSync     tanzu-package-repo-global
-echo "=> TanzuPackage_RepoSync     tkg-system"
 TanzuPackage_RepoSync     tkg-system 
 
 TanzuPackage_CertManager  cert-manager-pkg     cert-manager.community.tanzu.vmware.com

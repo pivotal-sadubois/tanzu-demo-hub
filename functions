@@ -10125,12 +10125,6 @@ TanzuPackage_RepoSync() {
     tanzu package repository list -A
     messageLine
   fi
-
-echo gggggggggg1
-echo "tanzu package repository list -n $PACKAGE_REPOSITORY"
-tanzu package repository list -n $PACKAGE_REPOSITORY 
-echo "tanzu package repository list -A"
-tanzu package repository list -A
 }
 
 # ------------------------------------------------------------------------------------------
@@ -10260,27 +10254,15 @@ TanzuPackage_CertManager() {
   PACKAGE_ID=$2
   PACKAGE_DES="Certificate management (cert-manager)"
 
-#gagagaga
   cmdLoop tanzu package installed get $PACKAGE_NAME -n $PACKAGE_NAMESPACE -o json > /tmp/output.json
   pkg=$(jq -r '.[].name' /tmp/output.json) 
   if [ "$pkg" != "$PACKAGE_NAME" ]; then
-echo kkkkkkkk
-tanzu package available list -n tanzu-package-repo-global  
-echo jjjjjjjjj
-echo "tanzu package available list $PACKAGE_ID -A"
-tanzu package available list $PACKAGE_ID -A
-echo wwwwwwwwww
     cmdLoop tanzu package available list $PACKAGE_ID -A -o json > /tmp/output.json
-cp /tmp/output.json /tmp/output1.json
-echo "/tmp/output1.json"
     if [ -s /tmp/output.json ]; then 
-echo xxxx
       package_ver=$(jq -r '.[]."version"' /tmp/output.json | tail -1)
       package_rel=$(jq -r '.[]."released-at"' /tmp/output.json | tail -1)
     else
       package_ver=""; package_rel=""
-echo "no version"
-exit
     fi
 
     # --- DELETE SERVICE ACCOUNT IF IT EXIST ----
@@ -10293,7 +10275,6 @@ exit
 
     cnt=0; ret=1
     while [ $ret -ne 0 -a $cnt -lt 5 ]; do
-echo "tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $PACKAGE_NAMESPACE --version $package_ver --create-namespace"
       tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $PACKAGE_NAMESPACE --version $package_ver \
             --create-namespace --poll-timeout 10m --wait=true > /tmp/error.log 2>&1; ret=$?
       [ $ret -eq 0 ] && break
