@@ -10259,10 +10259,12 @@ TanzuPackage_CertManager() {
   PACKAGE_ID=$2
   PACKAGE_DES="Certificate management (cert-manager)"
 
+echo gaga101
 #gagagaga
   cmdLoop tanzu package installed get $PACKAGE_NAME -n $PACKAGE_NAMESPACE -o json > /tmp/output.json
   pkg=$(jq -r '.[].name' /tmp/output.json) 
   if [ "$pkg" != "$PACKAGE_NAME" ]; then
+echo gaga102
     cmdLoop tanzu package available list $PACKAGE_ID -A -o json > /tmp/output.json
     if [ -s /tmp/output.json ]; then 
       package_ver=$(jq -r '.[]."version"' /tmp/output.json | tail -1)
@@ -10270,19 +10272,18 @@ TanzuPackage_CertManager() {
     else
       package_ver=""; package_rel=""
     fi
+echo gaga103
 
     # --- DELETE SERVICE ACCOUNT IF IT EXIST ----
     cmdLoop kubectl get serviceaccount -n tanzu-system-packages -o json > /tmp/output.json
     nam=$(jq -r --arg key "${PACKAGE_NAME}-${PACKAGE_NAMESPACE}-sa" '.items[] | select(.metadata.name == $key).metadata.name' /tmp/output.json)
     cmdLoop kubectl -n tanzu-system-packages delete serviceaccount $nam
+echo gaga104
    
-    #DELETEME
-    #package_ver=$(tanzu package available list $PACKAGE_ID -A -o json | jq -r '.[]."version"' | tail -1)
-    #package_rel=$(tanzu package available list $PACKAGE_ID -A -o json | jq -r '.[]."released-at"' | tail -1)
-
     messageTitle "Installing $PACKAGE_DES in $PACKAGE_NAMESPACE"
     messagePrint " ▪ Tanzu Package ($PACKAGE_NAME)"   "$PACKAGE_ID ($package_ver/$package_rel)"
 
+echo gaga105
     cnt=0; ret=1
     while [ $ret -ne 0 -a $cnt -lt 5 ]; do
 echo gaga1
@@ -10312,6 +10313,7 @@ echo gaga2
       rm -f /tmp/error.log
     fi
   fi
+echo gaga111
 
   cnt=0
   while [ $cnt -lt 5 ]; do
@@ -10325,6 +10327,7 @@ echo gaga2
     let cnt=cnt+1
     sleep 60
   done
+echo gaga112
 
   messageTitle "Verify $PACKAGE_DES"
   messagePrint " ▪ Tanzu Package ($PACKAGE_NAME)"                 "$pkg_nam"
@@ -10347,6 +10350,7 @@ echo gaga2
 
     exit 1
   fi
+echo gaga113
 
   # --- STORE SETTINGS IN CONFIGMAP ---
   uodateConfigMap tanzu-demo-hub TDH_CERTMANAGER_ENABLED          "true"
