@@ -418,8 +418,6 @@ TanzuPackage_CertManager  cert-manager-pkg     cert-manager.community.tanzu.vmwa
 TanzuPackage_Contour      contour-pkg          contour.community.tanzu.vmware.com
 TanzuPackage_LocalStorage local-storage-pkg    local-path-storage.community.tanzu.vmware.com
 createClusterIssuer
-
-exit
 getRootCA                 tanzu-demo-hub-tls
 TanzuPackage_Harbor       harbor-pkg           harbor.community.tanzu.vmware.com 
 
