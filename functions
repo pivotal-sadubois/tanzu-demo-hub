@@ -10165,7 +10165,7 @@ TanzuPackage_LocalStorage() {
     # --- DELETE SERVICE ACCOUNT IF IT EXIST ----
     cmdLoop kubectl get serviceaccount -n tanzu-system-packages -o json > /tmp/output.json
     nam=$(jq -r --arg key "${PACKAGE_NAME}-${PACKAGE_NAMESPACE}-sa" '.items[] | select(.metadata.name == $key).metadata.name' /tmp/output.json) 
-    cmdLoop kubectl -n tanzu-system-packages delete serviceaccount $nam
+    [ "$nam" != "" ] && cmdLoop kubectl -n tanzu-system-packages delete serviceaccount $nam
 
     messageTitle "Installing $PACKAGE_DES"
     messagePrint " ▪ Tanzu Package ($PACKAGE_NAME)"   "$PACKAGE_ID ($package_ver/$package_rel)"
@@ -10259,12 +10259,10 @@ TanzuPackage_CertManager() {
   PACKAGE_ID=$2
   PACKAGE_DES="Certificate management (cert-manager)"
 
-echo gaga101
 #gagagaga
   cmdLoop tanzu package installed get $PACKAGE_NAME -n $PACKAGE_NAMESPACE -o json > /tmp/output.json
   pkg=$(jq -r '.[].name' /tmp/output.json) 
   if [ "$pkg" != "$PACKAGE_NAME" ]; then
-echo gaga102
     cmdLoop tanzu package available list $PACKAGE_ID -A -o json > /tmp/output.json
     if [ -s /tmp/output.json ]; then 
       package_ver=$(jq -r '.[]."version"' /tmp/output.json | tail -1)
@@ -10272,28 +10270,19 @@ echo gaga102
     else
       package_ver=""; package_rel=""
     fi
-echo gaga103
 
     # --- DELETE SERVICE ACCOUNT IF IT EXIST ----
-echo "kubectl get serviceaccount -n tanzu-system-packages -o json"
     cmdLoop kubectl get serviceaccount -n tanzu-system-packages -o json > /tmp/output.json
-cp /tmp/output.json /tmp/output1.json
-echo gaga104
     nam=$(jq -r --arg key "${PACKAGE_NAME}-${PACKAGE_NAMESPACE}-sa" '.items[] | select(.metadata.name == $key).metadata.name' /tmp/output.json)
-echo "gaga106 NAM:$nam"
-    cmdLoop kubectl -n tanzu-system-packages delete serviceaccount $nam
-echo gaga107
+    [ "$nam" != "" ] && cmdLoop kubectl -n tanzu-system-packages delete serviceaccount $nam
    
     messageTitle "Installing $PACKAGE_DES in $PACKAGE_NAMESPACE"
     messagePrint " ▪ Tanzu Package ($PACKAGE_NAME)"   "$PACKAGE_ID ($package_ver/$package_rel)"
 
-echo gaga105
     cnt=0; ret=1
     while [ $ret -ne 0 -a $cnt -lt 5 ]; do
-echo gaga1
       tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $PACKAGE_NAMESPACE --version $package_ver \
             --create-namespace --poll-timeout 10m --wait=true > /tmp/error.log 2>&1; ret=$?
-echo gaga2
       [ $ret -eq 0 ] && break
       tanzu package installed delete $PACKAGE_NAME --namespace $PACKAGE_NAMESPACE -y > /dev/null 2>&1
 
@@ -10620,7 +10609,7 @@ TanzuPackage_Contour() {
     # --- DELETE SERVICE ACCOUNT IF IT EXIST ----
     cmdLoop kubectl get serviceaccount -n tanzu-system-packages -o json > /tmp/output.json
     nam=$(jq -r --arg key "${PACKAGE_NAME}-${PACKAGE_NAMESPACE}-sa" '.items[] | select(.metadata.name == $key).metadata.name' /tmp/output.json)
-    cmdLoop kubectl -n tanzu-system-packages delete serviceaccount $nam
+    [ "$nam" != "" ] && cmdLoop kubectl -n tanzu-system-packages delete serviceaccount $nam
 
     if [ "${TDH_DEPLOYMENT_CLOUD}" == "docker" -o "${TDH_TKGMC_INFRASTRUCTURE}" == "docker" ]; then
       VALUE_FILE=/tmp/contour-data-values.yaml; rm -f $VALUE_FILE
