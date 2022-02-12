@@ -10233,8 +10233,9 @@ echo "tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace
     fi
   fi
 
+#bbbbbbb
   cmdLoop tanzu package installed list -A -o json > /tmp/output.json
-  stt=$(jq -r --arg key "$PACKAGE_NAME" "cert-manager-pkg" '.[] | select(.name == $key).name' /tmp/output.json)
+  stt=$(jq -r --arg key "$PACKAGE_NAME" '.[] | select(.name == $key).name' /tmp/output.json)
   if [ "$stt" == "$PACKAGE_NAME" ]; then 
     while [ $cnt -lt 5 ]; do
       cmdLoop tanzu package installed get $PACKAGE_NAME -n $PACKAGE_NAMESPACE -o json > /tmp/pkg.json
@@ -10306,7 +10307,7 @@ TanzuPackage_CertManager() {
 echo "tanzu package installed get $PACKAGE_NAME -n $PACKAGE_NAMESPACE"
   cmdLoop tanzu package installed get $PACKAGE_NAME -n $PACKAGE_NAMESPACE -o json > /tmp/output.json
   pkg=$(jq -r '.[].name' /tmp/output.json) 
-echo gaga21
+echo "gaga21 pkg:$pkg"
   if [ "$pkg" != "$PACKAGE_NAME" ]; then
 echo gaga22
     cmdLoop tanzu package available list $PACKAGE_ID -A -o json > /tmp/output.json
@@ -10356,9 +10357,12 @@ echo "tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace
       rm -f /tmp/error.log
     fi
   fi
+echo gaga30
 
+#bbbbbb
   cmdLoop tanzu package installed list -A -o json > /tmp/output.json
-  stt=$(jq -r --arg key "$PACKAGE_NAME" "cert-manager-pkg" '.[] | select(.name == $key).name' /tmp/output.json)
+  stt=$(jq -r --arg key "$PACKAGE_NAME" '.[] | select(.name == $key).name' /tmp/output.json)
+echo "gaga31 stt:$stt"
   if [ "$stt" == "$PACKAGE_NAME" ]; then
     while [ $cnt -lt 5 ]; do
       cmdLoop tanzu package installed get $PACKAGE_NAME -n $PACKAGE_NAMESPACE -o json > /tmp/pkg.json
@@ -10577,7 +10581,8 @@ TanzuPackage_Harbor () {
 
 #bbbbb
   cmdLoop tanzu package installed list -A -o json > /tmp/output.json
-  stt=$(jq -r --arg key "$PACKAGE_NAME" "cert-manager-pkg" '.[] | select(.name == $key).name' /tmp/output.json)
+  stt=$(jq -r --arg key "$PACKAGE_NAME" '.[] | select(.name == $key).name' /tmp/output.json)
+echo "gaga90 STT:$stt"
   if [ "$stt" == "$PACKAGE_NAME" ]; then
     while [ $cnt -lt 5 ]; do
       cmdLoop tanzu package installed get $PACKAGE_NAME -n $PACKAGE_NAMESPACE -o json > /tmp/pkg.json
@@ -10809,8 +10814,9 @@ echo gaga52
     fi
   fi
 
+#bbbbbbbb
   cmdLoop tanzu package installed list -A -o json > /tmp/output.json
-  stt=$(jq -r --arg key "$PACKAGE_NAME" "cert-manager-pkg" '.[] | select(.name == $key).name' /tmp/output.json)
+  stt=$(jq -r --arg key "$PACKAGE_NAME" '.[] | select(.name == $key).name' /tmp/output.json)
   if [ "$stt" == "$PACKAGE_NAME" ]; then
     while [ $cnt -lt 5 ]; do
       cmdLoop tanzu package installed get $PACKAGE_NAME -n $PACKAGE_NAMESPACE -o json > /tmp/pkg.json
