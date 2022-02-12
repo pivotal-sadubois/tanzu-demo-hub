@@ -10183,8 +10183,8 @@ TanzuPackage_LocalStorage() {
   PACKAGE_ID="$2"
   PACKAGE_DES="Local Storage (RWO AccessMode)"
 
-  cmdLoop tanzu package installed get $PACKAGE_NAME -n $PACKAGE_NAMESPACE -o json > /tmp/output.json
-  pkg=$(jq -r '.[].name' /tmp/output.json) 
+  cmdLoop tanzu package installed list -A -o json > /tmp/output.json
+  pkg=$(jq -r --arg key "$PACKAGE_NAME" '.[] | select(.name == $key).name' /tmp/output.json)
   if [ "$pkg" != "$PACKAGE_NAME" ]; then
     cmdLoop tanzu package available list $PACKAGE_ID -A -o json > /tmp/output.json
 echo "tanzu package available list $PACKAGE_ID -A"
@@ -10212,7 +10212,19 @@ echo "tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace
       tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $PACKAGE_NAMESPACE --version $package_ver --create-namespace --wait=true > /tmp/error.log 2>&1; ret=$?
 
       [ $ret -eq 0 ] && break
-      tanzu package installed delete $PACKAGE_NAME --namespace $PACKAGE_NAMESPACE -y > /dev/null 2>&1
+
+echo gaga54
+      # --- DELETE FAILED PACKAGE INSTALL ---
+      cmdLoop tanzu package installed list -A -o json > /tmp/output.json
+      pkg=$(jq -r --arg key "$PACKAGE_NAME" '.[] | select(.name == $key).name' /tmp/output.json)
+      [ "$pkg" == "$PACKAGE_NAME" ] && tanzu package installed delete $PACKAGE_NAME --namespace $PACKAGE_NAMESPACE -y > /dev/null 2>&1
+
+echo gaga54
+      # --- DELETE SERVICE ACCOUNT IF IT EXIST ----
+      cmdLoop kubectl get serviceaccount -n tanzu-system-packages -o json > /tmp/output.json
+      nam=$(jq -r --arg key "${PACKAGE_NAME}-${PACKAGE_NAMESPACE}-sa" '.items[] | select(.metadata.name == $key).metadata.name' /tmp/output.json)
+      [ "$nam" != "" ] && cmdLoop kubectl -n tanzu-system-packages delete serviceaccount $nam
+echo gaga55
 
       let cnt=cnt+1
       sleep 30
@@ -10304,10 +10316,8 @@ TanzuPackage_CertManager() {
   PACKAGE_ID=$2
   PACKAGE_DES="Certificate management (cert-manager)"
 
-echo "tanzu package installed get $PACKAGE_NAME -n $PACKAGE_NAMESPACE"
-  cmdLoop tanzu package installed get $PACKAGE_NAME -n $PACKAGE_NAMESPACE -o json > /tmp/output.json
-  pkg=$(jq -r '.[].name' /tmp/output.json) 
-echo "gaga21 pkg:$pkg"
+  cmdLoop tanzu package installed list -A -o json > /tmp/output.json
+  pkg=$(jq -r --arg key "$PACKAGE_NAME" '.[] | select(.name == $key).name' /tmp/output.json)
   if [ "$pkg" != "$PACKAGE_NAME" ]; then
 echo gaga22
     cmdLoop tanzu package available list $PACKAGE_ID -A -o json > /tmp/output.json
@@ -10335,7 +10345,19 @@ echo "tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace
       tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $PACKAGE_NAMESPACE --version $package_ver \
             --create-namespace --poll-timeout 10m --wait=true > /tmp/error.log 2>&1; ret=$?
       [ $ret -eq 0 ] && break
-      tanzu package installed delete $PACKAGE_NAME --namespace $PACKAGE_NAMESPACE -y > /dev/null 2>&1
+
+echo gaga54
+      # --- DELETE FAILED PACKAGE INSTALL ---
+      cmdLoop tanzu package installed list -A -o json > /tmp/output.json
+      pkg=$(jq -r --arg key "$PACKAGE_NAME" '.[] | select(.name == $key).name' /tmp/output.json)
+      [ "$pkg" == "$PACKAGE_NAME" ] && tanzu package installed delete $PACKAGE_NAME --namespace $PACKAGE_NAMESPACE -y > /dev/null 2>&1
+
+echo gaga54
+      # --- DELETE SERVICE ACCOUNT IF IT EXIST ----
+      cmdLoop kubectl get serviceaccount -n tanzu-system-packages -o json > /tmp/output.json
+      nam=$(jq -r --arg key "${PACKAGE_NAME}-${PACKAGE_NAMESPACE}-sa" '.items[] | select(.metadata.name == $key).metadata.name' /tmp/output.json)
+      [ "$nam" != "" ] && cmdLoop kubectl -n tanzu-system-packages delete serviceaccount $nam
+echo gaga55
 
       let cnt=cnt+1
       sleep 30
@@ -10443,7 +10465,8 @@ TanzuPackage_Harbor () {
 
   #tanzu package installed delete harbor-pkg --namespace tanzu-system-packages
 
-  pkg=$(tanzu package installed get $PACKAGE_NAME -n $PACKAGE_NAMESPACE -o json 2>/dev/null | jq -r '.[].name')
+  cmdLoop tanzu package installed list -A -o json > /tmp/output.json
+  pkg=$(jq -r --arg key "$PACKAGE_NAME" '.[] | select(.name == $key).name' /tmp/output.json)
   if [ "$pkg" != "$PACKAGE_NAME" ]; then
     messagePrint " ▪ Create Namespace"  "$NAMESPACE"
     deleteNamespace $NAMESPACE > /dev/null 2>&1
@@ -10548,7 +10571,19 @@ TanzuPackage_Harbor () {
              --version $package_ver --create-namespace --poll-timeout 20m --poll-interval 10s --log-file /tmp/harbor.log \
              --values-file $HARBOR_VALUES --wait=true --verbose 9 > /tmp/error.log 2>&1; ret=$?
       [ $ret -eq 0 ] && break
-      tanzu package installed delete $PACKAGE_NAME --namespace $PACKAGE_NAMESPACE -y > /dev/null 2>&1
+
+echo gaga54
+      # --- DELETE FAILED PACKAGE INSTALL ---
+      cmdLoop tanzu package installed list -A -o json > /tmp/output.json
+      pkg=$(jq -r --arg key "$PACKAGE_NAME" '.[] | select(.name == $key).name' /tmp/output.json)
+      [ "$pkg" == "$PACKAGE_NAME" ] && tanzu package installed delete $PACKAGE_NAME --namespace $PACKAGE_NAMESPACE -y > /dev/null 2>&1
+
+echo gaga54
+      # --- DELETE SERVICE ACCOUNT IF IT EXIST ----
+      cmdLoop kubectl get serviceaccount -n tanzu-system-packages -o json > /tmp/output.json
+      nam=$(jq -r --arg key "${PACKAGE_NAME}-${PACKAGE_NAMESPACE}-sa" '.items[] | select(.metadata.name == $key).metadata.name' /tmp/output.json)
+      [ "$nam" != "" ] && cmdLoop kubectl -n tanzu-system-packages delete serviceaccount $nam
+echo gaga55
 
       let cnt=cnt+1
       sleep 30
@@ -10658,8 +10693,8 @@ TanzuPackage_Contour() {
   PACKAGE_ID=$2
   PACKAGE_DES="Contour ingress controller"
 
-  cmdLoop tanzu package installed get $PACKAGE_NAME -n $PACKAGE_NAMESPACE -o json > /tmp/output.json
-  pkg=$(jq -r '.[].name' /tmp/output.json)
+  cmdLoop tanzu package installed list -A -o json > /tmp/output.json
+  pkg=$(jq -r --arg key "$PACKAGE_NAME" '.[] | select(.name == $key).name' /tmp/output.json)
   if [ "$pkg" != "$PACKAGE_NAME" ]; then
 echo "tanzu package available list $PACKAGE_ID "
     cmdLoop tanzu package available list $PACKAGE_ID -A -o json > /tmp/output.json
@@ -10768,15 +10803,11 @@ echo "package_ver:$package_ver"
     fi
 
 #gagagag
+echo gaga50
     messageTitle "Installing $PACKAGE_DES"
     messagePrint " ▪ Tanzu Package ($PACKAGE_NAME)"   "$PACKAGE_ID ($package_ver/$package_rel)"
     cnt=0; ret=1
     while [ $ret -ne 0 -a $cnt -lt 5 ]; do
-      # --- DELETE SERVICE ACCOUNT IF IT EXIST ----
-      cmdLoop kubectl get serviceaccount -n tanzu-system-packages -o json > /tmp/output.json
-      nam=$(jq -r --arg key "${PACKAGE_NAME}-${PACKAGE_NAMESPACE}-sa" '.items[] | select(.metadata.name == $key).metadata.name' /tmp/output.json)
-      [ "$nam" != "" ] && cmdLoop kubectl -n tanzu-system-packages delete serviceaccount $nam
-
 echo gaga51
 echo "tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $PACKAGE_NAMESPACE --version $package_ver --create-namespace --poll-timeout 10m --values-file /tmp/contour-data-values.yaml --wait=true "
       tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $PACKAGE_NAMESPACE \
@@ -10785,11 +10816,24 @@ echo "tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace
 
 echo gaga52
       [ $ret -eq 0 ] && break
-      tanzu package installed delete $PACKAGE_NAME --namespace $PACKAGE_NAMESPACE -y > /dev/null 2>&1
+
+echo gaga54
+      # --- DELETE FAILED PACKAGE INSTALL ---
+      cmdLoop tanzu package installed list -A -o json > /tmp/output.json
+      pkg=$(jq -r --arg key "$PACKAGE_NAME" '.[] | select(.name == $key).name' /tmp/output.json)
+      [ "$pkg" == "$PACKAGE_NAME" ] && tanzu package installed delete $PACKAGE_NAME --namespace $PACKAGE_NAMESPACE -y > /dev/null 2>&1
+
+echo gaga54
+      # --- DELETE SERVICE ACCOUNT IF IT EXIST ----
+      cmdLoop kubectl get serviceaccount -n tanzu-system-packages -o json > /tmp/output.json
+      nam=$(jq -r --arg key "${PACKAGE_NAME}-${PACKAGE_NAMESPACE}-sa" '.items[] | select(.metadata.name == $key).metadata.name' /tmp/output.json)
+      [ "$nam" != "" ] && cmdLoop kubectl -n tanzu-system-packages delete serviceaccount $nam
+echo gaga55
 
       let cnt=cnt+1
       sleep 30
     done
+echo gaga6
 
     if [ $ret -ne 0 ]; then
       logMessages /tmp/contour.log
@@ -10814,11 +10858,15 @@ echo gaga52
     fi
   fi
 
+echo gaga7
 #bbbbbbbb
   cmdLoop tanzu package installed list -A -o json > /tmp/output.json
   stt=$(jq -r --arg key "$PACKAGE_NAME" '.[] | select(.name == $key).name' /tmp/output.json)
+echo "gaga8 STT:$stt"
   if [ "$stt" == "$PACKAGE_NAME" ]; then
+echo gaga9
     while [ $cnt -lt 5 ]; do
+echo "cmdLoop tanzu package installed get $PACKAGE_NAME -n $PACKAGE_NAMESPACE -o json"
       cmdLoop tanzu package installed get $PACKAGE_NAME -n $PACKAGE_NAMESPACE -o json > /tmp/pkg.json
       pkg_stt=$(jq -r '.[]."status"' /tmp/pkg.json)
       pkg_nam=$(jq -r '.[]."package-name"' /tmp/pkg.json)
@@ -10829,6 +10877,7 @@ echo gaga52
       let cnt=cnt+1
       sleep 60
     done
+echo gaga10
 
     messageTitle "Verify $PACKAGE_DES"
     messagePrint " ▪ Tanzu Package ($PACKAGE_NAME)"                 "$pkg_nam"
@@ -10855,6 +10904,7 @@ echo gaga52
     echo "ERROR: The Tanzu Package: $PACKAGE_NAME has not been installed"
     exit 1
   fi
+echo gaga11
 
   # --- VERIFY DNS DOMAIN ---
   verifyHostedZone ${TDH_ENVNAME}.$AWS_HOSTED_DNS_DOMAIN
