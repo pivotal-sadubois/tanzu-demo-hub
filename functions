@@ -11638,7 +11638,7 @@ echo "PKG:$pkg"
     while [ "$stt" != "Reconcile succeeded" -a $cnt -lt 5 ]; do
 
       tanzu package installed list -A -o json > /tmp/output.json
-      stt=$(jq -r --arg key "$TANZU_PACKAGE" '.[] | select(.status == $key).status' /tmp/output.json)
+      stt=$(jq -r --arg key "$TANZU_PACKAGE" '.[] | select(.name == $key).status' /tmp/output.json)
 echo "status:$stt"
 
      if [ "$stt" != "Reconcile succeeded" -a "$stt" != "Reconciling" ]; then 
