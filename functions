@@ -11626,6 +11626,33 @@ copySecretObject() {
   fi
 }
 
+waitTanzuPackageReconsile() {
+  pkg=$1
+  nsp=$2
+
+  cmdLoop tanzu package installed list -A -o json > /tmp/output.json
+  pkg=$(jq -r --arg key "$pkg" '.[] | select(.name == $key).name' /tmp/output.json)
+  if [ "$pkg" == "$pkg" ]; then
+    cnt=0; ret=1
+    while [ $ret -ne 0 -a $cnt -lt 5 ]; do
+
+      tanzu package installed list -A -o json > /tmp/output.json
+      stt=$(jq -r --arg key "$pkg" '.[] | select(.status == $key).name' /tmp/output.json)
+echo "status:$status"
+
+     if [ "$stt" != "Reconcile succeeded" -a "$stt" != "Reconciling" ]; then 
+       # --- INSTALLATION FAILED - CLEANUP ---
+echo "installation failed"
+     else
+       break
+
+     fi
+   done
+  
+
+}
+
+
 # ------------------------------------------------------------------------------------------
 # Function Name ......: deleteTanzuPackage
 # Function Purpose ...: Delete Tanzu Package
