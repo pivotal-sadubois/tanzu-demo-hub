@@ -10687,7 +10687,6 @@ TanzuPackage_Contour() {
     if [ "${TDH_DEPLOYMENT_CLOUD}" == "AWS" -o "${TDH_TKGMC_INFRASTRUCTURE}" == "AWS" ]; then
       VALUE_FILE=/tmp/contour-data-values.yaml; rm -f $VALUE_FILE
       echo "---"                                                                        >  $VALUE_FILE
-      echo "infrastructure_provider: aws"                                               >> $VALUE_FILE
       echo "namespace: tanzu-system-ingress"                                            >> $VALUE_FILE
       echo "contour:"                                                                   >> $VALUE_FILE
       echo " configFileContents: {}"                                                    >> $VALUE_FILE
