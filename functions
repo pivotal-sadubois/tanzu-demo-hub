@@ -10205,6 +10205,7 @@ TanzuPackage_LocalStorage() {
       [ $ret -eq 0 ] && break
 
       # --- DELETE FAILED PACKAGE INSTALL ---
+      deleteTanzuPackage $PACKAGE_NAME $PACKAGE_NAMESPACE
       cmdLoop tanzu package installed list -A -o json > /tmp/output.json
       pkg=$(jq -r --arg key "$PACKAGE_NAME" '.[] | select(.name == $key).name' /tmp/output.json)
       [ "$pkg" == "$PACKAGE_NAME" ] && tanzu package installed delete $PACKAGE_NAME --namespace $PACKAGE_NAMESPACE -y > /dev/null 2>&1
@@ -10242,7 +10243,7 @@ TanzuPackage_LocalStorage() {
       pkg_stt=$(jq -r '.[]."status"' /tmp/pkg.json)
       pkg_nam=$(jq -r '.[]."package-name"' /tmp/pkg.json)
       pkg_ver=$(jq -r '.[]."package-version"' /tmp/pkg.json)
-echo *pkg_stt:$pkg_stt"
+echo "pkg_stt:$pkg_stt"
 
       [ "$pkg_stt" == "Reconcile succeeded" -o "$pkg_stt" == "Reconciling" ] && break
 
@@ -10372,7 +10373,7 @@ echo gaga55
       pkg_ver=$(jq -r '.[]."package-version"' /tmp/pkg.json)
 
       [ "$pkg_stt" == "Reconcile succeeded" -o "$pkg_stt" == "Reconciling" ] && break
-echo *pkg_stt:$pkg_stt"
+echo "pkg_stt:$pkg_stt"
 
       let cnt=cnt+1
       sleep 60
@@ -10603,7 +10604,7 @@ echo "STT:$stt"
       pkg_ver=$(jq -r '.[]."package-version"' /tmp/pkg.json)
 
       [ "$pkg_stt" == "Reconcile succeeded" -o "$pkg_stt" == "Reconciling" ] && break
-echo *pkg_stt:$pkg_stt"
+echo "pkg_stt:$pkg_stt"
 
       let cnt=cnt+1
       sleep 60
@@ -10791,14 +10792,16 @@ echo "tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace
       [ $ret -eq 0 ] && break
 
       # --- DELETE FAILED PACKAGE INSTALL ---
-      cmdLoop tanzu package installed list -A -o json > /tmp/output.json
-      pkg=$(jq -r --arg key "$PACKAGE_NAME" '.[] | select(.name == $key).name' /tmp/output.json)
-      [ "$pkg" == "$PACKAGE_NAME" ] && tanzu package installed delete $PACKAGE_NAME --namespace $PACKAGE_NAMESPACE -y > /dev/null 2>&1
+      deleteTanzuPackage $PACKAGE_NAME $PACKAGE_NAMESPACE
+
+      #cmdLoop tanzu package installed list -A -o json > /tmp/output.json
+      #pkg=$(jq -r --arg key "$PACKAGE_NAME" '.[] | select(.name == $key).name' /tmp/output.json)
+      #[ "$pkg" == "$PACKAGE_NAME" ] && tanzu package installed delete $PACKAGE_NAME --namespace $PACKAGE_NAMESPACE -y > /dev/null 2>&1
 
       # --- DELETE SERVICE ACCOUNT IF IT EXIST ----
-      cmdLoop kubectl get serviceaccount -n tanzu-system-packages -o json > /tmp/output.json
-      nam=$(jq -r --arg key "${PACKAGE_NAME}-${PACKAGE_NAMESPACE}-sa" '.items[] | select(.metadata.name == $key).metadata.name' /tmp/output.json)
-      [ "$nam" != "" ] && cmdLoop kubectl -n tanzu-system-packages delete serviceaccount $nam
+      #cmdLoop kubectl get serviceaccount -n tanzu-system-packages -o json > /tmp/output.json
+      #nam=$(jq -r --arg key "${PACKAGE_NAME}-${PACKAGE_NAMESPACE}-sa" '.items[] | select(.metadata.name == $key).metadata.name' /tmp/output.json)
+      #[ "$nam" != "" ] && cmdLoop kubectl -n tanzu-system-packages delete serviceaccount $nam
 
       let cnt=cnt+1
       sleep 30
@@ -10837,7 +10840,7 @@ echo "STT:$stt"
       pkg_stt=$(jq -r '.[]."status"' /tmp/pkg.json)
       pkg_nam=$(jq -r '.[]."package-name"' /tmp/pkg.json)
       pkg_ver=$(jq -r '.[]."package-version"' /tmp/pkg.json)
-echo *pkg_stt:$pkg_stt"
+echo "pkg_stt:$pkg_stt"
 
       [ "$pkg_stt" == "Reconcile succeeded" -o "$pkg_stt" == "Reconciling" ] && break
 
@@ -11622,6 +11625,72 @@ copySecretObject() {
     fi
   fi
 }
+
+# ------------------------------------------------------------------------------------------
+# Function Name ......: deleteTanzuPackage
+# Function Purpose ...: Delete Tanzu Package
+# ------------------------------------------------------------------------------------------
+# Argument ($1) ......: Command to execure
+# ------------------------------------------------------------------------------------------
+# Return Value .......: 0 - SUCCEED, 1 - FAILED
+# ------------------------------------------------------------------------------------------
+deleteTanzuPackage() {
+  TANZU_PACKAGE=$1
+  TANZU_NAMESPACE=$2
+
+  cmdLoop tanzu package installed list -A -o json > /tmp/output.json
+  pkg=$(jq -r --arg key "$TANZU_PACKAGE" '.[] | select(.name == $key).name' /tmp/output.json)
+  if [ "$pkg" == "$TANZU_PACKAGE" ]; then
+    cnt=0; ret=1 
+    while [ $ret -ne 0 -a $cnt -lt 5 ]; do
+
+echo "tanzu package installed delete $TANZU_PACKAGE --namespace $TANZU_NAMESPACE -y"
+      tanzu package installed delete $TANZU_PACKAGE --namespace $TANZU_NAMESPACE -y > /dev/null 2>&1; ret=$?
+
+      # --- VERIFY IF PACKAGE IS DELETED ---
+echo xxx1
+cmdLoop tanzu package installed list -A
+echo xxx2
+      cmdLoop tanzu package installed list -A -o json > /tmp/output.json
+      pkg=$(jq -r --arg key "$TANZU_PACKAGE" '.[] | select(.name == $key).name' /tmp/output.json)
+echo "pkg:$pkg"
+      if [ "$pkg" != "$TANZU_PACKAGE" ]; then
+        # --- DELETE SERVICE ACCOUNT IF IT EXIST ----
+        cmdLoop kubectl get serviceaccount -n tanzu-system-packages -o json > /tmp/output.json
+        nam=$(jq -r --arg key "${TANZU_PACKAGE}-${TANZU_NAMESPACE}-sa" '.items[] | select(.metadata.name == $key).metadata.name' /tmp/output.json)
+echo xxx3
+cmdLoop tanzu package installed list -A
+echo xxx4
+
+echo "kubectl -n tanzu-system-packages delete serviceaccount $nam"
+        [ "$nam" != "" ] && cmdLoop kubectl -n tanzu-system-packages delete serviceaccount $nam
+echo xxx5
+cmdLoop tanzu package installed list -A
+echo xxx6
+      else
+        break
+      fi
+
+      let cnt=cnt+1
+      sleep 30
+    done
+
+    if [ $ret -ne 0 ]; then
+      logMessages /tmp/error.log
+      echo "ERROR: Failed to run command, please try manually"
+      if [ "$NATIVE" == "0" ]; then
+        echo "       => tools/${TDH_TOOLS}.sh"
+        echo "          tdh-tools:/$ $CMD"
+        echo "          tdh-tools:/$ exit"
+      else
+        echo "       =>  $CMD"
+      fi
+
+      exit 1
+    fi
+  fi
+}
+
 
 # ------------------------------------------------------------------------------------------
 # Function Name ......: cmdLoop
