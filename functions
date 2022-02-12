@@ -10778,6 +10778,9 @@ TanzuPackage_Contour() {
     messagePrint " ▪ Tanzu Package ($PACKAGE_NAME)"   "$PACKAGE_ID ($package_ver/$package_rel)"
     cnt=0; ret=1
     while [ $ret -ne 0 -a $cnt -lt 5 ]; do
+echo "tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $PACKAGE_NAMESPACE \
+           --version $package_ver --create-namespace --poll-timeout 10m \
+           --values-file /tmp/contour-data-values.yaml"
       tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $PACKAGE_NAMESPACE \
            --version $package_ver --create-namespace --poll-timeout 10m \
            --values-file /tmp/contour-data-values.yaml --wait=true > /tmp/contour.log 2>&1; ret=$?
