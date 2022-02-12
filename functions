@@ -10198,16 +10198,16 @@ echo gaga1
 echo gaga2
 echo "package_ver:$package_ver"
 
-    # --- DELETE SERVICE ACCOUNT IF IT EXIST ----
-    cmdLoop kubectl get serviceaccount -n tanzu-system-packages -o json > /tmp/output.json
-    nam=$(jq -r --arg key "${PACKAGE_NAME}-${PACKAGE_NAMESPACE}-sa" '.items[] | select(.metadata.name == $key).metadata.name' /tmp/output.json) 
-    [ "$nam" != "" ] && cmdLoop kubectl -n tanzu-system-packages delete serviceaccount $nam
-
 #gagagaga
     messageTitle "Installing $PACKAGE_DES"
     messagePrint " ▪ Tanzu Package ($PACKAGE_NAME)"   "$PACKAGE_ID ($package_ver/$package_rel)"
     cnt=0; ret=1
     while [ $ret -ne 0 -a $cnt -lt 5 ]; do
+      # --- DELETE SERVICE ACCOUNT IF IT EXIST ----
+      cmdLoop kubectl get serviceaccount -n tanzu-system-packages -o json > /tmp/output.json
+      nam=$(jq -r --arg key "${PACKAGE_NAME}-${PACKAGE_NAMESPACE}-sa" '.items[] | select(.metadata.name == $key).metadata.name' /tmp/output.json) 
+      [ "$nam" != "" ] && cmdLoop kubectl -n tanzu-system-packages delete serviceaccount $nam
+
 echo "tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $PACKAGE_NAMESPACE --version $package_ver --create-namespace --wait=true"
       tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $PACKAGE_NAMESPACE --version $package_ver --create-namespace --wait=true > /tmp/error.log 2>&1; ret=$?
 
@@ -10233,38 +10233,44 @@ echo "tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace
     fi
   fi
 
-  cnt=0
-  while [ $cnt -lt 5 ]; do
-    cmdLoop tanzu package installed get $PACKAGE_NAME -n $PACKAGE_NAMESPACE -o json > /tmp/pkg.json
-    pkg_stt=$(jq -r '.[]."status"' /tmp/pkg.json)
-    pkg_nam=$(jq -r '.[]."package-name"' /tmp/pkg.json)
-    pkg_ver=$(jq -r '.[]."package-version"' /tmp/pkg.json)
+  cmdLoop tanzu package installed list -A -o json > /tmp/output.json
+  stt=$(jq -r --arg key "$PACKAGE_NAME" "cert-manager-pkg" '.[] | select(.name == $key).name' /tmp/output.json)
+  if [ "$stt" == "$PACKAGE_NAME" ]; then 
+    while [ $cnt -lt 5 ]; do
+      cmdLoop tanzu package installed get $PACKAGE_NAME -n $PACKAGE_NAMESPACE -o json > /tmp/pkg.json
+      pkg_stt=$(jq -r '.[]."status"' /tmp/pkg.json)
+      pkg_nam=$(jq -r '.[]."package-name"' /tmp/pkg.json)
+      pkg_ver=$(jq -r '.[]."package-version"' /tmp/pkg.json)
 
-    [ "$pkg_stt" == "Reconcile succeeded" -o "$pkg_stt" == "Reconciling" ] && break
+      [ "$pkg_stt" == "Reconcile succeeded" -o "$pkg_stt" == "Reconciling" ] && break
 
-    let cnt=cnt+1
-    sleep 60
-  done
+      let cnt=cnt+1
+      sleep 60
+    done
 
-  messageTitle "Verify $PACKAGE_DES"
-  messagePrint " ▪ Tanzu Package ($PACKAGE_NAME)"                 "$pkg_nam"
-  messagePrint " ▪ Tanzu Package ($PACKAGE_NAME) Namespace"       "$NAMESPACE"
-  messagePrint " ▪ Tanzu Package ($PACKAGE_NAME) Version"         "$pkg_ver"
-  messagePrint " ▪ Tanzu Package ($PACKAGE_NAME) Status"          "$pkg_stt"
+    messageTitle "Verify $PACKAGE_DES"
+    messagePrint " ▪ Tanzu Package ($PACKAGE_NAME)"                 "$pkg_nam"
+    messagePrint " ▪ Tanzu Package ($PACKAGE_NAME) Namespace"       "$NAMESPACE"
+    messagePrint " ▪ Tanzu Package ($PACKAGE_NAME) Version"         "$pkg_ver"
+    messagePrint " ▪ Tanzu Package ($PACKAGE_NAME) Status"          "$pkg_stt"
 
-  if [ "$pkg_stt" != "Reconcile succeeded" -a "$pkg_stt" != "Reconciling" ]; then
-    echo "ERROR: failed to reconsile Tanzu Package ($PACKAGE_NAME) status $pkg_stt"
-    messageLine
-    tanzu package installed get $PACKAGE_NAME -n $PACKAGE_NAMESPACE
-    messageLine
-    if [ "$NATIVE" == "0" ]; then
-      echo "       => tools/${TDH_TOOLS}.sh"
-      echo "          tdh-tools:/$ tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $PACKAGE_NAMESPACE --version $package_ver --create-namespace"
-      echo "          tdh-tools:/$ exit"
-    else
-      echo "       => tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $PACKAGE_NAMESPACE --version $package_ver --create-namespace"
+    if [ "$pkg_stt" != "Reconcile succeeded" -a "$pkg_stt" != "Reconciling" ]; then
+      echo "ERROR: failed to reconsile Tanzu Package ($PACKAGE_NAME) status $pkg_stt"
+      messageLine
+      tanzu package installed get $PACKAGE_NAME -n $PACKAGE_NAMESPACE
+      messageLine
+      if [ "$NATIVE" == "0" ]; then
+        echo "       => tools/${TDH_TOOLS}.sh"
+        echo "          tdh-tools:/$ tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $PACKAGE_NAMESPACE --version $package_ver --create-namespace"
+        echo "          tdh-tools:/$ exit"
+      else
+        echo "       => tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $PACKAGE_NAMESPACE --version $package_ver --create-namespace"
+      fi
+  
+      exit 1
     fi
-
+  else
+    echo "ERROR: The Tanzu Package: $PACKAGE_NAME has not been installed"
     exit 1
   fi
 
@@ -10314,20 +10320,16 @@ echo gaga24
     fi
 echo "gaga25 package_ver:$package_ver"
 
-    # --- DELETE SERVICE ACCOUNT IF IT EXIST ----
-echo "kubectl get serviceaccount -n tanzu-system-packages -o json"
-    cmdLoop kubectl get serviceaccount -n tanzu-system-packages -o json > /tmp/output.json
-echo gaga26
-    nam=$(jq -r --arg key "${PACKAGE_NAME}-${PACKAGE_NAMESPACE}-sa" '.items[] | select(.metadata.name == $key).metadata.name' /tmp/output.json)
-echo gaga27
-    [ "$nam" != "" ] && cmdLoop kubectl -n tanzu-system-packages delete serviceaccount $nam
-echo gaga28
-   
     messageTitle "Installing $PACKAGE_DES in $PACKAGE_NAMESPACE"
     messagePrint " ▪ Tanzu Package ($PACKAGE_NAME)"   "$PACKAGE_ID ($package_ver/$package_rel)"
 
     cnt=0; ret=1
     while [ $ret -ne 0 -a $cnt -lt 5 ]; do
+      # --- DELETE SERVICE ACCOUNT IF IT EXIST ----
+      cmdLoop kubectl get serviceaccount -n tanzu-system-packages -o json > /tmp/output.json
+      nam=$(jq -r --arg key "${PACKAGE_NAME}-${PACKAGE_NAMESPACE}-sa" '.items[] | select(.metadata.name == $key).metadata.name' /tmp/output.json)
+      [ "$nam" != "" ] && cmdLoop kubectl -n tanzu-system-packages delete serviceaccount $nam
+   
 echo "tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $PACKAGE_NAMESPACE --version $package_ver --create-namespace --poll-timeout 10m --wait=true"
       tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $PACKAGE_NAMESPACE --version $package_ver \
             --create-namespace --poll-timeout 10m --wait=true > /tmp/error.log 2>&1; ret=$?
@@ -10355,39 +10357,44 @@ echo "tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace
     fi
   fi
 
-echo gaga29
-  cnt=0
-  while [ $cnt -lt 5 ]; do
-    cmdLoop tanzu package installed get $PACKAGE_NAME -n $PACKAGE_NAMESPACE -o json > /tmp/pkg.json
-    pkg_stt=$(jq -r '.[]."status"' /tmp/pkg.json)
-    pkg_nam=$(jq -r '.[]."package-name"' /tmp/pkg.json)
-    pkg_ver=$(jq -r '.[]."package-version"' /tmp/pkg.json)
+  cmdLoop tanzu package installed list -A -o json > /tmp/output.json
+  stt=$(jq -r --arg key "$PACKAGE_NAME" "cert-manager-pkg" '.[] | select(.name == $key).name' /tmp/output.json)
+  if [ "$stt" == "$PACKAGE_NAME" ]; then
+    while [ $cnt -lt 5 ]; do
+      cmdLoop tanzu package installed get $PACKAGE_NAME -n $PACKAGE_NAMESPACE -o json > /tmp/pkg.json
+      pkg_stt=$(jq -r '.[]."status"' /tmp/pkg.json)
+      pkg_nam=$(jq -r '.[]."package-name"' /tmp/pkg.json)
+      pkg_ver=$(jq -r '.[]."package-version"' /tmp/pkg.json)
 
-    [ "$pkg_stt" == "Reconcile succeeded" -o "$pkg_stt" == "Reconciling" ] && break
+      [ "$pkg_stt" == "Reconcile succeeded" -o "$pkg_stt" == "Reconciling" ] && break
 
-    let cnt=cnt+1
-    sleep 60
-  done
+      let cnt=cnt+1
+      sleep 60
+    done
 
-  messageTitle "Verify $PACKAGE_DES"
-  messagePrint " ▪ Tanzu Package ($PACKAGE_NAME)"                 "$pkg_nam"
-  messagePrint " ▪ Tanzu Package ($PACKAGE_NAME) Namespace"       "$NAMESPACE"
-  messagePrint " ▪ Tanzu Package ($PACKAGE_NAME) Version"         "$pkg_ver"
-  messagePrint " ▪ Tanzu Package ($PACKAGE_NAME) Status"          "$pkg_stt"
+    messageTitle "Verify $PACKAGE_DES"
+    messagePrint " ▪ Tanzu Package ($PACKAGE_NAME)"                 "$pkg_nam"
+    messagePrint " ▪ Tanzu Package ($PACKAGE_NAME) Namespace"       "$NAMESPACE"
+    messagePrint " ▪ Tanzu Package ($PACKAGE_NAME) Version"         "$pkg_ver"
+    messagePrint " ▪ Tanzu Package ($PACKAGE_NAME) Status"          "$pkg_stt"
 
-  if [ "$pkg_stt" != "Reconcile succeeded" -a "$pkg_stt" != "Reconciling" ]; then
-    echo "ERROR: failed to reconsile Tanzu Package ($PACKAGE_NAME)"
-    messageLine
-    tanzu package installed get $PACKAGE_NAME -n $PACKAGE_NAMESPACE
-    messageLine
-    if [ "$NATIVE" == "0" ]; then
-      echo "       => tools/${TDH_TOOLS}.sh"
-      echo "          tdh-tools:/$ tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $PACKAGE_NAMESPACE --version $package_ver --create-namespace"
-      echo "          tdh-tools:/$ exit"
-    else
-      echo "       => tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $PACKAGE_NAMESPACE --version $package_ver --create-namespace"
+    if [ "$pkg_stt" != "Reconcile succeeded" -a "$pkg_stt" != "Reconciling" ]; then
+      echo "ERROR: failed to reconsile Tanzu Package ($PACKAGE_NAME) status $pkg_stt"
+      messageLine
+      tanzu package installed get $PACKAGE_NAME -n $PACKAGE_NAMESPACE
+      messageLine
+      if [ "$NATIVE" == "0" ]; then
+        echo "       => tools/${TDH_TOOLS}.sh"
+        echo "          tdh-tools:/$ tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $PACKAGE_NAMESPACE --version $package_ver --create-namespace"
+        echo "          tdh-tools:/$ exit"
+      else
+        echo "       => tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $PACKAGE_NAMESPACE --version $package_ver --create-namespace"
+      fi
+
+      exit 1
     fi
-
+  else
+    echo "ERROR: The Tanzu Package: $PACKAGE_NAME has not been installed"
     exit 1
   fi
 
@@ -10568,42 +10575,48 @@ TanzuPackage_Harbor () {
     fi
   fi
 
-  cnt=0
-  while [ $cnt -lt 5 ]; do
-    cmdLoop tanzu package installed get $PACKAGE_NAME -n $PACKAGE_NAMESPACE -o json > /tmp/pkg.json
-    pkg_stt=$(jq -r '.[]."status"' /tmp/pkg.json)
-    pkg_nam=$(jq -r '.[]."package-name"' /tmp/pkg.json)
-    pkg_ver=$(jq -r '.[]."package-version"' /tmp/pkg.json)
+#bbbbb
+  cmdLoop tanzu package installed list -A -o json > /tmp/output.json
+  stt=$(jq -r --arg key "$PACKAGE_NAME" "cert-manager-pkg" '.[] | select(.name == $key).name' /tmp/output.json)
+  if [ "$stt" == "$PACKAGE_NAME" ]; then
+    while [ $cnt -lt 5 ]; do
+      cmdLoop tanzu package installed get $PACKAGE_NAME -n $PACKAGE_NAMESPACE -o json > /tmp/pkg.json
+      pkg_stt=$(jq -r '.[]."status"' /tmp/pkg.json)
+      pkg_nam=$(jq -r '.[]."package-name"' /tmp/pkg.json)
+      pkg_ver=$(jq -r '.[]."package-version"' /tmp/pkg.json)
 
-    [ "$pkg_stt" == "Reconcile succeeded" -o "$pkg_stt" == "Reconciling" ] && break
+      [ "$pkg_stt" == "Reconcile succeeded" -o "$pkg_stt" == "Reconciling" ] && break
 
-    let cnt=cnt+1
-    sleep 60
-  done
+      let cnt=cnt+1
+      sleep 60
+    done
 
-  messageTitle "Verify $PACKAGE_DES"
-  messagePrint " ▪ Tanzu Package ($PACKAGE_NAME)"               "$pkg_nam"
-  messagePrint " ▪ Tanzu Package ($PACKAGE_NAME) Namespace"     "$NAMESPACE"
-  messagePrint " ▪ Tanzu Package ($PACKAGE_NAME) Version"       "$pkg_ver"
-  messagePrint " ▪ Tanzu Package ($PACKAGE_NAME) Status"        "$pkg_stt"
-  messagePrint " ▪ Tanzu Package ($PACKAGE_NAME) FQDN"          "https://harbor.apps-contour.$TDH_ENVNAME.$AWS_HOSTED_DNS_DOMAIN"
-  messagePrint " ▪ Tanzu Package ($PACKAGE_NAME) USer:    "     "admin"
-  messagePrint " ▪ Tanzu Package ($PACKAGE_NAME) Password:"     "$TDH_HARBOR_ADMIN_PASSWORD"
+    messageTitle "Verify $PACKAGE_DES"
+    messagePrint " ▪ Tanzu Package ($PACKAGE_NAME)"                 "$pkg_nam"
+    messagePrint " ▪ Tanzu Package ($PACKAGE_NAME) Namespace"       "$NAMESPACE"
+    messagePrint " ▪ Tanzu Package ($PACKAGE_NAME) Version"         "$pkg_ver"
+    messagePrint " ▪ Tanzu Package ($PACKAGE_NAME) Status"          "$pkg_stt"
+    messagePrint " ▪ Tanzu Package ($PACKAGE_NAME) USer:    "     "admin"
+    messagePrint " ▪ Tanzu Package ($PACKAGE_NAME) Password:"     "$TDH_HARBOR_ADMIN_PASSWORD"
 
-  pkg_stt="Reconciling" ### sdubois 12-01-3033 beacuse of problems witj Reconsiling
-  if [ "$pkg_stt" != "Reconcile succeeded" -a "$pkg_stt" != "Reconciling" ]; then
-    echo "ERROR: failed to reconsile Tanzu Package $PACKAGE_NAME)"
-    messageLine
-    tanzu package installed get $PACKAGE_NAME -n $PACKAGE_NAMESPACE
-    messageLine
-    if [ "$NATIVE" == "0" ]; then
-      echo "       => tools/${TDH_TOOLS}.sh"
-      echo "          tdh-tools:/$ tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $PACKAGE_NAMESPACE --version $package_ver --create-namespace"
-      echo "          tdh-tools:/$ exit"
-    else
-      echo "       => tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $PACKAGE_NAMESPACE --version $package_ver --create-namespace"
+    pkg_stt="Reconciling" ### sdubois 12-01-3033 beacuse of problems witj Reconsiling
+    if [ "$pkg_stt" != "Reconcile succeeded" -a "$pkg_stt" != "Reconciling" ]; then
+      echo "ERROR: failed to reconsile Tanzu Package ($PACKAGE_NAME) status $pkg_stt"
+      messageLine
+      tanzu package installed get $PACKAGE_NAME -n $PACKAGE_NAMESPACE
+      messageLine
+      if [ "$NATIVE" == "0" ]; then
+        echo "       => tools/${TDH_TOOLS}.sh"
+        echo "          tdh-tools:/$ tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $PACKAGE_NAMESPACE --version $package_ver --create-namespace"
+        echo "          tdh-tools:/$ exit"
+      else
+        echo "       => tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $PACKAGE_NAMESPACE --version $package_ver --create-namespace"
+      fi
+
+      exit 1
     fi
-
+  else
+    echo "ERROR: The Tanzu Package: $PACKAGE_NAME has not been installed"
     exit 1
   fi
 
@@ -10653,13 +10666,6 @@ echo gaga1
       package_ver=""; package_rel=""
     fi
 echo "package_ver:$package_ver"
-
-    # --- DELETE SERVICE ACCOUNT IF IT EXIST ----
-    cmdLoop kubectl get serviceaccount -n tanzu-system-packages -o json > /tmp/output.json
-    nam=$(jq -r --arg key "${PACKAGE_NAME}-${PACKAGE_NAMESPACE}-sa" '.items[] | select(.metadata.name == $key).metadata.name' /tmp/output.json)
-echo gaga2
-    [ "$nam" != "" ] && cmdLoop kubectl -n tanzu-system-packages delete serviceaccount $nam
-echo gaga3
 
     if [ "${TDH_DEPLOYMENT_CLOUD}" == "docker" -o "${TDH_TKGMC_INFRASTRUCTURE}" == "docker" ]; then
       VALUE_FILE=/tmp/contour-data-values.yaml; rm -f $VALUE_FILE
@@ -10761,6 +10767,11 @@ echo gaga3
     messagePrint " ▪ Tanzu Package ($PACKAGE_NAME)"   "$PACKAGE_ID ($package_ver/$package_rel)"
     cnt=0; ret=1
     while [ $ret -ne 0 -a $cnt -lt 5 ]; do
+      # --- DELETE SERVICE ACCOUNT IF IT EXIST ----
+      cmdLoop kubectl get serviceaccount -n tanzu-system-packages -o json > /tmp/output.json
+      nam=$(jq -r --arg key "${PACKAGE_NAME}-${PACKAGE_NAMESPACE}-sa" '.items[] | select(.metadata.name == $key).metadata.name' /tmp/output.json)
+      [ "$nam" != "" ] && cmdLoop kubectl -n tanzu-system-packages delete serviceaccount $nam
+
 echo gaga51
 echo "tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $PACKAGE_NAMESPACE --version $package_ver --create-namespace --poll-timeout 10m --values-file /tmp/contour-data-values.yaml --wait=true "
       tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $PACKAGE_NAMESPACE \
@@ -10798,44 +10809,44 @@ echo gaga52
     fi
   fi
 
-echo gaga6
-  cnt=0
-  while [ $cnt -lt 5 ]; do
-echo gaga61
-    cmdLoop tanzu package installed get $PACKAGE_NAME -n $PACKAGE_NAMESPACE -o json > /tmp/pkg.json
-echo gaga62
-    pkg_stt=$(jq -r '.[]."status"' /tmp/pkg.json)
-    pkg_nam=$(jq -r '.[]."package-name"' /tmp/pkg.json)
-    pkg_ver=$(jq -r '.[]."package-version"' /tmp/pkg.json)
+  cmdLoop tanzu package installed list -A -o json > /tmp/output.json
+  stt=$(jq -r --arg key "$PACKAGE_NAME" "cert-manager-pkg" '.[] | select(.name == $key).name' /tmp/output.json)
+  if [ "$stt" == "$PACKAGE_NAME" ]; then
+    while [ $cnt -lt 5 ]; do
+      cmdLoop tanzu package installed get $PACKAGE_NAME -n $PACKAGE_NAMESPACE -o json > /tmp/pkg.json
+      pkg_stt=$(jq -r '.[]."status"' /tmp/pkg.json)
+      pkg_nam=$(jq -r '.[]."package-name"' /tmp/pkg.json)
+      pkg_ver=$(jq -r '.[]."package-version"' /tmp/pkg.json)
 
-    [ "$pkg_stt" == "Reconcile succeeded" -o "$pkg_stt" == "Reconciling" ] && break
+      [ "$pkg_stt" == "Reconcile succeeded" -o "$pkg_stt" == "Reconciling" ] && break
 
-    let cnt=cnt+1
-    sleep 60
-  done
-echo gaga7
+      let cnt=cnt+1
+      sleep 60
+    done
 
-  messageTitle "Verify $PACKAGE_DES"      
-  messagePrint " ▪ Tanzu Package ($PACKAGE_NAME)"               "$pkg_nam"
-  messagePrint " ▪ Tanzu Package ($PACKAGE_NAME) Namespace"     "$NAMESPACE"
-  messagePrint " ▪ Tanzu Package ($PACKAGE_NAME) Version"       "$pkg_ver"
-  messagePrint " ▪ Tanzu Package ($PACKAGE_NAME) Status"        "$pkg_stt"
+    messageTitle "Verify $PACKAGE_DES"
+    messagePrint " ▪ Tanzu Package ($PACKAGE_NAME)"                 "$pkg_nam"
+    messagePrint " ▪ Tanzu Package ($PACKAGE_NAME) Namespace"       "$NAMESPACE"
+    messagePrint " ▪ Tanzu Package ($PACKAGE_NAME) Version"         "$pkg_ver"
+    messagePrint " ▪ Tanzu Package ($PACKAGE_NAME) Status"          "$pkg_stt"
 
-  if [ "$pkg_stt" != "Reconcile succeeded" -a "$pkg_stt" != "Reconciling" ]; then
-    echo "ERROR: failed to reconsile Tanzu Package $PACKAGE_NAME)"
-    messageLine
-    tanzu package installed get $PACKAGE_NAME -n $PACKAGE_NAMESPACE
-    messageLine
-    if [ "$NATIVE" == "0" ]; then
-      echo "       => tools/${TDH_TOOLS}.sh"
-      echo "          tdh-tools:/$ tanzu package installed get $PACKAGE_NAME -n $PACKAGE_NAMESPACE"
-      echo "          tdh-tools:/$ tanzu package installed delete $PACKAGE_NAME --namespace $PACKAGE_NAMESPACE"
-      echo "          tdh-tools:/$ exit"
-    else
-      echo "       => tanzu package installed get $PACKAGE_NAME -n $PACKAGE_NAMESPACE"
-      echo "       => tanzu package installed delete $PACKAGE_NAME --namespace $PACKAGE_NAMESPACE"
+    if [ "$pkg_stt" != "Reconcile succeeded" -a "$pkg_stt" != "Reconciling" ]; then
+      echo "ERROR: failed to reconsile Tanzu Package ($PACKAGE_NAME) status $pkg_stt"
+      messageLine
+      tanzu package installed get $PACKAGE_NAME -n $PACKAGE_NAMESPACE
+      messageLine
+      if [ "$NATIVE" == "0" ]; then
+        echo "       => tools/${TDH_TOOLS}.sh"
+        echo "          tdh-tools:/$ tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $PACKAGE_NAMESPACE --version $package_ver --create-namespace"
+        echo "          tdh-tools:/$ exit"
+      else
+        echo "       => tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $PACKAGE_NAMESPACE --version $package_ver --create-namespace"
+      fi
+
+      exit 1
     fi
-
+  else
+    echo "ERROR: The Tanzu Package: $PACKAGE_NAME has not been installed"
     exit 1
   fi
 
