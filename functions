@@ -4031,7 +4031,7 @@ uodateConfigMap() {
   # --- CREATE CONFIG MAP IF IT DOES NOT EXIST ---
   cmdLoop kubectl get configmap -o json > /tmp/output.json
   nam=$(jq -r --arg key "tanzu-demo-hub" '.items[].metadata | select(.name == $key).name' /tmp/output.json)
-  [ "$nam" == "" ]; then cmdLoop kubectl create cm tanzu-demo-hub > /dev/null 2>&1
+  [ "$nam" == "" ] && cmdLoop kubectl create cm tanzu-demo-hub > /dev/null 2>&1
 
   #DELETEME
   #kubectl get cm tanzu-demo-hub > /dev/null 2>&1
@@ -4071,7 +4071,7 @@ getConfigMap() {
 createConfigMap() {
   cmdLoop kubectl get configmap -o json > /tmp/output.json
   nam=$(jq -r --arg key "tanzu-demo-hub" '.items[].metadata | select(.name == $key).name' /tmp/output.json)
-  [ "$nam" == "tanzu-demo-hub" ]; then cmdLoop kubectl delete configmap tanzu-demo-hub > /dev/null 2>&1
+  [ "$nam" == "tanzu-demo-hub" ] && cmdLoop kubectl delete configmap tanzu-demo-hub > /dev/null 2>&1
 
   cmdLoop kubectl create configmap tanzu-demo-hub \
        --from-literal=TDH_ENVNAME=$TDH_ENVNAME \
