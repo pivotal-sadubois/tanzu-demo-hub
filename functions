@@ -4028,37 +4028,52 @@ uodateConfigMap() {
   [ "$VALUE" == "True" ] && VALUE=true
   [ "$VALUE" == "False" ] && VALUE=false
   
-  kubectl get cm tanzu-demo-hub > /dev/null 2>&1
-  [ $? -ne 0 ] && kubectl create cm tanzu-demo-hub > /dev/null 2>&1
+  # --- CREATE CONFIG MAP IF IT DOES NOT EXIST ---
+  cmdLoop kubectl get configmap -o json > /tmp/output.json
+  nam=$(jq -r --arg key "tanzu-demo-hub" '.items[].metadata | select(.name == $key).name' /tmp/output.json)
+  [ "$nam" == "" ]; then cmdLoop kubectl create cm tanzu-demo-hub > /dev/null 2>&1
 
-  kubectl get cm tanzu-demo-hub -o json | jq -r '.data' | egrep ": " | sed -e 's/^ *"//g' -e 's/: /=/g' -e 's/"=/=/g' -e 's/\\\"//g' -e 's/,$//g' -e 's/"//g' | \
+  #DELETEME
+  #kubectl get cm tanzu-demo-hub > /dev/null 2>&1
+  #[ $? -ne 0 ] && kubectl create cm tanzu-demo-hub > /dev/null 2>&1
+
+
+  # --- DUMP CURRENT CONFIGMAP CONFIG ---
+  cmdLoop kubectl get cm tanzu-demo-hub -o json > /tmp/output.json 
+  jq -r '.data' /tmp/output.json  | egrep ": " | \
+          sed -e 's/^ *"//g' -e 's/: /=/g' -e 's/"=/=/g' -e 's/\\\"//g' -e 's/,$//g' -e 's/"//g' | \
           egrep -v "^$KEY=" | sort -u > /tmp/$CONFIG_MAP
   echo "$KEY=$VALUE" >> /tmp/$CONFIG_MAP
 
-  kubectl create configmap $CONFIG_MAP --from-env-file=/tmp/$CONFIG_MAP --dry-run=client -o yaml | kubectl apply -f - > /dev/null 2>&1
-  if [ $? -ne 0 ]; then
-    echo "ERROR: updating config map $CONFIG_MAP"
-    if [ "$NATIVE" == "0" ]; then
-      echo "       => tools/${TDH_TOOLS}.sh"   
-      echo "          tdh-tools:/$ kubectl create configmap $CONFIG_MAP --from-env-file=/tmp/$CONFIG_MAP --dry-run=client -o yaml | kubectl apply -f -"
-      echo "          tdh-tools:/$ exit"
-    else
-      echo "       => kubectl create configmap $CONFIG_MAP --from-env-file=/tmp/$CONFIG_MAP --dry-run=client -o yaml | kubectl apply -f -"
-    fi
-    exit 1
-  fi  
+  #DELETEME
+  #kubectl get cm tanzu-demo-hub -o json | jq -r '.data' | egrep ": " | sed -e 's/^ *"//g' -e 's/: /=/g' -e 's/"=/=/g' -e 's/\\\"//g' -e 's/,$//g' -e 's/"//g' | \
+  #        egrep -v "^$KEY=" | sort -u > /tmp/$CONFIG_MAP
+  #echo "$KEY=$VALUE" >> /tmp/$CONFIG_MAP
+
+  cmdLoop kubectl create configmap $CONFIG_MAP --from-env-file=/tmp/$CONFIG_MAP --dry-run=client -o yaml > /tmp/output.json
+  cmdLoop kubectl apply -f /tmp/output.json > /dev/null 2>&1
+
+  #DELETEME
+  #kubectl create configmap $CONFIG_MAP --from-env-file=/tmp/$CONFIG_MAP --dry-run=client -o yaml | kubectl apply -f - > /dev/null 2>&1
 }
 
 getConfigMap() {
   CONFIG_MAP=$1
   KEY=$2
 
-  kubectl get configmap tanzu-demo-hub -o json | jq -r ".data.$KEY" | sed 's/"//g'
+  cmdLoop kubectl get configmap tanzu-demo-hub -o json > /tmp/output.json
+  jq -r ".data.$KEY" /tmp/output.json | sed 's/"//g'
+
+  #DELETEME
+  #kubectl get configmap tanzu-demo-hub -o json | jq -r ".data.$KEY" | sed 's/"//g'
 }
 
 createConfigMap() {
-  kubectl delete configmap tanzu-demo-hub > /dev/null 2>&1
-  kubectl create configmap tanzu-demo-hub \
+  cmdLoop kubectl get configmap -o json > /tmp/output.json
+  nam=$(jq -r --arg key "tanzu-demo-hub" '.items[].metadata | select(.name == $key).name' /tmp/output.json)
+  [ "$nam" == "tanzu-demo-hub" ]; then cmdLoop kubectl delete configmap tanzu-demo-hub > /dev/null 2>&1
+
+  cmdLoop kubectl create configmap tanzu-demo-hub \
        --from-literal=TDH_ENVNAME=$TDH_ENVNAME \
        --from-literal=TDH_DOMAIN=$AWS_HOSTED_DNS_DOMAIN \
        --from-literal=TDH_LB_CONTOUR=apps-contour \
@@ -5910,6 +5925,7 @@ installTanzuDataPostgres() {
     ########################################### INSTALL POSTGRES OPERATOR ###################################################
     #########################################################################################################################
 
+#gugu
     if [ "$TDH_SERVICE_REGISTRY_HARBOR" == "true" ]; then
       # DNS_HARBOR=$(getConfigMap tanzu-demo-hub TDH_HARBOR_REGISTRY_DNS_HARBOR)
       TDH_HARBOR_REGISTRY_DNS_HARBOR=$(getConfigMap tanzu-demo-hub TDH_HARBOR_REGISTRY_DNS_HARBOR)
@@ -5923,6 +5939,7 @@ installTanzuDataPostgres() {
         let cnt=cnt+1
       done
 
+#gugu
       if [ $ret -ne 0 ]; then
         logMessages /tmp/error.log
         echo "ERROR: Docker login does not work 1"
@@ -10141,10 +10158,10 @@ TanzuPackage_RepoSync() {
     fi
 
     exit 1
-  else
-    messageLine
-    tanzu package repository list -A
-    messageLine
+#  else
+#    messageLine
+#    tanzu package repository list -A
+#    messageLine
   fi
 }
 
