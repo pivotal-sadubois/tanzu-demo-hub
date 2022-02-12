@@ -11627,26 +11627,29 @@ copySecretObject() {
 }
 
 waitTanzuPackageReconsile() {
-  pkg=$1
-  nsp=$2
+  TANZU_PACKAGE=$1
+  TANZU_NAMESPACE=$2
 
   cmdLoop tanzu package installed list -A -o json > /tmp/output.json
-  pkg=$(jq -r --arg key "$pkg" '.[] | select(.name == $key).name' /tmp/output.json)
+  pkg=$(jq -r --arg key "$TANZU_PACKAGE" '.[] | select(.name == $key).name' /tmp/output.json)
+echo "PKG:$pkg"
   if [ "$pkg" == "$pkg" ]; then
-    cnt=0; ret=1
-    while [ $ret -ne 0 -a $cnt -lt 5 ]; do
+    cnt=0; stt="Reconciling"
+    while [ "$stt" != "Reconcile succeeded" -a $cnt -lt 5 ]; do
 
       tanzu package installed list -A -o json > /tmp/output.json
-      stt=$(jq -r --arg key "$pkg" '.[] | select(.status == $key).name' /tmp/output.json)
+      stt=$(jq -r --arg key "$TANZU_PACKAGE" '.[] | select(.status == $key).name' /tmp/output.json)
 echo "status:$status"
 
      if [ "$stt" != "Reconcile succeeded" -a "$stt" != "Reconciling" ]; then 
        # --- INSTALLATION FAILED - CLEANUP ---
-echo "installation failed"
+echo "installation failed"; exit
      else
-       break
-
+       [ "$stt" == "Reconcile succeeded" ] && break
      fi
+
+     let cnt=cnt+1
+     sleep 30
    done
  fi 
 
