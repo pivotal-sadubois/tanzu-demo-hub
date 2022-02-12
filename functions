@@ -10297,27 +10297,38 @@ TanzuPackage_CertManager() {
   PACKAGE_ID=$2
   PACKAGE_DES="Certificate management (cert-manager)"
 
+echo "tanzu package installed get $PACKAGE_NAME -n $PACKAGE_NAMESPACE"
   cmdLoop tanzu package installed get $PACKAGE_NAME -n $PACKAGE_NAMESPACE -o json > /tmp/output.json
   pkg=$(jq -r '.[].name' /tmp/output.json) 
+echo gaga21
   if [ "$pkg" != "$PACKAGE_NAME" ]; then
+echo gaga22
     cmdLoop tanzu package available list $PACKAGE_ID -A -o json > /tmp/output.json
+echo gaga23
     if [ -s /tmp/output.json ]; then 
+echo gaga24
       package_ver=$(jq -r '.[]."version"' /tmp/output.json | tail -1)
       package_rel=$(jq -r '.[]."released-at"' /tmp/output.json | tail -1)
     else
       package_ver=""; package_rel=""
     fi
+echo "gaga25 package_ver:$package_ver"
 
     # --- DELETE SERVICE ACCOUNT IF IT EXIST ----
+echo "kubectl get serviceaccount -n tanzu-system-packages -o json"
     cmdLoop kubectl get serviceaccount -n tanzu-system-packages -o json > /tmp/output.json
+echo gaga26
     nam=$(jq -r --arg key "${PACKAGE_NAME}-${PACKAGE_NAMESPACE}-sa" '.items[] | select(.metadata.name == $key).metadata.name' /tmp/output.json)
+echo gaga27
     [ "$nam" != "" ] && cmdLoop kubectl -n tanzu-system-packages delete serviceaccount $nam
+echo gaga28
    
     messageTitle "Installing $PACKAGE_DES in $PACKAGE_NAMESPACE"
     messagePrint " ▪ Tanzu Package ($PACKAGE_NAME)"   "$PACKAGE_ID ($package_ver/$package_rel)"
 
     cnt=0; ret=1
     while [ $ret -ne 0 -a $cnt -lt 5 ]; do
+echo "tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $PACKAGE_NAMESPACE --version $package_ver --create-namespace --poll-timeout 10m --wait=true"
       tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $PACKAGE_NAMESPACE --version $package_ver \
             --create-namespace --poll-timeout 10m --wait=true > /tmp/error.log 2>&1; ret=$?
       [ $ret -eq 0 ] && break
@@ -10344,6 +10355,7 @@ TanzuPackage_CertManager() {
     fi
   fi
 
+echo gaga29
   cnt=0
   while [ $cnt -lt 5 ]; do
     cmdLoop tanzu package installed get $PACKAGE_NAME -n $PACKAGE_NAMESPACE -o json > /tmp/pkg.json
