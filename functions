@@ -10195,25 +10195,10 @@ TanzuPackage_LocalStorage() {
     messagePrint " ▪ Tanzu Package ($PACKAGE_NAME)"   "$PACKAGE_ID ($package_ver/$package_rel)"
     cnt=0; ret=1
     while [ $ret -ne 0 -a $cnt -lt 5 ]; do
-      # --- DELETE SERVICE ACCOUNT IF IT EXIST ----
-      cmdLoop kubectl get serviceaccount -n tanzu-system-packages -o json > /tmp/output.json
-      nam=$(jq -r --arg key "${PACKAGE_NAME}-${PACKAGE_NAMESPACE}-sa" '.items[] | select(.metadata.name == $key).metadata.name' /tmp/output.json) 
-      [ "$nam" != "" ] && cmdLoop kubectl -n tanzu-system-packages delete serviceaccount $nam
-
-      tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $PACKAGE_NAMESPACE --version $package_ver --create-namespace --wait=true > /tmp/error.log 2>&1; ret=$?
+      tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $PACKAGE_NAMESPACE --version $package_ver --create-namespace --wait=true > /tmp/error.log 2>&1
+      waitTanzuPackageReconsile $PACKAGE_NAME $PACKAGE_NAMESPACE; ret=$? 
 
       [ $ret -eq 0 ] && break
-
-      # --- DELETE FAILED PACKAGE INSTALL ---
-      deleteTanzuPackage $PACKAGE_NAME $PACKAGE_NAMESPACE
-      cmdLoop tanzu package installed list -A -o json > /tmp/output.json
-      pkg=$(jq -r --arg key "$PACKAGE_NAME" '.[] | select(.name == $key).name' /tmp/output.json)
-      [ "$pkg" == "$PACKAGE_NAME" ] && tanzu package installed delete $PACKAGE_NAME --namespace $PACKAGE_NAMESPACE -y > /dev/null 2>&1
-
-      # --- DELETE SERVICE ACCOUNT IF IT EXIST ----
-      cmdLoop kubectl get serviceaccount -n tanzu-system-packages -o json > /tmp/output.json
-      nam=$(jq -r --arg key "${PACKAGE_NAME}-${PACKAGE_NAMESPACE}-sa" '.items[] | select(.metadata.name == $key).metadata.name' /tmp/output.json)
-      [ "$nam" != "" ] && cmdLoop kubectl -n tanzu-system-packages delete serviceaccount $nam
 
       let cnt=cnt+1
       sleep 30
@@ -11632,20 +11617,17 @@ waitTanzuPackageReconsile() {
 
   cmdLoop tanzu package installed list -A -o json > /tmp/output.json
   pkg=$(jq -r --arg key "$TANZU_PACKAGE" '.[] | select(.name == $key).name' /tmp/output.json)
-echo "PKG:$pkg"
   if [ "$pkg" == "$pkg" ]; then
     cnt=0; stt="Reconciling"
     while [ "$stt" != "Reconcile succeeded" -a $cnt -lt 5 ]; do
 
       tanzu package installed list -A -o json > /tmp/output.json
       stt=$(jq -r --arg key "$TANZU_PACKAGE" '.[] | select(.name == $key).status' /tmp/output.json)
-echo "status:$stt"
 
      if [ "$stt" != "Reconcile succeeded" -a "$stt" != "Reconciling" ]; then 
-       # --- INSTALLATION FAILED - CLEANUP ---
-echo "installation failed"; exit
+       return 1
      else
-       [ "$stt" == "Reconcile succeeded" ] && break
+       [ "$stt" == "Reconcile succeeded" ] && return 0
      fi
 
      let cnt=cnt+1
