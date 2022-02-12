@@ -419,6 +419,8 @@ TanzuPackage_CertManager  cert-manager-pkg     cert-manager.community.tanzu.vmwa
 TanzuPackage_Contour      contour-pkg          contour.community.tanzu.vmware.com
 TanzuPackage_LocalStorage local-storage-pkg    local-path-storage.community.tanzu.vmware.com
 
+tanzu cluster delete tdh-docker-sadubois  -y
+sleep 300
 exit
 createClusterIssuer
 getRootCA                 tanzu-demo-hub-tls
