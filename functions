@@ -10183,27 +10183,32 @@ TanzuPackage_LocalStorage() {
   PACKAGE_ID="$2"
   PACKAGE_DES="Local Storage (RWO AccessMode)"
 
-#gagagaga
   cmdLoop tanzu package installed get $PACKAGE_NAME -n $PACKAGE_NAMESPACE -o json > /tmp/output.json
   pkg=$(jq -r '.[].name' /tmp/output.json) 
   if [ "$pkg" != "$PACKAGE_NAME" ]; then
     cmdLoop tanzu package available list $PACKAGE_ID -A -o json > /tmp/output.json
+echo "tanzu package available list $PACKAGE_ID -A"
     if [ -s /tmp/output.json ]; then 
+echo gaga1
       package_ver=$(jq -r '.[]."version"' /tmp/output.json | tail -1)
       package_rel=$(jq -r '.[]."released-at"' /tmp/output.json | tail -1)
     else
       package_ver=""; package_rel=""
     fi
+echo gaga2
+echo "package_ver:$package_ver"
 
     # --- DELETE SERVICE ACCOUNT IF IT EXIST ----
     cmdLoop kubectl get serviceaccount -n tanzu-system-packages -o json > /tmp/output.json
     nam=$(jq -r --arg key "${PACKAGE_NAME}-${PACKAGE_NAMESPACE}-sa" '.items[] | select(.metadata.name == $key).metadata.name' /tmp/output.json) 
     [ "$nam" != "" ] && cmdLoop kubectl -n tanzu-system-packages delete serviceaccount $nam
 
+#gagagaga
     messageTitle "Installing $PACKAGE_DES"
     messagePrint " ▪ Tanzu Package ($PACKAGE_NAME)"   "$PACKAGE_ID ($package_ver/$package_rel)"
     cnt=0; ret=1
     while [ $ret -ne 0 -a $cnt -lt 5 ]; do
+echo "tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $PACKAGE_NAMESPACE --version $package_ver --create-namespace --wait=true"
       tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $PACKAGE_NAMESPACE --version $package_ver --create-namespace --wait=true > /tmp/error.log 2>&1; ret=$?
 
       [ $ret -eq 0 ] && break
@@ -10623,7 +10628,6 @@ TanzuPackage_Contour() {
   PACKAGE_ID=$2
   PACKAGE_DES="Contour ingress controller"
 
-#gagagag
   cmdLoop tanzu package installed get $PACKAGE_NAME -n $PACKAGE_NAMESPACE -o json > /tmp/output.json
   pkg=$(jq -r '.[].name' /tmp/output.json)
   if [ "$pkg" != "$PACKAGE_NAME" ]; then
@@ -10735,6 +10739,7 @@ TanzuPackage_Contour() {
       echo " renewBefore: 360h"                                                         >> $VALUE_FILE
     fi
 
+#gagagag
     messageTitle "Installing $PACKAGE_DES"
     messagePrint " ▪ Tanzu Package ($PACKAGE_NAME)"   "$PACKAGE_ID ($package_ver/$package_rel)"
     cnt=0; ret=1
