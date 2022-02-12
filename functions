@@ -10242,6 +10242,7 @@ TanzuPackage_LocalStorage() {
       pkg_stt=$(jq -r '.[]."status"' /tmp/pkg.json)
       pkg_nam=$(jq -r '.[]."package-name"' /tmp/pkg.json)
       pkg_ver=$(jq -r '.[]."package-version"' /tmp/pkg.json)
+echo *pkg_stt:$pkg_stt"
 
       [ "$pkg_stt" == "Reconcile succeeded" -o "$pkg_stt" == "Reconciling" ] && break
 
@@ -10371,6 +10372,7 @@ echo gaga55
       pkg_ver=$(jq -r '.[]."package-version"' /tmp/pkg.json)
 
       [ "$pkg_stt" == "Reconcile succeeded" -o "$pkg_stt" == "Reconciling" ] && break
+echo *pkg_stt:$pkg_stt"
 
       let cnt=cnt+1
       sleep 60
@@ -10601,6 +10603,7 @@ echo "STT:$stt"
       pkg_ver=$(jq -r '.[]."package-version"' /tmp/pkg.json)
 
       [ "$pkg_stt" == "Reconcile succeeded" -o "$pkg_stt" == "Reconciling" ] && break
+echo *pkg_stt:$pkg_stt"
 
       let cnt=cnt+1
       sleep 60
@@ -10834,6 +10837,7 @@ echo "STT:$stt"
       pkg_stt=$(jq -r '.[]."status"' /tmp/pkg.json)
       pkg_nam=$(jq -r '.[]."package-name"' /tmp/pkg.json)
       pkg_ver=$(jq -r '.[]."package-version"' /tmp/pkg.json)
+echo *pkg_stt:$pkg_stt"
 
       [ "$pkg_stt" == "Reconcile succeeded" -o "$pkg_stt" == "Reconciling" ] && break
 
