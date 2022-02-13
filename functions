@@ -5537,21 +5537,11 @@ installGitea() {
     ver=""; crt=""; stt=""; dat=""
   fi
 
-  secret_name=$(getServiceAccountSecret kubeapps-operator)
-
-  cnt=0; ret=1
-  while [ $ret -ne 0 -a $cnt -lt 5 ]; do
-    KUBEAPPS_TOKEN=$(kubectl get secret $secret_name -o jsonpath='{.data.token}' -o go-template='{{.data.token | base64decode}}' 2>/tmp/error.log); ret=$?
-
-    [ $ret -eq 0 ] && break
-    let cnt=cnt+1
-    sleep 30
-  done
-
-
   cmdLoop helm get values gitea -n gitea -o json > /tmp/output.json
-  gitea_user=$(jq -r '.global.admin.username' /tmp/output.json) 
-  gitea_pass=$(jq -r '.global.admin.password' /tmp/output.json) 
+  cmdLoop helm get values $HELMCHART -n $HELMCHART -o json > /tmp/output.json
+
+  gitea_user=$(jq -r '.gitea.admin.username' /tmp/output.json) 
+  gitea_pass=$(jq -r '.gitea.admin.password' /tmp/output.json) 
 
   messagePrint " ▪ Verify Helm Chart $HELMCHART"   "$crt"
   messagePrint "   Helm Chart Name"                "$HELMCHART"
