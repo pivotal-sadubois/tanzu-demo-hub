@@ -5823,7 +5823,6 @@ installMinio() {
   else
     ver=""; crt=""; stt=""; dat=""
   fi
-#hallo
 
   cmdLoop kubectl -n $NAMESPACE get secrets minio -o json > /tmp/output.json
   ROOT_USER=$(jq -r '.data."root-user"' /tmp/output.json | base64 --decode)
@@ -6030,7 +6029,6 @@ installGitLab() {
     ver=""; crt=""; stt=""; dat=""
   fi
 
-#hallo
   SECRET=$(cmdLoop kubectl get secret tdh-gitlab-initial-root-password  -n $NAMESPACE -o json | jq -r '.data.password' | base64 -d )
 
   messagePrint " ▪ Verify GitLab CE Deployment"    "$crt"
@@ -10810,7 +10808,6 @@ TanzuPackage_Harbor () {
     copySecretObject default $NAMESPACE tanzu-demo-hub-tls
     #kubectl get secret tanzu-demo-hub-tls --namespace=default  -oyaml | grep -v '^\s*namespace:\s' | \
     #kubectl apply --namespace=$NAMESPACE -f - > /dev/null 2>&1
-#hallo
 
     cmdLoop kubectl get secrets tanzu-demo-hub-tls -n $NAMESPACE -o json > /tmp/output.json
     tls_crt=$(jq -r '.data."tls.crt"' /tmp/output.json) 
@@ -11356,6 +11353,49 @@ dockerRunPreparation() {
   done
 } 
 
+#hallo
+# ------------------------------------------------------------------------------------------
+# Function Name ......: runTDHtoolsDemos
+# Function Purpose ...: Install Contour Ingress Controller
+# ------------------------------------------------------------------------------------------
+# Argument ($1) ......: TDH Tools Flag (TCE/TCE)
+#          ($2) ......: Header Text to be shown on start
+#          ($3) ......: Commandline PATH and Command to be executed by docker
+#          ($4) ......: Commandline Arguments
+# ------------------------------------------------------------------------------------------
+# Return Value .......: 0 on Success, 1 on failure
+# ------------------------------------------------------------------------------------------
+runTDHtoolsDemos_new() {
+  VOTE_TCE=0; VOTE_TKG=0
+
+  # --- DECIDE IF TCE or TKG ---
+  if [ -s $HOME/.tdh-tools-tce/.kube/config ]; then 
+    let VOTE_TCE=VOTE_TCE+50
+    if [ -x /usr/local/bin/kubectl ]; then 
+      cnt=$(kubectl config get-clusters --kubeconfig $HOME/.tdh-tools-tce/.kube/config | \
+          sed '1d' | wc -l | awk '{ print $1 }') 
+      [ $cnt -gt 0 ] && let VOTE_TCE=VOTE_TCE+50
+    fi
+  fi
+    
+  # --- DECIDE IF TCE or TKG ---
+  if [ -s $HOME/.tdh-tools/.kube/config ]; then 
+    let VOTE_TKG=VOTE_TKG+50
+    if [ -x /usr/local/bin/kubectl ]; then 
+      cnt=$(kubectl config get-clusters --kubeconfig $HOME/.tdh-tools/.kube/config | \
+          sed '1d' | wc -l | awk '{ print $1 }')
+      [ $cnt -gt 0 ] && let VOTE_TKG=VOTE_TKG+50
+    fi
+  fi
+
+echo "VOTE_TCE:$VOTE_TCE"
+echo "VOTE_TKG:$VOTE_TKG"
+
+echo "TDH_TANZU_EDITION:$TDH_TANZU_EDITION"
+
+
+}
+
 # ------------------------------------------------------------------------------------------
 # Function Name ......: runTDHtools
 # Function Purpose ...: Install Contour Ingress Controller
@@ -11367,6 +11407,7 @@ dockerRunPreparation() {
 # ------------------------------------------------------------------------------------------
 # Return Value .......: 0 on Success, 1 on failure
 # ------------------------------------------------------------------------------------------
+#hallo
 runTDHtools() {
   TOOLS_TLAG="$1"
   HEADER_TEXT="$2"
