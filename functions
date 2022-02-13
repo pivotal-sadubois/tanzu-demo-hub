@@ -11392,8 +11392,7 @@ echo "kubectl delete --namespace $NAMESPACE serviceaccount $SERVICE_ACCOUNT"
     fi
   fi
 
-echo gaga4
-echo kubectl create --namespace $NAMESPACE serviceaccount $SERVICE_ACCOUNT "
+echo "kubectl create --namespace $NAMESPACE serviceaccount $SERVICE_ACCOUNT"
   cmdLoop kubectl create --namespace $NAMESPACE serviceaccount $SERVICE_ACCOUNT > /dev/null 2>&1
 }
 
