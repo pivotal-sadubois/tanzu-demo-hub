@@ -4126,7 +4126,7 @@ checkCLIcommands() {
       CLI_COMMANDS="/usr/local/bin/govc:brew:govc /usr/local/bin/packer:brew:packer"
     else
       if [ "$(uname -p)" == "arm" ]; then
-        CLI_COMMANDS="/usr/homebrew/bin/govc:brew:govc /usr/homebrew/bin/packer:brew:packer"
+        CLI_COMMANDS="/opt/homebrew/bin/govc:brew:govc /opt/homebrew/bin/packer:brew:packer"
       else
         CLI_COMMANDS="/usr/local/bin/govc:brew:govc /usr/local/bin/packer:brew:packer"
       fi
@@ -4158,7 +4158,7 @@ checkCLIcommands() {
       CLI_COMMANDS="/usr/local/bin/mc:apt:minio/stable/mc /usr/local/bin/psql:apt:libpq /usr/local/bin/s3cmd:brew:s3cmd"
     else
       if [ "$(uname -p)" == "arm" ]; then
-        CLI_COMMANDS="/usr/homebrew/bin/mc:brew:minio/stable/mc /usr/homebrew/bin/psql:brew:libpq /usr/homebrew/bin/s3cmd:brew:s3cmd"
+        CLI_COMMANDS="/opt/homebrew/bin/mc:brew:minio/stable/mc /opt/homebrew/bin/psql:brew:libpq /opt/homebrew/bin/s3cmd:brew:s3cmd"
       else
         CLI_COMMANDS="/usr/local/bin/mc:brew:minio/stable/mc /usr/local/bin/psql:brew:libpq /usr/local/bin/s3cmd:brew:s3cmd"
       fi
@@ -4190,7 +4190,7 @@ checkCLIcommands() {
       CLI_COMMANDS="/usr/local/bin/gsed:brew:gnu-sed /usr/local/bin/bat:brew:bat"
     else
       if [ "$(uname -p)" == "arm" ]; then
-        CLI_COMMANDS="/usr/homebrew/bin/hsed:brew:gnu-sed /usr/homebrew/bin/bat:brew:bat"
+        CLI_COMMANDS="/opt/homebrew/bin/hsed:brew:gnu-sed /opt/homebrew/bin/bat:brew:bat"
       else
         CLI_COMMANDS="/usr/local/bin/hsed:brew:gnu-sed /usr/local/bin/bat:brew:bat"
       fi
@@ -4222,7 +4222,7 @@ checkCLIcommands() {
       CLI_COMMANDS="/usr/bin/jq:apt:jq /usr/bin/wget:apt:wget /usr/bin/unzip:apt:unzip"
     else
       if [ "$(uname -p)" == "arm" ]; then
-        CLI_COMMANDS="/usr/homebrew/bin/jq:brew:jq /usr/homebrew/bin/wget:brew:wget"
+        CLI_COMMANDS="/opt/homebrew/bin/jq:brew:jq /opt/homebrew/bin/wget:brew:wget"
       else
         CLI_COMMANDS="/usr/local/bin/jq:brew:jq /usr/local/bin/wget:brew:wget"
       fi
@@ -4263,7 +4263,7 @@ checkCLIcommands() {
       CLI_COMMANDS="/usr/local/bin/mc:brew:minio/stable/mc /usr/local/bin/helm:brew:helm /usr/local/bin/npm:brew:npm"
     else
       if [ "$(uname -p)" == "arm" ]; then
-        CLI_COMMANDS="/usr/homebrew/bin/mc:brew:minio/stable/mc /usr/homebrew/bin/helm:brew:helm /usr/homebrew/bin/npm:brew:npm"
+        CLI_COMMANDS="/opt/homebrew/bin/mc:brew:minio/stable/mc /opt/homebrew/bin/helm:brew:helm /opt/homebrew/bin/npm:brew:npm"
       else
         CLI_COMMANDS="/usr/local/bin/mc:brew:minio/stable/mc /usr/local/bin/helm:brew:helm /usr/local/bin/npm:brew:npm"
       fi
