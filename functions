@@ -5497,6 +5497,13 @@ installKubeapps() {
     fi
 
 #mmmmmmmmm
+#    messagePrint " ▪ Create Cluster Role Binding"                 "default:jenkins-operator"
+#    createClusterRoleBinding jenkins-tbs build-service-user-role  default:jenkins-tbs
+
+#    messagePrint " ▪ Create Serviceaccount"              "jenkins-operator"
+#    createServiceAccount default jenkins-tbs
+
+
     messagePrint " ▪ Create Serviceaccount"              "kubeapps-operator"
     createServiceAccount default kubeapps-operator
 
@@ -11373,19 +11380,13 @@ createServiceAccount() {
   NAMESPACE=$1
   SERVICE_ACCOUNT=$2
 
-echo "gaga1"
-echo " kubectl --namespace $NAMESPACE get serviceaccount $SERVICE_ACCOUNT -o json > /tmp/output.json"
-  cmdLoop kubectl --namespace $NAMESPACE get serviceaccount $SERVICE_ACCOUNT -o json > /tmp/output.json
-echo "gaga2"
+  cmdLoop kubectl --namespace $NAMESPACE get serviceaccounts -o json > /tmp/output.json
   if [ -s /tmp/output.json ]; then 
-    sa=$(jq -r '.metadata.name' /tmp/output.json) 
-echo "SA:$sa"
+    sa=$(jq -r --arg key "$SERVICE_ACCOUNT" '.items[] | select(.metadata.name == $key).metadata.name' /tmp/output.json)
     if [ "sa" != "" ]; then 
-echo "kubectl delete --namespace $NAMESPACE serviceaccount $SERVICE_ACCOUNT"
       cmdLoop kubectl delete --namespace $NAMESPACE serviceaccount $SERVICE_ACCOUNT > /dev/null 2>&1
     fi
   fi
-echo "kubectl create --namespace $NAMESPACE serviceaccount $SERVICE_ACCOUNT"
 
   cmdLoop kubectl create --namespace $NAMESPACE serviceaccount $SERVICE_ACCOUNT > /dev/null 2>&1
 }
