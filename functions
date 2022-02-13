@@ -5553,7 +5553,7 @@ installGitea() {
   messagePrint "   Helm Chart Installed/Updated"   "$dat"
   messagePrint "   Gitea Internal Name"            "gitea.gitea.svc.cluster.local"
   messagePrint "   Gitea Management Portal"        "https://gitea.$DOMAIN"
-  messagePrint "   Gitea Admin User"               "gitea_user"
+  messagePrint "   Gitea Admin User"               "gitea_admin"
   messagePrint "   Gitea Admin Password"           "$TDH_HARBOR_ADMIN_PASSWORD"
 
   # --- STORE SETTINGS IN CONFIGMAP ---
