@@ -11398,15 +11398,7 @@ runTDHtoolsDemos_new() {
   fi
 
   if [ ! -f /tdh_tools_docker_container  ]; then
-    # --- VERIFY TOOLS AND ACCESS ---
-    verify_docker
-    checkCLIcommands        BASIC
-    checkKubernetesServices registry_docker
-
     if [ $NATIVE -eq 0 ]; then
-      tdh_tools_build $TOOLS_TLAG
-
-#hallo
       cid=$(docker ps -a | grep $TDH_TOOLS:latest | awk '{ print $1 }')
       [ "$cid" != "" ] && for n in $cid; do docker rm $n -f > /dev/null 2>&1; done
 
