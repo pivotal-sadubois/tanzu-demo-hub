@@ -5436,7 +5436,7 @@ installGitea() {
   TDH_ENVNAME=$(getConfigMap tanzu-demo-hub TDH_ENVNAME)
   DOMAIN=$(getConfigMap tanzu-demo-hub TDH_INGRESS_CONTOUR_LB_DOMAIN)
 
-  messageTitle "Application Dashboard for Kubernetes (Kupeapps)"
+  messageTitle "Self-hosted Git service (Gitea)"
   cnt=$(helm list -q -n $NAMESPACE | egrep -c "^kubeapps")
   if [ $cnt -eq 0 ]; then
     messagePrint " ▪ Add the Bintnami Repository"   "https://charts.bitnami.com/bitnami"
@@ -5484,16 +5484,24 @@ installGitea() {
     # --- ADDING HELM REPO ---
     helmRepoAdd $HELMREPO $HELMREPO_URL
 
+echo gaga1
     messagePrint " ▪ Deploy the $HELMCHART Helm Chart" "$HELMCHART"
     cnt=0; ret=1; stt="notdeployed"
     while [ $ret -ne 0 -a $cnt -lt 5 -a "$stt" != "deployed" ]; do
-      helm install $HELMCHART --namespace $NAMESPACE $HELMREPO/$HELMCHART -f $HELM_VALUES --version $HELM_CHART_VERSION > /tmp/error.log 2>&1; ret=$?
+echo gaga2
+      #helm install $HELMCHART --namespace $NAMESPACE $HELMREPO/$HELMCHART -f $HELM_VALUES --version $HELM_CHART_VERSION > /tmp/error.log 2>&1; ret=$?
+echo "helm install $HELMCHART --namespace $NAMESPACE $HELMREPO/$HELMCHART -f $HELM_VALUES --version $HELM_CHART_VERSION "
+      helm install $HELMCHART --namespace $NAMESPACE $HELMREPO/$HELMCHART -f $HELM_VALUES --version $HELM_CHART_VERSION 
+echo "RET:$ret"
+echo gaga3
 
       # --- WAIT FOR PODS TO GET STARTED ---
       runningPods $NAMESPACE
+echo gaga4
 
       cmdLoop helm ls -n $NAMESPACE -o json > /tmp/output.json
       stt=$(jq -r --arg chart "$HELMCHART" '.[] | select(.name == $chart).status' /tmp/output.json)
+echo "gaga5 STT:$stt"
 
       [ $ret -eq 0 -a "$stt" == "deployed" ] && break
 
@@ -5503,6 +5511,7 @@ installGitea() {
       let cnt=cnt+1
       sleep 30
     done
+echo gaga6
 
     if [ $ret -ne 0 -o "$stt" != "deployed" ]; then
       logMessages /tmp/error.log
