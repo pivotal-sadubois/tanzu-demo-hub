@@ -10728,6 +10728,7 @@ TanzuPackage_Contour() {
       # --- DELETE SERVICE ACCOUNT IF IT EXIST ----
       cmdLoop kubectl get serviceaccount -n tanzu-system-packages -o json > /tmp/output.json
       nam=$(jq -r --arg key "${PACKAGE_NAME}-${PACKAGE_NAMESPACE}-sa" '.items[] | select(.metadata.name == $key).metadata.name' /tmp/output.json)
+echo "kubectl -n tanzu-system-packages delete serviceaccount $nam"
       [ "$nam" != "" ] && cmdLoop kubectl -n tanzu-system-packages delete serviceaccount $nam
 
 echo "tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $PACKAGE_NAMESPACE \
