@@ -5438,10 +5438,10 @@ installGitea() {
   DOMAIN=$(getConfigMap tanzu-demo-hub TDH_INGRESS_CONTOUR_LB_DOMAIN)
 
   messageTitle "Self-hosted Git service (Gitea)"
-  cnt=$(helm list -q -n $NAMESPACE | egrep -c "^kubeapps")
+  cnt=$(helm list -q -n $NAMESPACE | egrep -c "^$HELMCHART")
   if [ $cnt -eq 0 ]; then
     # --- CREATE NAMESPACE ---
-    messagePrint " ▪ Create Namespace" "kubeapps"
+    messagePrint " ▪ Create Namespace" "$HELMCHART"
     deleteNamespace $NAMESPACE > /dev/null 2>&1
     createNamespace $NAMESPACE > /dev/null 2>&1
 
@@ -5586,12 +5586,12 @@ installKubeapps() {
   DOMAIN=$(getConfigMap tanzu-demo-hub TDH_INGRESS_CONTOUR_LB_DOMAIN)
 
   messageTitle "Application Dashboard for Kubernetes (Kupeapps)"
-  cnt=$(helm list -q -n $NAMESPACE | egrep -c "^kubeapps")
+  cnt=$(helm list -q -n $NAMESPACE | egrep -c "^$HELMCHART")
   if [ $cnt -eq 0 ]; then
     messagePrint " ▪ Add the Bintnami Repository"   "https://charts.bitnami.com/bitnami"
 
     # --- CREATE NAMESPACE ---
-    messagePrint " ▪ Create Namespace" "kubeapps"
+    messagePrint " ▪ Create Namespace" "$HELMCHART"
     deleteNamespace $NAMESPACE > /dev/null 2>&1
     createNamespace $NAMESPACE > /dev/null 2>&1
 
@@ -9834,12 +9834,16 @@ getGiteaAPItoken() {
   REFRESH_TOKEN="$1"
   VMC_SERVER="https://console.cloud.vmware.com/csp/gateway/am"
 
+echo hallo1
   TDH_SERVICE_GITEA_ADMIN_USER=$(getConfigMap tanzu-demo-hub TDH_SERVICE_GITEA_ADMIN_USER)
+echo hallo2
   TDH_SERVICE_GITEA_ADMIN_PASS=$(getConfigMap tanzu-demo-hub TDH_SERVICE_GITEA_ADMIN_PASS)
   TDH_SERVICE_GITEA_SERVER=$(getConfigMap tanzu-demo-hub TDH_SERVICE_GITEA_SERVER)
   TDH_SERVICE_GITEA_SERVER_URL=$(getConfigMap tanzu-demo-hub TDH_SERVICE_GITEA_SERVER_URL)
 
-  curl -k -X POST "$VMC_SERVER/api/auth/api-tokens/authorize?refresh_token=$TMC_SERVICE_TOKEN" 2>/dev/null | jq -r '.access_token'
+echo "TDH_SERVICE_GITEA_ADMIN_PASS:$TDH_SERVICE_GITEA_ADMIN_PASS"
+
+  #curl -k -X POST "$VMC_SERVER/api/auth/api-tokens/authorize?refresh_token=$TMC_SERVICE_TOKEN" 2>/dev/null | jq -r '.access_token'
 }
 
 
