@@ -5432,8 +5432,8 @@ installKubeapps() {
 
     # --- CREATE NAMESPACE ---
     messagePrint " ▪ Create Namespace" "kubeapps"
-    deleteNamespace $NAMESPACE
-    createNamespace $NAMESPACE
+    deleteNamespace $NAMESPACE > /dev/null 2>&1
+    createNamespace $NAMESPACE > /dev/null 2>&1
 
     # --- COPY SECRET TO NAMESPACE ---
     messagePrint " ▪ Copy TLS Secret" "tanzu-demo-hub-tls"
@@ -5512,6 +5512,7 @@ installKubeapps() {
     messagePrint " ▪ Kubeapps Dashboard deployed"        "https://kubeapps.$DOMAIN"
   fi
 
+echo "helm ls -n $NAMESPACE -o json"
   cmdLoop helm ls -n $NAMESPACE -o json > /tmp/output.json
   if [ -s /tmp/output.json ]; then
     ver=$(jq -r --arg chart "$HELMCHART" '.[] | select(.name == $chart).app_version' /tmp/output.json)
@@ -5521,9 +5522,11 @@ installKubeapps() {
   else  
     ver=""; crt=""; stt=""; dat=""
   fi
+echo gaga1
 
   secret_name=$(getServiceAccountSecret kubeapps-operator)
   #secret_name=$(kubectl get serviceaccount kubeapps-operator -o jsonpath='{range .secrets[*]}{.name}{"\n"}{end}' | grep kubeapps-operator-token)
+echo gaga2
 
   cnt=0; ret=1
   while [ $ret -ne 0 -a $cnt -lt 5 ]; do
@@ -5533,6 +5536,7 @@ installKubeapps() {
     let cnt=cnt+1
     sleep 30
   done
+echo gaga4
 
   messagePrint " ▪ Verify Helm Chart $HELMCHART"   "$crt"
   messagePrint "   Helm Chart Name"                "$HELMCHART"
@@ -5541,6 +5545,7 @@ installKubeapps() {
   messagePrint "   Helm Chart Installed/Updated"   "$dat"
   messagePrint "   Kubeapps Internal Name"         "kubeapps.kubeapps.svc.cluster.local"
   messagePrint "   Kubeapps Management Portal"     "https://kubeapps.$DOMAIN"
+exit
 
   if [ $ret -ne 0 ]; then
     logMessages /tmp/error.log
