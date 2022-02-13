@@ -5459,7 +5459,6 @@ installGitea() {
       HELM_CHART_VERSION=$TDH_SERVICE_GITEA_VERSION
     fi
 
-
     HELM_VALUES=/tmp/helm_kubeapps_values.yaml
 
     echo "global:"                                                                                                              >  $HELM_VALUES
@@ -5472,7 +5471,7 @@ installGitea() {
     echo ""                                                                                                                     >> $HELM_VALUES
     echo "gitea:"                                                                                                               >> $HELM_VALUES
     echo "  admin:"                                                                                                             >> $HELM_VALUES
-    echo "    # NOTE: Password can not be changed its stays 'r8sA8CPHD9!bt6d'                                                   >> $HELM_VALUES
+    echo "    # NOTE: Password can not be changed its stays 'r8sA8CPHD9!bt6d'"                                                  >> $HELM_VALUES
     echo "    username: gitea_admin"                                                                                            >> $HELM_VALUES
     echo "    password: r8sA8CPHD9!bt6d"                                                                                        >> $HELM_VALUES
     echo "    email: \"gi@tea.com\""                                                                                            >> $HELM_VALUES
@@ -5495,7 +5494,6 @@ installGitea() {
     messagePrint " ▪ Deploy the $HELMCHART Helm Chart" "$HELMCHART"
     cnt=0; ret=1; stt="notdeployed"
     while [ $ret -ne 0 -a $cnt -lt 5 -a "$stt" != "deployed" ]; do
-echo "helm install $HELMCHART --namespace $NAMESPACE $HELMREPO/$HELMCHART -f $HELM_VALUES --version $HELM_CHART_VERSION"
       helm install $HELMCHART --namespace $NAMESPACE $HELMREPO/$HELMCHART -f $HELM_VALUES --version $HELM_CHART_VERSION > /tmp/error.log 2>&1; ret=$?
 
       # --- WAIT FOR PODS TO GET STARTED ---
