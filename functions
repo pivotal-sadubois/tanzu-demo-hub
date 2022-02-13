@@ -9821,12 +9821,43 @@ tmcAPI_getToken() {
 }
 
 # ------------------------------------------------------------------------------------------
+# Function Name ......: createGiteaRepo
+# Function Purpose ...: Get Gitea Repo
+# ------------------------------------------------------------------------------------------
+# Argument ($1) ......: n/a
+# ------------------------------------------------------------------------------------------
+# Return Value .......: n/a
+# ------------------------------------------------------------------------------------------
+# Reference Documentation:
+# https://developer.vmware.com/apis/897/tanzu-mission-control
+# ------------------------------------------------------------------------------------------
+createGiteaRepo() {
+  GITEA_REPO=$1
+
+  TDH_SERVICE_GITEA_ADMIN_USER=$(getConfigMap tanzu-demo-hub TDH_SERVICE_GITEA_ADMIN_USER)
+  TDH_SERVICE_GITEA_ADMIN_PASS=$(getConfigMap tanzu-demo-hub TDH_SERVICE_GITEA_ADMIN_PASS)
+  TDH_SERVICE_GITEA_SERVER=$(getConfigMap tanzu-demo-hub TDH_SERVICE_GITEA_SERVER)
+  TDH_SERVICE_GITEA_SERVER_URL=$(getConfigMap tanzu-demo-hub TDH_SERVICE_GITEA_SERVER_URL)
+  TDH_SERVICE_GITEA_ADMIN_TOKEN_ID=$(getConfigMap tanzu-demo-hub TDH_SERVICE_GITEA_ADMIN_TOKEN_ID)
+
+  curl -X 'GET' ${TDH_SERVICE_GITEA_SERVER_URL}/api/v1/orgs \
+       -H 'accept: application/json' > /tmp/output.json
+
+#  curl -X POST ${TDH_SERVICE_GITEA_SERVER_URL}/api/v1/users/sacha/tokens \
+#                 -H 'accept: application/json' \
+#                 -H 'Content-Type: application/json' \
+#                 -u "$TDH_SERVICE_GITEA_ADMIN_USER:$TDH_SERVICE_GITEA_ADMIN_PASS" \
+#                 -d '{ "name": "tanzu-demo-hub" }' 2>/dev/null | jq -r '.sha1')
+
+}
+
+# ------------------------------------------------------------------------------------------
 # Function Name ......: createGiteaAPItoken
 # Function Purpose ...: Get Gitea API Bearer Token
 # ------------------------------------------------------------------------------------------
-# Argument ($1) ......: TMC Refresh Token
+# Argument ($1) ......: n/a
 # ------------------------------------------------------------------------------------------
-# Return Value .......: API Access Token
+# Return Value .......: n/a
 # ------------------------------------------------------------------------------------------
 # Reference Documentation:
 # https://developer.vmware.com/apis/897/tanzu-mission-control
