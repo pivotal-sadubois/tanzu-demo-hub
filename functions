@@ -10333,7 +10333,6 @@ TanzuPackage_CertManager() {
 
   cmdLoop tanzu package installed list -A -o json > /tmp/output.json
   stt=$(jq -r --arg key "$PACKAGE_NAME" '.[] | select(.name == $key).name' /tmp/output.json)
-echo gaga55
   if [ "$stt" == "$PACKAGE_NAME" ]; then
     while [ $cnt -lt 5 ]; do
       cmdLoop tanzu package installed get $PACKAGE_NAME -n $PACKAGE_NAMESPACE -o json > /tmp/pkg.json
@@ -10342,7 +10341,6 @@ echo gaga55
       pkg_ver=$(jq -r '.[]."package-version"' /tmp/pkg.json)
 
       [ "$pkg_stt" == "Reconcile succeeded" -o "$pkg_stt" == "Reconciling" ] && break
-echo "pkg_stt:$pkg_stt"
 
       let cnt=cnt+1
       sleep 60
@@ -10730,6 +10728,8 @@ TanzuPackage_Contour() {
       # --- DELETE SERVICE ACCOUNT IF IT EXIST ----
       cmdLoop kubectl get serviceaccount -n tanzu-system-packages -o json > /tmp/output.json
       nam=$(jq -r --arg key "${TANZU_PACKAGE}-${TANZU_NAMESPACE}-sa" '.items[] | select(.metadata.name == $key).metadata.name' /tmp/output.json)
+echo "NAM:$nam"
+echo "kubectl -n tanzu-system-packages delete serviceaccount $nam"
       [ "$nam" != "" ] && cmdLoop kubectl -n tanzu-system-packages delete serviceaccount $nam
 
 echo "tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $PACKAGE_NAMESPACE \
