@@ -5453,6 +5453,9 @@ installGitea() {
     #kubectl get secret tanzu-demo-hub-tls --namespace=default -oyaml | grep -v '^\s*namespace:\s' | \
     #kubectl apply --namespace=$NAMESPACE -f - > /dev/null 2>&1
 
+    # --- ADDING HELM REPO ---
+    helmRepoAdd $HELMREPO $HELMREPO_URL
+
     if [ "$TDH_SERVICE_GITEA_VERSION" == "" -o "$TDH_SERVICE_GITEA_VERSION" == "latest" ]; then
       HELM_CHART_VERSION=$(helm search repo $HELMREPO/$HELMCHART | egrep "^$HELMREPO/$HELMCHART" | tail -1 | awk '{ print $2 }')
     else
@@ -5480,11 +5483,6 @@ installGitea() {
     echo "    - secretName: tanzu-demo-hub-tls"                                                                                   >> $HELM_VALUES
     echo "      hosts:"                                                                                                           >> $HELM_VALUES
     echo "        - $HELMCHART.$DOMAIN"                                                                                             >> $HELM_VALUES
-
-echo gaga1
-    # --- ADDING HELM REPO ---
-echo "helmRepoAdd $HELMREPO $HELMREPO_URL"
-    helmRepoAdd $HELMREPO $HELMREPO_URL
 
 echo gaga1
     messagePrint " ▪ Deploy the $HELMCHART Helm Chart" "$HELMCHART"
@@ -5585,7 +5583,6 @@ installKubeapps() {
   cnt=$(helm list -q -n $NAMESPACE | egrep -c "^kubeapps")
   if [ $cnt -eq 0 ]; then
     messagePrint " ▪ Add the Bintnami Repository"   "https://charts.bitnami.com/bitnami"
-    helmRepoAdd bitnami https://charts.bitnami.com/bitnami
 
     # --- CREATE NAMESPACE ---
     messagePrint " ▪ Create Namespace" "kubeapps"
@@ -5597,6 +5594,9 @@ installKubeapps() {
     copySecretObject default $NAMESPACE tanzu-demo-hub-tls
     #kubectl get secret tanzu-demo-hub-tls --namespace=default -oyaml | grep -v '^\s*namespace:\s' | \
     #kubectl apply --namespace=$NAMESPACE -f - > /dev/null 2>&1
+
+    # --- ADD GIT REPOSITORY ---
+    helmRepoAdd bitnami https://charts.bitnami.com/bitnami
 
     if [ "$TDH_SERVICE_KUBEAPPS_VERSION" == "" -o "$TDH_SERVICE_KUBEAPPS_VERSION" == "latest" ]; then
       HELM_KUBEAPPS_VERSION=$(helm search repo bitnami/kubeapps | egrep "^bitnami/kubeapps" | tail -1 | awk '{ print $2 }')
@@ -5623,8 +5623,6 @@ installKubeapps() {
     echo "  - hosts:"                                                                                                           >> $HELM_VALUES
     echo "      - kubeapps.$DOMAIN"                                                                                             >> $HELM_VALUES
     echo "    secretName: tanzu-demo-hub-tls"                                                                                   >> $HELM_VALUES
-
-    helmRepoAdd bitnami https://charts.bitnami.com/bitnami
 
     messagePrint " ▪ Deploy the Kubeapps Helm Chart" "kubeapps"
     cnt=0; ret=1; stt="notdeployed"
@@ -5925,6 +5923,9 @@ installGitLab() {
     messagePrint " ▪ Installing GitLab" "gitlab/gitlab"
     createNamespace $NAMESPACE > /dev/null 2>&1
 
+    # --- ADD REPOSITORY --
+    helmRepoAdd gitlab https://charts.gitlab.io/
+
     # --- COPY SECRET TO NAMESPACE ---
     copySecretObject default $NAMESPACE tanzu-demo-hub-tls
 
@@ -5975,9 +5976,6 @@ installGitLab() {
     echo "certmanager:"                                                                                                         >> $HELM_VALUES
     echo "  installCRDs: false"                                                                                                 >> $HELM_VALUES
     echo "  install: false"                                                                                                     >> $HELM_VALUES
-
-    # --- ADD REPOSITORY --
-    helmRepoAdd gitlab https://charts.gitlab.io/
 
 #gogo
     cnt=0; ret=1; stt="notdeployed"
@@ -11719,8 +11717,8 @@ helmRepoAdd() {
     nam=$(jq -r --arg key "$REPO_NAME" '.[] | select(.name == $key).name' /tmp/output.json)
     if [ "$nam" == "" ]; then
       messagePrint " ▪ Add Helm Repo ($REPO_NAME)" "$REPO_URL"
-      cmdLoop helm repo add $REPO_NAME $REPO_URL
-      cmdLoop helm repo update
+      cmdLoop helm repo add $REPO_NAME $REPO_URL > /dev/null 2>&1
+      cmdLoop helm repo update > /dev/null 2>&1
     fi
   fi
 }
