@@ -10197,8 +10197,12 @@ TanzuPackage_LocalStorage() {
     while [ $ret -ne 0 -a $cnt -lt 5 ]; do
       tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $PACKAGE_NAMESPACE --version $package_ver --create-namespace --wait=true > /tmp/error.log 2>&1
       waitTanzuPackageReconsile $PACKAGE_NAME $PACKAGE_NAMESPACE; ret=$? 
-
-      [ $ret -eq 0 ] && break
+      if [ $ret -nq 0 ]; then 
+        # --- DELETE PACKAGE AND START OVER ---
+        deleteTanzuPackage $PACKAGE_NAME $PACKAGE_NAMESPACE
+      else
+        break
+      fi
 
       let cnt=cnt+1
       sleep 30
@@ -11656,13 +11660,9 @@ deleteTanzuPackage() {
     cnt=0; ret=1 
     while [ $ret -ne 0 -a $cnt -lt 5 ]; do
 
-echo "tanzu package installed delete $TANZU_PACKAGE --namespace $TANZU_NAMESPACE -y"
       tanzu package installed delete $TANZU_PACKAGE --namespace $TANZU_NAMESPACE -y > /dev/null 2>&1; ret=$?
 
       # --- VERIFY IF PACKAGE IS DELETED ---
-echo xxx1
-cmdLoop tanzu package installed list -A
-echo xxx2
       cmdLoop tanzu package installed list -A -o json > /tmp/output.json
       pkg=$(jq -r --arg key "$TANZU_PACKAGE" '.[] | select(.name == $key).name' /tmp/output.json)
 echo "pkg:$pkg"
