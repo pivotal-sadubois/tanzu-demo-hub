@@ -5410,6 +5410,152 @@ installJenkins() {
   uodateConfigMap tanzu-demo-hub TDH_SERVICE_JENKINS             "true"
 }
 
+# ------------------------------------------------------------------------------------------
+# Function Name ......: installGitea
+# Function Purpose ...: Install Gitea Helm Chargt
+# ------------------------------------------------------------------------------------------
+# Argument ($1) ......: None
+# ------------------------------------------------------------------------------------------
+# Return Value .......: 0 - SUCCEED, 1 - FAILED
+# ------------------------------------------------------------------------------------------
+# References .........: https://gitea.com/gitea/helm-chart ............. Gitea Documentation
+# ------------------------------------------------------------------------------------------
+installGitea() {
+  NAMESPACE=gitea
+  HELMCHART=gitea
+  HELMREPO=gitea-charts
+  HELMREPO_URL=https://dl.gitea.io/charts/
+
+  if [ "$TDH_SERVICE_KUBEAPPS" != "true" ]; then
+    uodateConfigMap tanzu-demo-hub TDH_SERVICE_GITEA        "false"
+    deleteHelmChart $NAMESPACE $HELMCHART
+    return
+  fi
+
+  TDH_DOMAIN=$(getConfigMap tanzu-demo-hub TDH_DOMAIN)
+  TDH_ENVNAME=$(getConfigMap tanzu-demo-hub TDH_ENVNAME)
+  DOMAIN=$(getConfigMap tanzu-demo-hub TDH_INGRESS_CONTOUR_LB_DOMAIN)
+
+  messageTitle "Application Dashboard for Kubernetes (Kupeapps)"
+  cnt=$(helm list -q -n $NAMESPACE | egrep -c "^kubeapps")
+  if [ $cnt -eq 0 ]; then
+    messagePrint " ▪ Add the Bintnami Repository"   "https://charts.bitnami.com/bitnami"
+    helmRepoAdd bitnami https://charts.bitnami.com/bitnami
+
+    # --- CREATE NAMESPACE ---
+    messagePrint " ▪ Create Namespace" "kubeapps"
+    deleteNamespace $NAMESPACE > /dev/null 2>&1
+    createNamespace $NAMESPACE > /dev/null 2>&1
+
+    # --- COPY SECRET TO NAMESPACE ---
+    messagePrint " ▪ Copy TLS Secret" "tanzu-demo-hub-tls"
+    copySecretObject default $NAMESPACE tanzu-demo-hub-tls
+    #kubectl get secret tanzu-demo-hub-tls --namespace=default -oyaml | grep -v '^\s*namespace:\s' | \
+    #kubectl apply --namespace=$NAMESPACE -f - > /dev/null 2>&1
+
+    if [ "$TDH_SERVICE_GITEA_VERSION" == "" -o "$TDH_SERVICE_GITEA_VERSION" == "latest" ]; then
+      HELM_CHART_VERSION=$(helm search repo $HELMREPO/$HELMCHART | egrep "^$HELMREPO/$HELMCHART" | tail -1 | awk '{ print $2 }')
+    else
+      HELM_CHART_VERSION=$TDH_SERVICE_GITEA_VERSION
+    fi
+
+    HELM_VALUES=/tmp/helm_kubeapps_values.yaml
+
+    echo "global:"                                                                                                              >  $HELM_VALUES
+    echo "  imageRegistry: docker.io"                                                                                           >> $HELM_VALUES
+    echo "  imagePullSecrets:"                                                                                                  >> $HELM_VALUES
+    echo "    - tdh-docker-repo"                                                                                                >> $HELM_VALUES
+    echo ""                                                                                                                     >> $HELM_VALUES
+    echo "ingress:"                                                                                                             >> $HELM_VALUES
+    echo "  enabled: true"                                                                                                      >> $HELM_VALUES
+    echo "  annotations:"                                                                                                       >> $HELM_VALUES
+    echo "    kubernetes.io/ingress.class: contour"                                                                             >> $HELM_VALUES
+    echo "    ingress.kubernetes.io/force-ssl-redirect: \"true\""                                                               >> $HELM_VALUES
+    echo "  hosts:"                                                                                                             >> $HELM_VALUES
+    echo "    - host: $HELMCHART.$DOMAIN"                                                                                       >> $HELM_VALUES
+    echo "      paths:"                                                                                                         >> $HELM_VALUES
+    echo "      - path: /"                                                                                                      >> $HELM_VALUES
+    echo "        pathType: Prefix"                                                                                             >> $HELM_VALUES
+    echo "  tls:"                                                                                                               >> $HELM_VALUES
+    echo "    - secretName: tanzu-demo-hub-tls"                                                                                   >> $HELM_VALUES
+    echo "      hosts:"                                                                                                           >> $HELM_VALUES
+    echo "        - $HELMCHART.$DOMAIN"                                                                                             >> $HELM_VALUES
+
+    # --- ADDING HELM REPO ---
+    helmRepoAdd $HELMREPO $HELMREPO_URL
+
+    messagePrint " ▪ Deploy the $HELMCHART Helm Chart" "$HELMCHART"
+    cnt=0; ret=1; stt="notdeployed"
+    while [ $ret -ne 0 -a $cnt -lt 5 -a "$stt" != "deployed" ]; do
+      helm install $HELMCHART --namespace $NAMESPACE $HELMREPO/$HELMCHART -f $HELM_VALUES --version $HELM_CHART_VERSION > /tmp/error.log 2>&1; ret=$?
+
+      # --- WAIT FOR PODS TO GET STARTED ---
+      runningPods $NAMESPACE
+
+      cmdLoop helm ls -n $NAMESPACE -o json > /tmp/output.json
+      stt=$(jq -r --arg chart "$HELMCHART" '.[] | select(.name == $chart).status' /tmp/output.json)
+
+      [ $ret -eq 0 -a "$stt" == "deployed" ] && break
+
+      # --- DELTE FAILED HELM CHART ---
+      deleteHelmChart $NAMESPACE $HELMCHART
+
+      let cnt=cnt+1
+      sleep 30
+    done
+
+    if [ $ret -ne 0 -o "$stt" != "deployed" ]; then
+      logMessages /tmp/error.log
+      echo "ERROR: Failed to deploy $HELMCHART Helm Chart"
+      if [ "$NATIVE" == "0" ]; then
+        echo "       => tools/${TDH_TOOLS}.sh"
+        echo "          tdh-tools:/$ helm install $HELMCHART --namespace $NAMESPACE $HELMREPO/$HELMCHART -f $HELM_VALUES --version $HELM_CHART_VERSION"
+        echo "          tdh-tools:/$ exit"
+      else
+        echo "       => helm install $HELMCHART --namespace $NAMESPACE $HELMREPO/$HELMCHART -f $HELM_VALUES --version $HELM_CHART_VERSION"
+      fi
+
+      exit 1
+    fi
+
+  fi
+
+  cmdLoop helm ls -n $NAMESPACE -o json > /tmp/output.json
+  if [ -s /tmp/output.json ]; then
+    ver=$(jq -r --arg chart "$HELMCHART" '.[] | select(.name == $chart).app_version' /tmp/output.json)
+    crt=$(jq -r --arg chart "$HELMCHART" '.[] | select(.name == $chart).chart' /tmp/output.json)
+    stt=$(jq -r --arg chart "$HELMCHART" '.[] | select(.name == $chart).status' /tmp/output.json)
+    dat=$(jq -r --arg chart "$HELMCHART" '.[] | select(.name == $chart).updated' /tmp/output.json)
+  else
+    ver=""; crt=""; stt=""; dat=""
+  fi
+
+  secret_name=$(getServiceAccountSecret kubeapps-operator)
+
+  cnt=0; ret=1
+  while [ $ret -ne 0 -a $cnt -lt 5 ]; do
+    KUBEAPPS_TOKEN=$(kubectl get secret $secret_name -o jsonpath='{.data.token}' -o go-template='{{.data.token | base64decode}}' 2>/tmp/error.log); ret=$?
+
+    [ $ret -eq 0 ] && break
+    let cnt=cnt+1
+    sleep 30
+  done
+
+  messagePrint " ▪ Verify Helm Chart $HELMCHART"   "$crt"
+  messagePrint "   Helm Chart Name"                "$HELMCHART"
+  messagePrint "   Helm Chart Version"             "$ver"
+  messagePrint "   Helm Chart Status"              "$stt"
+  messagePrint "   Helm Chart Installed/Updated"   "$dat"
+}
+
+# ------------------------------------------------------------------------------------------
+# Function Name ......: installKubeapps
+# Function Purpose ...: Install Kubeapps Helm Chargt
+# ------------------------------------------------------------------------------------------
+# Argument ($1) ......: None
+# ------------------------------------------------------------------------------------------
+# Return Value .......: 0 - SUCCEED, 1 - FAILED
+# ------------------------------------------------------------------------------------------
 installKubeapps() {
   NAMESPACE=kubeapps
   HELMCHART=kubeapps
@@ -5504,15 +5650,14 @@ installKubeapps() {
     fi
 
     messagePrint " ▪ Create Cluster Role Binding"        "default:kubeapps-operator"
-    createClusterRoleBinding kubeapps-operator cluster-admin default:kubeapps-operator
+    createClusterRoleBinding kubeapps-operator cluster-admin default:kubeapps-operator > /dev/null 2>&1
 
     messagePrint " ▪ Create Serviceaccount"              "kubeapps-operator"
-    createServiceAccount default kubeapps-operator
+    createServiceAccount default kubeapps-operator > /dev/null 2>&1
 
     messagePrint " ▪ Kubeapps Dashboard deployed"        "https://kubeapps.$DOMAIN"
   fi
 
-echo "helm ls -n $NAMESPACE -o json"
   cmdLoop helm ls -n $NAMESPACE -o json > /tmp/output.json
   if [ -s /tmp/output.json ]; then
     ver=$(jq -r --arg chart "$HELMCHART" '.[] | select(.name == $chart).app_version' /tmp/output.json)
@@ -5522,11 +5667,8 @@ echo "helm ls -n $NAMESPACE -o json"
   else  
     ver=""; crt=""; stt=""; dat=""
   fi
-echo gaga1
 
   secret_name=$(getServiceAccountSecret kubeapps-operator)
-  #secret_name=$(kubectl get serviceaccount kubeapps-operator -o jsonpath='{range .secrets[*]}{.name}{"\n"}{end}' | grep kubeapps-operator-token)
-echo gaga2
 
   cnt=0; ret=1
   while [ $ret -ne 0 -a $cnt -lt 5 ]; do
@@ -5536,7 +5678,6 @@ echo gaga2
     let cnt=cnt+1
     sleep 30
   done
-echo gaga4
 
   messagePrint " ▪ Verify Helm Chart $HELMCHART"   "$crt"
   messagePrint "   Helm Chart Name"                "$HELMCHART"
@@ -5545,7 +5686,6 @@ echo gaga4
   messagePrint "   Helm Chart Installed/Updated"   "$dat"
   messagePrint "   Kubeapps Internal Name"         "kubeapps.kubeapps.svc.cluster.local"
   messagePrint "   Kubeapps Management Portal"     "https://kubeapps.$DOMAIN"
-exit
 
   if [ $ret -ne 0 ]; then
     logMessages /tmp/error.log
@@ -11381,22 +11521,19 @@ waitForKappServices() {
 # Return Value .......: 0 - SUCCEED, 1 - FAILED
 # ------------------------------------------------------------------------------------------
 createServiceAccount() {
-  NAMESPACE=$1
+  TMP_NAMESPACE=$1
   SERVICE_ACCOUNT=$2
 
-  cmdLoop kubectl --namespace $NAMESPACE get serviceaccounts -o json > /tmp/output.json
+  cmdLoop kubectl --namespace $TMP_NAMESPACE get serviceaccounts -o json > /tmp/output.json
   if [ -s /tmp/output.json ]; then 
     sa=$(jq -r --arg key "$SERVICE_ACCOUNT" '.items[] | select(.metadata.name == $key).metadata.name' /tmp/output.json)
     if [ "$sa" != "" ]; then 
-      cmdLoop kubectl delete --namespace $NAMESPACE serviceaccount $SERVICE_ACCOUNT > /dev/null 2>&1
+      cmdLoop kubectl delete --namespace $TMP_NAMESPACE serviceaccount $SERVICE_ACCOUNT > /dev/null 2>&1
     fi
   fi
 
-  cmdLoop kubectl create --namespace $NAMESPACE serviceaccount $SERVICE_ACCOUNT > /dev/null 2>&1
+  cmdLoop kubectl create --namespace $TMP_NAMESPACE serviceaccount $SERVICE_ACCOUNT > /dev/null 2>&1
 }
-
-#    cmdLoop delete clusterrolebinding kubeapps-operator > /dev/null 2>&1
-#    cmdLoop create clusterrolebinding kubeapps-operator --clusterrole=cluster-admin --serviceaccount=default:kubeapps-operator
 
 # ------------------------------------------------------------------------------------------
 # Function Name ......: createClusterRoleBinding

@@ -427,6 +427,8 @@ installTanzuDataPostgres
 installSpringCloudGateway
 installMinio
 installKubeapps
+installGitea
+exit
 installJenkins
 installArgoCD
 installGitLab
