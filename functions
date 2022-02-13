@@ -9831,7 +9831,6 @@ tmcAPI_getToken() {
 # ------------------------------------------------------------------------------------------
 getGiteaAPItoken() {
   REFRESH_TOKEN="$1"
-  VMC_SERVER="
 
   TDH_SERVICE_GITEA_ADMIN_USER=$(getConfigMap tanzu-demo-hub TDH_SERVICE_GITEA_ADMIN_USER)
   TDH_SERVICE_GITEA_ADMIN_PASS=$(getConfigMap tanzu-demo-hub TDH_SERVICE_GITEA_ADMIN_PASS)
