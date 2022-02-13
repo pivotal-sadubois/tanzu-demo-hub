@@ -5496,19 +5496,11 @@ installKubeapps() {
       exit 1
     fi
 
-#mmmmmmmmm
-#    messagePrint " ▪ Create Cluster Role Binding"                 "default:jenkins-operator"
-#    createClusterRoleBinding jenkins-tbs build-service-user-role  default:jenkins-tbs
-
-#    messagePrint " ▪ Create Serviceaccount"              "jenkins-operator"
-#    createServiceAccount default jenkins-tbs
-
+    messagePrint " ▪ Create Cluster Role Binding"        "default:kubeapps-operator"
+    createClusterRoleBinding kubeapps-operator cluster-admin default:kubeapps-operator
 
     messagePrint " ▪ Create Serviceaccount"              "kubeapps-operator"
     createServiceAccount default kubeapps-operator
-
-    messagePrint " ▪ Create Cluster Role Binding"        "default:kubeapps-operator"
-    createClusterRoleBinding kubeapps-operator cluster-admin default:kubeapps-operator
 
     messagePrint " ▪ Kubeapps Dashboard deployed"        "https://kubeapps.$DOMAIN"
   fi
