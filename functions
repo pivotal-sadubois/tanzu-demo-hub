@@ -5419,6 +5419,7 @@ installJenkins() {
 # Return Value .......: 0 - SUCCEED, 1 - FAILED
 # ------------------------------------------------------------------------------------------
 # References .........: https://gitea.com/gitea/helm-chart ............. Gitea Documentation
+#                     : https://docs.gitea.io/en-us/api-usage/ ............. Gitea API Guide
 # ------------------------------------------------------------------------------------------
 installGitea() {
   NAMESPACE=gitea
@@ -5553,6 +5554,11 @@ installGitea() {
   messagePrint "   Gitea Management Portal"        "https://gitea.$DOMAIN"
   messagePrint "   Gitea Admin User"               "gitea_user"
   messagePrint "   Gitea Admin Password"           "$TDH_HARBOR_ADMIN_PASSWORD"
+
+  # --- STORE SETTINGS IN CONFIGMAP ---
+  uodateConfigMap tanzu-demo-hub TDH_SERVICE_GITEA             "true"
+  uodateConfigMap tanzu-demo-hub TDH_SERVICE_GITEA_ADMIN_USER  "gitea_user"
+  uodateConfigMap tanzu-demo-hub TDH_SERVICE_GITEA_ADMIN_PASS  "$TDH_HARBOR_ADMIN_PASSWORD"
 }
 
 # ------------------------------------------------------------------------------------------
