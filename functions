@@ -11373,7 +11373,10 @@ createServiceAccount() {
   NAMESPACE=$1
   SERVICE_ACCOUNT=$2
 
+echo "gaga1"
+echo " kubectl --namespace $NAMESPACE get serviceaccount $SERVICE_ACCOUNT -o json > /tmp/output.json"
   cmdLoop kubectl --namespace $NAMESPACE get serviceaccount $SERVICE_ACCOUNT -o json > /tmp/output.json
+echo "gaga2"
   if [ -s /tmp/output.json ]; then 
     sa=$(jq -r '.metadata.name' /tmp/output.json) 
 echo "SA:$sa"
@@ -11382,6 +11385,7 @@ echo "kubectl delete --namespace $NAMESPACE serviceaccount $SERVICE_ACCOUNT"
       cmdLoop kubectl delete --namespace $NAMESPACE serviceaccount $SERVICE_ACCOUNT > /dev/null 2>&1
     fi
   fi
+echo "kubectl create --namespace $NAMESPACE serviceaccount $SERVICE_ACCOUNT"
 
   cmdLoop kubectl create --namespace $NAMESPACE serviceaccount $SERVICE_ACCOUNT > /dev/null 2>&1
 }
