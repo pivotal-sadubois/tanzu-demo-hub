@@ -9847,11 +9847,16 @@ echo "curl -X GET https://${TDH_SERVICE_GITEA_SERVER}/api/v1/users/sacha/tokens 
                  -H 'accept: application/json' \
                  -H 'Content-Type: application/json' \
                  -u "$TDH_SERVICE_GITEA_ADMIN_USER:$TDH_SERVICE_GITEA_ADMIN_PASS" 2>/dev/null | \
-                 jq -r '.[]') 
+                 jq -r '.[] | select(.name == "tanzu-demo-hub").name') 
 
 echo gaga0
 echo "token:$token"
     if [ "$token" == "" ]; then
+#curl -X 'DELETE' \
+#  'https://gitea.apps-contour.tce.pcfsdu.com/api/v1/users/gitea_admin/tokens/tanzu-demo-hub' \
+#  -H 'accept: application/json' \
+#  -u "gitea_admin:Password12345" 
+
 echo gaga1
       token=$(curl -X POST ${TDH_SERVICE_GITEA_SERVER_URL}/api/v1/users/sacha/tokens \
                    -H 'accept: application/json' \
