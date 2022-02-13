@@ -5537,11 +5537,12 @@ installGitea() {
     ver=""; crt=""; stt=""; dat=""
   fi
 
-  cmdLoop helm get values gitea -n gitea -o json > /tmp/output.json
-  cmdLoop helm get values $HELMCHART -n $HELMCHART -o json > /tmp/output.json
+  #cmdLoop helm get values gitea -n gitea -o json > /tmp/output.json
+  #cmdLoop helm get values $HELMCHART -n $HELMCHART -o json > /tmp/output.json
+  #gitea_user=$(jq -r '.gitea.admin.username' /tmp/output.json) 
+  #gitea_pass=$(jq -r '.gitea.admin.password' /tmp/output.json) 
 
-  gitea_user=$(jq -r '.gitea.admin.username' /tmp/output.json) 
-  gitea_pass=$(jq -r '.gitea.admin.password' /tmp/output.json) 
+  cmdLoop kubectl -n $HELMCHART exec -it gitea-0 -- $HELMCHART admin user change-password -u gitea_admin -p $TDH_HARBOR_ADMIN_PASSWORD
 
   messagePrint " ▪ Verify Helm Chart $HELMCHART"   "$crt"
   messagePrint "   Helm Chart Name"                "$HELMCHART"
@@ -5550,8 +5551,8 @@ installGitea() {
   messagePrint "   Helm Chart Installed/Updated"   "$dat"
   messagePrint "   Gitea Internal Name"            "gitea.gitea.svc.cluster.local"
   messagePrint "   Gitea Management Portal"        "https://gitea.$DOMAIN"
-  messagePrint "   Gitea Admin User"               "$gitea_user"
-  messagePrint "   Gitea Admin Password"           "$gitea_pass"
+  messagePrint "   Gitea Admin User"               "gitea_user"
+  messagePrint "   Gitea Admin Password"           "$TDH_HARBOR_ADMIN_PASSWORD"
 }
 
 # ------------------------------------------------------------------------------------------
