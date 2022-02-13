@@ -9852,16 +9852,16 @@ echo gaga1
       curl -X DELETE https://${TDH_SERVICE_GITEA_SERVER}/api/v1/users/$TDH_SERVICE_GITEA_ADMIN_USER/tokens/tanzu-demo-hub \
            -H 'accept: application/json' \
            -u "$TDH_SERVICE_GITEA_ADMIN_USER:$TDH_SERVICE_GITEA_ADMIN_PASS" >/dev/null 2>&1
+    fi
 
-      token=$(curl -X POST ${TDH_SERVICE_GITEA_SERVER_URL}/api/v1/users/sacha/tokens \
-                   -H 'accept: application/json' \
-                   -H 'Content-Type: application/json' \
-                   -u "$TDH_SERVICE_GITEA_ADMIN_USER:$TDH_SERVICE_GITEA_ADMIN_PASS" \
-                   -d '{ "name": "tanzu-demo-hub" }' 2>/dev/null | jq -r '.sha1') 
+    token=$(curl -X POST ${TDH_SERVICE_GITEA_SERVER_URL}/api/v1/users/sacha/tokens \
+                 -H 'accept: application/json' \
+                 -H 'Content-Type: application/json' \
+                 -u "$TDH_SERVICE_GITEA_ADMIN_USER:$TDH_SERVICE_GITEA_ADMIN_PASS" \
+                 -d '{ "name": "tanzu-demo-hub" }' 2>/dev/null | jq -r '.sha1') 
 
 echo "token:$token"
 echo gaga2
-    fi
   fi
 }
 
