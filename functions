@@ -9846,13 +9846,14 @@ createGiteaRepo() {
   if [ "$nam" == "" ]; then 
     TMP_API_DATA=/tmp/gitea_api_data.json
     echo "{"                                                    >  $TMP_API_DATA
-    echo "  'description': 'Tanzu Demo Hub - Organisation',"    >> $TMP_API_DATA
-    echo "  'full_name': 'Tanzu Demo Hub',"                     >> $TMP_API_DATA
-    echo "  'location': '',"                                    >> $TMP_API_DATA
-    echo "  'repo_admin_change_team_access': true,"             >> $TMP_API_DATA
-    echo "  'username': 'tdh',"                                 >> $TMP_API_DATA
-    echo "  'visibility': 'public',"                            >> $TMP_API_DATA
-    echo "  'website': ''"                                      >> $TMP_API_DATA
+    echo "  \"description\": \"Tanzu Organisation\","           >> $TMP_API_DATA
+    echo "  \"full_name\": \"Tanzu Demo Hub\","                 >> $TMP_API_DATA
+    echo "  \"location\": \"\","                                >> $TMP_API_DATA
+    echo "  \"repo_admin_change_team_access\" true,"            >> $TMP_API_DATA
+    echo "  \"username\": \"tdh\",                              >> $TMP_API_DATA
+    echo "  \"visibility\": \"public\",                         >> $TMP_API_DATA
+    echo "  \"website\": \"\""                                  >> $TMP_API_DATA
+    echo "}"                                                    >> $TMP_API_DATA
 
     curl -X POST ${TDH_SERVICE_GITEA_SERVER_URL}/api/v1/orgs \
          -H 'accept: application/json' \
