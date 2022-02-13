@@ -9844,6 +9844,8 @@ echo "TDH_SERVICE_GITEA_ADMIN_TOKEN_ID:$TDH_SERVICE_GITEA_ADMIN_TOKEN_ID"
  if [ "$TDH_SERVICE_GITEA_ADMIN_TOKEN_ID" == "" -o "$TDH_SERVICE_GITEA_ADMIN_TOKEN_ID" == "null" ]; then 
   echo "no token"
 
+echo ""$TDH_SERVICE_GITEA_ADMIN_USER:$TDH_SERVICE_GITEA_ADMIN_PASS"
+
   curl -X GET https://${TDH_SERVICE_GITEA_SERVER}/api/v1/users/sacha/tokens \
        -H 'accept: application/json' \
        -H 'Content-Type: application/json' \
