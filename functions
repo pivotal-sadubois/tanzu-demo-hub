@@ -5462,6 +5462,7 @@ installGitea() {
       HELM_CHART_VERSION=$TDH_SERVICE_GITEA_VERSION
     fi
 
+
     HELM_VALUES=/tmp/helm_kubeapps_values.yaml
 
     echo "global:"                                                                                                              >  $HELM_VALUES
@@ -5471,8 +5472,9 @@ installGitea() {
     echo ""                                                                                                                     >> $HELM_VALUES
     echo "gitea:"                                                                                                               >> $HELM_VALUES
     echo "  admin:"                                                                                                             >> $HELM_VALUES
-    echo "    username: \"admin\""                                                                                              >> $HELM_VALUES
-    echo "    password: \"$TDH_HARBOR_ADMIN_PASSWORD\""                                                                         >> $HELM_VALUES
+    echo "    # NOTE: Password can not be changed it stays 'r8sA8CPHD9!bt6d'                                                    >> $HELM_VALUES
+    echo "    username: \"gitea_admin\""                                                                                        >> $HELM_VALUES
+    echo "    password: r8sA8CPHD9!bt6d"                                                                                        >> $HELM_VALUES
     echo "    email: \"gi@tea.com\""                                                                                            >> $HELM_VALUES
     echo ""                                                                                                                     >> $HELM_VALUES
     echo "ingress:"                                                                                                             >> $HELM_VALUES
@@ -5548,6 +5550,11 @@ echo "helm install $HELMCHART --namespace $NAMESPACE $HELMREPO/$HELMCHART -f $HE
     sleep 30
   done
 
+
+  cmdLoop helm get values gitea -n gitea -o json > /tmp/output.json
+  gitea_user=$(jq -r '.global.admin.username' /tmp/output.json) 
+  gitea_pass=$(jq -r '.global.admin.password' /tmp/output.json) 
+
   messagePrint " ▪ Verify Helm Chart $HELMCHART"   "$crt"
   messagePrint "   Helm Chart Name"                "$HELMCHART"
   messagePrint "   Helm Chart Version"             "$ver"
@@ -5555,8 +5562,8 @@ echo "helm install $HELMCHART --namespace $NAMESPACE $HELMREPO/$HELMCHART -f $HE
   messagePrint "   Helm Chart Installed/Updated"   "$dat"
   messagePrint "   Gitea Internal Name"            "gitea.gitea.svc.cluster.local"
   messagePrint "   Gitea Management Portal"        "https://gitea.$DOMAIN"
-  messagePrint "   Gitea Admin User"               "admin"
-  messagePrint "   Gitea Admin Password"           "$TDH_HARBOR_ADMIN_PASSWORD"
+  messagePrint "   Gitea Admin User"               "$gitea_user"
+  messagePrint "   Gitea Admin Password"           "$gitea_pass"
 }
 
 # ------------------------------------------------------------------------------------------
