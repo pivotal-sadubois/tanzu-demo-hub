@@ -11712,7 +11712,7 @@ deleteCertificate() {
 # ------------------------------------------------------------------------------------------
 helmRepoAdd() {
   REPO_NAME=$1
-  REPO_URL=$1
+  REPO_URL=$2
 
   cmdLoop helm repo list -o json > /tmp/output.json
   if [ -s /tmp/output.json ]; then
