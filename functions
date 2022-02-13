@@ -5558,7 +5558,7 @@ installGitea() {
 
   # --- STORE SETTINGS IN CONFIGMAP ---
   uodateConfigMap tanzu-demo-hub TDH_SERVICE_GITEA             "true"
-  uodateConfigMap tanzu-demo-hub TDH_SERVICE_GITEA_ADMIN_USER  "gitea_user"
+  uodateConfigMap tanzu-demo-hub TDH_SERVICE_GITEA_ADMIN_USER  "gitea_admin"
   uodateConfigMap tanzu-demo-hub TDH_SERVICE_GITEA_ADMIN_PASS  "$TDH_HARBOR_ADMIN_PASSWORD"
   uodateConfigMap tanzu-demo-hub TDH_SERVICE_GITEA_SERVER      "gitea.$DOMAIN"
   uodateConfigMap tanzu-demo-hub TDH_SERVICE_GITEA_SERVER_URL  "https://gitea.$DOMAIN"
