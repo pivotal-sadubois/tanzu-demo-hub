@@ -5439,9 +5439,6 @@ installGitea() {
   messageTitle "Self-hosted Git service (Gitea)"
   cnt=$(helm list -q -n $NAMESPACE | egrep -c "^kubeapps")
   if [ $cnt -eq 0 ]; then
-    messagePrint " ▪ Add the Bintnami Repository"   "https://charts.bitnami.com/bitnami"
-    helmRepoAdd bitnami https://charts.bitnami.com/bitnami
-
     # --- CREATE NAMESPACE ---
     messagePrint " ▪ Create Namespace" "kubeapps"
     deleteNamespace $NAMESPACE > /dev/null 2>&1
@@ -5470,10 +5467,13 @@ installGitea() {
     echo "  imagePullSecrets:"                                                                                                  >> $HELM_VALUES
     echo "    - tdh-docker-repo"                                                                                                >> $HELM_VALUES
     echo ""                                                                                                                     >> $HELM_VALUES
+    echo "config:"                                                                                                              >> $HELM_VALUES
+    echo "  disableRegistration: true"                                                                                          >> $HELM_VALUES
+    echo ""                                                                                                                     >> $HELM_VALUES
     echo "gitea:"                                                                                                               >> $HELM_VALUES
     echo "  admin:"                                                                                                             >> $HELM_VALUES
-    echo "    # NOTE: Password can not be changed it stays 'r8sA8CPHD9!bt6d'                                                    >> $HELM_VALUES
-    echo "    username: \"gitea_admin\""                                                                                        >> $HELM_VALUES
+    echo "    # NOTE: Password can not be changed its stays 'r8sA8CPHD9!bt6d'                                                   >> $HELM_VALUES
+    echo "    username: gitea_admin"                                                                                            >> $HELM_VALUES
     echo "    password: r8sA8CPHD9!bt6d"                                                                                        >> $HELM_VALUES
     echo "    email: \"gi@tea.com\""                                                                                            >> $HELM_VALUES
     echo ""                                                                                                                     >> $HELM_VALUES
