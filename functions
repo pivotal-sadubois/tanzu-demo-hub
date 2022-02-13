@@ -9842,7 +9842,7 @@ createGiteaRepo() {
 
   curl -X 'GET' ${TDH_SERVICE_GITEA_SERVER_URL}/api/v1/orgs \
        -H 'accept: application/json' 2>/dev/null > /tmp/output.json
-  nam=$(jq -r '.[] | select(.username == $key).username).username /tmp/output.json) 
+  nam=$(jq -r '.[] | select(.username == $key).username' /tmp/output.json) 
 
 echo "nam:$nam"
 
