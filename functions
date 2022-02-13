@@ -5469,6 +5469,12 @@ installGitea() {
     echo "  imagePullSecrets:"                                                                                                  >> $HELM_VALUES
     echo "    - tdh-docker-repo"                                                                                                >> $HELM_VALUES
     echo ""                                                                                                                     >> $HELM_VALUES
+    echo "gitea:"                                                                                                               >> $HELM_VALUES
+    echo "  admin:"                                                                                                             >> $HELM_VALUES
+    echo "    username: \"admin\""                                                                                              >> $HELM_VALUES
+    echo "    password: \"$TDH_HARBOR_ADMIN_PASSWORD\""                                                                         >> $HELM_VALUES
+    echo "    email: \"gi@tea.com\""                                                                                            >> $HELM_VALUES
+    echo ""                                                                                                                     >> $HELM_VALUES
     echo "ingress:"                                                                                                             >> $HELM_VALUES
     echo "  enabled: true"                                                                                                      >> $HELM_VALUES
     echo "  annotations:"                                                                                                       >> $HELM_VALUES
@@ -5480,28 +5486,20 @@ installGitea() {
     echo "      - path: /"                                                                                                      >> $HELM_VALUES
     echo "        pathType: Prefix"                                                                                             >> $HELM_VALUES
     echo "  tls:"                                                                                                               >> $HELM_VALUES
-    echo "    - secretName: tanzu-demo-hub-tls"                                                                                   >> $HELM_VALUES
-    echo "      hosts:"                                                                                                           >> $HELM_VALUES
-    echo "        - $HELMCHART.$DOMAIN"                                                                                             >> $HELM_VALUES
+    echo "    - secretName: tanzu-demo-hub-tls"                                                                                 >> $HELM_VALUES
+    echo "      hosts:"                                                                                                         >> $HELM_VALUES
+    echo "        - $HELMCHART.$DOMAIN"                                                                                         >> $HELM_VALUES
 
-echo gaga1
     messagePrint " ▪ Deploy the $HELMCHART Helm Chart" "$HELMCHART"
     cnt=0; ret=1; stt="notdeployed"
     while [ $ret -ne 0 -a $cnt -lt 5 -a "$stt" != "deployed" ]; do
-echo gaga2
       #helm install $HELMCHART --namespace $NAMESPACE $HELMREPO/$HELMCHART -f $HELM_VALUES --version $HELM_CHART_VERSION > /tmp/error.log 2>&1; ret=$?
-echo "helm install $HELMCHART --namespace $NAMESPACE $HELMREPO/$HELMCHART -f $HELM_VALUES --version $HELM_CHART_VERSION "
-      helm install $HELMCHART --namespace $NAMESPACE $HELMREPO/$HELMCHART -f $HELM_VALUES --version $HELM_CHART_VERSION 
-echo "RET:$ret"
-echo gaga3
 
       # --- WAIT FOR PODS TO GET STARTED ---
       runningPods $NAMESPACE
-echo gaga4
 
       cmdLoop helm ls -n $NAMESPACE -o json > /tmp/output.json
       stt=$(jq -r --arg chart "$HELMCHART" '.[] | select(.name == $chart).status' /tmp/output.json)
-echo "gaga5 STT:$stt"
 
       [ $ret -eq 0 -a "$stt" == "deployed" ] && break
 
@@ -5511,7 +5509,6 @@ echo "gaga5 STT:$stt"
       let cnt=cnt+1
       sleep 30
     done
-echo gaga6
 
     if [ $ret -ne 0 -o "$stt" != "deployed" ]; then
       logMessages /tmp/error.log
@@ -5555,6 +5552,10 @@ echo gaga6
   messagePrint "   Helm Chart Version"             "$ver"
   messagePrint "   Helm Chart Status"              "$stt"
   messagePrint "   Helm Chart Installed/Updated"   "$dat"
+  messagePrint "   Gitea Internal Name"            "gitea.gitea.svc.cluster.local"
+  messagePrint "   Gitea Management Portal"        "https://gitea.$DOMAIN"
+  messagePrint "   Gitea Admin User"               "admin"
+  messagePrint "   Gitea Admin Password"           "$TDH_HARBOR_ADMIN_PASSWORD"
 }
 
 # ------------------------------------------------------------------------------------------
