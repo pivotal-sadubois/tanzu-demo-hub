@@ -5420,6 +5420,7 @@ installJenkins() {
 # ------------------------------------------------------------------------------------------
 # References .........: https://gitea.com/gitea/helm-chart ............. Gitea Documentation
 #                     : https://docs.gitea.io/en-us/api-usage/ ............. Gitea API Guide
+#                     : https://try.gitea.io/api/swagger#/user/userCreateToken ..... Swagger
 # ------------------------------------------------------------------------------------------
 installGitea() {
   NAMESPACE=gitea
@@ -9819,6 +9820,39 @@ tmcAPI_getToken() {
 }
 
 # ------------------------------------------------------------------------------------------
+# Function Name ......: createGiteaAPItoken
+# Function Purpose ...: Get Gitea API Bearer Token
+# ------------------------------------------------------------------------------------------
+# Argument ($1) ......: TMC Refresh Token
+# ------------------------------------------------------------------------------------------
+# Return Value .......: API Access Token
+# ------------------------------------------------------------------------------------------
+# Reference Documentation:
+# https://developer.vmware.com/apis/897/tanzu-mission-control
+# ------------------------------------------------------------------------------------------
+createGiteaAPItoken() {
+  REFRESH_TOKEN="$1"
+
+  TDH_SERVICE_GITEA_ADMIN_USER=$(getConfigMap tanzu-demo-hub TDH_SERVICE_GITEA_ADMIN_USER)
+  TDH_SERVICE_GITEA_ADMIN_PASS=$(getConfigMap tanzu-demo-hub TDH_SERVICE_GITEA_ADMIN_PASS)
+  TDH_SERVICE_GITEA_SERVER=$(getConfigMap tanzu-demo-hub TDH_SERVICE_GITEA_SERVER)
+  TDH_SERVICE_GITEA_SERVER_URL=$(getConfigMap tanzu-demo-hub TDH_SERVICE_GITEA_SERVER_URL)
+  TDH_SERVICE_GITEA_ADMIN_TOKEN_ID=$(getConfigMap tanzu-demo-hub TDH_SERVICE_GITEA_ADMIN_TOKEN_ID)
+
+echo "TDH_SERVICE_GITEA_ADMIN_TOKEN_ID:$TDH_SERVICE_GITEA_ADMIN_TOKEN_ID"
+
+ if [ "$TDH_SERVICE_GITEA_ADMIN_TOKEN_ID" == "" ]; then 
+  echo "no token"
+ fi
+  
+echo xxx
+
+#  curl -XPOST -H "Content-Type: application/json"  -k -d '{"name":"test"}' \
+#       -u "$TDH_SERVICE_GITEA_ADMIN_USER:$TDH_SERVICE_GITEA_ADMIN_PASS" $TDH_SERVICE_GITEA_SERVER_URL
+
+}
+
+# ------------------------------------------------------------------------------------------
 # Function Name ......: getGiteaAPItoken
 # Function Purpose ...: Get Gitea API Bearer Token
 # ------------------------------------------------------------------------------------------
@@ -11937,4 +11971,17 @@ cmdLoop() {
 
   cat /tmp/loopCmdIgnore.out
 }
+
+exit
+curl -X 'POST' \
+  'https://gitea.apps-contour.tce.pcfsdu.com/api/v1/users/sacha/tokens' \
+  -H 'accept: application/json' \
+  -H 'Content-Type: application/json' \
+  -u "gitea_admin:Password12345" \
+  -d '{
+  "name": "tanzu-demo-hub"
+}'
+# {"id":1,"name":"tanzu-demo-hub","sha1":"c056bd24b2ecb4f1a3174f6befc69323cb06be21","token_last_eight":"cb06be21"}
+
+
 
