@@ -10200,6 +10200,22 @@ TanzuPackage_LocalStorage() {
     messagePrint " ▪ Tanzu Package ($PACKAGE_NAME)"   "$PACKAGE_ID ($package_ver/$package_rel)"
     cnt=0; ret=1
     while [ $ret -ne 0 -a $cnt -lt 5 ]; do
+      # --- DELETE SERVICE ACCOUNT IF IT EXIST ----
+      cmdLoop kubectl get serviceaccount -n tanzu-system-packages -o json > /tmp/output.json
+      nam=$(jq -r --arg key "${PACKAGE_NAME}-${PACKAGE_NAMESPACE}-sa" '.items[] | select(.metadata.name == $key).metadata.name' /tmp/output.json)
+      [ "$nam" != "" ] && cmdLoop kubectl -n tanzu-system-packages delete serviceaccount $nam
+
+      # --- DELETE SERVICE ACCOUNT IF IT EXIST ----
+      cmdLoop kubectl get clusterroles -n tanzu-system-packages -o json > /tmp/output.json
+      nam=$(jq -r --arg key "${PACKAGE_NAME}-${PACKAGE_NAMESPACE}-role" '.items[] | select(.metadata.name == $key).metadata.name' /tmp/output.json)
+      [ "$nam" != "" ] && cmdLoop kubectl -n tanzu-system-packages delete clusterrole $nam
+
+      # --- DELETE SERVICE ACCOUNT IF IT EXIST ----
+      cmdLoop kubectl get clusterrolebinding -n tanzu-system-packages -o json > /tmp/output.json
+      nam=$(jq -r --arg key "${PACKAGE_NAME}-${PACKAGE_NAMESPACE}-cluster-rolebinding" '.items[] | select(.metadata.name == $key).metadata.name' /tmp/output.json)
+      [ "$nam" != "" ] && cmdLoop kubectl -n tanzu-system-packages delete clusterrolebinding $nam
+
+#bbbbbbb1
       tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $PACKAGE_NAMESPACE --version $package_ver --create-namespace --wait=true > /tmp/error.log 2>&1
       waitTanzuPackageReconsile $PACKAGE_NAME $PACKAGE_NAMESPACE; ret=$? 
       if [ $ret -ne 0 ]; then 
@@ -10228,7 +10244,6 @@ TanzuPackage_LocalStorage() {
     fi
   fi
 
-#bbbbbbb1
   cmdLoop tanzu package installed list -A -o json > /tmp/output.json
   stt=$(jq -r --arg key "$PACKAGE_NAME" '.[] | select(.name == $key).name' /tmp/output.json)
   if [ "$stt" == "$PACKAGE_NAME" ]; then 
@@ -10289,26 +10304,33 @@ TanzuPackage_CertManager() {
     messageTitle "Installing $PACKAGE_DES in $PACKAGE_NAMESPACE"
     messagePrint " ▪ Tanzu Package ($PACKAGE_NAME)"   "$PACKAGE_ID ($package_ver/$package_rel)"
 
+#bbbb9
     cnt=0; ret=1
     while [ $ret -ne 0 -a $cnt -lt 5 ]; do
       # --- DELETE SERVICE ACCOUNT IF IT EXIST ----
       cmdLoop kubectl get serviceaccount -n tanzu-system-packages -o json > /tmp/output.json
       nam=$(jq -r --arg key "${PACKAGE_NAME}-${PACKAGE_NAMESPACE}-sa" '.items[] | select(.metadata.name == $key).metadata.name' /tmp/output.json)
       [ "$nam" != "" ] && cmdLoop kubectl -n tanzu-system-packages delete serviceaccount $nam
-   
-      tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $PACKAGE_NAMESPACE --version $package_ver \
-            --create-namespace --poll-timeout 10m --wait=true > /tmp/error.log 2>&1; ret=$?
-      [ $ret -eq 0 ] && break
-
-      # --- DELETE FAILED PACKAGE INSTALL ---
-      cmdLoop tanzu package installed list -A -o json > /tmp/output.json
-      pkg=$(jq -r --arg key "$PACKAGE_NAME" '.[] | select(.name == $key).name' /tmp/output.json)
-      [ "$pkg" == "$PACKAGE_NAME" ] && tanzu package installed delete $PACKAGE_NAME --namespace $PACKAGE_NAMESPACE -y > /dev/null 2>&1
 
       # --- DELETE SERVICE ACCOUNT IF IT EXIST ----
-      cmdLoop kubectl get serviceaccount -n tanzu-system-packages -o json > /tmp/output.json
-      nam=$(jq -r --arg key "${PACKAGE_NAME}-${PACKAGE_NAMESPACE}-sa" '.items[] | select(.metadata.name == $key).metadata.name' /tmp/output.json)
-      [ "$nam" != "" ] && cmdLoop kubectl -n tanzu-system-packages delete serviceaccount $nam
+      cmdLoop kubectl get clusterroles -n tanzu-system-packages -o json > /tmp/output.json
+      nam=$(jq -r --arg key "${PACKAGE_NAME}-${PACKAGE_NAMESPACE}-role" '.items[] | select(.metadata.name == $key).metadata.name' /tmp/output.json)
+      [ "$nam" != "" ] && cmdLoop kubectl -n tanzu-system-packages delete clusterrole $nam
+
+      # --- DELETE SERVICE ACCOUNT IF IT EXIST ----
+      cmdLoop kubectl get clusterrolebinding -n tanzu-system-packages -o json > /tmp/output.json
+      nam=$(jq -r --arg key "${PACKAGE_NAME}-${PACKAGE_NAMESPACE}-cluster-rolebinding" '.items[] | select(.metadata.name == $key).metadata.name' /tmp/output.json)
+      [ "$nam" != "" ] && cmdLoop kubectl -n tanzu-system-packages delete clusterrolebinding $nam
+
+      tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $PACKAGE_NAMESPACE --version $package_ver \
+            --create-namespace --poll-timeout 10m --wait=true > /tmp/error.log 2>&1
+      waitTanzuPackageReconsile $PACKAGE_NAME $PACKAGE_NAMESPACE; ret=$?
+      if [ $ret -ne 0 ]; then
+        # --- DELETE PACKAGE AND START OVER ---
+        deleteTanzuPackage $PACKAGE_NAME $PACKAGE_NAMESPACE > /dev/null 2>&1
+      else
+        break
+      fi
 
       let cnt=cnt+1
       sleep 30
@@ -10514,11 +10536,22 @@ TanzuPackage_Harbor () {
     messageTitle "Installing $PACKAGE_DES"
     messagePrint " ▪ Tanzu Package ($PACKAGE_NAME)"   "$PACKAGE_ID ($package_ver/$package_rel)"
     cnt=0; ret=1
+#bbbbb
     while [ $ret -ne 0 -a $cnt -lt 5 ]; do
       # --- DELETE SERVICE ACCOUNT IF IT EXIST ----
       cmdLoop kubectl get serviceaccount -n tanzu-system-packages -o json > /tmp/output.json
       nam=$(jq -r --arg key "${PACKAGE_NAME}-${PACKAGE_NAMESPACE}-sa" '.items[] | select(.metadata.name == $key).metadata.name' /tmp/output.json)
       [ "$nam" != "" ] && cmdLoop kubectl -n tanzu-system-packages delete serviceaccount $nam
+
+      # --- DELETE SERVICE ACCOUNT IF IT EXIST ----
+      cmdLoop kubectl get clusterroles -n tanzu-system-packages -o json > /tmp/output.json
+      nam=$(jq -r --arg key "${PACKAGE_NAME}-${PACKAGE_NAMESPACE}-role" '.items[] | select(.metadata.name == $key).metadata.name' /tmp/output.json)
+      [ "$nam" != "" ] && cmdLoop kubectl -n tanzu-system-packages delete clusterrole $nam
+
+      # --- DELETE SERVICE ACCOUNT IF IT EXIST ----
+      cmdLoop kubectl get clusterrolebinding -n tanzu-system-packages -o json > /tmp/output.json
+      nam=$(jq -r --arg key "${PACKAGE_NAME}-${PACKAGE_NAMESPACE}-cluster-rolebinding" '.items[] | select(.metadata.name == $key).metadata.name' /tmp/output.json)
+      [ "$nam" != "" ] && cmdLoop kubectl -n tanzu-system-packages delete clusterrolebinding $nam
 
       tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $PACKAGE_NAMESPACE \
              --version $package_ver --create-namespace --poll-timeout 20m --poll-interval 10s --log-file /tmp/harbor.log \
@@ -10560,7 +10593,6 @@ TanzuPackage_Harbor () {
     fi
   fi
 
-#bbbbb
 
   cmdLoop tanzu package installed list -A -o json > /tmp/output.json
   stt=$(jq -r --arg key "$PACKAGE_NAME" '.[] | select(.name == $key).name' /tmp/output.json)
@@ -10738,8 +10770,9 @@ TanzuPackage_Contour() {
       # --- DELETE SERVICE ACCOUNT IF IT EXIST ----
       cmdLoop kubectl get clusterrolebinding -n tanzu-system-packages -o json > /tmp/output.json
       nam=$(jq -r --arg key "${PACKAGE_NAME}-${PACKAGE_NAMESPACE}-cluster-rolebinding" '.items[] | select(.metadata.name == $key).metadata.name' /tmp/output.json)
-echo "kubectl -n tanzu-system-packages delete clusterrolebinding $nam"
       [ "$nam" != "" ] && cmdLoop kubectl -n tanzu-system-packages delete clusterrolebinding $nam
+
+#bbbbb
 
 echo "tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $PACKAGE_NAMESPACE \
            --version $package_ver --create-namespace --poll-timeout 10m \
@@ -10782,8 +10815,6 @@ echo "tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace
       rm -f /tmp/contour.log
     fi
   fi
-
-#bbbbbbbb
 
   cmdLoop tanzu package installed list -A -o json > /tmp/output.json
   stt=$(jq -r --arg key "$PACKAGE_NAME" '.[] | select(.name == $key).name' /tmp/output.json)
