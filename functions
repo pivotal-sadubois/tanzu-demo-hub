@@ -9840,11 +9840,15 @@ createGiteaRepo() {
   TDH_SERVICE_GITEA_SERVER_URL=$(getConfigMap tanzu-demo-hub TDH_SERVICE_GITEA_SERVER_URL)
   TDH_SERVICE_GITEA_ADMIN_TOKEN_ID=$(getConfigMap tanzu-demo-hub TDH_SERVICE_GITEA_ADMIN_TOKEN_ID)
 
+echo gaga1
   curl -X 'GET' ${TDH_SERVICE_GITEA_SERVER_URL}/api/v1/orgs \
        -H 'accept: application/json' 2>/dev/null > /tmp/output.json
+echo gaga2
   nam=$(jq -r --arg key $GITEA_REPO '.[] | select(.username == $key).username' /tmp/output.json) 
+echo gaga3
 
 echo "jq -r --arg key $GITEA_REPO '.[] | select(.username == $key).username' /tmp/output.json"
+echo gaga4
 
 echo "nam:$nam"
 
