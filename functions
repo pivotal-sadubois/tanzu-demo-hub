@@ -5481,7 +5481,9 @@ installGitea() {
     echo "      hosts:"                                                                                                           >> $HELM_VALUES
     echo "        - $HELMCHART.$DOMAIN"                                                                                             >> $HELM_VALUES
 
+echo gaga1
     # --- ADDING HELM REPO ---
+echo "helmRepoAdd $HELMREPO $HELMREPO_URL"
     helmRepoAdd $HELMREPO $HELMREPO_URL
 
 echo gaga1
