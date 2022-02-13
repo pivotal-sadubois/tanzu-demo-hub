@@ -9841,8 +9841,25 @@ createGiteaAPItoken() {
 
 echo "TDH_SERVICE_GITEA_ADMIN_TOKEN_ID:$TDH_SERVICE_GITEA_ADMIN_TOKEN_ID"
 
- if [ "$TDH_SERVICE_GITEA_ADMIN_TOKEN_ID" == "" ]; then 
+ if [ "$TDH_SERVICE_GITEA_ADMIN_TOKEN_ID" == "" -o "$TDH_SERVICE_GITEA_ADMIN_TOKEN_ID" == "null" ]; then 
   echo "no token"
+
+  curl -X GET https://${TDH_SERVICE_GITEA_SERVER}/api/v1/users/sacha/tokens \
+       -H 'accept: application/json' \
+       -H 'Content-Type: application/json' \
+       -u "$TDH_SERVICE_GITEA_ADMIN_USER:$TDH_SERVICE_GITEA_ADMIN_PASS | jq -r"
+
+
+#  curl -X POST ${TDH_SERVICE_GITEA_SERVER_URL}/api/v1/users/sacha/tokens
+#  'https://gitea.apps-contour.tce.pcfsdu.com/api/v1/users/sacha/tokens' \
+#  -H 'accept: application/json' \
+#  -H 'Content-Type: application/json' \
+#  -u "gitea_admin:Password12345" \
+#  -d '{
+#  "name": "tanzu-demo-hub"
+#}'
+
+
  fi
   
 echo xxx
