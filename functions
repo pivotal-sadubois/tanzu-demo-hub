@@ -9830,18 +9830,16 @@ tmcAPI_getToken() {
 # https://developer.vmware.com/apis/897/tanzu-mission-control
 # ------------------------------------------------------------------------------------------
 getGiteaAPItoken() {
-#gitea
   REFRESH_TOKEN="$1"
-  VMC_SERVER="https://console.cloud.vmware.com/csp/gateway/am"
+  VMC_SERVER="
 
-echo hallo1
   TDH_SERVICE_GITEA_ADMIN_USER=$(getConfigMap tanzu-demo-hub TDH_SERVICE_GITEA_ADMIN_USER)
-echo hallo2
   TDH_SERVICE_GITEA_ADMIN_PASS=$(getConfigMap tanzu-demo-hub TDH_SERVICE_GITEA_ADMIN_PASS)
   TDH_SERVICE_GITEA_SERVER=$(getConfigMap tanzu-demo-hub TDH_SERVICE_GITEA_SERVER)
   TDH_SERVICE_GITEA_SERVER_URL=$(getConfigMap tanzu-demo-hub TDH_SERVICE_GITEA_SERVER_URL)
 
-echo "TDH_SERVICE_GITEA_ADMIN_PASS:$TDH_SERVICE_GITEA_ADMIN_PASS"
+  curl -XPOST -H "Content-Type: application/json"  -k -d '{"name":"test"}' \
+       -u $TDH_SERVICE_GITEA_ADMIN_USER:$TDH_SERVICE_GITEA_ADMIN_PASS $TDH_SERVICE_GITEA_SERVER_URL 
 
   #curl -k -X POST "$VMC_SERVER/api/auth/api-tokens/authorize?refresh_token=$TMC_SERVICE_TOKEN" 2>/dev/null | jq -r '.access_token'
 }
