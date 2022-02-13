@@ -11398,8 +11398,6 @@ runTDHtoolsDemos_new() {
   fi
 
   if [ ! -f /tdh_tools_docker_container  ]; then
-    tdhHeader "$HEADER_TEXT"
-
     # --- VERIFY TOOLS AND ACCESS ---
     verify_docker
     checkCLIcommands        BASIC
@@ -11407,8 +11405,8 @@ runTDHtoolsDemos_new() {
 
     if [ $NATIVE -eq 0 ]; then
       tdh_tools_build $TOOLS_TLAG
-      messagePrint " ▪ Running TDH Tools Docker Container" "$TDH_TOOLS:latest $TDHPATH/$CMD_EXEC $CMD_ARGS"
 
+#hallo
       cid=$(docker ps -a | grep $TDH_TOOLS:latest | awk '{ print $1 }')
       [ "$cid" != "" ] && for n in $cid; do docker rm $n -f > /dev/null 2>&1; done
 
