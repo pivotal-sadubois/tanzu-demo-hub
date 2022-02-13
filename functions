@@ -9848,6 +9848,7 @@ echo gaga1
                  -u "$TDH_SERVICE_GITEA_ADMIN_USER:$TDH_SERVICE_GITEA_ADMIN_PASS" 2>/dev/null | \
                  jq -r '.[]') 
 
+echo gaga0
 echo "token:$token"
     if [ "$token" == "" ]; then
 echo gaga1
