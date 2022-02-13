@@ -9845,7 +9845,7 @@ echo gaga1
     token=$(curl -X GET https://${TDH_SERVICE_GITEA_SERVER}/api/v1/users/sacha/tokens \
                  -H 'accept: application/json' \
                  -H 'Content-Type: application/json' \
-                 -u "$TDH_SERVICE_GITEA_ADMIN_USER:$TDH_SERVICE_GITEA_ADMIN_PASS" | \
+                 -u "$TDH_SERVICE_GITEA_ADMIN_USER:$TDH_SERVICE_GITEA_ADMIN_PASS" 2>/dev/null | \
                  jq -r '.[]') 
 
 echo "token:$token"
@@ -9854,8 +9854,8 @@ echo gaga
       token=$(curl -X POST ${TDH_SERVICE_GITEA_SERVER_URL}/api/v1/users/sacha/tokens
                    -H 'accept: application/json' \
                    -H 'Content-Type: application/json' \
-                   -u "gitea_admin:Password12345" \
-                   -d '{ "name": "tanzu-demo-hub" #}' | jq -r '.sha1') 
+                   -u "$TDH_SERVICE_GITEA_ADMIN_USER:$TDH_SERVICE_GITEA_ADMIN_PASS" \
+                   -d '{ "name": "tanzu-demo-hub" }' 2>/dev/null | jq -r '.sha1') 
 echo gaga1
     fi
   fi
