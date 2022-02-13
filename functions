@@ -9849,7 +9849,7 @@ createGiteaRepo() {
     echo "  \"description\": \"Tanzu Organisation\","           >> $TMP_API_DATA
     echo "  \"full_name\": \"Tanzu Demo Hub\","                 >> $TMP_API_DATA
     echo "  \"location\": \"\","                                >> $TMP_API_DATA
-    echo "  \"repo_admin_change_team_access\" true,"            >> $TMP_API_DATA
+    echo "  \"repo_admin_change_team_access\": true,"           >> $TMP_API_DATA
     echo "  \"username\": \"tdh\","                             >> $TMP_API_DATA
     echo "  \"visibility\": \"public\","                        >> $TMP_API_DATA
     echo "  \"website\": \"\""                                  >> $TMP_API_DATA
