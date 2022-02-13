@@ -11972,15 +11972,14 @@ cmdLoop() {
   cat /tmp/loopCmdIgnore.out
 }
 
-exit
-curl -X 'POST' \
-  'https://gitea.apps-contour.tce.pcfsdu.com/api/v1/users/sacha/tokens' \
-  -H 'accept: application/json' \
-  -H 'Content-Type: application/json' \
-  -u "gitea_admin:Password12345" \
-  -d '{
-  "name": "tanzu-demo-hub"
-}'
+#curl -X 'POST' \
+#  'https://gitea.apps-contour.tce.pcfsdu.com/api/v1/users/sacha/tokens' \
+#  -H 'accept: application/json' \
+#  -H 'Content-Type: application/json' \
+#  -u "gitea_admin:Password12345" \
+#  -d '{
+#  "name": "tanzu-demo-hub"
+#}'
 # {"id":1,"name":"tanzu-demo-hub","sha1":"c056bd24b2ecb4f1a3174f6befc69323cb06be21","token_last_eight":"cb06be21"}
 
 
