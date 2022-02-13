@@ -395,6 +395,7 @@ uodateConfigMap tanzu-demo-hub TDH_DOMAIN                         $AWS_HOSTED_DN
 uodateConfigMap tanzu-demo-hub TDH_ENVNAME                        $TDH_TKGMC_ENVNAME
 uodateConfigMap tanzu-demo-hub TDH_DEPLOYMENT_TYPE                "tkg"
 uodateConfigMap tanzu-demo-hub TDH_MANAGED_BY_TMC                 "false"
+uodateConfigMap tanzu-demo-hub TDH_TANZU_EDITION                  "tce"
 
 uodateConfigMap tanzu-demo-hub TDH_CLUSTER_NAME                   "$TDH_TKGWC_NAME"
 uodateConfigMap tanzu-demo-hub TDH_MANAGEMENT_CLUSTER             "$TDH_TKGMC_NAME"

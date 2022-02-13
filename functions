@@ -9688,6 +9688,7 @@ cleanKindCluster() {
   fi
 }
 
+#hallo
 runTDHtoolsDemos() {
   if [ ! -f /tdh_tools_docker_container  ]; then
     if [ $NATIVE -eq 0 ]; then
@@ -9833,6 +9834,49 @@ tmcAPI_getToken() {
 # ------------------------------------------------------------------------------------------
 createGiteaRepo() {
   GITEA_REPO=$1
+  
+  TDH_SERVICE_GITEA_ADMIN_USER=$(getConfigMap tanzu-demo-hub TDH_SERVICE_GITEA_ADMIN_USER)
+  TDH_SERVICE_GITEA_ADMIN_PASS=$(getConfigMap tanzu-demo-hub TDH_SERVICE_GITEA_ADMIN_PASS)
+  TDH_SERVICE_GITEA_SERVER=$(getConfigMap tanzu-demo-hub TDH_SERVICE_GITEA_SERVER)
+  TDH_SERVICE_GITEA_SERVER_URL=$(getConfigMap tanzu-demo-hub TDH_SERVICE_GITEA_SERVER_URL)
+  TDH_SERVICE_GITEA_ADMIN_TOKEN_ID=$(getConfigMap tanzu-demo-hub TDH_SERVICE_GITEA_ADMIN_TOKEN_ID)
+  
+  curl -X 'GET' ${TDH_SERVICE_GITEA_SERVER_URL}/api/v1/orgs \
+       -H 'accept: application/json' 2>/dev/null > /tmp/output.json
+  nam=$(jq -r --arg key $GITEA_REPO '.[] | select(.username == $key).username' /tmp/output.json)
+  if [ "$nam" == "" ]; then 
+    TMP_API_DATA=/tmp/gitea_api_data.json                       
+    echo "{"                                                    >  $TMP_API_DATA
+    echo "  \"description\": \"Tanzu Organisation\","           >> $TMP_API_DATA
+    echo "  \"full_name\": \"Tanzu Demo Hub\","                 >> $TMP_API_DATA
+    echo "  \"location\": \"\","                                >> $TMP_API_DATA
+    echo "  \"repo_admin_change_team_access\": true,"           >> $TMP_API_DATA
+    echo "  \"username\": \"tdh\","                             >> $TMP_API_DATA
+    echo "  \"visibility\": \"public\","                        >> $TMP_API_DATA
+    echo "  \"website\": \"\""                                  >> $TMP_API_DATA
+    echo "}"                                                    >> $TMP_API_DATA
+    
+    cmdLoop curl -X POST ${TDH_SERVICE_GITEA_SERVER_URL}/api/v1/orgs \
+         -H 'accept: application/json' \
+         -u "$TDH_SERVICE_GITEA_ADMIN_USER:$TDH_SERVICE_GITEA_ADMIN_PASS" \
+         -H 'Content-Type: application/json' \
+         --data "@$TMP_API_DATA"
+  fi
+}
+
+# ------------------------------------------------------------------------------------------
+# Function Name ......: createGiteaOrg
+# Function Purpose ...: Get Gitea Org
+# ------------------------------------------------------------------------------------------
+# Argument ($1) ......: n/a
+# ------------------------------------------------------------------------------------------
+# Return Value .......: n/a
+# ------------------------------------------------------------------------------------------
+# Reference Documentation:
+# https://developer.vmware.com/apis/897/tanzu-mission-control
+# ------------------------------------------------------------------------------------------
+createGiteaOrg() {
+  GITEA_REPO=$1
 
   TDH_SERVICE_GITEA_ADMIN_USER=$(getConfigMap tanzu-demo-hub TDH_SERVICE_GITEA_ADMIN_USER)
   TDH_SERVICE_GITEA_ADMIN_PASS=$(getConfigMap tanzu-demo-hub TDH_SERVICE_GITEA_ADMIN_PASS)
@@ -9843,7 +9887,6 @@ createGiteaRepo() {
   curl -X 'GET' ${TDH_SERVICE_GITEA_SERVER_URL}/api/v1/orgs \
        -H 'accept: application/json' 2>/dev/null > /tmp/output.json
   nam=$(jq -r --arg key $GITEA_REPO '.[] | select(.username == $key).username' /tmp/output.json) 
-echo "NAM:$nam"
   if [ "$nam" == "" ]; then 
     TMP_API_DATA=/tmp/gitea_api_data.json
     echo "{"                                                    >  $TMP_API_DATA
