@@ -9838,8 +9838,9 @@ getGiteaAPItoken() {
   TDH_SERVICE_GITEA_SERVER=$(getConfigMap tanzu-demo-hub TDH_SERVICE_GITEA_SERVER)
   TDH_SERVICE_GITEA_SERVER_URL=$(getConfigMap tanzu-demo-hub TDH_SERVICE_GITEA_SERVER_URL)
 
+echo "curl -XPOST -H "Content-Type: application/json"  -k -d '{"name":"test"}' -u \"$TDH_SERVICE_GITEA_ADMIN_USER:$TDH_SERVICE_GITEA_ADMIN_PASS\" $TDH_SERVICE_GITEA_SERVER_URL"
   curl -XPOST -H "Content-Type: application/json"  -k -d '{"name":"test"}' \
-       -u $TDH_SERVICE_GITEA_ADMIN_USER:$TDH_SERVICE_GITEA_ADMIN_PASS $TDH_SERVICE_GITEA_SERVER_URL 
+       -u "$TDH_SERVICE_GITEA_ADMIN_USER:$TDH_SERVICE_GITEA_ADMIN_PASS" $TDH_SERVICE_GITEA_SERVER_URL 
 
   #curl -k -X POST "$VMC_SERVER/api/auth/api-tokens/authorize?refresh_token=$TMC_SERVICE_TOKEN" 2>/dev/null | jq -r '.access_token'
 }
