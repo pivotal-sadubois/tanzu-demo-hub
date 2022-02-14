@@ -9855,7 +9855,7 @@ giteaForkRepo() {
     echo "  \"organization\": \"$GITEA_ORG\","                  >> $TMP_API_DATA
     echo "}"                                                    >> $TMP_API_DATA
 
-    cmdLoop curl -X POST ${TDH_SERVICE_GITEA_SERVER_URL}/api/v1/repos/$GITEA_FORK_USER/$GITEA_FORK_REPO/forks \
+    curl -X POST ${TDH_SERVICE_GITEA_SERVER_URL}/api/v1/repos/$GITEA_FORK_USER/$GITEA_FORK_REPO/forks \
                  -H 'accept: application/json' \
                  -H 'Content-Type: application/json' \
                  --data "@$TMP_API_DATA"
