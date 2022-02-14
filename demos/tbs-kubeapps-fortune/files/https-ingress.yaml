@@ -4,20 +4,22 @@ metadata:
   name: fortune-ingress
   namespace: NAMESPACE
   annotations:
-    - kubernetes.io/ingress.class: contour
+    kubernetes.io/ingress.class: contour
   labels:
     app: fortune-app
 spec:
   tls:
-  - secretName: https-secret
-    hosts:
-      - fortune..DNS_DOMAIN
+  - hosts:
+    - fortune.DNS_DOMAIN
+    secretName: https-secret
   rules:
-  - host: fortune..DNS_DOMAIN
+  - host: fortune.DNS_DOMAIN
     http:
       paths:
       - path: /
+        pathType: Prefix
         backend:
-          serviceName: fortune-service
-          servicePort: 80
-
+          service:
+            name: fortune-service
+            port:
+              number: 80
