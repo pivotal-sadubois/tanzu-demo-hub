@@ -1622,23 +1622,17 @@ checkTMCintegration() {
         messagePrint " ▪ AWS CloudFormation ARN"                                   "$TDH_TANZU_DATA_PROTECTION_ARN" 
       fi
 
-echo "tmc cluster dataprotection backup list --cluster-name tdh-azure-sadubois -p attached -m attached --name \"full-backup\""
       # --- CONFIGURE FULL BACKUP ---
       cnt=$(tmc cluster dataprotection backup list --cluster-name $TDH_CLUSTER_NAME -p $TDH_PROVISIONER_NAME -m $MGMG_CLUSTER --name "full-backup" 2>/dev/null | egrep -c " full-backup ")
-echo "CNT:$cnt"
       if [ $cnt -gt 0 ]; then 
         stt=$(tmc cluster dataprotection backup list --cluster-name $TDH_CLUSTER_NAME -p $TDH_PROVISIONER_NAME -m $MGMG_CLUSTER --name "full-backup" | egrep " full-backup " | awk '{ print $NF }')
-echo "STT:$stt"
         if [ "$stt" != "COMPLETED" -a "$stt" != "INPROGRESS" ]; then 
           # --- DELETE OLD BACKUP ---
-echo "tmc cluster dataprotection backup delete --cluster-name $TDH_CLUSTER_NAME -p $TDH_PROVISIONER_NAME -m $MGMG_CLUSTER \"full-backup\""
           tmc cluster dataprotection backup delete --cluster-name $TDH_CLUSTER_NAME -p $TDH_PROVISIONER_NAME -m $MGMG_CLUSTER "full-backup"  > /dev/null 2>&1
           #tmc cluster dataprotection delete --cluster-name tdh-azure-sadubois -p attached -m attached --delete-backups 
           cnt=0
         fi
       fi
-
-exit
 
       sleep 300
 
@@ -9819,6 +9813,76 @@ tmcAPI_getToken() {
   curl -k -X POST "$VMC_SERVER/api/auth/api-tokens/authorize?refresh_token=$TMC_SERVICE_TOKEN" 2>/dev/null | jq -r '.access_token'
 }
 
+#  Fork
+#curl -X 'POST' \
+#  'https://try.gitea.io/api/v1/repos/parth-pandit/fortune-demo/forks' \
+#  -H 'accept: application/json' \
+#  -H 'Content-Type: application/json' \
+#  -d '{
+#  "name": "fortune-demo",
+#  "organization": "tdh"
+#}'
+
+# ------------------------------------------------------------------------------------------
+# Function Name ......: giteaForkRepo
+# Function Purpose ...: Get Gitea Repo
+# ------------------------------------------------------------------------------------------
+# Argument ($1) ......: n/a
+# ------------------------------------------------------------------------------------------
+# Return Value .......: n/a
+# ------------------------------------------------------------------------------------------
+# Example.............: giteaForkRepo <fork-user> <fork-repo> <org> <name
+#                       giteaForkRepo parth-pandit fortune-demo tdh fortune-demo
+# ------------------------------------------------------------------------------------------
+giteaForkRepo() {
+  GITEA_FORK_USER=$1
+  GITEA_FORK_REPO=$2
+  GITEA_REPO=$3
+  GITEA_ORG=$4
+
+  TDH_SERVICE_GITEA_ADMIN_USER=$(getConfigMap tanzu-demo-hub TDH_SERVICE_GITEA_ADMIN_USER)
+  TDH_SERVICE_GITEA_ADMIN_PASS=$(getConfigMap tanzu-demo-hub TDH_SERVICE_GITEA_ADMIN_PASS)
+  TDH_SERVICE_GITEA_SERVER=$(getConfigMap tanzu-demo-hub TDH_SERVICE_GITEA_SERVER)
+  TDH_SERVICE_GITEA_SERVER_URL=$(getConfigMap tanzu-demo-hub TDH_SERVICE_GITEA_SERVER_URL)
+  TDH_SERVICE_GITEA_ADMIN_TOKEN_ID=$(getConfigMap tanzu-demo-hub TDH_SERVICE_GITEA_ADMIN_TOKEN_ID)
+
+  curl -X 'GET' ${TDH_SERVICE_GITEA_SERVER_URL}/api/v1/orgs \
+       -H 'accept: application/json' 2>/dev/null > /tmp/output.json
+
+    TMP_API_DATA=/tmp/gitea_api_data.json
+    echo "{"                                                    >  $TMP_API_DATA
+    echo "  \"name\": \"$GITEA_REPO\","                         >> $TMP_API_DATA
+    echo "  \"organization\": \"$GITEA_ORG\","                  >> $TMP_API_DATA
+    echo "}"                                                    >> $TMP_API_DATA
+
+    cmdLoop curl -X POST ${TDH_SERVICE_GITEA_SERVER_URL}/api/v1/repos/$GITEA_FORK_USER/$GITEA_FORK_REPO/forks \
+                 -H 'accept: application/json' \
+                 -H 'Content-Type: application/json' \
+                 --data "@$TMP_API_DATA"
+
+exit
+  nam=$(jq -r --arg key $GITEA_REPO '.[] | select(.username == $key).username' /tmp/output.json)
+  if [ "$nam" == "" ]; then
+    TMP_API_DATA=/tmp/gitea_api_data.json
+    echo "{"                                                    >  $TMP_API_DATA
+    echo "  \"description\": \"Tanzu Organisation\","           >> $TMP_API_DATA
+    echo "  \"full_name\": \"Tanzu Demo Hub\","                 >> $TMP_API_DATA
+    echo "  \"location\": \"\","                                >> $TMP_API_DATA
+    echo "  \"repo_admin_change_team_access\": true,"           >> $TMP_API_DATA
+    echo "  \"username\": \"tdh\","                             >> $TMP_API_DATA
+    echo "  \"visibility\": \"public\","                        >> $TMP_API_DATA
+    echo "  \"website\": \"\""                                  >> $TMP_API_DATA
+    echo "}"                                                    >> $TMP_API_DATA
+
+    cmdLoop curl -X POST ${TDH_SERVICE_GITEA_SERVER_URL}/api/v1/orgs \
+         -H 'accept: application/json' \
+         -u "$TDH_SERVICE_GITEA_ADMIN_USER:$TDH_SERVICE_GITEA_ADMIN_PASS" \
+         -H 'Content-Type: application/json' \
+         --data "@$TMP_API_DATA"
+  fi
+}
+
+
 # ------------------------------------------------------------------------------------------
 # Function Name ......: createGiteaRepo
 # Function Purpose ...: Get Gitea Repo
@@ -9841,6 +9905,9 @@ createGiteaRepo() {
   
   curl -X 'GET' ${TDH_SERVICE_GITEA_SERVER_URL}/api/v1/orgs \
        -H 'accept: application/json' 2>/dev/null > /tmp/output.json
+
+
+exit
   nam=$(jq -r --arg key $GITEA_REPO '.[] | select(.username == $key).username' /tmp/output.json)
   if [ "$nam" == "" ]; then 
     TMP_API_DATA=/tmp/gitea_api_data.json                       
