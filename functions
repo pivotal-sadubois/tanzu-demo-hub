@@ -11440,6 +11440,8 @@ runTDHtoolsDemos_new() {
         [ ! -e $localdir ] && mkdir -p $localdir && chmod 777 $localdir
       done
 
+echo "${CORE_MOUNTS[*]}"
+exit
 
       docker run $ROOT_OPTIONS ${CORE_MOUNTS[*]} $TDH_TOOLS:latest chmod 666 /var/run/docker.sock > /dev/null 2>&1
       docker run $USER_OPTIONS ${CORE_MOUNTS[*]} $TDH_TOOLS:latest /usr/local/bin/$POSTSCRIPT > /dev/null 2>&1
