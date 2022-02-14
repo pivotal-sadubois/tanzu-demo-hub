@@ -9868,6 +9868,7 @@ GITEA_NEW_REPO=fortune-demo-01
     echo "  \"private\": false,"                                >> $TMP_API_DATA
     echo "}"                                                    >> $TMP_API_DATA
 
+echo "curl -X POST ${TDH_SERVICE_GITEA_SERVER_URL}/api/v1/repos/migrate"
     curl -X POST ${TDH_SERVICE_GITEA_SERVER_URL}/api/v1/repos/migrate \
                  -H 'accept: application/json' \
                  -u "$TDH_SERVICE_GITEA_ADMIN_USER:$TDH_SERVICE_GITEA_ADMIN_PASS" \
