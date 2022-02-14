@@ -11387,6 +11387,7 @@ runTDHtoolsDemos_new() {
     fi
   fi
 
+#hallo
   if [ $VOTE_TCE -gt $VOTE_TKG ]; then
     TOOLS_TLAG=tce 
     TDH_TOOLS=tdh-tools-tce
@@ -11445,7 +11446,8 @@ runTDHtoolsDemos_new() {
       docker run $ROOT_OPTIONS ${CORE_MOUNTS[*]} $TDH_TOOLS:latest chmod 666 /var/run/docker.sock > /dev/null 2>&1
       docker run $USER_OPTIONS ${CORE_MOUNTS[*]} $TDH_TOOLS:latest /usr/local/bin/$POSTSCRIPT > /dev/null 2>&1
       [ $ROOT_SHELL -eq 1 ] && SEXEC_OPTIONS=$ROOT_OPTIONS || SEXEC_OPTIONS=$USER_OPTIONS
-      docker run $SEXEC_OPTIONS ${CORE_MOUNTS[*]} $TDH_TOOLS:latest $TDHDEMO/$CMD_EXEC $DOCKER_ARGS; ret=$?
+      #docker run $SEXEC_OPTIONS ${CORE_MOUNTS[*]} $TDH_TOOLS:latest $TDHDEMO/$CMD_EXEC $DOCKER_ARGS; ret=$?
+      docker run $SEXEC_OPTIONS ${CORE_MOUNTS[*]} $TDH_TOOLS:latest bash; ret=$?
 
       # --- FINISH CURRENT SESSION AS WE RUN AS CONTAINER ---
       exit $ret
@@ -11469,7 +11471,6 @@ runTDHtoolsDemos_new() {
 # ------------------------------------------------------------------------------------------
 # Return Value .......: 0 on Success, 1 on failure
 # ------------------------------------------------------------------------------------------
-#hallo
 runTDHtools() {
   TOOLS_TLAG="$1"
   HEADER_TEXT="$2"
