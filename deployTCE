@@ -424,7 +424,8 @@ createClusterIssuer
 getRootCA                 tanzu-demo-hub-tls
 TanzuPackage_Harbor       harbor-pkg           harbor.community.tanzu.vmware.com 
 
-installTanzuDataPostgres
+installBuildService          ## Tanzu Build Service (TBS)
+installTanzuDataPostgres     ## Tanzu Data SQL
 installSpringCloudGateway
 installMinio
 installKubeapps
