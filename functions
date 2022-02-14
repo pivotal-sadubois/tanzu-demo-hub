@@ -11432,7 +11432,7 @@ runTDHtoolsDemos_new() {
                "-v $HOME/$TDH_TOOLS_PATH/.azure:$HOME/.azure:rw"                        ## PERSISTANT MICROSOFT AZURE CREDENTIALS
                "-v $HOME/$TDH_TOOLS_PATH/.vmware-cna-saas:$HOME/.vmware-cna-saas:rw"    ## TANZU MISSION CONTROL (TMC) LOGIN CREDENTIALS
                "-v $HOME/$TDH_TOOLS_PATH/tmp:/tmp:rw"                                   ## KEEP TEMP PERSISTENT
-               "-v $TDHPATH/:$TDHDEMO:ro"                                               ## TANZU-DEMO-HUB DIRECTORY
+               "-v $TDHDEMO/:$TDHDEMO:ro"                                               ## TANZU-DEMO-HUB DIRECTORY
              )
 
       # --- MAKE SURE DIRECTORIES ARE CREATED ---
