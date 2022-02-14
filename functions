@@ -9813,15 +9813,68 @@ tmcAPI_getToken() {
   curl -k -X POST "$VMC_SERVER/api/auth/api-tokens/authorize?refresh_token=$TMC_SERVICE_TOKEN" 2>/dev/null | jq -r '.access_token'
 }
 
-#  Fork
 #curl -X 'POST' \
-#  'https://try.gitea.io/api/v1/repos/parth-pandit/fortune-demo/forks' \
+#  'https://try.gitea.io/api/v1/repos/migrate' \
 #  -H 'accept: application/json' \
 #  -H 'Content-Type: application/json' \
 #  -d '{
-#  "name": "fortune-demo",
-#  "organization": "tdh"
+#  "auth_password": "Password12345",
+#  "auth_token": "string",
+#  "auth_username": "gitea_admin",
+#  "clone_addr": "https://github.com/parth-pandit/fortune-demo",
+#  "description": "string",
+#  "issues": true,
+#  "labels": true,
+#  "lfs": true,
+#  "lfs_endpoint": "string",
+#  "milestones": true,
+#  "mirror": true,
+#  "mirror_interval": "string",
+#  "private": true,
+#  "pull_requests": true,
+#  "releases": true,
+#  "repo_name": "fortune-demo-new",
+#  "repo_owner": "string",
+#  "service": "git",
+#  "uid": 0,
+#  "wiki": true
 #}'
+
+# ------------------------------------------------------------------------------------------
+# Function Name ......: giteaMirrorRepo
+# Function Purpose ...: Get Gitea Repo
+# ------------------------------------------------------------------------------------------
+# Argument ($1) ......: n/a
+# ------------------------------------------------------------------------------------------
+# Return Value .......: n/a
+# ------------------------------------------------------------------------------------------
+# Example.............: giteaForkRepo <fork-user> <fork-repo> <org> <name
+#                       giteaForkRepo parth-pandit fortune-demo tdh fortune-demo
+# ------------------------------------------------------------------------------------------
+giteaMirrorRepo() {
+  GITEA_REMOTE_REPO=$1
+  GITEA_NEW_REPO=$3
+  GITEA_NEW_ORG=$4
+
+GITEA_REMOTE_REPO=https://github.com/parth-pandit/fortune-demo
+GITEA_NEW_REPO=fortune-demo-01
+
+    TMP_API_DATA=/tmp/gitea_api_data.json
+    echo "{"                                                    >  $TMP_API_DATA
+    echo "  \"clone_addr\": \"$GITEA_REMOTE_REPO\","            >> $TMP_API_DATA
+    echo "  \"repo_name\": \"$GITEA_NEW_REPO\","                >> $TMP_API_DATA
+    echo "  \"repo_owner\": \"gitea_admin\","                   >> $TMP_API_DATA
+    echo "  \"mirror\": true,"                                  >> $TMP_API_DATA
+    echo "  \"private\": false,"                                >> $TMP_API_DATA
+    echo "}"                                                    >> $TMP_API_DATA
+
+    curl -X POST ${TDH_SERVICE_GITEA_SERVER_URL}/api/v1/repos/migrate \
+                 -H 'accept: application/json' \
+                 -u "$TDH_SERVICE_GITEA_ADMIN_USER:$TDH_SERVICE_GITEA_ADMIN_PASS" \
+                 -H 'Content-Type: application/json' \
+                 --data "@$TMP_API_DATA"
+
+}
 
 # ------------------------------------------------------------------------------------------
 # Function Name ......: giteaForkRepo
