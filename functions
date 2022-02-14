@@ -11391,10 +11391,12 @@ runTDHtoolsDemos_new() {
     TOOLS_TLAG=tce 
     TDH_TOOLS=tdh-tools-tce
     POSTSCRIPT="tdh-postinstall-user-tce.sh"
+    TDH_TOOLS_PATH=".${TDH_TOOLS}"
   else
     TOOLS_TLAG=tkg
     TDH_TOOLS=tdh-tools
     POSTSCRIPT="tdh-postinstall-user.sh"
+    TDH_TOOLS_PATH=".${TDH_TOOLS}"
   fi
 
   if [ ! -f /tdh_tools_docker_container  ]; then
