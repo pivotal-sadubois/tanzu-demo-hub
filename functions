@@ -11432,7 +11432,7 @@ runTDHtoolsDemos_new() {
                "-v $HOME/$TDH_TOOLS_PATH/.azure:$HOME/.azure:rw"                        ## PERSISTANT MICROSOFT AZURE CREDENTIALS
                "-v $HOME/$TDH_TOOLS_PATH/.vmware-cna-saas:$HOME/.vmware-cna-saas:rw"    ## TANZU MISSION CONTROL (TMC) LOGIN CREDENTIALS
                "-v $HOME/$TDH_TOOLS_PATH/tmp:/tmp:rw"                                   ## KEEP TEMP PERSISTENT
-               "-v $TDHPATH/:$TDHPATH:ro"                                               ## TANZU-DEMO-HUB DIRECTORY
+               "-v $TDHPATH/:$TDHDEMO:ro"                                               ## TANZU-DEMO-HUB DIRECTORY
              )
 
       # --- MAKE SURE DIRECTORIES ARE CREATED ---
@@ -11441,9 +11441,6 @@ runTDHtoolsDemos_new() {
         localdir=$(echo $n | awk -F: '{ print $1 }')
         [ ! -e $localdir ] && mkdir -p $localdir && chmod 777 $localdir
       done
-
-echo "${CORE_MOUNTS[*]}"
-exit
 
       docker run $ROOT_OPTIONS ${CORE_MOUNTS[*]} $TDH_TOOLS:latest chmod 666 /var/run/docker.sock > /dev/null 2>&1
       docker run $USER_OPTIONS ${CORE_MOUNTS[*]} $TDH_TOOLS:latest /usr/local/bin/$POSTSCRIPT > /dev/null 2>&1
