@@ -9856,26 +9856,23 @@ giteaMirrorRepo() {
   GITEA_NEW_REPO=$3
   GITEA_NEW_ORG=$4
 
-echo gaga1
   TDH_SERVICE_GITEA_ADMIN_USER=$(getConfigMap tanzu-demo-hub TDH_SERVICE_GITEA_ADMIN_USER)
   TDH_SERVICE_GITEA_ADMIN_PASS=$(getConfigMap tanzu-demo-hub TDH_SERVICE_GITEA_ADMIN_PASS)
   TDH_SERVICE_GITEA_SERVER=$(getConfigMap tanzu-demo-hub TDH_SERVICE_GITEA_SERVER)
   TDH_SERVICE_GITEA_SERVER_URL=$(getConfigMap tanzu-demo-hub TDH_SERVICE_GITEA_SERVER_URL)
   TDH_SERVICE_GITEA_ADMIN_TOKEN_ID=$(getConfigMap tanzu-demo-hub TDH_SERVICE_GITEA_ADMIN_TOKEN_ID)
-echo gaga2
 
 GITEA_REMOTE_REPO=https://github.com/parth-pandit/fortune-demo
-GITEA_NEW_REPO=fortune-demo-01
+GITEA_NEW_REPO=fortune-demo-02
 
     TMP_API_DATA=/tmp/gitea_api_data.json
     echo "{"                                                    >  $TMP_API_DATA
     echo "  \"clone_addr\": \"$GITEA_REMOTE_REPO\","            >> $TMP_API_DATA
     echo "  \"repo_name\": \"$GITEA_NEW_REPO\","                >> $TMP_API_DATA
-    echo "  \"repo_owner\": \"gitea_admin\","                   >> $TMP_API_DATA
+    echo "  \"repo_owner\": \"tdh\","                   >> $TMP_API_DATA
     echo "  \"mirror\": true,"                                  >> $TMP_API_DATA
     echo "  \"private\": false"                                 >> $TMP_API_DATA
     echo "}"                                                    >> $TMP_API_DATA
-echo gaga3
 
 echo "curl -X POST ${TDH_SERVICE_GITEA_SERVER_URL}/api/v1/repos/migrate -H 'accept: application/json' -u \"$TDH_SERVICE_GITEA_ADMIN_USER:$TDH_SERVICE_GITEA_ADMIN_PASS\"  -H 'Content-Type: application/json' --data \"@$TMP_API_DATA\""
     curl -X POST ${TDH_SERVICE_GITEA_SERVER_URL}/api/v1/repos/migrate \
