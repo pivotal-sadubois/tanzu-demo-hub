@@ -254,8 +254,28 @@ checkTMCcontext
 tmcCreateCluster
 getTDHClusterCredentials
 
-kubectl create clusterrolebinding tanzu-demo-hub-privileged-cluster-role-binding \
-        --clusterrole=vmware-system-tmc-psp-privileged --group=system:authenticated > /dev/null 2>&1
+if [ "${TDH_DEPLOYMENT_CLOUD}" == "vSphere" ]; then
+  #export KUBECTL_VSPHERE_PASSWORD=$VSPHERE_TKGS_VCENTER_PASSWORD
+  #kubectl vsphere login --insecure-skip-tls-verify --server $VSPHERE_TKGS_SUPERVISOR_CLUSTER \
+  #  -u $VSPHERE_TKGS_VCENTER_ADMIN --tanzu-kubernetes-cluster-name $TDH_CLUSTER_NAME \
+  #  --tanzu-kubernetes-cluster-namespace tanzu-demo-hub
+
+  # TKGS Clusters
+  # https://docs.vmware.com/en/VMware-vSphere/7.0/vmware-vsphere-with-tanzu/GUID-4CCDBB85-2770-4FB8-BF0E-5146B45C9543.html
+  kubectl get clusterrolebinding -o json > /tmp/output.json
+  nam=$(jq -r --arg key "default-tkg-admin-privileged-binding" '.items[].metadata | select(.name == $key).name' /tmp/output.json) 
+  if [ "$nam" != "default-tkg-admin-privileged-binding" ]; then 
+    kubectl create clusterrolebinding default-tkg-admin-privileged-binding \
+            --clusterrole=psp:vmware-system-privileged --group=system:authenticated 
+  fi
+fi
+
+kubectl get clusterrolebinding -o json > /tmp/output.json
+nam=$(jq -r --arg key "tanzu-demo-hub-privileged-cluster-role-binding" '.items[].metadata | select(.name == $key).name' /tmp/output.json) 
+if [ "$nam" != "tanzu-demo-hub-privileged-cluster-role-binding" ]; then 
+  kubectl create clusterrolebinding tanzu-demo-hub-privileged-cluster-role-binding \
+          --clusterrole=vmware-system-tmc-psp-privileged --group=system:authenticated 
+fi
 
 uodateConfigMap tanzu-demo-hub TDH_DOMAIN               $AWS_HOSTED_DNS_DOMAIN
 uodateConfigMap tanzu-demo-hub TDH_ENVNAME              $TDH_ENVNAME

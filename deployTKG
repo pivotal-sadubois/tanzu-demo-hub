@@ -459,6 +459,7 @@ installTanzuDataPostgres     ## Tanzu Data SQL
 installSpringCloudGateway
 installMinio
 installKubeapps
+installGitea
 installJenkins
 installArgoCD
 installGitLab

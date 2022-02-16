@@ -81,9 +81,9 @@ RUN curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/
 RUN chmod a+x kustomize && mv kustomize /usr/bin
 
 # --- INSTALL GITHUB CLIENT ---
-RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | apt-key add -
-RUN apt-add-repository "deb [arch=amd64] https://cli.github.com/packages $(lsb_release -cs) main"
-RUN apt-get update && apt-get install gh -y
+#RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | apt-key add -
+#RUN apt-add-repository "deb [arch=amd64] https://cli.github.com/packages $(lsb_release -cs) main"
+#RUN apt-get update && apt-get install gh -y
 
 #RUN wget -c https://dl.google.com/go/go1.14.2.linux-amd64.tar.gz -O - | tar -xz -C /usr/local
 #$ sudo add-apt-repository ppa:longsleep/golang-backports
