@@ -4,7 +4,7 @@
 # Author .......: Sacha Dubois, VMware
 # Description ..: Tanzu Demo Hub - Dockerfile for tdh-tools container
 # ############################################################################################
-                
+                  
 FROM ubuntu:20.04   
 MAINTAINER Sacha Dubois <sdubois@vmware.com>
 ENV TZ="Europe/Zurich"
@@ -13,6 +13,7 @@ ADD tdh-postinstall-root.sh     /usr/local/bin
 ADD tdh-postinstall-user.sh     /usr/local/bin
 ADD cli             /tanzu/cli
 ADD clitap          /tanzu-tap/cli
+ADD clusterctl      /usr/local/bin
 ADD kbld            /usr/local/bin
 ADD imgpkg          /usr/local/bin
 ADD kapp            /usr/local/bin
@@ -61,13 +62,6 @@ RUN apt-get update -qq && apt-get install -qqy \
     postgresql-client \
     iptables
 RUN apt-get clean 
-
-# --- INSTALL GRADLE ---
-ENV GRADLE_VERSION=7.1.1
-ENV PATH=$PATH:/opt/gradle/gradle-$GRADLE_VERSION/bin
-RUN wget https://services.gradle.org/distributions/gradle-$GRADLE_VERSION-bin.zip -P /tmp
-RUN mkdir -p /opt/gradle && unzip -d /opt/gradle /tmp/gradle-$GRADLE_VERSION-bin.zip
-#RUN ln -s /opt/gradle/gradle-$GRADLE_VERSION/bin /usr/local/bin/gradle 
 
 # --- INSTALL GOLANG ---
 RUN add-apt-repository ppa:longsleep/golang-backports

@@ -6852,6 +6852,40 @@ InstallMetallLB() {
   fi
 }
 
+dockerRateLimit() {
+  TMP_NAMESPACE=$1
+
+  cmdLoop kubectl get secrets -o json > /tmp/outpot.json
+  nam=$(jq -r --arg key "docker-registry" '.items[].metadata | select(.name == $key).name' /tmp/outpot.json)
+  if [ "$nam" != "docker-registry" ]; then 
+    cmdLoop kubectl -n $TMP_NAMESPACE create secret docker-registry tdh-docker-repo \
+            --docker-server $TDH_REGISTRY_DOCKER_NAME \
+            --docker-username $TDH_REGISTRY_DOCKER_USER \
+            --docker-password $TDH_REGISTRY_DOCKER_PASS
+ 
+    cnt=0; ret=1
+    while [ $ret -ne 0 -a $cnt -lt 5 ]; do
+      cmdLoop kubectl patch serviceaccount default -p '{"imagePullSecrets": [{"name": "tdh-docker-repo"}]}' -n $TMP_NAMESPACE > /dev/null 2>&1; ret=$?
+      [ $ret -eq 0 ] && break
+      let cnt=cnt+1
+      sleep 30
+    done
+
+    if [ $ret -ne 0 ]; then
+      echo "ERROR: Failed to Patch Service account"
+      if [ "$NATIVE" == "0" ]; then
+        echo "       => tools/${TDH_TOOLS}.sh"
+        echo "          tdh-tools:/$ kubectl patch serviceaccount default -p '{\"imagePullSecrets\": [{\"name\": \"tdh-docker-repo\"}]}' -n $TMP_NAMESPACE"
+        echo "          tdh-tools:/$ exit"
+      else
+        echo "       => kubectl patch serviceaccount default -p '{\"imagePullSecrets\": [{\"name\": \"tdh-docker-repo\"}]}' -n $TMP_NAMESPACE"
+      fi
+
+      exit 1
+    fi
+  fi
+}
+
 InstallContour() {
   if [ "$TDH_SERVICE_INGRESS_CONTOUR" != "true" ]; then
     uodateConfigMap tanzu-demo-hub TDH_INGRESS_CONTOUR_ENABLED        "false"
@@ -6874,6 +6908,7 @@ InstallContour() {
             --docker-server $TDH_REGISTRY_DOCKER_NAME \
             --docker-username $TDH_REGISTRY_DOCKER_USER \
             --docker-password $TDH_REGISTRY_DOCKER_PASS
+#gagadu
 
     cnt=0; ret=1
     while [ $ret -ne 0 -a $cnt -lt 5 ]; do
@@ -8744,6 +8779,7 @@ tdh_tools_build() {
   messagePrint " ▪ Carvel Tools: - Bundle and Relocate App Config (imgpkg)"    "$TDH_CARVEL_IMGPKG"
   messagePrint " ▪ Hashicorp Terraform"                                        "$TDH_TERRAFORM"
   messagePrint " ▪ Local Kubernetes clusters (Kind)"                           "$TDH_KIND"
+  messagePrint " ▪ Kubernetes Cluster API (clusterctl)"                        "$TDH_CLUSTERCTL"
   messagePrint " ▪ vSphere CLI (GOVC)"                                         "$TDH_GOVC"
   messagePrint " ▪ Microsft Azure CLI (az)"                                    "latest"
   messagePrint " ▪ Amazon AWS CLI (aws)"                                       "latest"
@@ -8910,6 +8946,34 @@ tdh_tools_build() {
     fi
   fi
 
+  if [ ! -e $TDH_DOCKER_CACHE/clusterctl/clusterctl-linux-amd64-$TDH_CLUSTERCTL ]; then 
+    curl -L https://github.com/kubernetes-sigs/cluster-api/releases/download/$TDH_CLUSTERCTL/clusterctl-linux-amd64 \
+         -o /tmp/clusterctl-linux-amd64-$TDH_CLUSTERCTL > /tmp/error.log 2>&1
+    if [ ! -s /tmp/clusterctl-linux-amd64-$TDH_CLUSTERCTL ]; then
+      logMessages /tmp/error.log
+      echo "ERROR: failed to download clusterctl binary"
+      if [ "$NATIVE" == "0" ]; then
+        echo "       => tools/${TDH_TOOLS}.sh"
+        echo "          tdh-tools:/$ curl -L https://github.com/kubernetes-sigs/cluster-api/releases/download/$TDH_CLUSTERCTL/clusterctl-linux-amd64"
+        echo "          tdh-tools:/$ exit"
+      else
+        echo "       => curl -L https://github.com/kubernetes-sigs/cluster-api/releases/download/$TDH_CLUSTERCTL/clusterctl-linux-amd64"
+      fi
+
+      exit 1
+    else
+      [ ! -d $TDH_DOCKER_CACHE/clusterctl ] && mkdir -p $TDH_DOCKER_CACHE/clusterctl
+      mv /tmp/clusterctl-linux-amd64-$TDH_CLUSTERCTL $TDH_DOCKER_CACHE/clusterctl/clusterctl-linux-amd64-$TDH_CLUSTERCTL
+      cp $TDH_DOCKER_CACHE/clusterctl/clusterctl-linux-amd64-$TDH_CLUSTERCTL $TDH_DOCKER_FILES/clusterctl
+      chmod a+x $TDH_DOCKER_FILES/clusterctl
+    fi
+
+    REBUILD_REQUIRED_SOFTWARE=1       ## REBUILD REQUIRED BECAUSE OF SOFTWARE CHANGE
+  else
+    cp $TDH_DOCKER_CACHE/clusterctl/clusterctl-linux-amd64-$TDH_CLUSTERCTL $TDH_DOCKER_FILES/clusterctl
+    chmod a+x $TDH_DOCKER_FILES/clusterctl
+  fi
+
   cp $TDH_DOCKER_CACHE/tmc-$TMC_CLI/tmc-linux-$TMC_CLI $TDH_DOCKER_FILES/tmc
   chmod a+x $TDH_DOCKER_FILES/tmc
 
@@ -8937,6 +9001,8 @@ tdh_tools_build() {
       cp $TDH_DOCKER_CACHE/pivnet/pivnet-linux-amd64-$TDH_PIVNET $TDH_DOCKER_FILES/pivnet
       chmod a+x $TDH_DOCKER_FILES/pivnet
     fi
+
+    REBUILD_REQUIRED_SOFTWARE=1       ## REBUILD REQUIRED BECAUSE OF SOFTWARE CHANGE
   else
     cp $TDH_DOCKER_CACHE/pivnet/pivnet-linux-amd64-$TDH_PIVNET $TDH_DOCKER_FILES/pivnet
     chmod a+x $TDH_DOCKER_FILES/pivnet
@@ -9813,33 +9879,6 @@ tmcAPI_getToken() {
   curl -k -X POST "$VMC_SERVER/api/auth/api-tokens/authorize?refresh_token=$TMC_SERVICE_TOKEN" 2>/dev/null | jq -r '.access_token'
 }
 
-#curl -X 'POST' \
-#  'https://try.gitea.io/api/v1/repos/migrate' \
-#  -H 'accept: application/json' \
-#  -H 'Content-Type: application/json' \
-#  -d '{
-#  "auth_password": "Password12345",
-#  "auth_token": "string",
-#  "auth_username": "gitea_admin",
-#  "clone_addr": "https://github.com/parth-pandit/fortune-demo",
-#  "description": "string",
-#  "issues": true,
-#  "labels": true,
-#  "lfs": true,
-#  "lfs_endpoint": "string",
-#  "milestones": true,
-#  "mirror": true,
-#  "mirror_interval": "string",
-#  "private": true,
-#  "pull_requests": true,
-#  "releases": true,
-#  "repo_name": "fortune-demo-new",
-#  "repo_owner": "string",
-#  "service": "git",
-#  "uid": 0,
-#  "wiki": true
-#}'
-
 # ------------------------------------------------------------------------------------------
 # Function Name ......: giteaMirrorRepo
 # Function Purpose ...: Get Gitea Repo
@@ -9853,8 +9892,8 @@ tmcAPI_getToken() {
 # ------------------------------------------------------------------------------------------
 giteaMirrorRepo() {
   GITEA_REMOTE_REPO=$1
+  GITEA_NEW_ORG=$2
   GITEA_NEW_REPO=$3
-  GITEA_NEW_ORG=$4
 
   TDH_SERVICE_GITEA_ADMIN_USER=$(getConfigMap tanzu-demo-hub TDH_SERVICE_GITEA_ADMIN_USER)
   TDH_SERVICE_GITEA_ADMIN_PASS=$(getConfigMap tanzu-demo-hub TDH_SERVICE_GITEA_ADMIN_PASS)
@@ -9862,25 +9901,33 @@ giteaMirrorRepo() {
   TDH_SERVICE_GITEA_SERVER_URL=$(getConfigMap tanzu-demo-hub TDH_SERVICE_GITEA_SERVER_URL)
   TDH_SERVICE_GITEA_ADMIN_TOKEN_ID=$(getConfigMap tanzu-demo-hub TDH_SERVICE_GITEA_ADMIN_TOKEN_ID)
 
-GITEA_REMOTE_REPO=https://github.com/parth-pandit/fortune-demo
-GITEA_NEW_REPO=fortune-demo-02
+  curl -X POST ${TDH_SERVICE_GITEA_SERVER_URL}/api/v1/repos/$GITEA_NEW_ORG/$GITEA_NEW_REPO \
+       -H 'accept: application/json' 2>/dev/null > /tmp/output.json
 
+  nam=$(jq -r '.full_name' /tmp/output.json) 
+  if [ "$nam" == "" -o "$nam" == "null" ]; then
     TMP_API_DATA=/tmp/gitea_api_data.json
     echo "{"                                                    >  $TMP_API_DATA
     echo "  \"clone_addr\": \"$GITEA_REMOTE_REPO\","            >> $TMP_API_DATA
     echo "  \"repo_name\": \"$GITEA_NEW_REPO\","                >> $TMP_API_DATA
-    echo "  \"repo_owner\": \"tdh\","                   >> $TMP_API_DATA
+    echo "  \"repo_owner\": \"$GITEA_NEW_ORG\","                >> $TMP_API_DATA
     echo "  \"mirror\": true,"                                  >> $TMP_API_DATA
     echo "  \"private\": false"                                 >> $TMP_API_DATA
     echo "}"                                                    >> $TMP_API_DATA
 
-echo "curl -X POST ${TDH_SERVICE_GITEA_SERVER_URL}/api/v1/repos/migrate -H 'accept: application/json' -u \"$TDH_SERVICE_GITEA_ADMIN_USER:$TDH_SERVICE_GITEA_ADMIN_PASS\"  -H 'Content-Type: application/json' --data \"@$TMP_API_DATA\""
-    curl -X POST ${TDH_SERVICE_GITEA_SERVER_URL}/api/v1/repos/migrate \
+    cnt=0; ret=1
+    while [ $ret -ne 0 -a $cnt -lt 5 ]; do
+      curl -X POST ${TDH_SERVICE_GITEA_SERVER_URL}/api/v1/repos/migrate \
                  -H 'accept: application/json' \
                  -u "$TDH_SERVICE_GITEA_ADMIN_USER:$TDH_SERVICE_GITEA_ADMIN_PASS" \
                  -H 'Content-Type: application/json' \
-                 --data "@$TMP_API_DATA"
+         --data "@$TMP_API_DATA" >/dev/null 2>&1; ret=$?
+      [ $ret -eq 0 ] && break
 
+      let cnt=cnt+1
+      sleep 10
+    done
+  fi
 }
 
 # ------------------------------------------------------------------------------------------
@@ -9906,42 +9953,30 @@ giteaForkRepo() {
   TDH_SERVICE_GITEA_SERVER_URL=$(getConfigMap tanzu-demo-hub TDH_SERVICE_GITEA_SERVER_URL)
   TDH_SERVICE_GITEA_ADMIN_TOKEN_ID=$(getConfigMap tanzu-demo-hub TDH_SERVICE_GITEA_ADMIN_TOKEN_ID)
 
-  curl -X 'GET' ${TDH_SERVICE_GITEA_SERVER_URL}/api/v1/orgs \
+  curl -X GET ${TDH_SERVICE_GITEA_SERVER_URL}/api/v1/repos/$GITEA_ORG/$GITEA_REPO \
        -H 'accept: application/json' 2>/dev/null > /tmp/output.json
-
-    TMP_API_DATA=/tmp/gitea_api_data.json
-    echo "{"                                                    >  $TMP_API_DATA
-    echo "  \"name\": \"$GITEA_REPO\","                         >> $TMP_API_DATA
-    echo "  \"organization\": \"$GITEA_ORG\","                  >> $TMP_API_DATA
-    echo "}"                                                    >> $TMP_API_DATA
-
-    curl -X POST ${TDH_SERVICE_GITEA_SERVER_URL}/api/v1/repos/$GITEA_FORK_USER/$GITEA_FORK_REPO/forks \
-                 -H 'accept: application/json' \
-                 -H 'Content-Type: application/json' \
-                 --data "@$TMP_API_DATA"
-
-exit
-  nam=$(jq -r --arg key $GITEA_REPO '.[] | select(.username == $key).username' /tmp/output.json)
+  nam=$(jq -r '.name' /tmp/output.json) 
   if [ "$nam" == "" ]; then
     TMP_API_DATA=/tmp/gitea_api_data.json
     echo "{"                                                    >  $TMP_API_DATA
-    echo "  \"description\": \"Tanzu Organisation\","           >> $TMP_API_DATA
-    echo "  \"full_name\": \"Tanzu Demo Hub\","                 >> $TMP_API_DATA
-    echo "  \"location\": \"\","                                >> $TMP_API_DATA
-    echo "  \"repo_admin_change_team_access\": true,"           >> $TMP_API_DATA
-    echo "  \"username\": \"tdh\","                             >> $TMP_API_DATA
-    echo "  \"visibility\": \"public\","                        >> $TMP_API_DATA
-    echo "  \"website\": \"\""                                  >> $TMP_API_DATA
+    echo "  \"name\": \"$GITEA_REPO\","                         >> $TMP_API_DATA
+    echo "  \"organization\": \"$GITEA_ORG\""                   >> $TMP_API_DATA
     echo "}"                                                    >> $TMP_API_DATA
 
-    cmdLoop curl -X POST ${TDH_SERVICE_GITEA_SERVER_URL}/api/v1/orgs \
-         -H 'accept: application/json' \
-         -u "$TDH_SERVICE_GITEA_ADMIN_USER:$TDH_SERVICE_GITEA_ADMIN_PASS" \
-         -H 'Content-Type: application/json' \
-         --data "@$TMP_API_DATA"
+    cnt=0; ret=1
+    while [ $ret -ne 0 -a $cnt -lt 5 ]; do
+      curl -X POST ${TDH_SERVICE_GITEA_SERVER_URL}/api/v1/repos/$GITEA_FORK_USER/$GITEA_FORK_REPO/forks \
+                 -H 'accept: application/json' \
+                 -H 'Content-Type: application/json' \
+                 -u "$TDH_SERVICE_GITEA_ADMIN_USER:$TDH_SERVICE_GITEA_ADMIN_PASS" \
+                 --data "@$TMP_API_DATA" >/dev/null 2>&1; ret=$?
+      [ $ret -eq 0 ] && break
+
+      let cnt=cnt+1
+      sleep 10
+    done
   fi
 }
-
 
 # ------------------------------------------------------------------------------------------
 # Function Name ......: createGiteaRepo
@@ -10002,6 +10037,7 @@ exit
 # ------------------------------------------------------------------------------------------
 createGiteaOrg() {
   GITEA_REPO=$1
+  GITEA_TEXT="$2"
 
   TDH_SERVICE_GITEA_ADMIN_USER=$(getConfigMap tanzu-demo-hub TDH_SERVICE_GITEA_ADMIN_USER)
   TDH_SERVICE_GITEA_ADMIN_PASS=$(getConfigMap tanzu-demo-hub TDH_SERVICE_GITEA_ADMIN_PASS)
@@ -10015,20 +10051,26 @@ createGiteaOrg() {
   if [ "$nam" == "" ]; then 
     TMP_API_DATA=/tmp/gitea_api_data.json
     echo "{"                                                    >  $TMP_API_DATA
-    echo "  \"description\": \"Tanzu Organisation\","           >> $TMP_API_DATA
-    echo "  \"full_name\": \"Tanzu Demo Hub\","                 >> $TMP_API_DATA
+    echo "  \"description\": \"$GITEA_TEXT\","                  >> $TMP_API_DATA
     echo "  \"location\": \"\","                                >> $TMP_API_DATA
     echo "  \"repo_admin_change_team_access\": true,"           >> $TMP_API_DATA
-    echo "  \"username\": \"tdh\","                             >> $TMP_API_DATA
+    echo "  \"username\": \"$GITEA_REPO\","                     >> $TMP_API_DATA
     echo "  \"visibility\": \"public\","                        >> $TMP_API_DATA
     echo "  \"website\": \"\""                                  >> $TMP_API_DATA
     echo "}"                                                    >> $TMP_API_DATA
 
-    cmdLoop curl -X POST ${TDH_SERVICE_GITEA_SERVER_URL}/api/v1/orgs \
+    cnt=0; ret=1
+    while [ $ret -ne 0 -a $cnt -lt 5 ]; do
+    curl -X POST ${TDH_SERVICE_GITEA_SERVER_URL}/api/v1/orgs \
          -H 'accept: application/json' \
          -u "$TDH_SERVICE_GITEA_ADMIN_USER:$TDH_SERVICE_GITEA_ADMIN_PASS" \
          -H 'Content-Type: application/json' \
-         --data "@$TMP_API_DATA" 
+         --data "@$TMP_API_DATA" >/dev/null 2>&1; ret=$?
+      [ $ret -eq 0 ] && break
+      
+      let cnt=cnt+1
+      sleep 10
+    done
   fi
 }
 
@@ -11035,6 +11077,7 @@ TanzuPackage_Harbor () {
       nam=$(jq -r --arg key "${PACKAGE_NAME}-${PACKAGE_NAMESPACE}-cluster-rolebinding" '.items[] | select(.metadata.name == $key).metadata.name' /tmp/output.json)
       [ "$nam" != "" ] && cmdLoop kubectl -n tanzu-system-packages delete clusterrolebinding $nam
 
+echo "tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $PACKAGE_NAMESPACE --version $package_ver --create-namespace --poll-timeout 20m --poll-interval 10s --values-file $HARBOR_VALUES --wait=true --verbose 9"
       tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $PACKAGE_NAMESPACE \
              --version $package_ver --create-namespace --poll-timeout 20m --poll-interval 10s --log-file /tmp/harbor.log \
              --values-file $HARBOR_VALUES --wait=true --verbose 9 > /tmp/error.log 2>&1; ret=$?
@@ -11558,6 +11601,7 @@ runTDHtoolsDemos_new() {
                "-v $HOME/$TDH_TOOLS_PATH/.mvn:$HOME/.mvn:rw"
                "-v $HOME/$TDH_TOOLS_PATH/.aws:$HOME/.aws:rw"                            ## PERSISTANT AWS CREDENTIALS
                "-v $HOME/$TDH_TOOLS_PATH/.azure:$HOME/.azure:rw"                        ## PERSISTANT MICROSOFT AZURE CREDENTIALS
+               "-v $HOME/$TDH_TOOLS_PATH/.cluster-api:$HOME/.cluster-api:rw"            ## PERSISTANT MICROSOFT AZURE CREDENTIALS
                "-v $HOME/$TDH_TOOLS_PATH/.vmware-cna-saas:$HOME/.vmware-cna-saas:rw"    ## TANZU MISSION CONTROL (TMC) LOGIN CREDENTIALS
                "-v $HOME/$TDH_TOOLS_PATH/tmp:/tmp:rw"                                   ## KEEP TEMP PERSISTENT
                "-v $TDHHOME/:$TDHHOME:ro"                                               ## TANZU-DEMO-HUB DIRECTORY
@@ -11573,8 +11617,7 @@ runTDHtoolsDemos_new() {
       docker run $ROOT_OPTIONS ${CORE_MOUNTS[*]} $TDH_TOOLS:latest chmod 666 /var/run/docker.sock > /dev/null 2>&1
       docker run $USER_OPTIONS ${CORE_MOUNTS[*]} $TDH_TOOLS:latest /usr/local/bin/$POSTSCRIPT > /dev/null 2>&1
       [ $ROOT_SHELL -eq 1 ] && SEXEC_OPTIONS=$ROOT_OPTIONS || SEXEC_OPTIONS=$USER_OPTIONS
-      docker run $SEXEC_OPTIONS ${CORE_MOUNTS[*]} $TDH_TOOLS:latest $TDHDEMO/$CMD_EXEC $DOCKER_ARGS; ret=$?
-      #docker run $SEXEC_OPTIONS ${CORE_MOUNTS[*]} $TDH_TOOLS:latest bash; ret=$?
+      docker run $SEXEC_OPTIONS ${CORE_MOUNTS[*]} $TDH_TOOLS:latest $TDHDEMO/$CMD_EXEC $CMD_ARGS; ret=$?
 
       # --- FINISH CURRENT SESSION AS WE RUN AS CONTAINER ---
       exit $ret
