@@ -4701,6 +4701,7 @@ tmcCreateCluster() {
       messageTitle "TMC Create Workload Cluster"
       messagePrint " ▪ TMC Cluster Name"                 "$TDH_CLUSTER_NAME"
       messagePrint " ▪ TMC Cluster Group"                "$TDH_CLUSTER_GROUP"
+      messagePrint " ▪ TMC Cluster Storage Class"        "$TDH_TKGWC_STORAGE_CLASS"
       messagePrint " ▪ TMC Template"                     "$TMC_TKGWC_TEMPLATE"
       messagePrint " ▪ TMC Provisioner Name"             "$TDH_PROVISIONER_NAME"
       messagePrint " ▪ TKG Management Cluster"           "$TDH_MANAGEMENT_CLUSTER"
@@ -4760,6 +4761,7 @@ tmcCreateCluster() {
       done
   
       sleep 300
+
     fi
   fi
 
@@ -4825,8 +4827,33 @@ getTDHClusterCredentials() {
     [ -f $HOME/.kube/config.new ] && mv ~/.kube/config.new ~/.kube/config
     chmod 600 ~/.kube/config
     unset KUBECONFIG
+
+echo gaga0
+    if [ "$TDH_DEPLOYMENT_CLOUD" == "vSphere" ]; then
+echo gaga1
+      export KUBECTL_VSPHERE_PASSWORD=$VSPHERE_TKGS_VCENTER_PASSWORD
+      kubectl vsphere login --insecure-skip-tls-verify --server $VSPHERE_TKGS_SUPERVISOR_CLUSTER \
+        -u $VSPHERE_TKGS_VCENTER_ADMIN --tanzu-kubernetes-cluster-name $TDH_CLUSTER_NAME \
+        --tanzu-kubernetes-cluster-namespace tanzu-demo-hub
+
+      kubectl get clusterrolebinding -o json > /tmp/output.json
+      nam=$(jq -r --arg key "default-tkg-admin-privileged-binding" '.items[].metadata | select(.name == $key).name' /tmp/output.json)
+      if [ "$nam" != "default-tkg-admin-privileged-binding" ]; then
+        kubectl create clusterrolebinding default-tkg-admin-privileged-binding \
+            --clusterrole=psp:vmware-system-privileged --group=system:authenticated
+      fi
+echo gaga2
+
+      # --- PATCH STORAGE CLASS
+      kubectl patch storageclass tanzu -p '{"metadata": {"annotations":{"storageclass.kubernetes.io/is-default-class":"true"}}}'
+echo gaga3
+
+      kubectl config use-context ${TDH_CLUSTER_NAME}-admin@$TDH_CLUSTER_NAME
+echo gaga4
+    else
+      kubectl config use-context ${TDH_CLUSTER_NAME}-admin@$TDH_CLUSTER_NAME
+    fi
   
-    kubectl config use-context ${TDH_CLUSTER_NAME}-admin@$TDH_CLUSTER_NAME
     #echo "----------------------------------------------------------------------------------------"
     #echo "export KUBECONFIG=/tmp/${TDH_CLUSTER_NAME}.kubeconfig"
     #echo "kubectl config get-contexts"
@@ -11286,16 +11313,20 @@ TanzuPackage_Contour() {
       cmdLoop kubectl get serviceaccount -n tanzu-system-packages -o json > /tmp/output.json
       nam=$(jq -r --arg key "${PACKAGE_NAME}-${PACKAGE_NAMESPACE}-sa" '.items[] | select(.metadata.name == $key).metadata.name' /tmp/output.json)
       [ "$nam" != "" ] && cmdLoop kubectl -n tanzu-system-packages delete serviceaccount $nam
+echo "kubectl -n tanzu-system-packages delete serviceaccount $nam"
 
       # --- DELETE SERVICE ACCOUNT IF IT EXIST ----
       cmdLoop kubectl get clusterroles -n tanzu-system-packages -o json > /tmp/output.json
       nam=$(jq -r --arg key "${PACKAGE_NAME}-${PACKAGE_NAMESPACE}-role" '.items[] | select(.metadata.name == $key).metadata.name' /tmp/output.json)
       [ "$nam" != "" ] && cmdLoop kubectl -n tanzu-system-packages delete clusterrole $nam
 
+echo "kubectl -n tanzu-system-packages delete clusterrole $nam"
+
       # --- DELETE SERVICE ACCOUNT IF IT EXIST ----
       cmdLoop kubectl get clusterrolebinding -n tanzu-system-packages -o json > /tmp/output.json
       nam=$(jq -r --arg key "${PACKAGE_NAME}-${PACKAGE_NAMESPACE}-cluster-rolebinding" '.items[] | select(.metadata.name == $key).metadata.name' /tmp/output.json)
       [ "$nam" != "" ] && cmdLoop kubectl -n tanzu-system-packages delete clusterrolebinding $nam
+echo "kubectl -n tanzu-system-packages delete clusterrolebinding $nam"
 
 #bbbbb
 
