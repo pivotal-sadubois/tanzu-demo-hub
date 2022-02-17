@@ -147,8 +147,12 @@ if [ "$TDH_SERVICE_REGISTRY_HARBOR" == "true" ]; then
   fi
 
   # --- CLEANUP ---
-  kp secret delete secret-registry-vmware > /dev/null 2>&1
-  kp secret delete secret-registry-harbor > /dev/null 2>&1
+  for n in $(kp secret list list | sed -e '1d' -e '$d' | awk '{ print $1 }'); do
+    kp secret delete $n > /dev/null 2>&1
+  done
+  
+  #kp secret delete secret-registry-vmware > /dev/null 2>&1
+  #kp secret delete secret-registry-harbor > /dev/null 2>&1
   kp secret delete secret-repo-git > /dev/null 2>&1
   kp image delete $TBS_SOURCE_APP > /dev/null 2>&1
   pkill com.docker.cli
