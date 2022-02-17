@@ -106,7 +106,7 @@ TBS_GIT_REPO=https://github.com/parth-pandit/fortune-demo
 ############################################# CLONE THE GIT REPRO ###############################################################
 #################################################################################################################################
 
-[ -d $TBS_SOURCE_DIR ] && rm -rf $TBS_SOURCE_DIR
+[ -d $TBS_SOURCE_DIR ] && rm -rf $TBS_SOURCE_DIR; mkdir -p $TBS_SOURCE_DIR
 prtHead "Clone Git Repository ($TBS_GIT_REPO) to $TBS_SOURCE_DIR"
 execCmd "(cd /tmp; git clone $TBS_GIT_REPO $TBS_SOURCE_DIR)"
 execCmd "(cd $TBS_SOURCE_DIR && git config --list)"
@@ -140,6 +140,8 @@ if [ "$TDH_SERVICE_REGISTRY_HARBOR" == "true" ]; then
   export REGISTRY_PASSWORD=$TDH_HARBOR_REGISTRY_ADMIN_PASSWORD
   slntCmd "export REGISTRY_PASSWORD=$TDH_HARBOR_REGISTRY_ADMIN_PASSWORD"
   execCmd "kp secret create secret-registry-vmware --registry $TDH_HARBOR_REGISTRY_DNS_HARBOR --registry-user admin"
+#echo "export REGISTRY_PASSWORD=$TDH_HARBOR_REGISTRY_ADMIN_PASSWORD"
+#echo "kp secret create secret-registry-vmware --registry $TDH_HARBOR_REGISTRY_DNS_HARBOR --registry-user admin"
 
   sleep 10
 
@@ -211,7 +213,6 @@ if [ "$TDH_SERVICE_REGISTRY_DOCKER" == "true" ]; then
   execCmd "kp build logs $TBS_SOURCE_APP"
 fi
 
-
 ##################################################################################################################################
 ############################################# INSTALL REDIS TROUGH KUBEAPPS ######################################################
 ##################################################################################################################################
@@ -265,7 +266,8 @@ fi
 # --- WAIT UNTIL HELM CHART IS INSTALLED ---
 cnt=0; stt=1
 while [ $cnt -lt 5 -a $stt -ne 0 ]; do
-  stt=$(kubectl get pods -n $NAMESPACE 2>/dev/null | egrep "^fortune-redis" | grep -vc "Running") 
+  #stt=$(kubectl get pods -n $NAMESPACE 2>/dev/null | egrep "^fortune-redis" | grep -vc "Running") 
+  stt=$(kubectl get pods -n $NAMESPACE 2>/dev/null | egrep "^fortune-redis" | grep Running | grep -vc "1/1") 
   [ $stt -eq 0 ] && break
   sleep 10
 done
@@ -323,7 +325,7 @@ echo "  tls.crt: \"$cert\"" >> $TBS_SOURCE_DIR/https-secret.yaml
 echo "  tls.key: \"$pkey\"" >> $TBS_SOURCE_DIR/https-secret.yaml
 
 prtHead "Create a secret with the certificates of domain $DOMAIN"
-execCat "$TBS_SOURCE_DIR/https-secret.yaml"
+#execCat "$TBS_SOURCE_DIR/https-secret.yaml"
 execCmd "kubectl create -f $TBS_SOURCE_DIR/https-secret.yaml -n $NAMESPACE"
 
 prtHead "Create the ingress route with context based routing"

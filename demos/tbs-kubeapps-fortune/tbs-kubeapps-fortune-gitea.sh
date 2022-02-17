@@ -49,7 +49,8 @@ echo '          ----------------------------------------------------------------
 echo '                                                                                      '
 
 # --- RUN SCRIPT INSIDE TDH-TOOLS OR NATIVE ON LOCAL HOST ---
-runTDHtoolsDemos
+runTDHtoolsDemos_new
+#runTDHtoolsDemos
 
 kubectl get configmap tanzu-demo-hub > /dev/null 2>&1
 if [ $? -ne 0 ]; then 
@@ -59,8 +60,14 @@ fi
 # --- VERIFY SERVICES ---
 verifyRequiredServices TDH_INGRESS_CONTOUR_ENABLED "Ingress Contour"
 verifyRequiredServices TDH_SERVICE_BUILD_SERVICE   "Harbor Registry"
+verifyRequiredServices TDH_SERVICE_GITEA           "Harbor Registry"
 
-TDH_SERVICE_REGISTRY_DOCKER=$(getConfigMap tanzu-demo-hub TDH_SERVICE_REGISTRY_DOCKER)
+# --- GITEA CONFIGURATION ---
+TDH_SERVICE_GITEA_ADMIN_USER=$(getConfigMap tanzu-demo-hub TDH_SERVICE_GITEA_ADMIN_USER)
+TDH_SERVICE_GITEA_ADMIN_PASS=$(getConfigMap tanzu-demo-hub TDH_SERVICE_GITEA_ADMIN_PASS)
+TDH_SERVICE_GITEA_SERVER=$(getConfigMap tanzu-demo-hub TDH_SERVICE_GITEA_SERVER)
+TDH_SERVICE_GITEA_SERVER_URL=$(getConfigMap tanzu-demo-hub TDH_SERVICE_GITEA_SERVER_URL)
+
 TDH_SERVICE_REGISTRY_HARBOR=$(getConfigMap tanzu-demo-hub TDH_SERVICE_REGISTRY_HARBOR)
 TDH_DOMAIN=$(getConfigMap tanzu-demo-hub TDH_DOMAIN)
 TDH_DOMAIN=$(getConfigMap tanzu-demo-hub TDH_DOMAIN)
@@ -79,45 +86,46 @@ checkCLIcommands        DEMO_TOOLS
 checkCLIcommands        TANZU_DATA
 
 # --- READ ENVIRONMET VARIABLES ---
-[ -f $HOME/.tanzu-demo-hub.cfg ] && . $HOME/.tanzu-demo-hub.cfg
+#[ -f $HOME/.tanzu-demo-hub.cfg ] && . $HOME/.tanzu-demo-hub.cfg
 
-if [ "${TDH_TBS_DEMO_FORTUNE_GIT}" == "" ]; then
-  echo "  --------------------------------------------------------------------------------------------------------------"
-  echo "  IMPORTANT: Please clone the Git Repo: https://github.com/parth-pandit/fortune-demo"
-  echo "             into your GitHub account and the TDH_TBS_DEMO_FORTUNE_GIT with repository in ~/.tanzu-demo-hub.cfg"
-  echo "             => export TDH_TBS_DEMO_FORTUNE_GIT=https://github.com/<git-repository>.git"
-  echo "  --------------------------------------------------------------------------------------------------------------"
-  exit 1
-fi
-
-if [ "${TDH_GITHUB_SSHKEY}" == "" ]; then
-  echo "  --------------------------------------------------------------------------------------------------------------"
-  echo "  IMPORTANT: Please create a GITHUB Access ssh-key for your account at: https://github.com/settings/keys and"
-  echo "             set the TDH_GITHUB_SSHKEY variable with your SSH Private Key file in ~/.tanzu-demo-hub.cfg"
-  echo "             => export TDH_GITHUB_SSHKEY=~/.ssh/<github_ssh_private_key_file>" 
-  echo "  --------------------------------------------------------------------------------------------------------------"
-  exit 1
-fi
-
-if [ "$TDH_SERVICE_REGISTRY_HARBOR" == "true" -a "$TDH_SERVICE_REGISTRY_DOCKER" == "true" ]; then 
-  echo "ERROR: This Demo requires a container registry either DockerHub or a deployed Harbor registry. Please enable "
-  echo "       one of them in the releated deployment filea and redeploy the kubernetes cluster"
-  echo "       TDH_SERVICE_REGISTRY_HARBOR=true     ## To use the Harbor Registry"
-  echo "       TDH_SERVICE_REGISTRY_DOCKER=true     ## To use DockerHub"
-  exit 1
-fi
-
+# https://github.com/pivotal-sadubois/fortune-demo
+TDH_SERVICE_REGISTRY_HARBOR=true
 TBS_SOURCE_APP=fortune
-TBS_SOURCE_DIR=/tmp/$TBS_SOURCE_APP 
-TBS_GIT_REPO=https://github.com/parth-pandit/fortune-demo
+TBS_SOURCE_DIR=/tmp/$TBS_SOURCE_APP
+
+GIT_MIRR_ORG="sync"
+GIT_REPO_ORG="tanzu"
+GIT_REPO_NAM="fortune-demo"
+GIT_REPO_SOURCE=https://github.com/parth-pandit/fortune-demo
+GIT_REPO_TARGET=https://$TDH_SERVICE_GITEA_SERVER/$GIT_REPO_ORG/$GIT_REPO_NAM
+
+#echo "TDH_TBS_DEMO_FORTUNE_GIT:$TDH_TBS_DEMO_FORTUNE_GIT"
+#echo "GIT_REPO_TARGET:$GIT_REPO_TARGET"
+#echo "TDH_TBS_DEMO_FORTUNE_GIT:$TDH_TBS_DEMO_FORTUNE_GIT"
+
+#################################################################################################################################
+############################################# GITEA SETUP ADN DEMO REPRO ########################################################
+#################################################################################################################################
+
+createGiteaOrg   $GIT_MIRR_ORG "Tanzu Organisation"
+createGiteaOrg   $GIT_REPO_ORG "Tanzu Organisation"
+giteaMirrorRepo  $GIT_REPO_SOURCE $GIT_MIRR_ORG $GIT_REPO_NAM
+giteaForkRepo    sync fortune-demo fortune-demo tanzu
+
+prtHead "Login to the Git Envifonment (Gitea)"
+prtText " => http://$TDH_SERVICE_GITEA_SERVER"
+prtText "    ($TDH_SERVICE_GITEA_ADMIN_USER/$TDH_SERVICE_GITEA_ADMIN_PASS)"
+prtText " => tanzu/fortune-demo   # Fortune Demo Repository"
+prtText ""
+prtText "press 'return' to continue"; read x
 
 #################################################################################################################################
 ############################################# CLONE THE GIT REPRO ###############################################################
 #################################################################################################################################
 
-[ -d $TBS_SOURCE_DIR ] && rm -rf $TBS_SOURCE_DIR; mkdir -p $TBS_SOURCE_DIR
-prtHead "Clone Git Repository ($TBS_GIT_REPO) to $TBS_SOURCE_DIR"
-execCmd "(cd /tmp; git clone $TDH_TBS_DEMO_FORTUNE_GIT $TBS_SOURCE_DIR)"
+[ -d $TBS_SOURCE_DIR ] && rm -rf $TBS_SOURCE_DIR
+prtHead "Clone Git Repository ($GIT_REPO_TARGET) to $TBS_SOURCE_DIR"
+execCmd "(cd /tmp; git clone $GIT_REPO_TARGET $TBS_SOURCE_DIR)"
 execCmd "(cd $TBS_SOURCE_DIR && git config --list)"
 
 #################################################################################################################################
@@ -145,43 +153,25 @@ if [ "$TDH_SERVICE_REGISTRY_HARBOR" == "true" ]; then
   pkill com.docker.cli
   kubectl delete namespace $NAMESPACE > /dev/null 2>&1
 
-  prtHead "Tanzu Build Service - Cluster Builders"
-  prtText "A Builder is a Tanzu Build Service resource used to manage Cloud Native Buildpack builders. Builders contain a set of buildpacks"
-  prtText "and a stack that will be used to create images (https://buildpacks.io/docs/concepts/components/builder)."
-  prtText ""
-  execCmd "kp clusterbuilder list"
-  execCmd "kp clusterbuilder status base"
-
-  #prtHead "Tanzu Build Service - ClusterStacks"
-  #prtText "A ClusterStack is a cluster scoped resource that provides the build and run images for the Cloud Native Buildpack stack that will be used in a Builder."
-  #prtText ""
-  #execCmd "kp clusterstack list"
-  #execCmd "kp clusterstack status default"
-
-  prtHead "Tanzu Build Service - Cluster Store"
-  prtText "The Cluster Store provides a collection of buildpacks that can be utilized by Builders. Build Service ships with a curated collection of"
-  prtText "Tanzu buildpacks for Java, Nodejs, Go, PHP, nginx, and httpd and Paketo buildpacks for procfile, and .NET Core. Updates to these buildpacks "
-  prtText "are provided on Tanzu Network."
-  prtText ""
-  execCmd "kp clusterstore list"
-  execCmd "kp clusterstore status default"
-
   prtHead "Create Secret (secret-registry-harbor) for Registry ($TDH_HARBOR_REGISTRY_DNS_HARBOR)"
   export REGISTRY_PASSWORD=$TDH_HARBOR_REGISTRY_ADMIN_PASSWORD
   slntCmd "export REGISTRY_PASSWORD=$TDH_HARBOR_REGISTRY_ADMIN_PASSWORD"
   execCmd "kp secret create secret-registry-vmware --registry $TDH_HARBOR_REGISTRY_DNS_HARBOR --registry-user admin"
 
   prtHead "Create Secret (secret-repo-git)"
-  execCmd "kp secret create secret-repo-git --git-url git@github.com --git-ssh-key $TDH_GITHUB_SSHKEY"
+  export GIT_PASSWORD=$TDH_SERVICE_GITEA_ADMIN_PASS
+  slntCmd "export GIT_PASSWORD=$TDH_SERVICE_GITEA_ADMIN_PASS"
+  execCmd "kp secret create secret-repo-git --git-url https://$TDH_SERVICE_GITEA_SERVER --git-user $TDH_SERVICE_GITEA_ADMIN_USER"
+
   sleep 15
 
   prtHead "Create TBS Image ($TBS_SOURCE_APP)"
 
   cnt=$(kp image list 2>/dev/null | egrep -c "^fortune")
   if [ $cnt -eq 0 ]; then
-    execCmd "kp image create $TBS_SOURCE_APP --tag $TDH_HARBOR_REGISTRY_DNS_HARBOR/library/$TBS_SOURCE_APP --git $TDH_TBS_DEMO_FORTUNE_GIT --git-revision master"
+    execCmd "kp image create $TBS_SOURCE_APP --tag $TDH_HARBOR_REGISTRY_DNS_HARBOR/library/$TBS_SOURCE_APP --git $GIT_REPO_TARGET --git-revision master"
   else
-    execCmd "kp image create $TBS_SOURCE_APP --tag $TDH_HARBOR_REGISTRY_DNS_HARBOR/library/$TBS_SOURCE_APP --git $TDH_TBS_DEMO_FORTUNE_GIT --git-revision master"
+    execCmd "kp image create $TBS_SOURCE_APP --tag $TDH_HARBOR_REGISTRY_DNS_HARBOR/library/$TBS_SOURCE_APP --git $GIT_REPO_TARGET --git-revision master"
 
     prtHead "Patch TBS Image ($TBS_SOURCE_APP)"
     execCmd "kp image patch $TBS_SOURCE_APP"
@@ -192,10 +182,6 @@ if [ "$TDH_SERVICE_REGISTRY_HARBOR" == "true" ]; then
 
   prtHead "Show the Build Process ($TBS_SOURCE_APP)"
   execCmd "kp build list $TBS_SOURCE_APP"
-
-  prtHead "View the new build Application Docker container ($TDH_REGISTRY_DOCKER_NAME/$TDH_REGISTRY_DOCKER_USER/$TBS_SOURCE_APP) in the Harbor Registry"
-  prtText "=> https://$TDH_HARBOR_REGISTRY_DNS_HARBOR (admin/$TDH_HARBOR_REGISTRY_ADMIN_PASSWORD)"
-  prtText ""
 fi
 
 #################################################################################################################################
@@ -228,27 +214,6 @@ if [ "$TDH_SERVICE_REGISTRY_DOCKER" == "true" ]; then
   pkill com.docker.cli
   kubectl delete namespace $NAMESPACE > /dev/null 2>&1
 
-  prtHead "Tanzu Build Service - Cluster Builders"
-  prtText "A Builder is a Tanzu Build Service resource used to manage Cloud Native Buildpack builders. Builders contain a set of buildpacks"
-  prtText "and a stack that will be used to create images (https://buildpacks.io/docs/concepts/components/builder)."
-  prtText ""
-  execCmd "kp clusterbuilder list"
-  execCmd "kp clusterbuilder status base"
-
-  #prtHead "Tanzu Build Service - ClusterStacks"
-  #prtText "A ClusterStack is a cluster scoped resource that provides the build and run images for the Cloud Native Buildpack stack that will be used in a Builder."
-  #prtText ""
-  #execCmd "kp clusterstack list"
-  #execCmd "kp clusterstack status default"
-
-  prtHead "Tanzu Build Service - Cluster Store"
-  prtText "The Cluster Store provides a collection of buildpacks that can be utilized by Builders. Build Service ships with a curated collection of"
-  prtText "Tanzu buildpacks for Java, Nodejs, Go, PHP, nginx, and httpd and Paketo buildpacks for procfile, and .NET Core. Updates to these buildpacks "
-  prtText "are provided on Tanzu Network."
-  prtText ""
-  execCmd "kp clusterstore list"
-  execCmd "kp clusterstore status default"
-
   prtHead "Create Secret (secret-registry-docker) for Registry (docker.io)"
   slntCmd "export DOCKER_PASSWORD=$(maskPassword \"$TDH_REGISTRY_DOCKER_PASS\")"
   export DOCKER_PASSWORD=$TDH_REGISTRY_DOCKER_PASS
@@ -271,11 +236,6 @@ if [ "$TDH_SERVICE_REGISTRY_DOCKER" == "true" ]; then
 
   prtHead "Show the Build Process ($TBS_SOURCE_APP)"
   execCmd "kp build logs $TBS_SOURCE_APP"
-
-  prtHead "View the new build Application Docker container ($TDH_REGISTRY_DOCKER_NAME/$TDH_REGISTRY_DOCKER_USER/$TBS_SOURCE_APP) in Docker Hub"
-  prtText "=> https://$TDH_REGISTRY_DOCKER_NAME (User: $TDH_REGISTRY_DOCKER_USER)"
-  prtText ""
-
 fi
 
 
@@ -323,7 +283,7 @@ prtText "        - Enable Init Container: true"
 prtText ""
 prtText "  presse 'return' to continue when ready"; read x
 
-cnt=$(helm list -n $NAMESPACE | egrep -c "^fortune")
+cnt=$(helm list -A | egrep -c "^fortune")
 if [ $cnt -eq 0 ]; then 
   prtHead "Install Redis from the Bitnami Application Catalog with helm"
   execCmd "helm install fortune -n $NAMESPACE bitnami/redis -f files/redis-helm-values.yaml"
@@ -370,7 +330,6 @@ fi
 
 prtHead "Create deployment for the fortune app"
 cat files/fortune-app.yaml | sed -e "s+FORTUNE_DOCKER_IMAGE+$IMAGE_PATH+g" -e "s/NAMESPACE/$NAMESPACE/g" > $TBS_SOURCE_DIR/fortune-app.yaml
-execCat "$TBS_SOURCE_DIR/fortune-app.yaml"
 execCmd "kubectl create -f $TBS_SOURCE_DIR/fortune-app.yaml"
 execCmd "kubectl get pods,svc -n $NAMESPACE"
 
@@ -420,6 +379,9 @@ echo "     => git push"                                                 # PUSH T
 echo ""
 echo "     # --- MAKE THE CHANGE WITH INTELLIJ-IDE ---"
 echo "     => /Applications/IntelliJ\ IDEA\ CE.app/Contents/MacOS/idea  $TBS_SOURCE_DIR"
+echo "     => File -> New -> Project from Version Control" 
+echo "           Version Control .:: Git"
+echo "           Url ..............: $GIT_REPO_TARGET"
 echo "     => Edit: src/main/resources/static/index.html                # CHANGE-THE MESSAGE TEXT"
 echo "     => IntelliJ IDA -> GIT -> Commit                             # COMMIT CHANGE"
 echo "     => IntelliJ IDA -> GIT -> Push                               # PUSH TO THE GIT REPOSITORY ON GITHUB"
