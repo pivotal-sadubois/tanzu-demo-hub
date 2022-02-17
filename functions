@@ -10884,6 +10884,8 @@ TanzuPackage_CertManager() {
         break
       fi
 
+#vvvvvvvvv
+
       let cnt=cnt+1
       sleep 30
     done
@@ -11328,7 +11330,7 @@ echo "kubectl -n tanzu-system-packages delete clusterrole $nam"
       [ "$nam" != "" ] && cmdLoop kubectl -n tanzu-system-packages delete clusterrolebinding $nam
 echo "kubectl -n tanzu-system-packages delete clusterrolebinding $nam"
 
-#bbbbb
+#vvvvvvvvvvvv
 
 echo "tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $PACKAGE_NAMESPACE \
            --version $package_ver --create-namespace --poll-timeout 10m \
@@ -11588,6 +11590,8 @@ runTDHtoolsDemos_new() {
     fi
   fi
 
+echo "VOTE_TCE:$VOTE_TCE"
+echo "VOTE_TKG:$VOTE_TKG"
 #hallo
   if [ $VOTE_TCE -gt $VOTE_TKG ]; then
     TOOLS_TLAG=tce 
