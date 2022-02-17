@@ -11579,7 +11579,7 @@ runTDHtoolsDemos_new() {
       [ $cnt -gt 0 ] && let VOTE_TCE=VOTE_TCE+50
 
       kubectl --kubeconfig $HOME/.tdh-tools-tce/.kube/config get ns > /dev/null 2>&1; ret=$? 
-      [ $ret -eq 0 ] && let VOTE_TKG=VOTE_TCE+50
+      [ $ret -eq 0 ] && let VOTE_TCE=VOTE_TCE+50
     fi
   fi
     
