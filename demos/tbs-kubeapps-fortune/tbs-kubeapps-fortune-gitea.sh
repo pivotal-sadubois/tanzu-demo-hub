@@ -106,6 +106,7 @@ GIT_REPO_TARGET=https://$TDH_SERVICE_GITEA_SERVER/$GIT_REPO_ORG/$GIT_REPO_NAM
 #################################################################################################################################
 ############################################# GITEA SETUP ADN DEMO REPRO ########################################################
 #################################################################################################################################
+echo "GIT_REPO_TARGET:$GIT_REPO_TARGET"
 
 createGiteaOrg   $GIT_MIRR_ORG "Tanzu Organisation"
 createGiteaOrg   $GIT_REPO_ORG "Tanzu Organisation"
@@ -123,10 +124,10 @@ prtText "press 'return' to continue"; read x
 ############################################# CLONE THE GIT REPRO ###############################################################
 #################################################################################################################################
 
-[ -d $TBS_SOURCE_DIR ] && rm -rf $TBS_SOURCE_DIR
-prtHead "Clone Git Repository ($GIT_REPO_TARGET) to $TBS_SOURCE_DIR"
-execCmd "(cd /tmp; git clone $GIT_REPO_TARGET $TBS_SOURCE_DIR)"
-execCmd "(cd $TBS_SOURCE_DIR && git config --list)"
+#[ -d $TBS_SOURCE_DIR ] && rm -rf $TBS_SOURCE_DIR
+#prtHead "Clone Git Repository ($GIT_REPO_TARGET) to $TBS_SOURCE_DIR"
+#execCmd "(cd /tmp; git clone $GIT_REPO_TARGET $TBS_SOURCE_DIR)"
+#execCmd "(cd $TBS_SOURCE_DIR && git config --list)"
 
 #################################################################################################################################
 ########################################## CONFIGURE TBS WITH THE HARBOR REGISTRY ###############################################
