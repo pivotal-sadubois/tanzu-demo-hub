@@ -122,9 +122,7 @@ prtText "press 'return' to continue"; read x
 ############################################# CLONE THE GIT REPRO ###############################################################
 #################################################################################################################################
 
-echo "GIT_REPO_TARGET:$GIT_REPO_TARGET"
-
-#[ -d $TBS_SOURCE_DIR ] && rm -rf $TBS_SOURCE_DIR
+[ -d $TBS_SOURCE_DIR ] && rm -rf $TBS_SOURCE_DIR
 prtHead "Clone Git Repository ($GIT_REPO_TARGET) to $TBS_SOURCE_DIR"
 execCmd "(cd /tmp; git clone $GIT_REPO_TARGET $TBS_SOURCE_DIR)"
 execCmd "(cd $TBS_SOURCE_DIR && git config --list)"
