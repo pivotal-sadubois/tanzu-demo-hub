@@ -9983,6 +9983,7 @@ giteaForkRepo() {
   curl -X GET ${TDH_SERVICE_GITEA_SERVER_URL}/api/v1/repos/$GITEA_ORG/$GITEA_REPO \
        -H 'accept: application/json' 2>/dev/null > /tmp/output.json
   nam=$(jq -r '.name' /tmp/output.json) 
+echo "giteaForkRepo: NAM:$nam"
   if [ "$nam" == "" ]; then
     TMP_API_DATA=/tmp/gitea_api_data.json
     echo "{"                                                    >  $TMP_API_DATA
