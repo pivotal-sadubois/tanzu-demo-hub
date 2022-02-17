@@ -11596,10 +11596,6 @@ runTDHtoolsDemos_new() {
     fi
   fi
 
-echo "VOTE_TCE:$VOTE_TCE"
-echo "VOTE_TKG:$VOTE_TKG"
-exit
-#hallo
   if [ $VOTE_TCE -gt $VOTE_TKG ]; then
     TOOLS_TLAG=tce 
     TDH_TOOLS=tdh-tools-tce
