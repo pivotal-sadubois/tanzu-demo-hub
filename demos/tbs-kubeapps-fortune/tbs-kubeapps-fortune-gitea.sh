@@ -111,6 +111,11 @@ createGiteaOrg   $GIT_REPO_ORG "Tanzu Organisation"
 giteaMirrorRepo  $GIT_REPO_SOURCE $GIT_MIRR_ORG $GIT_REPO_NAM
 giteaForkRepo    sync fortune-demo fortune-demo tanzu
 
+echo "git clone $GIT_REPO_TARGET $TBS_SOURCE_DIR"
+
+
+exit
+
 prtHead "Login to the Git Envifonment (Gitea)"
 prtText " => http://$TDH_SERVICE_GITEA_SERVER"
 prtText "    ($TDH_SERVICE_GITEA_ADMIN_USER/$TDH_SERVICE_GITEA_ADMIN_PASS)"
