@@ -11574,10 +11574,12 @@ runTDHtoolsDemos_new() {
   if [ -s $HOME/.tdh-tools-tce/.kube/config ]; then 
     let VOTE_TCE=VOTE_TCE+50
     if [ -x /usr/local/bin/kubectl ]; then 
-echo "kubectl config get-clusters --kubeconfig $HOME/.tdh-tools-tce/.kube/config"
       cnt=$(kubectl config get-clusters --kubeconfig $HOME/.tdh-tools-tce/.kube/config | \
           sed '1d' | wc -l | awk '{ print $1 }') 
       [ $cnt -gt 0 ] && let VOTE_TCE=VOTE_TCE+50
+
+      kubectl --kubeconfig $HOME/.tdh-tools-tce/.kube/config get ns > /dev/null 2>&1; ret=$? 
+      [ $ret -eq 0 ] && let VOTE_TKG=VOTE_TCE+50
     fi
   fi
     
@@ -11585,10 +11587,12 @@ echo "kubectl config get-clusters --kubeconfig $HOME/.tdh-tools-tce/.kube/config
   if [ -s $HOME/.tdh-tools/.kube/config ]; then 
     let VOTE_TKG=VOTE_TKG+50
     if [ -x /usr/local/bin/kubectl ]; then 
-echo "kubectl config get-clusters --kubeconfig $HOME/.tdh-tools/.kube/config"
       cnt=$(kubectl config get-clusters --kubeconfig $HOME/.tdh-tools/.kube/config | \
           sed '1d' | wc -l | awk '{ print $1 }')
       [ $cnt -gt 0 ] && let VOTE_TKG=VOTE_TKG+50
+
+      kubectl --kubeconfig $HOME/.tdh-tools/.kube/config get ns > /dev/null 2>&1; ret=$? 
+      [ $ret -eq 0 ] && let VOTE_TKG=VOTE_TKG+50
     fi
   fi
 
