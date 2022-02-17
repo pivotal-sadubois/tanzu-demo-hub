@@ -252,7 +252,9 @@ checkTMCAccess
 checkTMCcontext
 
 tmcCreateCluster
+echo gaga1; kubectl config get-contexts
 getTDHClusterCredentials
+echo gaga2; kubectl config get-contexts
 
 if [ "${TDH_DEPLOYMENT_CLOUD}" == "vSphere1" ]; then
   #export KUBECTL_VSPHERE_PASSWORD=$VSPHERE_TKGS_VCENTER_PASSWORD
@@ -270,8 +272,10 @@ if [ "${TDH_DEPLOYMENT_CLOUD}" == "vSphere1" ]; then
   fi
 fi
 
+echo gaga4; kubectl config get-contexts
 kubectl get clusterrolebinding -o json > /tmp/output.json
 nam=$(jq -r --arg key "tanzu-demo-hub-privileged-cluster-role-binding" '.items[].metadata | select(.name == $key).name' /tmp/output.json) 
+echo "clusterrolebinding NAM:$nam"
 if [ "$nam" != "tanzu-demo-hub-privileged-cluster-role-binding" ]; then 
   kubectl create clusterrolebinding tanzu-demo-hub-privileged-cluster-role-binding \
           --clusterrole=vmware-system-tmc-psp-privileged --group=system:authenticated 
@@ -287,6 +291,10 @@ uodateConfigMap tanzu-demo-hub TDH_CLUSTER_NAME                   "$TDH_CLUSTER_
 uodateConfigMap tanzu-demo-hub TDH_MANAGEMENT_CLUSTER             "$TDH_MANAGEMENT_CLUSTER"
 uodateConfigMap tanzu-demo-hub TDH_PROVISIONER_NAME               "$TDH_PROVISIONER_NAME"
 uodateConfigMap tanzu-demo-hub TDH_MISSION_CONTROL_ACCOUNT_NAME   "$TMC_ACCOUNT_NAME"
+
+echo gaga4; kubectl config get-contexts
+
+exit
 
 #InstallCertManager   ## OLD
 #InstallContour
