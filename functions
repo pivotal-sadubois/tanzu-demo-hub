@@ -5808,7 +5808,7 @@ cat $HELM_VALUES
 
     # --- ADD REPOSITORY --
     helmRepoAdd bitnami https://charts.bitnami.com/bitnami
-echo "gagag034
+echo gagag034
 
     messagePrint " ▪ Deploy the Minio Helm Chart" "minio"
     cnt=0; ret=1; stt="notdeployed"
