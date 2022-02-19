@@ -5807,7 +5807,9 @@ installMinio() {
     messagePrint " ▪ Deploy the Minio Helm Chart" "minio"
     cnt=0; ret=1; stt="notdeployed"
     while [ $ret -ne 0 -a $cnt -lt 5 -a "$stt" != "deployed" ]; do
-      helm install $HELMCHART bitnami/$HELMCHART --namespace $NAMESPACE -f ${HELM_VALUES} > /tmp/error.log 2>&1; ret=$?
+echo "helm install $HELMCHART bitnami/$HELMCHART --namespace $NAMESPACE -f ${HELM_VALUES}"
+      #helm install $HELMCHART bitnami/$HELMCHART --namespace $NAMESPACE -f ${HELM_VALUES} > /tmp/error.log 2>&1; ret=$?
+      helm install $HELMCHART bitnami/$HELMCHART --namespace $NAMESPACE -f ${HELM_VALUES} 
 
       # --- WAIT FOR PODS TO GET STARTED ---
       runningPods $NAMESPACE
@@ -5823,6 +5825,8 @@ installMinio() {
       let cnt=cnt+1
       sleep 30
     done
+
+echo gaga
 
     if [ $ret -ne 0 -o "$stt" != "deployed" ]; then
       logMessages /tmp/error.log
@@ -5841,6 +5845,7 @@ installMinio() {
     # --- WAIT FOR PODS TO GET STARTED ---
     runningPods minio
   fi
+echo gaga1
 
   cmdLoop helm ls -n $NAMESPACE -o json > /tmp/output.json
   if [ -s /tmp/output.json ]; then
@@ -5852,6 +5857,7 @@ installMinio() {
     ver=""; crt=""; stt=""; dat=""
   fi
 
+echo gaga2
   cmdLoop kubectl -n $NAMESPACE get secrets minio -o json > /tmp/output.json
   ROOT_USER=$(jq -r '.data."root-user"' /tmp/output.json | base64 --decode)
   ROOT_PASSWORD=$(jq -r '.data."root-password"' /tmp/output.json | base64 --decode)
@@ -5859,6 +5865,7 @@ installMinio() {
   # DELETEME
   #ROOT_USER=$(kubectl get secret --namespace minio minio -o jsonpath="{.data.root-user}" | base64 --decode)
   #ROOT_PASSWORD=$(kubectl get secret --namespace minio minio -o jsonpath="{.data.root-password}" | base64 --decode)
+echo gaga4
 
   messagePrint " ▪ Verify Minio S3"                "$crt"
   messagePrint "   Helm Chart Name"                "minio"
@@ -5885,6 +5892,7 @@ installMinio() {
       echo ""
     fi
   fi
+echo gaga4
 
   echo "     => mc alias set minio https://minio.$DOMAIN $ACCESS_KEY $SECRET_KEY"
   echo "     => mc ls minio"
