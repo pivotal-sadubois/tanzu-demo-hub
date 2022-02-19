@@ -5759,6 +5759,7 @@ installMinio() {
   NAMESPACE=minio
   HELMCHART=minio
 
+echo gaga01
   if [ "$TDH_SERVICE_MINIO" != "true" ]; then
     uodateConfigMap tanzu-demo-hub TDH_SERVICE_MINIO        "false"
     kubectl delete -n $NAMESPACE > /dev/null 2>&1
@@ -5769,17 +5770,17 @@ installMinio() {
   TDH_DOMAIN=$(getConfigMap tanzu-demo-hub TDH_DOMAIN)
   TDH_ENVNAME=$(getConfigMap tanzu-demo-hub TDH_ENVNAME)
   DOMAIN=$(getConfigMap tanzu-demo-hub TDH_INGRESS_CONTOUR_LB_DOMAIN)
+echo gaga02
 
   messageTitle "Minio S3 Object Storage"
   cnt=$(helm list -A -q | egrep -c "^minio")
+echo "CNT:$cnt"
   if [ $cnt -eq 0 ]; then
     messagePrint " ▪ Installing Minio" "bitnami/$HELMCHART"
     createNamespace $NAMESPACE > /dev/null 2>&1
 
     # --- COPY SECRET TO NAMESPACE ---
     copySecretObject default $NAMESPACE tanzu-demo-hub-tls
-    #kubectl get secret tanzu-demo-hub-tls --namespace=default  -oyaml | grep -v '^\s*namespace:\s' | \
-    #kubectl apply --namespace=$NAMESPACE -f - > /dev/null 2>&1
 
     HELM_VALUES=/tmp/helm_values.yaml
     echo ""                                                                                                                     >  $HELM_VALUES
@@ -5801,8 +5802,13 @@ installMinio() {
     echo "    - name: tdh-postgres-backup.minio.$DOMAIN"                                                                        >> $HELM_VALUES
     echo "      path: /"                                                                                                        >> $HELM_VALUES
 
+echo "gagag03"
+echo "HELM_VALUES:$HELM_VALUES"
+cat $HELM_VALUES
+
     # --- ADD REPOSITORY --
     helmRepoAdd bitnami https://charts.bitnami.com/bitnami
+echo "gagag034
 
     messagePrint " ▪ Deploy the Minio Helm Chart" "minio"
     cnt=0; ret=1; stt="notdeployed"
