@@ -9,7 +9,7 @@ FROM ubuntu:20.04
 MAINTAINER Sacha Dubois <sdubois@vmware.com>
 ENV TZ="Europe/Zurich"
 ENV ALLOW_INSTALL_AS_ROOT="true"
-ARG UID GID USER TZ HOME VMWUSER VMWPASS START 
+ARG UID GID USER TZ HOME VMWUSER VMWPASS START ARCH
 ADD tdh-postinstall-root.sh        /usr/local/bin
 ADD tdh-postinstall-user-tce.sh    /usr/local/bin
 ADD tce-linux-amd64 /tanzu/tce-linux-amd64
@@ -91,13 +91,13 @@ RUN chmod a+x kustomize && mv kustomize /usr/bin
 #$ sudo apt install golang-go
 
 # --- INSTALL TERRAFORM ---
-RUN curl -fsSL https://apt.releases.hashicorp.com/gpg | apt-key add -
-RUN apt-add-repository "deb [arch=amd64] https://apt.releases.hashicorp.com $(lsb_release -cs) main"
-RUN apt-get update && apt-get install terraform -y
+#RUN curl -fsSL https://apt.releases.hashicorp.com/gpg | apt-key add -
+#RUN apt-add-repository "deb [arch=amd64] https://apt.releases.hashicorp.com $(lsb_release -cs) main"
+#RUN apt-get update && apt-get install terraform -y
 
 # --- INSTALL BAT ----
-RUN curl -s  https://api.github.com/repos/sharkdp/bat/releases/latest |grep browser_download_url |  cut -d '"' -f 4 | grep 'amd64.deb' | grep -v musl | wget -i -
-RUN dpkg -i bat_*_amd64.deb
+RUN curl -s https://api.github.com/repos/sharkdp/bat/releases/latest |grep browser_download_url | cut -d '"' -f 4 | grep "${ARCH}.deb" | grep -v musl | wget -i -
+RUN dpkg -i bat_*_${ARCH}.deb
 RUN apt-get install -qqy bat
 
 # --- INSTALL DOCKER --- 

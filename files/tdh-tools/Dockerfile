@@ -90,8 +90,8 @@ RUN chmod a+x kustomize && mv kustomize /usr/bin
 #RUN apt-get update && apt-get install terraform -y
 
 # --- INSTALL BAT ----
-RUN curl -s  https://api.github.com/repos/sharkdp/bat/releases/latest |grep browser_download_url |  cut -d '"' -f 4 | grep 'amd64.deb' | grep -v musl | wget -i -
-RUN dpkg -i bat_*_amd64.deb
+RUN curl -s https://api.github.com/repos/sharkdp/bat/releases/latest |grep browser_download_url | cut -d '"' -f 4 | grep "${ARCH}.deb" | grep -v musl | wget -i -
+RUN dpkg -i bat_*_${ARCH}.deb
 RUN apt-get install -qqy bat
 
 # --- INSTALL DOCKER --- 
@@ -106,7 +106,9 @@ CMD ["wrapdocker"]
 
 # --- IMPORT MICROSOFT SSL KEYS ---
 RUN curl -sL https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor >> /etc/apt/trusted.gpg.d/microsoft.gpg
-RUN add-apt-repository "deb [arch=amd64] https://packages.microsoft.com/repos/azure-cli/ $(lsb_release -cs) main"
+RUN add-apt-repository "deb [arch=arm64] https://packages.microsoft.com/repos/azure-cli/ $(lsb_release -cs) main"
+#RUN add-apt-repository --allow-insecure-repositories http://launchpadlibrarian.net/492519293/azure-cli_2.10.1-1_all.deb
+#RUN apt-get install azure-cli -y
 
 # --- INSTALL HELM ---
 RUN curl -sL https://baltocdn.com/helm/signing.asc | gpg --dearmor >> /etc/apt/trusted.gpg.d/baltocdn.gpg
