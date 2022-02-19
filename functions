@@ -9774,7 +9774,7 @@ cleanKindCluster() {
 }
 
 #hallo
-runTDHtoolsDemos() {
+runTDHtoolsDemos_old() {
   if [ ! -f /tdh_tools_docker_container  ]; then
     if [ $NATIVE -eq 0 ]; then
       cid=$(docker ps -a | grep tdh-tools:latest | awk '{ print $1 }')
@@ -11556,7 +11556,7 @@ dockerRunPreparation() {
 # ------------------------------------------------------------------------------------------
 # Return Value .......: 0 on Success, 1 on failure
 # ------------------------------------------------------------------------------------------
-runTDHtoolsDemos_new() {
+runTDHtoolsDemos() {
   VOTE_TCE=0; VOTE_TKG=0
 
   # --- DECIDE IF TCE or TKG ---
