@@ -8,7 +8,7 @@
 FROM ubuntu:20.04   
 MAINTAINER Sacha Dubois <sdubois@vmware.com>
 ENV TZ="Europe/Zurich"
-ARG UID GID USER TZ HOME VMWUSER VMWPASS START 
+ARG UID GID USER TZ HOME VMWUSER VMWPASS START ARCH
 ADD tdh-postinstall-root.sh     /usr/local/bin
 ADD tdh-postinstall-user.sh     /usr/local/bin
 ADD cli             /tanzu/cli
