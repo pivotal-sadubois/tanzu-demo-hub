@@ -12201,14 +12201,22 @@ helmRepoAdd() {
   REPO_NAME=$1
   REPO_URL=$2
 
-  cmdLoop helm repo list -o json > /tmp/output.json
-  if [ -s /tmp/output.json ]; then
-    nam=$(jq -r --arg key "$REPO_NAME" '.[] | select(.name == $key).name' /tmp/output.json)
-    if [ "$nam" == "" ]; then
-      messagePrint " ▪ Add Helm Repo ($REPO_NAME)" "$REPO_URL"
-      cmdLoop helm repo add $REPO_NAME $REPO_URL > /dev/null 2>&1
-      cmdLoop helm repo update > /dev/null 2>&1
+  helm repo list > /dev/null 2>&1; ret=$?
+  if [ $ret -eq 0 ]; then 
+    cmdLoop helm repo list -o json > /tmp/output.json
+    if [ -s /tmp/output.json ]; then
+      nam=$(jq -r --arg key "$REPO_NAME" '.[] | select(.name == $key).name' /tmp/output.json)
+      if [ "$nam" == "" ]; then
+        messagePrint " ▪ Add Helm Repo ($REPO_NAME)" "$REPO_URL"
+        cmdLoop helm repo add $REPO_NAME $REPO_URL > /dev/null 2>&1
+        cmdLoop helm repo update > /dev/null 2>&1
+      fi
     fi
+  else
+    # --- NO REPO CONFIGURED YET ---
+    messagePrint " ▪ Add Helm Repo ($REPO_NAME)" "$REPO_URL"
+    cmdLoop helm repo add $REPO_NAME $REPO_URL > /dev/null 2>&1
+    cmdLoop helm repo update > /dev/null 2>&1
   fi
 }
 
