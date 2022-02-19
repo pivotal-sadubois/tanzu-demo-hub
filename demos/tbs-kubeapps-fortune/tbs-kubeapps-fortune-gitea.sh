@@ -49,8 +49,7 @@ echo '          ----------------------------------------------------------------
 echo '                                                                                      '
 
 # --- RUN SCRIPT INSIDE TDH-TOOLS OR NATIVE ON LOCAL HOST ---
-runTDHtoolsDemos_new
-#runTDHtoolsDemos
+runTDHtoolsDemos
 
 kubectl get configmap tanzu-demo-hub > /dev/null 2>&1
 if [ $? -ne 0 ]; then 
