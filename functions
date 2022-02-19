@@ -5759,7 +5759,6 @@ installMinio() {
   NAMESPACE=minio
   HELMCHART=minio
 
-echo gaga01
   if [ "$TDH_SERVICE_MINIO" != "true" ]; then
     uodateConfigMap tanzu-demo-hub TDH_SERVICE_MINIO        "false"
     kubectl delete -n $NAMESPACE > /dev/null 2>&1
@@ -5770,11 +5769,9 @@ echo gaga01
   TDH_DOMAIN=$(getConfigMap tanzu-demo-hub TDH_DOMAIN)
   TDH_ENVNAME=$(getConfigMap tanzu-demo-hub TDH_ENVNAME)
   DOMAIN=$(getConfigMap tanzu-demo-hub TDH_INGRESS_CONTOUR_LB_DOMAIN)
-echo gaga02
 
   messageTitle "Minio S3 Object Storage"
   cnt=$(helm list -A -q | egrep -c "^minio")
-echo "CNT:$cnt"
   if [ $cnt -eq 0 ]; then
     messagePrint " ▪ Installing Minio" "bitnami/$HELMCHART"
     createNamespace $NAMESPACE > /dev/null 2>&1
@@ -5802,20 +5799,13 @@ echo "CNT:$cnt"
     echo "    - name: tdh-postgres-backup.minio.$DOMAIN"                                                                        >> $HELM_VALUES
     echo "      path: /"                                                                                                        >> $HELM_VALUES
 
-echo "gagag03"
-echo "HELM_VALUES:$HELM_VALUES"
-cat $HELM_VALUES
-
     # --- ADD REPOSITORY --
     helmRepoAdd bitnami https://charts.bitnami.com/bitnami
-echo gagag034
 
     messagePrint " ▪ Deploy the Minio Helm Chart" "minio"
     cnt=0; ret=1; stt="notdeployed"
     while [ $ret -ne 0 -a $cnt -lt 5 -a "$stt" != "deployed" ]; do
-echo "helm install $HELMCHART bitnami/$HELMCHART --namespace $NAMESPACE -f ${HELM_VALUES}"
-      #helm install $HELMCHART bitnami/$HELMCHART --namespace $NAMESPACE -f ${HELM_VALUES} > /tmp/error.log 2>&1; ret=$?
-      helm install $HELMCHART bitnami/$HELMCHART --namespace $NAMESPACE -f ${HELM_VALUES} 
+      helm install $HELMCHART bitnami/$HELMCHART --namespace $NAMESPACE -f ${HELM_VALUES} > /tmp/error.log 2>&1; ret=$?
 
       # --- WAIT FOR PODS TO GET STARTED ---
       runningPods $NAMESPACE
@@ -5831,8 +5821,6 @@ echo "helm install $HELMCHART bitnami/$HELMCHART --namespace $NAMESPACE -f ${HEL
       let cnt=cnt+1
       sleep 30
     done
-
-echo gaga
 
     if [ $ret -ne 0 -o "$stt" != "deployed" ]; then
       logMessages /tmp/error.log
@@ -5851,7 +5839,6 @@ echo gaga
     # --- WAIT FOR PODS TO GET STARTED ---
     runningPods minio
   fi
-echo gaga1
 
   cmdLoop helm ls -n $NAMESPACE -o json > /tmp/output.json
   if [ -s /tmp/output.json ]; then
@@ -5863,15 +5850,9 @@ echo gaga1
     ver=""; crt=""; stt=""; dat=""
   fi
 
-echo gaga2
   cmdLoop kubectl -n $NAMESPACE get secrets minio -o json > /tmp/output.json
   ROOT_USER=$(jq -r '.data."root-user"' /tmp/output.json | base64 --decode)
   ROOT_PASSWORD=$(jq -r '.data."root-password"' /tmp/output.json | base64 --decode)
-
-  # DELETEME
-  #ROOT_USER=$(kubectl get secret --namespace minio minio -o jsonpath="{.data.root-user}" | base64 --decode)
-  #ROOT_PASSWORD=$(kubectl get secret --namespace minio minio -o jsonpath="{.data.root-password}" | base64 --decode)
-echo gaga4
 
   messagePrint " ▪ Verify Minio S3"                "$crt"
   messagePrint "   Helm Chart Name"                "minio"
@@ -5898,7 +5879,6 @@ echo gaga4
       echo ""
     fi
   fi
-echo gaga4
 
   echo "     => mc alias set minio https://minio.$DOMAIN $ACCESS_KEY $SECRET_KEY"
   echo "     => mc ls minio"

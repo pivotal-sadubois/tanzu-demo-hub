@@ -294,14 +294,24 @@ checkTMCintegration      TDP   ## Tanzu Data Protection
 checkTMCintegration      TCI   ## Tanzu Cluster Inspection
 
 echo "-----------------------------------------------------------------------------------------------------------"
-echo "Tanzu Kubernetes Grid Cluster ($TDH_CLUSTER_NAME) build completed"
+echo "Tanzu Kubernetes Grid Cluster ($TDH_TKGWC_NAME) build completed"
 echo "-----------------------------------------------------------------------------------------------------------"
-echo "1.) Set KUBECONFIG and set the cluster context"
-echo "    => export KUBECONFIG=/tmp/${TDH_CLUSTER_NAME}.kubeconfig:~/.kube/config"
-echo "    => kubectl config use-context $TDH_CLUSTER_NAME"
-echo "    => kubectl config get-contexts"
-echo "2.) Delete Cluster if not used anymore"
-echo "    => tmc cluster delete -m $TDH_MANAGEMENT_CLUSTER -p $TDH_PROVISIONER_NAME $TDH_CLUSTER_NAME"
+if [ "$NATIVE" == "0" ]; then
+  printf "\e[1m1.) Set KUBECONFIG and set the cluster context\e[0m\n"
+  echo "    => tools/tdh-tools.sh"
+  echo "       tdh-tools:/$ kubectl config set-cluster ${TDH_TKGWC_NAME}"
+  echo "       tdh-tools:/$ kubectl config use-context ${TDH_TKGWC_CONTEXT}"
+  printf "\e[1m2.) Delete Cluster if not used anymore\e[0m\n"
+  echo "    => tools/tdh-tools.sh"
+  echo "       tdh-tools:/$ tmc cluster delete -m $TDH_MANAGEMENT_CLUSTER -p $TDH_PROVISIONER_NAME $TDH_CLUSTER_NAME"
+else
+  echo "1.) Set KUBECONFIG and set the cluster context"
+  echo "    => kubectl config set-cluster ${TDH_TKGWC_NAME}"
+  echo "    => kubectl config use-context ${TDH_TKGWC_CONTEXT}"
+  echo "3.) Delete Cluster if not used anymore"
+  echo "    => tmc cluster delete -m $TDH_MANAGEMENT_CLUSTER -p $TDH_PROVISIONER_NAME $TDH_CLUSTER_NAME"
+fi
+
 
 #kubectl rollout restart deployment echoserver-1 -n contour-ingress-demo
 #kubectl get pods -n contour-ingress-demo
