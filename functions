@@ -4857,7 +4857,7 @@ echo gaga4
     kubectl get clusterrolebinding -o json > /tmp/output.json
     nam=$(jq -r --arg key "tanzu-demo-hub-privileged-cluster-role-binding" '.items[].metadata | select(.name == $key).name' /tmp/output.json)
     if [ "$nam" != "tanzu-demo-hub-privileged-cluster-role-binding" ]; then
-      kubectl create clusterrolebinding tanzu-demo-hub-privileged-cluster-role-binding \
+      oubectl create clusterrolebinding tanzu-demo-hub-privileged-cluster-role-binding \
               --clusterrole=vmware-system-tmc-psp-privileged --group=system:authenticated
     fi
   
@@ -11632,7 +11632,8 @@ runTDHtoolsDemos() {
                "-v $HOME/$TDH_TOOLS_PATH/.govmomi:$HOME/.govmomi:rw"
                "-v $HOME/$TDH_TOOLS_PATH/.gradle:$HOME/.gradle:rw"
                "-v $HOME/$TDH_TOOLS_PATH/.docker:$HOME/.docker:rw"                      ## DOCKER LOGIN CREDENTIALS
-               "-v $HOME/$TDH_TOOLS_PATH/.mvn:$HOME/.mvn:rw"
+               "-v $HOME/$TDH_TOOLS_PATH/.mvn:$HOME/.mvn:rw"                            ## MAVEN 
+               "-v $HOME/$TDH_TOOLS_PATH/.mc:$HOME/.mc:rw"                              ## MINIO CLIENT
                "-v $HOME/$TDH_TOOLS_PATH/.aws:$HOME/.aws:rw"                            ## PERSISTANT AWS CREDENTIALS
                "-v $HOME/$TDH_TOOLS_PATH/.azure:$HOME/.azure:rw"                        ## PERSISTANT MICROSOFT AZURE CREDENTIALS
                "-v $HOME/$TDH_TOOLS_PATH/.cluster-api:$HOME/.cluster-api:rw"            ## PERSISTANT MICROSOFT AZURE CREDENTIALS
