@@ -4853,6 +4853,13 @@ echo gaga4
     else
       kubectl config use-context ${TDH_CLUSTER_NAME}-admin@$TDH_CLUSTER_NAME
     fi
+
+    kubectl get clusterrolebinding -o json > /tmp/output.json
+    nam=$(jq -r --arg key "tanzu-demo-hub-privileged-cluster-role-binding" '.items[].metadata | select(.name == $key).name' /tmp/output.json)
+    if [ "$nam" != "tanzu-demo-hub-privileged-cluster-role-binding" ]; then
+      kubectl create clusterrolebinding tanzu-demo-hub-privileged-cluster-role-binding \
+              --clusterrole=vmware-system-tmc-psp-privileged --group=system:authenticated
+    fi
   
     #echo "----------------------------------------------------------------------------------------"
     #echo "export KUBECONFIG=/tmp/${TDH_CLUSTER_NAME}.kubeconfig"
