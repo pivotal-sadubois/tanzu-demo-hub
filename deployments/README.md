@@ -1,7 +1,5 @@
 # Tanzu Demo Hub - Deployment Files
-
-The Tanzu Demo Hub initiative is to build a environment to run predefined and tested Demos demonstration the capabilites of the VMware Tanzu production portfolio. The scripts and tools provided deploy TKG Management clusters on vSphere, AWS Cloud or Microsoft Azure cloud and on your local Labtop (Minikube) and installs standard services such as LoadBalancer, Ingress Routers, Harbor Registry, Mini S3 etc. The deployment scripts will create Let's Enscript certificates for you automaticly that all installed services and demos have valid certificates.
-
+There are two different deployment files within the Tanzu Demo Hub Environment. The *Tanzu Management Cluster Configuration* deployment files defines the Tanzu Management Cluster Configuration for (Azure, AWS, vSphere and Docker) environments, where the *Tanzu Demo Hub Configuration* defines the detail configuration of the TKG Workload cluster such as Kubernetes Version, Worker and Control Plance Nodes and Kubernetes Services such as (Harbor Registry, Contour Ingres, Kubeapps etc.). 
 ```
 Tanzu Demo Hub Configuration
 -----------------------------------------------------------------------------------------------------------------------------------
@@ -13,7 +11,7 @@ tce-tanzu-demo-hub-0.9.1.cfg               ##  Tanzu Demo Hub (TDH) Service Conf
 tce-tanzu-tap-demo-1.0.1.cfg               ##  Tanzu Applicaiton Platform (1.0.1) on TCE-0.10.0 
 minikube-tanzu-demo-hub.cfg                ##  Minikube Deployment Configuration 
 
-Tanzi Management Cluster Configuration
+Tanzu Management Cluster Configuration
 -----------------------------------------------------------------------------------------------------------------------------------
 tkgmc-aws-dev.cfg                          ##  Tanzu Management Cluster on AWS Deployment Config (dev-template) 
 tkgmc-aws-prod.cfg                         ##  Tanzu Management Cluster on AWS Deployment Config (prod-template) 
@@ -21,5 +19,8 @@ tkgmc-azure-dev.cfg                        ##  Tanzu Management Cluster on Azure
 tkgmc-azure-prod.cfg                       ##  Tanzu Management Cluster on Azure Deployment Config (prod-template) 
 tkgmc-vsphere-dev.cfg                      ##  Tanzu Management Cluster on vSphere Service (TKGs) Deployment Config (dev-template) 
 tcemc-docker-dev.cfg                       ##  Tanzu Management Cluster on docker (TCE) Deployment Config (dev-template) 
+
+Tanzu Mission Control (TMC)  Management Cluster Configuration
+-----------------------------------------------------------------------------------------------------------------------------------
 tmc-aws-awshosted.cfg                      ##  TMC Management Cluster on AWS Deployment Config (dev-template)x 
 ```
