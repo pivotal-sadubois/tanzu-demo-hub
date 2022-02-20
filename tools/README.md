@@ -2,8 +2,15 @@
 
 The TDH Tools container contain all the Tools and Utilities requires to operate and run Tanzu Demo Hub Environment and Demos. Each version of the TDH Tools Container contains its own version of tools depending on the environment (Tanzu Kubernetes Grid / Tanzu Comnunity Edition) and its Tanzu CLI Version. The have seperate config files (ie. $HOME/.tdh-tools-tce-1.4.1 or $HOME/.tdh-tools-tce-1.5.1).
 
-## TDH Tools and Utilites*
+## TDH Tools and Utilites Container
 The followin Tools and Utilities have been installed withing the TDH Tools Container. The major difference is the Tanzu CLI which differs in every version of the container.
+```
+tools/tdh-tools-tkg-1.5.1.sh         ## Tanzu Kubernetes Grid 1.4.1
+tools/tdh-tools-tkg-1.4.1.sh         ## Tanzu Kubernetes Grid 1.5.1
+tools/tdh-tools-tce-0.10.0.sh        ## Tanzu Comnunity Edition 0.10.0
+tools/tdh-tools-tce-0.9.1.sh         ## Tanzu Comnunity Edition 0.9.1
+```
+The Tools & Utilites within the TDH Tools Container are releated to the TKG/TCE Release and the Tanzu CLI Utility
 
 ```
 TDH Tools and Utilities                                              TKG-1.4.1  TKG-1.5.1  TCE-0.8.1  TCE-0.10.0 
@@ -23,6 +30,7 @@ vSphere CLI (GOVC)                                                     0.27.2   
 Microsft Azure CLI (az)                                                latest     latest     latest     latest 
 Amazon AWS CLI (aws)                                                   latest     latest     latest     latest 
 ```
+
 
 ## Using the TDH Tools Container
 ```
