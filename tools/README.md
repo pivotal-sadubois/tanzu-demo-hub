@@ -1,9 +1,8 @@
 # Tanzu Demo Hub - TDH Tools Container
 
-
 The TDH Tools container contain all the Tools and Utilities requires to operate and run Tanzu Demo Hub Environment and Demos. Each version of the TDH Tools Container contains its own version of tools depending on the environment (Tanzu Kubernetes Grid / Tanzu Comnunity Edition) and its Tanzu CLI Version. The have seperate config files (ie. $HOME/.tdh-tools-tce-1.4.1 or $HOME/.tdh-tools-tce-1.5.1).
 
-#TDH Tools and Utilites*
+## TDH Tools and Utilites*
 The followin Tools and Utilities have been installed withing the TDH Tools Container. The major difference is the Tanzu CLI which differs in every version of the container.
 
 ```
@@ -25,7 +24,15 @@ Microsft Azure CLI (az)                                                latest   
 Amazon AWS CLI (aws)                                                   latest     latest     latest     latest 
 ```
 
-# TDH Tools Containers releated Files and Directories
+## Using the TDH Tools Container
+```
+cd <tanzu-demo-hub-home-dir>
+./tools/tdh-tools-tkg-1.4.1.sh --help
+
+```
+
+
+## TDH Tools Containers releated Files and Directories
 Thw following list reflects a list of files and directories releated to the TDH Tools Container Configuration, Building and Runtime Envitonment. The $VERSION variable represents the TDH Tools Container Version that is basing on the TKG / TCE Releease ie. 1.4.1 (TKG) / 0.10.0 (TCE). 
 ```
 TDH Tools Container for Tanzu Kubernetes Grid (TKG) Files and Directories
@@ -51,11 +58,11 @@ $TDH_HOME/.tanzu-demo-hub/cache/                            ## TDH Tools Contain
 $HOME/.tdh-tools-tce-${VERSION}                             ## TDH Tools Container - Tools & Utility Config (dotfiles)
 ```
 
-# TDH Tools Environment Config (dotfiles)
+## TDH Tools Environment Config (dotfiles)
 The TDH Tools Container (dotfiles) represent a seperate configuration for all the Tools & Utilites installed in the container. These directories will be mounted from the users $HOME directory to the TDH Tools Container at Runtime. The TDH_TOOLS_PATH variable stands for the TDH Tools Container (.tdh-tools-tkg-${VERSION} or .tdh-tools-tce-${VERSION}).
 
 ```
-File/Directories                                                     ## Description 
+File/Directories                                                     Description 
 ------------------------------------------------------------------------------------------------------------------------
 $HOME/$TDH_TOOLS_PATH/.cache:$HOME/.cache                            ## Cached Tanzu Confif 
 $HOME/$TDH_TOOLS_PATH/.config:$HOME/.config                          ## Configuraiton for HELM and Tanzu 
