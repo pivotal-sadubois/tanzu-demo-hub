@@ -8,7 +8,7 @@ The followin Tools and Utilities have been installed withing the TDH Tools Conta
 
 | TDH Tools and Utilities | TKG 1.4.1, TKG 1.5.1, TCE 0.8.1, TCE 0.10.0 |
 | --- | --- | 
-| Tanzu Mission Control CLI | 0.42, 0.42, 0.42, 0.42 ]
+| Tanzu Mission Control CLI | 0.42, 0.42, 0.42, 0.42 |
 | Build Service Version | 1.4.2, 1.4.2, 1.4.2, 1.4.2 |
 | Build Service Tools (kp) | 0.4.2, 0.4.2, 0.4.2, 0.4.2 |
 | Tantzu CLI Bundle | 1.4.1, 1.4.1, 1.5.1, 0.9.1, 0.10.0 |
@@ -28,6 +28,29 @@ CertManager (Let's Enscript Wildcard Certificates)
 This is a comment
 
 *TDH Tools Container for Tanzu Kubernetes Grid (TKG) Files and Directories*
+
+```
+        $TDH_HOME/tools/tdh-tools/tdh-tools-tkg-${VERSION}          ## TDH Tools Container - Start script
+        $TDH_HOME/tools/tdh-tools/tdh-tools-tkg-cleanup-${VERSION}  ## TDH Tools Container - Cleanup script
+        $TDH_HOME/files/tdh-tools/tdh-tools-tkg-${VERSION}.cfg      ## TDH Tools Container (dotfiles) - Tools & Utility Versions
+        $TDH_HOME/files/tdh-tools/Dockerfile-tkg-${VERSION}         ## TDH Tools Container Dockerfile
+        /tmp/tdh-tools-tkg-${VERSION}                               ## TDH Tools Container - Docker Build Directory
+        $HOME/.tdh-tools-tkg-${VERSION}                             ## TDH Tools Container - Tools & Utility Config (dotfiles) 
+```
+
+glaasdasd
+
+```
+
+$TDH_HOME/tools/tdh-tools/tdh-tools-tkg-${VERSION}          ## TDH Tools Container - Start script 
+$TDH_HOME/tools/tdh-tools/tdh-tools-tkg-cleanup-${VERSION}  ## TDH Tools Container - Cleanup script
+$TDH_HOME/files/tdh-tools/tdh-tools-tkg-${VERSION}.cfg      ## TDH Tools Container (dotfiles) - Tools & Utility Versions
+$TDH_HOME/files/tdh-tools/Dockerfile-tkg-${VERSION}         ## TDH Tools Container Dockerfile
+/tmp/tdh-tools-tkg-${VERSION}                               ## TDH Tools Container - Docker Build Directory
+$HOME/.tdh-tools-tkg-${VERSION}                             ## TDH Tools Container - Tools & Utility Config (dotfiles) 
+
+...
+
 | Files | Description |
 | --- | --- |
 | $TDH_HOME/tools/tdh-tools/tdh-tools-tkg-${VERSION} | TDH Tools Container - Start script |
