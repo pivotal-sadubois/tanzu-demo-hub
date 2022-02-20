@@ -1,9 +1,14 @@
 # Tanzu Demo Hub - TDH Tools Container
 
+| TDH Tools Configureation | TKG 1.4.1 | TKG 1.5.1 | TCE 0.8.1 | TCE 0.10.0 |
+| --- | --- | --- | --- |
+| Tanzu Mission Control CLI | 1.4.1 | 1.5.1 | 0.9.1 | 0.10.0 |
+
+
 The TDH Tools container contain all the Tools and Utilities requires to operate and run Tanzu Demo Hub Environment and Demos. 
 
 | TDH Tools Configureation | TKG 1.4.1 | TKG 1.5.1 | TCE 0.8.1 | TCE 0.10.0 |
-| --- | --- |
+| --- | --- | --- | --- |
 | Tanzu Mission Control CLI | 1.4.1 | 1.5.1 | 0.9.1 | 0.10.0 |
 | Build Service Version | 1.4.2 | 1.4.2 | 1.4.2 | 1.4.2 |
 | Build Service Tools (kp) | 0.4.2 | 0.4.2 | 0.4.2 | 0.4.2 |
