@@ -25,8 +25,8 @@ Microsft Azure CLI (az)                                                latest   
 Amazon AWS CLI (aws)                                                   latest     latest     latest     latest 
 ```
 
-#TDH Tools Containers releated Files and Directories
-Thw following list reflects a list of files and directories releated to the TDH Tools Container Configuration, Building and Runtime Envitonment. 
+# TDH Tools Containers releated Files and Directories
+Thw following list reflects a list of files and directories releated to the TDH Tools Container Configuration, Building and Runtime Envitonment. The $VERSION variable represents the TDH Tools Container Version that is basing on the TKG / TCE Releease ie. 1.4.1 (TKG) / 0.10.0 (TCE). 
 ```
 TDH Tools Container for Tanzu Kubernetes Grid (TKG) Files and Directories
 ------------------------------------------------------------------------------------------------------------------------
@@ -51,9 +51,10 @@ $TDH_HOME/.tanzu-demo-hub/cache/                            ## TDH Tools Contain
 $HOME/.tdh-tools-tce-${VERSION}                             ## TDH Tools Container - Tools & Utility Config (dotfiles)
 ```
 
-#TDH Tools Environment Config (dotfiles)
+# TDH Tools Environment Config (dotfiles)
 The TDH Tools Container (dotfiles) represent a seperate configuration for all the Tools & Utilites installed in the container. These directories will be mounted from the users $HOME directory to the TDH Tools Container at Runtime. The TDH_TOOLS_PATH variable stands for the TDH Tools Container (.tdh-tools-tkg-${VERSION} or .tdh-tools-tce-${VERSION}).
 
+```
 File/Directories                                                     ## Description 
 ------------------------------------------------------------------------------------------------------------------------
 $HOME/$TDH_TOOLS_PATH/.cache:$HOME/.cache                            ## Cached Tanzu Confif 
@@ -75,4 +76,5 @@ $HOME/$TDH_TOOLS_PATH/.azure:$HOME/.azure                            ## Microsof
 $HOME/$TDH_TOOLS_PATH/.cluster-api:$HOME/.cluster-api                ## ClusterAPI (clusterctl) Configuration |
 $HOME/$TDH_TOOLS_PATH/.vmware-cna-saas:$HOME/.vmware-cna-saas        ## Tanzu Mission Contro (TMC) Login Credentials |
 $HOME/$TDH_TOOLS_PATH/tmp:/tmp                                       ## Keep the /tmp directory persistent |
+```
 
