@@ -1,5 +1,5 @@
 # Tanzu Demo Hub - Deployment Files
-There are two different deployment files within the Tanzu Demo Hub Environment. The *Tanzu Management Cluster Configuration* deployment files defines the Tanzu Management Cluster Configuration for (Azure, AWS, vSphere and Docker) environments, where the *Tanzu Demo Hub Configuration* defines the detail configuration of the TKG Workload cluster such as Kubernetes Version, Worker and Control Plance Nodes and Kubernetes Services such as (Harbor Registry, Contour Ingres, Kubeapps etc.). 
+There are two different deployment files within the Tanzu Demo Hub Environment. The **Tanzu Management Cluster Configuration** deployment files defines the Tanzu Management Cluster Configuration for (Azure, AWS, vSphere and Docker) environments, where the **Tanzu Demo Hub Configuration** defines the detail configuration of the TKG Workload cluster such as Kubernetes Version, Worker and Control Plance Nodes and Kubernetes Services such as (Harbor Registry, Contour Ingres, Kubeapps etc.). 
 ```
 Tanzu Demo Hub Configuration
 -----------------------------------------------------------------------------------------------------------------------------------
