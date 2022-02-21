@@ -791,7 +791,7 @@ If an integration into Tanzu Mission Control is planned (recommended) your TMC c
 export TMC_ACCOUNT_NAME_AWS=sadubois-aws
 export TMC_PROVISIONER_NAME=sadubois-aws
 export TMC_SSH_KEY_NAME_AWS=tanzu-demo-hub
-export TMC_SERVICE_TOKEN="45YWzUCd0ICo2ZKSKtJ9hEIlPuwWPma4C0d7RI2wS8y7AYE6H941as668Wqyi80F" #sadubois@pivoal.io
+export TMC_SERVICE_TOKEN="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" 
 export TMC_CONTEXT_NAME=vmware-cloud-tmc
 ```
 Tanzu Kubernetes Grid recommends the integration in either LDAP or OIDC Idendity Provider. LDAP will be configured and installed on the Jump Server where 
@@ -801,9 +801,9 @@ OIDC requires an external Identity Provider sich as OKTA. A free account can be 
 ######################################### IDENTITY MANAGEMENT (OIDC/LDAP) ###############################################
 #########################################################################################################################
 
-export TDH_OKTA_SECRET_ID="=0oalw23ymlHT9IDAf5d6"
-export TDH_OKTA_CLIENT_SECRET="RcSa1fRp6yNNe6Blc7pykWe-bScqG4qPvDklbe_A"
-export TDH_OKTA_URL="https://vmware-tdh.okta.com"
+export TDH_OKTA_SECRET_ID="=xxxxxxxxxxxxxxxxxxxx""
+export TDH_OKTA_CLIENT_SECRET="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+export TDH_OKTA_URL="https://mydomain.okta.com"
 export TDH_OKTA_SCOPES="openid,groups,email"
 export TDH_OKTA_USERNAME_CLAIM="code"
 export TDH_OKTA_GROUP_CLAIM="groups" 
