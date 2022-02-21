@@ -1873,8 +1873,9 @@ checkTDHAccess() {
         else
           echo "       => aws configure"
         fi
+
+        exit 1
       fi
-      exit 1
     fi
 
     if [ -d $HOME/.aws -a -f $HOME/.aws/credentials ]; then 
@@ -4857,7 +4858,7 @@ echo gaga4
     kubectl get clusterrolebinding -o json > /tmp/output.json
     nam=$(jq -r --arg key "tanzu-demo-hub-privileged-cluster-role-binding" '.items[].metadata | select(.name == $key).name' /tmp/output.json)
     if [ "$nam" != "tanzu-demo-hub-privileged-cluster-role-binding" ]; then
-      oubectl create clusterrolebinding tanzu-demo-hub-privileged-cluster-role-binding \
+      kubectl create clusterrolebinding tanzu-demo-hub-privileged-cluster-role-binding \
               --clusterrole=vmware-system-tmc-psp-privileged --group=system:authenticated
     fi
   
@@ -6142,7 +6143,6 @@ installTanzuDataPostgres() {
     ########################################### INSTALL POSTGRES OPERATOR ###################################################
     #########################################################################################################################
 
-#gugu
     if [ "$TDH_SERVICE_REGISTRY_HARBOR" == "true" ]; then
       # DNS_HARBOR=$(getConfigMap tanzu-demo-hub TDH_HARBOR_REGISTRY_DNS_HARBOR)
       TDH_HARBOR_REGISTRY_DNS_HARBOR=$(getConfigMap tanzu-demo-hub TDH_HARBOR_REGISTRY_DNS_HARBOR)
@@ -6156,7 +6156,6 @@ installTanzuDataPostgres() {
         let cnt=cnt+1
       done
 
-#gugu
       if [ $ret -ne 0 ]; then
         logMessages /tmp/error.log
         echo "ERROR: Docker login does not work 1"
@@ -8743,42 +8742,47 @@ verify_docker() {
 
 tdh_tools_build() {
   MODE=$1
+  TOOLS_VERSION=$2
   REBUILD_REQUIRED=0
   REBUILD_REQUIRED_SOFTWARE=0
   verify_docker
   checkTDHenvironment
 
-#gugu
   [ "$(uname -p)" == "arm" ] && ARCH=arm64 || ARCH=amd64
 
   if [ "$MODE" == "tce" ]; then 
+#gugu
     BUILD_MODE=tce
-    TDH_TOOLS_DOCKERFILE=Dockerfile-tce
-    TDH_TOOLS_IMAGE=tdh-tools-tce
-    [ -f files/tdh-tools/tdh-tools-tce.cfg ] && . files/tdh-tools/tdh-tools-tce.cfg
+    MACHINE=$(uname -m)
+    TDH_TOOLS_TAG=$(echo $TOOLS_VERSION | sed 's/^v//g') 
+    TDH_TOOLS_IMAGE=tdh-tools-${BUILD_MODE}-$TDH_TOOLS_TAG
+    TDH_TOOLS_DOCKERFILE=Dockerfile-${BUILD_MODE}-$TDH_TOOLS_TAG
+    [ -f files/tdh-tools/tdh-tools-${BUILD_MODE}-${TDH_TOOLS_TAG}.cfg ] && . files/tdh-tools/tdh-tools-${BUILD_MODE}-${TDH_TOOLS_TAG}.cfg
 
     TCE_DOWNLOAD_URL=https://github.com/vmware-tanzu/community-edition/releases/download/${TKG_COMNUNITY_EDITION_VERSION}
     TCE_LINUX_PACKAGE=tce-linux-amd64-${TKG_COMNUNITY_EDITION_VERSION}
     TCE_DARWIN_PACKAGE=tce-darwin-amd64-${TKG_COMNUNITY_EDITION_VERSION}
-    TDH_DOCKER_FILES=/tmp/tdh-tools-tce
+    TDH_DOCKER_FILES=/tmp/tdh-tools-tce-$TDH_TOOLS_TAG
     TDH_DOCKER_CACHE=$HOME/.tanzu-demo-hub/cache
     [ ! -d $TDH_DOCKER_CACHE ] && mkdir -p $TDH_DOCKER_CACHE
   fi
 
   if [ "$MODE" == "tkg" ]; then 
-    TDH_TOOLS_DOCKERFILE=Dockerfile
-    TDH_TOOLS_IMAGE=tdh-tools
     BUILD_MODE=tkg
-    [ -f files/tdh-tools/tdh-tools.cfg ] && . files/tdh-tools/tdh-tools.cfg
-    TDH_DOCKER_FILES=/tmp/tdh-tools
+    MACHINE=$(uname -m)
+    TDH_TOOLS_TAG=$TOOLS_VERSION
+    TDH_TOOLS_IMAGE=tdh-tools-${BUILD_MODE}-$TDH_TOOLS_TAG
+    TDH_TOOLS_DOCKERFILE=Dockerfile-${BUILD_MODE}-$TDH_TOOLS_TAG
+    [ -f files/tdh-tools/tdh-tools-${BUILD_MODE}-${TDH_TOOLS_TAG}.cfg ] && . files/tdh-tools/tdh-tools-${BUILD_MODE}-${TDH_TOOLS_TAG}.cfg
+    TDH_DOCKER_FILES=/tmp/tdh-tools-${BUILD_MODE}-$TDH_TOOLS_TAG
     TDH_DOCKER_CACHE=$HOME/.tanzu-demo-hub/cache
     [ ! -d $TDH_DOCKER_CACHE ] && mkdir -p $TDH_DOCKER_CACHE
   fi
+#gugu
 
   mkdir -p $TDH_DOCKER_FILES
   cp files/tdh-tools/$TDH_TOOLS_DOCKERFILE       $TDH_DOCKER_FILES/Dockerfile
   cp files/tdh-tools/wrapdocker                  $TDH_DOCKER_FILES
-  cp files/tdh-tools/tmc                         $TDH_DOCKER_FILES
   cp files/tdh-tools/jenkins-cli.jar             $TDH_DOCKER_FILES
   cp files/tdh-tools/vmware-ovftool.tar          $TDH_DOCKER_FILES
   DOCKER_CHKSUM=$(sum $TDHPATH/files/tdh-tools/$TDH_TOOLS_DOCKERFILE | awk '{ print $1 }')
@@ -8792,18 +8796,16 @@ tdh_tools_build() {
   [ "$TDH_SERVICE_BUILD_SERVICE_DEPENDANCIES" == "" ] && TDH_SERVICE_BUILD_SERVICE_DEPENDANCIES=0.3.0
   [ "$TKG_TANZU_KUBERNETES_GRID" == "" ] && TKG_TANZU_KUBERNETES_GRID=1.4.0
 
-  if [ $BUILD_MODE == "tce" ]; then
-    . files/tdh-tools/tdh-tools-tce.cfg
-  else
-    . files/tdh-tools/tdh-tools.cfg
-  fi
-
-  messageTitle "TDH Tools Configureation (files/tdh-tools/$TDH_TOOLS.cfg)"
+  messageTitle "TDH Tools Configureation (files/tdh-tools/${TDH_TOOLS}.cfg)"
   messagePrint " ▪ Tanzu Mission Control CLI"                                  "$TMC_CLI"
   messagePrint " ▪ Build Service Version"                                      "$TDH_SERVICE_BUILD_SERVICE_VERSION"
   messagePrint " ▪ Build Service Tools (kp)"                                   "$TDH_SERVICE_BUILD_SERVICE_KP"
-  messagePrint " ▪ Build Service Dependancies"                                 "$TDH_SERVICE_BUILD_SERVICE_DEPENDANCIES"
-  messagePrint " ▪ Tantzu CLI Bundle"                                          "$TKG_TANZU_KUBERNETES_GRID"
+  #messagePrint " ▪ Build Service Dependancies"                                 "$TDH_SERVICE_BUILD_SERVICE_DEPENDANCIES"
+  if [ "$MODE" == "tkg" ]; then
+    messagePrint " ▪ Tantzu CLI Bundle"                                        "$TKG_TANZU_KUBERNETES_GRID"
+  else
+    messagePrint " ▪ Tantzu Comnunity Edition CLI Bundle"                      "$(echo $TKG_COMNUNITY_EDITION_VERSION | sed 's/^v//g')"
+  fi
   messagePrint " ▪ Carvel Tools: - Handle multiple k8s Ressources (kapp)"      "$TDH_CARVEL_KAPP"
   messagePrint " ▪ Carvel Tools: - Build/Reference container images (kbld)"    "$TDH_CARVEL_KBLD"
   messagePrint " ▪ Carvel Tools: - Template Overlay for k8s config (ytt)"      "$TDH_CARVEL_YTT"
@@ -8971,10 +8973,15 @@ tdh_tools_build() {
         exit 1
       else
         ln -s $filename $TDH_DOCKER_CACHE/tmc-$TMC_CLI/tmc-linux-$TMC_CLI
+        cp $TDH_DOCKER_CACHE/tmc-$TMC_CLI/tmc-linux-$TMC_CLI  $TDH_DOCKER_FILES/tmc
+        chmod a+x $TDH_DOCKER_FILES/tmc
       fi
 
       REBUILD_REQUIRED_SOFTWARE=1       ## REBUILD REQUIRED BECAUSE OF SOFTWARE CHANGE
     fi
+  else
+    cp $TDH_DOCKER_CACHE/tmc-$TMC_CLI/tmc-linux-$TMC_CLI  $TDH_DOCKER_FILES/tmc
+    chmod a+x $TDH_DOCKER_FILES/tmc
   fi
 
   if [ ! -e $TDH_DOCKER_CACHE/clusterctl/clusterctl-linux-amd64-$TDH_CLUSTERCTL ]; then 
@@ -9062,96 +9069,137 @@ tdh_tools_build() {
     chmod a+x $TDH_DOCKER_FILES/$TDH_FILE_TAG
   fi
 
-  # --- TANZU CARVEL TOOLS (imgpkg) BINARY ---
-  TDH_BNDL_NAM="imgpkg"
-  TDH_BNDL_VER=$TDH_CARVEL_IMGPKG
-  TDH_FILE_TAG="$TDH_BNDL_NAM"
-  TDH_FILE_STR="${TDH_FILE_TAG} - Linux"
-  TDH_FILE_VER=$TDH_CARVEL_IMGPKG
-  TDH_FILE_NAM="$TDH_FILE_TAG-linux-amd64-$TDH_FILE_VER"
-
-  if [ ! -s $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER/$TDH_FILE_NAM ]; then
-    downloadFromPivnet $TDH_BNDL_NAM $TDH_BNDL_VER "$TDH_FILE_VER" "${TDH_FILE_STR}"
-    if [ -s /tmp/$TDH_FILE_NAM ]; then
-      [ ! -d $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER ] && mkdir -p $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER
-      mv /tmp/$TDH_FILE_NAM $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER
+  if [ $BUILD_MODE == "tce" ]; then
+    # --- TANZU CARVEL TOOLS (imgpkg) BINARY ---
+    TDH_BNDL_NAM="imgpkg"
+    TDH_BNDL_VER=$TDH_CARVEL_IMGPKG
+    TDH_FILE_TAG="$TDH_BNDL_NAM"
+    TDH_FILE_VER=$TDH_CARVEL_IMGPKG
+    #TDH_FILE_STR="${TDH_FILE_TAG} - Linux"
+    #TDH_FILE_NAM="$TDH_FILE_TAG-linux-amd64-$TDH_FILE_VER"
+  
+    MACHINE=x86_64 ## sadbois 21.02.2022 - HACK as there is not yet an arm package on pivnet
+    if [ "$MACHINE" == "arm" ]; then
+      TDH_FILE_STR="$TDH_FILE_TAG-linux-arm64-$TDH_FILE_VER"
+      TDH_FILE_NAM="$TDH_FILE_TAG-linux-arm64-$TDH_FILE_VER"
+      TDH_FILE_ALT="$TDH_FILE_TAG-linux-arm64"
+    else
+      TDH_FILE_STR="${TDH_FILE_TAG} - Linux"
+      TDH_FILE_NAM="$TDH_FILE_TAG-linux-amd64-$TDH_FILE_VER"
+      TDH_FILE_ALT="$TDH_FILE_TAG-linux-amd64"
+    fi
+  
+    if [ ! -s $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER/$TDH_FILE_NAM ]; then
+      downloadFromPivnet $TDH_BNDL_NAM $TDH_BNDL_VER "$TDH_FILE_VER" "${TDH_FILE_STR}"
+      [ -s /tmp/$TDH_FILE_ALT ] && mv /tmp/$TDH_FILE_ALT /tmp/$TDH_FILE_NAM
+      if [ -s /tmp/$TDH_FILE_NAM ]; then
+        [ ! -d $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER ] && mkdir -p $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER
+        mv /tmp/$TDH_FILE_NAM $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER
+        cp $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER/$TDH_FILE_NAM $TDH_DOCKER_FILES/$TDH_FILE_TAG
+        chmod a+x $TDH_DOCKER_FILES/$TDH_FILE_TAG
+      fi
+  
+      REBUILD_REQUIRED_SOFTWARE=1       ## REBUILD REQUIRED BECAUSE OF SOFTWARE CHANGE
+    else
+        cp $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER/$TDH_FILE_NAM $TDH_DOCKER_FILES/$TDH_FILE_TAG
+      chmod a+x $TDH_DOCKER_FILES/$TDH_FILE_TAG
+    fi
+  
+    # --- TANZU CARVEL TOOLS (kbld) BINARY ---
+    TDH_BNDL_NAM="kbld"
+    TDH_BNDL_VER=$TDH_CARVEL_KBLD
+    TDH_FILE_TAG="$TDH_BNDL_NAM"
+    TDH_FILE_VER=$TDH_BNDL_VER
+  
+    if [ "$MACHINE" == "arm" ]; then
+      TDH_FILE_STR="$TDH_FILE_TAG-linux-arm64-$TDH_FILE_VER"
+      TDH_FILE_NAM="$TDH_FILE_TAG-linux-arm64-$TDH_FILE_VER"
+      TDH_FILE_ALT="$TDH_FILE_TAG-linux-arm64"
+    else
+      TDH_FILE_STR="${TDH_FILE_TAG} - Linux"
+      TDH_FILE_NAM="$TDH_FILE_TAG-linux-amd64-$TDH_FILE_VER"
+      TDH_FILE_ALT="$TDH_FILE_TAG-linux-amd64"
+    fi
+  
+    if [ ! -s $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER/$TDH_FILE_NAM ]; then
+      downloadFromPivnet $TDH_BNDL_NAM $TDH_BNDL_VER "$TDH_FILE_VER" "${TDH_FILE_STR}"
+      [ -s /tmp/$TDH_FILE_ALT ] && mv /tmp/$TDH_FILE_ALT /tmp/$TDH_FILE_NAM
+      if [ -s /tmp/$TDH_FILE_NAM ]; then
+        [ ! -d $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER ] && mkdir -p $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER
+        mv /tmp/$TDH_FILE_NAM $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER
+        cp $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER/$TDH_FILE_NAM $TDH_DOCKER_FILES/$TDH_FILE_TAG
+        chmod a+x $TDH_DOCKER_FILES/$TDH_FILE_TAG
+      fi
+  
+      REBUILD_REQUIRED_SOFTWARE=1       ## REBUILD REQUIRED BECAUSE OF SOFTWARE CHANGE
+    else
       cp $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER/$TDH_FILE_NAM $TDH_DOCKER_FILES/$TDH_FILE_TAG
       chmod a+x $TDH_DOCKER_FILES/$TDH_FILE_TAG
     fi
 
-    REBUILD_REQUIRED_SOFTWARE=1       ## REBUILD REQUIRED BECAUSE OF SOFTWARE CHANGE
-  else
-    cp $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER/$TDH_FILE_NAM $TDH_DOCKER_FILES/$TDH_FILE_TAG
-    chmod a+x $TDH_DOCKER_FILES/$TDH_FILE_TAG
-  fi
-
-  # --- TANZU CARVEL TOOLS (kbld) BINARY ---
-  TDH_BNDL_NAM="kbld"
-  TDH_BNDL_VER=$TDH_CARVEL_KBLD
-  TDH_FILE_TAG="$TDH_BNDL_NAM"
-  TDH_FILE_STR="${TDH_FILE_TAG} - Linux"
-  TDH_FILE_VER=$TDH_BNDL_VER
-  TDH_FILE_NAM="$TDH_FILE_TAG-linux-amd64-$TDH_FILE_VER"
-
-  if [ ! -s $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER/$TDH_FILE_NAM ]; then
-    downloadFromPivnet $TDH_BNDL_NAM $TDH_BNDL_VER "$TDH_FILE_VER" "${TDH_FILE_STR}"
-    if [ -s /tmp/$TDH_FILE_NAM ]; then
-      [ ! -d $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER ] && mkdir -p $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER
-      mv /tmp/$TDH_FILE_NAM $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER
+    # --- TANZU CARVEL TOOLS (kbld) BINARY ---
+    TDH_BNDL_NAM="kapp"
+    TDH_BNDL_VER=$TDH_CARVEL_KAPP
+    TDH_FILE_TAG="$TDH_BNDL_NAM"
+    TDH_FILE_VER=$TDH_BNDL_VER
+  
+    if [ "$MACHINE" == "arm" ]; then
+      TDH_FILE_STR="$TDH_FILE_TAG-linux-arm64-$TDH_FILE_VER"
+      TDH_FILE_NAM="$TDH_FILE_TAG-linux-arm64-$TDH_FILE_VER"
+      TDH_FILE_ALT="$TDH_FILE_TAG-linux-arm64"
+    else
+      TDH_FILE_STR="${TDH_FILE_TAG} - Linux"
+      TDH_FILE_NAM="$TDH_FILE_TAG-linux-amd64-$TDH_FILE_VER"
+      TDH_FILE_ALT="$TDH_FILE_TAG-linux-amd64"
+    fi
+  
+    if [ ! -s $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER/$TDH_FILE_NAM ]; then
+      downloadFromPivnet $TDH_BNDL_NAM $TDH_BNDL_VER "$TDH_FILE_VER" "${TDH_FILE_STR}"
+      [ -s /tmp/$TDH_FILE_ALT ] && mv /tmp/$TDH_FILE_ALT /tmp/$TDH_FILE_NAM
+      if [ -s /tmp/$TDH_FILE_NAM ]; then
+        [ ! -d $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER ] && mkdir -p $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER
+        mv /tmp/$TDH_FILE_NAM $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER
+        cp $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER/$TDH_FILE_NAM $TDH_DOCKER_FILES/$TDH_FILE_TAG
+        chmod a+x $TDH_DOCKER_FILES/$TDH_FILE_TAG
+      fi
+  
+      REBUILD_REQUIRED_SOFTWARE=1       ## REBUILD REQUIRED BECAUSE OF SOFTWARE CHANGE
+    else
       cp $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER/$TDH_FILE_NAM $TDH_DOCKER_FILES/$TDH_FILE_TAG
       chmod a+x $TDH_DOCKER_FILES/$TDH_FILE_TAG
     fi
+  
+    # --- TANZU CARVEL TOOLS (kbld) BINARY ---
+    TDH_BNDL_NAM="ytt"
+    TDH_BNDL_VER=$TDH_CARVEL_YTT
+    TDH_FILE_TAG="$TDH_BNDL_NAM"
+    TDH_FILE_VER=$TDH_BNDL_VER
 
-    REBUILD_REQUIRED_SOFTWARE=1       ## REBUILD REQUIRED BECAUSE OF SOFTWARE CHANGE
-  else
-    cp $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER/$TDH_FILE_NAM $TDH_DOCKER_FILES/$TDH_FILE_TAG
-    chmod a+x $TDH_DOCKER_FILES/$TDH_FILE_TAG
-  fi
-
-  # --- TANZU CARVEL TOOLS (kbld) BINARY ---
-  TDH_BNDL_NAM="kapp"
-  TDH_BNDL_VER=$TDH_CARVEL_KAPP
-  TDH_FILE_TAG="$TDH_BNDL_NAM"
-  TDH_FILE_STR="${TDH_FILE_TAG} - Linux"
-  TDH_FILE_VER=$TDH_BNDL_VER
-  TDH_FILE_NAM="$TDH_FILE_TAG-linux-amd64-$TDH_FILE_VER"
-
-  if [ ! -s $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER/$TDH_FILE_NAM ]; then
-    downloadFromPivnet $TDH_BNDL_NAM $TDH_BNDL_VER "$TDH_FILE_VER" "${TDH_FILE_STR}"
-    if [ -s /tmp/$TDH_FILE_NAM ]; then
-      [ ! -d $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER ] && mkdir -p $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER
-      mv /tmp/$TDH_FILE_NAM $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER
+    if [ "$MACHINE" == "arm" ]; then
+      TDH_FILE_STR="$TDH_FILE_TAG-linux-arm64-$TDH_FILE_VER"
+      TDH_FILE_NAM="$TDH_FILE_TAG-linux-arm64-$TDH_FILE_VER"
+      TDH_FILE_ALT="$TDH_FILE_TAG-linux-arm64"
+    else
+      TDH_FILE_STR="${TDH_FILE_TAG} - Linux"
+      TDH_FILE_NAM="$TDH_FILE_TAG-linux-amd64-$TDH_FILE_VER"
+      TDH_FILE_ALT="$TDH_FILE_TAG-linux-amd64"
+    fi
+  
+    if [ ! -s $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER/$TDH_FILE_NAM ]; then
+      downloadFromPivnet $TDH_BNDL_NAM $TDH_BNDL_VER "$TDH_FILE_VER" "${TDH_FILE_STR}"
+      [ -s /tmp/$TDH_FILE_ALT ] && mv /tmp/$TDH_FILE_ALT /tmp/$TDH_FILE_NAM
+      if [ -s /tmp/$TDH_FILE_NAM ]; then
+        [ ! -d $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER ] && mkdir -p $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER
+        mv /tmp/$TDH_FILE_NAM $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER
+        cp $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER/$TDH_FILE_NAM $TDH_DOCKER_FILES/$TDH_FILE_TAG
+        chmod a+x $TDH_DOCKER_FILES/$TDH_FILE_TAG
+      fi
+  
+      REBUILD_REQUIRED_SOFTWARE=1       ## REBUILD REQUIRED BECAUSE OF SOFTWARE CHANGE
+    else
       cp $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER/$TDH_FILE_NAM $TDH_DOCKER_FILES/$TDH_FILE_TAG
       chmod a+x $TDH_DOCKER_FILES/$TDH_FILE_TAG
     fi
-
-    REBUILD_REQUIRED_SOFTWARE=1       ## REBUILD REQUIRED BECAUSE OF SOFTWARE CHANGE
-  else
-    cp $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER/$TDH_FILE_NAM $TDH_DOCKER_FILES/$TDH_FILE_TAG
-    chmod a+x $TDH_DOCKER_FILES/$TDH_FILE_TAG
-  fi
-
-  # --- TANZU CARVEL TOOLS (kbld) BINARY ---
-  TDH_BNDL_NAM="ytt"
-  TDH_BNDL_VER=$TDH_CARVEL_YTT
-  TDH_FILE_TAG="$TDH_BNDL_NAM"
-  TDH_FILE_STR="${TDH_FILE_TAG} - Linux"
-  TDH_FILE_VER=$TDH_BNDL_VER
-  TDH_FILE_NAM="$TDH_FILE_TAG-linux-amd64-$TDH_FILE_VER"
-
-  if [ ! -s $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER/$TDH_FILE_NAM ]; then
-    downloadFromPivnet $TDH_BNDL_NAM $TDH_BNDL_VER "$TDH_FILE_VER" "${TDH_FILE_STR}"
-    if [ -s /tmp/$TDH_FILE_NAM ]; then
-      [ ! -d $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER ] && mkdir -p $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER
-      mv /tmp/$TDH_FILE_NAM $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER
-      cp $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER/$TDH_FILE_NAM $TDH_DOCKER_FILES/$TDH_FILE_TAG
-      chmod a+x $TDH_DOCKER_FILES/$TDH_FILE_TAG
-    fi
-
-    REBUILD_REQUIRED_SOFTWARE=1       ## REBUILD REQUIRED BECAUSE OF SOFTWARE CHANGE
-  else
-    cp $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER/$TDH_FILE_NAM $TDH_DOCKER_FILES/$TDH_FILE_TAG
-    chmod a+x $TDH_DOCKER_FILES/$TDH_FILE_TAG
   fi
 
   if [ ! -s $TDH_DOCKER_FILES/kubectl-vsphere ]; then
@@ -9269,7 +9317,7 @@ tdh_tools_build() {
   chmod +x $TDH_DOCKER_FILES/govc
 
   if [ ! -s $TDH_DOCKER_FILES/ovftool ]; then
-     echo -e "\n\n\nyes" | nohup $TDHPATH/software/VMware-ovftool-4.4.1-16812187-lin.x86_64.bundle > /dev/null 2>&1
+    echo -e "\n\n\nyes" | nohup $TDHPATH/software/VMware-ovftool-4.4.1-16812187-lin.x86_64.bundle > /dev/null 2>&1
   fi
 
   #messagePrint " ▪ Docker Image ($TDH_TOOLS_IMAGE) Name / ID"                  "$TDH_TOOLS_IMAGE:latest / $DOCKER_IMAGE_LATEST_ID"
@@ -9306,33 +9354,58 @@ tdh_tools_build() {
     TCE_DOWNLOAD_URL=https://github.com/vmware-tanzu/community-edition/releases/download/${TKG_COMNUNITY_EDITION_VERSION}
     TCE_LINUX_PACKAGE=tce-linux-amd64-${TKG_COMNUNITY_EDITION_VERSION}
 
-    if [ ! -d $TDH_DOCKER_FILES/$TCE_LINUX_PACKAGE -o ! -f $TDH_DOCKER_FILES/$TCE_LINUX_PACKAGE/install.sh ]; then
-      rm -rf $TDH_DOCKER_FILES/$TCE_LINUX_PACKAGE
-      wget $TCE_DOWNLOAD_URL/${TCE_LINUX_PACKAGE}.tar.gz > /dev/null 2>&1
-      tar xvfz ${TCE_LINUX_PACKAGE}.tar.gz > /dev/null 2>&1
-      mv $TCE_LINUX_PACKAGE $TDH_DOCKER_FILES
-    fi
+    appname="tce"
+    filename="${appname}-linux-amd64"
+    version="$TKG_COMNUNITY_EDITION_VERSION"
+    if [ ! -s $TDH_DOCKER_CACHE/$appname/${filename}-${version}.tar.gz ]; then
+      messagePrint " ▪ Downloading Tanzu Comnunity Edition (TCE)"                                "${filename}.tar.gz"
+      [ ! -s $TDH_DOCKER_CACHE/$appname ] && mkdir -p $TDH_DOCKER_CACHE/$appname
 
-    if [ ! -h $TDH_DOCKER_FILES/tce-linux-amd64 ]; then
-      ln -s $TCE_LINUX_PACKAGE $TDH_DOCKER_FILES/tce-linux-amd64
+      wget -q $TCE_DOWNLOAD_URL/${TCE_LINUX_PACKAGE}.tar.gz \
+           -O /tmp/${filename}-${version}.tar.gz > /tmp/error.log 2>&1
+      if [ ! -s /tmp/${filename}-${version}.tar.gz ]; then
+        logMessages /tmp/error.log
+        echo "ERROR: failed to download ${filename}.tar.gz"
+        if [ "$NATIVE" == "0" ]; then
+          echo "       => tools/${TDH_TOOLS}.sh"
+          echo "          tdh-tools:/$ wget $TCE_DOWNLOAD_URL/${TCE_LINUX_PACKAGE}.tar.gz"
+          echo "          tdh-tools:/$ exit"
+        else
+          echo "       => wget $TCE_DOWNLOAD_URL/${TCE_LINUX_PACKAGE}.tar.gz"
+        fi
+  
+        exit 1
+      else
+        mv /tmp/${filename}-${version}.tar.gz $TDH_DOCKER_CACHE/$appname/
+        (cd $TDH_DOCKER_FILES; tar xvfz $TDH_DOCKER_CACHE/$appname/${filename}-${version}.tar.gz > /dev/null 2>&1)
+        rm -f $TDH_DOCKER_FILES/tce-linux-amd64
+        ln -s ${filename}-${version} $TDH_DOCKER_FILES/${filename}
+      fi
+  
+      REBUILD_REQUIRED_SOFTWARE=1       ## REBUILD REQUIRED BECAUSE OF SOFTWARE CHANGE
     fi
+  
+    (cd $TDH_DOCKER_FILES; tar xvfz $TDH_DOCKER_CACHE/$appname/${filename}-${version}.tar.gz > /dev/null 2>&1) 
+    rm -f $TDH_DOCKER_FILES/tce-linux-amd64
+    ln -s ${filename}-${version} $TDH_DOCKER_FILES/${filename}
   fi
 
   # --- POSTINSTALL SCRIPTS
   cp files/tdh-tools/tdh-postinstall-root.sh $TDH_DOCKER_FILES
   chmod a+x $TDH_DOCKER_FILES/tdh-postinstall-root.sh
 
-  cp files/tdh-tools/tdh-postinstall-user.sh $TDH_DOCKER_FILES
-  chmod a+x $TDH_DOCKER_FILES/tdh-postinstall-user.sh
+#gugu
+  if [ "$MODE" == "tkg" ]; then 
+    cp files/tdh-tools/tdh-postinstall-user-tkg-${TDH_TOOLS_TAG}.sh $TDH_DOCKER_FILES/tdh-postinstall-user.sh
+    chmod a+x $TDH_DOCKER_FILES/tdh-postinstall-user.sh
+  fi
 
-  cp files/tdh-tools/tdh-postinstall-user-tce.sh $TDH_DOCKER_FILES
-  chmod a+x $TDH_DOCKER_FILES/tdh-postinstall-user-tce.sh
+  if [ "$MODE" == "tce" ]; then 
+    cp files/tdh-tools/tdh-postinstall-user-tce-${TDH_TOOLS_TAG}.sh $TDH_DOCKER_FILES/tdh-postinstall-user.sh
+    chmod a+x $TDH_DOCKER_FILES/tdh-postinstall-user.sh
+  fi
 
   echo tdh-tools > $TDH_DOCKER_FILES/hostname
-
-  if [ $BUILD_MODE == "tap" ]; then
-echo gaga100
-  fi
 
   if [ $BUILD_MODE == "tkg" ]; then
     # --- CLEANUP ---
@@ -9345,9 +9418,11 @@ echo gaga100
       TANZU_CLI_BUNDLE=$TDH_DOCKER_FILES/tkg-${TKG_TANZU_KUBERNETES_GRID}
       TANZU_CLI_BUNDLE=$TANZU_DEMO_HUB_CACHE/tkg-${TKG_TANZU_KUBERNETES_GRID}
 
-      if [ ! -f $TANZU_CLI_BUNDLE/tanzu-cli-bundle-v${TKG_TANZU_KUBERNETES_GRID}-linux-amd64.tar -a \
-           ! -f $TANZU_CLI_BUNDLE/tanzu-cli-bundle-linux-amd64.tar ]; then 
+      [ -s $TANZU_CLI_BUNDLE/tanzu-cli-bundle-v${TKG_TANZU_KUBERNETES_GRID}-linux-amd64.tar.gz ] && gunzip $TANZU_CLI_BUNDLE/tanzu-cli-bundle-v${TKG_TANZU_KUBERNETES_GRID}-linux-amd64.tar
+      [ -s $TANZU_CLI_BUNDLE/tanzu-cli-bundle-linux-amd64.tar.gz ] && gunzip $TANZU_CLI_BUNDLE/tanzu-cli-bundle-linux-amd64.tar
 
+      if [ ! -f $TANZU_CLI_BUNDLE/tanzu-cli-bundle-v${TKG_TANZU_KUBERNETES_GRID}-linux-amd64.tar -a \
+           ! -f $TANZU_CLI_BUNDLE/tanzu-cli-bundle-linux-amd64.tar ]; then
         VMWCLI=/tmp/vmw-cli
 
         if [ ! -s $VMWCLI ]; then
@@ -9444,7 +9519,6 @@ echo gaga100
   
       REBUILD_REQUIRED=1
     fi
-
   fi
 
   if [ $REBUILD_REQUIRED -gt 0 ]; then 
@@ -9461,21 +9535,10 @@ echo gaga100
     docker container prune -f > /dev/null 2>&1
     docker system prune -f > /dev/null 2>&1
   
-#    messagePrint " ▪ Building TDH Tools docker container" "tdh-tools:CHKSUM-$DOCKER_CHKSUM"
-#    cd $TDH_DOCKER_FILES && docker build -q -t tdh-tools:CHKSUM-$DOCKER_CHKSUM \
-#      --build-arg UID=$(id -u) \
-#      --build-arg GID=$(id -g) \
-#      --build-arg USER=$USER \
-#      --build-arg HOME=$HOME \
-#      --build-arg TANZU_CLI=$vmwfile \
-#      --build-arg TANZU_DEMO_HUB=$TANZU_DEMO_HUB \
-#      --build-arg TDHPATH=$TDHPATH \
-#      --build-arg TZ=$(ls -l /etc/localtime | /usr/bin/cut -d '/' -f 8,9) $TDH_DOCKER_FILES > /dev/null 2>&1; ret=$?
-
-
     time1=$(echo "($(hourInSec)*360)+($(minInSec)*60)+$(secInSec)" | bc)
     messagePrint " ▪ Building TDH Tools docker container" "$TDH_TOOLS_IMAGE:CHKSUM-$DOCKER_CHKSUM"
-    cd $TDH_DOCKER_FILES && docker build -q -t $TDH_TOOLS_IMAGE:CHKSUM-$DOCKER_CHKSUM \
+    #cd $TDH_DOCKER_FILES && docker build -q -t $TDH_TOOLS_IMAGE:CHKSUM-$DOCKER_CHKSUM \
+    cd $TDH_DOCKER_FILES && docker build -t $TDH_TOOLS_IMAGE:CHKSUM-$DOCKER_CHKSUM \
       --build-arg UID=$(id -u) \
       --build-arg GID=$(id -g) \
       --build-arg USER=$USER \
@@ -10737,7 +10800,7 @@ TanzuPackage_LocalStorage() {
   PACKAGE_ID="$2"
   PACKAGE_DES="Local Storage (RWO AccessMode)"
 
-  cmdLoop tanzu package installed list -A -o json > /tmp/output.json
+  cmdLoop tanzu package installed list -A -o json > /tmp/output.json 2>/dev/null
   pkg=$(jq -r --arg key "$PACKAGE_NAME" '.[] | select(.name == $key).name' /tmp/output.json)
   if [ "$pkg" != "$PACKAGE_NAME" ]; then
     # --- DELETE SERVICE ACCOUNT IF IT EXIST ----
@@ -10801,7 +10864,7 @@ TanzuPackage_LocalStorage() {
     fi
   fi
 
-  cmdLoop tanzu package installed list -A -o json > /tmp/output.json
+  cmdLoop tanzu package installed list -A -o json > /tmp/output.json 2> /dev/null
   stt=$(jq -r --arg key "$PACKAGE_NAME" '.[] | select(.name == $key).name' /tmp/output.json)
   if [ "$stt" == "$PACKAGE_NAME" ]; then 
     cmdLoop tanzu package installed get $PACKAGE_NAME -n $PACKAGE_NAMESPACE -o json > /tmp/pkg.json
@@ -10847,7 +10910,7 @@ TanzuPackage_CertManager() {
   PACKAGE_ID=$2
   PACKAGE_DES="Certificate management (cert-manager)"
 
-  cmdLoop tanzu package installed list -A -o json > /tmp/output.json
+  cmdLoop tanzu package installed list -A -o json > /tmp/output.json 2>/dev/null
   pkg=$(jq -r --arg key "$PACKAGE_NAME" '.[] | select(.name == $key).name' /tmp/output.json)
   if [ "$pkg" != "$PACKAGE_NAME" ]; then
     cmdLoop tanzu package available list $PACKAGE_ID -A -o json > /tmp/output.json
@@ -10912,7 +10975,7 @@ TanzuPackage_CertManager() {
     fi
   fi
 
-  cmdLoop tanzu package installed list -A -o json > /tmp/output.json
+  cmdLoop tanzu package installed list -A -o json > /tmp/output.json 2>/dev/null
   stt=$(jq -r --arg key "$PACKAGE_NAME" '.[] | select(.name == $key).name' /tmp/output.json)
   if [ "$stt" == "$PACKAGE_NAME" ]; then
     while [ $cnt -lt 5 ]; do
@@ -10994,7 +11057,7 @@ TanzuPackage_Harbor () {
 
   #tanzu package installed delete harbor-pkg --namespace tanzu-system-packages
 
-  cmdLoop tanzu package installed list -A -o json > /tmp/output.json
+  cmdLoop tanzu package installed list -A -o json > /tmp/output.json 2>/dev/null
   pkg=$(jq -r --arg key "$PACKAGE_NAME" '.[] | select(.name == $key).name' /tmp/output.json)
   if [ "$pkg" != "$PACKAGE_NAME" ]; then
     messagePrint " ▪ Create Namespace"  "$NAMESPACE"
@@ -11111,9 +11174,8 @@ TanzuPackage_Harbor () {
       nam=$(jq -r --arg key "${PACKAGE_NAME}-${PACKAGE_NAMESPACE}-cluster-rolebinding" '.items[] | select(.metadata.name == $key).metadata.name' /tmp/output.json)
       [ "$nam" != "" ] && cmdLoop kubectl -n tanzu-system-packages delete clusterrolebinding $nam
 
-echo "tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $PACKAGE_NAMESPACE --version $package_ver --create-namespace --poll-timeout 20m --poll-interval 10s --values-file $HARBOR_VALUES --wait=true --verbose 9"
       tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $PACKAGE_NAMESPACE \
-             --version $package_ver --create-namespace --poll-timeout 20m --poll-interval 10s --log-file /tmp/harbor.log \
+             --version $package_ver --create-namespace --poll-timeout 20m --poll-interval 10s \
              --values-file $HARBOR_VALUES --wait=true --verbose 9 > /tmp/error.log 2>&1; ret=$?
       waitTanzuPackageReconsile $PACKAGE_NAME $PACKAGE_NAMESPACE; ret=$?
       if [ $ret -ne 0 ]; then
@@ -11153,7 +11215,7 @@ echo "tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace
   fi
 
 
-  cmdLoop tanzu package installed list -A -o json > /tmp/output.json
+  cmdLoop tanzu package installed list -A -o json > /tmp/output.json 2>/dev/null
   stt=$(jq -r --arg key "$PACKAGE_NAME" '.[] | select(.name == $key).name' /tmp/output.json)
   if [ "$stt" == "$PACKAGE_NAME" ]; then
     cmdLoop tanzu package installed get $PACKAGE_NAME -n $PACKAGE_NAMESPACE -o json > /tmp/pkg.json
@@ -11206,7 +11268,7 @@ TanzuPackage_Contour() {
   PACKAGE_ID=$2
   PACKAGE_DES="Contour ingress controller"
 
-  cmdLoop tanzu package installed list -A -o json > /tmp/output.json
+  cmdLoop tanzu package installed list -A -o json > /tmp/output.json 2>/dev/null
   pkg=$(jq -r --arg key "$PACKAGE_NAME" '.[] | select(.name == $key).name' /tmp/output.json)
   if [ "$pkg" != "$PACKAGE_NAME" ]; then
     cmdLoop tanzu package available list $PACKAGE_ID -A -o json > /tmp/output.json
@@ -11370,7 +11432,7 @@ TanzuPackage_Contour() {
     fi
   fi
 
-  cmdLoop tanzu package installed list -A -o json > /tmp/output.json
+  cmdLoop tanzu package installed list -A -o json > /tmp/output.json 2>/dev/null
   stt=$(jq -r --arg key "$PACKAGE_NAME" '.[] | select(.name == $key).name' /tmp/output.json)
   if [ "$stt" == "$PACKAGE_NAME" ]; then
     cmdLoop tanzu package installed get $PACKAGE_NAME -n $PACKAGE_NAMESPACE -o json > /tmp/pkg.json
@@ -11391,7 +11453,7 @@ TanzuPackage_Contour() {
   # --- VERIFY DNS DOMAIN ---
   verifyHostedZone ${TDH_ENVNAME}.$AWS_HOSTED_DNS_DOMAIN
 
-  [ "$TDH_TOOLS" == "tdh-tools" ] && CONTOUR_NS=tanzu-system-ingress || CONTOUR_NS=projectcontour
+  [ "$TDH_TOOLS_CONTAINER_TYPE" == "tkg" ] && CONTOUR_NS=tanzu-system-ingress || CONTOUR_NS=projectcontour
 
   ipa=""; cnt=0
   while [ "$ipa" == "" -a $cnt -lt 15 ]; do
@@ -11593,7 +11655,7 @@ runTDHtoolsDemos() {
   if [ $VOTE_TCE -gt $VOTE_TKG ]; then
     TOOLS_TLAG=tce 
     TDH_TOOLS=tdh-tools-tce
-    POSTSCRIPT="tdh-postinstall-user-tce.sh"
+    POSTSCRIPT="tdh-postinstall-user.sh"
     TDH_TOOLS_PATH=".${TDH_TOOLS}"
   else
     TOOLS_TLAG=tkg
@@ -11619,17 +11681,17 @@ runTDHtoolsDemos() {
                "-v /var/run/docker.sock:/var/run/docker.sock"                           ## REQIORED FOR DOCKER
                "-v $HOME/.tanzu-demo-hub:$HOME/.tanzu-demo-hub:rw"
                "-v $HOME/.tanzu-demo-hub.cfg:$HOME/.tanzu-demo-hub.cfg:ro"
-               "-v $HOME/$TDH_TOOLS_PATH/.cache:$HOME/.cache:rw"
+               "-v $HOME/$TDH_TOOLS_PATH/.cache:$HOME/.cache:rw"                        ## CACHED TANZU CONFIG
                "-v $HOME/$TDH_TOOLS_PATH/.config:$HOME/.config:rw"                      ## CONFIG FOR HELM AND TANZU
                "-v $HOME/$TDH_TOOLS_PATH/.kube:$HOME/.kube:rw"                          ## KUBERNETES CLUSTER CONTEXTS
                "-v $HOME/$TDH_TOOLS_PATH/.kube-tkg:$HOME/.kube-tkg:rw"                  ## TANZU MANAGEMENT CLUSTER CONTEXTS
-               "-v $HOME/$TDH_TOOLS_PATH/.local:$HOME/.local:rw"
-               "-v $HOME/$TDH_TOOLS_PATH/.tanzu:$HOME/.tanzu:rw"
-               "-v $HOME/$TDH_TOOLS_PATH/.terraform:$HOME/.terraform:rw"
-               "-v $HOME/$TDH_TOOLS_PATH/.terraform.d:$HOME/.terraform.d:rw"
-               "-v $HOME/$TDH_TOOLS_PATH/.s3cfg:$HOME/.s3cfg:rw"
-               "-v $HOME/$TDH_TOOLS_PATH/.govmomi:$HOME/.govmomi:rw"
-               "-v $HOME/$TDH_TOOLS_PATH/.gradle:$HOME/.gradle:rw"
+               "-v $HOME/$TDH_TOOLS_PATH/.local:$HOME/.local:rw"                        ## TANZU CLI CONFIG
+               "-v $HOME/$TDH_TOOLS_PATH/.tanzu:$HOME/.tanzu:rw"                        ## TANZU CONFIG (DEPRECATED)
+               "-v $HOME/$TDH_TOOLS_PATH/.terraform:$HOME/.terraform:rw"                ## TERRAFORM CONFIG
+               "-v $HOME/$TDH_TOOLS_PATH/.terraform.d:$HOME/.terraform.d:rw"            ## TERRAFORM CONFIG
+               "-v $HOME/$TDH_TOOLS_PATH/.s3cfg:$HOME/.s3cfg:rw"                        ## AWS S3 CONFIG
+               "-v $HOME/$TDH_TOOLS_PATH/.govmomi:$HOME/.govmomi:rw"                    ## GOVC CONFIG
+               "-v $HOME/$TDH_TOOLS_PATH/.gradle:$HOME/.gradle:rw"                      ## GRADLE CONFIG
                "-v $HOME/$TDH_TOOLS_PATH/.docker:$HOME/.docker:rw"                      ## DOCKER LOGIN CREDENTIALS
                "-v $HOME/$TDH_TOOLS_PATH/.mvn:$HOME/.mvn:rw"                            ## MAVEN 
                "-v $HOME/$TDH_TOOLS_PATH/.mc:$HOME/.mc:rw"                              ## MINIO CLIENT
@@ -11677,22 +11739,23 @@ runTDHtoolsDemos() {
 # ------------------------------------------------------------------------------------------
 runTDHtools() {
   TOOLS_TLAG="$1"
-  HEADER_TEXT="$2"
-  DOCKER_EXEC="$3"
-  DOCKER_ARGS="$4"
+  TOOLS_VERSION="$2"
+  HEADER_TEXT="$3"
+  DOCKER_EXEC="$4"
+  DOCKER_ARGS="$5"
 
   if [ "$TOOLS_TLAG" == "tce" -o "$TOOLS_TLAG" == "TCE" ]; then 
-    TDH_TOOLS=tdh-tools-tce 
-    POSTSCRIPT="tdh-postinstall-user-tce.sh"
+    TDH_TOOLS=tdh-tools-tce-$TOOLS_VERSION
+    POSTSCRIPT="tdh-postinstall-user.sh"
   fi
 
   if [ "$TOOLS_TLAG" == "tkg" -o "$TOOLS_TLAG" == "TKG" ]; then 
-    TDH_TOOLS=tdh-tools
+    TDH_TOOLS=tdh-tools-tkg-$TOOLS_VERSION
     POSTSCRIPT="tdh-postinstall-user.sh"
   fi
 
   if [ "$TOOLS_TLAG" == "tap" -o "$TOOLS_TLAG" == "TAP" ]; then 
-    TDH_TOOLS=tdh-tools-tap
+    TDH_TOOLS=tdh-tools-tap-$TOOLS_VERSION
     POSTSCRIPT="tdh-postinstall-user-tap.sh"
   fi
 
@@ -11707,7 +11770,7 @@ runTDHtools() {
     checkKubernetesServices registry_docker
 
     if [ $NATIVE -eq 0 ]; then
-      tdh_tools_build $TOOLS_TLAG
+      tdh_tools_build $TOOLS_TLAG $TOOLS_VERSION
       messagePrint " ▪ Running TDH Tools Docker Container" "$TDH_TOOLS:latest $TDHPATH/$CMD_EXEC $CMD_ARGS"
 
       cid=$(docker ps -a | grep $TDH_TOOLS:latest | awk '{ print $1 }')
@@ -12263,13 +12326,13 @@ waitTanzuPackageReconsile() {
   TANZU_PACKAGE=$1
   TANZU_NAMESPACE=$2
 
-  cmdLoop tanzu package installed list -A -o json > /tmp/output.json
+  cmdLoop tanzu package installed list -A -o json > /tmp/output.json 2>/dev/null
   pkg=$(jq -r --arg key "$TANZU_PACKAGE" '.[] | select(.name == $key).name' /tmp/output.json)
   if [ "$pkg" == "$pkg" ]; then
     cnt=0; stt="Reconciling"
     while [ "$stt" != "Reconcile succeeded" -a $cnt -lt 5 ]; do
 
-      tanzu package installed list -A -o json > /tmp/output.json
+      tanzu package installed list -A -o json > /tmp/output.json 2>/dev/null
       stt=$(jq -r --arg key "$TANZU_PACKAGE" '.[] | select(.name == $key).status' /tmp/output.json)
 
      if [ "$stt" != "Reconcile succeeded" -a "$stt" != "Reconciling" ]; then 
@@ -12298,7 +12361,7 @@ deleteTanzuPackage() {
   TANZU_PACKAGE=$1
   TANZU_NAMESPACE=$2
 
-  cmdLoop tanzu package installed list -A -o json > /tmp/output.json
+  cmdLoop tanzu package installed list -A -o json > /tmp/output.json 2>/dev/null
   pkg=$(jq -r --arg key "$TANZU_PACKAGE" '.[] | select(.name == $key).name' /tmp/output.json)
   if [ "$pkg" == "$TANZU_PACKAGE" ]; then
     cnt=0; ret=1 
@@ -12307,7 +12370,7 @@ deleteTanzuPackage() {
       tanzu package installed delete $TANZU_PACKAGE --namespace $TANZU_NAMESPACE -y > /dev/null 2>&1; ret=$?
 
       # --- VERIFY IF PACKAGE IS DELETED ---
-      cmdLoop tanzu package installed list -A -o json > /tmp/output.json
+      cmdLoop tanzu package installed list -A -o json > /tmp/output.json 2>/dev/null
       pkg=$(jq -r --arg key "$TANZU_PACKAGE" '.[] | select(.name == $key).name' /tmp/output.json)
 echo "pkg:$pkg"
       if [ "$pkg" != "$TANZU_PACKAGE" ]; then
@@ -12315,13 +12378,13 @@ echo "pkg:$pkg"
         cmdLoop kubectl get serviceaccount -n tanzu-system-packages -o json > /tmp/output.json
         nam=$(jq -r --arg key "${TANZU_PACKAGE}-${TANZU_NAMESPACE}-sa" '.items[] | select(.metadata.name == $key).metadata.name' /tmp/output.json)
 echo xxx3
-cmdLoop tanzu package installed list -A
+cmdLoop tanzu package installed list -A 2>/dev/null
 echo xxx4
 
 echo "kubectl -n tanzu-system-packages delete serviceaccount $nam"
         [ "$nam" != "" ] && cmdLoop kubectl -n tanzu-system-packages delete serviceaccount $nam
 echo xxx5
-cmdLoop tanzu package installed list -A
+cmdLoop tanzu package installed list -A 2>/dev/null
 echo xxx6
       else
         break
@@ -12384,15 +12447,129 @@ cmdLoop() {
   cat /tmp/loopCmdIgnore.out
 }
 
-#curl -X 'POST' \
-#  'https://gitea.apps-contour.tce.pcfsdu.com/api/v1/users/sacha/tokens' \
-#  -H 'accept: application/json' \
-#  -H 'Content-Type: application/json' \
-#  -u "gitea_admin:Password12345" \
-#  -d '{
-#  "name": "tanzu-demo-hub"
-#}'
-# {"id":1,"name":"tanzu-demo-hub","sha1":"c056bd24b2ecb4f1a3174f6befc69323cb06be21","token_last_eight":"cb06be21"}
+# ------------------------------------------------------------------------------------------
+# Function Name ......: listTMCDeployments
+# Function Purpose ...: List TMC Deploymnets
+# ------------------------------------------------------------------------------------------
+# Argument ($1) ......: n/a
+# ------------------------------------------------------------------------------------------
+# Return Value .......: 0 - SUCCEED, 1 - FAILED
+# ------------------------------------------------------------------------------------------
+listTMCDeployments() {
+  echo
+  printf "%-31s %-7s %-35s %s\n" "TMC-DEPLOYMENT" "CLOUD" "MANAGEMENT-CLUSTER" "STATUS"
+  messageLine
 
+  for deployment in $(ls -1 ${TDHPATH}/deployments/tmc-*.cfg ${HOME}/.tanzu-demo-hub/config/tmc* 2>/dev/null ); do
+    TDH_TKGMC_INFRASTRUCTURE=$(egrep "^TDH_TKGMC_INFRASTRUCTURE=" $deployment | awk -F'=' '{ print $2 }' | sed 's/"//g')
+    TDH_TKGMC_ENVNAME=$(egrep "^TDH_TKGMC_ENVNAME=" $deployment | awk -F'=' '{ print $2 }' | sed 's/"//g')
+    TDH_DEPLOYMENT_CLOUD=$(egrep "^TDH_DEPLOYMENT_CLOUD=" $deployment | awk -F'=' '{ print $2 }' | sed 's/"//g')
+    TDH_MANAGEMENT_CLUSTER=$(egrep "^TDH_MANAGEMENT_CLUSTER=" $deployment | awk -F'=' '{ print $2 }')
 
+    tmc managementcluster get $TDH_MANAGEMENT_CLUSTER > /dev/null 2>&1
+    if [ $? -ne 0 ]; then
+      stt="unavailable"
+    else
+      st1=$(tmc managementcluster get $TDH_MANAGEMENT_CLUSTER -o json | jq -r '.status.phase')
+      st2=$(tmc managementcluster get $TDH_MANAGEMENT_CLUSTER -o json | jq -r '.status.health')
+      [ "$st1" == "null" -o "$st1" == "" ] && stt="NOT READY / $st2" || stt="$st1 / $st2"
+    fi
+
+    dep=$(basename $deployment)
+
+    printf "%-31s %-7s %-35s %s\n" $dep $TDH_DEPLOYMENT_CLOUD $TDH_MANAGEMENT_CLUSTER "$stt"
+  done
+
+  messageLine
+}
+
+# ------------------------------------------------------------------------------------------
+# Function Name ......: listClusters
+# Function Purpose ...: List Clusters
+# ------------------------------------------------------------------------------------------
+# Argument ($1) ......: n/a
+# ------------------------------------------------------------------------------------------
+# Return Value .......: 0 - SUCCEED, 1 - FAILED
+# ------------------------------------------------------------------------------------------
+listClusters() {
+  #cat /tmp/2 | jq -r '.spec | select(.provisionedcluster.accountName == "smidgley-aws").provisionedcluster.accountName'
+  cnt=$(tmc cluster list --group sadubois --output json | jq -r '."totalCount"')
+  cnt=$(tmc cluster list --output json | jq -r '."totalCount"')
+  if [ $cnt -gt 0 ]; then
+    TMPFILE=/tmp/tdh_listCluster.tmp; rm -f $TMPFILE
+
+    echo "NAME                 KUBERNETES           PROVIDER   CREDENTIALS          REGION          STATE"
+    echo "-----------------------------------------------------------------------------------------------------------"
+
+    tmc cluster list --group $TMC_CLUSTER_GROUP --output json > $TMPFILE
+    tmc cluster list --output json > $TMPFILE
+    for cln in $(jq -r '.clusters[] | select(.status.type == "PROVISIONED").fullName.name' $TMPFILE | head -5); do
+      ver=$(jq -r --arg cluster "$cln" '.clusters[] | select(.fullName.name == $cluster)' $TMPFILE | \
+            jq -r '.spec.provisionedcluster.version')
+      acc=$(jq -r --arg cluster "$cln" '.clusters[] | select(.fullName.name == $cluster)' $TMPFILE | \
+            jq -r '.spec.provisionedcluster.accountName')
+      cpv=$(jq -r --arg cluster "$cln" '.clusters[] | select(.fullName.name == $cluster)' $TMPFILE | \
+            jq -r '.status.agent.metadata.cloudProvider')
+      reg=$(jq -r --arg cluster "$cln" '.clusters[] | select(.fullName.name == $cluster)' $TMPFILE | \
+            jq -r '.status.agent.metadata.region')
+      stt=$(jq -r --arg cluster "$cln" '.clusters[] | select(.fullName.name == $cluster)' $TMPFILE | \
+            jq -r '.status.status.state.state')
+
+      printf "%-20s %-20s %-10s %-20s %-15s %-10s\n" $cln $ver $cpv $acc $reg $stt
+    done
+
+    # --- CLEANUP ---
+    rm -f $TMPFILE
+  fi
+}
+
+# ------------------------------------------------------------------------------------------
+# Function Name ......: listClusterConfig
+# Function Purpose ...: List Clusters Config
+# ------------------------------------------------------------------------------------------
+# Argument ($1) ......: n/a
+# ------------------------------------------------------------------------------------------
+# Return Value .......: 0 - SUCCEED, 1 - FAILED
+# ------------------------------------------------------------------------------------------
+listClusterConfig() {
+  echo
+  printf "%-31s %-7s %-15s %-20s %-5s %s\n" "TKG-CONFIGURATION" "PLAN" "DESCRIPTION"
+  messageLine
+
+  for deployment in $(ls -1 ${TDHPATH}/deployments/tkg-*.cfg | grep -v "tkgmc-"); do
+    TDH_DEPLOYMENT_DESCRIPTION=$(egrep "^TDH_DEPLOYMENT_DESCRIPTION=" $deployment | awk -F'=' '{ print $2 }' | sed 's/"//g')
+    TDH_DEPLOYMENT_CLUSTER_PLAN=$(egrep "^TDH_DEPLOYMENT_CLUSTER_PLAN=" $deployment | awk -F'=' '{ print $2 }')
+
+    dep=$(basename $deployment)
+
+    printf "%-31s %-7s %-15s %-20s %-5s %s\n" $dep "$TDH_DEPLOYMENT_CLUSTER_PLAN" "$TDH_DEPLOYMENT_DESCRIPTION"
+  done
+
+  messageLine
+}
+
+# ------------------------------------------------------------------------------------------
+# Function Name ......: listTKGmcDeployments
+# Function Purpose ...: List TKC Management Cluster Deployments
+# ------------------------------------------------------------------------------------------
+# Argument ($1) ......: n/a
+# ------------------------------------------------------------------------------------------
+# Return Value .......: 0 - SUCCEED, 1 - FAILED
+# ------------------------------------------------------------------------------------------
+listTKGmcDeployments() {
+  echo ""
+  printf "%-30s %-7s %-7s %-30s %-5s %s\n" "CONFIURATION" "CLOUD" "DOMAIN" "MGMT-CLUSTER" "PLAN" "CONFIGURATION"
+  echo "-----------------------------------------------------------------------------------------------------------"
+
+  for deployment in $(ls -1 ${TDHPATH}/deployments/tkgmc*.cfg); do
+    . $deployment
+
+    dep=$(basename $deployment)
+
+    printf "%-30s %-7s %-7s %-30s %-5s %s\n" $dep $TDH_TKGMC_INFRASTRUCTURE ${TDH_TKGMC_ENVNAME} "${TDH_TKGMC_NAME}-<TDH_USER>" \
+           $TDH_TKGMC_PLAN "$TDH_TKGMC_CONFIG"
+  done
+
+  echo "-----------------------------------------------------------------------------------------------------------"
+}
 

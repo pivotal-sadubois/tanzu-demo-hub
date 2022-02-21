@@ -14,7 +14,6 @@ export DEPLOY_TKG_CLEAN=0
 export TDH_TOOLS=tdh-tools
 
 # --- SETTING FOR TDH-TOOLS ---
-export NATIVE=0                ## NATIVE=1 r(un on local host), NATIVE=0 (run within docker)
 export START_COMMAND="$*"
 export CMD_EXEC=$(basename $0)
 export CMD_ARGS=$*
@@ -23,140 +22,41 @@ export CMD_ARGS=$*
 [ -f $TANZU_DEMO_HUB/functions ] && . $TANZU_DEMO_HUB/functions
 [ -f $HOME/.tanzu-demo-hub.cfg ] && . $HOME/.tanzu-demo-hub.cfg
 
+usage() {
+  str=$(ls -1 $TDHPATH/files/tdh-tools/tdh-tools-tkg-*.cfg | sed -e 's/^.*tools-tkg-//g' -e 's/\.cfg//g' | paste - - | awk '{ printf("%s or %s\n", $1, $2) }')
+  echo "USAGE: $0 [oprions] -d <deployment> -v <tkg-version>"
+  echo "            Options:  -d <deployment.cfg>         # TKG Management Cluster Deployment Name"
+  echo "                      -v <tkg-version>            # TKG Version (ie. $str)"
+  echo ""
+  echo "                      --delete                    # Delete Management Cluster and Jump Server"
+  echo "                      --debug                     # default (disabled)"
+  echo "                      --native                    # Use 'native' installed tools instead of the tdh-tools container"
+}
+
 while [ "$1" != "" ]; do
   case $1 in
+    -d)            DEPLOY_TKG_TEMPLATE=$2;;
+    -v)            DEPLOY_TKG_VERSION=$2;;
     --delete)      DEPLOY_TKG_CLEAN=1;;
     --debug)       DEBUG=1;;
     --native)      NATIVE=1;;
-    *)             DEPLOY_TKG_TEMPLATE=$1;;
   esac
   shift
 done
 
-#############################################################################################################################
-################################### EXECUTING CODE WITHIN  TDH-TOOLS DOCKER CONTAINER  ######################################
-#############################################################################################################################
-runTDHtools tkg "Deploy TCE Management Cluster" "$TDHPATH/$CMD_EXEC" "$CMD_ARGS"
-
-usage() {
-  echo "USAGE: $0 [oprions] <deployment>"
-  echo "            --delete                 # Delete Management Cluster and Jump Server"
-  echo "            --debug                  # default (disabled)"
-  echo "            --native                 # Use 'native' installed tools instead of the tdh-tools container"
-}
-
-listTemplates() {
-  echo "TKG CLUSTER TEMPLATES"
-  echo "-----------------------------------------------------------------------------------------------------------"
-  tmc cluster template list
-  echo "-----------------------------------------------------------------------------------------------------------"
-}
-
-listDeployments() {
-  echo ""
-  printf "%-30s %-7s %-7s %-30s %-5s %s\n" "CONFIURATION" "CLOUD" "DOMAIN" "MGMT-CLUSTER" "PLAN" "CONFIGURATION"
-  echo "-----------------------------------------------------------------------------------------------------------"
-
-  for deployment in $(ls -1 ${TDHPATH}/deployments/tkgmc*.cfg); do
-    . $deployment
-
-    dep=$(basename $deployment)
-
-    printf "%-30s %-7s %-7s %-30s %-5s %s\n" $dep $TDH_TKGMC_INFRASTRUCTURE ${TDH_TKGMC_ENVNAME} "${TDH_TKGMC_NAME}-<TDH_USER>" \
-           $TDH_TKGMC_PLAN "$TDH_TKGMC_CONFIG"
-  done
-
-  echo "-----------------------------------------------------------------------------------------------------------"
-}
-
-createCluster_old() {
-  SSH_KEY_NAME=vmware-cloud-tmc
-  SSH_KEY_FILE=~/.tanzu-demo-hub/KeyPair-${SSH_KEY_NAME}-${AWS_REGION}.pem
-
-  #tmc cluster create -c sadubois-aws -g sadubois --name sadubois-demo -r eu-central-1 -s vmware-cloud-tmc 
-  #tmc cluster create -t aws-ha -c my-credential -s my-ssh-key" #template
-
-  #stt=$(tmc cluster list --group $TMC_CLUSTER_GROUP --name $TMC_CLUSTER_NAME --output json | \
-  stt=$(tmc cluster list --name $TMC_CLUSTER_NAME --output json | \
-        jq -r '.clusters[].status.status.state.state')
-  if [ "${stt}" == "DELETING" ]; then 
-    echo "ERROR: Cluster $TMC_CLUSTER_NAME is currently beeing deleted, please wait and try again later"
-    echo "       => tmc cluster list --name $TMC_CLUSTER_NAME"
-    echo ""; exit 1
-  fi
-
-  messageTitle "Creating Cluster"
-  messagePrint " ▪ Cluster Name"             "$TMC_CLUSTER_NAME"
-  messagePrint " ▪ Cluster Group"            "$TMC_CLUSTER_GROUP"
-  messagePrint " ▪ Cluster Template"         "$DEPLOY_TKG_TEMPLATE"
-  messagePrint " ▪ AWS Credentials"          "$TMC_ACCOUNT_NAME_AWS"
-  messagePrint " ▪ AWS Region"               "$AWS_REGION"
-
-  if [ "${stt}" == "" ]; then 
-    echo "-----------------------------------------------------------------------------------------------------------"
-    tmc cluster create -c $TMC_ACCOUNT_NAME_AWS -g $TMC_CLUSTER_GROUP --name $TMC_CLUSTER_NAME \
-        -s $SSH_KEY_NAME --management-cluster-name $TDH_MANAGEMENT_CLUSTER -r $AWS_REGION \
-        --provisioner-name $TMC_ACCOUNT_NAME_AWS
-    echo "-----------------------------------------------------------------------------------------------------------"
-  fi
-
-  while [ 1 ]; do
-    #stt=$(tmc cluster list --group $TMC_CLUSTER_GROUP --name $TMC_CLUSTER_NAME --output json | \
-    stt=$(tmc cluster list --name $TMC_CLUSTER_NAME --output json | \
-         jq -r '.clusters[].status.phase')
-    if [ "${stt}" != "CREATING" ]; then break; fi
- 
-    sleep 60
-  done
-
-  messagePrint " ▪ Cluster Status"           "$stt"
-
-  #tmc cluster create -c sadubois-aws -g sadubois --name sadubois-demo -s vmware-cloud-tmc -t default
-  #tmc cluster list --group sadubois --name sadubois-demo --output json
-  #tmc cluster list --name sadubois-demo --output json | jq -r '.clusters[].status.status'
-}
-
-listClusters() {
-  #cat /tmp/2 | jq -r '.spec | select(.provisionedcluster.accountName == "smidgley-aws").provisionedcluster.accountName'
-  cnt=$(tmc cluster list --group sadubois --output json | jq -r '."totalCount"') 
-  cnt=$(tmc cluster list --output json | jq -r '."totalCount"') 
-  if [ $cnt -gt 0 ]; then
-    TMPFILE=/tmp/tdh_listCluster.tmp; rm -f $TMPFILE
-
-    echo "NAME                 KUBERNETES           PROVIDER   CREDENTIALS          REGION          STATE"
-    echo "-----------------------------------------------------------------------------------------------------------"
-
-    tmc cluster list --group $TMC_CLUSTER_GROUP --output json > $TMPFILE
-    tmc cluster list --output json > $TMPFILE
-    for cln in $(jq -r '.clusters[] | select(.status.type == "PROVISIONED").fullName.name' $TMPFILE | head -5); do
-      ver=$(jq -r --arg cluster "$cln" '.clusters[] | select(.fullName.name == $cluster)' $TMPFILE | \
-            jq -r '.spec.provisionedcluster.version')
-      acc=$(jq -r --arg cluster "$cln" '.clusters[] | select(.fullName.name == $cluster)' $TMPFILE | \
-            jq -r '.spec.provisionedcluster.accountName')
-      cpv=$(jq -r --arg cluster "$cln" '.clusters[] | select(.fullName.name == $cluster)' $TMPFILE | \
-            jq -r '.status.agent.metadata.cloudProvider')
-      reg=$(jq -r --arg cluster "$cln" '.clusters[] | select(.fullName.name == $cluster)' $TMPFILE | \
-            jq -r '.status.agent.metadata.region')
-      stt=$(jq -r --arg cluster "$cln" '.clusters[] | select(.fullName.name == $cluster)' $TMPFILE | \
-            jq -r '.status.status.state.state')
-
-      printf "%-20s %-20s %-10s %-20s %-15s %-10s\n" $cln $ver $cpv $acc $reg $stt
-
-    done
-
-
-#    tmc cluster list --output json | jq -r '.clusters[1] | [.fullName.name,.spec.provisionedcluster.version]'
-
-#  tmc cluster list --group $TMC_CLUSTER_GROUP
-  echo "-----------------------------------------------------------------------------------------------------------"
-
-    # --- CLEANUP ---
-    rm -f $TMPFILE
-  fi
-}
-
 if [ "${DEPLOY_TKG_TEMPLATE}" == "" ]; then
-  listDeployments
+  listTKGmcDeployments
+  usage; exit 0
+fi
+
+if [ "${DEPLOY_TKG_VERSION}" != "" ]; then
+  if [ ! -f $TDHPATH/files/tdh-tools/tdh-tools-tkg-${DEPLOY_TKG_VERSION}.cfg ]; then 
+    str=$(ls -1 $TDHPATH/files/tdh-tools/tdh-tools-tkg-*.cfg | sed -e 's/^.*tools-tkg-//g' -e 's/\.cfg//g' | paste - - | awk '{ printf("%s or %s\n", $1, $2) }') 
+    echo "ERROR: Unsuported TKG Release $DEPLOY_TKG_VERSION, ($str) are supported"
+    exit 0
+  fi
+else
+  echo "ERROR: Please specifiy option -v <tkg-version>" 
   usage; exit 0
 fi
 
@@ -168,10 +68,10 @@ else
   . ${TDHPATH}/deployments/${DEPLOY_TKG_TEMPLATE}
 fi
 
-# --- CHECK ENVIRONMENT VARIABLES ---
-if [ -f ~/.tanzu-demo-hub.cfg ]; then
-  . ~/.tanzu-demo-hub.cfg
-fi
+#############################################################################################################################
+################################### EXECUTING CODE WITHIN  TDH-TOOLS DOCKER CONTAINER  ######################################
+#############################################################################################################################
+runTDHtools tkg $DEPLOY_TKG_VERSION "Deploy TKG Management Cluster" "$TDHPATH/$CMD_EXEC" "$CMD_ARGS"
 
 export TDH_DEPLOYMENT_ENV_NAME=$TDH_TKGMC_INFRASTRUCTURE
 export TKG_CONFIG=~/.tanzu-demo-hub/$TDH_TKGMC_CONFIG
@@ -193,7 +93,6 @@ cleanupEnvironment() {
   fi
 
   cleanKindCluster
-
 
   # --- DEREGISTER TMC REGISTRATION
   tmc managementcluster get $TDH_TKGMC_NAME-$TDH_USER > /dev/null 2>&1; ret=$?
@@ -1301,7 +1200,7 @@ if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "vSphere" -a "${TDH_TKGMC_TKG_TYPE}" == "tk
   echo "      storageClass: pacific-gold-storage-policy"                                                                          >> $CLUSTER_TEMPLATE
 
   messageTitle "Create the TKG Management Cluster deployment File"
-  messagePrint " ▪ Deployment File"        "$HOME/.tanzu-demo-hub/config/tkgmc-${TDH_TKGMC_NAME}.yaml"
+  messagePrint " ▪ Deployment File"        "$HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.yaml"
   messagePrint " ▪ Management Cluster"     "$TDH_TKGMC_NAME"
   messagePrint " ▪ Cloud Infrastructure"   "$TDH_DEPLOYMENT_ENV_NAME"
 
@@ -1658,6 +1557,7 @@ else
   echo "TDH_TKGMC_WC_CONFIG_DEV=${TDH_TKGMC_NAME}-wc-dev.yaml"                        >> $DEPLOYMENT_FILE
   echo "TDH_TKGMC_WC_CONFIG_PROD=${TDH_TKGMC_NAME}-wc-prod.yaml"                      >> $DEPLOYMENT_FILE
   echo "TDH_TKGMC_KUBECONFIG=${TDH_TKGMC_NAME}.kubeconfig"                            >> $DEPLOYMENT_FILE
+  echo "TDH_TKGMC_TOOLS_CONTAINER=${TDH_TOOLS}"                                       >> $DEPLOYMENT_FILE
 
   if [ "$TDH_DEPLOYMENT_ENV_NAME" == "Azure" ]; then
     echo ""                                                                           >> $DEPLOYMENT_FILE
@@ -1771,7 +1671,8 @@ else
   #$SSH_COMMAND -n "tanzu management-cluster get 2>/dev/null | sed -n '/^  NAME /,/^NAME/p' | egrep -v \"^NAME\" "
   tanzu config server list 
   echo "-----------------------------------------------------------------------------------------------------------"
-  printf "\e[1m1.) Check Management Cluster Status (On local workstation or on the jump server)\e[0m\n"
+  printf "\e[1m1.) Access to the Jump Server and verify Deployment\e[0m\n"
+  echo "    => $SSH_COMMAND"
   echo "    => tanzu management-cluster get"
   printf "    => %-80s %s\n" "kubectl config set-cluster $TDH_TKGMC_NAME" "# Set k8s Context to mc Cluster"
   printf "    => %-80s %s\n" "kubectl config set-context ${TDH_TKGMC_NAME}-admin@${TDH_TKGMC_NAME}" "# Set k8s Context to mc Cluster"
@@ -1794,7 +1695,7 @@ else
     echo ""
 
     if [ "$NATIVE" == "0" ]; then
-      echo "    => tools/tdh-tools.sh"
+      echo "    => tools/${TDH_TOOLS}.sh"
       echo "       tdh-tools:/$ export CLUSTER_NAME=<cluster_name>                   ## Workload Cluster Name"
       echo "       tdh-tools:/$ export VSPHERE_CONTROL_PLANE_ENDPOINT=<ip-address>   ## Control Plane IP Adress for the worklaod Cluster"
       echo "       tdh-tools:/$ tanzu cluster create -f \$HOME/.tanzu/tkg/clusterconfigs/${TDH_TKGMC_NAME}-wc-dev.yaml --tkr v1.20.4---vmware.3-tkg.1"
@@ -1817,7 +1718,7 @@ else
   else
     printf "\e[1m2.) Ceeate TKG Workload Cluster\e[0m\n"
     if [ "$NATIVE" == "0" ]; then
-      echo "    => tools/tdh-tools.sh"
+      echo "    => tools/${TDH_TOOLS}.sh"
       echo "       tdh-tools:/$ tanzu kubernetes-release get"
       #echo "       tdh-tools:/$ tanzu cluster create -f \$HOME/.tanzu/tkg/clusterconfigs/${TDH_TKGMC_NAME}-wc-dev.yaml  <cluster-name> -tkr v1.18.17---vmware.2-tkg.1"
       #echo "       tdh-tools:/$ tanzu cluster create -f \$HOME/.tanzu/tkg/clusterconfigs/${TDH_TKGMC_NAME}-wc-prod.yaml <cluster-name>"
@@ -1840,7 +1741,7 @@ else
   printf "\e[1m2.) Ceeate Tanzu Demo Hub (TDH) Workload Cluster with services (TBS, Harbor, Ingres etc.)\e[0m\n"
   if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "vSphere" ]; then
     if [ "$NATIVE" == "0" ]; then
-      echo "    => tools/tdh-tools.sh"
+      echo "    => tools/${TDH_TOOLS}.sh"
       echo "       tdh-tools:/$ ./deployTKG -m $TDH_TKGMC_NAME -d tkg-tanzu-demo-hub.cfg -n tdh-$CLOUD-$TDH_USER -tag TKG_CLUSTER_01"
       echo "       tdh-tools:/$ ./deployTKG -m $TDH_TKGMC_NAME -d tkg-tanzu-demo-hub.cfg -n tdh-$CLOUD-$TDH_USER -tag TKG_CLUSTER_02 -k \"v1.20.8---vmware.1-tkg.2\""
       echo "       tdh-tools:/$ exit"
@@ -1850,7 +1751,7 @@ else
     fi
   else
     if [ "$NATIVE" == "0" ]; then
-      echo "    => tools/tdh-tools.sh"
+      echo "    => tools/${TDH_TOOLS}.sh"
       echo "       tdh-tools:/$ ./deployTKG -m $TDH_TKGMC_NAME -d tkg-tanzu-demo-hub.cfg -n tdh-$CLOUD-$TDH_USER"
       echo "       tdh-tools:/$ ./deployTKG -m $TDH_TKGMC_NAME -d tkg-tanzu-demo-hub.cfg -n tdh-$CLOUD-$TDH_USER -k \"v1.20.8---vmware.1-tkg.2\""
       echo "       tdh-tools:/$ exit"
