@@ -1535,7 +1535,7 @@ else
 #gaga
 
   messageTitle "Create the TKG Management Cluster deployment File"
-  messagePrint " ▪ Deployment File"        "$HOME/.tanzu-demo-hub/config/tkgmc-${TDH_TKGMC_NAME}.yaml"
+  messagePrint " ▪ Deployment File"        "$HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.yaml"
   messagePrint " ▪ Management Cluster"     "$TDH_TKGMC_NAME"
   messagePrint " ▪ Cloud Infrastructure"   "$TDH_DEPLOYMENT_ENV_NAME"
 
