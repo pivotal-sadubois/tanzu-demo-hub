@@ -6,6 +6,10 @@ metadata:
   namespace: NAMESPACE
   labels:
     app: TBS_SOURCE_APP-app
+  annotations:
+    ingress.kubernetes.io/force-ssl-redirect: "true"
+    ingress.kubernetes.io/ssl-redirect: "true"
+    kubernetes.io/ingress.class: contour
 spec:
   tls:
   - secretName: https-secret

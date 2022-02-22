@@ -16,14 +16,13 @@ spec:
   sso:
     secret: animal-rescue-sso
     roles-attribute-name: "groups"
-
 ---
 
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   annotations:
-    ingress.kubernetes.io/force-ssl-redirect: "true"
+    #ingress.kubernetes.io/force-ssl-redirect: "true"
     kubernetes.io/ingress.class: contour
   name: gateway-demo
   labels:

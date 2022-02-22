@@ -2,7 +2,7 @@ apiVersion: run.tanzu.vmware.com/v1alpha1
 kind: TanzuKubernetesCluster
 metadata:
   name: tkg-cluster-1
-  namespace: tanzu-demo
+  namespace: tanzu-demo-hub
 spec:
   distribution:
     fullVersion: v1.20.9+vmware.1-tkg.1.a4cee5b
@@ -18,15 +18,15 @@ spec:
       services:
         cidrBlocks:
         - 10.96.0.0/16
-    storage: {}
+    storage: 
+      defaultClass: tanzu
   topology:
     controlPlane:
-      class: guaranteed-small
+      class: guaranteed-medium
       count: 1
       storageClass: tanzu
     workers:
       #class: best-effort-2xlarge
-      class: guaranteed-small
+      class: guaranteed-medium
       count: 1
       storageClass: tanzu
-

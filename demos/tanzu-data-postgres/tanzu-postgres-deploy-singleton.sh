@@ -52,6 +52,7 @@ echo '                                                                          
 # --- RUN SCRIPT INSIDE TDH-TOOLS OR NATIVE ON LOCAL HOST ---
 runTDHtoolsDemos
 
+exit
 kubectl get configmap tanzu-demo-hub > /dev/null 2>&1
 if [ $? -ne 0 ]; then 
   echo "ERROR: Configmap tanzu-demo-hub does not exist"; exit
