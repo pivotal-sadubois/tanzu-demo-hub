@@ -301,7 +301,7 @@ vSphereLogin() {
       echo "                                        => (usually you VMware User Name without @vmware.com)"
     fi
   else
-    echo "vSphere Access Credentials (TKGs)"
+    messageTitle "vSphere Access Credentials (TKGs)"
     messagePrint " ▪ vCenter Server Name"                "$VSPHERE_TKGS_VCENTER_SERVER"
     messagePrint " ▪ vCenter Admin User"                 "$VSPHERE_TKGS_VCENTER_ADMIN"
     messagePrint " ▪ vCenter Admin Password"             $(maskPassword "$VSPHERE_TKGS_VCENTER_PASSWORD")
@@ -367,6 +367,27 @@ vSphereLogin() {
     exit
   fi
 
+  # --- RECONFIGURE WORKLOAD CLUSTERS ---
+  cmdLoop kubectl get clusters -A -o json > /tmp/output.json
+  cmdLoop kubectl config view -o json > /tmp/kubeconfig.json
+
+  first=0
+  for nam in $(jq -r '.items[] | select(.status.phase == "Provisioned").metadata.name' /tmp/output.json); do
+    nsp=$(jq -r --arg key "$nam" '.items[] | select(.metadata.name == $key).metadata.namespace' /tmp/output.json) 
+    clu=$(jq -r --arg key "$nam" '.contexts[] | select(.name == $key).cluster' /tmp/kubeconfig.json) 
+    if [ "$clu" == "" ]; then 
+      [ $first -eq 0 ] && messageTitle "vSphere Workload Clusters" && first=1
+      messagePrint " ▪ Configure context for Cluster"                "$nam"
+ 
+      export KUBECTL_VSPHERE_PASSWORD=$VSPHERE_TKGS_VCENTER_PASSWORD
+      kubectl vsphere login --insecure-skip-tls-verify --server $VSPHERE_TKGS_SUPERVISOR_CLUSTER \
+          -u $VSPHERE_TKGS_VCENTER_ADMIN --tanzu-kubernetes-cluster-name $nam \
+          --tanzu-kubernetes-cluster-namespace $nsp > /dev/null 2>&1
+    fi
+  done
+
+  # --- SWITCH CONTEXT BACK TO WORKLOAD CLUSTERS ---
+  kubectl config use-context $VSPHERE_TKGS_SUPERVISOR_CLUSTER > /dev/null 2>&1
 }
 
 tmcCheckLogin() {
@@ -4214,12 +4235,12 @@ checkCLIcommands() {
 
   if [ "$cat" == "BASIC" ]; then
     if [ "$(uname)" == "Linux" ]; then
-      CLI_COMMANDS="/usr/bin/jq:apt:jq /usr/bin/wget:apt:wget /usr/bin/unzip:apt:unzip"
+      CLI_COMMANDS="/usr/bin/jq:apt:jq /usr/bin/wget:apt:wget /usr/bin/unzip:apt:unzip /usr/bin/kubectl:apt:kubectl"
     else
       if [ "$(uname -p)" == "arm" ]; then
-        CLI_COMMANDS="/opt/homebrew/bin/jq:brew:jq /opt/homebrew/bin/wget:brew:wget"
+        CLI_COMMANDS="/opt/homebrew/bin/jq:brew:jq /opt/homebrew/bin/wget:brew:wget /opt/homebrew/bin/kubectl:brew:kubectl"
       else
-        CLI_COMMANDS="/usr/local/bin/jq:brew:jq /usr/local/bin/wget:brew:wget"
+        CLI_COMMANDS="/usr/local/bin/jq:brew:jq /usr/local/bin/wget:brew:wget /usr/local/bin/kubectl:brew:kubectl"
       fi
     fi
 
@@ -4724,6 +4745,7 @@ tmcCreateCluster() {
                            --instance-type $TDH_TKGWC_CONTROPLANE_MACHINE \
                            --worker-node-count $TDH_TKGWC_WORKERNODES \
                            --storage-class $TDH_TKGWC_STORAGE_CLASS \
+                           --default-storage-class $TDH_TKGWC_STORAGE_CLASS \
                            -g $TDH_CLUSTER_GROUP --version $TDH_TKGWC_KUBERNETES -n $TDH_CLUSTER_NAME > /tmp/error.log 2>&1; ret=$?
 
       if [ $ret -ne 0 ]; then
@@ -4829,9 +4851,7 @@ getTDHClusterCredentials() {
     chmod 600 ~/.kube/config
     unset KUBECONFIG
 
-echo gaga0
     if [ "$TDH_DEPLOYMENT_CLOUD" == "vSphere" ]; then
-echo gaga1
       export KUBECTL_VSPHERE_PASSWORD=$VSPHERE_TKGS_VCENTER_PASSWORD
       kubectl vsphere login --insecure-skip-tls-verify --server $VSPHERE_TKGS_SUPERVISOR_CLUSTER \
         -u $VSPHERE_TKGS_VCENTER_ADMIN --tanzu-kubernetes-cluster-name $TDH_CLUSTER_NAME \
@@ -4843,14 +4863,10 @@ echo gaga1
         kubectl create clusterrolebinding default-tkg-admin-privileged-binding \
             --clusterrole=psp:vmware-system-privileged --group=system:authenticated
       fi
-echo gaga2
 
       # --- PATCH STORAGE CLASS
       kubectl patch storageclass tanzu -p '{"metadata": {"annotations":{"storageclass.kubernetes.io/is-default-class":"true"}}}'
-echo gaga3
-
       kubectl config use-context ${TDH_CLUSTER_NAME}-admin@$TDH_CLUSTER_NAME
-echo gaga4
     else
       kubectl config use-context ${TDH_CLUSTER_NAME}-admin@$TDH_CLUSTER_NAME
     fi
@@ -8751,13 +8767,12 @@ tdh_tools_build() {
   [ "$(uname -p)" == "arm" ] && ARCH=arm64 || ARCH=amd64
 
   if [ "$MODE" == "tce" ]; then 
-#gugu
     BUILD_MODE=tce
     MACHINE=$(uname -m)
     TDH_TOOLS_TAG=$(echo $TOOLS_VERSION | sed 's/^v//g') 
     TDH_TOOLS_IMAGE=tdh-tools-${BUILD_MODE}-$TDH_TOOLS_TAG
     TDH_TOOLS_DOCKERFILE=Dockerfile-${BUILD_MODE}-$TDH_TOOLS_TAG
-    [ -f files/tdh-tools/tdh-tools-${BUILD_MODE}-${TDH_TOOLS_TAG}.cfg ] && . files/tdh-tools/tdh-tools-${BUILD_MODE}-${TDH_TOOLS_TAG}.cfg
+    [ -f $TDHPATH/files/tdh-tools/tdh-tools-${BUILD_MODE}-${TDH_TOOLS_TAG}.cfg ] && . $TDHPATH/files/tdh-tools/tdh-tools-${BUILD_MODE}-${TDH_TOOLS_TAG}.cfg
 
     TCE_DOWNLOAD_URL=https://github.com/vmware-tanzu/community-edition/releases/download/${TKG_COMNUNITY_EDITION_VERSION}
     TCE_LINUX_PACKAGE=tce-linux-amd64-${TKG_COMNUNITY_EDITION_VERSION}
@@ -8773,7 +8788,7 @@ tdh_tools_build() {
     TDH_TOOLS_TAG=$TOOLS_VERSION
     TDH_TOOLS_IMAGE=tdh-tools-${BUILD_MODE}-$TDH_TOOLS_TAG
     TDH_TOOLS_DOCKERFILE=Dockerfile-${BUILD_MODE}-$TDH_TOOLS_TAG
-    [ -f files/tdh-tools/tdh-tools-${BUILD_MODE}-${TDH_TOOLS_TAG}.cfg ] && . files/tdh-tools/tdh-tools-${BUILD_MODE}-${TDH_TOOLS_TAG}.cfg
+    [ -f $TDHPATH/files/tdh-tools/tdh-tools-${BUILD_MODE}-${TDH_TOOLS_TAG}.cfg ] && . $TDHPATH/files/tdh-tools/tdh-tools-${BUILD_MODE}-${TDH_TOOLS_TAG}.cfg
     TDH_DOCKER_FILES=/tmp/tdh-tools-${BUILD_MODE}-$TDH_TOOLS_TAG
     TDH_DOCKER_CACHE=$HOME/.tanzu-demo-hub/cache
     [ ! -d $TDH_DOCKER_CACHE ] && mkdir -p $TDH_DOCKER_CACHE
@@ -8781,10 +8796,10 @@ tdh_tools_build() {
 #gugu
 
   mkdir -p $TDH_DOCKER_FILES
-  cp files/tdh-tools/$TDH_TOOLS_DOCKERFILE       $TDH_DOCKER_FILES/Dockerfile
-  cp files/tdh-tools/wrapdocker                  $TDH_DOCKER_FILES
-  cp files/tdh-tools/jenkins-cli.jar             $TDH_DOCKER_FILES
-  cp files/tdh-tools/vmware-ovftool.tar          $TDH_DOCKER_FILES
+  cp $TDHPATH/files/tdh-tools/$TDH_TOOLS_DOCKERFILE       $TDH_DOCKER_FILES/Dockerfile
+  cp $TDHPATH/files/tdh-tools/wrapdocker                  $TDH_DOCKER_FILES
+  cp $TDHPATH/files/tdh-tools/jenkins-cli.jar             $TDH_DOCKER_FILES
+  cp $TDHPATH/files/tdh-tools/vmware-ovftool.tar          $TDH_DOCKER_FILES
   DOCKER_CHKSUM=$(sum $TDHPATH/files/tdh-tools/$TDH_TOOLS_DOCKERFILE | awk '{ print $1 }')
   DOCKER_IMAGE_LATEST_ID=$(docker images | egrep "^$TDH_TOOLS_IMAGE " | grep "latest" | awk '{ print $3 }')
   DOCKER_IMAGE_ID=$(docker images | egrep "^$TDH_TOOLS_IMAGE " | grep "CHKSUM" | grep "$DOCKER_IMAGE_LATEST_ID" | awk '{ print $3 }')
@@ -8796,7 +8811,7 @@ tdh_tools_build() {
   [ "$TDH_SERVICE_BUILD_SERVICE_DEPENDANCIES" == "" ] && TDH_SERVICE_BUILD_SERVICE_DEPENDANCIES=0.3.0
   [ "$TKG_TANZU_KUBERNETES_GRID" == "" ] && TKG_TANZU_KUBERNETES_GRID=1.4.0
 
-  messageTitle "TDH Tools Configureation (files/tdh-tools/${TDH_TOOLS}.cfg)"
+  messageTitle "TDH Tools Configureation ($TDHPATH/files/tdh-tools/${TDH_TOOLS}.cfg)"
   messagePrint " ▪ Tanzu Mission Control CLI"                                  "$TMC_CLI"
   messagePrint " ▪ Build Service Version"                                      "$TDH_SERVICE_BUILD_SERVICE_VERSION"
   messagePrint " ▪ Build Service Tools (kp)"                                   "$TDH_SERVICE_BUILD_SERVICE_KP"
@@ -9329,7 +9344,7 @@ tdh_tools_build() {
       messagePrint " ▪ Docker Image ($TDH_TOOLS_IMAGE) Checksum"                 "$DOCKER_IMAGE_CHKSUM => No Rebuild required"
     else
       if [ "$DOCKER_IMAGE_CHKSUM" == "" ]; then 
-        messagePrint " ▪ Dockerfile Checksum (files/tdh-tools/$TDH_TOOLS_DOCKERFILE)"  "$DOCKER_CHKSUM"
+        messagePrint " ▪ Dockerfile Checksum (iles/tdh-tools/$TDH_TOOLS_DOCKERFILE)"  "$DOCKER_CHKSUM"
         messagePrint " ▪ Docker Image ($TDH_TOOLS_IMAGE) Checksum"                     "container not builded yet"
       else
         messagePrint " ▪ Dockerfile Checksum (files/tdh-tools/$TDH_TOOLS_DOCKERFILE)"  "$DOCKER_CHKSUM"
@@ -9391,17 +9406,17 @@ tdh_tools_build() {
   fi
 
   # --- POSTINSTALL SCRIPTS
-  cp files/tdh-tools/tdh-postinstall-root.sh $TDH_DOCKER_FILES
+  cp $TDHPATH/files/tdh-tools/tdh-postinstall-root.sh $TDH_DOCKER_FILES
   chmod a+x $TDH_DOCKER_FILES/tdh-postinstall-root.sh
 
 #gugu
   if [ "$MODE" == "tkg" ]; then 
-    cp files/tdh-tools/tdh-postinstall-user-tkg-${TDH_TOOLS_TAG}.sh $TDH_DOCKER_FILES/tdh-postinstall-user.sh
+    cp $TDHPATH/files/tdh-tools/tdh-postinstall-user-tkg-${TDH_TOOLS_TAG}.sh $TDH_DOCKER_FILES/tdh-postinstall-user.sh
     chmod a+x $TDH_DOCKER_FILES/tdh-postinstall-user.sh
   fi
 
   if [ "$MODE" == "tce" ]; then 
-    cp files/tdh-tools/tdh-postinstall-user-tce-${TDH_TOOLS_TAG}.sh $TDH_DOCKER_FILES/tdh-postinstall-user.sh
+    cp $TDHPATH/files/tdh-tools/tdh-postinstall-user-tce-${TDH_TOOLS_TAG}.sh $TDH_DOCKER_FILES/tdh-postinstall-user.sh
     chmod a+x $TDH_DOCKER_FILES/tdh-postinstall-user.sh
   fi
 
@@ -9841,42 +9856,6 @@ cleanKindCluster() {
   fi
 }
 
-#hallo
-runTDHtoolsDemos_old() {
-  if [ ! -f /tdh_tools_docker_container  ]; then
-    if [ $NATIVE -eq 0 ]; then
-      cid=$(docker ps -a | grep tdh-tools:latest | awk '{ print $1 }')
-      [ "$cid" != "" ] && for n in $cid; do docker rm $n -f > /dev/null 2>&1; done
-
-      # --- DUMP ENVIRONMENT VARIABLES ---
-      env | grep TDH > /tmp/tdh.env
-
-      [ ! -d $HOME/.tanzu ] && mkdir -p $HOME/.tanzu
-  
-      mkdir -p $HOME/.mc $HOME/.cache $HOME/.config $HOME/.local
-      mkdir -p /tmp/docker && chmod a+w /tmp/docker
-      docker run -it --rm --name tdh-tools -v /var/run/docker.sock:/var/run/docker.sock tdh-tools:latest chmod 666 /var/run/docker.sock > /dev/null 2>&1
-      docker run -u $(id -u):$(id -g) --group-add 0 -it --init --rm --name tdh-tools --network=host --env-file /tmp/tdh.env \
-         -v $HOME:$HOME:ro -v $HOME/.local:$HOME/.local:rw -v $HOME/.tanzu-demo-hub:$HOME/.tanzu-demo-hub:rw \
-         -v /var/run/docker.sock:/var/run/docker.sock:rw -v $HOME/.cache:$HOME/.cache:rw -v $HOME/.config:$HOME/.config:rw \
-         -v $HOME/.aws:$HOME/.aws:rw -v $HOME/.vmware-cna-saas:$HOME/.vmware-cna-saas:rw -v $HOME/.azure:$HOME/.azure:rw \
-         -v /tmp:/tmp:rw -v /tmp/docker:$HOME/.docker:rw -v $HOME/.mc:$HOME/.mc:rw -v $HOME/.tanzu:$HOME/.tanzu:rw \
-         -v $HOME/.kube-tkg:$HOME/.kube-tkg:rw -v $HOME/.kube:$HOME/.kube:rw -v $HOME/.govmomi:$HOME/.govmomi:rw \
-         -v $HOME/.ssh:$HOME/.ssh:rw -v $HOME/.terraform:$HOME/.terraform:rw -v $HOME/.gradle:$HOME/.gradle:rw \
-         -v $HOME/.s3cfg:$HOME/.s3cfg:rw \
-         -e "KUBECONFIG=$HOME/.kube/config" --hostname tdh-tools tdh-tools:latest $TDHDEMO/$CMD_EXEC $CMD_ARGS; ret=$?
-  
-      # --- FINISH CURRENT SESSION AS WE RUN AS CONTAINER ---
-      exit $ret
-    fi
-  else
-    # trap ctrl-c and call ctrl_c()
-    #trap ctrl_c INT
-
-    cd $TDHDEMO
-  fi
-}
-
 usage_tdh_demo() {
   echo ""
   echo "USAGE: $0 [options]" 
@@ -9889,7 +9868,9 @@ usage_tdh_demo() {
 checkCLIarguments() {
   while [ "$1" != "" ]; do
     case $1 in
-      --native)      NATIVE=1;;
+      --type)        TDH_TOOLS_TYPE=$2;;
+      --version)     TDH_TOOLS_VERS=$2;;
+      --context)     TDH_CONTEXT=$2;;
       --usage)       usage_tdh_demo;;
       --help)        usage_tdh_demo;;
       -h)            usage_tdh_demo;;
@@ -11624,45 +11605,81 @@ dockerRunPreparation() {
 # Return Value .......: 0 on Success, 1 on failure
 # ------------------------------------------------------------------------------------------
 runTDHtoolsDemos() {
-  VOTE_TCE=0; VOTE_TKG=0
+  TDH_CLUSTER_TYPE=$1
+  [ "$TDH_CLUSTER_TYPE" == "" ] && TDH_CLUSTER_TYPE=tdh
 
-  # --- DECIDE IF TCE or TKG ---
-  if [ -s $HOME/.tdh-tools-tce/.kube/config ]; then 
-    let VOTE_TCE=VOTE_TCE+50
-    if [ -x /usr/local/bin/kubectl ]; then 
-      cnt=$(kubectl config get-clusters --kubeconfig $HOME/.tdh-tools-tce/.kube/config | \
-          sed '1d' | wc -l | awk '{ print $1 }') 
-      [ $cnt -gt 0 ] && let VOTE_TCE=VOTE_TCE+50
+  checkCLIcommands BASIC
 
-      kubectl --kubeconfig $HOME/.tdh-tools-tce/.kube/config get ns > /dev/null 2>&1; ret=$? 
-      [ $ret -eq 0 ] && let VOTE_TCE=VOTE_TCE+50
-    fi
-  fi
+  if [ "$TDH_CLUSTER_TYPE" == "tdh" ]; then 
+    if [ "$TDH_TOOLS_TYPE" == "" -o "$TDH_TOOLS_VERS" == "" -o "$TDH_CONTEXT" == "" ]; then 
+      CLUSTER_LIST=/tmp/cluster_list.csv; rm -f $CLUSTER_LIST; touch $CLUSTER_LIST
+      for typ in tkg tce; do
+        for ver in $(ls -1 $TDHHOME/files/tdh-tools/tdh-tools-${typ}-*.cfg | sed -e 's/^.*tools-tkg-//g' -e 's/^.*tools-tce-//g' -e 's/\.cfg//g' | sort -V); do
+          if [ -s $HOME/.tdh-tools-${typ}-${ver}/.kube/config ]; then
+            cmdLoop kubectl config view --kubeconfig=$HOME/.tdh-tools-${typ}-${ver}/.kube/config -o json | jq -r '.contexts[]' > /tmp/output.json 2>/dev/null
+            for nam in $(jq -r '.name' /tmp/output.json 2>/dev/null); do
+              clu=$(jq -r --arg key "$nam" 'select(.name == $key).context.cluster' /tmp/output.json 2>/dev/null)    
+              usr=$(jq -r --arg key "$nam" 'select(.name == $key).context.user' /tmp/output.json 2>/dev/null)    
     
-  # --- DECIDE IF TCE or TKG ---
-  if [ -s $HOME/.tdh-tools/.kube/config ]; then 
-    let VOTE_TKG=VOTE_TKG+50
-    if [ -x /usr/local/bin/kubectl ]; then 
-      cnt=$(kubectl config get-clusters --kubeconfig $HOME/.tdh-tools/.kube/config | \
-          sed '1d' | wc -l | awk '{ print $1 }')
-      [ $cnt -gt 0 ] && let VOTE_TKG=VOTE_TKG+50
+              kubectl --kubeconfig=$HOME/.tdh-tools-${typ}-${ver}/.kube/config config use-context $nam > /dev/null 2>&1; ret_con=$?
+              kubectl --kubeconfig=$HOME/.tdh-tools-${typ}-${ver}/.kube/config get cm -n default -o json > /tmp/output.json 2>/dev/null; ret=$?
+    
+              if [ $ret_con -eq 0 -a $ret -eq 0 ]; then 
+                cfm=$(jq -r '.items[].metadata | select(.name == "tanzu-demo-hub").name' /tmp/output.json 2>/dev/null)
+                if [ "$cfm" == "tanzu-demo-hub" ]; then 
+                  echo "${typ},${ver},${nam},${clu}"  >> $CLUSTER_LIST
+                fi
+              else
+                CONFIG="$HOME/.tdh-tools-${typ}-${ver}/.kube/config"
+                kubectl --kubeconfig=$CONFIG config unset clusters.${nam} > /dev/null 2>&1
+                kubectl --kubeconfig=$CONFIG config unset contexts.${nam} > /dev/null 2>&1
+                kubectl --kubeconfig=$CONFIG config unset users.${nam} > /dev/null 2>&1
+              fi
+            done
+          fi
+        done
+      done
 
-      kubectl --kubeconfig $HOME/.tdh-tools/.kube/config get ns > /dev/null 2>&1; ret=$? 
-      [ $ret -eq 0 ] && let VOTE_TKG=VOTE_TKG+50
+      cnt=$(wc -l $CLUSTER_LIST | awk '{ print $1 }') 
+      if [ $cnt -gt 0 ]; then 
+        echo "WARNING: Multiple clusters found with Tanzu Demo Hub (TDH) environments, please chose the desired one"
+        echo "         and restart the demo."
+        awk -F',' '{ printf("         => ./%s --type %s --version %s --context %s\n",a,$1,$2,$3) }' a="$CMD_EXEC" $CLUSTER_LIST
+        echo ""
+      fi
+
+      exit
+    fi
+  else
+    if [ "$TDH_TOOLS_TYPE" == "" -o "$TDH_TOOLS_VERS" == "" -o "$TDH_CONTEXT" == "" ]; then
+      CLUSTER_LIST=/tmp/cluster_list.csv; rm -f $CLUSTER_LIST; touch $CLUSTER_LIST
+      for typ in tkg tce; do
+        for ver in $(ls -1 $TDHHOME/files/tdh-tools/tdh-tools-${typ}-*.cfg | sed -e 's/^.*tools-tkg-//g' -e 's/^.*tools-tce-//g' -e 's/\.cfg//g' | sort -V); do
+          if [ -s $HOME/.tdh-tools-${typ}-${ver}/.kube/config ]; then
+            cmdLoop kubectl config view --kubeconfig=$HOME/.tdh-tools-${typ}-${ver}/.kube/config -o json | jq -r '.contexts[]' > /tmp/output.json 2>/dev/null
+            for nam in $(jq -r 'select(.name | contains("wcp.")).name' /tmp/output.json 2>/dev/null); do
+              echo "${typ},${ver},${nam},${clu}"  >> $CLUSTER_LIST
+            done
+          fi
+        done
+      done
+
+      cnt=$(wc -l $CLUSTER_LIST | awk '{ print $1 }')
+      if [ $cnt -gt 0 ]; then
+        echo "WARNING: Multiple clusters found with Tanzu Demo Hub (TDH) environments, please chose the desired one"
+        echo "         and restart the demo."
+        awk -F',' '{ printf("         => ./%s --type %s --version %s --context %s\n",a,$1,$2,$3) }' a="$CMD_EXEC" $CLUSTER_LIST
+        echo ""
+      fi
+
+      exit
     fi
   fi
 
-  if [ $VOTE_TCE -gt $VOTE_TKG ]; then
-    TOOLS_TLAG=tce 
-    TDH_TOOLS=tdh-tools-tce
-    POSTSCRIPT="tdh-postinstall-user.sh"
-    TDH_TOOLS_PATH=".${TDH_TOOLS}"
-  else
-    TOOLS_TLAG=tkg
-    TDH_TOOLS=tdh-tools
-    POSTSCRIPT="tdh-postinstall-user.sh"
-    TDH_TOOLS_PATH=".${TDH_TOOLS}"
-  fi
+  TOOLS_TLAG=$TDH_TOOLS_TYPE
+  TDH_TOOLS=tdh-tools-${TDH_TOOLS_TYPE}-$TDH_TOOLS_VERS
+  POSTSCRIPT="tdh-postinstall-user.sh"
+  TDH_TOOLS_PATH=".${TDH_TOOLS}"
 
   if [ ! -f /tdh_tools_docker_container  ]; then
     if [ $NATIVE -eq 0 ]; then
@@ -11671,7 +11688,6 @@ runTDHtoolsDemos() {
 
       # --- DUMP ENVIRONMENT VARIABLES ---
       env | grep TDH > /tmp/tdh.env
-
 
       export CORE_OPTIONS="-it --init --rm --hostname tdh-tools --name $TDH_TOOLS --network=host"
       export USER_OPTIONS="$CORE_OPTIONS -u $(id -u):$(id -g) --env-file /tmp/tdh.env -e \"KUBECONFIG=$HOME/.kube/config\""
@@ -11819,6 +11835,7 @@ runTDHtools() {
       docker run $USER_OPTIONS ${CORE_MOUNTS[*]} $TDH_TOOLS:latest /usr/local/bin/$POSTSCRIPT > /dev/null 2>&1
       [ $ROOT_SHELL -eq 1 ] && SEXEC_OPTIONS=$ROOT_OPTIONS || SEXEC_OPTIONS=$USER_OPTIONS
       docker run $SEXEC_OPTIONS ${CORE_MOUNTS[*]} $TDH_TOOLS:latest $DOCKER_EXEC $DOCKER_ARGS; ret=$?
+#hallo runTDHtools
   
       # --- FINISH CURRENT SESSION AS WE RUN AS CONTAINER ---
       exit $ret

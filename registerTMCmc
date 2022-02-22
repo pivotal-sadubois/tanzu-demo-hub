@@ -10,14 +10,9 @@ export TANZU_DEMO_HUB=$(cd "$(pwd)/$(dirname $0)"; pwd)
 export TDHPATH=$(cd "$(pwd)/$(dirname $0)"; pwd)
 export DEBUG=0
 export NATIVE=0
-export TDH_DEPLOYMENT_ENV_NAME="awstkg"
-export TDH_DEPLOYMENT_CLOUD="AWS"
-export DEPLOY_PCF_DEPLOYMENT=aws_tkg_default.cfg
-
 unset TMC_MANAGEMENT_CLUSTER
 
 # --- SETTING FOR TDH-TOOLS ---
-export NATIVE=0                ## NATIVE=1 r(un on local host), NATIVE=0 (run within docker)
 export START_COMMAND="$*"
 export CMD_EXEC=$(basename $0)
 export CMD_ARGS=$*
@@ -26,32 +21,39 @@ export CMD_ARGS=$*
 [ -f $TANZU_DEMO_HUB/functions ] && . $TANZU_DEMO_HUB/functions
 [ -f $HOME/.tanzu-demo-hub.cfg ] && . $HOME/.tanzu-demo-hub.cfg
 
+DEPLOY_TKG_VERSION=$(ls -1 $TDHPATH/files/tdh-tools/tdh-tools-tkg-*.cfg | sed -e 's/^.*tools-tkg-//g' -e 's/\.cfg//g' | tail -1) 
+
 usage() {
+  str=$(ls -1 $TDHPATH/files/tdh-tools/tdh-tools-tkg-*.cfg | sed -e 's/^.*tools-tkg-//g' -e 's/\.cfg//g' | paste - - | awk '{ printf("%s or %s\n", $1, $2) }')
   echo ""
-  echo "USAGE: $0 >options> [-d <display-name>] [-debug|-clean]"
-  echo "            Options:  -d <display-name>           # Tanzu Mission Control (TMC) Deployment Name"
-  echo "                                                  # (default: tkgmc-vsphere-<tmc-user>"
+  echo "USAGE: $0 <options> [-d <display-name> -v <tkg-version>] [-debug|-clean]"
+  echo "           Options:  -d <display-name>           # Tanzu Mission Control (TMC) Deployment Name"
+  echo "                                                 # (default: tkgmc-vsphere-<tmc-user>"
+  echo "                     -v <tkg-version>            # TKG Version (ie. $str)"
+  echo "                                                 # (default latest: $DEPLOY_TKG_VERSION"
   echo ""
-  echo "                      --native                    # Native execution without tdh-tools container"
-  echo "                      --debug                     # default (disabled)"
-  echo "                      --clean                     # cleanuo the deployment"
+  echo "                     --native                    # Native execution without tdh-tools container"
+  echo "                     --debug                     # default (disabled)"
+  echo "                     --clean                     # cleanuo the deployment"
   echo ""
 }
+
+while [ "$1" != "" ]; do
+  case $1 in
+    -d)            TMC_DISPLAY_NAME=$2;;
+    -v)            DEPLOY_TKG_VERSION=$2;;
+    --clean)       DEPLOY_TKG_CLEAN=1;;
+    --debug)       DEBUG=1;;
+    --native)      NATIVE=1;;
+    --usage)       usage; exit;;
+  esac
+  shift
+done
 
 #############################################################################################################################
 ################################### EXECUTING CODE WITHIN  TDH-TOOLS DOCKER CONTAINER  ######################################
 #############################################################################################################################
-runTDHtools tkg "Deploy TKG Cluster with Tanzu Mission Control (TMC)" "$TDHPATH/$CMD_EXEC" "$CMD_ARGS"
-
-while [ "$1" != "" ]; do
-  case $1 in
-    -d)  TMC_DISPLAY_NAME=$2;;
-    --clean) DEPLOY_TKG_CLEAN=1;;
-    --debug) DEBUG=1;;
-    --native)      NATIVE=1;;
-  esac
-  shift
-done
+runTDHtools tkg $DEPLOY_TKG_VERSION "Deploy TKG Cluster with Tanzu Mission Control (TMC)" "$TDHPATH/$CMD_EXEC" "$CMD_ARGS"
 
 # --- VERIFY TOOLS AND ACCESS ---
 checkCloudCLI
@@ -76,7 +78,6 @@ else
   TMC_CONFIG_NAME="tmc-vsphere-tkgs"
   TMC_DISPLAY_NAME="tkgmc-vsphere--$TDH_USER"
 fi
-
 
 cnt=$(kubectl get ns | egrep -c "^svc-tmc-c8") 
 if [ $cnt -gt 0 ]; then
@@ -197,7 +198,8 @@ echo "nodes[0]='best-effort-medium'"                                           >
 echo "nodes[1]='best-effort-large'"                                            >> $CONFIG_FILE
 echo "nodes[2]='best-effort-xlarge'"                                           >> $CONFIG_FILE
 
-
+echo "vSphere for Tanzu supervisor cluster ($TMC_DISPLAY_NAME) successfilly registered"
+echo ""
 
 
 
