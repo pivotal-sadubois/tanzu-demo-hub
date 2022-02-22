@@ -1,0 +1,141 @@
+# ############################################################################################
+# File: ........: files/tdh-tools/Dockerfile    
+# Language .....: docker  
+# Author .......: Sacha Dubois, VMware
+# Description ..: Tanzu Demo Hub - Dockerfile for tdh-tools container
+# ############################################################################################
+                    
+FROM ubuntu:20.04   
+MAINTAINER Sacha Dubois <sdubois@vmware.com>
+ENV TZ="Europe/Zurich"
+ARG UID GID USER TZ HOME VMWUSER VMWPASS START ARCH
+ADD tdh-postinstall-root.sh     /usr/local/bin
+ADD tdh-postinstall-user.sh     /usr/local/bin
+ADD cli             /tanzu/cli
+ADD clitap          /tanzu-tap/cli
+ADD clusterctl      /usr/local/bin
+ADD kbld            /usr/local/bin
+ADD imgpkg          /usr/local/bin
+ADD kapp            /usr/local/bin
+ADD ytt             /usr/local/bin
+ADD argocd          /usr/local/bin
+ADD kubectl         /usr/local/bin
+ADD kp              /usr/local/bin
+ADD mc              /usr/local/bin
+ADD jenkins-cli.jar /usr/local
+ADD tmc             /usr/local/bin
+ADD terraform-bin   /usr/local/bin/terraform
+ADD kind            /usr/local/bin
+ADD govc            /usr/local/bin
+ADD kubectl-vsphere /usr/local/bin
+ADD kubectl         /usr/local/bin
+ADD vmware-ovftool  /usr/lib/vmware-ovftool
+RUN ln -s /usr/lib/vmware-ovftool/ovftool /usr/local/bin/ovftool
+
+# --- LOCAL TIME AND USER ---
+RUN touch /tdh_tools_docker_container 
+RUN ln -snf /usr/share/zoneinfo/${TZ} /etc/localtime && echo ${TZ} > /etc/timezone
+#RUN useradd -u $UID -g $GID -d $HOME $USER 
+RUN grep ":$GID:" /etc/group || groupadd -g $GID $USER^
+RUN useradd -u $UID -d $HOME $USER 
+RUN groupadd docker
+RUN usermod -a -G docker $USER
+RUN usermod -a -G daemon $USER
+RUN usermod -a -G root $USER
+
+# --- INSTALL REQUIRED UBUNTU PACKAGES --- 
+RUN apt-get update -qq && apt-get install -qqy \
+    apt-transport-https \
+    ca-certificates \
+    curl \
+    wget \
+    openjdk-11-jdk \
+    lxc \
+    software-properties-common \
+    lsb-core \
+    lsb-release \
+    gnupg \
+    sed \
+    maven \
+    zip \
+    s3cmd \
+    postgresql-client \
+    iptables
+RUN apt-get clean 
+
+# --- INSTALL GOLANG ---
+RUN add-apt-repository ppa:longsleep/golang-backports
+RUN apt-get install -qqy golang-go
+
+#RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | gpg --dearmor -o /usr/share/keyrings/githubcli-archive-keyring.gpg
+#RUN echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
+
+# --- INSTALL KUSTOMIZE 
+RUN curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh"  | bash
+RUN chmod a+x kustomize && mv kustomize /usr/bin
+
+# --- INSTALL GITHUB CLIENT ---
+#RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | apt-key add -
+#RUN apt-add-repository "deb [arch=amd64] https://cli.github.com/packages $(lsb_release -cs) main"
+#RUN apt-get update && apt-get install gh -y
+
+#RUN wget -c https://dl.google.com/go/go1.14.2.linux-amd64.tar.gz -O - | tar -xz -C /usr/local
+#$ sudo add-apt-repository ppa:longsleep/golang-backports
+#$ sudo apt update
+#$ sudo apt install golang-go
+
+# --- INSTALL TERRAFORM (LATEST) ---
+#RUN curl -fsSL https://apt.releases.hashicorp.com/gpg | apt-key add -
+#RUN apt-add-repository "deb [arch=amd64] https://apt.releases.hashicorp.com $(lsb_release -cs) main"
+#RUN apt-get update && apt-get install terraform -y
+
+# --- INSTALL BAT ----
+RUN curl -s https://api.github.com/repos/sharkdp/bat/releases/latest |grep browser_download_url | cut -d '"' -f 4 | grep "${ARCH}.deb" | grep -v musl | wget -i -
+RUN dpkg -i bat_*_${ARCH}.deb
+RUN apt-get install -qqy bat
+
+# --- INSTALL DOCKER --- 
+RUN curl -sSL https://get.docker.com/ | sh
+ADD ./wrapdocker /usr/local/bin/wrapdocker
+RUN chmod g+x /usr/local/bin/wrapdocker 
+VOLUME /var/lib/docker
+CMD ["wrapdocker"]
+#RUN curl -L https://github.com/docker/compose/releases/download/1.29.1/docker-compose-Linux-x86_64 -o /usr/bin/docker-compose 
+#RUN chmod +x /usr/local/bin/docker-compose
+#RUN ln -s /usr/local/bin/docker-compose /usr/bin/docker-compose
+
+# --- IMPORT MICROSOFT SSL KEYS ---
+RUN curl -sL https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor >> /etc/apt/trusted.gpg.d/microsoft.gpg
+RUN add-apt-repository "deb [arch=arm64] https://packages.microsoft.com/repos/azure-cli/ $(lsb_release -cs) main"
+#RUN add-apt-repository --allow-insecure-repositories http://launchpadlibrarian.net/492519293/azure-cli_2.10.1-1_all.deb
+#RUN apt-get install azure-cli -y
+
+# --- INSTALL HELM ---
+RUN curl -sL https://baltocdn.com/helm/signing.asc | gpg --dearmor >> /etc/apt/trusted.gpg.d/baltocdn.gpg
+RUN add-apt-repository "deb https://baltocdn.com/helm/stable/debian/ all main"
+RUN apt-get install helm -y
+
+RUN apt-get update && apt-get install -y \
+    git vim azure-cli jq awscli 
+
+# --- INSTALL TANZU UTILITIES ---
+RUN ls -la /
+RUN ls -la /tanzu/cli/
+RUN ls -la /tanzu/cli/core/v*
+RUN install /tanzu/cli/core/v*/tanzu-core-linux_amd64 /usr/local/bin/tanzu
+RUN gunzip -q /tanzu/cli/*.gz
+RUN cd /tanzu && tanzu plugin clean
+RUN cd /tanzu && tanzu plugin install --local cli all
+
+# --- INSTQLL CARVEL TOOLS ---
+RUN cp /tanzu/cli/imgpkg-linux* /usr/local/bin/imgpkg && chmod a+x /usr/local/bin/imgpkg
+RUN cp /tanzu/cli/kapp-linux* /usr/local/bin/kapp && chmod a+x /usr/local/bin/kapp
+RUN cp /tanzu/cli/kbld-linux* /usr/local/bin/kbld && chmod a+x /usr/local/bin/kbld
+RUN cp /tanzu/cli/ytt-linux* /usr/local/bin/ytt && chmod a+x /usr/local/bin/ytt
+RUN cp /tanzu/cli/vendir-linux* /usr/local/bin/vendir && chmod a+x /usr/local/bin/vendir
+
+# --- DIRTY FIX TO GET LATEST TOOLS (https://github.com/vmware-tanzu/carvel) ---
+RUN curl -sL https://github.com/vmware-tanzu/carvel-imgpkg/releases/download/v0.13.0/imgpkg-linux-amd64 -o /tanzu/cli/imgpkg-linux-amd64
+RUN mv /tanzu/cli/imgpkg-linux-amd64 /usr/local/bin/imgpkg && chmod a+x /usr/local/bin/imgpkg
+
+

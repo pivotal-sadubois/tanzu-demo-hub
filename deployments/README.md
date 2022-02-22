@@ -22,5 +22,5 @@ tcemc-docker-dev.cfg                       ##  Tanzu Management Cluster on docke
 
 Tanzu Mission Control (TMC)  Management Cluster Configuration
 -----------------------------------------------------------------------------------------------------------------------------------
-tmc-aws-awshosted.cfg                      ##  TMC Management Cluster on AWS Deployment Config (dev-template)x 
+tmc-aws-awshosted.cfg                      ##  TMC Management Cluster on AWS Deployment Config (dev-template)
 ```

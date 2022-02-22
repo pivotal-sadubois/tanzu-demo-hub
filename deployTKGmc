@@ -1200,9 +1200,10 @@ if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "vSphere" -a "${TDH_TKGMC_TKG_TYPE}" == "tk
   echo "      storageClass: pacific-gold-storage-policy"                                                                          >> $CLUSTER_TEMPLATE
 
   messageTitle "Create the TKG Management Cluster deployment File"
-  messagePrint " ▪ Deployment File"        "$HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.yaml"
-  messagePrint " ▪ Management Cluster"     "$TDH_TKGMC_NAME"
-  messagePrint " ▪ Cloud Infrastructure"   "$TDH_DEPLOYMENT_ENV_NAME"
+  messagePrint " ▪ TKG Deployment File"          "$HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.yaml"
+  messagePrint " ▪ TDH Configuration"            "$HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.cfg"
+  messagePrint " ▪ Management Cluster"           "$TDH_TKGMC_NAME"
+  messagePrint " ▪ Cloud Infrastructure"         "$TDH_DEPLOYMENT_ENV_NAME"
 
   mkdir -p $HOME/.tanzu/tkg/clusterconfigs
 

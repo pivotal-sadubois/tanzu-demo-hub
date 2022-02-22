@@ -10,18 +10,17 @@ export TANZU_DEMO_HUB=$(cd "$(pwd)/$(dirname $0)"; pwd)
 export TDHPATH=$(cd "$(pwd)/$(dirname $0)"; pwd)
 export DEBUG=0
 export NATIVE=0
-export TDH_DEPLOYMENT_ENV_NAME="awstkg"
 export TDH_DEPLOYMENT_CLOUD="AWS"
 export DEPLOY_PCF_DEPLOYMENT=aws_tkg_default.cfg
 
-unset TMC_MANAGEMENT_CLUSTER
-unset TMC_ACCOUNT_NAME  
-
 # --- SETTING FOR TDH-TOOLS ---
-export NATIVE=0                ## NATIVE=1 r(un on local host), NATIVE=0 (run within docker)
 export START_COMMAND="$*"
 export CMD_EXEC=$(basename $0)
 export CMD_ARGS=$*
+
+# --- TMC CONFIG ---
+unset TMC_MANAGEMENT_CLUSTER
+unset TMC_ACCOUNT_NAME  
 
 # --- SOUTCE FOUNCTIONS AND USER ENVIRONMENT ---
 [ -f $TANZU_DEMO_HUB/functions ] && . $TANZU_DEMO_HUB/functions
@@ -40,88 +39,6 @@ usage() {
   echo ""
 }
 
-#############################################################################################################################
-################################### EXECUTING CODE WITHIN  TDH-TOOLS DOCKER CONTAINER  ######################################
-#############################################################################################################################
-runTDHtools tkg "Deploy TKG Cluster with Tanzu Mission Control (TMC)" "$TDHPATH/$CMD_EXEC" "$CMD_ARGS"
-
-listClusterConfig() {
-  echo
-  printf "%-31s %-7s %-15s %-20s %-5s %s\n" "TKG-CONFIGURATION" "PLAN" "DESCRIPTION"
-  messageLine
-
-  for deployment in $(ls -1 ${TDHPATH}/deployments/tkg-*.cfg | grep -v "tkgmc-"); do
-    TDH_DEPLOYMENT_DESCRIPTION=$(egrep "^TDH_DEPLOYMENT_DESCRIPTION=" $deployment | awk -F'=' '{ print $2 }' | sed 's/"//g')
-    TDH_DEPLOYMENT_CLUSTER_PLAN=$(egrep "^TDH_DEPLOYMENT_CLUSTER_PLAN=" $deployment | awk -F'=' '{ print $2 }')
-
-    dep=$(basename $deployment)
-
-    printf "%-31s %-7s %-15s %-20s %-5s %s\n" $dep "$TDH_DEPLOYMENT_CLUSTER_PLAN" "$TDH_DEPLOYMENT_DESCRIPTION"
-  done
-
-  messageLine
-}
-
-listDeployments() {
-  echo
-  printf "%-31s %-7s %-35s %s\n" "TMC-DEPLOYMENT" "CLOUD" "MANAGEMENT-CLUSTER" "STATUS"
-  messageLine
-
-  for deployment in $(ls -1 ${TDHPATH}/deployments/tmc-*.cfg ${HOME}/.tanzu-demo-hub/config/tmc* 2>/dev/null ); do
-    TDH_TKGMC_INFRASTRUCTURE=$(egrep "^TDH_TKGMC_INFRASTRUCTURE=" $deployment | awk -F'=' '{ print $2 }' | sed 's/"//g')
-    TDH_TKGMC_ENVNAME=$(egrep "^TDH_TKGMC_ENVNAME=" $deployment | awk -F'=' '{ print $2 }' | sed 's/"//g')
-    TDH_DEPLOYMENT_CLOUD=$(egrep "^TDH_DEPLOYMENT_CLOUD=" $deployment | awk -F'=' '{ print $2 }' | sed 's/"//g')
-    TDH_MANAGEMENT_CLUSTER=$(egrep "^TDH_MANAGEMENT_CLUSTER=" $deployment | awk -F'=' '{ print $2 }')
-
-    tmc managementcluster get $TDH_MANAGEMENT_CLUSTER > /dev/null 2>&1
-    if [ $? -ne 0 ]; then 
-      stt="unavailable"
-    else
-      st1=$(tmc managementcluster get $TDH_MANAGEMENT_CLUSTER -o json | jq -r '.status.phase') 
-      st2=$(tmc managementcluster get $TDH_MANAGEMENT_CLUSTER -o json | jq -r '.status.health') 
-      stt="$st1 / $st2"
-    fi
-
-    dep=$(basename $deployment)
-
-    printf "%-31s %-7s %-35s %s\n" $dep $TDH_DEPLOYMENT_CLOUD $TDH_MANAGEMENT_CLUSTER "$stt"
-  done
-
-  messageLine
-}
-
-listClusters() {
-  #cat /tmp/2 | jq -r '.spec | select(.provisionedcluster.accountName == "smidgley-aws").provisionedcluster.accountName'
-  cnt=$(tmc cluster list --group sadubois --output json | jq -r '."totalCount"') 
-  cnt=$(tmc cluster list --output json | jq -r '."totalCount"') 
-  if [ $cnt -gt 0 ]; then
-    TMPFILE=/tmp/tdh_listCluster.tmp; rm -f $TMPFILE
-
-    echo "NAME                 KUBERNETES           PROVIDER   CREDENTIALS          REGION          STATE"
-    echo "-----------------------------------------------------------------------------------------------------------"
-
-    tmc cluster list --group $TMC_CLUSTER_GROUP --output json > $TMPFILE
-    tmc cluster list --output json > $TMPFILE
-    for cln in $(jq -r '.clusters[] | select(.status.type == "PROVISIONED").fullName.name' $TMPFILE | head -5); do
-      ver=$(jq -r --arg cluster "$cln" '.clusters[] | select(.fullName.name == $cluster)' $TMPFILE | \
-            jq -r '.spec.provisionedcluster.version')
-      acc=$(jq -r --arg cluster "$cln" '.clusters[] | select(.fullName.name == $cluster)' $TMPFILE | \
-            jq -r '.spec.provisionedcluster.accountName')
-      cpv=$(jq -r --arg cluster "$cln" '.clusters[] | select(.fullName.name == $cluster)' $TMPFILE | \
-            jq -r '.status.agent.metadata.cloudProvider')
-      reg=$(jq -r --arg cluster "$cln" '.clusters[] | select(.fullName.name == $cluster)' $TMPFILE | \
-            jq -r '.status.agent.metadata.region')
-      stt=$(jq -r --arg cluster "$cln" '.clusters[] | select(.fullName.name == $cluster)' $TMPFILE | \
-            jq -r '.status.status.state.state')
-
-      printf "%-20s %-20s %-10s %-20s %-15s %-10s\n" $cln $ver $cpv $acc $reg $stt
-    done
-
-    # --- CLEANUP ---
-    rm -f $TMPFILE
-  fi
-}
-
 while [ "$1" != "" ]; do
   case $1 in
     -c)  TKG_DEPLOYMENT=$2;;
@@ -136,13 +53,9 @@ while [ "$1" != "" ]; do
 done
 
 if [ "${TKG_DEPLOYMENT}" == "" -o "${TMC_DEPLOYMENT}" == "" ]; then
-  if [ "${TKG_DEPLOYMENT}" == "" ]; then
-    listDeployments
-  fi
+  [ "${TKG_DEPLOYMENT}" == "" ] && listTMCDeployments
+  [ "${TMC_DEPLOYMENT}" == "" ] && listClusterConfig
 
-  if [ "${TMC_DEPLOYMENT}" == "" ]; then
-    listClusterConfig
-  fi
   usage; exit 0
 fi
 
@@ -161,8 +74,16 @@ fi
 
 if [ -f ${TDHPATH}/deployments/$TKG_DEPLOYMENT ]; then
   . ${TDHPATH}/deployments/$TKG_DEPLOYMENT
+else
+  echo "ERROR: Deployment file $TKG_DEPLOYMENT can not be found in the directory:"
+  echo "       ${TDHPATH}/deployments or ${HOME}/.tanzu-demo-hub/config"
+  exit 1
 fi
 
+#############################################################################################################################
+################################### EXECUTING CODE WITHIN  TDH-TOOLS DOCKER CONTAINER  ######################################
+#############################################################################################################################
+runTDHtools $TDH_TOOLS_CONTAINER_TYPE $TDH_TOOLS_CONTAINER_VERS "Deploy TKG Cluster with Tanzu Mission Control (TMC)" "$TDHPATH/$CMD_EXEC" "$CMD_ARGS"
 
 cnt=$(egrep -c "^TDH_DEPLOYMENT_CLOUD=" $TMC_DEPLOYMENT_CONFIG)
 if [ $cnt -eq 0 ]; then
@@ -293,38 +214,26 @@ checkTMCintegration      TO    ## Tanzu Observability (Wavefront)
 checkTMCintegration      TDP   ## Tanzu Data Protection
 checkTMCintegration      TCI   ## Tanzu Cluster Inspection
 
+TDH_TKGWC_NAME=${TDH_CLUSTER_NAME}
+TDH_TKGWC_CONTEXT=${TDH_CLUSTER_NAME}-admin@${TDH_CLUSTER_NAME}
+
 echo "-----------------------------------------------------------------------------------------------------------"
 echo "Tanzu Kubernetes Grid Cluster ($TDH_TKGWC_NAME) build completed"
 echo "-----------------------------------------------------------------------------------------------------------"
 if [ "$NATIVE" == "0" ]; then
-  printf "\e[1m1.) Set KUBECONFIG and set the cluster context\e[0m\n"
-  echo "    => tools/tdh-tools.sh"
-  echo "       tdh-tools:/$ kubectl config set-cluster ${TDH_TKGWC_NAME}"
-  echo "       tdh-tools:/$ kubectl config use-context ${TDH_TKGWC_CONTEXT}"
+  printf "\e[1m1.) To access, set the cluster andthe context\e[0m\n"
+  echo "       => tools/${TDH_TOOLS}.sh"
+  echo "          tdh-tools:/$ kubectl config set-cluster ${TDH_TKGWC_NAME}"
+  echo "          tdh-tools:/$ kubectl config use-context ${TDH_TKGWC_CONTEXT}"
   printf "\e[1m2.) Delete Cluster if not used anymore\e[0m\n"
-  echo "    => tools/tdh-tools.sh"
-  echo "       tdh-tools:/$ tmc cluster delete -m $TDH_MANAGEMENT_CLUSTER -p $TDH_PROVISIONER_NAME $TDH_CLUSTER_NAME"
+  echo "       => tools/${TDH_TOOLS}.sh"
+  echo "          tdh-tools:/$ tmc cluster delete -m $TDH_MANAGEMENT_CLUSTER -p $TDH_PROVISIONER_NAME $TDH_CLUSTER_NAME"
 else
-  echo "1.) Set KUBECONFIG and set the cluster context"
+  echo "1.) To access, set the cluster andthe context"
   echo "    => kubectl config set-cluster ${TDH_TKGWC_NAME}"
   echo "    => kubectl config use-context ${TDH_TKGWC_CONTEXT}"
   echo "3.) Delete Cluster if not used anymore"
   echo "    => tmc cluster delete -m $TDH_MANAGEMENT_CLUSTER -p $TDH_PROVISIONER_NAME $TDH_CLUSTER_NAME"
 fi
 
-
-#kubectl rollout restart deployment echoserver-1 -n contour-ingress-demo
-#kubectl get pods -n contour-ingress-demo
-#kubectl create rolebinding tanzu-demo-hub-privileged-my-namespace-role-binding --clusterrole=vmware-system-tmc-psp-privileged --group=system:authenticated -n contour-ingress-demo
-
-
-exit
-
-  # --- CHECK CLOUD AND JUMP SERVER ---
-  checkCloudAccess
-  configureJumpHost
-
-
-tmc managementcluster deregister tkgmc-vsphere-sadubois
-
-
+exit 0

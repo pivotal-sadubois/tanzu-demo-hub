@@ -1,0 +1,105 @@
+# ############################################################################################
+# File: ........: files/tdh-tools/Dockerfile-tce
+# Language .....: docker  
+# Author .......: Sacha Dubois, VMware
+# Description ..: Tanzu Demo Hub - Dockerfile for tdh-tools-tce (Tanzu Commninoty Eddition)
+# ############################################################################################
+            
+FROM ubuntu:20.04  
+MAINTAINER Sacha Dubois <sdubois@vmware.com>
+ENV TZ="Europe/Zurich"
+ENV ALLOW_INSTALL_AS_ROOT="true"
+ARG UID GID USER TZ HOME VMWUSER VMWPASS START ARCH
+ADD tdh-postinstall-root.sh        /usr/local/bin
+ADD tdh-postinstall-user-tce.sh    /usr/local/bin
+ADD tce-linux-amd64 /tanzu/tce-linux-amd64
+ADD hostname                       /etc/hostname
+ADD clusterctl      /usr/local/bin
+ADD kbld            /usr/local/bin
+ADD imgpkg          /usr/local/bin
+ADD kapp            /usr/local/bin
+ADD ytt             /usr/local/bin
+ADD argocd          /usr/local/bin
+ADD kubectl         /usr/local/bin
+ADD kp              /usr/local/bin
+ADD mc              /usr/local/bin
+ADD jenkins-cli.jar /usr/local
+ADD tmc             /usr/local/bin
+ADD terraform-bin   /usr/local/bin/terraform
+ADD kind            /usr/local/bin
+ADD govc            /usr/local/bin
+ADD kubectl-vsphere /usr/local/bin
+ADD kubectl         /usr/local/bin
+ADD vmware-ovftool  /usr/lib/vmware-ovftool
+      
+# --- LOCAL TIME AND USER ---
+RUN touch /tdh_tools_docker_container 
+RUN ln -snf /usr/share/zoneinfo/${TZ} /etc/localtime && echo ${TZ} > /etc/timezone
+RUN grep "$GID:" /etc/group || groupadd -g $GID $USER
+RUN tail -10 /etc/group
+RUN useradd -m -u $UID -g $GID -d $HOME $USER 
+RUN groupadd docker
+RUN usermod -a -G docker $USER
+RUN usermod -a -G daemon $USER
+RUN usermod -a -G root $USER
+
+# --- PASSWORDLESS SUDO ---
+RUN mkdir -p /etc/sudoers.d && echo "$USER ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/$USER
+
+# --- INSTALL REQUIRED UBUNTU PACKAGES --- 
+RUN apt-get update -qq && apt-get install -qqy \
+    apt-transport-https \
+    ca-certificates \
+    curl \
+    wget \
+    openjdk-11-jdk \
+    lxc \
+    software-properties-common \
+    lsb-core \
+    lsb-release \
+    gnupg \
+    sed \
+    maven \
+    zip \
+    s3cmd \
+    sudo \
+    postgresql-client \
+    iptables
+RUN apt-get clean 
+
+# --- INSTALL GOLANG ---
+RUN add-apt-repository ppa:longsleep/golang-backports
+RUN apt-get install -qqy golang-go
+
+# --- INSTALL KUSTOMIZE 
+RUN curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh"  | bash
+RUN chmod a+x kustomize && mv kustomize /usr/bin
+
+# --- INSTALL BAT ----
+RUN curl -s https://api.github.com/repos/sharkdp/bat/releases/latest |grep browser_download_url | cut -d '"' -f 4 | grep "${ARCH}.deb" | grep -v musl | wget -i -
+RUN dpkg -i bat_*_${ARCH}.deb
+RUN apt-get install -qqy bat
+
+# --- INSTALL DOCKER --- 
+RUN curl -sSL https://get.docker.com/ | sh
+ADD ./wrapdocker /usr/local/bin/wrapdocker
+RUN chmod g+x /usr/local/bin/wrapdocker 
+VOLUME /var/lib/docker
+CMD ["wrapdocker"]
+#RUN curl -L https://github.com/docker/compose/releases/download/1.29.1/docker-compose-Linux-x86_64 -o /usr/bin/docker-compose 
+
+# --- IMPORT MICROSOFT SSL KEYS ---
+RUN curl -sL https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor >> /etc/apt/trusted.gpg.d/microsoft.gpg
+RUN add-apt-repository "deb [arch=amd64] https://packages.microsoft.com/repos/azure-cli/ $(lsb_release -cs) main"
+     
+# --- INSTALL HELM ---
+RUN curl -sL https://baltocdn.com/helm/signing.asc | gpg --dearmor >> /etc/apt/trusted.gpg.d/baltocdn.gpg
+RUN add-apt-repository "deb https://baltocdn.com/helm/stable/debian/ all main"
+RUN apt-get install helm -y
+
+RUN apt-get update && apt-get install -y \
+    git vim azure-cli jq awscli 
+
+# --- INSTALL TANZU UTILITIES ---
+RUN su $USER -c /tanzu/tce-linux-amd64/install.sh
+ 
