@@ -19,10 +19,11 @@ Tanzu Mission Control CLI                                               0.42    
 Build Service Version                                                   1.4.2      1.4.2      1.4.2      1.4.2
 Build Service Tools (kp)                                                0.4.2      0.4.2      0.4.2      0.4.2
 Tantzu CLI Bundle                                                       1.4.1      1.5.1      0.9.1     0.10.0 
-Carvel Tools: - Handle multiple k8s Ressources (kapp)                  0.42.0     0.43.0     0.42.0     0.42.0 
-Carvel Tools: - Build/Reference container images (kbld)                0.31.0     0.32.0     0.31.0     0.31.0 
-Carvel Tools: - Template Overlay for k8s config (ytt)                  0.38.0     0.31.0     0.38.0     0.38.0 
-Carvel Tools: - Bundle and Relocate App Config (imgpkg)                0.23.1     0.24.0     0.23.1     0.23.1 
+Carvel Tools: - Handle multiple k8s Ressources (kapp)                  0.37.0     0.42.0     0.42.0     0.42.0 
+Carvel Tools: - Build/Reference container images (kbld)                0.30.0     0.31.0     0.31.0     0.31.0 
+Carvel Tools: - Template Overlay for k8s config (ytt)                  0.34.0     0.35.0     0.38.0     0.38.0 
+Carvel Tools: - Bundle and Relocate App Config (imgpkg)                0.10.0     0.18.0     0.23.1     0.23.1 
+Carvel Tools: - Declaratively state directory's contents (vendir)      0.21.1     0.23.0       -          - 
 Hashicorp Terraform                                                    0.14.3     0.14.3     0.14.3     0.14.3 
 Local Kubernetes clusters (Kind)                                       0.11.1     0.11.1     0.11.1     0.11.1 
 Kubernetes Cluster API (clusterctl)                                    v1.0.4     v1.0.4     v1.0.4     v1.0.4 
