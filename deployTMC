@@ -197,6 +197,7 @@ TanzuPackage_RepoSync       tkg-system
 
 TanzuPackage_CertManager    cert-manager-pkg     cert-manager.tanzu.vmware.com
 TanzuPackage_Contour        contour-pkg          contour.tanzu.vmware.com
+
 createClusterIssuer
 getRootCA tanzu-demo-hub-tls
 TanzuPackage_Harbor       harbor-pkg           harbor.tanzu.vmware.com
@@ -206,6 +207,7 @@ installTanzuDataPostgres     ## Tanzu Data SQL
 installSpringCloudGateway
 installMinio                 ## Required for Tanzu PostgreSQL Demos
 installKubeapps
+installGitea
 installJenkins
 installTAP                   ## Tanzu Application Platform (TAP)
 

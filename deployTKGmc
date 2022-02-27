@@ -1466,26 +1466,41 @@ else
     tanzu management-cluster kubeconfig get --admin > /dev/null 2>&1
     kubectl config set-cluster $TDH_TKGMC_NAME > /dev/null 2>&1
     kubectl config use-context ${TDH_TKGMC_NAME}-admin@$TDH_TKGMC_NAME > /dev/null 2>&1
+  else
+    # --- RECONFIGURE KUBECONFIG OF THE MANAGEMENT CLUSTER ---
+    [ ! -d ~/.kube-tkg ] && mkdir -p ~/.kube-tkg
+    [ ! -f ~/.kube-tkg/config ] && touch ~/.kube-tkg/config
+
+    cnt=$(grep -c $TDH_TKGMC_NAME ~/.kube-tkg/config 2>/dev/null) 
+    if [ $cnt -eq 0 ]; then 
+      tanzu management-cluster kubeconfig get --admin > /dev/null 2>&1
+      kubectl config set-cluster $TDH_TKGMC_NAME > /dev/null 2>&1
+      kubectl config use-context ${TDH_TKGMC_NAME}-admin@$TDH_TKGMC_NAME > /dev/null 2>&1
+    fi
   fi
 
   # --- VERIFY TMC REGISTRATION
-  tmc managementcluster get $TDH_TKGMC_NAME > /dev/null 2>&1
-  if [ $? -eq 0 ]; then
-    #tmc managementcluster get aws-hosted -o json | jq -r '.status.phase'
-    stt=$(tmc managementcluster get $TDH_TKGMC_NAME -o json 2>/dev/null | jq -r '.status.phase') 
-    if [ "$stt" != "READY" ]; then 
+  cmdLoop tmc managementcluster list -o json > /tmp/output.json
+  nam=$(jq -r --arg key "$TDH_TKGMC_NAME" '.managementClusters[] | select(.fullName.name == $key).fullName.name' /tmp/output.json)
+  if [ "$nam" == "$TDH_TKGMC_NAME" ]; then
+    st1=$(jq -r --arg key "$TDH_TKGMC_NAME" '.managementClusters[] | select(.fullName.name == $key).status.phase' /tmp/output.json)
+    st2=$(jq -r --arg key "$TDH_TKGMC_NAME" '.managementClusters[] | select(.fullName.name == $key).status.health' /tmp/output.json)
+    [ "$st1" == "null" -o "$st1" == "" ] && stt="NOT READY / $st2" || stt="$st1 / $st2"
+
+    if [ "$st1" != "READY" -o "$st2" != "HEALTHY"  ]; then 
       messagePrint " ▪ TMC DeRegister Cluster"             "$TDH_TKGMC_NAME"
-      #tmc managementcluster deregister $TDH_TKGMC_NAME -k $HOME/.kube/config -f > /tmp/error.log 2>&1; ret=$?
-      tmc managementcluster deregister $TDH_TKGMC_NAME -k $HOME/.kube/config > /tmp/error.log 2>&1; ret=$?
+      #tmc managementcluster deregister $TDH_TKGMC_NAME -k $HOME/.kube/config > /tmp/error.log 2>&1; ret=$?
+
+      tmc managementcluster delete $TDH_TKGMC_NAME -f > /tmp/error.log 2>&1; ret=$?
       if [ $ret -ne 0 ]; then
         logMessages /tmp/error.log
         echo "ERROR: failed to deregister Management Cluster $TDH_TKGMC_NAME, please try manually"
         if [ "$NATIVE" == "0" ]; then
           echo "       => tools/${TDH_TOOLS}.sh"
-          echo "          tdh-tools:/$ tmc managementcluster deregister $TDH_TKGMC_NAME -k $HOME/.kube/config -f"
+          echo "          tdh-tools:/$ tmc managementcluster delete $TDH_TKGMC_NAME -f"
           echo "          tdh-tools:/$ exit"
         else
-          echo "       => tmc managementcluster deregister $TDH_TKGMC_NAME -k $HOME/.kube/config -f"
+          echo "       => tmc managementcluster delete $TDH_TKGMC_NAME -f"
         fi
 
         exit 1
@@ -1493,8 +1508,10 @@ else
     fi
   fi
 
-  tmc managementcluster get $TDH_TKGMC_NAME > /dev/null 2>&1
-  if [ $? -ne 0 ]; then
+
+  cmdLoop tmc managementcluster list -o json > /tmp/output.json
+  nam=$(jq -r --arg key "$TDH_TKGMC_NAME" '.managementClusters[] | select(.fullName.name == $key).fullName.name' /tmp/output.json)
+  if [ "$nam" == "" ]; then
     messagePrint " ▪ TMC Register Cluster"             "$TDH_TKGMC_NAME"
 
     ret=1; cnt=0
@@ -1533,7 +1550,6 @@ else
 
   # --- CLEANUP OLD MANAGEMENT CLUSTERS ---
   #cleanKubeconfig $HOME/.tanzu/config.yaml  => cleanManagementCluster
-#gaga
 
   messageTitle "Create the TKG Management Cluster deployment File"
   messagePrint " ▪ Deployment File"        "$HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.yaml"
@@ -1604,7 +1620,6 @@ else
     tanzu kubernetes-release os get $n | sed '1d' | awk -v n="$n" '{ printf("# TMC_K8S_OS_REL:%s:%s:%s:%s\n",n,$1,$2,$3)}' >> $CONFIG_FILE
   done
 
-#gaga
   if [ "$TDH_DEPLOYMENT_ENV_NAME" == "Azure" ]; then
     echo ""                                                                           >> $CONFIG_FILE
     echo "nodes[0]='Standard_D2s_v3'   ## Azure Standard_D2s_v3 (2 Cores, 8 GB RAM)"  >> $CONFIG_FILE

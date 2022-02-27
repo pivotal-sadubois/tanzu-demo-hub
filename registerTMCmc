@@ -67,6 +67,7 @@ cleanKubeconfig
 tmcCheckLogin
 #checkTDHAccess
 vSphereLogin
+vSphereKubeconfig
 
 # --- VERIFY ITS A PEZ CLUSTER ---
 cnt=$(echo $VSPHERE_TKGS_VCENTER_SERVER | egrep -c "\.haas-") 
@@ -172,12 +173,16 @@ if [ $cnt -gt 0 ]; then
 fi
 
 VSPHERE_NAMESPACE=tanzu-demo-hub
+VSPHERE_STORAGE_CLASS=tanzu
 TDH_VSPHERE_API_TOKEN=$(vSphereAPI_getToken "$VSPHERE_TKGS_VCENTER_SERVER" "$VSPHERE_TKGS_VCENTER_ADMIN" "$VSPHERE_TKGS_VCENTER_PASSWORD")
 vSphereAPI_createNamespace $TDH_VSPHERE_API_TOKEN $VSPHERE_TKGS_VCENTER_SERVER $VSPHERE_NAMESPACE
 
 messageTitle "TMC Management Server Configuration"
-messagePrint " ▪ Tanzu Mission Control (TMC) - Management Cluster"       "$TMC_DISPLAY_NAME"
+messagePrint " ▪ Tanzu Mission Control (TMC) - Management Cluster"       "$HOME/.tanzu-demo-hub/config/${TMC_DISPLAY_NAME}.cfg"
+messagePrint " ▪ Tanzu Mission Control (TMC) - Kubeconfig"               "$HOME/.tanzu-demo-hub/config/${TMC_DISPLAY_NAME}.kubeconfig"
 messagePrint " ▪ Tanzu Mission Control (TMC) - Configuration Files"      "$HOME/.tanzu-demo-hub/config/${TMC_CONFIG_NAME}.cfg"
+
+mv $HOME/.kube/config_$VSPHERE_TKGS_SUPERVISOR_CLUSTER $HOME/.tanzu-demo-hub/config/${TMC_DISPLAY_NAME}.kubeconfig
 
 KUBERNETES_RELEASE=$(kubectl get tanzukubernetesreleases | tail -1 | awk '{ print $1 }')
 
@@ -197,6 +202,26 @@ echo ""                                                                        >
 echo "nodes[0]='best-effort-medium'"                                           >> $CONFIG_FILE
 echo "nodes[1]='best-effort-large'"                                            >> $CONFIG_FILE
 echo "nodes[2]='best-effort-xlarge'"                                           >> $CONFIG_FILE
+
+CONFIG_FILE="$HOME/.tanzu-demo-hub/config/${TMC_DISPLAY_NAME}.cfg"
+echo "TDH_TKGMC_INFRASTRUCTURE=vSphere"                                        >  $CONFIG_FILE
+echo "TDH_TKGMC_NAME=$TMC_DISPLAY_NAME"                                        >> $CONFIG_FILE
+echo "TDH_TKGMC_ENVNAME=tkgs"                                                  >> $CONFIG_FILE
+echo "TDH_TKGMC_TMC_CONFIG="                                                   >> $CONFIG_FILE
+echo "TDH_TKGMC_STORAGE_CLASS=$VSPHERE_STORAGE_CLASS"                          >> $CONFIG_FILE
+echo "TDH_TKGMC_VSPHERE_NAMESPACE=$VSPHERE_NAMESPACE"                          >> $CONFIG_FILE
+echo "TDH_TKGMC_VSPHERE_USER=$VSPHERE_TKGS_VCENTER_ADMIN"                      >> $CONFIG_FILE
+echo "TDH_TKGMC_VSPHERE_PASS=$VSPHERE_TKGS_VCENTER_PASSWORD"                   >> $CONFIG_FILE
+echo "TDH_TKGMC_CONFIG="                                                       >> $CONFIG_FILE
+echo "TDH_TKGMC_SUPERVISORCLUSTER=$VSPHERE_TKGS_SUPERVISOR_CLUSTER"            >> $CONFIG_FILE
+echo "TDH_TKGMC_KUBECONFIG=${TMC_DISPLAY_NAME}.kubeconfig"                     >> $CONFIG_FILE
+echo "TDH_TKGMC_TOOLS_CONTAINER=tdh-tools-tkg-$DEPLOY_TKG_VERSION"             >> $CONFIG_FILE
+echo ""                                                                        >> $CONFIG_FILE
+echo "nodes[0]='best-effort-medium'"                                           >> $CONFIG_FILE
+echo "nodes[1]='best-effort-large'"                                            >> $CONFIG_FILE
+echo "nodes[2]='best-effort-xlarge'"                                           >> $CONFIG_FILE
+
+
 
 echo "vSphere for Tanzu supervisor cluster ($TMC_DISPLAY_NAME) successfilly registered"
 echo ""

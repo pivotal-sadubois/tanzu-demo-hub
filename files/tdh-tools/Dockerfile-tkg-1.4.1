@@ -4,7 +4,7 @@
 # Author .......: Sacha Dubois, VMware
 # Description ..: Tanzu Demo Hub - Dockerfile for tdh-tools container
 # ############################################################################################
-                    
+         
 FROM ubuntu:20.04   
 MAINTAINER Sacha Dubois <sdubois@vmware.com>
 ENV TZ="Europe/Zurich"
@@ -14,10 +14,10 @@ ADD tdh-postinstall-user.sh     /usr/local/bin
 ADD cli             /tanzu/cli
 ADD clitap          /tanzu-tap/cli
 ADD clusterctl      /usr/local/bin
-#ADD kbld            /usr/local/bin
-#ADD imgpkg          /usr/local/bin
-#ADD kapp            /usr/local/bin
-#ADD ytt             /usr/local/bin
+ADD kbld            /usr/local/bin
+ADD imgpkg          /usr/local/bin
+ADD kapp            /usr/local/bin
+ADD ytt             /usr/local/bin
 ADD argocd          /usr/local/bin
 ADD kubectl         /usr/local/bin
 ADD kp              /usr/local/bin
