@@ -51,7 +51,7 @@ fi
 
 if [ "${DEPLOY_TKG_VERSION}" != "" ]; then
   if [ ! -f $TDHPATH/files/tdh-tools/tdh-tools-tkg-${DEPLOY_TKG_VERSION}.cfg ]; then
-    str=$(ls -1 $TDHPATH/files/tdh-tools/tdh-tools-tkg-*.cfg | sed -e 's/^.*tools-tkg-//g' -e 's/\.cfg//g' | paste - - | awk '{ printf("%s or %s\n", $1, $2) }')
+    str=$(ls -1 $TDHPATH/files/tdh-tools/tdh-tools-tce-*.cfg | sed -e 's/^.*tools-tce-//g' -e 's/\.cfg//g' | paste - - | awk '{ printf("%s or %s\n", $1, $2) }')
     echo "ERROR: Unsuported TKG Release $DEPLOY_TKG_VERSION, ($str) are supported"
     exit 0
   fi
