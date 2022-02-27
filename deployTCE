@@ -13,10 +13,8 @@ export NATIVE=0
 export DEPLOY_TKG_CLEAN=0
 export TDH_TKGWC_K8S_VERSION=""
 export TDH_TANZU_MISSION_CONTROL_REGISTRATION=true
-export TDH_TOOLS=tdh-tools-tce
 
 # --- SETTING FOR TDH-TOOLS ---
-export NATIVE=0                ## NATIVE=1 r(un on local host), NATIVE=0 (run within docker)
 export START_COMMAND="$*"
 export CMD_EXEC=$(basename $0)
 export CMD_ARGS=$*
@@ -25,10 +23,27 @@ export CMD_ARGS=$*
 [ -f $TANZU_DEMO_HUB/functions ] && . $TANZU_DEMO_HUB/functions
 [ -f $HOME/.tanzu-demo-hub.cfg ] && . $HOME/.tanzu-demo-hub.cfg
 
+usage() {
+  echo ""
+  echo "USAGE: $0 [options] -d <tkg-deployment.cfg> -c <tkg-configuration.cfg> -n <cluster-name> [-k <kubernetes-version>] [--debug]"
+  echo "            Options:  -n  <cluster-name>        # Should reflect the environment and its purpose. Make sure"
+  echo "                                                # to add your user name, to prevent conflicts in TMC"
+  echo "                                                # ie. tdh-azure-sdubois or tdh-aws-sdubois-aws"
+  echo ""
+  echo "                      -tag <name-tag>           # Cluster NameTag ie. TKG_CLUSTER_01 or TKG_CLUSTER_02"
+  echo "                      -k  <controlplane-ip>     # default (latest)"
+  echo "                                                # use 'tanzu kubernetes-release get' to see available"
+  echo ""
+  echo "                      --delete                  # Delete Workload Cluster"
+  echo "                      --debug                   # default (disabled)"
+  echo "                      --native                  # Use 'native' installed tools instead of the tdh-tools container"
+  echo ""
+}
+
 while [ "$1" != "" ]; do
   case $1 in
     -d)   TKG_DEPLOYMENT=$2;;
-    -m)   TDH_TKGMC_NAME=$2;;
+    -c)   TKG_CONFIGURATION=$2;;
     -n)   TDH_TKGWC_NAME=$2;;
     -k)   TDH_TKGWC_K8S_VERSION=$2;;
     -tag) TDH_TKGWC_NAME_TAG=$2;;
@@ -39,10 +54,57 @@ while [ "$1" != "" ]; do
   shift
 done
 
+if [ "${TKG_DEPLOYMENT}" == "" -o "${TKG_CONFIGURATION}" == "" ]; then
+  [ "${TKG_DEPLOYMENT}" == "" ] && listTKGmc
+  [ "${TKG_CONFIGURATION}" == "" ] && listClusterConfig
+
+  usage; exit 0
+fi
+
+# --- VERIFY DEPLOYMENT ---
+if [ -f $HOME/.tanzu-demo-hub/config/${TKG_DEPLOYMENT} ]; then
+  TMC_DEPLOYMENT_CONFIG=${HOME}/.tanzu-demo-hub/config/${TKG_DEPLOYMENT}
+  TDH_TKGMC_NAME=$(egrep "^TDH_TKGMC_NAME=" $TMC_DEPLOYMENT_CONFIG | awk -F'=' '{ print $2 }' | sed 's/"//g')
+  TDH_TKGMC_TOOLS_CONTAINER=$(egrep "^TDH_TKGMC_TOOLS_CONTAINER=" $TMC_DEPLOYMENT_CONFIG | awk -F'=' '{ print $2 }' | sed 's/"//g' | awk -F'-' '{ print $NF }')
+  K8S_TKGMC=$(echo $TDH_TKGMC_TOOLS_CONTAINER | awk -F'.' '{ printf("%s.%s\n",$1,$2) }')
+
+  . $HOME/.tanzu-demo-hub/config/${TKG_DEPLOYMENT}
+else
+  echo "ERROR: Deployment file $TKG_DEPLOYMENT can not be found in the directory:"
+  echo "       $HOME/.tanzu-demo-hub/config"
+  exit 1
+fi
+
+if [ -f $TDHPATH/deployments/$TKG_CONFIGURATION ]; then
+  TKG_TANZU_KUBERNETES_GRID=$(egrep "^TKG_TANZU_KUBERNETES_GRID=" $TDHPATH/deployments/$TKG_CONFIGURATION | awk -F'=' '{ print $2 }')
+  K8S_TKGWC=$(echo $TKG_TANZU_KUBERNETES_GRID | awk -F'.' '{ printf("%s.%s\n",$1,$2) }')
+
+  if [ "$K8S_TKGMC" != "$K8S_TKGWC" ]; then
+    K8S_SHORT=$(echo $TDH_TKGMC_TOOLS_CONTAINER | awk -F'.' '{ printf("%s.%s.x\n",$1,$2) }')
+    echo "ERROR: Management Cluster ($TDH_TKGMC_NAME) deployed with $TKG_DEPLOYMENT has been configured"
+    echo "       with TKG ${K8S_TKGMC}.x, but the TKG Workload Cluster defined in $TKG_CONFIGURATION"
+    echo "       requires TKG ${K8S_TKGWC}.x. Please use a TDK Configuration supporteing TKG $K8S_SHORT instead"
+    echo ""
+    exit
+  fi
+
+  . ${TDHPATH}/deployments/$TKG_CONFIGURATION
+else
+  echo "ERROR: Deployment file $TKG_DEPLOYMENT can not be found in the directory:"
+  echo "       $TDHPATH/deployments or $HOME/.tanzu-demo-hub/config"
+  exit 1
+fi
+
+echo "runTDHtools \"$TDH_TOOLS_CONTAINER_TYPE\" \"$TDH_TOOLS_CONTAINER_VERS\" \"Deploy TKG Workload Cluster\" \"$TDHPATH/$CMD_EXEC\" \"$CMD_ARGS\""
+exit
+
 #############################################################################################################################
 ################################### EXECUTING CODE WITHIN  TDH-TOOLS DOCKER CONTAINER  ######################################
 #############################################################################################################################
-runTDHtools tce "Deploy TCE Workload Cluster" "$TDHPATH/$CMD_EXEC" "$CMD_ARGS"
+#runTDHtools tce "Deploy TCE Workload Cluster" "$TDHPATH/$CMD_EXEC" "$CMD_ARGS"
+runTDHtools "$TDH_TOOLS_CONTAINER_TYPE" "$TDH_TOOLS_CONTAINER_VERS" "Deploy TKG Workload Cluster" "$TDHPATH/$CMD_EXEC" "$CMD_ARGS"
+
+exit
 
 # --- FIX MANAGEMENT SERVER NAME INSTEAD OF ITS DEPLOYMENT FILE NAME ---
 if [ -f $HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME} -o $HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.cfg ]; then 
