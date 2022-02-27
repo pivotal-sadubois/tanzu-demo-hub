@@ -4545,6 +4545,17 @@ checkTMCcontext() {
   fi 
 }
 
+# ------------------------------------------------------------------------------------------
+# Function Name ......: tkgCreateCluster
+# Function Purpose ...: Install a Tanzu Kubernetes Grid Workload Cluster
+# ------------------------------------------------------------------------------------------
+# Argument ($1) ......: None
+# ------------------------------------------------------------------------------------------
+# Return Value .......: 0 - SUCCEED, 1 - FAILED
+# ------------------------------------------------------------------------------------------
+# References: 
+# https://docs.vmware.com/en/VMware-vSphere/7.0/vmware-vsphere-with-tanzu/
+# ------------------------------------------------------------------------------------------
 tkgCreateCluster() {
   #########################################################################################################################
   ################################################ INSTALL TKG ON AZURE ###################################################
@@ -4835,7 +4846,6 @@ tkgCreateCluster() {
 #        echo "          capacity:"                                                      >> $CLUSTER_CONFIG_FILE
 #        echo "            storage: 50Gi"                                                >> $CLUSTER_CONFIG_FILE
       
-#hallo
         messagePrint " ▪ TKG Workload Cluster ($TDH_TKGWC_NAME)"          "deploying cluster ....."
         cmdLoop kubectl apply -f $CLUSTER_CONFIG_FILE --wait=true > /dev/null 2>&1
 
@@ -4870,6 +4880,13 @@ tkgCreateCluster() {
       echo "       => vsphereWorkloadClusterLogin $TKG_DEPLOYMENT $TDH_TKGWC_NAME"
       exit 1
     fi
+
+
+    # Deploying Workloads and Extensions on TKGS Clusters
+    # https://docs.vmware.com/en/VMware-vSphere/7.0/vmware-vsphere-with-tanzu/GUID-E39346D8-320F-4B3D-B526-5313D99129CE.html
+
+    # Prepare a Tanzu Kubernetes Cluster Created by Using the Tanzu Kubernetes Grid Service to Run Packages
+    # https://docs.vmware.com/en/VMware-Tanzu-Kubernetes-Grid/1.5/vmware-tanzu-kubernetes-grid-15/GUID-packages-prep-tkgs-kapp.html
 
     cmdLoop kubectl get PodSecurityPolicy -o json > /tmp/outpus.json
     nam=$(jq -r --arg key "tanzu-system-kapp-ctrl-restricted" '.items[].metadata | select(.name == $key).name' /tmp/output.json) 
@@ -4910,18 +4927,32 @@ tkgCreateCluster() {
       echo "        max: 65535"                                         >> $PSP_CONFIG
       echo "  readOnlyRootFilesystem: false"                            >> $PSP_CONFIG
 
-      kubectl apply -f tanzu-system-kapp-ctrl-restricted.yaml > /dev/null 2>&1
+      if [ $DEBUG -eq 1 ]; then
+        messagePrint " ▪ Define PodSecurityPolicy"                 "tanzu-system-kapp-ctrl-restricted"
+        messageLine
+        kubectl apply -f $PSP_CONFIG 
+        messageLine
+      else
+        messagePrint " ▪ Define PodSecurityPolicy"                 "tanzu-system-kapp-ctrl-restricted"
+        kubectl apply -f $PSP_CONFIG > /dev/null 2>&1
+      fi
     fi
 
     cnt=$(kubectl get pods -n tkg-system | grep -c kapp-controller)
     if [ $cnt -eq 0 ]; then 
+      messagePrint " ▪ Installing Kapp Controller"                 " $TDHPATH/files/kapp-controller.yaml"
       kubectl apply -f $TDHPATH/files/kapp-controller.yaml
 
-      tanzu package repository add tanzu-system-packages --url projects.registry.vmware.com/tkg/packages/standard/repo:v1.5.0
+      runningPods kube-system
+      runningPods tkg-system
+
+      #tanzu package repository add REPOSITORY-NAME -n tanzu-package-repo-global --url projects.registry.vmware.com/tkg/packages/standard/repo:v1.5.0
+      #tanzu package repository add tanzu-system-packages --url projects.registry.vmware.com/tkg/packages/standard/repo:v1.5.0
     fi
 
     export KUBECONFIG=$HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.kubeconfig
   fi
+
 }
 
 vsphereSupervisorClusterLogin() {
@@ -11192,7 +11223,7 @@ TanzuPackage_AddRepo() {
   stt=$(tanzu package repository list -n tanzu-package-repo-global -o json 2>/dev/null | \
         jq -r --arg pkg tce-repo '.[] | select(.name == $pkg).status' 2>/dev/null) 
   if [ "$stt" == "" ]; then 
-    messagePrint " ▪ Adding Tanzu Package Repository"   "$TANZU_REPO_NAME"
+    messagePrint " ▪ Adding Tanzu Package Repository"   "$TANZU_REPO_URL"
     cnt=0; ret=1
     while [ $ret -ne 0 -a $cnt -lt 5 ]; do
       tanzu package repository add $TANZU_REPO_NAME --url $TANZU_REPO_URL \
@@ -13171,7 +13202,7 @@ listClusterConfig() {
   printf "%-40s %-7s %-15s %-32s %-5s %s\n" "TKG-CONFIGURATION" "PLAN" "DESCRIPTION"
   messageLine
 
-  for deployment in $(ls -1 ${TDHPATH}/deployments/tkg-*.cfg | grep -v "tkgmc-"); do
+  for deployment in $(ls -1 ${TDHPATH}/deployments/${TDH_TOOLS_CONTAINER_TYPE}-*.cfg | grep -v "tkgmc-"); do
     TDH_DEPLOYMENT_DESCRIPTION=$(egrep "^TDH_DEPLOYMENT_DESCRIPTION=" $deployment | awk -F'=' '{ print $2 }' | sed 's/"//g')
     TDH_DEPLOYMENT_CLUSTER_PLAN=$(egrep "^TDH_DEPLOYMENT_CLUSTER_PLAN=" $deployment | awk -F'=' '{ print $2 }')
 
@@ -13232,4 +13263,7 @@ listTCEmcDeployments() {
 
   echo "-----------------------------------------------------------------------------------------------------------"
 }
+
+#kubectl get tanzukubernetescluster -n tanzu-demo-hub tdh-vsphere-sadubois
+#kubectl delete tanzukubernetescluster -n tanzu-demo-hub tdh-vsphere-sadubois
 
