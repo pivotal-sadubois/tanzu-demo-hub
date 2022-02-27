@@ -87,6 +87,7 @@ else
 fi
 
 if [ -f $TDHPATH/deployments/$TKG_CONFIGURATION ]; then
+echo "XXXXXX $TDHPATH/deployments/$TKG_CONFIGURATION"
   TKG_TANZU_KUBERNETES_GRID=$(egrep "^TKG_TANZU_KUBERNETES_GRID=" $TDHPATH/deployments/$TKG_CONFIGURATION | awk -F'=' '{ print $2 }')
   K8S_TKGWC=$(echo $TKG_TANZU_KUBERNETES_GRID | awk -F'.' '{ printf("%s.%s\n",$1,$2) }')
 
