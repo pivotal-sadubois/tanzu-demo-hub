@@ -55,7 +55,6 @@ while [ "$1" != "" ]; do
   shift
 done
 
-echo "1 TDH_TOOLS_CONTAINER_TYPE:$TDH_TOOLS_CONTAINER_TYPE"
 if [ "${TKG_DEPLOYMENT}" == "" -o "${TKG_CONFIGURATION}" == "" ]; then
   [ "${TKG_DEPLOYMENT}" == "" ] && listTKGmc
   [ "${TKG_CONFIGURATION}" == "" ] && listClusterConfig
@@ -63,7 +62,6 @@ if [ "${TKG_DEPLOYMENT}" == "" -o "${TKG_CONFIGURATION}" == "" ]; then
   usage; exit 0
 fi
 
-echo "2 TDH_TOOLS_CONTAINER_TYPE:$TDH_TOOLS_CONTAINER_TYPE"
 # --- VERIFY DEPLOYMENT ---
 if [ -f $HOME/.tanzu-demo-hub/config/${TKG_DEPLOYMENT} ]; then
   TMC_DEPLOYMENT_CONFIG=${HOME}/.tanzu-demo-hub/config/${TKG_DEPLOYMENT}
@@ -77,7 +75,6 @@ else
   echo "       $HOME/.tanzu-demo-hub/config"
   exit 1
 fi
-echo "3 TDH_TOOLS_CONTAINER_TYPE:$TDH_TOOLS_CONTAINER_TYPE"
 
 if [ -f $TDHPATH/deployments/$TKG_CONFIGURATION ]; then
   TKG_TANZU_KUBERNETES_GRID=$(egrep "^TKG_TANZU_KUBERNETES_GRID=" $TDHPATH/deployments/$TKG_CONFIGURATION | awk -F'=' '{ print $2 }')
@@ -98,7 +95,6 @@ else
   echo "       $TDHPATH/deployments or $HOME/.tanzu-demo-hub/config"
   exit 1
 fi
-echo "4 TDH_TOOLS_CONTAINER_TYPE:$TDH_TOOLS_CONTAINER_TYPE"
 
 echo "runTDHtools \"$TDH_TOOLS_CONTAINER_TYPE\" \"$TDH_TOOLS_CONTAINER_VERS\" \"Deploy TKG Workload Cluster\" \"$TDHPATH/$CMD_EXEC\" \"$CMD_ARGS\""
 exit
