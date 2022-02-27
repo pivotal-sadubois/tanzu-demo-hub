@@ -23,7 +23,7 @@ export CMD_ARGS=$*
 [ -f $HOME/.tanzu-demo-hub.cfg ] && . $HOME/.tanzu-demo-hub.cfg
 
 usage() {
-  str=$(ls -1 $TDHPATH/files/tdh-tools/tdh-tools-tkg-*.cfg | sed -e 's/^.*tools-tkg-//g' -e 's/\.cfg//g' | paste - - | awk '{ printf("%s or %s\n", $1, $2) }')
+  str=$(ls -1 $TDHPATH/files/tdh-tools/tdh-tools-tce-*.cfg | sed -e 's/^.*tools-tce-//g' -e 's/\.cfg//g' | paste - - | awk '{ printf("%s or %s\n", $1, $2) }')
   echo "USAGE: $0 [oprions] -d <deployment> -v <tkg-version>"
   echo "            Options:  -d <deployment.cfg>         # TKG Management Cluster Deployment Name"
   echo "                      -v <tkg-version>            # TKG Version (ie. $str)"
