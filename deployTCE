@@ -74,7 +74,12 @@ echo "K8S_TKGMC:$K8S_TKGMC"
 echo "TDH_TKGMC_TOOLS_CONTAINER:$TDH_TKGMC_TOOLS_CONTAINER"
 
 
+echo "$HOME/.tanzu-demo-hub/config/${TKG_DEPLOYMENT}"
   . $HOME/.tanzu-demo-hub/config/${TKG_DEPLOYMENT}
+
+echo "K8S_TKGWC:$K8S_TKGWC 1"
+echo "K8S_TKGWC:$K8S_TKGWC 1"
+
 else
   echo "ERROR: Deployment file $TKG_DEPLOYMENT can not be found in the directory:"
   echo "       $HOME/.tanzu-demo-hub/config"
