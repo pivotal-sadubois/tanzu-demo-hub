@@ -13208,3 +13208,28 @@ listTKGmcDeployments() {
   echo "-----------------------------------------------------------------------------------------------------------"
 }
 
+# ------------------------------------------------------------------------------------------
+# Function Name ......: listTCEmcDeployments  
+# Function Purpose ...: List TCE Management Cluster Deployments
+# ------------------------------------------------------------------------------------------
+# Argument ($1) ......: n/a
+# ------------------------------------------------------------------------------------------
+# Return Value .......: 0 - SUCCEED, 1 - FAILED
+# ------------------------------------------------------------------------------------------
+listTCEmcDeployments() {
+  echo ""
+  printf "%-30s %-7s %-7s %-30s %-5s %s\n" "CONFIURATION" "CLOUD" "DOMAIN" "MGMT-CLUSTER" "PLAN" "CONFIGURATION"
+  echo "-----------------------------------------------------------------------------------------------------------"
+
+  for deployment in $(ls -1 ${TDHPATH}/deployments/tcemc*.cfg); do
+    . $deployment
+
+    dep=$(basename $deployment)
+
+    printf "%-30s %-7s %-7s %-30s %-5s %s\n" $dep $TDH_TKGMC_INFRASTRUCTURE ${TDH_TKGMC_ENVNAME} "${TDH_TKGMC_NAME}-<TDH_USER>" \
+           $TDH_TKGMC_PLAN "$TDH_TKGMC_CONFIG"
+  done
+
+  echo "-----------------------------------------------------------------------------------------------------------"
+}
+
