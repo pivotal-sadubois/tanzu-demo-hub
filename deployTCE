@@ -411,10 +411,26 @@ fi
 #InstallContour
 #InstallHarborRegistry
 
+if [ -s $TDHPATH/files/tanzu-packages/repo-${TDH_TOOLS_CONTAINER_TYPE}-${TDH_TOOLS_CONTAINER_VERS}.cfg ]; then
+ . $TDHPATH/files/tanzu-packages/repo-${TDH_TOOLS_CONTAINER_TYPE}-${TDH_TOOLS_CONTAINER_VERS}.cfg
+else
+  echo "ERROR: Tanzu Package Repository Configuration not found for the release ${TDH_TOOLS_CONTAINER_TYPE}/${TDH_TOOLS_CONTAINER_VERS}"
+  echo "       => $TDHPATH/files/tanzu-packages/repo-${TDH_TOOLS_CONTAINER_TYPE}-${TDH_TOOLS_CONTAINER_VERS}.cfg"
+  exit
+fi
+
 messageTitle "Tanzu Package Management"
-TanzuPackage_AddRepo      tanzu-package-repo-global tce-repo projects.registry.vmware.com/tce/main:0.9.1
+echo "TanzuPackage_AddRepo       tanzu-package-repo-global tce-repo $TCE_REPOSITORY"
+TanzuPackage_AddRepo       tanzu-package-repo-global tce-repo $TCE_REPOSITORY
 TanzuPackage_RepoSync     tanzu-package-repo-global
 TanzuPackage_RepoSync     tkg-system 
+
+#messageTitle "Tanzu Package Management"
+#TanzuPackage_AddRepo      tanzu-package-repo-global tce-repo projects.registry.vmware.com/tce/main:0.9.1
+#TanzuPackage_RepoSync     tanzu-package-repo-global
+#TanzuPackage_RepoSync     tkg-system 
+
+exit
 
 TanzuPackage_CertManager  cert-manager-pkg     cert-manager.community.tanzu.vmware.com
 TanzuPackage_Contour      contour-pkg          contour.community.tanzu.vmware.com
