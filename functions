@@ -4897,8 +4897,10 @@ tkgCreateCluster() {
       echo "metadata:"                                                  >> $PSP_CONFIG
       echo "  name: tanzu-system-kapp-ctrl-restricted"                  >> $PSP_CONFIG
       echo "spec:"                                                      >> $PSP_CONFIG
-      echo "  privileged: false"                                        >> $PSP_CONFIG
-      echo "  allowPrivilegeEscalation: false"                          >> $PSP_CONFIG
+#      echo "  privileged: false"                                        >> $PSP_CONFIG
+#      echo "  allowPrivilegeEscalation: false"                          >> $PSP_CONFIG
+      echo "  privileged: true"                                         >> $PSP_CONFIG
+      echo "  allowPrivilegeEscalation: true"                           >> $PSP_CONFIG
       echo "  requiredDropCapabilities:"                                >> $PSP_CONFIG
       echo "    - ALL"                                                  >> $PSP_CONFIG
       echo "  volumes:"                                                 >> $PSP_CONFIG
@@ -4940,8 +4942,15 @@ tkgCreateCluster() {
 
     cnt=$(kubectl get pods -n tkg-system | grep -c kapp-controller)
     if [ $cnt -eq 0 ]; then 
-      messagePrint " ▪ Installing Kapp Controller"                 " $TDHPATH/files/kapp-controller.yaml"
-      kubectl apply -f $TDHPATH/files/kapp-controller.yaml
+      if [ $DEBUG -eq 1 ]; then
+        messagePrint " ▪ Installing Kapp Controller"               "$TDHPATH/files/kapp-controller.yaml"
+        messageLine
+        kubectl apply -f $TDHPATH/files/kapp-controller.yaml
+        messageLine
+      else
+        messagePrint " ▪ Define PodSecurityPolicy"                 "tanzu-system-kapp-ctrl-restricted"
+        kubectl apply -f $TDHPATH/files/kapp-controller.yaml > /dev/null 2>&1
+      fi
 
       runningPods kube-system
       runningPods tkg-system
@@ -4950,7 +4959,9 @@ tkgCreateCluster() {
       #tanzu package repository add tanzu-system-packages --url projects.registry.vmware.com/tkg/packages/standard/repo:v1.5.0
     fi
 
+    # --- RELAXING POD SECUROTY ---
     export KUBECONFIG=$HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.kubeconfig
+    kubectl apply -f $TDHPATH/files/psp/vmware-system-privileged.yaml > /dev/null 2>&1
   fi
 
 }
@@ -6025,8 +6036,12 @@ installGitea() {
     #kubectl get secret tanzu-demo-hub-tls --namespace=default -oyaml | grep -v '^\s*namespace:\s' | \
     #kubectl apply --namespace=$NAMESPACE -f - > /dev/null 2>&1
 
+    # --- DOCKER PULL SECRET ---
+    dockerPullSecret $NAMESPACE
+
     # --- ADDING HELM REPO ---
     helmRepoAdd $HELMREPO $HELMREPO_URL
+#hallo
 
     if [ "$TDH_SERVICE_GITEA_VERSION" == "" -o "$TDH_SERVICE_GITEA_VERSION" == "latest" ]; then
       HELM_CHART_VERSION=$(helm search repo $HELMREPO/$HELMCHART | egrep "^$HELMREPO/$HELMCHART" | tail -1 | awk '{ print $2 }')
@@ -6034,12 +6049,12 @@ installGitea() {
       HELM_CHART_VERSION=$TDH_SERVICE_GITEA_VERSION
     fi
 
-    HELM_VALUES=/tmp/helm_kubeapps_values.yaml
+    HELM_VALUES=/tmp/gitea_kubeapps_values.yaml
 
-    echo "global:"                                                                                                              >  $HELM_VALUES
+    echo "images:"                                                                                                              >  $HELM_VALUES
     echo "  imageRegistry: docker.io"                                                                                           >> $HELM_VALUES
-    echo "  imagePullSecrets:"                                                                                                  >> $HELM_VALUES
-    echo "    - tdh-docker-repo"                                                                                                >> $HELM_VALUES
+    echo "  imagePullPolicy: Always"                                                                                            >> $HELM_VALUES
+    echo "  imagePullSecrets: tdh-docker-repo"                                                                                  >> $HELM_VALUES
     echo ""                                                                                                                     >> $HELM_VALUES
     echo "config:"                                                                                                              >> $HELM_VALUES
     echo "  disableRegistration: true"                                                                                          >> $HELM_VALUES
@@ -6169,6 +6184,9 @@ installKubeapps() {
     messagePrint " ▪ Create Namespace" "$HELMCHART"
     deleteNamespace $NAMESPACE > /dev/null 2>&1
     createNamespace $NAMESPACE > /dev/null 2>&1
+
+    # --- DOCKER PULL SECRET ---
+    dockerPullSecret $NAMESPACE
 
     # --- COPY SECRET TO NAMESPACE ---
     messagePrint " ▪ Copy TLS Secret" "tanzu-demo-hub-tls"
@@ -6506,6 +6524,9 @@ installGitLab() {
     #DELETEME
     #kubectl get secret tanzu-demo-hub-tls --namespace=default  -oyaml | grep -v '^\s*namespace:\s' | \
     #kubectl apply --namespace=$NAMESPACE -f -
+
+    # --- DOCKER PULL SECRET ---
+    dockerPullSecret $NAMESPACE
 
     copySecretObject default $NAMESPACE tanzu-demo-hub-tls gitlab-wildcard-tls
 
@@ -7386,6 +7407,9 @@ InstallMetallLB() {
     createNamespace $NAMESPACE > /dev/null 2>&1
     patchServiceAccount default $NAMESPACE
 
+    # --- DOCKER PULL SECRET ---
+    dockerPullSecret $NAMESPACE
+
     HELM_VALUES=/tmp/metallb_values.yaml
 
     ipa=$(docker network inspect kind | jq -r '.[].IPAM.Config[].Subnet' | egrep "^[0-9]*\." | awk -F'.' '{ printf("%s.%s\n",$1,$2)}')
@@ -7475,11 +7499,8 @@ InstallContour() {
     createNamespace $NAMESPACE > /dev/null 2>&1
     helmRepoAdd bitnami https://charts.bitnami.com/bitnami
 
-    messagePrint " ▪ Create Docker secret"  "tdh-docker-repo"
-    cndLoop kubectl -n $NAMESPACE create secret docker-registry tdh-docker-repo \
-            --docker-server $TDH_REGISTRY_DOCKER_NAME \
-            --docker-username $TDH_REGISTRY_DOCKER_USER \
-            --docker-password $TDH_REGISTRY_DOCKER_PASS
+    # --- DOCKER PULL SECRET ---
+    dockerPullSecret $NAMESPACE
 
     cnt=0; ret=1
     while [ $ret -ne 0 -a $cnt -lt 5 ]; do
@@ -7981,11 +8002,8 @@ InstallHarborRegistry() {
     deleteHelmChart $NAMESPACE $HELMCHART
     patchServiceAccount default $NAMESPACE
 
-    messagePrint " ▪ Create Docker secret"  "tdh-docker-repo"
-    cndLoop kubectl -n $NAMESPACE create secret docker-registry tdh-docker-repo \
-            --docker-server $TDH_REGISTRY_DOCKER_NAME \
-            --docker-username $TDH_REGISTRY_DOCKER_USER \
-            --docker-password $TDH_REGISTRY_DOCKER_PASS > /dev/null 2>&1
+    # --- DOCKER PULL SECRET ---
+    dockerPullSecret $NAMESPACE
 
     # --- COPY SECRET TO NAMESPACE ---
     cmdLoop kubectl get secret tanzu-demo-hub-tls --namespace=default  -oyaml | grep -v '^\s*namespace:\s' | \
@@ -10310,7 +10328,7 @@ patchServiceAccount() {
 
   messagePrint " ▪ Patch Docker RateLimit in ServiceAccount"  "$NAMESPACE/$SERVICE_ACCOUNT"
   kubectl -n $NAMESPACE delete secret tdh-docker-repo >/dev/null 2>&1
-  cndLoop kubectl -n $NAMESPACE create secret docker-registry tdh-docker-repo \
+  cmdLoop kubectl -n $NAMESPACE create secret docker-registry tdh-docker-repo \
           --docker-server $TDH_REGISTRY_DOCKER_NAME \
           --docker-username $TDH_REGISTRY_DOCKER_USER \
           --docker-password $TDH_REGISTRY_DOCKER_PASS >/dev/null 2>&1
@@ -11576,11 +11594,8 @@ TanzuPackage_Harbor () {
     deleteNamespace $NAMESPACE > /dev/null 2>&1
     createNamespace $NAMESPACE > /dev/null 2>&1
 
-    messagePrint " ▪ Create Docker secret"  "tdh-docker-repo"
-    cndLoop kubectl -n $NAMESPACE create secret docker-registry tdh-docker-repo \
-            --docker-server $TDH_REGISTRY_DOCKER_NAME \
-            --docker-username $TDH_REGISTRY_DOCKER_USER \
-            --docker-password $TDH_REGISTRY_DOCKER_PASS > /dev/null 2>&1
+    # --- DOCKER PULL SECRET ---
+    dockerPullSecret $NAMESPACE
 
     # --- COPY SECRET TO NAMESPACE ---
     copySecretObject default $NAMESPACE tanzu-demo-hub-tls
@@ -13264,6 +13279,37 @@ listTCEmcDeployments() {
   echo "-----------------------------------------------------------------------------------------------------------"
 }
 
+# ------------------------------------------------------------------------------------------
+# Function Name ......: dockerPullSecret
+# Function Purpose ...: List TCE Management Cluster Deployments
+# ------------------------------------------------------------------------------------------
+# Argument ($1) ......: n/a
+# ------------------------------------------------------------------------------------------
+# Return Value .......: 0 - SUCCEED, 1 - FAILED
+# ------------------------------------------------------------------------------------------
+dockerPullSecret() {
+  TMP_NAMESPACE=$1
+
+  messagePrint " ▪ Create Docker secret"  "tdh-docker-repo"
+  cmdLoop kubectl -n $TMP_NAMESPACE create secret docker-registry tdh-docker-repo \
+          --docker-server $TDH_REGISTRY_DOCKER_NAME \
+          --docker-username $TDH_REGISTRY_DOCKER_USER \
+          --docker-password $TDH_REGISTRY_DOCKER_PASS
+
+  kubectl get serviceaccount default -n $TMP_NAMESPACE -o yaml > /tmp/serviceaccount.yaml
+  echo "imagePullSecrets:"              >> /tmp/serviceaccount.yaml
+  echo "- name: tdh-docker-repo"        >> /tmp/serviceaccount.yaml
+
+  kubectl apply -f /tmp/serviceaccount.yaml > /dev/null 2>&1
+}
+
 #kubectl get tanzukubernetescluster -n tanzu-demo-hub tdh-vsphere-sadubois
 #kubectl delete tanzukubernetescluster -n tanzu-demo-hub tdh-vsphere-sadubois
+
+#kubectl get ClusterRole psp:privileged -n tanzu-system-packages  
+#kubectl apply -f files/psp/vmware-system-privileged.yaml
+
+#tanzu package install cert-manager-pkg --package-name cert-manager.tanzu.vmware.com --namespace tanzu-system-packages --version 1.5.3+vmware.2-tkg.1 --create-namespace 
+#kapp list -A
+#kapp inspect -a cert-manager-pkg-ctrl -n tanzu-system-packages
 
