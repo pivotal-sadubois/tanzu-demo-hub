@@ -45,7 +45,7 @@ while [ "$1" != "" ]; do
 done
 
 if [ "${DEPLOY_TKG_TEMPLATE}" == "" ]; then
-  listTKGmcDeployments
+  listTCEmcDeployments
   usage; exit 0
 fi
 
@@ -67,6 +67,8 @@ if [ ! -f ${TDHPATH}/deployments/${DEPLOY_TKG_TEMPLATE} ]; then
 else
   . ${TDHPATH}/deployments/${DEPLOY_TKG_TEMPLATE}
 fi
+
+exit
 
 #############################################################################################################################
 ################################### EXECUTING CODE WITHIN  TDH-TOOLS DOCKER CONTAINER  ######################################
