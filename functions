@@ -4302,7 +4302,7 @@ checkCLIcommands() {
       sys=$(echo $arg | awk -F: '{ print $2 }')
       pkg=$(echo $arg | awk -F: '{ print $3 }')
 
-      if [ ! -x $cmd ]; then
+      if [ ! -x $cmd -a ! -x /usr/local/bin/$pkg ]; then
 	if [ "$(uname)" == "Linux" ]; then
 	  if [ $sys == "apt" ]; then
             echo "ERROR: $cmd not installed, please install it"
