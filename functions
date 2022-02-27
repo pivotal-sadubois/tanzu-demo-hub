@@ -13202,7 +13202,7 @@ listClusterConfig() {
   printf "%-40s %-7s %-15s %-32s %-5s %s\n" "TKG-CONFIGURATION" "PLAN" "DESCRIPTION"
   messageLine
 
-  for deployment in $(ls -1 ${TDHPATH}/deployments/tkg-*.cfg | grep -v "tkgmc-"); do
+  for deployment in $(ls -1 ${TDHPATH}/deployments/${TDH_TOOLS_CONTAINER_TYPE}-*.cfg | grep -v "${TDH_TOOLS_CONTAINER_TYPE}mc-"); do
     TDH_DEPLOYMENT_DESCRIPTION=$(egrep "^TDH_DEPLOYMENT_DESCRIPTION=" $deployment | awk -F'=' '{ print $2 }' | sed 's/"//g')
     TDH_DEPLOYMENT_CLUSTER_PLAN=$(egrep "^TDH_DEPLOYMENT_CLUSTER_PLAN=" $deployment | awk -F'=' '{ print $2 }')
 

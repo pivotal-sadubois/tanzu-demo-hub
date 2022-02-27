@@ -13,6 +13,7 @@ export NATIVE=0
 export DEPLOY_TKG_CLEAN=0
 export TDH_TKGWC_K8S_VERSION=""
 export TDH_TANZU_MISSION_CONTROL_REGISTRATION=true
+export TDH_TOOLS_CONTAINER_TYPE=tkg
 
 # --- SETTING FOR TDH-TOOLS ---
 export START_COMMAND="$*"
@@ -290,20 +291,25 @@ fi
 #InstallContour
 #InstallHarborRegistry
 
-#  TKGS
-#  NAME                   REPOSITORY                                               TAG     STATUS               DETAILS  NAMESPACE                  
-#  tanzu-system-packages  projects.registry.vmware.com/tkg/packages/standard/repo  v1.5.0  Reconcile succeeded           default                    
-#  tkg-repo               projects.registry.vmware.com/tkg/packages/standard/repo  v1.5.0  Reconcile succeeded           tanzu-package-repo-global  
-#  TanzuPackage_AddRepo      tanzu-package-repo-global tkg-repo projects.registry.vmware.com/tkg/packages/standard/repo:v1.5.0
-#  TanzuPackage_RepoSync     tanzu-package-repo-global
+if [ -s $TDHPATH/files/tanzu-packages/repo-${TDH_TOOLS_CONTAINER_TYPE}-${TDH_TOOLS_CONTAINER_VERS}.cfg ]; then 
+ . $TDHPATH/files/tanzu-packages/repo-${TDH_TOOLS_CONTAINER_TYPE}-${TDH_TOOLS_CONTAINER_VERS}.cfg 
+else
+  echo "ERROR: Tanzu Package Repository Configuration not found for the release ${TDH_TOOLS_CONTAINER_TYPE}/${TDH_TOOLS_CONTAINER_VERS}"
+  echo "       => $TDHPATH/files/tanzu-packages/repo-${TDH_TOOLS_CONTAINER_TYPE}-${TDH_TOOLS_CONTAINER_VERS}.cfg"
+  exit
+fi
 
-
-exit
 messageTitle "Tanzu Package Management"
-TanzuPackage_RepoSync     default
+if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "vSphere" -a "$TDH_TKGMC_ENVNAME" == "tkgs" ]; then
+  TanzuPackage_AddRepo      tanzu-package-repo-global tkg-repo $TKG_REPOSITORY
+else
+  TanzuPackage_RepoSync     default
+fi
 
 TanzuPackage_CertManager  cert-manager-pkg     cert-manager.tanzu.vmware.com 
 TanzuPackage_Contour      contour-pkg          contour.tanzu.vmware.com
+
+exit
 createClusterIssuer
 getRootCA                 tanzu-demo-hub-tls
 TanzuPackage_Harbor       harbor-pkg           harbor.tanzu.vmware.com
