@@ -101,45 +101,6 @@ fi
 #############################################################################################################################
 runTDHtools "$TDH_TOOLS_CONTAINER_TYPE" "$TDH_TOOLS_CONTAINER_VERS" "Deploy TCE Workload Cluster" "$TDHPATH/$CMD_EXEC" "$CMD_ARGS"
 
-# --- FIX MANAGEMENT SERVER NAME INSTEAD OF ITS DEPLOYMENT FILE NAME ---
-if [ -f $HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME} -o $HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.cfg ]; then 
-  [ -f $HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME} ] && TDH_TKGMC_NAME=$(echo "$TDH_TKGMC_NAME" | awk -F'.' '{ print $1 }')
-fi
-
-usage() {
-  echo ""
-  echo "USAGE: $0 [options] -m <mgmt-cluster> -d <deployment> -n <cluster-name> [-k <kubernetes-version>] [--debug]"
-  echo "            Options:  -n  <cluster-name>        # Should reflect the environment and its purpose. Make sure"
-  echo "                                                # to add your user name, to prevent conflicts in TMC"
-  echo "                                                # ie. tdh-azure-sdubois or tdh-aws-sdubois-aws"
-  echo ""
-  echo "                      -tag <name-tag>           # Cluster NameTag ie. TKG_CLUSTER_01 or TKG_CLUSTER_02"
-  echo "                      -k  <controlplane-ip>     # default (latest)"
-  echo "                                                # use 'tanzu kubernetes-release get' to see available"
-  echo ""
-  echo "                      --delete                  # Delete Workload Cluster"
-  echo "                      --debug                   # default (disabled)"
-  echo "                      --native                  # Use 'native' installed tools instead of the tdh-tools-tce container"
-  echo ""
-}
-
-listClusterConfig() {
-  echo
-  printf "%-31s %-5s %-15s %-20s %-5s %s\n" "DEPLOYMENT" "PLAN" "DESCRIPTION" 
-  echo "-----------------------------------------------------------------------------------------------------------"
-
-  for deployment in $(ls -1 ${TDHPATH}/deployments/tkg-*.cfg | grep -v "tcemc-"); do
-    TDH_DEPLOYMENT_DESCRIPTION=$(egrep "^TDH_DEPLOYMENT_DESCRIPTION=" $deployment | awk -F'=' '{ print $2 }' | sed 's/"//g')
-    TDH_DEPLOYMENT_CLUSTER_PLAN=$(egrep "^TDH_DEPLOYMENT_CLUSTER_PLAN=" $deployment | awk -F'=' '{ print $2 }')
-
-    dep=$(basename $deployment)
-
-    printf "%-31s %-5s %-15s %-20s %-5s %s\n" $dep "$TDH_DEPLOYMENT_CLUSTER_PLAN" "$TDH_DEPLOYMENT_DESCRIPTION"
-  done
-
-  echo "-----------------------------------------------------------------------------------------------------------"
-}
-
 listDeployments() {
   echo
   printf "%-31s %-7s %-28s %s\n" "CONFIURATION" "CLOUD" "MANAGEMENT-CLUSTER" "STATUS"
@@ -190,39 +151,6 @@ listDeployments() {
 
   echo "-----------------------------------------------------------------------------------------------------------"
 }
-
-if [ "${TKG_DEPLOYMENT}" == "" -o "${TDH_TKGMC_NAME}" == "" ]; then
-  if [ "${TKG_DEPLOYMENT}" == "" ]; then
-    listDeployments
-  fi
-
-  if [ "${TKG_WC_CLUSTER}" == "" ]; then
-    listClusterConfig
-  fi
-  usage; exit 0
-fi
-
-# --- VERIFY DEPLOYMENT ---
-TKG_DEPLOYMENT_CONFIG=$(echo $TKG_DEPLOYMENT | sed 's/cfg/yaml/g')
-if [ ! -f ${TDHPATH}/deployments/${TKG_DEPLOYMENT} ]; then
-  echo "ERROR: Deployment file $TKG_DEPLOYMENT can not be found in ${TDHPATH}/deployments"
-  exit 1
-else
-  . ${TDHPATH}/deployments/${TKG_DEPLOYMENT}
-fi
-
-# --- CHECK ENVIRONMENT VARIABLES ---
-if [ -f ~/.tanzu-demo-hub.cfg ]; then
-  . ~/.tanzu-demo-hub.cfg
-fi
-
-# --- SOURCE MANAGEMENT CLUSTER VARIABLES ---
-if [ -f $HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.cfg ]; then
-  . $HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.cfg
-else
-  echo "ERROR: Configuration for Management Cluster $TDH_TKGMC_NAME could not be found"
-  exit 1
-fi
 
 if [ "$TDH_DEPLOYMENT_CLUSTER_PLAN" == "dev" ]; then
   TDH_TKGMC_CONFIG=$TDH_TKGMC_WC_CONFIG_DEV
