@@ -1228,13 +1228,19 @@ fi
   TKG_WC_CONFIG_PRD="$HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}-wc-prod.yaml"
   TKG_MC_CONFIG="$HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.yaml"
 
+  TMC_CONFIG_NAME="$(echo ${TDH_TKGMC_NAME} | sed 's/tcemc/tmc/g')"
+  CONFIG_FILE="$HOME/.tanzu-demo-hub/config/${TMC_CONFIG_NAME}.cfg"
+
   echo "TDH_TKGMC_INFRASTRUCTURE=$TDH_DEPLOYMENT_ENV_NAME"               >  $DEPLOYMENT_FILE
   echo "TDH_TKGMC_NAME=$TDH_TKGMC_NAME"                                  >> $DEPLOYMENT_FILE
   echo "TDH_TKGMC_ENVNAME=$TDH_TKGMC_ENVNAME"                            >> $DEPLOYMENT_FILE
+  echo "TDH_TKGMC_TMC_CONFIG=${TMC_CONFIG_NAME}.cfg"                     >> $DEPLOYMENT_FILE
   echo "TDH_TKGMC_CONFIG=${TDH_TKGMC_NAME}.yaml"                         >> $DEPLOYMENT_FILE
   echo "TDH_TKGMC_WC_CONFIG_DEV=${TDH_TKGMC_NAME}-wc-dev.yaml"           >> $DEPLOYMENT_FILE
   echo "TDH_TKGMC_WC_CONFIG_PROD=${TDH_TKGMC_NAME}-wc-prod.yaml"         >> $DEPLOYMENT_FILE
   echo "TDH_TKGMC_KUBECONFIG=${TDH_TKGMC_NAME}.kubeconfig"               >> $DEPLOYMENT_FILE
+  echo "TDH_TKGMC_TOOLS_CONTAINER=${TDH_TOOLS}"                          >> $DEPLOYMENT_FILE
+
 
   #echo "TDH_TKGMC_PLAN=dev"                                             >> $DEPLOYMENT_FILE
   #echo "TDH_TKGMC_CEIP_PARTICIPATION=true"                              >> $DEPLOYMENT_FILE
