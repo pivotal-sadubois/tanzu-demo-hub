@@ -6542,6 +6542,8 @@ installGitLab() {
     HELM_VALUES=/tmp/gitlab_values.yaml
     echo ""                                                                                                                     >  $HELM_VALUES
     echo "global:"                                                                                                              >> $HELM_VALUES
+    echo "  image:"                                                                                                             >> $HELM_VALUES
+    echo "    pullSecrets: [\"tdh-docker-repo\"]"                                                                               >> $HELM_VALUES
     echo "  imageRegistry: docker.io"                                                                                           >> $HELM_VALUES
     echo "  imagePullSecrets:"                                                                                                  >> $HELM_VALUES
     echo "    - tdh-docker-repo"                                                                                                >> $HELM_VALUES
@@ -6553,7 +6555,8 @@ installGitLab() {
     echo "    key: password"                                                                                                    >> $HELM_VALUES
     echo "  ingress:"                                                                                                           >> $HELM_VALUES
     echo "    configureCertmanager: false"                                                                                      >> $HELM_VALUES
-
+    echo "runner:"                                                                                                              >> $HELM_VALUES
+    echo "  imagePullSecrets: tdh-docker-repo"                                                                                  >> $HELM_VALUES
     echo "ingress:"                                                                                                             >> $HELM_VALUES
     echo "  apiVersion: \"\""                                                                                                   >> $HELM_VALUES
     echo "  configureCertmanager: true"                                                                                         >> $HELM_VALUES
@@ -11920,9 +11923,14 @@ TanzuPackage_Contour() {
       nam=$(jq -r --arg key "${PACKAGE_NAME}-${PACKAGE_NAMESPACE}-cluster-rolebinding" '.items[] | select(.metadata.name == $key).metadata.name' /tmp/output.json)
       [ "$nam" != "" ] && cmdLoop kubectl -n tanzu-system-packages delete clusterrolebinding $nam
 
+      #tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $PACKAGE_NAMESPACE \
+      #     --version $package_ver --create-namespace --poll-timeout 10m \
+      #     --values-file /tmp/contour-data-values.yaml --wait=true > /tmp/contour.log 2>&1; ret=$?
+
+echo "tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $PACKAGE_NAMESPACE --version $package_ver --create-namespace --poll-timeout 10m --values-file /tmp/contour-data-values.yaml --wait=true"
       tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $PACKAGE_NAMESPACE \
            --version $package_ver --create-namespace --poll-timeout 10m \
-           --values-file /tmp/contour-data-values.yaml --wait=true > /tmp/contour.log 2>&1; ret=$?
+           --values-file /tmp/contour-data-values.yaml --wait=true 
 
       waitTanzuPackageReconsile $PACKAGE_NAME $PACKAGE_NAMESPACE; ret=$?
       if [ $ret -ne 0 ]; then
@@ -13283,12 +13291,16 @@ listTCEmcDeployments() {
 # Function Name ......: dockerPullSecret
 # Function Purpose ...: List TCE Management Cluster Deployments
 # ------------------------------------------------------------------------------------------
-# Argument ($1) ......: n/a
+# Argument ($1) ......: Namespace
+#          ($2) ......: Service Account
 # ------------------------------------------------------------------------------------------
 # Return Value .......: 0 - SUCCEED, 1 - FAILED
 # ------------------------------------------------------------------------------------------
 dockerPullSecret() {
   TMP_NAMESPACE=$1
+  TMP_SERVICEACCOUNT=$2
+
+  [ "$TMP_SERVICEACCOUNT" == "" ] && TMP_SERVICEACCOUNT=default
 
   messagePrint " ▪ Create Docker secret"  "tdh-docker-repo"
   cmdLoop kubectl -n $TMP_NAMESPACE create secret docker-registry tdh-docker-repo \
@@ -13296,7 +13308,7 @@ dockerPullSecret() {
           --docker-username $TDH_REGISTRY_DOCKER_USER \
           --docker-password $TDH_REGISTRY_DOCKER_PASS
 
-  kubectl get serviceaccount default -n $TMP_NAMESPACE -o yaml > /tmp/serviceaccount.yaml
+  kubectl get serviceaccount $TMP_SERVICEACCOUNT -n $TMP_NAMESPACE -o yaml > /tmp/serviceaccount.yaml
   echo "imagePullSecrets:"              >> /tmp/serviceaccount.yaml
   echo "- name: tdh-docker-repo"        >> /tmp/serviceaccount.yaml
 
