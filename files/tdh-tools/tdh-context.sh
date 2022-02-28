@@ -4,21 +4,42 @@ CONTEXT_LIST=""
 # --- GATHER RIGHT KUBECONFIG ---
 for n in $(ls -1 $HOME/.tanzu-demo-hub/config/tkgmc-vsphere*.kubeconfig); do
   nam=$(echo $n | sed 's/kubeconfig/cfg/g')
-  . ${nam}   ## READ ENVIRONMENT VARIABLES FROM CONFIG FILE
+  [ -s $nam ] && . ${nam}   ## READ ENVIRONMENT VARIABLES FROM CONFIG FILE
 
-  [ -s $nam ] && . $nam
-  [ -s $HOME/.kube/config ] && mv $HOME/.kube/config $HOME/.kube/config.old
+  cnt=$(echo $TDH_TKGMC_SUPERVISORCLUSTER | egrep -c "pez.vmware.com") 
+  if [ $cnt -gt 0 ]; then 
+    curl -m 3 https://pez-portal.int-apps.pcfone.io > /dev/null 2>&1; ret=$?
+    if [ $ret -eq 0 ]; then
+      [ -s $HOME/.kube/config ] && mv $HOME/.kube/config $HOME/.kube/config.old
 
-  export KUBECTL_VSPHERE_PASSWORD=$TDH_TKGMC_VSPHERE_PASS
-  kubectl vsphere login --insecure-skip-tls-verify --server $TDH_TKGMC_SUPERVISORCLUSTER -u $TDH_TKGMC_VSPHERE_USER > /tmp/error.log 2>&1; ret=$?
+      export KUBECTL_VSPHERE_PASSWORD=$TDH_TKGMC_VSPHERE_PASS
+      kubectl vsphere login --insecure-skip-tls-verify --server $TDH_TKGMC_SUPERVISORCLUSTER -u $TDH_TKGMC_VSPHERE_USER > /tmp/error.log 2>&1; ret=$?
 
-  mv $HOME/.kube/config $n
-  mv $HOME/.kube/config.old $HOME/.kube/config
+      [ -s $HOME/.kube/config ] && mv $HOME/.kube/config $n
+      mv $HOME/.kube/config.old $HOME/.kube/config
 
-  kubectl --kubeconfig=$n get ns >/dev/null 2>&1; ret=$?
-  if [ $ret -eq 0 ]; then
-    nam=$(echo $n | awk -F'/' '{ print $NF }' | sed 's/\.kubeconfig//g')
-    CONTEXT_LIST="$CONTEXT_LIST $nam:$n"
+      kubectl --kubeconfig=$n get ns >/dev/null 2>&1; ret=$?
+      if [ $ret -eq 0 ]; then
+        nam=$(echo $n | awk -F'/' '{ print $NF }' | sed 's/\.kubeconfig//g')
+        CONTEXT_LIST="$CONTEXT_LIST $nam:$n"
+      fi
+    else
+      echo "ERROR: Can not verify $nam as connection to VMware VPN is required"
+    fi
+  else
+    [ -s $HOME/.kube/config ] && mv $HOME/.kube/config $HOME/.kube/config.old
+
+    export KUBECTL_VSPHERE_PASSWORD=$TDH_TKGMC_VSPHERE_PASS
+    kubectl vsphere login --insecure-skip-tls-verify --server $TDH_TKGMC_SUPERVISORCLUSTER -u $TDH_TKGMC_VSPHERE_USER > /tmp/error.log 2>&1; ret=$?
+
+    [ -s $HOME/.kube/config ] && mv $HOME/.kube/config $n
+    mv $HOME/.kube/config.old $HOME/.kube/config
+
+    kubectl --kubeconfig=$n get ns >/dev/null 2>&1; ret=$?
+    if [ $ret -eq 0 ]; then
+      nam=$(echo $n | awk -F'/' '{ print $NF }' | sed 's/\.kubeconfig//g')
+      CONTEXT_LIST="$CONTEXT_LIST $nam:$n"
+    fi
   fi
 done
 

@@ -4975,6 +4975,15 @@ vsphereSupervisorClusterLogin() {
   # --- SET LOGIN PASSWORD AS ENVIRONMENT VARIABLE ---
   export KUBECTL_VSPHERE_PASSWORD=$TDH_TKGMC_VSPHERE_PASS
 
+  cnt=$(echo $TDH_TKGMC_SUPERVISORCLUSTER | egrep -c "pez.vmware.com")
+  if [ $cnt -gt 0 ]; then 
+    curl -m 1 https://pez-portal.int-apps.pcfone.io > /dev/null 2>&1; echo $?
+    if [ $ret -ne 0 ]; then
+      echo "ERROR: you are not logged into VMware VPN"
+      exit
+    fi
+  fi
+
   ret=1; cnt=0
   while [ $ret -ne 0 -a $cnt -lt 5 ]; do
     kubectl vsphere login --insecure-skip-tls-verify --server $TDH_TKGMC_SUPERVISORCLUSTER -u $TDH_TKGMC_VSPHERE_USER > /tmp/error.log 2>&1; ret=$?
@@ -4983,7 +4992,7 @@ vsphereSupervisorClusterLogin() {
     sleep 30
   done
 
-  mv $HOME/.kube/config $HOME/.tanzu-demo-hub/config/${MC_CONFIG}.kubeconfig
+  [ -s $HOME/.kube/config ] && mv $HOME/.kube/config $HOME/.tanzu-demo-hub/config/${MC_CONFIG}.kubeconfig
   mv $HOME/.kube/config.old $HOME/.kube/config
 
   ret=1; cnt=0
@@ -6542,8 +6551,6 @@ installGitLab() {
     HELM_VALUES=/tmp/gitlab_values.yaml
     echo ""                                                                                                                     >  $HELM_VALUES
     echo "global:"                                                                                                              >> $HELM_VALUES
-    echo "  image:"                                                                                                             >> $HELM_VALUES
-    echo "    pullSecrets: [\"tdh-docker-repo\"]"                                                                               >> $HELM_VALUES
     echo "  imageRegistry: docker.io"                                                                                           >> $HELM_VALUES
     echo "  imagePullSecrets:"                                                                                                  >> $HELM_VALUES
     echo "    - tdh-docker-repo"                                                                                                >> $HELM_VALUES
@@ -6555,8 +6562,6 @@ installGitLab() {
     echo "    key: password"                                                                                                    >> $HELM_VALUES
     echo "  ingress:"                                                                                                           >> $HELM_VALUES
     echo "    configureCertmanager: false"                                                                                      >> $HELM_VALUES
-    echo "runner:"                                                                                                              >> $HELM_VALUES
-    echo "  imagePullSecrets: tdh-docker-repo"                                                                                  >> $HELM_VALUES
     echo "ingress:"                                                                                                             >> $HELM_VALUES
     echo "  apiVersion: \"\""                                                                                                   >> $HELM_VALUES
     echo "  configureCertmanager: true"                                                                                         >> $HELM_VALUES
@@ -6578,10 +6583,8 @@ installGitLab() {
 #gogo
     cnt=0; ret=1; stt="notdeployed"
     while [ $ret -ne 0 -a $cnt -lt 5 -a "$stt" != "deployed" ]; do
-      helm install gitlab gitlab/gitlab -f ${HELM_VALUES} --namespace $NAMESPACE > /tmp/error.log 2>&1; ret=$?
-
-      # --- WAIT FOR PODS TO GET STARTED ---
-      runningPods $NAMESPACE
+      #helm install gitlab gitlab/gitlab -f ${HELM_VALUES} --namespace $NAMESPACE > /tmp/error.log 2>&1; ret=$?
+      helm install gitlab gitlab/gitlab -f ${HELM_VALUES} --namespace $NAMESPACE; ret=$?
 
       cmdLoop helm ls -n $NAMESPACE -o json > /tmp/output.json
       stt=$(jq -r --arg chart "$HELMCHART" '.[] | select(.name == $chart).status' /tmp/output.json)
@@ -6608,6 +6611,21 @@ installGitLab() {
 
       exit 1
     fi
+
+    # PATCH DOCKER PULL SECRET
+    dockerPullSecret gitlab gitlab-certmanager-issuer 
+    kubectl get sa -n gitlab
+    dockerPullSecret gitlab gitlab-gitlab-runner 
+    dockerPullSecret gitlab gitlab-nginx-ingress
+    dockerPullSecret gitlab gitlab-nginx-ingress-backend
+    dockerPullSecret gitlab gitlab-prometheus-server
+
+    cmdLoop kubectl -n gitlab rollout restart deployment gitlab-gitlab-runner > /dev/null 2>&1
+    cmdLoop kubectl -n gitlab rollout restart deployment gitlab-prometheus-serve> /dev/null 2>&1
+
+    # --- WAIT FOR PODS TO GET STARTED ---
+    runningPods $NAMESPACE
+
   fi
 
   cmdLoop helm ls -n $NAMESPACE -o json > /tmp/output.json
@@ -12297,6 +12315,14 @@ runTDHtoolsDemos() {
     done
 
     if [ "$TDH_CLUSTER_TYPE" == "wcp" ]; then 
+      #vmware
+      ##curl -m 1 https://pez-portal.int-apps.pcfone.io > /dev/null 2>&1; echo $?
+      #if [ $ret -ne 0 ]; then
+      #  echo "ERROR: you are not in VMware VPN"
+      #  echo "       environment deployed"
+      #  exit
+      #fi
+
       cnt=$(echo "$CLUSTER_LIST" | awk '{ print NF }')
       if [ $cnt -eq 0 ]; then
         echo "ERROR: No Tanzu for vSphere Supervisor Cluster  found, make sure there is an"
@@ -12307,7 +12333,6 @@ runTDHtoolsDemos() {
       if [ $cnt -gt 1 ]; then
       echo "WARNING: Multiple clusters found with Tanzu Demo Hub (TDH) environments, please chose the desired one"
         echo "         and restart the demo."
-       # awk -F',' '{ printf("         => ./%s --type %s --version %s --context %s\n",a,$1,$2,$3) }' a="$CMD_EXEC" $CLUSTER_LIST
         echo ""
         exit
       else
@@ -13302,17 +13327,25 @@ dockerPullSecret() {
 
   [ "$TMP_SERVICEACCOUNT" == "" ] && TMP_SERVICEACCOUNT=default
 
-  messagePrint " ▪ Create Docker secret"  "tdh-docker-repo"
-  cmdLoop kubectl -n $TMP_NAMESPACE create secret docker-registry tdh-docker-repo \
-          --docker-server $TDH_REGISTRY_DOCKER_NAME \
-          --docker-username $TDH_REGISTRY_DOCKER_USER \
-          --docker-password $TDH_REGISTRY_DOCKER_PASS
-
-  kubectl get serviceaccount $TMP_SERVICEACCOUNT -n $TMP_NAMESPACE -o yaml > /tmp/serviceaccount.yaml
-  echo "imagePullSecrets:"              >> /tmp/serviceaccount.yaml
-  echo "- name: tdh-docker-repo"        >> /tmp/serviceaccount.yaml
-
-  kubectl apply -f /tmp/serviceaccount.yaml > /dev/null 2>&1
+  cmdLoop kubectl -n $TMP_NAMESPACE get secret -o json > /tmp/output.json
+  nam=$(jq -r --arg key "tdh-docker-repo" '.items[].metadata | select(.name == $key).name' /tmp/output.json) 
+  if [ "$nam" != "tdh-docker-repo" ]; then 
+    messagePrint " ▪ Create Docker secret"  "tdh-docker-repo"
+    cmdLoop kubectl -n $TMP_NAMESPACE create secret docker-registry tdh-docker-repo \
+            --docker-server $TDH_REGISTRY_DOCKER_NAME \
+            --docker-username $TDH_REGISTRY_DOCKER_USER \
+            --docker-password $TDH_REGISTRY_DOCKER_PASS > /dev/null 2>&1
+  fi
+  
+  cmdLoop kubectl -n $TMP_NAMESPACE get sa -o json > /tmp/output.json
+  san=$(jq -r --arg key "$TMP_SERVICEACCOUNT" '.items[].metadata | select(.name == $key).name' /tmp/output.json)
+  if [ "$san" == "$TMP_SERVICEACCOUNT" ]; then
+    kubectl get serviceaccount $TMP_SERVICEACCOUNT -n $TMP_NAMESPACE -o yaml > /tmp/serviceaccount.yaml
+    echo "imagePullSecrets:"              >> /tmp/serviceaccount.yaml
+    echo "- name: tdh-docker-repo"        >> /tmp/serviceaccount.yaml
+  
+    kubectl apply -f /tmp/serviceaccount.yaml > /dev/null 2>&1
+  fi
 }
 
 #kubectl get tanzukubernetescluster -n tanzu-demo-hub tdh-vsphere-sadubois

@@ -1552,9 +1552,10 @@ else
   #cleanKubeconfig $HOME/.tanzu/config.yaml  => cleanManagementCluster
 
   messageTitle "Create the TKG Management Cluster deployment File"
-  messagePrint " ▪ Deployment File"        "$HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.yaml"
-  messagePrint " ▪ Management Cluster"     "$TDH_TKGMC_NAME"
-  messagePrint " ▪ Cloud Infrastructure"   "$TDH_DEPLOYMENT_ENV_NAME"
+  messagePrint " ▪ TDH Deployment File"          "$HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.yaml"
+  messagePrint " ▪ TDH Configuration"            "$HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.cfg"
+  messagePrint " ▪ Management Cluster"           "$TDH_TKGMC_NAME"
+  messagePrint " ▪ Cloud Infrastructure"         "$TDH_DEPLOYMENT_ENV_NAME"
 
   mkdir -p $HOME/.tanzu/tkg/clusterconfigs
 
