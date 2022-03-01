@@ -111,8 +111,13 @@ if [ ! -s /usr/local/bin/tanzu ]; then
     (cd cli; sudo install core/v*/tanzu-core-linux_amd64 /usr/local/bin/tanzu)
     cd /tmp
     tanzu plugin clean
-    tanzu plugin install --local cli all
 
+
+    tanzu plugin install --local cli all > /dev/null 2>&1; ret=$?
+    if [ $ret -ne 0 ]; then
+      tanzu plugin sync
+    fi
+ 
     gunzip cli/*.gz
     mv cli/imgpkg-linux-amd64-* /usr/local/bin/imgpkg && chmod +x /usr/local/bin/imgpkg
     mv cli/kapp-linux-amd64-*   /usr/local/bin/kapp   && chmod +x /usr/local/bin/kapp
