@@ -12721,9 +12721,6 @@ runningPods() {
   cnt=$(jq -r --arg key "$NAMESPACE" '.items[] | select(.metadata.namespace == $key).status.phase' /tmp/output.yaml | \
         egrep -vc "Running|Completed|Succeeded|Evicted|Failed")
 
-echo "runningPods:tot:$tot" 1>&2
-echo "runningPods:cnt:$cnt" 1>&2
-
   let bsy=tot-cnt
 
   messageCountInit " ▪ Waiting for pods to start in namespace $NAMESPACE" $tot $bsy
@@ -12736,7 +12733,6 @@ echo "runningPods:cnt:$cnt" 1>&2
 
     let bsy=tot-cnt
     messageCount $bsy
-echo " - runningPods:$cnt:$cnt bsy:$bsy" 1>&2
 
     [ $cnt -eq 0 ] && break
 
