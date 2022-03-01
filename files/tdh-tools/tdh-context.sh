@@ -2,7 +2,7 @@
 
 CONTEXT_LIST=""
 # --- GATHER RIGHT KUBECONFIG ---
-for n in $(ls -1 $HOME/.tanzu-demo-hub/config/*.kubeconfig | egrep "tkgmc|tcemc"); do
+for n in $(ls -1 $HOME/.tanzu-demo-hub/config/*.kubeconfig 2>/dev/null | egrep "tkgmc|tcemc"); do
   nam=$(echo $n | sed 's/kubeconfig/cfg/g')
   vsp=$(echo $n | egrep -c "tkgmc-vsphere|tcemc-vsphere") 
   [ -s $nam ] && . ${nam}   ## READ ENVIRONMENT VARIABLES FROM CONFIG FILE
