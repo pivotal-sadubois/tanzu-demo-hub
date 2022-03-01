@@ -4557,6 +4557,8 @@ checkTMCcontext() {
 # https://docs.vmware.com/en/VMware-vSphere/7.0/vmware-vsphere-with-tanzu/
 # ------------------------------------------------------------------------------------------
 tkgCreateCluster() {
+  [ "$TDH_DEPLOYMENT_CLOUD" == "" ] && TDH_DEPLOYMENT_CLOUD=$TDH_TKGMC_INFRASTRUCTURE
+
   #########################################################################################################################
   ################################################ INSTALL TKG ON AZURE ###################################################
   #########################################################################################################################
@@ -4991,7 +4993,7 @@ vsphereSupervisorClusterLogin() {
 
   cnt=$(echo $TDH_TKGMC_SUPERVISORCLUSTER | egrep -c "pez.vmware.com")
   if [ $cnt -gt 0 ]; then 
-    curl -m 1 https://pez-portal.int-apps.pcfone.io > /dev/null 2>&1; echo $?
+    curl -m 3 https://pez-portal.int-apps.pcfone.io > /dev/null 2>&1; ret=$?
     if [ $ret -ne 0 ]; then
       echo "ERROR: you are not logged into VMware VPN"
       exit
@@ -5002,7 +5004,7 @@ vsphereSupervisorClusterLogin() {
   while [ $ret -ne 0 -a $cnt -lt 5 ]; do
     kubectl vsphere login --insecure-skip-tls-verify --server $TDH_TKGMC_SUPERVISORCLUSTER -u $TDH_TKGMC_VSPHERE_USER > /tmp/error.log 2>&1; ret=$?
     [ $ret -eq 0 ] && break
-   00 let cnt=cnt+1
+    let cnt=cnt+1
     sleep 30
   done
 
