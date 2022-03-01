@@ -2727,6 +2727,7 @@ createTKGMCcluster() {
 
       messagePrint " ▪ Management Cluster Creating Completed"    "/tmp/$TDH_TKGMC_NAME.log"
 
+#hallo
       tanzu management-cluster kubeconfig get --admin > /dev/null 2>&1
       kubectl config set-cluster $TDH_TKGMC_NAME > /dev/null 2>&1
       kubectl config use-context ${TDH_TKGMC_NAME}-admin@$TDH_TKGMC_NAME > /dev/null 2>&1
