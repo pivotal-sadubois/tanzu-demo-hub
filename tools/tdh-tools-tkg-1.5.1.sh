@@ -43,7 +43,6 @@ done
 #############################################################################################################################
 runTDHtools tkg $TKG_VERSION "Run TDH Tools Docker Container" "$COMMAND" ""
 
-exit
 usage() {
   echo "USAGE: $0 [oprions] <deployment>"
   echo "                   --usage     # Show this info"

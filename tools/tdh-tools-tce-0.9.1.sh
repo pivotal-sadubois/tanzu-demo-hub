@@ -10,6 +10,7 @@ export TANZU_DEMO_HUB=$(cd "$(pwd)/$(dirname $0)/../"; pwd)
 export TDHPATH=$(cd "$(pwd)/$(dirname $0)/../"; pwd)
 export ROOT_SHELL=0
 export COMMAND=bash
+export COMMAND=/usr/local/bin/tdh-context.sh
 export SILENT=0
 export TDH_TOOLS=tdh-tools-tce
 export TCE_VERSION=0.9.1
@@ -39,7 +40,7 @@ done
 #############################################################################################################################
 ################################### EXECUTING CODE WITHIN  TDH-TOOLS DOCKER CONTAINER  ######################################
 #############################################################################################################################
-runTDHtools tce $TCE_VERSION "Run TDH Tools Docker Container" "bash" ""
+runTDHtools tce $TCE_VERSION "Run TDH Tools Docker Container" "$COMMAND" ""
 
 usage() {
   echo "USAGE: $0 [oprions] <deployment>"
