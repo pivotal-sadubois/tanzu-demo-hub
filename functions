@@ -3031,11 +3031,8 @@ createTKGMCcluster() {
       echo "IDENTITY_MANAGEMENT_TYPE: none"                                              >> $TKG_TEMPLATE
     fi
 
-echo "holullu 1 createTKGMCcluster"
-
     cnt=$(tanzu management-cluster get 2>/dev/null | egrep -c " $TDH_TKGMC_NAME ")
     if [ ${cnt} -eq 0 ]; then
-echo "holullu 2 createTKGMCcluster"
       # --- CLEANUP OLD CONFIG ---
       export KUBECONFIG=~/.kube-tkg/config
 
@@ -3082,18 +3079,19 @@ echo "holullu 2 createTKGMCcluster"
       fi
 
       messagePrint " ▪ Management Cluster Creating Completed"    "/tmp/$TDH_TKGMC_NAME.log"
+    else
+      messagePrint " ▪ Management Cluster already installed"    "/tmp/$TDH_TKGMC_NAME.log"
+    fi
+echo "holullu AWS"
 
+    if [ ! -f $TKG_KUBECONFIG ]; then
       tanzu management-cluster kubeconfig get --admin > /dev/null 2>&1
       kubectl config set-cluster $TDH_TKGMC_NAME > /dev/null 2>&1
       kubectl config use-context ${TDH_TKGMC_NAME}-admin@$TDH_TKGMC_NAME > /dev/null 2>&1
       context=$(kubectl config view -o json | jq -r '.contexts[].name' 2>/dev/null)
-echo "holullu"
-echo "tanzu management-cluster kubeconfig get --admin --export-file=${TKG_KUBECONFIG} "
-echo "TKG_KUBECONFIG:$TKG_KUBECONFIG"
       tanzu management-cluster kubeconfig get --admin --export-file=${TKG_KUBECONFIG} > /dev/null 2>&1; ret=$?
-ls -la $TKG_KUBECONFIG
-      if [ $ret -ne 0 ]; then
-        echo "ERROR: failed to generate kubeconfig:"
+      if [ ${ret} -ne 0 ]; then
+        echo "ERROR: failed to export kubeconfig"
         if [ "$NATIVE" == "0" ]; then
           echo "       => tools/${TDH_TOOLS}.sh"
           echo "          tdh-tools:/$ tanzu management-cluster kubeconfig get --admin --export-file=${TKG_KUBECONFIG}"
@@ -3101,12 +3099,49 @@ ls -la $TKG_KUBECONFIG
         else
           echo "       => tanzu management-cluster kubeconfig get --admin --export-file=${TKG_KUBECONFIG}"
         fi
-        messageLine
-        tanzu management-cluster kubeconfig get --admin --export-file=${TKG_KUBECONFIG} 
-        messageLine
         exit 1
       fi
     fi
+
+    kubectl config set-cluster $TDH_TKGMC_NAME > /dev/null 2>&1
+    kubectl config use-context ${TDH_TKGMC_NAME}-admin@$TDH_TKGMC_NAME > /dev/null 2>&1
+
+    context=$(kubectl config view -o json | jq -r '.contexts[].name' 2>/dev/null)
+    messageTitle "Verify TKG Managment Cluster"
+    messagePrint " ▪ Cluster Name"        "$TDH_TKGMC_NAME"
+    messagePrint " ▪ Cluster Context"     "$context"
+    messagePrint " ▪ Cluster Config"      "~/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.cfg"
+    messagePrint " ▪ Cluster Kubeconfig"  "~/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.kubeconfig"
+
+    echo ""                                                                                         >  /tmp/motd
+    echo '     _____                       ____                         _   _       _'              >> /tmp/motd
+    echo '    |_   _|_ _ _ __  _____   _  |  _ \  ___ _ __ ___   ___   | | | |_   _| |__'           >> /tmp/motd
+    echo '      | |/ _  |  _ \|_  / | | | | | | |/ _ \  _   _ \ / _ \  | |_| | | | |  _ \'          >> /tmp/motd
+    echo '      | | (_| | | | |/ /| |_| | | |_| |  __/ | | | | | (_) | |  _  | |_| | |_) |'         >> /tmp/motd
+    echo '      |_|\__,_|_| |_/___|\__,_| |____/ \___|_| |_| |_|\___/  |_| |_|\__,_|_.__/'          >> /tmp/motd
+    echo ""                                                                                         >> /tmp/motd
+    echo "    ----------------------------------------------------------------------------"         >> /tmp/motd
+    echo "                   Demonstration for VMware Tanzu Product Portfolio"                      >> /tmp/motd
+    echo "                            by Sacha Dubois, VMware Inc"                                  >> /tmp/motd
+    echo "    ----------------------------------------------------------------------------"         >> /tmp/motd
+    echo ""                                                                                         >> /tmp/motd
+    echo "1.) Verify Envrionment"                                                                   >> /tmp/motd
+    echo "    => export KUBECONFIG=~/.tanzu-demo-hub/config/kubeconfig_$TDH_TKGMC_NAME.yaml"        >> /tmp/motd
+    echo "    => kubectl config get-clusters"                                                       >> /tmp/motd
+    echo "    => kubectl config get-contexts"                                                       >> /tmp/motd
+    echo ""                                                                                         >> /tmp/motd
+    echo "2.) Verify Tanzu Management Cluster Status"                                               >> /tmp/motd
+    echo "    => tanzu management-cluster get"                                                      >> /tmp/motd
+    echo ""                                                                                         >> /tmp/motd
+    echo "3.) Create Workload Cluster"                                                              >> /tmp/motd
+    echo "    => tanzu cluster create"                                                              >> /tmp/motd
+    echo ""                                                                                         >> /tmp/motd
+
+    cnt=$(egrep -c "export KUBECONFIG" ~/.bashrc)
+    [ $cnt -eq 0 ] && sed -i '/export KUBECONFIG=.*$/d' ~/.bashrc
+    echo "export KUBECONFIG=~/.tanzu-demo-hub/config/kubeconfig_$TDH_TKGMC_NAME.yaml" >> ~/.bashrc
+
+    sudo mv /tmp/motd /etc/motd
   fi
 
   if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "Azure" ]; then
@@ -3274,10 +3309,12 @@ ls -la $TKG_KUBECONFIG
 
         exit 1
       fi
+
       messagePrint " ▪ Management Cluster Creating Completed"    "/tmp/$TDH_TKGMC_NAME.log"
     else
       messagePrint " ▪ Management Cluster already installed"    "/tmp/$TDH_TKGMC_NAME.log"
     fi
+echo "holullu azure"
 
     if [ ! -f $TKG_KUBECONFIG ]; then 
       tanzu management-cluster kubeconfig get --admin > /dev/null 2>&1
@@ -3341,7 +3378,7 @@ ls -la $TKG_KUBECONFIG
 }
 
 setTKGclusterDNS() {
-  TKG_CLUSTER="$1"
+  TKG _CLUSTER="$1"
   TKG_IPADRESS="$2"
   TKG_INGRESS="$3"
   DNS_PREFIX="$TDH_TKGMC_ENVNAME"
