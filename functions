@@ -12035,7 +12035,7 @@ TanzuPackage_Contour() {
 
 echo "tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $PACKAGE_NAMESPACE --version $package_ver --create-namespace --poll-timeout 10m --values-file /tmp/contour-data-values.yaml --wait=true"
       tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $PACKAGE_NAMESPACE \
-           --version $package_ver --create-namespace --poll-timeout 10m \
+           --version $package_ver --create-namespace --poll-timeout 30m \
            --values-file /tmp/contour-data-values.yaml --wait=true 
 
       waitTanzuPackageReconsile $PACKAGE_NAME $PACKAGE_NAMESPACE; ret=$?

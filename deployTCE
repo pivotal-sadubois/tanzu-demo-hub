@@ -260,23 +260,19 @@ fi
 
 tkgCreateCluster
 
-echo guguseli1
 # --- CLEANUP KUNECONFIG ---
 cleanKubeconfig
 setK8sEnvironment $TDH_TKGWC_NAME
 tmcCheckLogin
 
-echo guguseli2
 export TDH_TKGWC_CONTEXT=$(kubectl config current-context)
 export TDH_ENVNAME=$TDH_TKGMC_ENVNAME
 export TMC_PROVISIONER_NAME="attached"
 export TDH_MANAGEMENT_CLUSTER=$TDH_TKGMC_NAME
-echo guguseli3
 
 messageTitle "Waiting for system pods to have completed starting"
 runningPods kube-system
 runningPods tkg-system
-echo guguseli4
 
 messageTitle "Waiting for Kapp Services to have completed starting"
 #waitForKappServices   default     ${TDH_TKGWC_NAME}-kapp-controller-ctrl
@@ -293,7 +289,6 @@ uodateConfigMap tanzu-demo-hub TDH_CLUSTER_NAME                   "$TDH_TKGWC_NA
 uodateConfigMap tanzu-demo-hub TDH_MANAGEMENT_CLUSTER             "$TDH_TKGMC_NAME"
 uodateConfigMap tanzu-demo-hub TDH_PROVISIONER_NAME               "$TMC_PROVISIONER_NAME"
 uodateConfigMap tanzu-demo-hub TDH_MISSION_CONTROL_ACCOUNT_NAME   "ukn"
-echo guguseli5
 
 if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "docker" ]; then
   InstallMetallLB
@@ -312,7 +307,6 @@ else
   exit
 fi
 
-echo guguseli6
 messageTitle "Tanzu Package Management"
 echo "TanzuPackage_AddRepo       tanzu-package-repo-global tce-repo $TCE_REPOSITORY"
 TanzuPackage_AddRepo       tanzu-package-repo-global tce-repo $TCE_REPOSITORY
@@ -321,7 +315,6 @@ TanzuPackage_RepoSync     tkg-system
 TanzuPackage_CertManager  cert-manager-pkg     cert-manager.community.tanzu.vmware.com
 TanzuPackage_Contour      contour-pkg          contour.community.tanzu.vmware.com
 TanzuPackage_LocalStorage local-storage-pkg    local-path-storage.community.tanzu.vmware.com
-echo guguseli7
 
 createClusterIssuer
 getRootCA                 tanzu-demo-hub-tls
