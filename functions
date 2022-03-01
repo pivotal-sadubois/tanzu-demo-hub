@@ -4586,6 +4586,11 @@ tkgCreateCluster() {
     messagePrint " ▪ Workload Cluster Configuration"        "deployments/$TKG_DEPLOYMENT"
     messagePrint " ▪ Workload Cluster consolidated Config"  "$HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml"
 
+echo "TDH_DEPLOYMENT_CLUSTER_PLAN:$TDH_DEPLOYMENT_CLUSTER_PLAN"
+    [ "$TDH_DEPLOYMENT_CLUSTER_PLAN" == "" ] && TDH_DEPLOYMENT_CLUSTER_PLAN="dev"
+    [ "$TDH_DEPLOYMENT_CLUSTER_PLAN" == "dev" ] && DEP_SOURCE=$HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.yaml
+    [ "$TDH_DEPLOYMENT_CLUSTER_PLAN" == "prod" ] && DEP_SOURCE=$HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.yaml
+
     messagePrint " ▪ Kubernetes Version"               "$TDH_TKGWC_KUBERNETES"
     messagePrint " ▪ Kubernetes Image"                 "$TDH_TKGWC_K8S_VERSION"
 
@@ -4593,9 +4598,12 @@ echo hallo1
     # --- GENERATE WORKLOAD CLUSTER CONFIG FILE ---
     CLUSTER_CONFIG_FILE=$HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml
 
+echo "DEP_SOURCE:$DEP_SOURCE"
 echo hallo2
 
-    echo "CLUSTER_NAME: $TDH_TKGWC_NAME"                                            >  $CLUSTER_CONFIG_FILE
+    str="AZURE_SUBSCRIPTION_ID|AZURE_TENANT_ID|AZURE_CLIENT_ID|AZURE_CLIENT_SECRET|AZURE_LOCATION|AZURE_SSH_PUBLIC_KEY_B64|CLUSTER_PLAN"
+    egrep "$str" $DEP_SOURCE                                                        >  $CLUSTER_CONFIG_FILE
+    echo "CLUSTER_NAME: $TDH_TKGWC_NAME"                                            >> $CLUSTER_CONFIG_FILE
     echo "WORKER_MACHINE_COUNT: $TDH_TKGWC_WORKERNODES"                             >> $CLUSTER_CONFIG_FILE
     echo "CNI: antrea"                                                              >> $CLUSTER_CONFIG_FILE
     echo "AZURE_CONTROL_PLANE_MACHINE_TYPE: $TDH_TKGWC_CONTROPLANE_MACHINE"         >> $CLUSTER_CONFIG_FILE
@@ -6108,29 +6116,23 @@ installGitea() {
 
   messageTitle "Self-hosted Git service (Gitea)"
   cnt=$(helm list -q -n $NAMESPACE | egrep -c "^$HELMCHART")
-echo "figu0 CNT:$cnt"
   if [ $cnt -eq 0 ]; then
-echo figu1
     # --- CREATE NAMESPACE ---
     messagePrint " ▪ Create Namespace" "$HELMCHART"
     deleteNamespace $NAMESPACE > /dev/null 2>&1
     createNamespace $NAMESPACE > /dev/null 2>&1
-echo figu2
 
     # --- COPY SECRET TO NAMESPACE ---
     messagePrint " ▪ Copy TLS Secret" "tanzu-demo-hub-tls"
     copySecretObject default $NAMESPACE tanzu-demo-hub-tls
     #kubectl get secret tanzu-demo-hub-tls --namespace=default -oyaml | grep -v '^\s*namespace:\s' | \
     #kubectl apply --namespace=$NAMESPACE -f - > /dev/null 2>&1
-echo figu3
 
     # --- DOCKER PULL SECRET ---
     dockerPullSecret $NAMESPACE
-echo figu4
 
     # --- ADDING HELM REPO ---
     helmRepoAdd $HELMREPO $HELMREPO_URL
-echo figu5
 
     if [ "$TDH_SERVICE_GITEA_VERSION" == "" -o "$TDH_SERVICE_GITEA_VERSION" == "latest" ]; then
       HELM_CHART_VERSION=$(helm search repo $HELMREPO/$HELMCHART | egrep "^$HELMREPO/$HELMCHART" | tail -1 | awk '{ print $2 }')
@@ -6205,7 +6207,6 @@ echo figu5
     fi
 
   fi
-echo figu10
 
   cmdLoop helm ls -n $NAMESPACE -o json > /tmp/output.json
   if [ -s /tmp/output.json ]; then
@@ -6217,8 +6218,21 @@ echo figu10
     ver=""; crt=""; stt=""; dat=""
   fi
 echo figu11
+  
+  cmdLoop kubectl -n $HELMCHART exec -it gitea-0 -- $HELMCHART admin user change-password -u gitea_admin -p $TDH_HARBOR_ADMIN_PASSWORD > /tmp/error.log 2>&1; ret=$?
+  if [ $ret -ne 0 ]; then
+    logMessages /tmp/error.log
+    echo "ERROR: Failed to change password for Gitea"
+    if [ "$NATIVE" == "0" ]; then
+      echo "       => tools/${TDH_TOOLS}.sh"
+      echo "          tdh-tools:/$ kubectl -n $HELMCHART exec -it gitea-0 -- $HELMCHART admin user change-password -u gitea_admin -p $TDH_HARBOR_ADMIN_PASSWORD"
+      echo "          tdh-tools:/$ exit"
+    else
+      echo "       =>  kubectl -n $HELMCHART exec -it gitea-0 -- $HELMCHART admin user change-password -u gitea_admin -p $TDH_HARBOR_ADMIN_PASSWORD"
+    fi
 
-  cmdLoop kubectl -n $HELMCHART exec -it gitea-0 -- $HELMCHART admin user change-password -u gitea_admin -p $TDH_HARBOR_ADMIN_PASSWORD > /dev/null 2>&1
+    exit 1
+  fi
 
   messagePrint " ▪ Verify Helm Chart $HELMCHART"   "$crt"
   messagePrint "   Helm Chart Name"                "$HELMCHART"
@@ -6236,15 +6250,12 @@ echo figu11
   uodateConfigMap tanzu-demo-hub TDH_SERVICE_GITEA_ADMIN_PASS  "$TDH_HARBOR_ADMIN_PASSWORD"
   uodateConfigMap tanzu-demo-hub TDH_SERVICE_GITEA_SERVER      "gitea.$DOMAIN"
   uodateConfigMap tanzu-demo-hub TDH_SERVICE_GITEA_SERVER_URL  "https://gitea.$DOMAIN"
-echo figu13
 
   # --- CREATE AMDIN TOKEN FOR USER gitea_admin ---
   createGiteaAPItoken
-echo figu14
 
   TDH_SERVICE_GITEA_ADMIN_TOKEN_ID=$(getConfigMap tanzu-demo-hub TDH_SERVICE_GITEA_ADMIN_TOKEN_ID)
   messagePrint "   Gitea Admin Token ID"           "$TDH_SERVICE_GITEA_ADMIN_TOKEN_ID"
-echo figu15
 }
 
 # ------------------------------------------------------------------------------------------
@@ -13193,10 +13204,11 @@ cmdLoop() {
       echo "       =>  $CMD" 1>&2
     fi
 
-    exit 1
+    return 1
   fi
 
   cat /tmp/loopCmdIgnore.out
+  return 0
 }
 
 # ------------------------------------------------------------------------------------------
