@@ -4570,6 +4570,20 @@ tkgCreateCluster() {
     a=1
   fi
 
+echo "TDH_DEPLOYMENT_CLOUD:$TDH_DEPLOYMENT_CLOUD"
+  #########################################################################################################################
+  ################################################ INSTALL TKG ON AZURE ###################################################
+  #########################################################################################################################
+  if [ "$TDH_DEPLOYMENT_CLOUD" == "docker" ]; then
+    [ "$TDH_DEPLOYMENT_CLUSTER_PLAN" == "dev" ] && DEP_SOURCE=$HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.yaml
+    [ "$TDH_DEPLOYMENT_CLUSTER_PLAN" == "prod" ] && DEP_SOURCE=$HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.yaml
+
+    # --- GENERATE WORKLOAD CLUSTER CONFIG FILE ---
+    CLUSTER_CONFIG_FILE=$HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml
+
+    a=1
+  fi
+
   #########################################################################################################################
   ################################################ INSTALL TKG ON AZURE ###################################################
   #########################################################################################################################
