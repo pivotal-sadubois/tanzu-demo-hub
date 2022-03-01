@@ -6050,7 +6050,6 @@ installGitea() {
 
     # --- ADDING HELM REPO ---
     helmRepoAdd $HELMREPO $HELMREPO_URL
-#hallo
 
     if [ "$TDH_SERVICE_GITEA_VERSION" == "" -o "$TDH_SERVICE_GITEA_VERSION" == "latest" ]; then
       HELM_CHART_VERSION=$(helm search repo $HELMREPO/$HELMCHART | egrep "^$HELMREPO/$HELMCHART" | tail -1 | awk '{ print $2 }')
@@ -7429,7 +7428,7 @@ InstallMetallLB() {
     patchServiceAccount default $NAMESPACE
 
     # --- DOCKER PULL SECRET ---
-    dockerPullSecret $NAMESPACE
+    #dockerPullSecret $NAMESPACE
 
     HELM_VALUES=/tmp/metallb_values.yaml
 
@@ -9178,9 +9177,6 @@ messageCountInit() {
   if [ "${PCF_DEPLOYMENT_DEBUG}" == "true" -o "${DEBUG}" == "1" ]; then
     printf "\e[37m[${_dat}-$HST] - ${_msg} ${_str}: $_num\e[0m"
   else
-    #printf " \e[37m- ${_msg} ${_str}: $_num\e[0m"
-    #printf "\e[37m${_msg} ${_str}: ${_stt}\e[0m"
-    #printf "\e[37m${_msg} ${_str}:       \e[0m"
     printf "\e[37m${_msg} ${_str}: [%02d/%02d]\e[0m" $_cnt $_tot
   fi
 }
@@ -12613,16 +12609,13 @@ runningPods() {
 
   cmdLoop kubectl get pods -A -o json > /tmp/output.yaml
   tot=$(jq -r --arg key "$NAMESPACE" '.items[] | select(.metadata.namespace == $key).status.phase' /tmp/output.yaml | \
-        wc -l | awk '{ print $1 }')
+        egrep -v Evicted | wc -l | awk '{ print $1 }')
   cnt=$(jq -r --arg key "$NAMESPACE" '.items[] | select(.metadata.namespace == $key).status.phase' /tmp/output.yaml | \
-        egrep -vc "Running|Completed|Succeeded")
+        egrep -vc "Running|Completed|Succeeded|Evicted")
 
-  #DELETEME
-  #tot=$(cmdLoop kubectl get pods -n $NAMESPACE | sed '1d' | wc -l | awk '{ print $1 }')
-  #cnt=$(cmdLoop kubectl get pods -n $NAMESPACE | sed '1d' | grep -vc Running)
   let bsy=tot-cnt
 
-  messageCountInit " ▪ Waiting for pods to start within namespace $NAMESPACE" $tot $bsy
+  messageCountInit " ▪ Waiting for pods to start in namespace $NAMESPACE" $tot $bsy
 
   cnt=1; 
   while [ $cnt -ne 0 ]; do
@@ -13050,13 +13043,13 @@ echo "pkg:$pkg"
         cmdLoop kubectl get serviceaccount -n tanzu-system-packages -o json > /tmp/output.json
         nam=$(jq -r --arg key "${TANZU_PACKAGE}-${TANZU_NAMESPACE}-sa" '.items[] | select(.metadata.name == $key).metadata.name' /tmp/output.json)
 echo xxx3
-cmdLoop tanzu package installed list -A 2>/dev/null
+ cmdLoop tanzu package installed list -A 2>/dev/null
 echo xxx4
 
 echo "kubectl -n tanzu-system-packages delete serviceaccount $nam"
         [ "$nam" != "" ] && cmdLoop kubectl -n tanzu-system-packages delete serviceaccount $nam
 echo xxx5
-cmdLoop tanzu package installed list -A 2>/dev/null
+ cmdLoop tanzu package installed list -A 2>/dev/null
 echo xxx6
       else
         break
