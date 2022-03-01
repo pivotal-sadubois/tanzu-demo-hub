@@ -12,6 +12,7 @@ ENV ALLOW_INSTALL_AS_ROOT="true"
 ARG UID GID USER TZ HOME VMWUSER VMWPASS START ARCH
 ADD tdh-postinstall-root.sh        /usr/local/bin
 ADD tdh-postinstall-user.sh        /usr/local/bin
+ADD tdh-context.sh                 /usr/local/bin
 ADD tce-linux-amd64 /tanzu/tce-linux-amd64
 ADD hostname                       /etc/hostname
 ADD clusterctl      /usr/local/bin
