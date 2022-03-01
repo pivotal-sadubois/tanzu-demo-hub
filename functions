@@ -4591,13 +4591,13 @@ echo hallo2
     # --- WRITE CLUSTER CONFIG ---
     echo "TDH_TKGMC_NAME=$TDH_TKGMC_NAME"                                                       >  $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.cfg
     echo "TDH_TKGMC_SUPERVISORCLUSTER=$TDH_TKGMC_SUPERVISORCLUSTER"                             >> $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.cfg
-    echo "TDH_TKGWC_K8S_VERSION=$TDH_TKGWC_K8S_VERSION"                                         >> $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.cfg
-    echo "TDH_TKGMC_STORAGE_CLASS=$TDH_TKGMC_STORAGE_CLASS"                                     >> $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.cfg
-    echo "TDH_TKGMC_VSPHERE_NAMESPACE=$TDH_TKGMC_VSPHERE_NAMESPACE"                             >> $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.cfg
-    echo "TDH_TKGMC_CONFIG=HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.cfg"                   >> $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.cfg
-    echo "TDH_TKGMC_KUBECONFIG=HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.kubeconfig"        >> $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.cfg
+    echo "TDH_TKGWC_K8S_VERSION=$TDH_TKGWC_KUBERNETES"                                          >> $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.cfg
+    echo "TDH_TKGWC_K8S_IMAGE=$TDH_TKGWC_K8S_VERSION"                                           >> $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.cfg
+    echo "TDH_TKGMC_CONFIG=\$HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.cfg"                 >> $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.cfg
+    echo "TDH_TKGMC_KUBECONFIG=\$HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.kubeconfig"      >> $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.cfg
 
 echo "hallo $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.cfg"
+echo "hallo $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml"
 
     [ "$TDH_DEPLOYMENT_CLUSTER_PLAN" == "" ] && TDH_DEPLOYMENT_CLUSTER_PLAN="dev"
     [ "$TDH_DEPLOYMENT_CLUSTER_PLAN" == "dev" ] && DEP_SOURCE=$HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.yaml
@@ -4614,11 +4614,6 @@ echo "hallo $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.cfg"
     echo "CLUSTER_NAME: $TDH_TKGWC_NAME"                                            >> $CLUSTER_CONFIG_FILE
     echo "WORKER_MACHINE_COUNT: $TDH_TKGWC_WORKERNODES"                             >> $CLUSTER_CONFIG_FILE
     echo "CNI: antrea"                                                              >> $CLUSTER_CONFIG_FILE
-    echo "AZURE_CONTROL_PLANE_MACHINE_TYPE: $TDH_TKGWC_CONTROPLANE_MACHINE"         >> $CLUSTER_CONFIG_FILE
-    echo "AZURE_NODE_MACHINE_TYPE: $TDH_TKGWC_WORKERNODES_MACHINE"                  >> $CLUSTER_CONFIG_FILE
-    echo "AZURE_RESOURCE_GROUP: $TDH_TKGWC_NAME"                                    >> $CLUSTER_CONFIG_FILE
-    echo "AZURE_VNET_RESOURCE_GROUP: $TDH_TKGWC_NAME"                               >> $CLUSTER_CONFIG_FILE
-    echo "AZURE_VNET_NAME: ${TDH_TKGWC_NAME}-vnet"                                  >> $CLUSTER_CONFIG_FILE
     echo "ENABLE_MHC: true"                                                         >> $CLUSTER_CONFIG_FILE
     echo "MHC_UNKNOWN_STATUS_TIMEOUT: 10m"                                          >> $CLUSTER_CONFIG_FILE
     echo "MHC_FALSE_STATUS_TIMEOUT: 20m"                                            >> $CLUSTER_CONFIG_FILE
