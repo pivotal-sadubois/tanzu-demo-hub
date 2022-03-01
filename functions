@@ -4586,6 +4586,17 @@ tkgCreateCluster() {
     messagePrint " ▪ Workload Cluster Configuration"        "deployments/$TKG_DEPLOYMENT"
     messagePrint " ▪ Workload Cluster consolidated Config"  "$HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml"
 
+    # --- WRITE CLUSTER CONFIG ---
+    echo "TDH_TKGMC_NAME=$TDH_TKGMC_NAME"                                                       >  $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.cfg
+    echo "TDH_TKGMC_SUPERVISORCLUSTER=$TDH_TKGMC_SUPERVISORCLUSTER"                             >> $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.cfg
+    echo "TDH_TKGWC_K8S_VERSION=$TDH_TKGWC_K8S_VERSION"                                         >> $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.cfg
+    echo "TDH_TKGMC_STORAGE_CLASS=$TDH_TKGMC_STORAGE_CLASS"                                     >> $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.cfg
+    echo "TDH_TKGMC_VSPHERE_NAMESPACE=$TDH_TKGMC_VSPHERE_NAMESPACE"                             >> $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.cfg
+    echo "TDH_TKGMC_CONFIG=HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.cfg"                   >> $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.cfg
+    echo "TDH_TKGMC_KUBECONFIG=HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.kubeconfig"        >> $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.cfg
+
+echo "hallo $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.cfg"
+
     [ "$TDH_DEPLOYMENT_CLUSTER_PLAN" == "" ] && TDH_DEPLOYMENT_CLUSTER_PLAN="dev"
     [ "$TDH_DEPLOYMENT_CLUSTER_PLAN" == "dev" ] && DEP_SOURCE=$HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.yaml
     [ "$TDH_DEPLOYMENT_CLUSTER_PLAN" == "prod" ] && DEP_SOURCE=$HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.yaml
