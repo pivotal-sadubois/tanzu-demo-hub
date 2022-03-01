@@ -7,7 +7,7 @@ for n in $(ls -1 $HOME/.tanzu-demo-hub/config/*.kubeconfig 2>/dev/null | egrep "
   vsp=$(echo $n | egrep -c "tkgmc-vsphere|tcemc-vsphere") 
   [ -s $nam ] && . ${nam}   ## READ ENVIRONMENT VARIABLES FROM CONFIG FILE
 
-  if [ $csp -gt 0 ]; then 
+  if [ $vsp -gt 0 ]; then 
     cnt=$(echo $TDH_TKGMC_SUPERVISORCLUSTER | egrep -c "pez.vmware.com") 
     if [ $cnt -gt 0 ]; then 
       curl -m 3 https://pez-portal.int-apps.pcfone.io > /dev/null 2>&1; ret=$?
