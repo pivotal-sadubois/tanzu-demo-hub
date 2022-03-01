@@ -13096,14 +13096,14 @@ cmdLoop() {
   done
 
   if [ $ret -ne 0 ]; then
-    logMessages /tmp/error.log
-    echo "ERROR: Failed to run command, please try manually"
+    logMessages /tmp/error.log 1>&2
+    echo "ERROR: Failed to run command, please try manually" 1>&2
     if [ "$NATIVE" == "0" ]; then
-      echo "       => tools/${TDH_TOOLS}.sh"
-      echo "          tdh-tools:/$ $CMD"
-      echo "          tdh-tools:/$ exit"
+      echo "       => tools/${TDH_TOOLS}.sh" 1>&2
+      echo "          tdh-tools:/$ $CMD" 1>&2
+      echo "          tdh-tools:/$ exit" 1>&2
     else
-      echo "       =>  $CMD"
+      echo "       =>  $CMD" 1>&2
     fi
 
     exit 1
