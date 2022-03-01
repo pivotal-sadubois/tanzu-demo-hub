@@ -1395,7 +1395,6 @@ else
     # --- CREATE MANAGEMENT CLUSTER ---
     [ ! -d ~/.tanzu-demo-hub/config ] && mkdir -p ~/.tanzu-demo-hub/config
 
-echo holullu0
     $SSH_COMMAND -n "[ -f $SSH_HOME/tanzu-demo-hub/scripts/InstallTKGmc.sh ] && tanzu-demo-hub/scripts/InstallTKGmc.sh \"$DEPLOY_TKG_TEMPLATE\" \"$TDH_TKGMC_NAME\" \"$DEBUG\""; ret=$?
     if [ ${ret} -ne 0 ]; then
       echo "ERROR: Failed to deploy Management Server on $JUMP_HOST"
@@ -1413,9 +1412,7 @@ echo holullu0
 
     cnt=$(tanzu management-cluster get 2>/dev/null | grep -c " $TDH_TKGMC_NAME ")
     if [ $cnt -eq 0 ]; then
-echo holullu1
       $SCP_COMMAND ${SSH_USER}@${SSH_HOST}:$SSH_HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.kubeconfig ~/.tanzu-demo-hub/config > /dev/null 2>&1
-echo holullu2
       $SCP_COMMAND ${SSH_USER}@${SSH_HOST}:$SSH_HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.yaml ~/.tanzu-demo-hub/config > /dev/null 2>&1
 
       if [ ! -f $HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.kubeconfig ]; then 
