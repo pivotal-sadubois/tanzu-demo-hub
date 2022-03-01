@@ -4576,9 +4576,7 @@ tkgCreateCluster() {
   #########################################################################################################################
   ################################################ INSTALL TKG ON AZURE ###################################################
   #########################################################################################################################
-echo hallo1
   if [ "$TDH_DEPLOYMENT_CLOUD" == "docker" ]; then
-echo hallo2
     messageTitle "Tanzu Kubernetes Grid Deployment"
     messagePrint " ▪ Management Cluster Name"               "$TDH_TKGMC_NAME"
     messagePrint " ▪ Management Cluster Configuration"      "$HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.cfg"
@@ -4588,8 +4586,6 @@ echo hallo2
     messagePrint " ▪ Workload Cluster Configuration"        "deployments/$TKG_DEPLOYMENT"
     messagePrint " ▪ Workload Cluster consolidated Config"  "$HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml"
 
-echo "XXX TDH_TKGWC_KUBERNETES:$TDH_TKGWC_KUBERNETES"
-
     # --- WRITE CLUSTER CONFIG ---
     echo "TDH_TKGMC_NAME=$TDH_TKGMC_NAME"                                                       >  $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.cfg
     echo "TDH_TKGWC_K8S_VERSION=$TDH_TKGWC_KUBERNETES"                                          >> $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.cfg
@@ -4597,8 +4593,6 @@ echo "XXX TDH_TKGWC_KUBERNETES:$TDH_TKGWC_KUBERNETES"
     echo "TDH_TKGMC_CONFIG=\$HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.cfg"                 >> $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.cfg
     echo "TDH_TKGMC_KUBECONFIG=\$HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.kubeconfig"      >> $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.cfg
 
-echo "hallo $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.cfg"
-echo "hallo $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml"
 
     [ "$TDH_DEPLOYMENT_CLUSTER_PLAN" == "" ] && TDH_DEPLOYMENT_CLUSTER_PLAN="dev"
     [ "$TDH_DEPLOYMENT_CLUSTER_PLAN" == "dev" ] && DEP_SOURCE=$HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.yaml
@@ -4646,12 +4640,10 @@ echo "hallo $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml"
       #dockerPullImages="projects.registry.vmware.com/tkg/antrea/antrea-debian:v0.13.3_vmware.1 \
       #                  projects.registry.vmware.com/tkg/tanzu_core/capabilities/capabilities-controller-manager:v1.4.1"
     fi
-echo hallo_docker
 
     # --- GET CREDENTIALS AND SET ENVIRONMENT ---
     tanzu cluster kubeconfig get $TDH_TKGWC_NAME --admin > /dev/null 2>&1
     tanzu cluster kubeconfig get $TDH_TKGWC_NAME --admin > $HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.kubeconfig 2>/dev/null
-echo "hallo $HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.kubeconfig"
   fi
 
   #########################################################################################################################
@@ -12697,17 +12689,17 @@ dockerPullImages() {
 }
 
 # ------------------------------------------------------------------------------------------
-# Function Name ......: deleteRunningPods
+# Function Name ......: deleteFailedPods
 # Function Purpose ...: Waiting for system Services to have completed starting
 # ------------------------------------------------------------------------------------------
 # Argument ($1) ......: Namespace
 # ------------------------------------------------------------------------------------------
 # Return Value .......: 0 - SUCCEED, 1 - FAILED
 # ------------------------------------------------------------------------------------------
-deleteRunningPods() {
+deleteFailedPods() {
   NAMESPACE=$1
 
-  for n in $(cmdLoop kubectl -n $NAMESPACE get pods | grep Evicted | awk '{ print $1 }'); do
+  for n in $(cmdLoop kubectl -n $NAMESPACE get pods | egrep "Evicted|Error|CrashLoopBackOff" | awk '{ print $1 }'); do
     cmdLoop kubectl -n $NAMESPACE delete pod $n > /dev/null 2>&1
   done
 }
