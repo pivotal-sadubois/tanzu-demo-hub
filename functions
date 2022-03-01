@@ -3031,8 +3031,11 @@ createTKGMCcluster() {
       echo "IDENTITY_MANAGEMENT_TYPE: none"                                              >> $TKG_TEMPLATE
     fi
 
+echo "holullu 1 createTKGMCcluster"
+
     cnt=$(tanzu management-cluster get 2>/dev/null | egrep -c " $TDH_TKGMC_NAME ")
     if [ ${cnt} -eq 0 ]; then
+echo "holullu 2 createTKGMCcluster"
       # --- CLEANUP OLD CONFIG ---
       export KUBECONFIG=~/.kube-tkg/config
 
@@ -3084,7 +3087,11 @@ createTKGMCcluster() {
       kubectl config set-cluster $TDH_TKGMC_NAME > /dev/null 2>&1
       kubectl config use-context ${TDH_TKGMC_NAME}-admin@$TDH_TKGMC_NAME > /dev/null 2>&1
       context=$(kubectl config view -o json | jq -r '.contexts[].name' 2>/dev/null)
+echo "holullu"
+echo "tanzu management-cluster kubeconfig get --admin --export-file=${TKG_KUBECONFIG} "
+echo "TKG_KUBECONFIG:$TKG_KUBECONFIG"
       tanzu management-cluster kubeconfig get --admin --export-file=${TKG_KUBECONFIG} > /dev/null 2>&1; ret=$?
+ls -la $TKG_KUBECONFIG
       if [ $ret -ne 0 ]; then
         echo "ERROR: failed to generate kubeconfig:"
         if [ "$NATIVE" == "0" ]; then
@@ -13197,14 +13204,14 @@ cmdLoop() {
 
   cnt=0; ret=1
   while [ $ret -ne 0 -a $cnt -lt 5 ]; do
-    $CMD > /tmp/loopCmdIgnore.out 2>/tmp/error.log; ret=$?
+    $CMD > /tmp/loopCmdIgnore.out 2>/tmp/cmdloop_error.log; ret=$?
     [ $ret -eq 0 ] && break
     let cnt=cnt+1
     sleep 30
   done
 
   if [ $ret -ne 0 ]; then
-    logMessages /tmp/error.log 1>&2
+    logMessages /tmp/cmdloop_error.log 1>&2
     echo "ERROR: Failed to run command, please try manually" 1>&2
     if [ "$NATIVE" == "0" ]; then
       echo "       => tools/${TDH_TOOLS}.sh" 1>&2
