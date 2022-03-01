@@ -608,7 +608,7 @@ createJumpHost() {
     echo "          -var-file=$TDH_TERRAFORM_TFVARS -auto-approve"
     messageLine
 
-    sed -in "/$JUMP_HOST/d" ~/.ssh/known_hosts
+    [ -s ~/.ssh/known_hosts ] && sed -in "/$JUMP_HOST/d" ~/.ssh/known_hosts
     SSH_USER=ubuntu
     SSH_HOME=/home/ubuntu
     SSH_HOST=$JUMP_HOST
@@ -974,7 +974,7 @@ createJumpHost() {
       route53setDNSrecord "$pip" "jump.$TDH_TKGMC_ENVNAME.$AWS_HOSTED_DNS_DOMAIN" "$TDH_TKGMC_ENVNAME.$AWS_HOSTED_DNS_DOMAIN"
 #jjjjjjjjj az
 
-      sed -in "/$JUMP_HOST/d" ~/.ssh/known_hosts
+      [ -s ~/.ssh/known_hosts ] && sed -in "/$JUMP_HOST/d" ~/.ssh/known_hosts
       messagePrint " ▪ Wait for SSH Daemon on jump-host to come online" "< 5min"
     fi
   fi
