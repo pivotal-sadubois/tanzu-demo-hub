@@ -4573,7 +4573,6 @@ tkgCreateCluster() {
     a=1
   fi
 
-echo "TDH_DEPLOYMENT_CLOUD:$TDH_DEPLOYMENT_CLOUD"
   #########################################################################################################################
   ################################################ INSTALL TKG ON AZURE ###################################################
   #########################################################################################################################
@@ -4590,15 +4589,13 @@ echo "TDH_DEPLOYMENT_CLOUD:$TDH_DEPLOYMENT_CLOUD"
     messagePrint " ▪ Kubernetes Version"               "$TDH_TKGWC_KUBERNETES"
     messagePrint " ▪ Kubernetes Image"                 "$TDH_TKGWC_K8S_VERSION"
 
-echo gaga1
+echo hallo1
     # --- GENERATE WORKLOAD CLUSTER CONFIG FILE ---
     CLUSTER_CONFIG_FILE=$HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml
 
-    str="AZURE_SUBSCRIPTION_ID|AZURE_TENANT_ID|AZURE_CLIENT_ID|AZURE_CLIENT_SECRET|AZURE_LOCATION|AZURE_SSH_PUBLIC_KEY_B64|CLUSTER_PLAN"
-    egrep "$str" $DEP_SOURCE                                                        >  $CLUSTER_CONFIG_FILE
-echo gaga2
+echo hallo2
 
-    echo "CLUSTER_NAME: $TDH_TKGWC_NAME"                                            >> $CLUSTER_CONFIG_FILE
+    echo "CLUSTER_NAME: $TDH_TKGWC_NAME"                                            >  $CLUSTER_CONFIG_FILE
     echo "WORKER_MACHINE_COUNT: $TDH_TKGWC_WORKERNODES"                             >> $CLUSTER_CONFIG_FILE
     echo "CNI: antrea"                                                              >> $CLUSTER_CONFIG_FILE
     echo "AZURE_CONTROL_PLANE_MACHINE_TYPE: $TDH_TKGWC_CONTROPLANE_MACHINE"         >> $CLUSTER_CONFIG_FILE
@@ -4609,7 +4606,7 @@ echo gaga2
     echo "ENABLE_MHC: true"                                                         >> $CLUSTER_CONFIG_FILE
     echo "MHC_UNKNOWN_STATUS_TIMEOUT: 10m"                                          >> $CLUSTER_CONFIG_FILE
     echo "MHC_FALSE_STATUS_TIMEOUT: 20m"                                            >> $CLUSTER_CONFIG_FILE
-echo gaga3
+echo hallo3
 
     [ "${TDH_TKGWC_CNI}" == "" ] && TDH_TKGWC_CNI=calico
     if [ "${TDH_TKGWC_CNI}" == "antrea" ]; then
@@ -4622,27 +4619,27 @@ echo gaga3
     else
       echo "CNI: $TDH_TKGWC_CNI"                                                    >> $CLUSTER_CONFIG_FILE
     fi
-echo gaga4
+echo hallo5
 
     if [ $DEBUG -gt 0 ]; then
       echo "-----------------------------------------------------------------------------------------------------------"
       cat $HOME/.tanzu/tkg/clusterconfigs/$TDH_TKGMC_CONFIG deployments/$TKG_DEPLOYMENT | egrep -v "^#" | sed -e '/^$/d'
     fi
 
-echo gaga5
+echo hallo5
     tanzu cluster get $TDH_TKGWC_NAME >/dev/null 2>&1; ret=$?
     if [ $ret -ne 0 ]; then
-echo gaga6
+echo hallo6
       echo "-----------------------------------------------------------------------------------------------------------"
       echo "=> tanzu cluster create $TDH_TKGWC_NAME -f $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml --tkr $TDH_TKGWC_K8S_VERSION"
       tanzu cluster create $TDH_TKGWC_NAME -f $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml --tkr $TDH_TKGWC_K8S_VERSION
       echo "-----------------------------------------------------------------------------------------------------------"
 
-echo gaga7
+echo hallo7
       #dockerPullImages="projects.registry.vmware.com/tkg/antrea/antrea-debian:v0.13.3_vmware.1 \
       #                  projects.registry.vmware.com/tkg/tanzu_core/capabilities/capabilities-controller-manager:v1.4.1"
     fi
-echo gaga8
+echo hall8
 
     # --- GET CREDENTIALS AND SET ENVIRONMENT ---
     tanzu cluster kubeconfig get $TDH_TKGWC_NAME --admin > /dev/null 2>&1
@@ -6111,23 +6108,29 @@ installGitea() {
 
   messageTitle "Self-hosted Git service (Gitea)"
   cnt=$(helm list -q -n $NAMESPACE | egrep -c "^$HELMCHART")
+echo "figu0 CNT:$cnt"
   if [ $cnt -eq 0 ]; then
+echo figu1
     # --- CREATE NAMESPACE ---
     messagePrint " ▪ Create Namespace" "$HELMCHART"
     deleteNamespace $NAMESPACE > /dev/null 2>&1
     createNamespace $NAMESPACE > /dev/null 2>&1
+echo figu2
 
     # --- COPY SECRET TO NAMESPACE ---
     messagePrint " ▪ Copy TLS Secret" "tanzu-demo-hub-tls"
     copySecretObject default $NAMESPACE tanzu-demo-hub-tls
     #kubectl get secret tanzu-demo-hub-tls --namespace=default -oyaml | grep -v '^\s*namespace:\s' | \
     #kubectl apply --namespace=$NAMESPACE -f - > /dev/null 2>&1
+echo figu3
 
     # --- DOCKER PULL SECRET ---
     dockerPullSecret $NAMESPACE
+echo figu4
 
     # --- ADDING HELM REPO ---
     helmRepoAdd $HELMREPO $HELMREPO_URL
+echo figu5
 
     if [ "$TDH_SERVICE_GITEA_VERSION" == "" -o "$TDH_SERVICE_GITEA_VERSION" == "latest" ]; then
       HELM_CHART_VERSION=$(helm search repo $HELMREPO/$HELMCHART | egrep "^$HELMREPO/$HELMCHART" | tail -1 | awk '{ print $2 }')
@@ -6202,6 +6205,7 @@ installGitea() {
     fi
 
   fi
+echo figu10
 
   cmdLoop helm ls -n $NAMESPACE -o json > /tmp/output.json
   if [ -s /tmp/output.json ]; then
@@ -6212,6 +6216,7 @@ installGitea() {
   else
     ver=""; crt=""; stt=""; dat=""
   fi
+echo figu11
 
   cmdLoop kubectl -n $HELMCHART exec -it gitea-0 -- $HELMCHART admin user change-password -u gitea_admin -p $TDH_HARBOR_ADMIN_PASSWORD > /dev/null 2>&1
 
@@ -6231,12 +6236,15 @@ installGitea() {
   uodateConfigMap tanzu-demo-hub TDH_SERVICE_GITEA_ADMIN_PASS  "$TDH_HARBOR_ADMIN_PASSWORD"
   uodateConfigMap tanzu-demo-hub TDH_SERVICE_GITEA_SERVER      "gitea.$DOMAIN"
   uodateConfigMap tanzu-demo-hub TDH_SERVICE_GITEA_SERVER_URL  "https://gitea.$DOMAIN"
+echo figu13
 
   # --- CREATE AMDIN TOKEN FOR USER gitea_admin ---
   createGiteaAPItoken
+echo figu14
 
   TDH_SERVICE_GITEA_ADMIN_TOKEN_ID=$(getConfigMap tanzu-demo-hub TDH_SERVICE_GITEA_ADMIN_TOKEN_ID)
   messagePrint "   Gitea Admin Token ID"           "$TDH_SERVICE_GITEA_ADMIN_TOKEN_ID"
+echo figu15
 }
 
 # ------------------------------------------------------------------------------------------
