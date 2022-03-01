@@ -107,14 +107,17 @@ if [ ! -s /usr/local/bin/tanzu ]; then
     fi
   fi
 
+echo gaga1
   if [ -d /tmp/cli ]; then
+echo gaga2
     (cd cli; sudo install core/v*/tanzu-core-linux_amd64 /usr/local/bin/tanzu)
     cd /tmp
     tanzu plugin clean
 
-
+echo gaga4
     tanzu plugin install --local cli all > /dev/null 2>&1; ret=$?
     if [ $ret -ne 0 ]; then
+echo gaga5
       tanzu plugin sync
     fi
  
