@@ -1616,12 +1616,13 @@ else
   echo "# THILS VALUES HAS BEEN GENERATED, DONT EDIT MANUALLY"                      >> $CONFIG_FILE
   tanzu kubernetes-release get | egrep " v" | awk '{ printf("# TMC_K8S_VERSIONS:%s:%s:%s:%s\n",$1,$2,$3,$4)}' >> $CONFIG_FILE
 
-  str=$(tanzu kubernetes-release get 2>/dev/null | egrep " v" | awk '{ print $1 }') 
-  for n in $str; do
-    tanzu kubernetes-release os get $n | sed '1d' | awk -v n="$n" '{ printf("# TMC_K8S_OS_REL:%s:%s:%s:%s\n",n,$1,$2,$3)}' >> $CONFIG_FILE
-  done
 
   if [ "$TDH_DEPLOYMENT_ENV_NAME" == "Azure" ]; then
+    str=$(tanzu kubernetes-release get 2>/dev/null | egrep " v" | awk '{ print $1 }') 
+    for n in $str; do
+      tanzu kubernetes-release os get $n | sed '1d' | awk -v n="$n" '{ printf("# TMC_K8S_OS_REL:%s:%s:%s:%s\n",n,$1,$2,$3)}' >> $CONFIG_FILE
+    done
+
     echo ""                                                                           >> $CONFIG_FILE
     echo "nodes[0]='Standard_D2s_v3'   ## Azure Standard_D2s_v3 (2 Cores, 8 GB RAM)"  >> $CONFIG_FILE
     echo "nodes[1]='Standard_D4s_v3'   ## Azure Standard_D4s_v3 (2 Cores, 8 GB RAM)"  >> $CONFIG_FILE
@@ -1629,6 +1630,11 @@ else
   fi
 
   if [ "$TDH_DEPLOYMENT_ENV_NAME" == "AWS" ]; then
+    str=$(tanzu kubernetes-release get 2>/dev/null | egrep " v" | awk '{ print $1 }') 
+    for n in $str; do
+      tanzu kubernetes-release os get $n --region $AWS_REGION | sed '1d' | awk -v n="$n" '{ printf("# TMC_K8S_OS_REL:%s:%s:%s:%s\n",n,$1,$2,$3)}' >> $CONFIG_FILE
+    done
+
     echo ""                                                                           >> $CONFIG_FILE
     echo "nodes[0]='m5.large'          ## AWS m5.large   (2 Cores, 8 GB RAM)"         >> $CONFIG_FILE
     echo "nodes[1]='m5.xlarge'         ## AWS m5.xlarge  (2 Cores, 8 GB RAM)"         >> $CONFIG_FILE
