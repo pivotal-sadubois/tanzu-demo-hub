@@ -10117,7 +10117,8 @@ tdh_tools_build() {
 
 echo gaga1
   if [ ! -s $TDH_DOCKER_FILES/mc ]; then
-    wget https://dl.min.io/client/mc/release/linux-amd64/mc > /dev/null 2>&1
+    #wget https://dl.min.io/client/mc/release/linux-amd64/mc > /dev/null 2>&1
+    wget https://dl.min.io/client/mc/release/linux-amd64/mc 
 ls -la mc
 pwd
     mv mc $TDH_DOCKER_FILES && chmod a+x $TDH_DOCKER_FILES/mc
@@ -10201,9 +10202,11 @@ echo gaga1011
       [ -s $TANZU_CLI_BUNDLE/tanzu-cli-bundle-v${TKG_TANZU_KUBERNETES_GRID}-linux-amd64.tar.gz ] && gunzip $TANZU_CLI_BUNDLE/tanzu-cli-bundle-v${TKG_TANZU_KUBERNETES_GRID}-linux-amd64.tar
       [ -s $TANZU_CLI_BUNDLE/tanzu-cli-bundle-linux-amd64.tar.gz ] && gunzip $TANZU_CLI_BUNDLE/tanzu-cli-bundle-linux-amd64.tar
 
+echo gaga1012
       if [ ! -f $TANZU_CLI_BUNDLE/tanzu-cli-bundle-v${TKG_TANZU_KUBERNETES_GRID}-linux-amd64.tar -a \
            ! -f $TANZU_CLI_BUNDLE/tanzu-cli-bundle-linux-amd64.tar ]; then
         VMWCLI=/tmp/vmw-cli
+echo gaga10121
 
         if [ ! -s $VMWCLI ]; then
           messagePrint " ▪ Install Package (vmw-cli)" "installing"
@@ -10216,6 +10219,7 @@ echo gaga1011
 
           chmod 755 $VMWCLI
         fi
+echo gaga10122
 
         #################################################################################
         ################# DOWNLOAD TANZU-CLI-BUNDLE FROM MYVMWARE.COM ###################
@@ -10233,6 +10237,7 @@ echo gaga1011
           messageLine
           exit 1
         fi
+echo gaga10123
 
         cnt=0
         vmwfile=$($VMWCLI ls vmware_tanzu_kubernetes_grid 2>/dev/null | egrep "^tanzu-cli-bundle" | grep linux | tail -1 | awk '{ print $1 }')
@@ -10243,6 +10248,7 @@ echo gaga1011
         done
 
         messagePrint " ▪ Downloading Tanzu CLI Bundle" "${TANZU_CLI_BUNDLE}/$vmwfile"
+echo gaga10124
 
         if [ "$vmwfile" == "" ]; then
           echo "ERROR: failed to download $vmwfile"
@@ -10277,6 +10283,7 @@ echo gaga1011
             mv $vmwfile ${TANZU_CLI_BUNDLE}/$vmwfile
           fi
         fi
+echo gaga10125
 
         TANZU_CLI_BUNDLE=${TANZU_CLI_BUNDLE}/$vmwfile
       else
@@ -10286,6 +10293,7 @@ echo gaga1011
           TANZU_CLI_BUNDLE=${TANZU_DEMO_HUB_CACHE}/tkg-${TKG_TANZU_KUBERNETES_GRID}/tanzu-cli-bundle-v${TKG_TANZU_KUBERNETES_GRID}-linux-amd64.tar
         fi
       fi
+echo gaga1014
 
       if [ ! -d $TDH_DOCKER_FILES/cli-$TKG_TANZU_KUBERNETES_GRID  ]; then
         rm -f ${TDH_DOCKER_FILES}/cli 
@@ -10293,6 +10301,7 @@ echo gaga1011
         cd $TDH_DOCKER_FILES && ln -s  cli-$TKG_TANZU_KUBERNETES_GRID cli
       fi
     fi
+echo gaga11
 
     if [ $REBUILD_REQUIRED_SOFTWARE -gt 0 ]; then 
       messagePrint " ▪ Software Updates (files/tdh-tools/tdh-tools.cfg) )"  "=> Rebuild required"
