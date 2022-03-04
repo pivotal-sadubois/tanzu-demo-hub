@@ -2312,7 +2312,7 @@ configureJumpHost() {
   if [ "$ret" -ne 0 ]; then 
     messagePrint " ▪ Copy Tanzu Demo Hub Directory" "$HOME/.tanzu-demo-hub"
     # 02.12.2021 Can not copy the .tanzu-demo-hub/config over to jump, its overwriting cluster kubeconfig files on the jump if deployTKGmc is started again
-    (cd $HOME && tar cf /tmp/tdh-home.tar .aws .azure .tanzu-demo-hub/terraform .tanzu-demo-hub/certificates .tanzu-demo-hub/config .tanzu-demo-hub/cache .tanzu-demo-hub.cfg .tanzu-demo-hub/KeyPair* > /dev/null 2>&1)
+    (cd $HOME && tar cf /tmp/tdh-home.tar .aws .azure .tanzu-demo-hub/terraform .tanzu-demo-hub/certificates .tanzu-demo-hub/config .tanzu-demo-hub.cfg .tanzu-demo-hub/KeyPair* > /dev/null 2>&1)
 
     ret=1; cnt=0
     while [ $ret -ne 0 -a $cnt -lt 5 ]; do
@@ -2330,6 +2330,16 @@ configureJumpHost() {
       sleep 30
     done 
   fi
+
+  ver=$(ls -1 $TDHPATH/files/tdh-tools/tdh-tools-tkg-*.cfg | sed -e 's/^.*tools-tkg-//g' -e 's/\.cfg//g' | head -1) 
+echo "VER:$ver"
+  $SSH_COMMAND "[ -d ~/.tanzu-demo-hub/cache/tkg-${ver} ] && exit 0" > /dev/null 2>&1; ret=$?
+  if [ "$ret" -ne 0 ]; then 
+ echo guguseli
+echo "~/.tanzu-demo-hub/cache/tkg-${ver}"
+  fi
+
+exit
 
   $SSH_COMMAND "[ -f ~/tdh_cloud_unpacked ] && exit 0" > /dev/null 2>&1; ret=$?
   if [ "$ret" -ne 0 ]; then    
