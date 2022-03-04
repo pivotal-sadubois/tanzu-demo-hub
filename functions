@@ -2229,6 +2229,26 @@ configureLDAP() {
   messagePrint " ▪ Verify LDAP Management (phpLDAPadmin)"   "http://${JUMP_HOST}/phpldapadmin"
 } 
 
+# ------------------------------------------------------------------------------------------
+# Function Name ......: buildTDHToolsContainer
+# Function Purpose ...: Build the TDH Tools Container
+# ------------------------------------------------------------------------------------------
+# Argument ($1) ......: none
+# ------------------------------------------------------------------------------------------
+# Return Value .......: 0 - SUCCEED, 1 - FAILED
+# ------------------------------------------------------------------------------------------
+buildTDHToolsContainer() {
+a=1
+}
+
+# ------------------------------------------------------------------------------------------
+# Function Name ......: configureJumpHost
+# Function Purpose ...: Configure Juno Hosts, Downloading TDH_HOME Directory
+# ------------------------------------------------------------------------------------------
+# Argument ($1) ......: none
+# ------------------------------------------------------------------------------------------
+# Return Value .......: 0 - SUCCEED, 1 - FAILED
+# ------------------------------------------------------------------------------------------
 configureJumpHost() {
   messageTitle "Configure Jump Server: $SSH_HOST"
 
@@ -2353,8 +2373,6 @@ configureJumpHost() {
       sleep 30
     done
   fi
-
-exit
 
   $SSH_COMMAND "[ -f ~/tdh_cloud_unpacked ] && exit 0" > /dev/null 2>&1; ret=$?
   if [ "$ret" -ne 0 ]; then    
