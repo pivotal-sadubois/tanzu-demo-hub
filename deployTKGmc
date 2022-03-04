@@ -1002,10 +1002,14 @@ checkTDHAccess
 checkCloudAccess
 
 #checkTMCAccess
+echo hallo1
 checkKeyPairs
+echo hallo2
 #checkTKGdownloads
 tmcCheckLogin
+echo hallo3
 checkIdentityProvider
+echo hallo4
 
 # --- CREATE TKG CLUSTER AND JUMP SERVER
 createJumpHost

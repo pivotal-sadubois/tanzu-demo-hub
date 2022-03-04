@@ -10296,9 +10296,17 @@ echo gaga10125
 echo gaga1014
 
       if [ ! -d $TDH_DOCKER_FILES/cli-$TKG_TANZU_KUBERNETES_GRID  ]; then
+echo gaga10141
+pwd
+echo "rm -f ${TDH_DOCKER_FILES}/cli"
         rm -f ${TDH_DOCKER_FILES}/cli 
+echo gaga10142
+echo "tar xf $TANZU_CLI_BUNDLE && mv cli ${TDH_DOCKER_FILES}/cli-$TKG_TANZU_KUBERNETES_GRID"
         tar xf $TANZU_CLI_BUNDLE && mv cli ${TDH_DOCKER_FILES}/cli-$TKG_TANZU_KUBERNETES_GRID
+echo gaga10143
+echo "cd $TDH_DOCKER_FILES && ln -s  cli-$TKG_TANZU_KUBERNETES_GRID cli"
         cd $TDH_DOCKER_FILES && ln -s  cli-$TKG_TANZU_KUBERNETES_GRID cli
+echo gaga10144
       fi
     fi
 echo gaga11
