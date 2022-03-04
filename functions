@@ -2331,12 +2331,27 @@ configureJumpHost() {
     done 
   fi
 
+  # --- COPY CACHED SOFTWARE FROM MYWMWARE.COM THAT PROBABLY CAN NOT BE DOWNLOADED AGAIN ---
   ver=$(ls -1 $TDHPATH/files/tdh-tools/tdh-tools-tkg-*.cfg | sed -e 's/^.*tools-tkg-//g' -e 's/\.cfg//g' | head -1) 
-echo "VER:$ver"
   $SSH_COMMAND "[ -d ~/.tanzu-demo-hub/cache/tkg-${ver} ] && exit 0" > /dev/null 2>&1; ret=$?
   if [ "$ret" -ne 0 ]; then 
- echo guguseli
-echo "~/.tanzu-demo-hub/cache/tkg-${ver}"
+    (cd $HOME && tar cf /tmp/tdh-cache.tar .tanzu-demo-hub/cache/tkg-${ver} > /dev/null 2>&1)
+
+   ret=1; cnt=0
+    while [ $ret -ne 0 -a $cnt -lt 5 ]; do
+      $SCP_COMMAND /tmp/tdh-cache.tar ${SSH_USER}@${SSH_HOST}:$SSH_HOME > /dev/null 2>&1; ret=$?
+      [ $ret -eq 0 ] && break
+      let cnt=cnt+1
+      sleep 30
+    done
+
+    stt=""; cnt=0
+    while [ "${stt}" != "true" -a $cnt -lt 5 ]; do
+      stt=$($SSH_COMMAND -n "tar xf tdh-cache.tar && echo true && touch ~/tdh_cache_unpacked")
+      [ "$stt" == "true" ] && break
+      let cnt=cnt+1
+      sleep 30
+    done
   fi
 
 exit
