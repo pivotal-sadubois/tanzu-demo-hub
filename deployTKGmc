@@ -1013,6 +1013,14 @@ sshEnvironment
 
 configureJumpHost
 
+for rel in $(ls -1 $TDHPATH/files/tdh-tools/tdh-tools-tkg-*.cfg | sed -e 's/^.*tools-tkg-//g' -e 's/\.cfg//g'); do
+echo "buildTDHToolsContainer tkg $rel"
+  buildTDHToolsContainer tkg $rel
+done
+
+
+#hallo
+
 
 exit
 configureLetsEnscript

@@ -2238,7 +2238,11 @@ configureLDAP() {
 # Return Value .......: 0 - SUCCEED, 1 - FAILED
 # ------------------------------------------------------------------------------------------
 buildTDHToolsContainer() {
-a=1
+  TKG_TYPE=$1
+  TKG_RELEASE=$2
+
+  tdh_tools_build $TKG_TYPE $TKG_RELEASE
+#hallo
 }
 
 # ------------------------------------------------------------------------------------------
@@ -10307,7 +10311,7 @@ tdh_tools_build() {
     time1=$(echo "($(hourInSec)*360)+($(minInSec)*60)+$(secInSec)" | bc)
     messagePrint " ▪ Building TDH Tools docker container" "$TDH_TOOLS_IMAGE:CHKSUM-$DOCKER_CHKSUM"
     #cd $TDH_DOCKER_FILES && docker build -q -t $TDH_TOOLS_IMAGE:CHKSUM-$DOCKER_CHKSUM \
-    cd $TDH_DOCKER_FILES && docker build -t $TDH_TOOLS_IMAGE:CHKSUM-$DOCKER_CHKSUM \
+    cd $TDH_DOCKER_FILES && docker build -q -t $TDH_TOOLS_IMAGE:CHKSUM-$DOCKER_CHKSUM \
       --build-arg UID=$(id -u) \
       --build-arg GID=$(id -g) \
       --build-arg USER=$USER \
