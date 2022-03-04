@@ -748,11 +748,14 @@ echo hallo41
       exit
     fi
 
+echo hallo411
     # --- VERIFY / CREATE APPLICATION ID AND SERVICE PRINCIPLE ---
     appid=$(az ad app list --display-name "TanzuDemoHub-$TDH_USER" | jq -r '.[].appId')
+echo hallo412
     if [ "$appid" == "" ]; then 
       messageTitle "Register Azure Application (TanzuDemoHub-$TDH_USER)"
       az ad sp create-for-rbac --role Owner --name "TanzuDemoHub-$TDH_USER" > /tmp/TanzuDemoHub-$TDH_USER.json 2>/dev/null
+echo hallo413
       AZURE_CLIENT_ID=$(jq -r '.appId' /tmp/TanzuDemoHub-$TDH_USER.json)
       AZURE_CLIENT_SECRET=$(jq -r '.password' /tmp/TanzuDemoHub-$TDH_USER.json)
 
@@ -772,6 +775,7 @@ echo hallo41
         echo " "
         exit 0
       else
+echo hallo414
         docker run --rm --name azure-cli bitnami/azure-cli:latest login --service-principal --username $appid --password $AZURE_CLIENT_SECRET --tenant $AZURE_TENANT_ID > /dev/null 2>&1
         if [ $? -ne 0 ]; then 
           AZURE_CLIENT_ID=$appid
