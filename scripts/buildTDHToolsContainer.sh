@@ -18,11 +18,13 @@ export TKG_TYPE=$1
 export TKG_RELEASE=$2
 
 echo "buildTDHToolsContainer.sh gaga2"
-. $TANZU_DEMO_HUB/functions
+[ -f $TANZU_DEMO_HUB/functions ] && . $TANZU_DEMO_HUB/functions
 echo "buildTDHToolsContainer.sh gaga3"
+[ -f $HONE/.tanzu-demo-hub.cfg ] && . $HONE/.tanzu-demo-hub.cfg
+echo "buildTDHToolsContainer.sh gaga4"
 
 for rel in $(ls -1 $TDHPATH/files/tdh-tools/tdh-tools-tkg-*.cfg | sed -e 's/^.*tools-tkg-//g' -e 's/\.cfg//g'); do
-echo "buildTDHToolsContainer.sh gaga4"
+echo "buildTDHToolsContainer.sh gaga5"
   tdh_tools_build $TKG_TYPE $TKG_RELEASE
 done
 

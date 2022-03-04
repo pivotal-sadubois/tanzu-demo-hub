@@ -737,6 +737,7 @@ createJumpHost() {
   fi
 
   if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "Azure" ]; then
+echo hallo41
     JUMP_HOST="jump-${TDH_TKGMC_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}"
 
     # --- VERIFY AZURE ACCESS ---
@@ -784,6 +785,7 @@ createJumpHost() {
         fi
       fi
     fi
+echo hallo42
 
     appid=$(az ad app list --display-name "TanzuDemoHub-$TDH_USER" | jq -r '.[].appId')
     objid=$(az ad sp list --all --display-name TanzuDemoHub-$TDH_USER | jq -r '.[].objectId')
@@ -805,9 +807,11 @@ createJumpHost() {
         exit 1
       fi
     fi
+echo hallo42
   
     vm_stt=$(az vm list -d --query "[?contains(name, '$JUMP_HOST')]" | jq -r '.[].powerState')
     if [ "${vm_stt}" == "" ]; then
+echo hallo421
       # --- VM DOES NOT EXIST, CREATING ---
       nam=$(az network vnet list -g Admin --query "[?contains(name, 'admin-vnet')]" | jq -r '.[].name')
       if [ "$nam" != "admin-vnet" ]; then
@@ -826,6 +830,7 @@ createJumpHost() {
       else
         messagePrint " ▪ Verify Vnet" "admin-vnet"
       fi
+echo hallo422
 
       nam=$(az network public-ip list -g Admin --query "[?contains(name, 'AdminPublicIP_$TDH_TKGMC_ENVNAME')]" | jq -r '.[].name')
       if [ "$nam" != "AdminPublicIP_$TDH_TKGMC_ENVNAME" ]; then
@@ -843,6 +848,7 @@ createJumpHost() {
 
         messagePrint " ▪ Verify PublicIP (AdminPublicIP_$TDH_TKGMC_ENVNAME)" "$pip"
       fi
+echo hallo423
 
       nam=$(az network nsg list --query "[?contains(name, 'AdminSG')]" | jq -r '.[].name')
       if [ "$nam" != "AdminSG" ]; then
@@ -858,6 +864,7 @@ createJumpHost() {
       else
         messagePrint " ▪ Verify Security Group" "AdminSG"
       fi
+echo hallo424
 
       nam=$(az network nsg rule list -g Admin --nsg-name AdminSG --query "[?contains(name, 'AdminSG-RuleSSH')]" | \
             jq -r '.[].name')
@@ -906,6 +913,7 @@ createJumpHost() {
       else
         messagePrint " ▪ Verify Security Group Rule" "AdminSG-RuleSSH"
       fi
+echo hallo426
 
       nam=$(az network nic list -g Admin --query "[?contains(name, 'AdminNic_$TDH_TKGMC_ENVNAME')]" | \
             jq -r '.[].name')
@@ -928,6 +936,7 @@ createJumpHost() {
       else
         messagePrint " ▪ Verify NIC" "AdminNic_$TDH_TKGMC_ENVNAME"
       fi
+echo hallo43
 
       #nam=$(az vm list --query "[?contains(name, '$JUMP_HOST')]" | jq -r '.[].name')
       #if [ "$nam" != "$JUMP_HOST" ]; then
@@ -950,6 +959,7 @@ createJumpHost() {
         echo "          --nics AdminNic_$TDH_TKGMC_ENVNAME --image UbuntuLTS --admin-username ubuntu --generate-ssh-keys"
         exit 1
       fi
+echo hallo44
     else
       #stt=$(az vm list -d --query "[?contains(name, '$JUMP_HOST')]" | jq -r '.[].powerState')
       if [ "${vm_stt}" != "VM running" ]; then
@@ -957,6 +967,7 @@ createJumpHost() {
         az vm start --resource-group Admin --name $JUMP_HOST
       fi
     fi
+echo hallo44
 
     pip=""
     while [ "$pip" == "" -o "$pip" == "null" ]; do
@@ -966,6 +977,7 @@ createJumpHost() {
     done
 
     aip=$(route53getIPaddress $TDH_TKGMC_ENVNAME $AWS_HOSTED_DNS_DOMAIN)
+echo hallo45
 
     # --- UPDATE DNS DOMAIN ---
     if [ "${pip}" != "${aip}" ]; then
@@ -979,7 +991,9 @@ createJumpHost() {
       [ -s ~/.ssh/known_hosts ] && sed -in "/$JUMP_HOST/d" ~/.ssh/known_hosts
       messagePrint " ▪ Wait for SSH Daemon on jump-host to come online" "< 5min"
     fi
+echo hallo46
   fi
+echo hallo47
 }
 
 # --- VERYFY ACCESS TO CLOUD ---
