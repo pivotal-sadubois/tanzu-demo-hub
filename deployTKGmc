@@ -940,6 +940,7 @@ createJumpHost() {
           --location $AZURE_LOCATION \
           --nics AdminNic_$TDH_TKGMC_ENVNAME \
           --image UbuntuLTS \
+          --size Standard_DS2_v2 \
           --admin-username ubuntu \
           --size Standard_DS2_v2 \
           --ssh-key-values ~/.tanzu-demo-hub/KeyPair-Azure.pub > /dev/null 2>&1
