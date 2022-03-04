@@ -933,6 +933,7 @@ createJumpHost() {
       #if [ "$nam" != "$JUMP_HOST" ]; then
       messagePrint " ▪ Creating VM" "$JUMP_HOST"
 
+#gaga
       az vm create \
           --resource-group Admin \
           --name $JUMP_HOST \
@@ -940,6 +941,7 @@ createJumpHost() {
           --nics AdminNic_$TDH_TKGMC_ENVNAME \
           --image UbuntuLTS \
           --admin-username ubuntu \
+          --size Standard_DS2_v2 \
           --ssh-key-values ~/.tanzu-demo-hub/KeyPair-Azure.pub > /dev/null 2>&1
           #--generate-ssh-keys > /dev/null 2>&1
       if [ $? -ne 0 ]; then
@@ -1797,7 +1799,7 @@ else
 #  fi
 
   printf "\e[1m3.) Delete the Management Cluster\e[0m\n"
-  echo "    => ./deployTKGmc $DEPLOY_TKG_TEMPLATE --delete"
+  echo "    => ./deployTKGmc -d $DEPLOY_TKG_TEMPLATE --delete -v <version>"
 
   printf "\e[1m4.) Login to Jump Server: $JUMP_HOST (only if required)\e[0m\n"
   echo "    => $SSH_DISPLAY"
