@@ -20,9 +20,9 @@ export TKG_RELEASE=$2
 echo "buildTDHToolsContainer.sh gaga2"
 [ -f $TANZU_DEMO_HUB/functions ] && . $TANZU_DEMO_HUB/functions
 echo "buildTDHToolsContainer.sh gaga3"
-[ -f $HONE/.tanzu-demo-hub.cfg ] && . $HONE/.tanzu-demo-hub.cfg
+[ -f $HOME/.tanzu-demo-hub.cfg ] && . $HOME/.tanzu-demo-hub.cfg
 echo "PCF_PIVNET_TOKEN:$PCF_PIVNET_TOKEN"
-grep PCF_PIVNET_TOKEN $HONE/.tanzu-demo-hub.cfg
+grep PCF_PIVNET_TOKEN $HOME/.tanzu-demo-hub.cfg
 echo "buildTDHToolsContainer.sh gaga4"
 
 for rel in $(ls -1 $TDHPATH/files/tdh-tools/tdh-tools-tkg-*.cfg | sed -e 's/^.*tools-tkg-//g' -e 's/\.cfg//g'); do
