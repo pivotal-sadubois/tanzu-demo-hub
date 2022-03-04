@@ -10326,8 +10326,10 @@ tdh_tools_build() {
       echo "             --build-arg GID=$(id -g) \\"
       echo "             --build-arg USER=$USER \\"
       echo "             --build-arg HOME=$HOME \\"
+      echo "             --build-arg TANZU_DEMO_HUB=$TANZU_DEMO_HUB \\"
       echo "             --build-arg TDHPATH=$TDHPATH \\"
-      echo "             --build-arg TZ=$(ls -l /etc/localtime | /usr/bin/cut -d '/' -f 8,9) $TDH_DOCKER_FILES"
+      echo "             --build-arg ARCH=$ARCH \\"
+      echo "             --build-arg TZ=$(ls -l /etc/localtime | /usr/bin/cut -d '/' -f 8,9) ."
       exit 1
     fi
   
