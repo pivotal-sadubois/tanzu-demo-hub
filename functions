@@ -2246,6 +2246,7 @@ echo "$SSH_COMMAND -n \"[ -f $SSH_HOME/tanzu-demo-hub/scripts/uploadOVAimages.sh
     $SSH_COMMAND -n "[ -f $SSH_HOME/tanzu-demo-hub/scripts/buildTDHToolsContainer.sh ] && tanzu-demo-hub/scripts/buildTDHToolsContainer.sh tkg $rel"
 
   done
+}
 
 # ------------------------------------------------------------------------------------------
 # Function Name ......: configureJumpHost
