@@ -12,6 +12,7 @@ export DEBUG=0
 export NATIVE=0                ## NATIVE=1 r(un on local host), NATIVE=0 (run within docker)
 export DEPLOY_TKG_CLEAN=0
 export TDH_TOOLS=tdh-tools
+export TDH_TOOLS_CONTAINER_TYPE=tkg
 
 # --- SETTING FOR TDH-TOOLS ---
 export START_COMMAND="$*"
@@ -1036,7 +1037,7 @@ sshEnvironment
 echo hallo6
 
 configureJumpHost
-buildTDHToolsContainer
+buildTDHToolsContainer   $TDH_TOOLS_CONTAINER_TYPE
 
 #hallo
 
