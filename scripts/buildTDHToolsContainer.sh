@@ -6,7 +6,6 @@
 # Description ..: Tanzu Demo Hub - Create TDH Tools Container
 # ############################################################################################
 
-echo "buildTDHToolsContainer.sh gaga1"
 export TANZU_DEMO_HUB=$(cd "$(pwd)/$(dirname $0)/.."; pwd)
 export TDHPATH=$(cd "$(pwd)/$(dirname $0)/.."; pwd)
 export DEPLOY_TKG_TEMPLATE=tkgmc-dev-vsphere-macbook.cfg
@@ -24,3 +23,4 @@ for rel in $(ls -1 $TDHPATH/files/tdh-tools/tdh-tools-tkg-*.cfg | sed -e 's/^.*t
   tdh_tools_build $TKG_TYPE $TKG_RELEASE
 done
 
+exit 0

@@ -56,7 +56,7 @@ done
 for n in $(ls -1 $HOME/.tanzu-demo-hub/config/tdh*.kubeconfig 2>/dev/null); do
   nam=$(echo $n | awk -F'/' '{ print $NF }' | sed 's/\.kubeconfig//g')
 
-  kubectl --kubeconfig=$n get cm -n default -o json > /tmp/output.json 2>/dev/null
+  kubectl --kubeconfig=$n --request-timeout 1s get cm -n default -o json > /tmp/output.json 2>/dev/null
   if [ -s /tmp/output.json ]; then
     cfm=$(jq -r '.items[].metadata | select(.name == "tanzu-demo-hub").name' /tmp/output.json 2>/dev/null)
     if [ "$cfm" == "tanzu-demo-hub" ]; then
