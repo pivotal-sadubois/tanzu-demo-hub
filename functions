@@ -3439,8 +3439,6 @@ echo holullu-azure-4
     #[ $cnt -eq 0 ] && sed -i '/export KUBECONFIG=.*$/d' ~/.bashrc
     #echo "export KUBECONFIG=~/.tanzu-demo-hub/config/kubeconfig_$TDH_TKGMC_NAME.yaml" >> ~/.bashrc
     #sudo mv /tmp/motd /etc/motd
-
-
   fi
 }
 
