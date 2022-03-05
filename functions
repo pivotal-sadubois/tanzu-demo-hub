@@ -3368,6 +3368,10 @@ echo "holullu AWS"
       messagePrint " ▪ Management Cluster Creating"        "This may take up to 15min ..."
       echo "tanzu management-cluster create --file $TKG_TEMPLATE -v 0 --log-file=/tmp/$TDH_TKGMC_NAME.log"
 
+echo "TDH_TOOLS_CONTAINER_TYPE:$TDH_TOOLS_CONTAINER_TYPE"
+echo "DEPLOY_TKG_VERSION:$DEPLOY_TKG_VERSION"
+exit
+
       ret=1; cnt=0
       while [ $ret -ne 0 -a $cnt -lt 3 ]; do
         if [ $DEBUG -gt 0 ]; then

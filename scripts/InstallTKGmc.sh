@@ -8,7 +8,6 @@
 # 2021-11-25 ...: fix kind cluster on linux jump host
 # ############################################################################################
 
-echo "XXXX InstallTKGmc.sh $(hostname)"
 export TANZU_DEMO_HUB=$(cd "$(pwd)/$(dirname $0)/.."; pwd)
 export TDHPATH=$(cd "$(pwd)/$(dirname $0)/.."; pwd)
 export DEPLOY_TKG_TEMPLATE=$1
@@ -16,21 +15,8 @@ export TDH_TKGMC_NAME_TMP="$2"
 export DEBUG="$3"
 export TDH_TOOLS_CONTAINER_TYPE="$4"
 export DEPLOY_TKG_VERSION="$5"
-export NATIVE=0
 
-# --- SETTING FOR TDH-TOOLS ---
-export START_COMMAND="$*"
-export CMD_EXEC=scripts/$(basename $0)
-export CMD_ARGS=$*
-
-# --- SOUTCE FOUNCTIONS AND USER ENVIRONMENT ---
-[ -f $TANZU_DEMO_HUB/functions ] && . $TANZU_DEMO_HUB/functions
-[ -f $HOME/.tanzu-demo-hub.cfg ] && . $HOME/.tanzu-demo-hub.cfg
-
-#############################################################################################################################
-################################### EXECUTING CODE WITHIN  TDH-TOOLS DOCKER CONTAINER  ######################################
-#############################################################################################################################
-runTDHtools $TDH_TOOLS_CONTAINER_TYPE $DEPLOY_TKG_VERSION "Deploy TKG Management Cluster" "$TDHPATH/$CMD_EXEC" "$CMD_ARGS"
+. $TANZU_DEMO_HUB/functions
 
 # --- VERIFY DEPLOYMENT ---
 if [ ! -f ${TDHPATH}/deployments/${DEPLOY_TKG_TEMPLATE} ]; then
@@ -38,6 +24,11 @@ if [ ! -f ${TDHPATH}/deployments/${DEPLOY_TKG_TEMPLATE} ]; then
   exit 1
 else
   . ${TDHPATH}/deployments/${DEPLOY_TKG_TEMPLATE}
+fi
+
+# --- CHECK ENVIRONMENT VARIABLES ---
+if [ -f ~/.tanzu-demo-hub.cfg ]; then
+  . ~/.tanzu-demo-hub.cfg
 fi
 
 export TDH_DEPLOYMENT_ENV_NAME=$TDH_TKGMC_INFRASTRUCTURE
@@ -53,10 +44,18 @@ fi
 # --- RESET TDH_TKGMC_NAME ---
 export TDH_TKGMC_NAME="$TDH_TKGMC_NAME_TMP"
 
-#sshEnvironment > /dev/null 2>&1
-echo "InstallTKGmc.sh gaga1"
-createTKGMCcluster $TDH_TKGMC_NAME; ret=$?
-echo "InstallTKGmc.sh gaga1"
-if [ $ret -ne 0 ]; then exit 1; fi
+# --- CORRECT PERMISSONS ---
+[ -d $HOME/.tanzu ] && sudo chown -R ubuntu:ubuntu $HOME/.tanzu
+[ -d $HOME/.local ] && sudo chown -R ubuntu:ubuntu $HOME/.local
+[ -d $HOME/.config ] && sudo chown -R ubuntu:ubuntu $HOME/.config
+[ -d $HOME/.cache ] && sudo chown -R ubuntu:ubuntu $HOME/.cache
+[ -d $HOME/.kube-tkg ] && sudo chown -R ubuntu:ubuntu $HOME/.kube-tkg
 
-return 0
+# --- FIX FOR KIND (https://kb.vmware.com/s/article/85245)
+sudo sysctl net/netfilter/nf_conntrack_max=131072 > /dev/null 2>&1
+
+#sshEnvironment > /dev/null 2>&1
+createTKGMCcluster $TDH_TKGMC_NAME
+if [ $? -ne 0 ]; then exit 1; fi
+
+
