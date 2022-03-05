@@ -10129,8 +10129,7 @@ tdh_tools_build() {
   fi
 
   if [ ! -s $TDH_DOCKER_FILES/mc ]; then
-    #wget https://dl.min.io/client/mc/release/linux-amd64/mc > /dev/null 2>&1
-    wget https://dl.min.io/client/mc/release/linux-amd64/mc 
+    wget https://dl.min.io/client/mc/release/linux-amd64/mc > /dev/null 2>&1
     mv mc $TDH_DOCKER_FILES && chmod a+x $TDH_DOCKER_FILES/mc
   fi
 
@@ -10195,13 +10194,11 @@ tdh_tools_build() {
   echo tdh-tools > $TDH_DOCKER_FILES/hostname
 
   if [ $BUILD_MODE == "tkg" ]; then
-echo gaga101
     # --- CLEANUP ---
     [ "$TDH_DOCKER_FILES" != "" ] && rm -rf $TDH_DOCKER_FILES/cli $TDH_DOCKER_FILES/cli-${TKG_TANZU_KUBERNETES_GRID} 
 
     # --- CHECK WETHER THE BUNDLE IS INSTALLED ---
     if [ ! -d $TDH_DOCKER_FILES/cli-${TKG_TANZU_KUBERNETES_GRID} -o $TDH_DOCKER_FILES/cli-${TKG_TANZU_KUBERNETES_GRID}/core/v*/tanzu-core-linux_amd64 ]; then
-echo gaga1011
       TANZU_DEMO_HUB_CACHE=$HOME/.tanzu-demo-hub/cache.orig
       TANZU_DEMO_HUB_CACHE=$HOME/.tanzu-demo-hub/cache
       TANZU_CLI_BUNDLE=$TDH_DOCKER_FILES/tkg-${TKG_TANZU_KUBERNETES_GRID}
@@ -10210,11 +10207,9 @@ echo gaga1011
       [ -s $TANZU_CLI_BUNDLE/tanzu-cli-bundle-v${TKG_TANZU_KUBERNETES_GRID}-linux-amd64.tar.gz ] && gunzip $TANZU_CLI_BUNDLE/tanzu-cli-bundle-v${TKG_TANZU_KUBERNETES_GRID}-linux-amd64.tar
       [ -s $TANZU_CLI_BUNDLE/tanzu-cli-bundle-linux-amd64.tar.gz ] && gunzip $TANZU_CLI_BUNDLE/tanzu-cli-bundle-linux-amd64.tar
 
-echo gaga1012
       if [ ! -f $TANZU_CLI_BUNDLE/tanzu-cli-bundle-v${TKG_TANZU_KUBERNETES_GRID}-linux-amd64.tar -a \
            ! -f $TANZU_CLI_BUNDLE/tanzu-cli-bundle-linux-amd64.tar ]; then
         VMWCLI=/tmp/vmw-cli
-echo gaga10121
 
         if [ ! -s $VMWCLI ]; then
           messagePrint " ▪ Install Package (vmw-cli)" "installing"
@@ -10227,7 +10222,6 @@ echo gaga10121
 
           chmod 755 $VMWCLI
         fi
-echo gaga10122
 
         #################################################################################
         ################# DOWNLOAD TANZU-CLI-BUNDLE FROM MYVMWARE.COM ###################
@@ -10245,7 +10239,6 @@ echo gaga10122
           messageLine
           exit 1
         fi
-echo gaga10123
 
         cnt=0
         vmwfile=$($VMWCLI ls vmware_tanzu_kubernetes_grid 2>/dev/null | egrep "^tanzu-cli-bundle" | grep linux | tail -1 | awk '{ print $1 }')
@@ -10256,7 +10249,6 @@ echo gaga10123
         done
 
         messagePrint " ▪ Downloading Tanzu CLI Bundle" "${TANZU_CLI_BUNDLE}/$vmwfile"
-echo gaga10124
 
         if [ "$vmwfile" == "" ]; then
           echo "ERROR: failed to download $vmwfile"
@@ -10291,7 +10283,6 @@ echo gaga10124
             mv $vmwfile ${TANZU_CLI_BUNDLE}/$vmwfile
           fi
         fi
-echo gaga10125
 
         TANZU_CLI_BUNDLE=${TANZU_CLI_BUNDLE}/$vmwfile
       else
@@ -10301,23 +10292,13 @@ echo gaga10125
           TANZU_CLI_BUNDLE=${TANZU_DEMO_HUB_CACHE}/tkg-${TKG_TANZU_KUBERNETES_GRID}/tanzu-cli-bundle-v${TKG_TANZU_KUBERNETES_GRID}-linux-amd64.tar
         fi
       fi
-echo gaga1014
 
       if [ ! -d $TDH_DOCKER_FILES/cli-$TKG_TANZU_KUBERNETES_GRID  ]; then
-echo gaga10141
-pwd
-echo "rm -f ${TDH_DOCKER_FILES}/cli"
         rm -f ${TDH_DOCKER_FILES}/cli 
-echo gaga10142
-echo "tar xf $TANZU_CLI_BUNDLE && mv cli ${TDH_DOCKER_FILES}/cli-$TKG_TANZU_KUBERNETES_GRID"
         tar xf $TANZU_CLI_BUNDLE && mv cli ${TDH_DOCKER_FILES}/cli-$TKG_TANZU_KUBERNETES_GRID
-echo gaga10143
-echo "cd $TDH_DOCKER_FILES && ln -s  cli-$TKG_TANZU_KUBERNETES_GRID cli"
         cd $TDH_DOCKER_FILES && ln -s  cli-$TKG_TANZU_KUBERNETES_GRID cli
-echo gaga10144
       fi
     fi
-echo gaga11
 
     if [ $REBUILD_REQUIRED_SOFTWARE -gt 0 ]; then 
       messagePrint " ▪ Software Updates (files/tdh-tools/tdh-tools.cfg) )"  "=> Rebuild required"
@@ -10325,7 +10306,6 @@ echo gaga11
       REBUILD_REQUIRED=1
     fi
   fi
-echo gaga1021
 
   if [ $REBUILD_REQUIRED -gt 0 ]; then 
     if [ ! -s $TDH_DOCKER_FILES/kubectl ]; then
@@ -10374,7 +10354,6 @@ echo gaga1021
     messagePrint " ▪ Create Tag (latest) for  TDH Tools docker container" "$TDH_TOOLS_IMAGE:latest"
     docker tag $TDH_TOOLS_IMAGE:CHKSUM-$DOCKER_CHKSUM $TDH_TOOLS_IMAGE:latest
   fi
-echo gaga2011
 }
 
 verify_datacenter() {

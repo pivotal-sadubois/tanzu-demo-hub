@@ -738,7 +738,6 @@ createJumpHost() {
   fi
 
   if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "Azure" ]; then
-echo hallo41
     JUMP_HOST="jump-${TDH_TKGMC_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}"
 
     # --- VERIFY AZURE ACCESS ---
@@ -749,14 +748,11 @@ echo hallo41
       exit
     fi
 
-echo hallo411
     # --- VERIFY / CREATE APPLICATION ID AND SERVICE PRINCIPLE ---
-    appid=$(az ad app list --display-name "TanzuDemoHub-$TDH_USER" | jq -r '.[].appId')
-echo hallo412
+    appid=$(az ad app list --display-name "TanzuDemoHub-$TDH_USER" 2>/dev/null | jq -r '.[].appId')
     if [ "$appid" == "" ]; then 
       messageTitle "Register Azure Application (TanzuDemoHub-$TDH_USER)"
       az ad sp create-for-rbac --role Owner --name "TanzuDemoHub-$TDH_USER" > /tmp/TanzuDemoHub-$TDH_USER.json 2>/dev/null
-echo hallo413
       AZURE_CLIENT_ID=$(jq -r '.appId' /tmp/TanzuDemoHub-$TDH_USER.json)
       AZURE_CLIENT_SECRET=$(jq -r '.password' /tmp/TanzuDemoHub-$TDH_USER.json)
 
@@ -776,7 +772,6 @@ echo hallo413
         echo " "
         exit 0
       else
-echo hallo414
         docker run --rm --name azure-cli bitnami/azure-cli:latest login --service-principal --username $appid --password $AZURE_CLIENT_SECRET --tenant $AZURE_TENANT_ID > /dev/null 2>&1
         if [ $? -ne 0 ]; then 
           AZURE_CLIENT_ID=$appid
@@ -790,10 +785,9 @@ echo hallo414
         fi
       fi
     fi
-echo hallo42
 
-    appid=$(az ad app list --display-name "TanzuDemoHub-$TDH_USER" | jq -r '.[].appId')
-    objid=$(az ad sp list --all --display-name TanzuDemoHub-$TDH_USER | jq -r '.[].objectId')
+    appid=$(az ad app list --display-name "TanzuDemoHub-$TDH_USER" 2>/dev/null | jq -r '.[].appId')
+    objid=$(az ad sp list --all --display-name TanzuDemoHub-$TDH_USER 2>/dev/null | jq -r '.[].objectId')
     messageTitle "Verify Azure Application (TanzuDemoHub-$TDH_USER)"
     messagePrint " ▪ Azure Client ID" "$appid"
     messagePrint " ▪ Azure Client Secret" "verified"
@@ -812,11 +806,9 @@ echo hallo42
         exit 1
       fi
     fi
-echo hallo42
   
     vm_stt=$(az vm list -d --query "[?contains(name, '$JUMP_HOST')]" | jq -r '.[].powerState')
     if [ "${vm_stt}" == "" ]; then
-echo hallo421
       # --- VM DOES NOT EXIST, CREATING ---
       nam=$(az network vnet list -g Admin --query "[?contains(name, 'admin-vnet')]" | jq -r '.[].name')
       if [ "$nam" != "admin-vnet" ]; then
@@ -835,7 +827,6 @@ echo hallo421
       else
         messagePrint " ▪ Verify Vnet" "admin-vnet"
       fi
-echo hallo422
 
       nam=$(az network public-ip list -g Admin --query "[?contains(name, 'AdminPublicIP_$TDH_TKGMC_ENVNAME')]" | jq -r '.[].name')
       if [ "$nam" != "AdminPublicIP_$TDH_TKGMC_ENVNAME" ]; then
@@ -853,7 +844,6 @@ echo hallo422
 
         messagePrint " ▪ Verify PublicIP (AdminPublicIP_$TDH_TKGMC_ENVNAME)" "$pip"
       fi
-echo hallo423
 
       nam=$(az network nsg list --query "[?contains(name, 'AdminSG')]" | jq -r '.[].name')
       if [ "$nam" != "AdminSG" ]; then
@@ -869,7 +859,6 @@ echo hallo423
       else
         messagePrint " ▪ Verify Security Group" "AdminSG"
       fi
-echo hallo424
 
       nam=$(az network nsg rule list -g Admin --nsg-name AdminSG --query "[?contains(name, 'AdminSG-RuleSSH')]" | \
             jq -r '.[].name')
@@ -918,7 +907,6 @@ echo hallo424
       else
         messagePrint " ▪ Verify Security Group Rule" "AdminSG-RuleSSH"
       fi
-echo hallo426
 
       nam=$(az network nic list -g Admin --query "[?contains(name, 'AdminNic_$TDH_TKGMC_ENVNAME')]" | \
             jq -r '.[].name')
@@ -941,7 +929,6 @@ echo hallo426
       else
         messagePrint " ▪ Verify NIC" "AdminNic_$TDH_TKGMC_ENVNAME"
       fi
-echo hallo43
 
       #nam=$(az vm list --query "[?contains(name, '$JUMP_HOST')]" | jq -r '.[].name')
       #if [ "$nam" != "$JUMP_HOST" ]; then
@@ -964,7 +951,6 @@ echo hallo43
         echo "          --nics AdminNic_$TDH_TKGMC_ENVNAME --image UbuntuLTS --admin-username ubuntu --generate-ssh-keys"
         exit 1
       fi
-echo hallo44
     else
       #stt=$(az vm list -d --query "[?contains(name, '$JUMP_HOST')]" | jq -r '.[].powerState')
       if [ "${vm_stt}" != "VM running" ]; then
@@ -972,7 +958,6 @@ echo hallo44
         az vm start --resource-group Admin --name $JUMP_HOST
       fi
     fi
-echo hallo44
 
     pip=""
     while [ "$pip" == "" -o "$pip" == "null" ]; do
@@ -982,7 +967,6 @@ echo hallo44
     done
 
     aip=$(route53getIPaddress $TDH_TKGMC_ENVNAME $AWS_HOSTED_DNS_DOMAIN)
-echo hallo45
 
     # --- UPDATE DNS DOMAIN ---
     if [ "${pip}" != "${aip}" ]; then
@@ -996,9 +980,7 @@ echo hallo45
       [ -s ~/.ssh/known_hosts ] && sed -in "/$JUMP_HOST/d" ~/.ssh/known_hosts
       messagePrint " ▪ Wait for SSH Daemon on jump-host to come online" "< 5min"
     fi
-echo hallo46
   fi
-echo hallo47
 }
 
 # --- VERYFY ACCESS TO CLOUD ---
@@ -1021,26 +1003,17 @@ checkTDHAccess
 checkCloudAccess
 
 #checkTMCAccess
-echo hallo1
 checkKeyPairs
-echo hallo2
 #checkTKGdownloads
 tmcCheckLogin
-echo hallo3
 checkIdentityProvider
-echo hallo4
 
 # --- CREATE TKG CLUSTER AND JUMP SERVER
 createJumpHost
-echo hallo5
 sshEnvironment
-echo hallo6
 
 configureJumpHost
 buildTDHToolsContainer   $TDH_TOOLS_CONTAINER_TYPE
-
-#hallo
-
 
 exit
 configureLetsEnscript
