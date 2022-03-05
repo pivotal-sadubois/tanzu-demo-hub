@@ -625,7 +625,7 @@ sshEnvironment() {
     SSH_OPTIONS="-o StrictHostKeyChecking=no -o RequestTTY=yes -o ServerAliveInterval=240"
     SCP_OPTIONS="-o StrictHostKeyChecking=no"
     SSH_COMMAND="ssh -q $SSH_OPTIONS -i ${SSH_PRIVATE_KEY} ${SSH_USER}@${SSH_HOST}"
-    SCP_COMMAND="scp -i ${SSH_PRIVATE_KEY} -r $SCP_OPTIONS"
+    SCP_COMMAND="scp -tt -i ${SSH_PRIVATE_KEY} -r $SCP_OPTIONS"
     SSH_DISPLAY="ssh -i ${SSH_PRIVATE_KEY} ${SSH_USER}@${SSH_HOST}"
   fi
 
@@ -647,7 +647,7 @@ sshEnvironment() {
     SSH_OPTIONS="-o StrictHostKeyChecking=no -o RequestTTY=yes -o ServerAliveInterval=240 -o ClientAliveInterval=240"
     SSH_OPTIONS="-o StrictHostKeyChecking=no -o RequestTTY=yes -o ServerAliveInterval=240"
     SCP_OPTIONS="-o StrictHostKeyChecking=no"
-    SSH_COMMAND="ssh -q $SSH_OPTIONS -i ${SSH_PRIVATE_KEY} ${SSH_USER}@${SSH_HOST}"
+    SSH_COMMAND="ssh -tt -q $SSH_OPTIONS -i ${SSH_PRIVATE_KEY} ${SSH_USER}@${SSH_HOST}"
     SCP_COMMAND="scp -i ${SSH_PRIVATE_KEY} -r $SCP_OPTIONS"
     SSH_DISPLAY="ssh $SSH_OPTIONS -i ${SSH_PRIVATE_KEY} ${SSH_USER}@${SSH_HOST}"
   fi
@@ -661,7 +661,7 @@ sshEnvironment() {
     SSH_OPTIONS="-o StrictHostKeyChecking=no -o RequestTTY=yes -o ServerAliveInterval=30"
     SSH_DISPLAY="-o StrictHostKeyChecking=no"
     SCP_OPTIONS="-o StrictHostKeyChecking=no"
-    SSH_COMMAND="ssh -q $SSH_OPTIONS -i $SSH_KEY_FILE ${SSH_USER}@${SSH_HOST}"
+    SSH_COMMAND="ssh -tt -q $SSH_OPTIONS -i $SSH_KEY_FILE ${SSH_USER}@${SSH_HOST}"
     SCP_COMMAND="scp -r $SCP_OPTIONS -i $SSH_KEY_FILE"
     SSH_DISPLAY="ssh -i $SSH_KEY_FILE ${SSH_USER}@${SSH_HOST}"
   fi
@@ -679,7 +679,7 @@ sshEnvironment() {
     SSH_HOST="${INSTANCE_NAME}.${ZONE}.${prj}"
     SSH_OPTIONS="-o StrictHostKeyChecking=no -o RequestTTY=yes -o ServerAliveInterval=30"
     SCP_OPTIONS="-o StrictHostKeyChecking=no"
-    SSH_COMMAND="ssh -q $SSH_OPTIONS ${SSH_USER}@${SSH_HOST}"
+    SSH_COMMAND="ssh -tt -q $SSH_OPTIONS ${SSH_USER}@${SSH_HOST}"
     SCP_COMMAND="scp -r $SCP_OPTIONS"
     SSH_DISPLAY="ssh ${SSH_USER}@${SSH_HOST}"
   fi
