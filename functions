@@ -12668,6 +12668,7 @@ runTDHtools() {
                "-v $HOME/$TDH_TOOLS_PATH/.kube-tkg:$HOME/.kube-tkg:rw"                  ## TANZU MANAGEMENT CLUSTER CONTEXTS
                "-v $HOME/$TDH_TOOLS_PATH/.local:$HOME/.local:rw"
                "-v $HOME/$TDH_TOOLS_PATH/.tanzu:$HOME/.tanzu:rw"
+               "-v $HOME/$TDH_TOOLS_PATH/.ssh:$HOME/.ssh:rw"                            ## SSH to AWS/AZURE AMDIN SERVER
                "-v $HOME/$TDH_TOOLS_PATH/.terraform:$HOME/.terraform:rw"
                "-v $HOME/$TDH_TOOLS_PATH/.terraform.d:$HOME/.terraform.d:rw"
                "-v $HOME/$TDH_TOOLS_PATH/.s3cfg:$HOME/.s3cfg:rw"
