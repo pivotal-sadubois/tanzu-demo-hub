@@ -1406,7 +1406,9 @@ else
 
     CMDEXE="scripts/InstallTKGmc.sh"
     CMDDIR="$SSH_HOME/tanzu-demo-hub"
+echo "deployTKGmc gaga1"
     $SSH_COMMAND -n "[ -f $CMDDIR/$CMDEXE ] && cd $CMDDIR && $CMDEXE \"$DEPLOY_TKG_TEMPLATE\" \"$TDH_TKGMC_NAME\" \"$DEBUG\" \"$TDH_TOOLS_CONTAINER_TYPE\" \"$DEPLOY_TKG_VERSION\""; ret=$?
+echo "deployTKGmc gaga2"
     if [ ${ret} -ne 0 ]; then
       echo "ERROR: Failed to deploy Management Server on $JUMP_HOST"
       echo "       => $SSH_DISPLAY -n cd $CMDDIR && $CMDEXE \"$DEPLOY_TKG_TEMPLATE\" \"$TDH_TKGMC_NAME\ \"$DEBUG\" \"$TDH_TOOLS_CONTAINER_TYPE\" \"$DEPLOY_TKG_VERSION\""
