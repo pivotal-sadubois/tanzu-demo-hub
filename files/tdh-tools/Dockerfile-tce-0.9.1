@@ -5,7 +5,7 @@
 # Description ..: Tanzu Demo Hub - Dockerfile for tdh-tools-tce (Tanzu Commninoty Eddition)
 # ############################################################################################
                 
-FROM ubuntu:20.04  
+FROM --platform=linux/amd64 ubuntu:20.04
 MAINTAINER Sacha Dubois <sdubois@vmware.com>
 ENV TZ="Europe/Zurich"
 ENV ALLOW_INSTALL_AS_ROOT="true"

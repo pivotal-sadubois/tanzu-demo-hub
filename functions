@@ -9533,7 +9533,9 @@ tdh_tools_build() {
   verify_docker
   checkTDHenvironment
 
-  [ "$(uname -p)" == "arm" ] && ARCH=arm64 || ARCH=amd64
+  # 05-03-2022 sdubois no, we always do amd64, as arm has some libraries missing
+  #[ "$(uname -p)" == "arm" ] && ARCH=arm64 || ARCH=amd64
+  ARCH=amd64
 
   if [ "$MODE" == "tce" ]; then 
     BUILD_MODE=tce
