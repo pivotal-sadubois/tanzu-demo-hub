@@ -43,11 +43,6 @@ else
   . ${TDHPATH}/deployments/${DEPLOY_TKG_TEMPLATE}
 fi
 
-# --- CHECK ENVIRONMENT VARIABLES ---
-if [ -f ~/.tanzu-demo-hub.cfg ]; then
-  . ~/.tanzu-demo-hub.cfg
-fi
-
 export TDH_DEPLOYMENT_ENV_NAME=$TDH_TKGMC_INFRASTRUCTURE
 export TKG_CONFIG=${TDHPATH}/config/$TDH_TKGMC_CONFIG
 
@@ -60,16 +55,6 @@ fi
 
 # --- RESET TDH_TKGMC_NAME ---
 export TDH_TKGMC_NAME="$TDH_TKGMC_NAME_TMP"
-
-# --- CORRECT PERMISSONS ---
-[ -d $HOME/.tanzu ] && sudo chown -R ubuntu:ubuntu $HOME/.tanzu
-[ -d $HOME/.local ] && sudo chown -R ubuntu:ubuntu $HOME/.local
-[ -d $HOME/.config ] && sudo chown -R ubuntu:ubuntu $HOME/.config
-[ -d $HOME/.cache ] && sudo chown -R ubuntu:ubuntu $HOME/.cache
-[ -d $HOME/.kube-tkg ] && sudo chown -R ubuntu:ubuntu $HOME/.kube-tkg
-
-# --- FIX FOR KIND (https://kb.vmware.com/s/article/85245)
-sudo sysctl net/netfilter/nf_conntrack_max=131072 > /dev/null 2>&1
 
 #sshEnvironment > /dev/null 2>&1
 createTKGMCcluster $TDH_TKGMC_NAME
