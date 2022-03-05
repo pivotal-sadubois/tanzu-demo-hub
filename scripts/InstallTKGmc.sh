@@ -13,8 +13,26 @@ export TDHPATH=$(cd "$(pwd)/$(dirname $0)/.."; pwd)
 export DEPLOY_TKG_TEMPLATE=$1
 export TDH_TKGMC_NAME_TMP="$2"
 export DEBUG="$3"
+export TDH_TOOLS_CONTAINER_TYPE="$4"
+export DEPLOY_TKG_VERSION="$5"
+export NATIVE=0
 
-. $TANZU_DEMO_HUB/functions
+# --- SETTING FOR TDH-TOOLS ---
+export START_COMMAND="$*"
+export CMD_EXEC=$(basename $0)
+export CMD_ARGS=$*
+
+# --- SOUTCE FOUNCTIONS AND USER ENVIRONMENT ---
+[ -f $TANZU_DEMO_HUB/functions ] && . $TANZU_DEMO_HUB/functions
+
+#############################################################################################################################
+################################### EXECUTING CODE WITHIN  TDH-TOOLS DOCKER CONTAINER  ######################################
+#############################################################################################################################
+runTDHtools $TDH_TOOLS_CONTAINER_TYPE $DEPLOY_TKG_VERSION "Deploy TKG Management Cluster" "$TDHPATH/$CMD_EXEC" "$CMD_ARGS"
+
+
+hostname
+exit
 
 # --- VERIFY DEPLOYMENT ---
 if [ ! -f ${TDHPATH}/deployments/${DEPLOY_TKG_TEMPLATE} ]; then

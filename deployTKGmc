@@ -1014,8 +1014,6 @@ sshEnvironment
 
 configureJumpHost
 buildTDHToolsContainer   $TDH_TOOLS_CONTAINER_TYPE
-
-exit
 configureLetsEnscript
 
 if [ "$DEPLOY_TKG_CLEAN" -eq 1 ]; then
@@ -1364,8 +1362,9 @@ else
       messageTitle "Accepting Image Terms for Provider (vmware-inc) / Offer: (tkg-capi)"
       #[ ! -d $HOME/.tanzu-demo-hub/cache/azure-eula ] && mkdir -p $HOME/.tanzu-demo-hub/cache/azure-eula
 
-      for img in $(az vm image list --publisher vmware-inc --offer tkg-capi --all | jq -r '.[].urn' | \
-                   grep -v "2020" | awk -F: '{ printf("%s:%s:%s\n",$1,$2,$3)}' | sort | uniq); do
+      cmdLoop az vm image list --publisher vmware-inc --offer tkg-capi --all > /tmp/output.json
+      for img in $(jq -r '.[].urn' /tmp/output.json | egrep -v "2020|2021" | \
+                   awk -F: '{ printf("%s:%s:%s\n",$1,$2,$3)}' | sort | uniq); do
         stt=$(az vm image terms show --urn $img:latest | jq -r '.accepted')
 
         if [ "$stt" != "true" ]; then 
@@ -1401,12 +1400,16 @@ else
     # --- CREATE MANAGEMENT CLUSTER ---
     [ ! -d ~/.tanzu-demo-hub/config ] && mkdir -p ~/.tanzu-demo-hub/config
 
-    $SSH_COMMAND -n "[ -f $SSH_HOME/tanzu-demo-hub/scripts/InstallTKGmc.sh ] && tanzu-demo-hub/scripts/InstallTKGmc.sh \"$DEPLOY_TKG_TEMPLATE\" \"$TDH_TKGMC_NAME\" \"$DEBUG\""; ret=$?
+    CMD="tanzu-demo-hub/scripts/InstallTKGmc.sh"
+    $SSH_COMMAND -n "[ -f $SSH_HOME/$CMD ] && $CMD \"$DEPLOY_TKG_TEMPLATE\" \"$TDH_TKGMC_NAME\" \"$DEBUG\" \"$TDH_TOOLS_CONTAINER_TYPE\" \"$DEPLOY_TKG_VERSION\""; ret=$?
     if [ ${ret} -ne 0 ]; then
       echo "ERROR: Failed to deploy Management Server on $JUMP_HOST"
-      echo "       => $SSH_DISPLAY -n tanzu-demo-hub/scripts/InstallTKGmc.sh \"$DEPLOY_TKG_TEMPLATE\" \"$DEBUG\""
+      echo "       => $SSH_DISPLAY -n $CMD \"$DEPLOY_TKG_TEMPLATE\" \"$DEBUG\" \"$TDH_TOOLS_CONTAINER_TYPE\" \"$DEPLOY_TKG_VERSION\""
       exit
     fi
+echo "deployTKGmc gaga-100"
+exit
+
 
     cleanKubeconfig           $HOME/.kube/config
     cleanKubeconfig           $HOME/.kube-tkg/config
