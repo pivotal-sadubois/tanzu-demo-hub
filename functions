@@ -2242,7 +2242,7 @@ buildTDHToolsContainer() {
 
   for rel in $(ls -1 $TDHPATH/files/tdh-tools/tdh-tools-tkg-*.cfg | sed -e 's/^.*tools-tkg-//g' -e 's/\.cfg//g'); do
     $SSH_COMMAND -n "[ -f $SSH_HOME/tanzu-demo-hub/scripts/buildTDHToolsContainer.sh ] && tanzu-demo-hub/scripts/buildTDHToolsContainer.sh $TKG_TYPE $rel"; ret=$?
-    if [ $ret -eq 0 ]; then
+    if [ $ret -ne 0 ]; then
       echo "ERROR: failed to TDH Tools container on the Jumop Host"
       if [ "$NATIVE" == "0" ]; then
         echo "       => tools/${TDH_TOOLS}.sh"
