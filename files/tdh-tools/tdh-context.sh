@@ -20,7 +20,7 @@ for n in $(ls -1 $HOME/.tanzu-demo-hub/config/*.kubeconfig 2>/dev/null | egrep "
         [ -s $HOME/.kube/config ] && mv $HOME/.kube/config $n
         mv $HOME/.kube/config.old $HOME/.kube/config
   
-        kubectl --kubeconfig=$n get ns >/dev/null 2>&1; ret=$?
+        kubectl --kubeconfig=$n --request-timeout 1s get ns >/dev/null 2>&1; ret=$?
         if [ $ret -eq 0 ]; then
           nam=$(echo $n | awk -F'/' '{ print $NF }' | sed 's/\.kubeconfig//g')
           CONTEXT_LIST="$CONTEXT_LIST $nam:$n"
@@ -37,7 +37,7 @@ for n in $(ls -1 $HOME/.tanzu-demo-hub/config/*.kubeconfig 2>/dev/null | egrep "
       [ -s $HOME/.kube/config ] && mv $HOME/.kube/config $n
       mv $HOME/.kube/config.old $HOME/.kube/config
   
-      kubectl --kubeconfig=$n get ns >/dev/null 2>&1; ret=$?
+      kubectl --kubeconfig=$n --request-timeout 1s get ns >/dev/null 2>&1; ret=$?
       if [ $ret -eq 0 ]; then
         nam=$(echo $n | awk -F'/' '{ print $NF }' | sed 's/\.kubeconfig//g')
         CONTEXT_LIST="$CONTEXT_LIST $nam:$n"
@@ -45,7 +45,7 @@ for n in $(ls -1 $HOME/.tanzu-demo-hub/config/*.kubeconfig 2>/dev/null | egrep "
     fi
   else
     # --- REGULAR CLUSTER (NOT-VSPHERE) ----
-    kubectl --kubeconfig=$n get ns >/dev/null 2>&1; ret=$?
+    kubectl --kubeconfig=$n --request-timeout 1s get ns >/dev/null 2>&1; ret=$?
     if [ $ret -eq 0 ]; then
       nam=$(echo $n | awk -F'/' '{ print $NF }' | sed 's/\.kubeconfig//g')
       CONTEXT_LIST="$CONTEXT_LIST $nam:$n"
