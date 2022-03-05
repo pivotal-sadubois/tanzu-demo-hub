@@ -1,9 +1,9 @@
 #!/bin/bash
 # ############################################################################################
-# File: ........: InstallTKGmc.sh
+# File: ........: removeTKGmc.sh
 # Language .....: bash
 # Author .......: Sacha Dubois, VMware
-# Description ..: Tanzu Demo Hub - Deploy TKG Management Cluster
+# Description ..: Tanzu Demo Hub - Delete TKG Management Cluster
 # ############################################################################################
 # 2021-11-25 ...: fix kind cluster on linux jump host
 # ############################################################################################
@@ -12,13 +12,18 @@ export TANZU_DEMO_HUB=$(cd "$(pwd)/$(dirname $0)/.."; pwd)
 export TDHPATH=$(cd "$(pwd)/$(dirname $0)/.."; pwd)
 export TDH_TKGMC_NAME_TMP="$1"
 export DEBUG="$2"
+export TDH_TOOLS_CONTAINER_TYPE="$4"
+export DEPLOY_TKG_VERSION="$5"
+export NATIVE=0
 
-. $TANZU_DEMO_HUB/functions
+# --- SOUTCE FOUNCTIONS AND USER ENVIRONMENT ---
+[ -f $TANZU_DEMO_HUB/functions ] && . $TANZU_DEMO_HUB/functions
+[ -f $HOME/.tanzu-demo-hub.cfg ] && . $HOME/.tanzu-demo-hub.cfg
 
-# --- CHECK ENVIRONMENT VARIABLES ---
-if [ -f ~/.tanzu-demo-hub.cfg ]; then
-  . ~/.tanzu-demo-hub.cfg
-fi
+#############################################################################################################################
+################################### EXECUTING CODE WITHIN  TDH-TOOLS DOCKER CONTAINER  ######################################
+#############################################################################################################################
+runTDHtools $TDH_TOOLS_CONTAINER_TYPE $DEPLOY_TKG_VERSION "Deploy TKG Management Cluster" "$TDHPATH/$CMD_EXEC" "$CMD_ARGS"
 
 # --- RESET TDH_TKGMC_NAME ---
 export TDH_TKGMC_NAME="$TDH_TKGMC_NAME_TMP"

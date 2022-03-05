@@ -123,10 +123,12 @@ cleanupEnvironment() {
 
   # --- DELETE MANAGEMENT CLUSTER FROM THE JUMP HOST ---
   [ ! -d ~/.tanzu-demo-hub/config ] && mkdir -p ~/.tanzu-demo-hub/config
-  $SSH_COMMAND -n "[ -f $SSH_HOME/tanzu-demo-hub/scripts/removeTKGmc.sh ] && cd $SSH_HOME/tanzu-demo-hub && scripts/removeTKGmc.sh \"$TDH_TKGMC_NAME-$TDH_USER\" \"$DEBUG\""; ret=$?
+  CMDEXE="scripts/removeTKGmc.sh"
+  CMDDIR="$SSH_HOME/tanzu-demo-hub"
+  $SSH_COMMAND -n "[ -f $CMDDIR/$CMDEXE ] && cd $CMDDIR && $CMDEXE \"$TDH_TKGMC_NAME-$TDH_USER\" \"$DEBUG\""; ret=$?
   if [ ${ret} -ne 0 ]; then
     echo "ERROR: Failed to delete Management Server on $JUMP_HOST"
-    echo "       => $SSH_DISPLAY -n tanzu-demo-hub/scripts/InstallTKGmc.sh \"$TDH_TKGMC_NAME-$TDH_USER\" \"$DEBUG\""
+    echo "       => $SSH_DISPLAY -n tanzu-demo-hub/scripts/removeTKGmc.sh \"$TDH_TKGMC_NAME-$TDH_USER\" \"$DEBUG\""
     exit 1
   fi
 
@@ -975,7 +977,6 @@ createJumpHost() {
       route53setDNSrecord "$pip" "$JUMP_HOST" "$AWS_HOSTED_DNS_DOMAIN"
       messagePrint " ▪ Updating Zone Record for (jump.$TDH_TKGMC_ENVNAME.$AWS_HOSTED_DNS_DOMAIN)" "$pip"
       route53setDNSrecord "$pip" "jump.$TDH_TKGMC_ENVNAME.$AWS_HOSTED_DNS_DOMAIN" "$TDH_TKGMC_ENVNAME.$AWS_HOSTED_DNS_DOMAIN"
-#jjjjjjjjj az
 
       [ -s ~/.ssh/known_hosts ] && sed -in "/$JUMP_HOST/d" ~/.ssh/known_hosts
       messagePrint " ▪ Wait for SSH Daemon on jump-host to come online" "< 5min"
@@ -1411,9 +1412,6 @@ else
       echo "       => $SSH_DISPLAY -n cd $CMDDIR && $CMDEXE \"$DEPLOY_TKG_TEMPLATE\" \"$TDH_TKGMC_NAME\ \"$DEBUG\" \"$TDH_TOOLS_CONTAINER_TYPE\" \"$DEPLOY_TKG_VERSION\""
       exit
     fi
-echo "deployTKGmc gaga-100"
-exit
-
 
     cleanKubeconfig           $HOME/.kube/config
     cleanKubeconfig           $HOME/.kube-tkg/config
