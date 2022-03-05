@@ -53,7 +53,9 @@ fi
 export TDH_TKGMC_NAME="$TDH_TKGMC_NAME_TMP"
 
 #sshEnvironment > /dev/null 2>&1
-createTKGMCcluster $TDH_TKGMC_NAME
-if [ $? -ne 0 ]; then exit 1; fi
+echo "InstallTKGmc.sh gaga1"
+createTKGMCcluster $TDH_TKGMC_NAME; ret=$?
+echo "InstallTKGmc.sh gaga1"
+if [ $ret -ne 0 ]; then exit 1; fi
 
-
+return 0
