@@ -8,6 +8,7 @@
 # 2021-11-25 ...: fix kind cluster on linux jump host
 # ############################################################################################
 
+echo "InstallTKGmc.sh $(hostname)"
 export TANZU_DEMO_HUB=$(cd "$(pwd)/$(dirname $0)/.."; pwd)
 export TDHPATH=$(cd "$(pwd)/$(dirname $0)/.."; pwd)
 export DEPLOY_TKG_TEMPLATE=$1
