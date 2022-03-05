@@ -24,6 +24,7 @@ export CMD_ARGS=$*
 
 # --- SOUTCE FOUNCTIONS AND USER ENVIRONMENT ---
 [ -f $TANZU_DEMO_HUB/functions ] && . $TANZU_DEMO_HUB/functions
+[ -f $HOME/.tanzu-demo-hub.cfg ] && . $HOME/.tanzu-demo-hub.cfg
 
 #############################################################################################################################
 ################################### EXECUTING CODE WITHIN  TDH-TOOLS DOCKER CONTAINER  ######################################
