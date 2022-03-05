@@ -617,7 +617,7 @@ createJumpHost() {
     SSH_HOST=$JUMP_HOST
     SSH_OPTIONS="-o StrictHostKeyChecking=no -o RequestTTY=yes -o ServerAliveInterval=30"
     SCP_OPTIONS="-o StrictHostKeyChecking=no"
-    SSH_COMMAND="ssh -q $SSH_OPTIONS -i ~/.tanzu-demo-hub/KeyPair-${KEY_NAME}-$AWS_REGION.pem ${SSH_USER}@${SSH_HOST}"
+    SSH_COMMAND="ssh -tt -q $SSH_OPTIONS -i ~/.tanzu-demo-hub/KeyPair-${KEY_NAME}-$AWS_REGION.pem ${SSH_USER}@${SSH_HOST}"
     SCP_COMMAND="scp -r $SCP_OPTIONS -i ~/.tanzu-demo-hub/KeyPair-${KEY_NAME}-$AWS_REGION.pem"
 
     messagePrint " ▪ Wait for SSH to be ready" "< 5m"
@@ -634,7 +634,7 @@ createJumpHost() {
     SSH_USER="${VSPHERE_JUMPHOST_USER}"
     SSH_OPTIONS="-o StrictHostKeyChecking=no -o RequestTTY=yes -o ServerAliveInterval=240"
     SSH_PRIVATE_KEY=$VSPHERE_SSH_PRIVATE_KEY_FILE
-    SSH_COMMAND="ssh -q $SSH_OPTIONS -i ${SSH_PRIVATE_KEY} ${SSH_USER}@${JUMP_HOST}"
+    SSH_COMMAND="ssh -tt -q $SSH_OPTIONS -i ${SSH_PRIVATE_KEY} ${SSH_USER}@${JUMP_HOST}"
 
     messageTitle "Verify vSphere Jump-Server ($JUMP_HOST)"
     messagePrint " ▪ Wait for SSH to be ready" "< 3m"
@@ -657,7 +657,7 @@ createJumpHost() {
     SSH_USER=ubuntu
     SSH_OPTIONS="-o StrictHostKeyChecking=no -o RequestTTY=yes -o ServerAliveInterval=240"
     SSH_PRIVATE_KEY=$VSPHERE_SSH_PRIVATE_KEY_FILE
-    SSH_COMMAND="ssh -q $SSH_OPTIONS -i ${SSH_PRIVATE_KEY} ${SSH_USER}@${JUMP_HOST}"
+    SSH_COMMAND="ssh -tt -q $SSH_OPTIONS -i ${SSH_PRIVATE_KEY} ${SSH_USER}@${JUMP_HOST}"
     SSH_USER=ubuntu
 
     # --- TEST IF JUMP HOST IS ALREADY DEPLOYED
@@ -1407,6 +1407,7 @@ else
     CMDEXE="scripts/InstallTKGmc.sh"
     CMDDIR="$SSH_HOME/tanzu-demo-hub"
     $SSH_COMMAND -n "[ -f $CMDDIR/$CMDEXE ] && cd $CMDDIR && $CMDEXE \"$DEPLOY_TKG_TEMPLATE\" \"$TDH_TKGMC_NAME\" \"$DEBUG\" \"$TDH_TOOLS_CONTAINER_TYPE\" \"$DEPLOY_TKG_VERSION\""; ret=$?
+echo "gaga SSH_COMMAND:$SSH_COMMAND"
     if [ ${ret} -ne 0 ]; then
       echo "ERROR: Failed to deploy Management Server on $JUMP_HOST"
       echo "       => $SSH_DISPLAY -n \"cd $CMDDIR && $CMDEXE $DEPLOY_TKG_TEMPLATE $TDH_TKGMC_NAME $DEBUG $TDH_TOOLS_CONTAINER_TYPE $DEPLOY_TKG_VERSION\""
