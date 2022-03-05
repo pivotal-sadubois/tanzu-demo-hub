@@ -123,7 +123,7 @@ cleanupEnvironment() {
 
   # --- DELETE MANAGEMENT CLUSTER FROM THE JUMP HOST ---
   [ ! -d ~/.tanzu-demo-hub/config ] && mkdir -p ~/.tanzu-demo-hub/config
-  $SSH_COMMAND -n "[ -f $SSH_HOME/tanzu-demo-hub/scripts/removeTKGmc.sh ] && tanzu-demo-hub/scripts/removeTKGmc.sh \"$TDH_TKGMC_NAME-$TDH_USER\" \"$DEBUG\""; ret=$?
+  $SSH_COMMAND -n "[ -f $SSH_HOME/tanzu-demo-hub/scripts/removeTKGmc.sh ] && cd $SSH_HOME/tanzu-demo-hub && scripts/removeTKGmc.sh \"$TDH_TKGMC_NAME-$TDH_USER\" \"$DEBUG\""; ret=$?
   if [ ${ret} -ne 0 ]; then
     echo "ERROR: Failed to delete Management Server on $JUMP_HOST"
     echo "       => $SSH_DISPLAY -n tanzu-demo-hub/scripts/InstallTKGmc.sh \"$TDH_TKGMC_NAME-$TDH_USER\" \"$DEBUG\""
@@ -1400,11 +1400,12 @@ else
     # --- CREATE MANAGEMENT CLUSTER ---
     [ ! -d ~/.tanzu-demo-hub/config ] && mkdir -p ~/.tanzu-demo-hub/config
 
-    CMD="tanzu-demo-hub/scripts/InstallTKGmc.sh"
-    $SSH_COMMAND -n "[ -f $SSH_HOME/$CMD ] && $CMD \"$DEPLOY_TKG_TEMPLATE\" \"$TDH_TKGMC_NAME\" \"$DEBUG\" \"$TDH_TOOLS_CONTAINER_TYPE\" \"$DEPLOY_TKG_VERSION\""; ret=$?
+    CMDEXE="scripts/InstallTKGmc.sh"
+    CMDDIR="$SSH_HOME/tanzu-demo-hub"
+    $SSH_COMMAND -n "[ -f $CMDDIR/$CMDEXE ] && cd $CMDDIR && $CMD \"$DEPLOY_TKG_TEMPLATE\" \"$TDH_TKGMC_NAME\" \"$DEBUG\" \"$TDH_TOOLS_CONTAINER_TYPE\" \"$DEPLOY_TKG_VERSION\""; ret=$?
     if [ ${ret} -ne 0 ]; then
       echo "ERROR: Failed to deploy Management Server on $JUMP_HOST"
-      echo "       => $SSH_DISPLAY -n $CMD \"$DEPLOY_TKG_TEMPLATE\" \"$DEBUG\" \"$TDH_TOOLS_CONTAINER_TYPE\" \"$DEPLOY_TKG_VERSION\""
+      echo "       => $SSH_DISPLAY -n cd $CMDDIR && $CMD \"$DEPLOY_TKG_TEMPLATE\" \"$DEBUG\" \"$TDH_TOOLS_CONTAINER_TYPE\" \"$DEPLOY_TKG_VERSION\""
       exit
     fi
 echo "deployTKGmc gaga-100"
