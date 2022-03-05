@@ -3370,6 +3370,9 @@ echo "holullu AWS"
 
 echo "TDH_TOOLS_CONTAINER_TYPE:$TDH_TOOLS_CONTAINER_TYPE"
 echo "DEPLOY_TKG_VERSION:$DEPLOY_TKG_VERSION"
+     scripts/InstallTKGmcContainer.sh $TKG_TEMPLATE
+
+echo hallo
 exit
 
       ret=1; cnt=0
