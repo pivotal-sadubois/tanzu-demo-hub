@@ -16,12 +16,10 @@ export DEBUG="$3"
 export TDH_TOOLS_CONTAINER_TYPE="$4"
 export DEPLOY_TKG_VERSION="$5"
 export NATIVE=0
-echo "TANZU_DEMO_HUB:$TANZU_DEMO_HUB"
-echo "TDHPATH:$TDHPATH"
 
 # --- SETTING FOR TDH-TOOLS ---
 export START_COMMAND="$*"
-export CMD_EXEC=$(basename $0)
+export CMD_EXEC=scripts/$(basename $0)
 export CMD_ARGS=$*
 
 # --- SOUTCE FOUNCTIONS AND USER ENVIRONMENT ---
