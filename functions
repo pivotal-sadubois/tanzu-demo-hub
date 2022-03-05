@@ -2507,6 +2507,7 @@ configureJumpHost() {
     echo "export KUBECONFIG=~/.tanzu-demo-hub/config/kubeconfig_$TDH_TKGMC_NAME.yaml" >> ~/.bashrc
     sudo mv /tmp/motd /etc/motd
   fi
+hostname
 }
 
 verifyHostedZone() {

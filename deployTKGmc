@@ -1015,6 +1015,8 @@ sshEnvironment
 
 configureJumpHost
 
+hostname
+
 exit
 buildTDHToolsContainer   $TDH_TOOLS_CONTAINER_TYPE
 configureLetsEnscript
