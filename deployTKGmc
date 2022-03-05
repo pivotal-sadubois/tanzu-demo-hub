@@ -1015,6 +1015,7 @@ sshEnvironment
 
 configureJumpHost
 buildTDHToolsContainer   $TDH_TOOLS_CONTAINER_TYPE
+exit
 configureLetsEnscript
 
 if [ "$DEPLOY_TKG_CLEAN" -eq 1 ]; then
