@@ -23,7 +23,10 @@ export START_COMMAND="$*"
 export CMD_EXEC=scripts/$(basename $0)
 export CMD_ARGS=$*
 
-echo removeTKGmc.sh-gaga3
+echo "TDH_TOOLS_CONTAINER_TYPE:$TDH_TOOLS_CONTAINER_TYPE"
+echo "DEPLOY_TKG_VERSION:$DEPLOY_TKG_VERSION"
+
+echo "removeTKGmc.sh-gaga3 CMD_EXEC:$CMD_EXEC"
 # --- SOUTCE FOUNCTIONS AND USER ENVIRONMENT ---
 [ -f $TANZU_DEMO_HUB/functions ] && . $TANZU_DEMO_HUB/functions
 [ -f $HOME/.tanzu-demo-hub.cfg ] && . $HOME/.tanzu-demo-hub.cfg
@@ -32,7 +35,7 @@ echo removeTKGmc.sh-gaga4
 #############################################################################################################################
 ################################### EXECUTING CODE WITHIN  TDH-TOOLS DOCKER CONTAINER  ######################################
 #############################################################################################################################
-runTDHtools $TDH_TOOLS_CONTAINER_TYPE $DEPLOY_TKG_VERSION "Deploy TKG Management Cluster" "$TDHPATH/$CMD_EXEC" "$CMD_ARGS"
+runTDHtools $TDH_TOOLS_CONTAINER_TYPE $DEPLOY_TKG_VERSION "Delete TKG Management Cluster" "$TDHPATH/$CMD_EXEC" "$CMD_ARGS"
 
 # --- RESET TDH_TKGMC_NAME ---
 export TDH_TKGMC_NAME="$TDH_TKGMC_NAME_TMP"
