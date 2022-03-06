@@ -3337,7 +3337,7 @@ echo "holullu AWS"
       echo "IDENTITY_MANAGEMENT_TYPE: none"                                              >> $TKG_TEMPLATE
     fi
 
-    scripts/InstallTKGmcContainer.sh $TDH_TKGMC_NAME $TKG_TEMPLATE $TKG_KUBECONFIG
+    scripts/InstallTKGmcContainer.sh $TDH_TKGMC_NAME $TKG_TEMPLATE $TKG_KUBECONFIG; ret=$?
     if [ ${ret} -ne 0 ]; then
       echo "ERROR: failed to create management clster"
       echo "       => scripts/InstallTKGmcContainer.sh $TDH_TKGMC_NAME $TKG_TEMPLATE $TKG_KUBECONFIG"

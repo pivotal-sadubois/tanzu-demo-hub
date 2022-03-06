@@ -63,13 +63,13 @@ if [ ${cnt} -eq 0 ]; then
 
   ret=1; cnt=0
   while [ $ret -ne 0 -a $cnt -lt 3 ]; do
-    messageLine
     if [ $DEBUG -gt 0 ]; then
+      messageLine
       tanzu management-cluster create --file $TKG_TEMPLATE -v 0 -t 2h --log-file=/tmp/$TDH_TKGMC_NAME.log; ret=$?
+      messageLine
     else
       tanzu management-cluster create --file $TKG_TEMPLATE -v 0 -t 2h --log-file=/tmp/$TDH_TKGMC_NAME.log > /dev/null 2>&1; ret=$?
     fi
-    messageLine
   
     [ $ret -eq 0 ] && break
   
