@@ -12,6 +12,7 @@ export DEBUG=0
 export NATIVE=0                ## NATIVE=1 r(un on local host), NATIVE=0 (run within docker)
 export DEPLOY_TKG_CLEAN=0
 export TDH_TOOLS=tdh-tools-tce
+export TDH_TOOLS_CONTAINER_TYPE=tce
 
 # --- SETTING FOR TDH-TOOLS ---
 export START_COMMAND="$*"
@@ -21,6 +22,9 @@ export CMD_ARGS=$*
 # --- SOUTCE FOUNCTIONS AND USER ENVIRONMENT ---
 [ -f $TANZU_DEMO_HUB/functions ] && . $TANZU_DEMO_HUB/functions
 [ -f $HOME/.tanzu-demo-hub.cfg ] && . $HOME/.tanzu-demo-hub.cfg
+
+# --- CHECK FOR BASIC COMANDS ---
+checkCLIcommands        BASIC
 
 usage() {
   str=$(ls -1 $TDHPATH/files/tdh-tools/tdh-tools-tce-*.cfg | sed -e 's/^.*tools-tce-//g' -e 's/\.cfg//g' | paste - - | awk '{ printf("%s or %s\n", $1, $2) }')
@@ -371,7 +375,6 @@ echo "TKG_KUBECONFIG:$TKG_KUBECONFIG"
 
     createTKGMCcluster
 
-#hallo
     tanzu management-cluster kubeconfig get --admin > /dev/null 2>&1
     kubectl config set-cluster $TDH_TKGMC_NAME > /dev/null 2>&1
     kubectl config use-context ${TDH_TKGMC_NAME}-admin@$TDH_TKGMC_NAME > /dev/null 2>&1

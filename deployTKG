@@ -24,6 +24,9 @@ export CMD_ARGS=$*
 [ -f $TANZU_DEMO_HUB/functions ] && . $TANZU_DEMO_HUB/functions
 [ -f $HOME/.tanzu-demo-hub.cfg ] && . $HOME/.tanzu-demo-hub.cfg
 
+# --- CHECK FOR BASIC COMANDS ---
+checkCLIcommands        BASIC
+
 usage() {
   echo ""
   echo "USAGE: $0 [options] -d <tkg-deployment.cfg> -c <tkg-configuration.cfg> -n <cluster-name> [-k <kubernetes-version>] [--debug]"
@@ -321,7 +324,6 @@ createClusterIssuer
 getRootCA                 tanzu-demo-hub-tls
 TanzuPackage_Harbor       harbor-pkg           harbor.tanzu.vmware.com
 
-
 installBuildService          ## Tanzu Build Service (TBS)
 installTanzuDataPostgres     ## Tanzu Data SQL
 installSpringCloudGateway
@@ -340,14 +342,26 @@ else
 fi
 
 if [ "$TDH_TANZU_MISSION_CONTROL_REGISTRATION" == "true" ]; then
+echo "tmc cluster list -p $TMC_PROVISIONER_NAME -m $TMC_MANAGEMENT_CLUSTER"
+tmc cluster list -p $TMC_PROVISIONER_NAME -m $TMC_MANAGEMENT_CLUSTER | grep tdh
+echo gaga1
   cmdLoop tmc cluster list -p $TMC_PROVISIONER_NAME -m $TMC_MANAGEMENT_CLUSTER -o json > /tmp/output.json
   nam=$(jq -r --arg key "$TDH_TKGWC_NAME" '.clusters[] | select(.fullName.name == $key).fullName.name' /tmp/output.json)
+echo "NAM-1:$nam"
   if [ "$nam" == "$TDH_TKGWC_NAME" ]; then
+echo "tmc cluster validate -k $KUBECONFIG"
+    tmc cluster validate -k $KUBECONFIG
+
     stt=$(jq -r --arg key "$TDH_TKGWC_NAME" '.clusters[] | select(.fullName.name == $key).status.phase' /tmp/output.json) 
     hlt=$(jq -r --arg key "$TDH_TKGWC_NAME" '.clusters[] | select(.fullName.name == $key).status.health' /tmp/output.json) 
+echo "gaga stt:$stt hlt:$hlt"
     if [ "$stt" != "READY" -a "$hlt" != "HEALTHY" ]; then 
+echo idiot
+echo "tmc cluster delete $TDH_TKGWC_NAME -p $TMC_PROVISIONER_NAME -m $TMC_MANAGEMENT_CLUSTER -f "
       tmc cluster delete $TDH_TKGWC_NAME -p $TMC_PROVISIONER_NAME -m $TMC_MANAGEMENT_CLUSTER -f > /dev/null 2>&1; ret=$?
+echo "RET:$ret"
       if [ $ret -ne 0 ]; then
+echo "tmc cluster delete $TDH_TKGWC_NAME -p $TMC_PROVISIONER_NAME -m $TMC_MANAGEMENT_CLUSTER -f"
         tmc cluster delete $TDH_TKGWC_NAME -p $TMC_PROVISIONER_NAME -m $TMC_MANAGEMENT_CLUSTER -f > /tmp/error.log 2>&1; ret=$?
         if [ $ret -ne 0 ]; then
           logMessages /tmp/error.log
@@ -372,12 +386,25 @@ if [ "$TDH_TANZU_MISSION_CONTROL_REGISTRATION" == "true" ]; then
           cnt=$(tmc cluster list --name $TDH_TKGWC_NAME 2>/dev/null | grep -c $TDH_TKGWC_NAME)
           sleep 20
         done
+      else
+        # --- WAIT FOR THE CLUSTER TO BE DELETED ---
+        cnt=1
+        while [ $cnt -ne 0 ]; do
+          cnt=$(tmc cluster list --name $TDH_TKGWC_NAME 2>/dev/null | grep -c $TDH_TKGWC_NAME)
+          sleep 20
+        done
       fi
+
+      kubectl delete ns vmware-system-tmc --wait=true > /dev/null 2>&1
     fi
   fi
 
+echo gaga3
+tmc cluster list -p $TMC_PROVISIONER_NAME -m $TMC_MANAGEMENT_CLUSTER | grep tdh
+echo gaga4
   cmdLoop tmc cluster list -p $TMC_PROVISIONER_NAME -m $TMC_MANAGEMENT_CLUSTER -o json > /tmp/output.json
   nam=$(jq -r --arg key "$TDH_TKGWC_NAME" '.clusters[] | select(.fullName.name == $key).fullName.name' /tmp/output.json)
+echo "NAM-2:$nam"
   if [ "$nam" != "$TDH_TKGWC_NAME" ]; then
     ret=1; cnt=0
     while [ $ret -ne 0 -a $cnt -lt 5 ]; do
@@ -385,6 +412,7 @@ if [ "$TDH_TANZU_MISSION_CONTROL_REGISTRATION" == "true" ]; then
             -m $TMC_MANAGEMENT_CLUSTER -g tanzu-demo-hub --force > /tmp/error.log 2>&1); ret=$?
 
       [ $ret -eq 0 ] && break
+      cmdLoop tmc cluster delete $TDH_TKGWC_NAME -p $TMC_PROVISIONER_NAME -m $TMC_MANAGEMENT_CLUSTER -f > /tmp/error.log 2>&1
 
       let cnt=cnt+1
       sleep 30
@@ -406,12 +434,17 @@ if [ "$TDH_TANZU_MISSION_CONTROL_REGISTRATION" == "true" ]; then
     else
       if [ -f /tmp/k8s-attach-manifest.yaml ]; then 
         cmdLoop kubectl apply -f /tmp/k8s-attach-manifest.yaml > /dev/null 2>&1
-        runningPods vmware-system-tmc
+        deleteFailedPods  vmware-system-tmc
+        runningPods       vmware-system-tmc
       fi
     fi
   fi
 fi
 
+echo gaga5
+tmc cluster list -p $TMC_PROVISIONER_NAME -m $TMC_MANAGEMENT_CLUSTER | grep tdh
+echo gaga6
+exit
 # --- NO CONNECTION FROM A PEZ-INTERNAL CLUSTER ---
 if [ "${TDH_TKGMC_INFRASTRUCTURE}" != "vSphere1" ]; then
   checkTMCintegration      TO    ## Tanzu Observability (Wavefront)
