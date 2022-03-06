@@ -52,6 +52,9 @@ while [ "$1" != "" ]; do
   shift
 done
 
+# --- CHECK FOR BASIC COMANDS ---
+checkCLIcommands        BASIC
+
 if [ "${TKG_DEPLOYMENT}" == "" -o "${TMC_DEPLOYMENT}" == "" ]; then
   [ "${TKG_DEPLOYMENT}" == "" ] && listTMCDeployments
   [ "${TMC_DEPLOYMENT}" == "" ] && listClusterConfig
@@ -153,7 +156,6 @@ export TDH_TLS_ISSUER_NAME=letsencrypt-staging
 export TDH_TLS_ISSUER_CONFIG=/tmp/issuer-dns-manager1.yaml
 
 # --- VERYFY ACCESS TO CLOUD ---
-checkCLIcommands        BASIC
 checkTDHenvironment
 checkKubernetesServices registry_docker
 checkKubernetesServices cert-manager
