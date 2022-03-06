@@ -476,18 +476,16 @@ tmcCheckLogin() {
     exit 1
   fi
 
-echo gaga1
   if [ ! -x /usr/local/bin/tmc ]; then 
-echo gaga2
-    messagePrint " ▪ Downloading TMC CLI BINARY"                                "$filename"
     API_TOKEN=$(tmcAPI_getToken $TMC_SERVICE_TOKEN) 
     url=$(tmcAPI_getCliBinary $API_TOKEN $TMC_SERVER_URL darwinX64)
-    if [ "url" == "" ]; then 
+    if [ "$url" == "" ]; then 
       echo "ERROR: failed to download tmc binary from $TMC_SERVER_URL"
       exit 1
     fi
+echo "url:$url"
 
-    wget $url -O /tmp/$filename 
+    wget $url -O /tmp/tmc 
     echo "ERROR: TMC Binary has not yet installed. We downloaded it for you proactively"
     echo "       as  type (darwinX64). Please do the following to complete the installatio"
     echo "       => sudo mv /tmp/tmc /usr/local/bin"
