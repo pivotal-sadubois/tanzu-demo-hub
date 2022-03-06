@@ -4345,11 +4345,11 @@ checkCLIcommands() {
         fi
       else
         CLI_COMMANDS="/usr/local/bin/jq:brew:jq /usr/local/bin/wget:brew:wget /usr/local/bin/kubectl:brew:kubectl"
-        cnt=$(echo $PATH | grep -c "/opt/local/bin") 
+        cnt=$(echo $PATH | grep -c "/usr/local/bin") 
         if [ $cnt -eq 0 ]; then 
-          echo "ERROR: Software path (/opt/local/bin) not set in your PATH environment variable, please set"
+          echo "ERROR: Software path (/usr/local/bin) not set in your PATH environment variable, please set"
           echo "       it in your $HOME/.bashrc as folows"
-          echo "       => export PATH=$PATH:/opt/local/bin"
+          echo "       => export PATH=$PATH:/usr/local/bin"
           exit 1
         fi
       fi
@@ -4701,7 +4701,7 @@ tkgCreateCluster() {
 
     # --- GET CREDENTIALS AND SET ENVIRONMENT ---
     tanzu cluster kubeconfig get $TDH_TKGWC_NAME --admin > /dev/null 2>&1
-    tanzu cluster kubeconfig get $TDH_TKGWC_NAME --admin > $HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.kubeconfig 2>/dev/null
+    tanzu cluster kubeconfig get $TDH_TKGWC_NAME --admin > $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.kubeconfig 2>/dev/null
   fi
 
   #########################################################################################################################
@@ -4798,6 +4798,7 @@ tkgCreateCluster() {
 
     # --- GET CREDENTIALS AND SET ENVIRONMENT ---
     tanzu cluster kubeconfig get $TDH_TKGWC_NAME --admin > /dev/null 2>&1
+    tanzu cluster kubeconfig get $TDH_TKGWC_NAME --admin > $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.kubeconfig 2>/dev/null
   fi
 
   #########################################################################################################################
@@ -5350,12 +5351,16 @@ tmcCreateCluster() {
 
     if [ "$stt" == "" -o "$stt" != "READY" ]; then
       KUBERNETES_VERSION=$(for n in $TMC_K8S_VERSIONS; do echo v$n; done | egrep "$TDH_TKGWC_KUBERNETES" | tail -1 | sed 's/^v//g') 
+echo "1 KUBERNETES_VERSION:$KUBERNETES_VERSION"
 
       [ "$TMC_KUBERNETES_VERSION" != "" ] && KUBERNETES_VERSION=$TMC_KUBERNETES_VERSION
       [ "$TDH_TKGWC_CONTROPLANE" == "3" ] && TMC_TKGWC_TEMPLATE="aws-ha" || TMC_TKGWC_TEMPLATE="default"
 
       # --- SEARCH KUBERNETES VERSIONS ---
       KUBERNETES_VERSION=$(tmcGetKubernetesImage $TDH_TKGWC_KUBERNETES) 
+
+echo "2 KUBERNETES_VERSION:$KUBERNETES_VERSION"
+
 
       messageTitle "TMC Create Workload Cluster"     
       messagePrint " ▪ TMC Cluster Name"                 "$TDH_CLUSTER_NAME"
@@ -7236,6 +7241,8 @@ installBuildService() {
       # --- DEPLOY KAPP ---
       cnt=$(kapp inspect -a tanzu-build-service 2>/dev/null | grep -c "0 resources")
       stt=$(kapp inspect -a tanzu-build-service 2>/dev/null | tail -1)
+echo "gaga cnt:$cnt"
+echo "gaga stt:stt"
       if [ "$stt" != "Succeeded" -o $cnt -eq 1 ]; then
         kapp delete -a tanzu-build-service -y >/dev/null 2>&1
         messagePrint " ▪ Deploy Build Service (kapp)" "/tmp/bundle/values.yaml"
