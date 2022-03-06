@@ -10966,7 +10966,7 @@ tmcAPI_getCliBinary() {
 
 curl -k -X GET -H "Authdrization: Bearer $REFRESH_TOKEN" \
                  -H 'Content-Type: application/x-www-form-urlencoded' \
-                 ${TMC_SERVER}/v1alpha/system/binaries 2>/dev/null | jq -r ".versions.\"$latest\" 1>&2
+                 ${TMC_SERVER}/v1alpha/system/binaries 2>/dev/null | jq -r ".versions.\"$latest\"" 1>&2
 
   curl -k -X GET -H "Authdrization: Bearer $REFRESH_TOKEN" \
                  -H 'Content-Type: application/x-www-form-urlencoded' \
