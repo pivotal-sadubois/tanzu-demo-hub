@@ -175,14 +175,18 @@ apt update -y > /dev/null 2>&1
 
 # --- INSTALL TMC CLIENT ---
 if [ ! -x /usr/local/bin/tmc ]; then
-  _type="linuxX64"
-
+echo gaga1
   API_TOKEN=$(tmcAPI_getToken $TMC_SERVICE_TOKEN)
-  url=$(tmcAPI_getCliBinary $API_TOKEN $TMC_SERVER_URL darwinX64)
+echo gaga2
+  url=$(tmcAPI_getCliBinary $API_TOKEN $TMC_SERVER_URL linuxX64)
+echo gaga3
   wget -q $url -O /tmp/tmc
+echo gaga4
 
   mv /tmp/tmc /usr/local/bin
+echo gaga5
   sudo chmod a+x /usr/local/bin/tmc
+echo gaga6
 fi
 
 touch /tkg_software_installed
