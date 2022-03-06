@@ -1013,8 +1013,6 @@ createJumpHost
 sshEnvironment
 
 configureJumpHost
-echo end
-exit
 buildTDHToolsContainer   $TDH_TOOLS_CONTAINER_TYPE
 configureLetsEnscript
 
