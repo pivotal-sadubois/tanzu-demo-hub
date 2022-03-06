@@ -4312,17 +4312,27 @@ checkCLIcommands() {
   fi
 
   if [ "$cat" == "BASIC" ]; then
-echo gaga1
     if [ "$(uname)" == "Linux" ]; then
       CLI_COMMANDS="/usr/bin/jq:apt:jq /usr/bin/wget:apt:wget /usr/bin/unzip:apt:unzip /usr/bin/kubectl:apt:kubectl"
     else
-echo gaga2
       if [ "$(uname -p)" == "arm" ]; then
-echo gaga3
         CLI_COMMANDS="/opt/homebrew/bin/jq:brew:jq /opt/homebrew/bin/wget:brew:wget /opt/homebrew/bin/kubectl:brew:kubectl"
+        cnt=$(echo $PATH | grep -c "/opt/homebrew/bin") 
+        if [ $cnt -eq 0 ]; then 
+          echo "ERROR: Software path (/opt/homebrew/bin) not set in your PATH environment variable, please set"
+          echo "       it in your $HOME/.bashrc as folows"
+          echo "       => export PATH=$PATH:/opt/homebrew/bin"
+          exit 1
+        fi
       else
-echo gaga4
         CLI_COMMANDS="/usr/local/bin/jq:brew:jq /usr/local/bin/wget:brew:wget /usr/local/bin/kubectl:brew:kubectl"
+        cnt=$(echo $PATH | grep -c "/opt/local/bin") 
+        if [ $cnt -eq 0 ]; then 
+          echo "ERROR: Software path (/opt/local/bin) not set in your PATH environment variable, please set"
+          echo "       it in your $HOME/.bashrc as folows"
+          echo "       => export PATH=$PATH:/opt/local/bin"
+          exit 1
+        fi
       fi
     fi
 
