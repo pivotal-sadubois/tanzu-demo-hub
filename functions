@@ -406,6 +406,7 @@ vSphereKubeconfig() {
   # --- SET LOGIN PASSWORD AS ENVIRONMENT VARIABLE ---
   export KUBECTL_VSPHERE_PASSWORD=$VSPHERE_TKGS_VCENTER_PASSWORD
 
+#hallo
   mv $HOME/.kube/config $HOME/.kube/config.bak
 
   ret=1; cnt=0
@@ -2841,7 +2842,6 @@ createTKGMCcluster() {
 
       messagePrint " ▪ Management Cluster Creating Completed"    "/tmp/$TDH_TKGMC_NAME.log"
 
-#hallo
       tanzu management-cluster kubeconfig get --admin > /dev/null 2>&1
       kubectl config set-cluster $TDH_TKGMC_NAME > /dev/null 2>&1
       kubectl config use-context ${TDH_TKGMC_NAME}-admin@$TDH_TKGMC_NAME > /dev/null 2>&1
@@ -4701,7 +4701,12 @@ tkgCreateCluster() {
 
     # --- GET CREDENTIALS AND SET ENVIRONMENT ---
     tanzu cluster kubeconfig get $TDH_TKGWC_NAME --admin > /dev/null 2>&1
-    tanzu cluster kubeconfig get $TDH_TKGWC_NAME --admin > $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.kubeconfig 2>/dev/null
+
+    # --- CREATE GLOBAL KUBECONFIG FILE ---
+    mv $HOME/.kube/config $HOME/.kube/config.bak
+    tanzu cluster kubeconfig get $TDH_TKGWC_NAME --admin > /dev/null 2>&1
+    mv $HOME/.kube/config $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.kubeconfig
+    mv $HOME/.kube/config.bak $HOME/.kube/config
   fi
 
   #########################################################################################################################
@@ -4798,7 +4803,12 @@ tkgCreateCluster() {
 
     # --- GET CREDENTIALS AND SET ENVIRONMENT ---
     tanzu cluster kubeconfig get $TDH_TKGWC_NAME --admin > /dev/null 2>&1
-    tanzu cluster kubeconfig get $TDH_TKGWC_NAME --admin > $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.kubeconfig 2>/dev/null
+
+    # --- CREATE GLOBAL KUBECONFIG FILE ---
+    mv $HOME/.kube/config $HOME/.kube/config.bak
+    tanzu cluster kubeconfig get $TDH_TKGWC_NAME --admin > /dev/null 2>&1
+    mv $HOME/.kube/config $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.kubeconfig
+    mv $HOME/.kube/config.bak $HOME/.kube/config
   fi
 
   #########################################################################################################################
@@ -4820,6 +4830,7 @@ tkgCreateCluster() {
         if [ "$TDH_TKGWC_NAME_TAG" == "TKG_CLUSTER_02" ]; then
           TDH_TKGWC_CPIP_ADDRESS=$VSPHERE_TKGM_WKLD_CLUSTER02_CONTROL_PLANE
           TDH_TKGWC_LB_ADDRESS=$VSPHERE_TKGM_WKLD_CLUSTER03_LOADBALANCER_POOL
+
         fi
   
         if [ "$TDH_TKGWC_NAME_TAG" == "TKG_CLUSTER_04" ]; then
@@ -4914,7 +4925,6 @@ tkgCreateCluster() {
       messagePrint " ▪ Workload Cluster Name"                 "$TDH_TKGWC_NAME"
       messagePrint " ▪ Workload Cluster Configuration"        "$HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml"
       messagePrint " ▪ Workload Cluster Kubeconfig"           "$HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.kubeconfig"
-echo hallo
 
       messagePrint " ▪ TKG Cluster Kubernetes Release"        "$TDH_TKGWC_K8S_VERSION"
       messagePrint " ▪ TKG Cluster Worker Nodes"              "$TDH_TKGWC_WORKERNODES"
@@ -5673,10 +5683,7 @@ exit
     fi
   fi
 
-
-return
-
-  messageTitle "Spring Cloud Gateway"
+  messageTitle "Tanzu Application Platform (TAP)"
   cnt=0
   if [ $cnt -eq 0 ]; then
     TDH_SERVICE_TAP_VERSION=$(getConfigMap tanzu-demo-hub TDH_SERVICE_TAP_VERSION)
@@ -5830,14 +5837,30 @@ installSpringCloudGateway() {
   messageTitle "Spring Cloud Gateway"
   cnt=$(kubectl get pods -A | egrep -c "^$NAMESPACE")
   if [ $cnt -eq 0 ]; then
+    TBS_FILE="/tmp/spring-cloud-gateway-k8s-$TDH_SERVICE_SPRING_CLOUD_GATEWAY_VERSION.tgz"
+    [ -f $TBS_FILE ] && rm -f $TBS_FILE
+
     # --- DOWNLOAD BUILD_SERVICE BINARIES ---
     downloadFromPivnet spring-cloud-gateway-for-kubernetes $TDH_SERVICE_SPRING_CLOUD_GATEWAY_VERSION \
         "$TDH_SERVICE_SPRING_CLOUD_GATEWAY_VERSION" "Spring Cloud Gateway for Kubernetes Installer"
 
-    TBS_FILE="/tmp/spring-cloud-gateway-k8s-$TDH_SERVICE_SPRING_CLOUD_GATEWAY_VERSION.tgz"
     [ -d /tmp/spring-cloud-gateway ] && rm -rf /tmp/spring-cloud-gateway
     mkdir -p /tmp/spring-cloud-gateway
-    tar xfz $TBS_FILE -C /tmp/spring-cloud-gateway
+
+    tar xfz $TBS_FILE -C /tmp/spring-cloud-gateway; ret=$? 
+    if [ $ret -ne 0 ]; then
+      logMessages /tmp/error.log
+      echo "ERROR: Failed to unpack $TBS_FILE"
+      if [ "$NATIVE" == "0" ]; then
+        echo "       => tools/${TDH_TOOLS}.sh"
+        echo "          tdh-tools:/$ tar xfz $TBS_FILE -C /tmp/spring-cloud-gateway"
+        echo "          tdh-tools:/$ exit"
+      else
+        echo "       => tar xfz $TBS_FILE -C /tmp/spring-cloud-gateway"
+      fi
+
+      exit 1
+    fi
 
     messagePrint " ▪ Verify VMware Registry Access" "$TDH_REGISTRY_VMWARE_NAME"
     cnt=0; ret=1
@@ -6289,7 +6312,6 @@ installGitea() {
   else
     ver=""; crt=""; stt=""; dat=""
   fi
-echo figu11
   
   cmdLoop kubectl -n $HELMCHART exec -it gitea-0 -- $HELMCHART admin user change-password -u gitea_admin -p $TDH_HARBOR_ADMIN_PASSWORD > /tmp/error.log 2>&1; ret=$?
   if [ $ret -ne 0 ]; then

@@ -1017,18 +1017,28 @@ checkIdentityProvider
 createJumpHost
 sshEnvironment
 
+echo gaga1
 configureJumpHost
+echo gaga2
 buildTDHToolsContainer   $TDH_TOOLS_CONTAINER_TYPE
+echo gaga3
 configureLetsEnscript
+echo gaga4
 
 if [ "$DEPLOY_TKG_CLEAN" -eq 1 ]; then
+echo gaga5
   deleteManagementCluster $TDH_TKGMC_NAME
+echo gaga6
   cleanupEnvironment
+echo gaga7
   cleanKubeconfig
+echo gaga8
   cleanManagementCluster
+echo gaga9
 
   # --- CLEAN CONFIG ON JUMP HOST ---
   $SSH_COMMAND -n "rm -f $SSH_HOME/.kube/config $SSH_HOME/.kube-tkg/config $SSH_HOME/.config/tanzu/config.yaml"
+echo gaga10
 
   exit 0
 fi
