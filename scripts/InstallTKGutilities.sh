@@ -173,6 +173,18 @@ messagePrint " ▪ Update Packages" "apt upgrade -y"
 apt update -y > /dev/null 2>&1
 [ -f /home/ubuntu/.docker ] && chown -R ubuntu:ubuntu /home/ubuntu/.docker
 
+# --- INSTALL TMC CLIENT ---
+if [ ! -x /usr/local/bin/tmc ]; then
+  _type="linuxX64"
+
+  API_TOKEN=$(tmcAPI_getToken $TMC_SERVICE_TOKEN)
+  url=$(tmcAPI_getCliBinary $API_TOKEN $TMC_SERVER_URL darwinX64)
+  wget -q $url -O /tmp/tmc
+
+  mv /tmp/tmc /usr/local/bin
+  sudo chmod a+x /usr/local/bin/tmc
+fi
+
 touch /tkg_software_installed
 
 exit 0
