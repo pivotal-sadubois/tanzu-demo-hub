@@ -481,6 +481,7 @@ tmcCheckLogin() {
     _arch=$(uname) 
     _mach=$(uname -m) 
 
+#hallo
     [ "${_arch}" == "Darwin" -a "${_mach}" == "x86_64" ] && _type="darwinX64"
     [ "${_arch}" == "Darwin" -a "${_mach}" == "arm64" ] && _type="darwinX64"
     [ "${_arch}" == "Linux" -a "${_mach}" == "x86_64" ] && _type="linuxX64"
