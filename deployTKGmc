@@ -135,10 +135,10 @@ echo gaga107
   [ ! -d ~/.tanzu-demo-hub/config ] && mkdir -p ~/.tanzu-demo-hub/config
   CMDEXE="scripts/removeTKGmc.sh"
   CMDDIR="$SSH_HOME/tanzu-demo-hub"
-  $SSH_COMMAND -n "[ -f $CMDDIR/$CMDEXE ] && cd $CMDDIR && $CMDEXE \"$TDH_TKGMC_NAME-$TDH_USER\" \"$DEBUG\""; ret=$?
+  $SSH_COMMAND -n "[ -f $CMDDIR/$CMDEXE ] && cd $CMDDIR && $CMDEXE \"$TDH_TKGMC_NAME-$TDH_USER\" \"$DEBUG\" \"$TDH_TOOLS_CONTAINER_TYPE\" \"$DEPLOY_TKG_VERSION\""; ret=$?
   if [ ${ret} -ne 0 ]; then
     echo "ERROR: Failed to delete Management Server on $JUMP_HOST"
-    echo "       => $SSH_DISPLAY -n tanzu-demo-hub/scripts/removeTKGmc.sh \"$TDH_TKGMC_NAME-$TDH_USER\" \"$DEBUG\""
+    echo "       => $SSH_DISPLAY -n tanzu-demo-hub/scripts/removeTKGmc.sh \"$TDH_TKGMC_NAME-$TDH_USER\" \"$DEBUG\" \"$TDH_TOOLS_CONTAINER_TYPE\" \"$DEPLOY_TKG_VERSION\""
     exit 1
   fi
 echo gaga108

@@ -13,8 +13,8 @@ export TANZU_DEMO_HUB=$(cd "$(pwd)/$(dirname $0)/.."; pwd)
 export TDHPATH=$(cd "$(pwd)/$(dirname $0)/.."; pwd)
 export TDH_TKGMC_NAME_TMP="$1"
 export DEBUG="$2"
-export TDH_TOOLS_CONTAINER_TYPE="$4"
-export DEPLOY_TKG_VERSION="$5"
+export TDH_TOOLS_CONTAINER_TYPE="$3"
+export DEPLOY_TKG_VERSION="$4"
 export NATIVE=0
 
 echo removeTKGmc.sh-gaga2
