@@ -945,6 +945,7 @@ createJumpHost() {
           --image UbuntuLTS \
           --admin-username ubuntu \
           --size Standard_DS2_v2 \
+          --os-disk-size-gb 100 \
           --ssh-key-values ~/.tanzu-demo-hub/KeyPair-Azure.pub > /dev/null 2>&1
           #--generate-ssh-keys > /dev/null 2>&1
       if [ $? -ne 0 ]; then
@@ -1412,6 +1413,9 @@ else
       echo "       => $SSH_DISPLAY -n \"cd $CMDDIR && $CMDEXE $DEPLOY_TKG_TEMPLATE $TDH_TKGMC_NAME $DEBUG $TDH_TOOLS_CONTAINER_TYPE $DEPLOY_TKG_VERSION\""
       exit 1
     fi
+
+echo "gaga end-end-end-end-end"
+exit
 
     cleanKubeconfig           $HOME/.kube/config
     cleanKubeconfig           $HOME/.kube-tkg/config
