@@ -153,6 +153,7 @@ export TDH_TLS_ISSUER_NAME=letsencrypt-staging
 export TDH_TLS_ISSUER_CONFIG=/tmp/issuer-dns-manager1.yaml
 
 # --- VERYFY ACCESS TO CLOUD ---
+checkCLIcommands        BASIC
 checkTDHenvironment
 checkKubernetesServices registry_docker
 checkKubernetesServices cert-manager
