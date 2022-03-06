@@ -485,7 +485,7 @@ tmcCheckLogin() {
     fi
 echo "url:$url"
 
-    wget $url -O /tmp/tmc 
+    wget -q $url -O /tmp/tmc 
     echo "ERROR: TMC Binary has not yet installed. We downloaded it for you proactively"
     echo "       as  type (darwinX64). Please do the following to complete the installatio"
     echo "       => sudo mv /tmp/tmc /usr/local/bin"
