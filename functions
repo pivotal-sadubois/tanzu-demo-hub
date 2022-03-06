@@ -477,13 +477,22 @@ tmcCheckLogin() {
   fi
 
   if [ ! -x /usr/local/bin/tmc ]; then 
+    _arch=$(uname) 
+    _mach=$(uname -m) 
+
+    [ "${_arch)" == "Darwin" -a "${_mach)" == "x86_64" ] && _type="darwinX64"
+    [ "${_arch)" == "Darwin" -a "${_mach)" == "arm64" ] && _type="darwinX64"
+    if [ "$_type" == "" ]; then 
+      echo "ERROR: unknown Architecure $_arch/$_mach"
+      exit 1
+    fi
+
     API_TOKEN=$(tmcAPI_getToken $TMC_SERVICE_TOKEN) 
     url=$(tmcAPI_getCliBinary $API_TOKEN $TMC_SERVER_URL darwinX64)
     if [ "$url" == "" ]; then 
       echo "ERROR: failed to download tmc binary from $TMC_SERVER_URL"
       exit 1
     fi
-echo "url:$url"
 
     wget -q $url -O /tmp/tmc 
     echo "ERROR: TMC Binary has not yet installed. We downloaded it for you proactively"
@@ -492,8 +501,6 @@ echo "url:$url"
     echo "       => sudo chmod a+x /usr/local/bin/tmc"
     exit 1
   fi
-echo gaga3
-exit
 
   # --- IF STARTED BY (tdh-tools) CONTAINER, NO TMC CLI IST INSTALLED ---
   [ "$FLAG" == "--noverify" ] && return
