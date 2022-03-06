@@ -5351,7 +5351,6 @@ tmcCreateCluster() {
 
     if [ "$stt" == "" -o "$stt" != "READY" ]; then
       KUBERNETES_VERSION=$(for n in $TMC_K8S_VERSIONS; do echo v$n; done | egrep "$TDH_TKGWC_KUBERNETES" | tail -1 | sed 's/^v//g') 
-echo "1 KUBERNETES_VERSION:$KUBERNETES_VERSION"
 
       [ "$TMC_KUBERNETES_VERSION" != "" ] && KUBERNETES_VERSION=$TMC_KUBERNETES_VERSION
       [ "$TDH_TKGWC_CONTROPLANE" == "3" ] && TMC_TKGWC_TEMPLATE="aws-ha" || TMC_TKGWC_TEMPLATE="default"
@@ -5359,8 +5358,10 @@ echo "1 KUBERNETES_VERSION:$KUBERNETES_VERSION"
       # --- SEARCH KUBERNETES VERSIONS ---
       KUBERNETES_VERSION=$(tmcGetKubernetesImage $TDH_TKGWC_KUBERNETES) 
 
-echo "2 KUBERNETES_VERSION:$KUBERNETES_VERSION"
-
+      if [ "$KUBERNETES_VERSION" == "" ]; then 
+        echo "ERROR: No supported image found for Kubernetes version: $TDH_TKGWC_KUBERNETES"
+        exit
+      fi
 
       messageTitle "TMC Create Workload Cluster"     
       messagePrint " ▪ TMC Cluster Name"                 "$TDH_CLUSTER_NAME"
