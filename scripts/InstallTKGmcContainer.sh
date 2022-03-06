@@ -28,5 +28,8 @@ export CMD_ARGS=$*
 runTDHtools $TDH_TOOLS_CONTAINER_TYPE $DEPLOY_TKG_VERSION "Deploy TKG Management Cluster" "$TDHPATH/$CMD_EXEC" "$CMD_ARGS"
 
 echo "tanzu management-cluster create --file $CONFIG_FILE -v 0 -t 2h"
-hostname
-echo "InstallTKGmcContainer.sh gaga"
+tanzu management-cluster create --file $CONFIG_FILE -v 0 -t 2h
+
+tanzu management-cluster get > /dev/null 2>&1; ret=$?
+[ $ret -eq 0 ] && return 0 || return 1
+

@@ -624,8 +624,9 @@ sshEnvironment() {
     SSH_OPTIONS="-o StrictHostKeyChecking=no -o RequestTTY=yes -o ServerAliveInterval=240 -o ClientAliveInterval=240"
     SSH_OPTIONS="-o StrictHostKeyChecking=no -o RequestTTY=yes -o ServerAliveInterval=240"
     SCP_OPTIONS="-o StrictHostKeyChecking=no"
+    SSH_TTY="ssh -tt -q $SSH_OPTIONS -i ${SSH_PRIVATE_KEY} ${SSH_USER}@${SSH_HOST}"
     SSH_COMMAND="ssh -q $SSH_OPTIONS -i ${SSH_PRIVATE_KEY} ${SSH_USER}@${SSH_HOST}"
-    SCP_COMMAND="scp -tt -i ${SSH_PRIVATE_KEY} -r $SCP_OPTIONS"
+    SCP_COMMAND="scp -i ${SSH_PRIVATE_KEY} -r $SCP_OPTIONS"
     SSH_DISPLAY="ssh -i ${SSH_PRIVATE_KEY} ${SSH_USER}@${SSH_HOST}"
   fi
 
@@ -647,7 +648,8 @@ sshEnvironment() {
     SSH_OPTIONS="-o StrictHostKeyChecking=no -o RequestTTY=yes -o ServerAliveInterval=240 -o ClientAliveInterval=240"
     SSH_OPTIONS="-o StrictHostKeyChecking=no -o RequestTTY=yes -o ServerAliveInterval=240"
     SCP_OPTIONS="-o StrictHostKeyChecking=no"
-    SSH_COMMAND="ssh -tt -q $SSH_OPTIONS -i ${SSH_PRIVATE_KEY} ${SSH_USER}@${SSH_HOST}"
+    SSH_TTY="ssh -tt -q $SSH_OPTIONS -i ${SSH_PRIVATE_KEY} ${SSH_USER}@${SSH_HOST}"
+    SSH_COMMAND="ssh -q $SSH_OPTIONS -i ${SSH_PRIVATE_KEY} ${SSH_USER}@${SSH_HOST}"
     SCP_COMMAND="scp -i ${SSH_PRIVATE_KEY} -r $SCP_OPTIONS"
     SSH_DISPLAY="ssh $SSH_OPTIONS -i ${SSH_PRIVATE_KEY} ${SSH_USER}@${SSH_HOST}"
   fi
@@ -661,7 +663,8 @@ sshEnvironment() {
     SSH_OPTIONS="-o StrictHostKeyChecking=no -o RequestTTY=yes -o ServerAliveInterval=30"
     SSH_DISPLAY="-o StrictHostKeyChecking=no"
     SCP_OPTIONS="-o StrictHostKeyChecking=no"
-    SSH_COMMAND="ssh -tt -q $SSH_OPTIONS -i $SSH_KEY_FILE ${SSH_USER}@${SSH_HOST}"
+    SSH_TTY="ssh -tt -q $SSH_OPTIONS -i $SSH_KEY_FILE ${SSH_USER}@${SSH_HOST}"
+    SSH_COMMAND="ssh -q $SSH_OPTIONS -i $SSH_KEY_FILE ${SSH_USER}@${SSH_HOST}"
     SCP_COMMAND="scp -r $SCP_OPTIONS -i $SSH_KEY_FILE"
     SSH_DISPLAY="ssh -i $SSH_KEY_FILE ${SSH_USER}@${SSH_HOST}"
   fi
@@ -679,7 +682,8 @@ sshEnvironment() {
     SSH_HOST="${INSTANCE_NAME}.${ZONE}.${prj}"
     SSH_OPTIONS="-o StrictHostKeyChecking=no -o RequestTTY=yes -o ServerAliveInterval=30"
     SCP_OPTIONS="-o StrictHostKeyChecking=no"
-    SSH_COMMAND="ssh -tt -q $SSH_OPTIONS ${SSH_USER}@${SSH_HOST}"
+    SSH_TTY="ssh -tt -q $SSH_OPTIONS ${SSH_USER}@${SSH_HOST}"
+    SSH_COMMAND="ssh -q $SSH_OPTIONS ${SSH_USER}@${SSH_HOST}"
     SCP_COMMAND="scp -r $SCP_OPTIONS"
     SSH_DISPLAY="ssh ${SSH_USER}@${SSH_HOST}"
   fi
@@ -3368,21 +3372,18 @@ echo "holullu AWS"
       messagePrint " ▪ Management Cluster Creating"        "This may take up to 15min ..."
       echo "tanzu management-cluster create --file $TKG_TEMPLATE -v 0 --log-file=/tmp/$TDH_TKGMC_NAME.log"
 
-echo "TDH_TOOLS_CONTAINER_TYPE:$TDH_TOOLS_CONTAINER_TYPE"
-echo "DEPLOY_TKG_VERSION:$DEPLOY_TKG_VERSION"
-     scripts/InstallTKGmcContainer.sh $TKG_TEMPLATE
-
-echo hallo
-exit
-
       ret=1; cnt=0
       while [ $ret -ne 0 -a $cnt -lt 3 ]; do
         if [ $DEBUG -gt 0 ]; then
           messageLine
-          tanzu management-cluster create --file $TKG_TEMPLATE -v 0 -t 2h --log-file=/tmp/$TDH_TKGMC_NAME.log; ret=$?
+          #tanzu management-cluster create --file $TKG_TEMPLATE -v 0 -t 2h --log-file=/tmp/$TDH_TKGMC_NAME.log; ret=$?
+          scripts/InstallTKGmcContainer.sh $TKG_TEMPLATE
           messageLine
         else
-          tanzu management-cluster create --file $TKG_TEMPLATE -v 0 -t 2h --log-file=/tmp/$TDH_TKGMC_NAME.log > /dev/null 2>&1; ret=$?
+          #tanzu management-cluster create --file $TKG_TEMPLATE -v 0 -t 2h --log-file=/tmp/$TDH_TKGMC_NAME.log > /dev/null 2>&1; ret=$?
+          messageLine
+          scripts/InstallTKGmcContainer.sh $TKG_TEMPLATE; ret=$?
+          messageLine
         fi
 
         [ $ret -eq 0 ] && break
