@@ -162,9 +162,6 @@ cleanupEnvironment() {
     [ -f $HOME/.tanzu-demo-hub/config/$TDH_TKGMC_NAME-$TDH_USER.yaml ] && rm -f $HOME/.tanzu-demo-hub/config/$TDH_TKGMC_NAME-$TDH_USER.yaml
   fi
 
-  if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "Azure" ]; then
-  fi
-
   if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "AWS" ]; then
     TERRAFORM_PATH=$HOME/.tanzu-demo-hub/terraform/aws
     if [ ! -d $TERRAFORM_PATH ]; then 
