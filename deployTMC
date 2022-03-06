@@ -12,6 +12,7 @@ export DEBUG=0
 export NATIVE=0
 export TDH_DEPLOYMENT_CLOUD="AWS"
 export DEPLOY_PCF_DEPLOYMENT=aws_tkg_default.cfg
+export TDH_TOOLS_CONTAINER_TYPE=tkg
 
 # --- SETTING FOR TDH-TOOLS ---
 export START_COMMAND="$*"
