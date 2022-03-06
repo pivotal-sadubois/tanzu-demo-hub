@@ -481,16 +481,18 @@ echo gaga1
 echo gaga2
     messagePrint " ▪ Downloading TMC CLI BINARY"                                "$filename"
     API_TOKEN=$(tmcAPI_getToken $TMC_SERVICE_TOKEN) 
-    file=$(tmcAPI_getCliBinary $API_TOKEN $TMC_SERVER_URL)
-
-wget $download_url -O $TDH_DOCKER_CACHE/tmc-$TMC_CLI/$filename 
-echo "FILE:$file"
-
+    file=$(tmcAPI_getCliBinary $API_TOKEN $TMC_SERVER_URL darwinX64)
     if [ "file" == "" ]; then 
       echo "ERROR: failed to login to TMC API on $TMC_SERVER_URL"
       exit 1
     fi
 
+    wget $download_url -O /tmp/$filename 
+    echo "ERROR: TMC Binary has not yet installed. We downloaded it for you proactively"
+    echo "       as  type (darwinX64). Please do the following to complete the installatio"
+    echo "       => sudo mv /tmp/tmc /usr/local/bin"
+    echo "       => sudo chmod a+x /usr/local/bin/tmc"
+    exit 1
   fi
 echo gaga3
 exit
@@ -9683,7 +9685,7 @@ tdh_tools_build() {
 
     # --- DOWNLOAD TMC CLI ---
     API_TOKEN=$(tmcAPI_getToken $TMC_SERVICE_TOKEN)
-    download_url=$(tmcAPI_getCliBinary $API_TOKEN $TMC_SERVER_URL)
+    download_url=$(tmcAPI_getCliBinary $API_TOKEN $TMC_SERVER_URL linuxX64)
     filename=$(echo $download_url | awk -F'/' '{ printf("tmc-linux-%s\n", $(NF-3))}')
     [ ! -d $TDH_DOCKER_CACHE/tmc-$TMC_CLI ] && mkdir -p $TDH_DOCKER_CACHE/tmc-$TMC_CLI
 
@@ -10952,6 +10954,13 @@ echo "curl -XPOST -H "Content-Type: application/json"  -k -d '{"name":"test"}' -
 # ------------------------------------------------------------------------------------------
 # Return Value .......: API Access Token
 # ------------------------------------------------------------------------------------------
+# darwinX86 .........: MacOS x86
+# darwinX64 .........: MacOS x86_64
+# linuxX86 ........ .: Linux x86
+# linuxX64 ..........: Linux x86_64
+# windowsX86 ........: Windows x86
+# windowsX64 ........: Windows x86_64
+# ------------------------------------------------------------------------------------------
 # Reference Documentation: 
 # https://developer.vmware.com/apis/897/tanzu-mission-control
 # ------------------------------------------------------------------------------------------
@@ -10964,13 +10973,9 @@ tmcAPI_getCliBinary() {
                           -H 'Content-Type: application/x-www-form-urlencoded' \
                           ${TMC_SERVER}/v1alpha/system/binaries 2>/dev/null | jq -r '.latestVersion')
 
-curl -k -X GET -H "Authdrization: Bearer $REFRESH_TOKEN" \
-                 -H 'Content-Type: application/x-www-form-urlencoded' \
-                 ${TMC_SERVER}/v1alpha/system/binaries 2>/dev/null | jq -r ".versions.\"$latest\"" 1>&2
-
   curl -k -X GET -H "Authdrization: Bearer $REFRESH_TOKEN" \
                  -H 'Content-Type: application/x-www-form-urlencoded' \
-                 ${TMC_SERVER}/v1alpha/system/binaries 2>/dev/null | jq -r ".versions.\"$latest\".linuxX64"
+                 ${TMC_SERVER}/v1alpha/system/binaries 2>/dev/null | jq -r ".versions.\"$latest\".$TMC_TYPE"
 }
 
 
