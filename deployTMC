@@ -54,7 +54,9 @@ done
 
 # --- CHECK FOR BASIC COMANDS ---
 checkCLIcommands        BASIC
+tmcCheckLogin
 
+exit
 if [ "${TKG_DEPLOYMENT}" == "" -o "${TMC_DEPLOYMENT}" == "" ]; then
   [ "${TKG_DEPLOYMENT}" == "" ] && listTMCDeployments
   [ "${TMC_DEPLOYMENT}" == "" ] && listClusterConfig
