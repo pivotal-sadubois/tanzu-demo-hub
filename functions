@@ -476,6 +476,23 @@ tmcCheckLogin() {
     exit 1
   fi
 
+echo gaga1
+  if [ ! -x /usr/local/bin/tmc ]; then 
+echo gaga2
+    messagePrint " ▪ Downloading TMC CLI BINARY"                                "$filename"
+    API_TOKEN=$(tmcAPI_getToken $TMC_SERVICE_TOKEN) 
+    file=$(tmcAPI_getCliBinary $API_TOKEN $TMC_SERVER_URL)
+echo "FILE:$file"
+
+    if [ "file" == "" ]; then 
+      echo "ERROR: failed to login to TMC API on $TMC_SERVER_URL"
+      exit 1
+    fi
+
+  fi
+echo gaga3
+exit
+
   # --- IF STARTED BY (tdh-tools) CONTAINER, NO TMC CLI IST INSTALLED ---
   [ "$FLAG" == "--noverify" ] && return
 
@@ -512,13 +529,6 @@ tmcCheckLogin() {
     exit 1
   fi
 
-  API_TOKEN=$(tmcAPI_getToken $TMC_SERVICE_TOKEN) 
-
-  file=$(tmcAPI_getCliBinary $API_TOKEN $TMC_SERVER_URL)
-  if [ "file" == "" ]; then 
-    echo "ERROR: failed to login to TMC API on $TMC_SERVER_URL"
-    exit 1
-  fi
 }
 
 messageTitle() {
