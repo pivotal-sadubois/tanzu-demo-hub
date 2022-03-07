@@ -9169,11 +9169,6 @@ deleteManagementCluster() {
 
   cnt=1; loop=0
   while [ $cnt -ne 0 -a $loop -lt 10 ]; do
-    messagePrint " ▪ TMC DeRegister Cluster"             "waiting"
-
-#gaga
-echo "tmc managementcluster list | grep -c $MGMT_CLUSTER"
-tmc managementcluster list | grep -c $MGMT_CLUSTER
     cnt=$(tmc managementcluster list | grep -c $MGMT_CLUSTER)
 
     let loop=loop+1
