@@ -1,7 +1,7 @@
 # Tanzu Demo Hub
 
 
-The Tanzu Demo Hub initiative is to build a environment to run predefined and tested Demos that highlight the capabilites of the VMware Tanzu production portfolio. The scripts and tools provided deploy TKG Management clusters on vSphere, AWS Cloud or Microsoft Azure cloud and on your local Laptop (Minikube) and installs standard services such as LoadBalancer, Ingress Routers, Harbor Registry, Mini S3 etc. The deployment scripts will create Let's Encrypt certificates for you automatically so that all installed services and demos have valid certificates.
+The Tanzu Demo Hub initiative is to build an environment to run predefined and tested demos of the capabilities from the VMware Tanzu production portfolio. The scripts and tools provided deploy TKG Management clusters on vSphere, AWS Cloud, Microsoft Azure cloud, or on your local Laptop (Minikube) and install standard services such as LoadBalancer, Ingress Routers, Harbor Registry, Mini S3, etc. The deployment scripts will create Let's Encrypt certificates for you automatically that all installed services and demos have valid certificates.
 
 ![TanzuDemoHub](https://github.com/pivotal-sadubois/tanzu-demo-hub/blob/main/files/TanzuDemoHub.jpg)
 
@@ -56,7 +56,7 @@ export AWS_SECRET_KEY="XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 export AWS_REGION="eu-central-1"
 export AWS_HOSTED_DNS_DOMAIN="mydomain.com"  # YOUR PERSONAL DNS DOMAIN HOSTED ON ROUTE53
 ```
-TDH Services such as Harbor, Tanzu Build Service or Tanzu Postgres etc. require accedd to depending services such as (GitHub, Docker, PivNET etc). You can use your existing credentials if you already have an account or you need to signup if you dont have one.
+TDH Services such as Harbor, Tanzu Build Service or Tanzu Postgres etc. require access to depending services such as (GitHub, Docker, PivNET etc). You can use your existing credentials if you already have an account or you need to signup if you don't have one.
 *Supported Environments*
 - [GitHub Account SignUp](https://github.com/signup?ref_cta=Sign+up&ref_loc=header+logged+out&ref_page=%2F&source=header-home)
 - [myVMware SignUp](https://my.vmware.com/web/vmware/registration)
@@ -84,7 +84,7 @@ export TDH_GITHUB_SSHKEY=~/.ssh/id_XXXXXXXX
 export TDH_HARBOR_ADMIN_PASSWORD=XXXXXXXXXXXX
 export PCF_PIVNET_TOKEN="XXXXXXXXXXXXXXXXXXXXXXXXXXX-r"  ## Pivnet APi Token (https://network.pivotal.io)
 ```
-The integration of Tanzu Mission Control and Tanzu Observability requires you to have a VMware Cloud Account in the tanzu-emeo (Organization ID: fea0ee4b-bbf6-4444-b1d6-e493597d46a4) as a prerequsisits. The Workload Cluster created will automaticly integrated into Tanzu Observability (TO) after creation, therefor its required that you provide TO access credentials as well. 
+The integration of Tanzu Mission Control and Tanzu Observability requires you to have a VMware Cloud Account in the tanzu-emea (Organization ID: fea0ee4b-bbf6-4444-b1d6-e493597d46a4) as a prerequisite. The Workload Cluster created will be automatically integrated into Tanzu Observability (TO) after creation, therefore it's required that you provide TO access credentials as well. 
 ```
 #########################################################################################################################
 ################################################ TANZU OBSERVABILITY ####################################################
@@ -95,7 +95,7 @@ export TDH_TANZU_OBSERVABILITY_URL="https://vmware.wavefront.com"
 export TDH_TANZU_DATA_PROTECTION_ARN="arn:aws:iam::XXXXXXXXXXXX:role/VMwareTMCProviderCredentialMgr"
 export TDH_TANZU_DATA_PROTECTION_BACKUP_LOCATION="sadubois-aws-dp"
 ```
-If an integration into Tanzu Mission Control is planned (recommended) your TMC credentials needs to be specified also
+If an integration into Tanzu Mission Control is planned (recommended) your TMC credentials need to be specified also
 ```
 #########################################################################################################################
 ################################################## TMC CREDENTIALS ######################################################
@@ -123,7 +123,7 @@ USAGE: ./deployMiniKube [options] -d <deployment> [--clean|--debug]
 Sachas-MacBook-Pro:tanzu-demo-hub sdu$ 
 ```
 
-The Tanzu Demo Hub can be deployed with different deployment configurations. As default and a requirement to run the Tanzu Demo Hub Demos the (minikube-tanzu-demo-hub.cfg) is required to be used. Later this deployemnt can be modified and adjusted for you needs.
+The Tanzu Demo Hub can be deployed with different deployment configurations. As default and a requirement to run the Tanzu Demo Hub Demos the (`minikube-tanzu-demo-hub.cfg`) is required to be used. Later this deployment can be modified and adjusted for your needs.
 ```
 $ ./deployMiniKube -d minikube-tanzu-demo-hub.cfg
 
@@ -187,13 +187,13 @@ Verify LetsEnscript Certificate
         Subject: CN = *.apps-contour.local.pcfsdu.com
                 DNS:*.apps-contour.local.pcfsdu.com, DNS:*.apps-nginx.local.pcfsdu.com
 ------------------------------------------------------------------------------------------------------------------------
-Harbor Reistry
- ▪ Verify Harbor Reistry .....................................: bitnami/harbor
-   Harbor Reistry Namespace: .................................: registry-harbor
-   Harbor Reistry Helm Chart: ................................: harbor-9.2.2
-   Harbor Reistry Version: ...................................: 2.1.2
-   Harbor Reistry Status: ....................................: deployed
-   Harbor Reistry Installed/Updated: .........................: 2021-06-08 01:09:25.175152 +0200 CEST
+Harbor Registry
+ ▪ Verify Harbor Registry .....................................: bitnami/harbor
+   Harbor Registry Namespace: .................................: registry-harbor
+   Harbor Registry Helm Chart: ................................: harbor-9.2.2
+   Harbor Registry Version: ...................................: 2.1.2
+   Harbor Registry Status: ....................................: deployed
+   Harbor Registry Installed/Updated: .........................: 2021-06-08 01:09:25.175152 +0200 CEST
  ▪ TDH Certificate Issuer: ...................................: Let's Encrypt
  ▪ TDH Certificate File: .....................................: tdh-cert.pem
  ▪ TDH Certificate CN: .......................................: R3
@@ -249,7 +249,7 @@ Tanzu Kubernetes Grid Cluster (tdh-minikube-sadubois) build completed
 ```
 
 # Tanzu-Demo-Hub on Azure
-The Tanzu Demo Hub in the Microsoft Azure Cloud is divided in two part, the installation of the Management Cluster which is done by the deployTKGmc utility and the deployment of the TKG Cluster and installation of the Kubernetes services such as (Harbor, Tanzu Build Serice, Tanzu Data Postgres etc.) will be installed with the deployTKG afterwards.
+The Tanzu Demo Hub in the Microsoft Azure Cloud is divided into two parts, the installation of the Management Cluster which is done by the deployTKGmc utility and the deployment of the TKG Cluster and installation of the Kubernetes services such as (Harbor, Tanzu Build Serice, Tanzu Data Postgres etc.) will be installed with the deployTKG afterward.
 
 *Tanzu Demo Hub Configuration ($HOME/.tanzu-demo-hub.cfg)*
 ```
@@ -272,7 +272,7 @@ export AWS_SECRET_KEY="XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 export AWS_REGION="eu-central-1"
 export AWS_HOSTED_DNS_DOMAIN="mydomain.com"  # YOUR PERSONAL DNS DOMAIN HOSTED ON ROUTE53
 ```
-If an integration into Tanzu Mission Control is planned (recommended) your TMC credentials needs to be specified also
+If an integration into Tanzu Mission Control is planned (recommended) your TMC credentials need to be specified also
 ```
 #########################################################################################################################
 ################################################## TMC CREDENTIALS ######################################################
@@ -285,7 +285,7 @@ export TMC_SSH_KEY_NAME_AWS=tanzu-demo-hub
 
 ```
 $ ./deployTKGmc
-CONFIURATION                   CLOUD   DOMAIN  MGMT-CLUSTER                   PLAN  CONFIGURATION
+CONFIGURATION                   CLOUD   DOMAIN  MGMT-CLUSTER                   PLAN  CONFIGURATION
 -----------------------------------------------------------------------------------------------------------
 tkgmc-aws-dev.cfg              AWS     awstkg  tkgmc-aws-<TDH_USER>           dev   tkgmc-aws.yaml
 tkgmc-aws-prod.cfg             AWS     awstkg  tkgmc-aws-dev-<TDH_USER>       prod  tkgmc-aws-dev.yaml
@@ -375,7 +375,7 @@ Create config file for TKG Workload Clusters
     => kubectl get kubeadmcontrolplane,machine,machinedeployment --all-namespaces       # To verify the first control plane is up
     => tanzu login --server tkgmc-vsphere-tkgm-sadubois                                 # Show Tanzu Management Cluster
     => tanzu management-cluster get                                                     # Show Tanzu Management Cluster
-2.) Ceeate TKG Workload Cluster
+2.) Create TKG Workload Cluster
     TKG Workload Cluster 01 ...............................: NAME_TAG: TKG_CLUSTER_01
         Cluster Control Plane .............................: 10.212.153.111
         LoadBalancer IP Pool ..............................: 10.212.153.115-10.212.153.119
@@ -408,7 +408,7 @@ Create config file for TKG Workload Clusters
 # Tanzu-Demo-Hub on Azure
 ```
 $ ./deployTKGmc
-CONFIURATION                   CLOUD   DOMAIN  MGMT-CLUSTER                   PLAN  CONFIGURATION
+CONFIGURATION                   CLOUD   DOMAIN  MGMT-CLUSTER                   PLAN  CONFIGURATION
 -----------------------------------------------------------------------------------------------------------
 tkgmc-aws-dev.cfg              AWS     awstkg  tkgmc-aws-<TDH_USER>           dev   tkgmc-aws.yaml
 tkgmc-aws-prod.cfg             AWS     awstkg  tkgmc-aws-dev-<TDH_USER>       prod  tkgmc-aws-dev.yaml
@@ -450,7 +450,7 @@ Verify Azure Application (TanzuDemoHub)
  ▪ Application Display Name ..............................: TanzuDemoHub
  ▪ ServicePrincipal ......................................: XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX
  ▪ Role Binding ..........................................: Owner
-Verifing Azure Jump-Server (jump-aztkg.pcfsdu.com)
+Verifying Azure Jump-Server (jump-aztkg.pcfsdu.com)
  ▪ SSH Command ...........................................: jump-aztkg.pcfsdu.com
 ----------------------------------------------------------------------------------------------------------------------------------------------
 ssh -o StrictHostKeyChecking=no -o RequestTTY=yes -o ServerAliveInterval=240 -i /Users/sdu/.tanzu-demo-hub/KeyPair-Azure.pem ubuntu@52.166.176.113
@@ -469,7 +469,7 @@ Creating TKG Managment Cluster
  ▪ Cluster CIDR ..........................................: 100.96.0.0/11
  ▪ Service CIDR ..........................................: 100.64.0.0/13
  ▪ Health Check Enabled ..................................: true
-Create TKG Managment Cluster
+Create TKG Management Cluster
  ▪ Cluster Name ..........................................: tkgmc-azure-sadubois
  ▪ Cluster Context .......................................: tkgmc-azure-sadubois-admin@tkgmc-azure-sadubois
  ▪ Cluster Config ........................................: ~/.tanzu-demo-hub/config/tkgmc-azure-sadubois.cfg
@@ -514,7 +514,7 @@ Create config file for TKG Workload Clusters
 # Tanzu-Demo-Hub on AWS
 ```
 $ ./deployTKGmc
-CONFIURATION                   CLOUD   DOMAIN  MGMT-CLUSTER                   PLAN  CONFIGURATION
+CONFIGURATION                   CLOUD   DOMAIN  MGMT-CLUSTER                   PLAN  CONFIGURATION
 -----------------------------------------------------------------------------------------------------------
 tkgmc-aws-dev.cfg              AWS     awstkg  tkgmc-aws-<TDH_USER>           dev   tkgmc-aws.yaml
 tkgmc-aws-prod.cfg             AWS     awstkg  tkgmc-aws-dev-<TDH_USER>       prod  tkgmc-aws-dev.yaml
@@ -555,8 +555,8 @@ AWS Access Credentials
 SSH Key Pairs
  ▪ KeyPair Name ..............................................: tanzu-demo-hub
  ▪ KeyPair File ..............................................: /Users/sdu/.tanzu-demo-hub/KeyPair-tanzu-demo-hub-eu-central-1.pem
- ▪ Verify KeyPair Fingerpring ................................: XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX
-OIDC Identitiy Management (IdM)
+ ▪ Verify KeyPair Fingerprint ................................: XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX
+OIDC Identity Management (IdM)
  ▪ OKTA SecretId .............................................: XXXXXXXXXXXXXXXXXXXXX
  ▪ OKTA Client Secret ........................................: XXXXXXXXXXXXXXXXXXXXXXX-XXXXXXXXXXXXXXXX
  ▪ OKTA URL ..................................................: https://vmware-tdh.okta.com
@@ -617,7 +617,7 @@ certbot 1.17.0 from Certbot Project (certbot-eff*) installed
 => Installing Pivnet
  ▪ Install Package (helm) ....................................: installing
  ▪ Install Package (ntp) .....................................: installing
- ▪ Rebooting Jump Server .....................................: wait for services comming up ...
+ ▪ Rebooting Jump Server .....................................: wait for services coming up ...
 Install TKG Utilities (tkg, ytt, kapp, kbld, kubectl, kind) on Jump Host (jump.awstkg.pcfsdu.com)
  ▪ Login to Docker Registry ..................................: docker.io
  ▪ Docker Ratelimit: .........................................: 200;w=21600
@@ -632,7 +632,7 @@ chown: cannot access '/home/ubuntu/.docker': No such file or directory
 Install Certificate for domain (awstkg.pcfsdu.com)
 Validate Certificates for domain (awstkg.pcfsdu.com)
  ▪ Certificate Expiratation Data: ............................: Oct  2 22:15:37 2021 GMT
-Creating TKG Managment Cluster
+Creating TKG Management Cluster
  ▪ Cluster Name ..............................................: tkgmc-aws-sadubois
  ▪ Configuration File ........................................: ${HOME}/.tanzu-demo-hub/config/tkgmc-aws-sadubois.yaml
  ▪ Cluster CIDR ..............................................: 100.96.0.0/11
@@ -689,15 +689,15 @@ Create config file for TKG Workload Clusters
 ```
 
 # Tanzu-Demo-Hub on vSphere
-This option will install a TKG Management Server (TKGm) on vSphere. Only the deployment on [VMware PEZ Cloud Service](https://pez-portal.int-apps.pcfone.io/ "VMware PEZ Cloud") is currently supported. The support for other vSphere envuronments is planned to a later time. 
+This option will install a TKG Management Server (TKGm) on vSphere. Only the deployment on [VMware PEZ Cloud Service](https://pez-portal.int-apps.pcfone.io/ "VMware PEZ Cloud") is currently supported. The support for other vSphere environments is planned for a later time. 
 
 ## Deployment on VMware PEZ Cloud
-The VMware PEZ Cloud is ideal for a TKG deployment as all compontents such as Jump Server, DHCP enabled networks etc. has been preconfigured for use. From the list of different deployment options choose the 'IaaS Only - vSphere (7.0 U2)' option. 
+The VMware PEZ Cloud is ideal for a TKG deployment as all components such as Jump Server, DHCP enabled networks etc. has been preconfigured for use. From the list of different deployment options choose the 'IaaS Only - vSphere (7.0 U2)' option. 
 
 *Deployment Requirements*
 - PEZ Environment - IaaS Only - vSphere (7.0 U2)
 - AWS Route53 Domain (ie. pcfsdu.com)
-- Macbook with Docker Desktop enabled
+- MacBook with Docker Desktop enabled
 
 ![PEZ](https://github.com/pivotal-sadubois/tanzu-demo-hub/blob/main/files/PEZ.png)
 Take the values provided from the VMware PEZ Cloud environment details page and add them to your local $HOME/tanzu-demo-hub.cfg configuration file. If it does not yet exist, please create it.
@@ -745,7 +745,7 @@ export AWS_SECRET_KEY="XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 export AWS_REGION="eu-central-1"
 export AWS_HOSTED_DNS_DOMAIN="mydomain.com"  # YOUR PERSONAL DNS DOMAIN HOSTED ON ROUTE53
 ```
-TDH Services such as Harbor, Tanzu Build Service or Tanzu Postgres etc. require accedd to depending services such as (GitHub, Docker, PivNET etc). You can use your existing credentials if you already have an account or you need to signup if you dont have one. 
+TDH Services such as Harbor, Tanzu Build Service or Tanzu Postgres etc. require access to depending services such as (GitHub, Docker, PivNET etc). You can use your existing credentials if you already have an account or you need to signup if you don't have one. 
 *Supported Environments*
 - [GitHub Account SignUp](https://github.com/signup?ref_cta=Sign+up&ref_loc=header+logged+out&ref_page=%2F&source=header-home)
 - [myVMware SignUp](https://my.vmware.com/web/vmware/registration)
@@ -771,7 +771,7 @@ export TDH_GITHUB_SSHKEY=~/.ssh/id_XXXXXXXX
 export TDH_HARBOR_ADMIN_PASSWORD=XXXXXXXXXXXX
 export PCF_PIVNET_TOKEN="XXXXXXXXXXXXXXXXXXXXXXXXXXX-r"  ## Pivnet APi Token (https://network.pivotal.io)
 ```
-Your TKG Management and Workload cluster should be integrated into Tanzu Observability automaticly on creation, therefor its required that you provide TO access credentials as well
+Your TKG Management and Workload cluster should be integrated into Tanzu Observability automatically on creation, therefore its required that you provide TO access credentials as well
 ```
 #########################################################################################################################
 ################################################ TANZU OBSERVABILITY ####################################################
@@ -782,7 +782,7 @@ export TDH_TANZU_OBSERVABILITY_URL="https://vmware.wavefront.com"
 export TDH_TANZU_DATA_PROTECTION_ARN="arn:aws:iam::XXXXXXXXXXXX:role/VMwareTMCProviderCredentialMgr"
 export TDH_TANZU_DATA_PROTECTION_BACKUP_LOCATION="sadubois-aws-dp"
 ```
-If an integration into Tanzu Mission Control is planned (recommended) your TMC credentials needs to be specified also
+If an integration into Tanzu Mission Control is planned (recommended) your TMC credentials need to be specified also
 ```
 #########################################################################################################################
 ################################################## TMC CREDENTIALS ######################################################
@@ -794,8 +794,8 @@ export TMC_SSH_KEY_NAME_AWS=tanzu-demo-hub
 export TMC_SERVICE_TOKEN="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" 
 export TMC_CONTEXT_NAME=vmware-cloud-tmc
 ```
-Tanzu Kubernetes Grid recommends the integration in either LDAP or OIDC Idendity Provider. LDAP will be configured and installed on the Jump Server where 
-OIDC requires an external Identity Provider sich as OKTA. A free account can be optained under https://okta.com
+Tanzu Kubernetes Grid recommends the integration in either LDAP or OIDC Identity Provider. LDAP will be configured and installed on the Jump Server where 
+OIDC requires an external Identity Provider such as OKTA. A free account can be obtained under https://okta.com
 ```
 #########################################################################################################################
 ######################################### IDENTITY MANAGEMENT (OIDC/LDAP) ###############################################
@@ -806,14 +806,14 @@ export TDH_OKTA_CLIENT_SECRET="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
 export TDH_OKTA_URL="https://mydomain.okta.com"
 export TDH_OKTA_SCOPES="openid,groups,email"
 export TDH_OKTA_USERNAME_CLAIM="code"
-export TDH_OKTA_GROUP_CLAIM="groups" 
+export TDH_OKTA_GROUP_CLAIM="groups"
 ```
 
 
 
 ```
 $ ./deployTKGmc
-CONFIURATION                   CLOUD   DOMAIN  MGMT-CLUSTER                   PLAN  CONFIGURATION
+CONFIGURATION                   CLOUD   DOMAIN  MGMT-CLUSTER                   PLAN  CONFIGURATION
 -----------------------------------------------------------------------------------------------------------
 tkgmc-aws-dev.cfg              AWS     awstkg  tkgmc-aws-<TDH_USER>           dev   tkgmc-aws.yaml
 tkgmc-aws-prod.cfg             AWS     awstkg  tkgmc-aws-dev-<TDH_USER>       prod  tkgmc-aws-dev.yaml
