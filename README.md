@@ -1,12 +1,12 @@
 # Tanzu Demo Hub
 
 
-The Tanzu Demo Hub initiative is to build a environment to run predefined and tested Demos demonstration the capabilites of the VMware Tanzu production portfolio. The scripts and tools provided deploy TKG Management clusters on vSphere, AWS Cloud or Microsoft Azure cloud and on your local Labtop (Minikube) and installs standard services such as LoadBalancer, Ingress Routers, Harbor Registry, Mini S3 etc. The deployment scripts will create Let's Enscript certificates for you automaticly that all installed services and demos have valid certificates.
+The Tanzu Demo Hub initiative is to build a environment to run predefined and tested Demos that highlight the capabilites of the VMware Tanzu production portfolio. The scripts and tools provided deploy TKG Management clusters on vSphere, AWS Cloud or Microsoft Azure cloud and on your local Laptop (Minikube) and installs standard services such as LoadBalancer, Ingress Routers, Harbor Registry, Mini S3 etc. The deployment scripts will create Let's Encrypt certificates for you automatically so that all installed services and demos have valid certificates.
 
 ![TanzuDemoHub](https://github.com/pivotal-sadubois/tanzu-demo-hub/blob/main/files/TanzuDemoHub.jpg)
 
-*Platfomrm Services installed by Tanzu Demo Hub*
-- CertManager (Let's Enscript Wildcard Certificates)
+*Platform Services installed by Tanzu Demo Hub*
+- CertManager (Let's Encrypt Wildcard Certificates)
   - TKG on Azure (*.aztkg.<your-domain>.com)
   - TKG on AWS (*.awstkg.<your-domain>.com)
   - TKG on vSphere (*.vstkg.<your-domain>.com)
@@ -21,7 +21,7 @@ The Tanzu Demo Hub initiative is to build a environment to run predefined and te
 - Tanzu Data Postgress Operator
 - Spring Cloud Gateway
 
-*Prebuild Demos*
+*Prebuilt Demos*
 - Kubernetes Pod Security
 - TMC Policies
 - TBS PetClinic Demo
