@@ -1005,7 +1005,7 @@ checkCloudAccess
 #checkTMCAccess
 checkKeyPairs
 #checkTKGdownloads
-[ "$(uname)" == "Darwin" ] && tmcCheckLogin
+tmcCheckLogin
 checkIdentityProvider
 
 # --- CREATE TKG CLUSTER AND JUMP SERVER
@@ -1474,8 +1474,13 @@ else
     fi
 
     tanzu management-cluster kubeconfig get --admin > /dev/null 2>&1
+echo gaga1
+echo " kubectl config set-cluster $TDH_TKGMC_NAME"
     kubectl config set-cluster $TDH_TKGMC_NAME > /dev/null 2>&1
+echo gaga2
+echo "kubectl config use-context ${TDH_TKGMC_NAME}-admin@$TDH_TKGMC_NAME"
     kubectl config use-context ${TDH_TKGMC_NAME}-admin@$TDH_TKGMC_NAME > /dev/null 2>&1
+echo gaga3
   else
     # --- RECONFIGURE KUBECONFIG OF THE MANAGEMENT CLUSTER ---
     [ ! -d ~/.kube-tkg ] && mkdir -p ~/.kube-tkg
