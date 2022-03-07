@@ -363,7 +363,7 @@ else
     echo "       => tmc cluster attach --name $TDH_TKGWC_NAME --kubeconfig=$KUBECONFIG -p $TMC_PROVISIONER_NAME -m $TMC_MANAGEMENT_CLUSTER -g tanzu-demo-hub"
   fi
 
-  if [ "$TDH_TANZU_MISSION_CONTROL_REGISTRATION" == "true1" ]; then
+  if [ "$TDH_TANZU_MISSION_CONTROL_REGISTRATION" == "true" ]; then
     cmdLoop tmc cluster list -p $TMC_PROVISIONER_NAME -m $TMC_MANAGEMENT_CLUSTER -o json > /tmp/output.json
     nam=$(jq -r --arg key "$TDH_TKGWC_NAME" '.clusters[] | select(.fullName.name == $key).fullName.name' /tmp/output.json)
     if [ "$nam" == "$TDH_TKGWC_NAME" ]; then
