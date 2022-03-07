@@ -5,8 +5,8 @@ The Tanzu Demo Hub initiative is to build an environment to run predefined and t
 
 ![TanzuDemoHub](https://github.com/pivotal-sadubois/tanzu-demo-hub/blob/main/files/TanzuDemoHub.jpg)
 
-*Platfomrm Services installed by Tanzu Demo Hub*
-- CertManager (Let's Enscript Wildcard Certificates)
+*Platform Services installed by Tanzu Demo Hub*
+- CertManager (Let's Encrypt Wildcard Certificates)
   - TKG on Azure (*.aztkg.<your-domain>.com)
   - TKG on AWS (*.awstkg.<your-domain>.com)
   - TKG on vSphere (*.vstkg.<your-domain>.com)
@@ -21,7 +21,7 @@ The Tanzu Demo Hub initiative is to build an environment to run predefined and t
 - Tanzu Data Postgress Operator
 - Spring Cloud Gateway
 
-*Prebuild Demos*
+*Prebuilt Demos*
 - Kubernetes Pod Security
 - TMC Policies
 - TBS PetClinic Demo
