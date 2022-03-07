@@ -1393,6 +1393,7 @@ echo gaga13
       done
     fi
 
+echo gaga14
     # --- VERIFY IF DOCKER IS RUNNING ---
     if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "vSphere" ]; then
       docker ps > /dev/null 2>&1
@@ -1404,6 +1405,7 @@ echo gaga13
 
     # --- CREATE MANAGEMENT CLUSTER ---
     [ ! -d ~/.tanzu-demo-hub/config ] && mkdir -p ~/.tanzu-demo-hub/config
+echo gaga15
 
     # --- FIX FOR KIND (https://kb.vmware.com/s/article/85245)
     $SSH_COMMAND -n "sudo sysctl net/netfilter/nf_conntrack_max=131072 > /dev/null 2>&1"
@@ -1416,11 +1418,16 @@ echo gaga13
       echo "       => $SSH_DISPLAY -n \"cd $CMDDIR && $CMDEXE $DEPLOY_TKG_TEMPLATE $TDH_TKGMC_NAME $DEBUG $TDH_TOOLS_CONTAINER_TYPE $DEPLOY_TKG_VERSION\""
       exit 1
     fi
+echo gaga16
 
     cleanKubeconfig           $HOME/.kube/config
+echo gaga17
     cleanKubeconfig           $HOME/.kube-tkg/config
+echo gaga18
     #cleanKubeconfig           $HOME/.config/tanzu/config.yaml
+echo gaga19
     cleanManagementCluster
+echo gaga20
 
     # --- LOGIN ---
     tanzu login --server $TDH_TKGMC_NAME > /dev/null 2>&1
@@ -1477,6 +1484,7 @@ echo gaga13
         exit
       fi
     fi
+echo gaga21
 
     tanzu management-cluster kubeconfig get --admin > /dev/null 2>&1
 echo gaga1
