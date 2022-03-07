@@ -9166,6 +9166,14 @@ deleteManagementCluster() {
 
   tmc managementcluster delete $MGMT_CLUSTER -f > /dev/null 2>&1
 
+  cnt=1
+  while [ $cnt -ne 0 ]; do
+    messagePrint " ▪ TMC DeRegister Cluster"             "waiting"
+    cnt=$(tmc managementcluster list | grep -c $MGMT_CLUSTER)
+
+    sleep 30
+  done
+
   cnt=$(tanzu management-cluster get 2>/dev/null | grep -c " $MGMT_CLUSTER ")
   if [ $cnt -gt 0 ]; then
 
