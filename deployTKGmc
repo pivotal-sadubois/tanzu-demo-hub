@@ -1014,9 +1014,7 @@ sshEnvironment
 
 configureJumpHost
 buildTDHToolsContainer   $TDH_TOOLS_CONTAINER_TYPE
-echo gaga10
 configureLetsEnscript
-echo gaga11
 
 if [ "$DEPLOY_TKG_CLEAN" -eq 1 ]; then
   deleteManagementCluster $TDH_TKGMC_NAME
@@ -1030,7 +1028,6 @@ if [ "$DEPLOY_TKG_CLEAN" -eq 1 ]; then
   exit 0
 fi
 
-echo gaga12
 # --- SET MANAGEMENT CLUSTER NAME ---
 TDH_TKGMC_NAME=${TDH_TKGMC_NAME}-${TDH_USER}
 
@@ -1353,12 +1350,10 @@ else
   #########################################################################################################################
   ############################## TANZU KUBERNETS GRID FOR AWS, AZURE AND VPSHERE (TKGm) ###################################
   #########################################################################################################################
-echo gaga12
 
   if [ "${TDH_TKGMC_TKG_TYPE}" == "tkgm" ]; then
     $SSH_COMMAND -n "[ -f $SSH_HOME/tanzu-demo-hub/scripts/uploadOVAimages.sh ] && tanzu-demo-hub/scripts/uploadOVAimages.sh $DEPLOY_TKG_TEMPLATE $DEBUG"
   fi
-echo gaga13
 
   cnt=$(tanzu management-cluster get 2>/dev/null | grep -c " $TDH_TKGMC_NAME ")
   if [ $cnt -eq 0 ]; then
@@ -1393,7 +1388,6 @@ echo gaga13
       done
     fi
 
-echo gaga14
     # --- VERIFY IF DOCKER IS RUNNING ---
     if [ "${TDH_DEPLOYMENT_ENV_NAME}" == "vSphere" ]; then
       docker ps > /dev/null 2>&1
@@ -1405,7 +1399,6 @@ echo gaga14
 
     # --- CREATE MANAGEMENT CLUSTER ---
     [ ! -d ~/.tanzu-demo-hub/config ] && mkdir -p ~/.tanzu-demo-hub/config
-echo gaga15
 
     # --- FIX FOR KIND (https://kb.vmware.com/s/article/85245)
     $SSH_COMMAND -n "sudo sysctl net/netfilter/nf_conntrack_max=131072 > /dev/null 2>&1"
@@ -1418,16 +1411,11 @@ echo gaga15
       echo "       => $SSH_DISPLAY -n \"cd $CMDDIR && $CMDEXE $DEPLOY_TKG_TEMPLATE $TDH_TKGMC_NAME $DEBUG $TDH_TOOLS_CONTAINER_TYPE $DEPLOY_TKG_VERSION\""
       exit 1
     fi
-echo gaga16
 
     cleanKubeconfig           $HOME/.kube/config
-echo gaga17
     cleanKubeconfig           $HOME/.kube-tkg/config
-echo gaga18
     #cleanKubeconfig           $HOME/.config/tanzu/config.yaml
-echo gaga19
     cleanManagementCluster
-echo gaga20
 
     # --- LOGIN ---
     tanzu login --server $TDH_TKGMC_NAME > /dev/null 2>&1
@@ -1484,16 +1472,10 @@ echo gaga20
         exit
       fi
     fi
-echo gaga21
 
     tanzu management-cluster kubeconfig get --admin > /dev/null 2>&1
-echo gaga1
-echo " kubectl config set-cluster $TDH_TKGMC_NAME"
     kubectl config set-cluster $TDH_TKGMC_NAME > /dev/null 2>&1
-echo gaga2
-echo "kubectl config use-context ${TDH_TKGMC_NAME}-admin@$TDH_TKGMC_NAME"
     kubectl config use-context ${TDH_TKGMC_NAME}-admin@$TDH_TKGMC_NAME > /dev/null 2>&1
-echo gaga3
   else
     # --- RECONFIGURE KUBECONFIG OF THE MANAGEMENT CLUSTER ---
     [ ! -d ~/.kube-tkg ] && mkdir -p ~/.kube-tkg

@@ -9164,13 +9164,18 @@ cleanKubeconfig() {
 deleteManagementCluster() {
   MGMT_CLUSTER=$1
 
-  tmc managementcluster delete $MGMT_CLUSTER -f > /dev/null 2>&1
+  #tmc managementcluster delete $MGMT_CLUSTER -f > /dev/null 2>&1
+  tmc managementcluster delete $MGMT_CLUSTER -f 
 
-  cnt=1
-  while [ $cnt -ne 0 ]; do
+  cnt=1; loop=0
+  while [ $cnt -ne 0 -a $loop -lt 10 ]; do
     messagePrint " ▪ TMC DeRegister Cluster"             "waiting"
+
+echo "tmc managementcluster list | grep -c $MGMT_CLUSTER"
+tmc managementcluster list | grep -c $MGMT_CLUSTER
     cnt=$(tmc managementcluster list | grep -c $MGMT_CLUSTER)
 
+    let loop=loop+1
     sleep 30
   done
 
