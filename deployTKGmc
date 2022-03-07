@@ -1520,6 +1520,14 @@ echo gaga3
 
         exit 1
       fi
+
+      cnt=1
+      while [ $cnt -ne 0 ]; do
+        messagePrint " ▪ TMC DeRegister Cluster"             "waiting"
+        cnt=$(tmc managementcluster list | grep -c $TDH_TKGMC_NAME)
+
+        sleep 30
+      done
     fi
   fi
 
