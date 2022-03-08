@@ -28,14 +28,9 @@ Tanzu Demo Hub Featuring Demos - Validation Tests: - March 2022
 | ----------------------------------------- | --- | ------ | ---- |
 | Fortune App (TBS with Redis and Kubeapps) | 1.5.1 | sdubois | 2021-02-24 |
 | | 1.4.1 | sdubois | 2021-02-24 |
-| Kubernetes Pod Security | tmc-aws-awshosted.cfg | 1.5.1 | sdubois | 2021-02-24 |
-
-Kubernetes Pod Security
-TMC Policies
-TBS PetClinic Demo
-Tanzu Data Postgres
-Tanzu Data Postgres
-
+| Kubernetes Pod Security | 1.5.1 | sdubois | 2021-02-24 |
+| TBS PetClinic Demo | 1.5.1 | sdubois | 2021-02-24 |
+| Tanzu Data Postgres | 1.5.1 | sdubois | 2021-02-24 |
 
 ## Release 1.0.0
 The scope of this roadmap is the entire Tanzu Community Edition program, which includes this GitHub project repository, the [Tanzu Framework](https://github.com/vmware-tanzu/tanzu-framework) project repository, the project repositories for packages delivered as part of Tanzu Commmunity Edition, and non-code program aspects such as videos, training materials, and community activities.
