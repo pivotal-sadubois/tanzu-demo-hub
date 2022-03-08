@@ -24,11 +24,11 @@ Tanzu Comnunity Edition Management Cluster Deployment (deployTCEmc) - Validation
 
 Tanzu Demo Hub Featuring Demos - Validation Tests: - March 2022
 
-| Demo                            | TDH Deployment | TKG | TDH Configuration | Tester | Date |
-| ------------------------------- | -------------- | ----| ----------------- | ------ | ------ | 
+| Demo                            | TDH Deployment | TDH Configuration | TKG | Tester | Date |
+| ------------------------------- | -------------- | ----------------- | ----| ------ | ------ | 
 | Fortune App (TBS with Redis and Kubeapps) | tmc-aws-awshosted.cfg | 1.5.1 | sdubois | 2021-02-24 |
-| | tkgmc-azure-sadubois.cfg | 1.5.1 | sdubois | 2021-02-24 |
-| | tkgmc-azure-sadubois.cfg | 1.4.1 | sdubois | 2021-02-24 |
+| | tkgmc-azure-sadubois.cfg | tkg-tanzu-demo-hub-1.4.cfg | 1.5.1 | sdubois | 2021-02-24 |
+| | tkgmc-azure-sadubois.cfg | tkg-tanzu-demo-hub-1.4.cfg | 1.4.1 | sdubois | 2021-02-24 |
 | Kubernetes Pod Security | tmc-aws-awshosted.cfg | 1.5.1 | sdubois | 2021-02-24 |
 
 Kubernetes Pod Security
