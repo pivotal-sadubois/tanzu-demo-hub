@@ -333,107 +333,50 @@ installJenkins
 installArgoCD
 installGitLab
 
+#########################################################################################################################
+################################################ TMC INTEGRATION ########################################################
+#########################################################################################################################
+
 if [ "$TDH_TANZU_MISSION_CONTROL_REGISTRATION" == "true" ]; then
-  cnt=$(tmc cluster list --name $TDH_TKGWC_NAME 2>/dev/null | grep -c $TDH_TKGWC_NAME)
-  if [ $cnt -gt 0 ]; then
-    stt=$(tmc cluster list --name $TDH_TKGWC_NAME -o json | jq -r '.clusters[].status.conditions."Agent-READY".status')
-    if [ "$stt" != "TRUE" ]; then 
-      #tmc cluster reattach --name $TDH_TKGWC_NAME -p tanzu-demo-hub -m $TDH_TKGMC_NAME > /dev/null 2>&1; ret=$?
-      tmc cluster reattach --name $TDH_TKGWC_NAME -p attached -m attached > /dev/null 2>&1; ret=$?
-      if [ $ret -ne 0 ]; then
-        MGMT=$(tmc cluster list --name $TDH_TKGWC_NAME | grep $TDH_TKGWC_NAME | awk '{ print $2 }')
-        PROV=$(tmc cluster list --name $TDH_TKGWC_NAME | grep $TDH_TKGWC_NAME | awk '{ print $3 }')
-        tmc cluster delete $TDH_TKGWC_NAME -p $PROV -m $MGMT -f > /dev/null 2>&1; ret=$?
-        if [ $ret -ne 0 ]; then
-          echo "ERROR: TMC failed to attach cluster"
-          echo "       => tmc cluster delete $TDH_TKGWC_NAME -p tanzu-demo-hub -m $TDH_TKGMC_NAME"
-          exit 1
-        fi
+  TDH_MANAGEMENT_CLUSTER=$TDH_TKGMC_NAME
+  TMC_MANAGEMENT_CLUSTER=$TDH_MANAGEMENT_CLUSTER
+  TMC_PROVISIONER_NAME=attached
+  TMC_MANAGEMENT_CLUSTER=attached
+  KUBECONFIG=$HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.kubeconfig
 
-        # --- WAIT FOR THE CLUSTER TO BE DELETED ---
-        cnt=1
-        while [ $cnt -ne 0 ]; do
-          cnt=$(tmc cluster list --name $TDH_TKGWC_NAME 2>/dev/null | grep -c $TDH_TKGWC_NAME)
-          sleep 20
-        done
-
-        cnt=0
-      fi
-    fi
+  stt=$(attachClusterToTMC $TDH_TKGWC_NAME $TMC_PROVISIONER_NAME $TMC_MANAGEMENT_CLUSTER $KUBECONFIG)
+  if [ "$stt" == "READY/HEALTHY" ]; then
+    # --- TCE INTEGRATIONS ARE NOT YET SUPPORTED IN TCE ---
+    if [ "${TDH_TKGMC_INFRASTRUCTURE}" != "docker" ]; then
+      checkTMCintegration      TO    ## Tanzu Observability (Wavefront)
+      checkTMCintegration      TDP   ## Tanzu Data Protection
+      checkTMCintegration      TCI   ## Tanzu Cluster Inspection
+   fi
+  else
+    echo "ERROR: TKG Worklaod Cluster ($TDH_TKGWC_NAME) is currently in state: $stt. TMC Integration can not be"
+    echo "       performed right now. Delete the Cluster manually in TMC or wait until it has disapiered and try again"
+    echo ""
   fi
-
-  if [ $cnt -eq 0 ]; then
-    tmc cluster attach --name $TDH_TKGWC_NAME --kubeconfig $HOME/.kube/config -p tanzu-demo-hub \
-          -m $TDH_TKGMC_NAME -g tanzu-demo-hub > /dev/null 2>&1; ret=$?
-    if [ $ret -ne 0 ]; then
-      echo "ERROR: TMC failed to attach cluster"
-      echo "       => tmc cluster reattach --name $TDH_TKGWC_NAME --kubeconfig $HOME/.kube/config -p tanzu-demo-hub -m $TDH_TKGMC_NAME "
-      exit 1
-    fi
-  fi
-fi
-
-# --- NO CONNECTION FROM A PEZ-INTERNAL CLUSTER ---
-if [ "${TDH_TKGMC_INFRASTRUCTURE}" != "docker" ]; then
-  checkTMCintegration      TO    ## Tanzu Observability (Wavefront)
-  checkTMCintegration      TDP   ## Tanzu Data Protection
-  checkTMCintegration      TCI   ## Tanzu Cluster Inspection
 fi
 
 echo "-----------------------------------------------------------------------------------------------------------"
-echo "Tanzu Kubernetes Grid Cluster ($TDH_TKGWC_NAME) build completed"
+echo "Tanzu Kubernetes Grid Comnunity Edition Cluster ($TDH_TKGWC_NAME) build completed"
 echo "-----------------------------------------------------------------------------------------------------------"
 if [ "$NATIVE" == "0" ]; then
   printf "\e[1m1.) Set KUBECONFIG and set the cluster context\e[0m\n"
-  echo "    => tools/tdh-tools.sh"
+  echo "    => tools/${TDH_TOOLS}.sh"
   echo "       tdh-tools:/$ kubectl config set-cluster ${TDH_TKGWC_NAME}"
   echo "       tdh-tools:/$ kubectl config use-context ${TDH_TKGWC_CONTEXT}"
-  printf "\e[1m2.) Relaxing Pod Security in cluster ($TDH_TKGWC_NAME)\e[0m\n"
-  echo "    # Allow Privileged Pods for the Cluster"
-  echo "    => tools/tdh-tools.sh"
-  echo "       tdh-tools:/$ kubectl create clusterrolebinding tanzu-demo-hub-privileged-cluster-role-binding \\"
-  echo "                      --clusterrole=vmware-system-tmc-psp-privileged --group=system:authenticated"
-  echo "    # Allow Privileged Pods for a Namespace (my-namespace)"
-  echo "    => tdh-tools:/$ kubectl create rolebinding tanzu-demo-hub-privileged-my-namespace-role-binding \\"
-  echo "                      --clusterrole=vmware-system-tmc-psp-privileged --group=system:authenticated -n my-namespace"
   printf "\e[1m2.) Delete Cluster if not used anymore\e[0m\n"
-  echo "    => tools/tdh-tools.sh"
+  echo "    => tools/${TDH_TOOLS}.sh"
   echo "       tdh-tools:/$ tanzu cluster delete $TDH_TKGWC_NAME"
 else
   echo "1.) Set KUBECONFIG and set the cluster context"
   echo "    => kubectl config set-cluster ${TDH_TKGWC_NAME}"
   echo "    => kubectl config use-context ${TDH_TKGWC_CONTEXT}"
   echo "    => kubectl config get-contexts"
-  echo "2.) Relaxing Pod Security in cluster ($TDH_TKGWC_NAME)"
-  echo "    # Allow Privileged Pods for the Cluster"
-  echo "    => kubectl create clusterrolebinding tanzu-demo-hub-privileged-cluster-role-binding \\"
-  echo "        --clusterrole=vmware-system-tmc-psp-privileged --group=system:authenticated"
-  echo "    # Allow Privileged Pods for a Namespace (my-namespace)"
-  echo "    => kubectl create rolebinding tanzu-demo-hub-privileged-my-namespace-role-binding \\"
-  echo "        --clusterrole=vmware-system-tmc-psp-privileged --group=system:authenticated -n my-namespace"
   echo "3.) Delete Cluster if not used anymore"
   echo "    => tanzu cluster delete $TDH_TKGWC_NAME"
 fi
 
-exit
-
-echo "-----------------------------------------------------------------------------------------------------------"
-echo "1Tanzu Kubernetes Grid Cluster ($TDH_TKGWC_NAME) build completed"
-echo "-----------------------------------------------------------------------------------------------------------"
-echo "1.) Set KUBECONFIG and set the cluster context"
-echo "    => kubectl config set-cluster ${TDH_TKGWC_NAME}"
-echo "    => kubectl config use-context ${TDH_TKGWC_CONTEXT}"
-echo "    => kubectl config get-contexts"
-echo "2.) Relaxing Pod Security in cluster ($TDH_TKGWC_NAME)"
-echo "    # Allow Privileged Pods for the Cluster"
-echo "    => kubectl create clusterrolebinding tanzu-demo-hub-privileged-cluster-role-binding \\"
-echo "        --clusterrole=vmware-system-tmc-psp-privileged --group=system:authenticated"
-echo "    # Allow Privileged Pods for a Namespace (my-namespace)"
-echo "    => kubectl create rolebinding tanzu-demo-hub-privileged-my-namespace-role-binding \\"
-echo "        --clusterrole=vmware-system-tmc-psp-privileged --group=system:authenticated -n my-namespace"
-echo "3.) Delete Cluster if not used anymore"
-echo "    => tanzu cluster delete $TDH_TKGWC_NAME"
-
-
-exit
-
+exit 0

@@ -13054,14 +13054,29 @@ createNamespace() {
 deleteNamespace() {
   NAMESPACE=$1
 
-  cmdLoop kubectl get ns -o json > /tmp/output.json
-  if [ -s /tmp/output.json ]; then
-    nam=$(jq -r --arg key "$NAMESPACE" '.items[] | select(.metadata.name == $key).metadata.name' /tmp/output.json)
-
-    if [ "$nam" != "" ]; then
-      cmdLoop kubectl delete ns $NAMESPACE
+  nam=$NAMESPACE
+  while [ "$nam" == "$NAMESPACE" ]; do
+    cmdLoop kubectl get ns -o json > /tmp/output.json
+    if [ -s /tmp/output.json ]; then
+      nam=$(jq -r --arg key "$NAMESPACE" '.items[] | select(.metadata.name == $key).metadata.name' /tmp/output.json)
+  
+      if [ "$nam" != "" ]; then
+        stt=$(jq -r --arg key "$NAMESPACE" '.items[] | select(.metadata.name == $key).status.phase' /tmp/output.json)
+        if [ "$stt" == "Terminating" ]; then 
+          messagePrint " ▪ Deleting Namespace (force)"     "$NAMESPACE"
+          cmdLoop kubectl get ns $NAMESPACE -o json | \
+                  jq -r '. | select(.spec.finalizers[] == "kubernetes").spec.finalizers |= []' > /tmp/namespace.json
+          cmdLoop kubectl replace --raw "/api/v1/namespaces/$NAMESPACE/finalize" -f /tmp/namespace.json > /dev/null 2>&1
+        else
+          messagePrint " ▪ Deleting Namespace"     "$NAMESPACE"
+          cmdLoop kubectl delete ns $NAMESPACE
+        fi
+      fi
     fi
-  fi
+
+    let cnt=cnt+1
+    sleep 10
+  done
 }
 
 # ------------------------------------------------------------------------------------------
@@ -13571,6 +13586,168 @@ dockerPullSecret() {
     kubectl apply -f /tmp/serviceaccount.yaml > /dev/null 2>&1
   fi
 }
+
+# ------------------------------------------------------------------------------------------
+# Function Name ......: detachClusterFromTMConFailure
+# Function Purpose ...: Detaching a TKG Cluster from TMC on bad status
+# ------------------------------------------------------------------------------------------
+# Argument ($1) ......: Cluster Name
+#          ($2) ......: Provisioner
+#          ($3) ......: Management Cluster
+# ------------------------------------------------------------------------------------------
+# Return Value .......: 0 - SUCCEED, 1 - FAILED
+# ------------------------------------------------------------------------------------------
+# Example ............: detachClusterFromTMConFailure tdh-azure-sadubois attached attached
+#                     : detachClusterFromTMConFailure tdh-vsphere-sadubois attached attached
+# ------------------------------------------------------------------------------------------
+detachClusterFromTMConFailure() {
+  clusterName=$1
+  provisioner=$2
+  mgmtCluster=$3
+  flag="$4"
+
+  #########################################################################################################################
+  ############################################ FORCE DELETE OF CLUSTER  ###################################################
+  #########################################################################################################################
+  cmdLoop tmc cluster list --name $clusterName -p $provisioner -m $mgmtCluster -o json > /tmp/output.json
+  nam=$(jq -r --arg clu "$clusterName" --arg pvn "$provisioner" --arg mcl "$mgmtCluster" \
+        '.clusters[] | select(.fullName.name == $clu and .fullName.provisionerName == $pvn and .fullName.managementClusterName == $mcl).fullName.name' 2>/dev/null /tmp/output.json) 
+  if [ "$nam" == "$clusterName" ]; then
+    # --- CLUSTER EXISTS - CHECK STATUS ---
+    stt=$(jq -r --arg clu "$clusterName" --arg pvn "$provisioner" --arg mcl "$mgmtCluster" \
+          '.clusters[] | select(.fullName.name == $clu and .fullName.provisionerName == $pvn and .fullName.managementClusterName == $mcl).status.phase' 2>/dev/null /tmp/output.json) 
+    hlt=$(jq -r --arg clu "$clusterName" --arg pvn "$provisioner" --arg mcl "$mgmtCluster" \
+          '.clusters[] | select(.fullName.name == $clu and .fullName.provisionerName == $pvn and .fullName.managementClusterName == $mcl).status.health' 2>/dev/null /tmp/output.json) 
+
+    [ "$flag" == "force" ] && stt="FAILED"
+    if [ ! "$stt" == "READY" -o ! "$hlt" == "HEALTHY" ]; then
+      tmc cluster delete $clusterName -p $provisioner -m $mgmtCluster > /dev/null 2>&1
+
+      # --- WAIT FOR THE CLUSTER TO BE DELETED ---
+      nam="$clusterName"; ccc=0
+      while [ "$nam" == "$clusterName" -a $ccc -lt 5 ]; do
+        cmdLoop tmc cluster list --name $clusterName -p $provisioner -m $mgmtCluster -o json > /tmp/output.json
+        nam=$(jq -r --arg clu "$clusterName" --arg pvn "$provisioner" --arg mcl "$mgmtCluster" \
+              '.clusters[] | select(.fullName.name == $clu and .fullName.provisionerName == $pvn and .fullName.managementClusterName == $mcl).fullName.name' 2>/dev/null /tmp/output.json) 
+        [ "$nam" != "$clusterName" ] && break
+        let ccc=ccc+1
+        sleep 60
+      done
+    fi
+  fi
+
+  #########################################################################################################################
+  ############################################ FORCE DELETE OF CLUSTER  ###################################################
+  #########################################################################################################################
+  cmdLoop tmc cluster list --name $clusterName -p $provisioner -m $mgmtCluster -o json > /tmp/output.json
+  nam=$(jq -r --arg clu "$clusterName" --arg pvn "$provisioner" --arg mcl "$mgmtCluster" \
+        '.clusters[] | select(.fullName.name == $clu and .fullName.provisionerName == $pvn and .fullName.managementClusterName == $mcl).fullName.name' 2>/dev/null /tmp/output.json) 
+  if [ "$nam" == "$clusterName" ]; then
+    nam=$(jq -r --arg clu "$clusterName" --arg pvn "$provisioner" --arg mcl "$mgmtCluster" \
+          '.clusters[] | select(.fullName.name == $clu and .fullName.provisionerName == $pvn and .fullName.managementClusterName == $mcl).fullName.name' /tmp/output.json)
+    stt=$(jq -r --arg clu "$clusterName" --arg pvn "$provisioner" --arg mcl "$mgmtCluster" \
+          '.clusters[] | select(.fullName.name == $clu and .fullName.provisionerName == $pvn and .fullName.managementClusterName == $mcl).status.phase' 2>/dev/null /tmp/output.json)
+    hlt=$(jq -r --arg clu "$clusterName" --arg pvn "$provisioner" --arg mcl "$mgmtCluster" \
+          '.clusters[] | select(.fullName.name == $clu and .fullName.provisionerName == $pvn and .fullName.managementClusterName == $mcl).status.health' 2>/dev/null /tmp/output.json)
+    if [ ! "$stt" == "READY" -o ! "$hlt" == "HEALTHY" ]; then
+      tmc cluster delete $clusterName -p $provisioner -m $mgmtCluster -f > /dev/null 2>&1
+
+      # --- WAIT FOR THE CLUSTER TO BE DELETED ---
+      nam="$clusterName"; ccc=0
+      while [ "$nam" == "$clusterName" -a $ccc -lt 5 ]; do
+        cmdLoop tmc cluster list --name $clusterName -p $provisioner -m $mgmtCluster -o json > /tmp/output.json
+        nam=$(jq -r --arg clu "$clusterName" --arg pvn "$provisioner" --arg mcl "$mgmtCluster" \
+              '.clusters[] | select(.fullName.name == $clu and .fullName.provisionerName == $pvn and .fullName.managementClusterName == $mcl).fullName.name ' /tmp/output.json)
+        [ "$nam" != "$clusterName" ] && break
+        let ccc=ccc+1
+        sleep 30
+      done
+    fi
+
+    #########################################################################################################################
+    ######################################### CLEANUP NAMESPACE IF STILL THERE ##############################################
+    #########################################################################################################################
+    #deleteNamespace vmware-system-tmc 
+  fi
+}
+
+# ------------------------------------------------------------------------------------------
+# Function Name ......: attachClusterToTMC
+# Function Purpose ...: Attaching a TKG Cluster to TMC 
+# ------------------------------------------------------------------------------------------
+# Argument ($1) ......: Cluster Name
+#          ($2) ......: Provisioner
+#          ($3) ......: Management Cluster
+#          ($4) ......: Kubeconfig
+# ------------------------------------------------------------------------------------------
+# Return Value .......: Status (HEALTY, DETACHING, FAILED) 
+# ------------------------------------------------------------------------------------------
+# Example: attachClusterToTMC tdh-azure-sadubois attached attached $HOME/.tanzu-demo-hub/config/tdh-azure-sadubois.kubeconfig 
+# ------------------------------------------------------------------------------------------
+attachClusterToTMC() {
+  clusterName=$1
+  provisioner=$2
+  mgmtCluster=$3
+  kubeconfig=$4
+
+  #########################################################################################################################
+  ######################################### VERIFY CLUSTER AVAIABLILITY ###################################################
+  #########################################################################################################################
+  kubectl --kubeconfig=$kubeconfig --request-timeout 1s get ns > /dev/null 2>&1; ret=$?
+  [ $ret -ne 0 ] && echo "UNREACHABLE" && return 1
+
+  #########################################################################################################################
+  ########################################## DELETE CLUSTER IN FAILED STATE ###############################################
+  #########################################################################################################################
+  detachClusterFromTMConFailure $clusterName $provisioner $mgmtCluster
+  
+  #########################################################################################################################
+  ################################################ ATTACH CLUSTER TO TMC ##################################################
+  #########################################################################################################################
+  cmdLoop tmc cluster list --name $clusterName -p $provisioner -m $mgmtCluster -o json > /tmp/output.json
+  nam=$(jq -r --arg clu "$clusterName" --arg pvn "$provisioner" --arg mcl "$mgmtCluster" \
+        '.clusters[] | select(.fullName.name == $clu and .fullName.provisionerName == $pvn and .fullName.managementClusterName == $mcl).fullName.name' /tmp/output.json)
+  stt=$(jq -r --arg clu "$clusterName" --arg pvn "$provisioner" --arg mcl "$mgmtCluster" \
+        '.clusters[] | select(.fullName.name == $clu and .fullName.provisionerName == $pvn and .fullName.managementClusterName == $mcl).status.phase' /tmp/output.json)
+  hlt=$(jq -r --arg clu "$clusterName" --arg pvn "$provisioner" --arg mcl "$mgmtCluster" \
+        '.clusters[] | select(.fullName.name == $clu and .fullName.provisionerName == $pvn and .fullName.managementClusterName == $mcl).status.health' /tmp/output.json)
+  [ "$nam" == "$clusterName" ] && echo "$stt/$hlt" && return 0
+
+  if [ "$nam" != "$clusterName" ]; then 
+    (cd /tmp && tmc cluster attach --name $clusterName --kubeconfig=$kubeconfig -p $provisioner \
+          -m $mgmtCluster -g tanzu-demo-hub --force > /tmp/error.log 2>&1); ret=$?
+
+    deleteFailedPods  vmware-system-tmc > /dev/null 2>&1
+    runningPods       vmware-system-tmc > /dev/null 2>&1
+
+    # --- WAIT FOR THE CLUSTER TO BE STARTED ---
+    stt="NOTREADY"; hlt="UNKNOWN"; ccc=0
+    while [ "$stt/$hlt" != "READY/HEALTHY" -a $ccc -lt 10 ]; do
+      cmdLoop tmc cluster list --name $clusterName -p $provisioner -m $mgmtCluster -o json > /tmp/output.json
+      stt=$(jq -r --arg clu "$clusterName" --arg pvn "$provisioner" --arg mcl "$mgmtCluster" \
+            '.clusters[] | select(.fullName.name == $clu and .fullName.provisionerName == $pvn and .fullName.managementClusterName == $mcl).status.phase' /tmp/output.json) 
+      hlt=$(jq -r --arg clu "$clusterName" --arg pvn "$provisioner" --arg mcl "$mgmtCluster" \
+          '.clusters[] | select(.fullName.name == $clu and .fullName.provisionerName == $pvn and .fullName.managementClusterName == $mcl).status.health' /tmp/output.json) 
+      [ "$stt/$hlt" == "READY/HEALTHY" ] && break
+echo "sleep 60 - $stt/$hlt" 1>&2
+      let ccc=ccc+1
+      sleep 60
+    done
+  fi
+
+  #########################################################################################################################
+  ################################################## VERIFY STATUS ########################################################
+  #########################################################################################################################
+  cmdLoop tmc cluster list --name $clusterName -p $provisioner -m $mgmtCluster -o json > /tmp/output.json
+  stt=$(jq -r --arg clu "$clusterName" --arg pvn "$provisioner" --arg mcl "$mgmtCluster" \
+        '.clusters[] | select(.fullName.name == $clu and .fullName.provisionerName == $pvn and .fullName.managementClusterName == $mcl).status.phase' /tmp/output.json)
+  hlt=$(jq -r --arg clu "$clusterName" --arg pvn "$provisioner" --arg mcl "$mgmtCluster" \
+        '.clusters[] | select(.fullName.name == $clu and .fullName.provisionerName == $pvn and .fullName.managementClusterName == $mcl).status.health' /tmp/output.json)
+
+  echo "$stt/$hlt"; return 0
+}
+
+
 
 #kubectl get tanzukubernetescluster -n tanzu-demo-hub tdh-vsphere-sadubois
 #kubectl delete tanzukubernetescluster -n tanzu-demo-hub tdh-vsphere-sadubois

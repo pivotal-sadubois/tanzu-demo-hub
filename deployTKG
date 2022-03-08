@@ -332,129 +332,37 @@ installKubeapps
 installGitea
 installJenkins
 installArgoCD
-#installGitLab
+installGitLab
 
-if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "vSphere" -a "$TDH_TKGMC_ENVNAME" == "tkgs" ]; then
-  TMC_PROVISIONER_NAME=attached
-  TMC_MANAGEMENT_CLUSTER=attached
+#########################################################################################################################
+################################################ TMC INTEGRATION ########################################################
+#########################################################################################################################
 
-  echo "INFO: Attaching the cluster $TDH_TKGWC_NAME to TMC needs to be done manually, because of stability problems with TMC"
-  echo "      s attaching clould get stalled. It can be done in the TMC GUI or by CLI."
-  if [ "$NATIVE" == "0" ]; then
-    echo "       => tools/${TDH_TOOLS}.sh"
-    echo "          tdh-tools:/$ tmc cluster attach --name $TDH_TKGWC_NAME --kubeconfig=$KUBECONFIG -p $TMC_PROVISIONER_NAME -m $TMC_MANAGEMENT_CLUSTER -g tanzu-demo-hub"
-    echo "          tdh-tools:/$ exit"
+if [ "$TDH_TANZU_MISSION_CONTROL_REGISTRATION" == "true" ]; then
+  if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "vSphere" -a "$TDH_TKGMC_ENVNAME" == "tkgs" ]; then
+    TMC_PROVISIONER_NAME=attached
+    TMC_MANAGEMENT_CLUSTER=attached
   else
-    echo "       => tmc cluster attach --name $TDH_TKGWC_NAME --kubeconfig=$KUBECONFIG -p $TMC_PROVISIONER_NAME -m $TMC_MANAGEMENT_CLUSTER -g tanzu-demo-hub"
+    TDH_MANAGEMENT_CLUSTER=$TDH_TKGMC_NAME
+    TMC_MANAGEMENT_CLUSTER=$TDH_MANAGEMENT_CLUSTER
+    TMC_PROVISIONER_NAME=attached
+    TMC_MANAGEMENT_CLUSTER=attached
+    KUBECONFIG=$HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.kubeconfig
   fi
-else
-  TDH_MANAGEMENT_CLUSTER=$TDH_TKGMC_NAME
-  TMC_MANAGEMENT_CLUSTER=$TDH_MANAGEMENT_CLUSTER
-  TMC_MANAGEMENT_CLUSTER=attached
-  KUBECONFIG=$HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.kubeconfig
 
-  echo "INFO: Attaching the cluster $TDH_TKGWC_NAME to TMC needs to be done manually, because of stability problems with TMC"
-  echo "      as attaching clould get stalled. It can be done in the TMC GUI or by CLI."
-  if [ "$NATIVE" == "0" ]; then
-    echo "       => tools/${TDH_TOOLS}.sh"
-    echo "          tdh-tools:/$ tmc cluster attach --name $TDH_TKGWC_NAME --kubeconfig=$KUBECONFIG -p $TMC_PROVISIONER_NAME -m $TMC_MANAGEMENT_CLUSTER -g tanzu-demo-hub"
-    echo "          tdh-tools:/$ exit"
+  stt=$(attachClusterToTMC $TDH_TKGWC_NAME $TMC_PROVISIONER_NAME $TMC_MANAGEMENT_CLUSTER $KUBECONFIG)
+  if [ "$stt" == "READY/HEALTHY" ]; then 
+    # --- NO CONNECTION FROM A PEZ-INTERNAL CLUSTER ---
+    if [ "${TDH_TKGMC_INFRASTRUCTURE}" != "vSphere" ]; then
+      checkTMCintegration      TO    ## Tanzu Observability (Wavefront)
+      checkTMCintegration      TDP   ## Tanzu Data Protection
+      checkTMCintegration      TCI   ## Tanzu Cluster Inspection
+   fi
   else
-    echo "       => tmc cluster attach --name $TDH_TKGWC_NAME --kubeconfig=$KUBECONFIG -p $TMC_PROVISIONER_NAME -m $TMC_MANAGEMENT_CLUSTER -g tanzu-demo-hub"
+    echo "ERROR: TKG Worklaod Cluster ($TDH_TKGWC_NAME) is currently in state: $stt. TMC Integration can not be"
+    echo "       performed right now. Delete the Cluster manually in TMC or wait until it has disapiered and try again"
+    echo ""
   fi
-
-  if [ "$TDH_TANZU_MISSION_CONTROL_REGISTRATION" == "true" ]; then
-    cmdLoop tmc cluster list -p $TMC_PROVISIONER_NAME -m $TMC_MANAGEMENT_CLUSTER -o json > /tmp/output.json
-    nam=$(jq -r --arg key "$TDH_TKGWC_NAME" '.clusters[] | select(.fullName.name == $key).fullName.name' /tmp/output.json)
-    if [ "$nam" == "$TDH_TKGWC_NAME" ]; then
-      tmc cluster validate -k $KUBECONFIG -m attached -p attached > /dev/null 2>&1; ret=$?
-
-      stt=$(jq -r --arg key "$TDH_TKGWC_NAME" '.clusters[] | select(.fullName.name == $key).status.phase' /tmp/output.json) 
-      hlt=$(jq -r --arg key "$TDH_TKGWC_NAME" '.clusters[] | select(.fullName.name == $key).status.health' /tmp/output.json) 
-      if [ "$stt" != "READY" -a "$hlt" != "HEALTHY" ]; then 
-        tmc cluster delete $TDH_TKGWC_NAME -p $TMC_PROVISIONER_NAME -m $TMC_MANAGEMENT_CLUSTER -f > /dev/null 2>&1; ret=$?
-        if [ $ret -ne 0 ]; then
-          tmc cluster delete $TDH_TKGWC_NAME -p $TMC_PROVISIONER_NAME -m $TMC_MANAGEMENT_CLUSTER -f > /tmp/error.log 2>&1; ret=$?
-          if [ $ret -ne 0 ]; then
-            logMessages /tmp/error.log
-            echo "ERROR: TMC failed to delete cluster"
-            if [ "$NATIVE" == "0" ]; then
-              echo "       => tools/${TDH_TOOLS}.sh"
-              echo "          tdh-tools:/$ tmc cluster delete $TDH_TKGWC_NAME -p $TMC_PROVISIONER_NAME -m $TMC_MANAGEMENT_CLUSTER -f"
-              echo "          tdh-tools:/$ exit"
-            else
-              echo "       => tmc cluster delete $TDH_TKGWC_NAME -p $TMC_PROVISIONER_NAME -m $TMC_MANAGEMENT_CLUSTER -f"
-            fi
-            exit 1
-          else
-            if [ -d /tmp/k8s-attach-manifest.yaml ]; then
-              kubectl apply -f k8s-attach-manifest.yaml
-            fi
-          fi
-  
-          # --- WAIT FOR THE CLUSTER TO BE DELETED ---
-          cnt=1
-          while [ $cnt -ne 0 ]; do
-            cnt=$(tmc cluster list --name $TDH_TKGWC_NAME 2>/dev/null | grep -c $TDH_TKGWC_NAME)
-            sleep 20
-          done
-        else
-          # --- WAIT FOR THE CLUSTER TO BE DELETED ---
-          cnt=1
-          while [ $cnt -ne 0 ]; do
-            cnt=$(tmc cluster list --name $TDH_TKGWC_NAME 2>/dev/null | grep -c $TDH_TKGWC_NAME)
-            sleep 20
-          done
-        fi
-  
-        kubectl delete ns vmware-system-tmc --wait=true > /dev/null 2>&1
-      fi
-    fi
-  
-    cmdLoop tmc cluster list -p $TMC_PROVISIONER_NAME -m $TMC_MANAGEMENT_CLUSTER -o json > /tmp/output.json
-    nam=$(jq -r --arg key "$TDH_TKGWC_NAME" '.clusters[] | select(.fullName.name == $key).fullName.name' /tmp/output.json)
-    if [ "$nam" != "$TDH_TKGWC_NAME" ]; then
-      ret=1; cnt=0
-      while [ $ret -ne 0 -a $cnt -lt 5 ]; do
-        (cd /tmp && tmc cluster attach --name $TDH_TKGWC_NAME --kubeconfig=$KUBECONFIG -p $TMC_PROVISIONER_NAME \
-              -m $TMC_MANAGEMENT_CLUSTER -g tanzu-demo-hub --force > /tmp/error.log 2>&1); ret=$?
-  
-        [ $ret -eq 0 ] && break
-        cmdLoop tmc cluster delete $TDH_TKGWC_NAME -p $TMC_PROVISIONER_NAME -m $TMC_MANAGEMENT_CLUSTER -f > /tmp/error.log 2>&1
-  
-        let cnt=cnt+1
-        sleep 30
-      done
-  
-      if [ $ret -ne 0 ]; then
-        logMessages /tmp/error.log
-        echo "ERROR: TMC failed to attach cluster"
-        if [ "$NATIVE" == "0" ]; then
-          echo "       => tools/${TDH_TOOLS}.sh"
-          echo "          tdh-tools:/$ tmc cluster attach --name $TDH_TKGWC_NAME --kubeconfig=$KUBECONFIG -p $TMC_PROVISIONER_NAME -m $TMC_MANAGEMENT_CLUSTER -g tanzu-demo-hub"
-          echo "          tdh-tools:/$ tmc cluster logs -k $KUBECONFIG"
-          echo "          tdh-tools:/$ exit"
-        else
-          echo "       => tanzu cluster delete $TDH_TKGWC_NAME -y"
-          echo "       => tmc cluster logs -k $KUBECONFIG"
-        fi
-        exit 1
-      else
-        if [ -f /tmp/k8s-attach-manifest.yaml ]; then 
-          cmdLoop kubectl apply -f /tmp/k8s-attach-manifest.yaml > /dev/null 2>&1
-          deleteFailedPods  vmware-system-tmc
-          runningPods       vmware-system-tmc
-        fi
-      fi
-    fi
-  fi
-
-  # --- NO CONNECTION FROM A PEZ-INTERNAL CLUSTER ---
-  #if [ "${TDH_TKGMC_INFRASTRUCTURE}" != "vSphere1" ]; then
-  #  checkTMCintegration      TO    ## Tanzu Observability (Wavefront)
-  #  checkTMCintegration      TDP   ## Tanzu Data Protection
-  #  checkTMCintegration      TCI   ## Tanzu Cluster Inspection
-  #fi
 fi
 
 echo "-----------------------------------------------------------------------------------------------------------"
