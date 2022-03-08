@@ -9,7 +9,7 @@ This document provides an overview of the major themes driving Tanzu Community E
 Tanzu Management Cluster Deployment (deployTKGmc) - Validation Tests: - March 2022
 
 | Deployment | Environment | Type | TKG Version | Command | Tester | Date | Test Status |
-| ---------- | ----------- | ------ | ----------- | ----------- | ----------- |
+| ---------- | ----------- | ---- | ----------- | ------- | ------ | ---- { ----------- |
 | tkgmc-aws-dev.cfg | AWS | Dev | 1.4.1 | deployTKGmc -d tkgmc-aws-dev.cfg -v 1.4.1 | sdubois | 2021-03-04 | completed |
 | tkgmc-aws-dev.cfg | AWS | Dev | 1.5.1 | deployTKGmc -d tkgmc-aws-dev.cfg -v 1.5.1 | sdubois | 2021-03-04 | completed |
 | tkgmc-aws-dev.cfg | Azure | Dev | 1.4.1 | deployTKGmc -d tkgmc-aws-dev.cfg -v 1.4.1 | sdubois | 2021-03-06 | completed |
