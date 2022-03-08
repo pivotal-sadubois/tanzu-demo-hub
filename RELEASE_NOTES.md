@@ -14,30 +14,28 @@ Tanzu Management Cluster Deployment (deployTKGmc) - Validation Tests: - March 20
 | | AWS | Dev | 1.5.1 | deployTKGmc -d tkgmc-aws-dev.cfg -v 1.5.1 | sdubois | 2021-03-04 |
 | tkgmc-azure-dev.cfg | Azure | Dev | 1.4.1 | deployTKGmc -d tkgmc-aws-dev.cfg -v 1.4.1 | sdubois | 2021-03-06 |
 | | Azure | Dev | 1.4.1 | deployTKGmc -d tkgmc-aws-dev.cfg  -v 1.5.1 | sdubois | 2021-03-06 |
+
+Tanzu Comnunity Edition Management Cluster Deployment (deployTCEmc) - Validation Tests: - March 2022
+
+| Deployment | Cloud | Type | TKG | Command | Tester | Date |
+| ------------------ | ----- | ---- | --- | ----------------------------------------------------------- | ------ | ---- |
 | tcemc-azure-dev.cfg | Docker | Dev | 0.9.1 | deployTCEmc -d tkgmc-aws-dev.cfg -v 0.9.1 | sdubois | 2021-02-24 |
 | | Docker | Dev | 0.10.0 | deployTCEmc -d tkgmc-aws-dev.cfg  -v 0.10.0 | sdubois | 2021-02-24 |
 
-Tanzu Management Cluster Deployment (deployTKGmc) - Validation Tests: - March 2022
+Tanzu Demo Hub Featuring Demos - Validation Tests: - March 2022
 
-| Deployment | Cloud | Type | TKG | Command | Tester | Date | Test Status |
-| ------------------ | ----- | ---- | --- | --------------------------------------------------------- | ------ | ---- | ----------- |
-| tkgmc-aws-dev.cfg | AWS | Dev | 1.4.1 | deployTKGmc -d tkgmc-aws-dev.cfg -v 1.4.1 | sdubois | 2021-03-04 | completed |
-| tkgmc-aws-dev.cfg | AWS | Dev | 1.5.1 | deployTKGmc -d tkgmc-aws-dev.cfg -v 1.5.1 | sdubois | 2021-03-04 | completed |
-| tkgmc-aws-dev.cfg | Azure | Dev | 1.4.1 | deployTKGmc -d tkgmc-aws-dev.cfg -v 1.4.1 | sdubois | 2021-03-06 | completed |
-| tkgmc-aws-dev.cfg | Azure | Dev | 1.4.1 | deployTKGmc -d tkgmc-aws-dev.cfg  -v 1.5.1 | sdubois | 2021-03-06 | completed |
+| Demo                            | TDH Deployment | TKG | TDH Configuration | Tester | Date |
+| ------------------------------- | -------------- | ----| ----------------- | ------ | ------ | 
+| Fortune App (TBS with Redis and Kubeapps) | tmc-aws-awshosted.cfg | 1.5.1 | sdubois | 2021-02-24 |
+| | tkgmc-azure-sadubois.cfg | 1.5.1 | sdubois | 2021-02-24 |
+| | tkgmc-azure-sadubois.cfg | 1.4.1 | sdubois | 2021-02-24 |
+| Kubernetes Pod Security | tmc-aws-awshosted.cfg | 1.5.1 | sdubois | 2021-02-24 |
 
-Tanzu Workload Cluster Deployment (deployTKG) - Validation Tests: - March 2022
-
-| Deployment | Deployment File | Environment | TKG Version | Test Status |
-| ---------- | -------- | ------ | ----------- | ----------- | ----------- |
-| tkgmc-aws-dev.cfg | depliy | Awaiting Proposal | v1.2 |
-
-
-
-
-| Deployment | Feature | Status (Phase) | Targeted Release |
-| ----- | ------- | -------------- | ---------------- |
-| | Make management clusters registerable in Tanzu Mission Control | Implementation in Progress: [Proposal](https://github.com/vmware-tanzu/community-edition/issues/2992) | v0.11 |
+Kubernetes Pod Security
+TMC Policies
+TBS PetClinic Demo
+Tanzu Data Postgres
+Tanzu Data Postgres
 
 
 ## Release 1.0.0
