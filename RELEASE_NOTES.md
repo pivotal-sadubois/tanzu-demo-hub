@@ -13,7 +13,7 @@ Tanzu Management Cluster Deployment (deployTKGmc) - Validation Tests: - March 20
 | tkgmc-aws-dev.cfg | AWS | Dev | 1.4.1 | deployTKGmc -d tkgmc-aws-dev.cfg -v 1.4.1 | sdubois | 2021-03-04 |
 | | AWS | Dev | 1.5.1 | deployTKGmc -d tkgmc-aws-dev.cfg -v 1.5.1 | sdubois | 2021-03-04 |
 | tkgmc-azure-dev.cfg | Azure | Dev | 1.4.1 | deployTKGmc -d tkgmc-aws-dev.cfg -v 1.4.1 | sdubois | 2021-03-06 |
-| | Azure | Dev | 1.4.1 | deployTKGmc -d tkgmc-aws-dev.cfg  -v 1.5.1 | sdubois | 2021-03-06 - completed |
+| | Azure | Dev | 1.4.1 | deployTKGmc -d tkgmc-aws-dev.cfg  -v 1.5.1 | sdubois | 2021-03-06 |
 | tcemc-azure-dev.cfg | Docker | Dev | 0.9.1 | deployTCEmc -d tkgmc-aws-dev.cfg -v 0.9.1 | sdubois | 2021-02-24 |
 | | Docker | Dev | 0.10.0 | deployTCEmc -d tkgmc-aws-dev.cfg  -v 0.10.0 | sdubois | 2021-02-24 |
 
