@@ -216,7 +216,6 @@ if [ "$DEPLOY_TKG_CLEAN" -eq 1 ]; then
   exit 0
 fi
 
-
 # --- VERYFY ACCESS TO CLOUD ---
 checkTDHenvironment
 

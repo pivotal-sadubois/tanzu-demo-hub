@@ -3198,7 +3198,6 @@ createTKGMCcluster() {
     else
       messagePrint " ▪ Management Cluster already installed"    "/tmp/$TDH_TKGMC_NAME.log"
     fi
-echo "holullu AWS"
 
     if [ ! -f $TKG_KUBECONFIG ]; then
       tanzu management-cluster kubeconfig get --admin > /dev/null 2>&1
@@ -7266,8 +7265,6 @@ installBuildService() {
       # --- DEPLOY KAPP ---
       cnt=$(kapp inspect -a tanzu-build-service 2>/dev/null | grep -c "0 resources")
       stt=$(kapp inspect -a tanzu-build-service 2>/dev/null | tail -1)
-echo "gaga cnt:$cnt"
-echo "gaga stt:stt"
       if [ "$stt" != "Succeeded" -o $cnt -eq 1 ]; then
         kapp delete -a tanzu-build-service -y >/dev/null 2>&1
         messagePrint " ▪ Deploy Build Service (kapp)" "/tmp/bundle/values.yaml"
@@ -12513,9 +12510,10 @@ runTDHtoolsDemos() {
     # --- GATHER RIGHT KUBECONFIG ---
     for n in $(ls -1 $HOME/.tanzu-demo-hub/config/tkgmc-vsphere*.kubeconfig 2>/dev/null); do
       nam=$(echo $n | awk -F'/' '{ print $NF }' | sed 's/\.kubeconfig//g')
+#gaga
       vsphereSupervisorClusterLogin $nam
 
-      kubectl --kubeconfig=$n get ns >/dev/null 2>&1; ret=$?
+      kubectl --kubeconfig=$n --request-timeout 1s get ns >/dev/null 2>&1; ret=$?
       if [ $ret -eq 0 ]; then
         nam=$(echo $n | awk -F'/' '{ print $NF }' | sed 's/\.kubeconfig//g') 
         CLUSTER_LIST="$CLUSTER_LIST $nam" 
@@ -13729,7 +13727,6 @@ attachClusterToTMC() {
       hlt=$(jq -r --arg clu "$clusterName" --arg pvn "$provisioner" --arg mcl "$mgmtCluster" \
           '.clusters[] | select(.fullName.name == $clu and .fullName.provisionerName == $pvn and .fullName.managementClusterName == $mcl).status.health' /tmp/output.json) 
       [ "$stt/$hlt" == "READY/HEALTHY" ] && break
-echo "sleep 60 - $stt/$hlt" 1>&2
       let ccc=ccc+1
       sleep 60
     done
