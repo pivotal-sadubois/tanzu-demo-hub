@@ -12573,10 +12573,12 @@ runTDHtoolsDemos() {
 
     for n in $(ls -1 $HOME/.tanzu-demo-hub/config/tdh*.kubeconfig 2>/dev/null); do
       nam=$(echo $n | awk -F'/' '{ print $NF }' | sed 's/\.kubeconfig//g') 
+echo "N:$n NAM:$nam"
   
-      kubectl --kubeconfig=$n --request-timeout 1s get cm -n default -o json > /tmp/output.json 2>/dev/null
+      cmdLoop kubectl --kubeconfig=$n --request-timeout 1s get cm -n default -o json > /tmp/output.json 2>/dev/null
       if [ -s /tmp/output.json ]; then
         cfm=$(jq -r '.items[].metadata | select(.name == "tanzu-demo-hub").name' /tmp/output.json 2>/dev/null)
+echo "cfm:$cfm"
         if [ "$cfm" == "tanzu-demo-hub" ]; then
           CLUSTER_LIST="$CLUSTER_LIST $nam" 
           CONTEXT_LIST="$CONTEXT_LIST $nam"
