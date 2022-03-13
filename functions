@@ -12438,10 +12438,8 @@ runTDHtoolsDemos() {
     tag=$(echo $n | awk -F: '{ print $1 }') 
 
 echo "IMG:$img TAG:$tag"
-echo "$TDHHOME/files/tdh-tools/Dockerfile-$img"
-ls -la $TDHHOME/files/tdh-tools/Dockerfile-$img
     if [ -f $TDHHOME/files/tdh-tools/Dockerfile-$img ]; then 
-      DOCKER_CHKSUM=$(sum $TDHPATH/files/tdh-tools/$Dockerfile-$img | awk '{ print $1 }')
+      DOCKER_CHKSUM=$(sum $TDHHOME/files/tdh-tools/$Dockerfile-$img | awk '{ print $1 }')
 echo "DOCKER_CHKSUM:$DOCKER_CHKSUM TAG:$tag"
     fi
 
