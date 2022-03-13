@@ -12449,8 +12449,8 @@ runTDHtoolsDemos() {
   done
 
 
-iecho "TDH_TOOLS_TYPE:$TDH_TOOLS_TYPE"
-iecho "TDH_TOOLS:$TDH_TOOLS"
+echo "TDH_TOOLS_TYPE:$TDH_TOOLS_TYPE"
+echo "TDH_TOOLS:$TDH_TOOLS"
 echo end
 sleep 10000
   DOCKER_CHKSUM=$(sum $TDHPATH/files/tdh-tools/$TDH_TOOLS_DOCKERFILE | awk '{ print $1 }')
