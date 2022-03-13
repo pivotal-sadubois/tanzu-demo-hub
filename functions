@@ -4689,6 +4689,7 @@ tkgCreateCluster() {
       cat $HOME/.tanzu/tkg/clusterconfigs/$TDH_TKGMC_CONFIG deployments/$TKG_DEPLOYMENT | egrep -v "^#" | sed -e '/^$/d'
     fi
 
+#hallo docker
     tanzu cluster get $TDH_TKGWC_NAME >/dev/null 2>&1; ret=$?
     if [ $ret -ne 0 ]; then
       echo "-----------------------------------------------------------------------------------------------------------"
@@ -4779,6 +4780,7 @@ tkgCreateCluster() {
       cat $HOME/.tanzu/tkg/clusterconfigs/$TDH_TKGMC_CONFIG deployments/$TKG_DEPLOYMENT | egrep -v "^#" | sed -e '/^$/d'
     fi
 
+#hallo azure
     tanzu cluster get $TDH_TKGWC_NAME >/dev/null 2>&1; ret=$?
     if [ $ret -ne 0 ]; then
       echo "-----------------------------------------------------------------------------------------------------------"
@@ -8005,6 +8007,7 @@ createClusterIssuer() {
     #echo "  - \"$NOTARY_HOSTNAME\""                             >> $CERTIFICATE_CONFIG
     echo "  - '*.apps-contour.${TDH_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}'"     >> $CERTIFICATE_CONFIG
     echo "  - '*.apps-nginx.${TDH_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}'"       >> $CERTIFICATE_CONFIG
+    echo "  - '*.gitlab.${TDH_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}'"       >> $CERTIFICATE_CONFIG
 
     messageTitle " - This may take a couple of minutes ...."
     kubectl create -f $CERTIFICATE_CONFIG > /dev/null 2>&1
@@ -8023,9 +8026,11 @@ createClusterIssuer() {
     #DELETEME
     #stt=$(kubectl get certificate $TDH_TLS_CERT -o json 2>/dev/null | \
     #        jq -r '.status.conditions[] | select(.type == "Ready").status')
+
     while [ $cnt -lt 5 -a "$stt" != "True" ]; do
       cmdLoop kubectl get certificate $TDH_TLS_CERT -o json > /tmp/output.json
       stt=$(jq -r '.status.conditions[] | select(.type == "Ready").status' /tmp/output.json)
+echo "tdhdebug:functions:createClusterIssuer stt:$stt"
 
       #DELETEME
       #stt=$(kubectl get certificate $TDH_TLS_CERT -o json 2>/dev/null | \
@@ -12035,6 +12040,7 @@ TanzuPackage_Contour() {
 
     if [ "${TDH_DEPLOYMENT_CLOUD}" == "docker" -o "${TDH_TKGMC_INFRASTRUCTURE}" == "docker" ]; then
       VALUE_FILE=/tmp/contour-data-values.yaml; rm -f $VALUE_FILE
+      echo "namespace: tanzu-system-ingress"                                            >  $VALUE_FILE
       echo "contour:"                                                                   >> $VALUE_FILE
       echo " configFileContents: {}"                                                    >> $VALUE_FILE
       echo " useProxyProtocol: false"                                                   >> $VALUE_FILE
