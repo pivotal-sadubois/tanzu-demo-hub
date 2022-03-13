@@ -6459,9 +6459,6 @@ installKubeapps() {
       exit 1
     fi
 
-    # --- WAIT FOR PODS TO GET STARTED ---
-    runningPods NAMESPACE
-
     messagePrint " ▪ Create Cluster Role Binding"        "default:kubeapps-operator"
     createClusterRoleBinding kubeapps-operator cluster-admin default:kubeapps-operator > /dev/null 2>&1
 
@@ -9568,7 +9565,6 @@ tdh_tools_build() {
     TDH_DOCKER_CACHE=$HOME/.tanzu-demo-hub/cache
     [ ! -d $TDH_DOCKER_CACHE ] && mkdir -p $TDH_DOCKER_CACHE
   fi
-#gugu
 
   mkdir -p $TDH_DOCKER_FILES
   cp $TDHPATH/files/tdh-tools/$TDH_TOOLS_DOCKERFILE       $TDH_DOCKER_FILES/Dockerfile
@@ -10186,7 +10182,6 @@ tdh_tools_build() {
   cp $TDHPATH/files/tdh-tools/tdh-context.sh $TDH_DOCKER_FILES
   chmod a+x $TDH_DOCKER_FILES/tdh-context.sh
 
-#gugu
   if [ "$MODE" == "tkg" ]; then 
     cp $TDHPATH/files/tdh-tools/tdh-postinstall-user-tkg-${TDH_TOOLS_TAG}.sh $TDH_DOCKER_FILES/tdh-postinstall-user.sh
     chmod a+x $TDH_DOCKER_FILES/tdh-postinstall-user.sh
@@ -12984,6 +12979,17 @@ createServiceAccount() {
   fi
 
   cmdLoop kubectl create --namespace $TMP_NAMESPACE serviceaccount $SERVICE_ACCOUNT > /dev/null 2>&1
+
+  # --- WAIT UNTIL SERVICE ACCOUNT HAS BEEN CREATED ---
+  uid=""; cnt=0
+  while [ "$uid" != "" -a $cnt -lt 5 ]; then 
+    cmdLoop kubectl get serviceaccount -n $TMP_NAMESPACE -o json > /tmp/output.json
+    crb=$(jq -r --arg key "$SERVICE_ACCOUNT" '.items[] | select(.metadata.name == $key).metadata.uid' /tmp/output.json) 
+    [ "$uid" != "" ] && break
+
+    cnt=cnt+1
+    sleep 30
+  done
 }
 
 # ------------------------------------------------------------------------------------------
