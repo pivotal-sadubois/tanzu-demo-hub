@@ -6459,6 +6459,9 @@ installKubeapps() {
       exit 1
     fi
 
+    # --- WAIT FOR PODS TO GET STARTED ---
+    runningPods NAMESPACE
+
     messagePrint " ▪ Create Cluster Role Binding"        "default:kubeapps-operator"
     createClusterRoleBinding kubeapps-operator cluster-admin default:kubeapps-operator > /dev/null 2>&1
 
@@ -6468,6 +6471,7 @@ installKubeapps() {
     messagePrint " ▪ Kubeapps Dashboard deployed"        "https://kubeapps.$DOMAIN"
   fi
 
+#gaga kubeapps
   cmdLoop helm ls -n $NAMESPACE -o json > /tmp/output.json
   if [ -s /tmp/output.json ]; then
     ver=$(jq -r --arg chart "$HELMCHART" '.[] | select(.name == $chart).app_version' /tmp/output.json)
@@ -6479,15 +6483,18 @@ installKubeapps() {
   fi
 
   secret_name=$(getServiceAccountSecret kubeapps-operator)
-
-  cnt=0; ret=1
-  while [ $ret -ne 0 -a $cnt -lt 5 ]; do
-    KUBEAPPS_TOKEN=$(kubectl get secret $secret_name -o jsonpath='{.data.token}' -o go-template='{{.data.token | base64decode}}' 2>/tmp/error.log); ret=$?
-
-    [ $ret -eq 0 ] && break
-    let cnt=cnt+1
-    sleep 30
-  done
+  if [ "$secret_name" != "" ]; then
+    cnt=0; ret=1
+    while [ $ret -ne 0 -a $cnt -lt 5 ]; do
+      KUBEAPPS_TOKEN=$(kubectl get secret $secret_name -o jsonpath='{.data.token}' -o go-template='{{.data.token | base64decode}}' 2>/tmp/error.log); ret=$?
+  
+      [ $ret -eq 0 ] && break
+      let cnt=cnt+1
+      sleep 30
+    done
+  else
+    echo "ERROR: Failed to get kubeapps secret"
+  fi
 
   messagePrint " ▪ Verify Helm Chart $HELMCHART"   "$crt"
   messagePrint "   Helm Chart Name"                "$HELMCHART"
@@ -6602,8 +6609,9 @@ installMinio() {
     fi
 
     # --- WAIT FOR PODS TO GET STARTED ---
-    runningPods minio
+    runningPods NAMESPACE
   fi
+#gaga minio
 
   cmdLoop helm ls -n $NAMESPACE -o json > /tmp/output.json
   if [ -s /tmp/output.json ]; then
@@ -8030,7 +8038,6 @@ createClusterIssuer() {
     while [ $cnt -lt 5 -a "$stt" != "True" ]; do
       cmdLoop kubectl get certificate $TDH_TLS_CERT -o json > /tmp/output.json
       stt=$(jq -r '.status.conditions[] | select(.type == "Ready").status' /tmp/output.json)
-echo "tdhdebug:functions:createClusterIssuer stt:$stt"
 
       #DELETEME
       #stt=$(kubectl get certificate $TDH_TLS_CERT -o json 2>/dev/null | \
@@ -12516,7 +12523,6 @@ runTDHtoolsDemos() {
     # --- GATHER RIGHT KUBECONFIG ---
     for n in $(ls -1 $HOME/.tanzu-demo-hub/config/tkgmc-vsphere*.kubeconfig 2>/dev/null); do
       nam=$(echo $n | awk -F'/' '{ print $NF }' | sed 's/\.kubeconfig//g')
-#gaga
       vsphereSupervisorClusterLogin $nam
 
       kubectl --kubeconfig=$n --request-timeout 1s get ns >/dev/null 2>&1; ret=$?
