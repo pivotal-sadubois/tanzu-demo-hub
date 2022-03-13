@@ -97,6 +97,8 @@ execCmd "kubectl create namespace $NAMESPACE"
 execCmd "kubectl get namespace"
 
 # --- GET THE KUBERNETES DEFAULT STORAGE CLASSE ---
+cmdLoop kubectl get sc -o json > /tmp/output.json
+STORAGE_CLASS=$(jq -r '.items[].metadata | select(.annotations."storageclass.kubernetes.io/is-default-class" == "true").name' /tmp/output.json)
 STORAGE_CLASS=$(kubectl get sc | grep default | awk '{ print $1 }') 
 [ "$STORAGE_CLASS" == "" ] && STORAGE_CLASS=standard
 
