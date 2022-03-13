@@ -12433,17 +12433,24 @@ runTDHtoolsDemos() {
 
   # --- GET THE RIGHT TDH TOOLS CONTAINER ---
 #gaga
-  for n in $(docker images --filter "reference=tdh*:CHKSUM*" | egrep "^tdh-tools" | awk '{ printf("%s:%s\n", $1,$2)}' | sed 's/CHKSUM-//g'); do
+  for n in $(docker images --filter "reference=tdh*:CHKSUM*" | egrep "^tdh-tools" | sort -Vr | \
+             awk '{ printf("%s:%s\n", $1,$2)}' | sed 's/CHKSUM-//g'); do
     img=$(echo $n | awk -F: '{ print $1 }' | sed 's/tdh-tools-//g') 
     tag=$(echo $n | awk -F: '{ print $2 }') 
 
-echo "IMG:$img TAG:$tag"
     if [ -f $TDHHOME/files/tdh-tools/Dockerfile-$img ]; then 
       DOCKER_CHKSUM=$(sum $TDHHOME/files/tdh-tools/Dockerfile-$img | awk '{ print $1 }')
-echo "DOCKER_CHKSUM:$DOCKER_CHKSUM TAG:$tag"
+      if [ "$DOCKER_CHKSUM" == "$tag" ]; then
+        TDH_TOOLS_TYPE=$(echo "$img" | awk -F'-' '{ print $1 }') 
+        TDH_TOOLS=tdh-tools-${img}
+        break
+      fi
     fi
-
   done
+
+
+iecho "TDH_TOOLS_TYPE:$TDH_TOOLS_TYPE"
+iecho "TDH_TOOLS:$TDH_TOOLS"
 echo end
 sleep 10000
   DOCKER_CHKSUM=$(sum $TDHPATH/files/tdh-tools/$TDH_TOOLS_DOCKERFILE | awk '{ print $1 }')
