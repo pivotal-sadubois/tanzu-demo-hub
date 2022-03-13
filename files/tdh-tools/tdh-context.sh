@@ -56,13 +56,20 @@ done
 for n in $(ls -1 $HOME/.tanzu-demo-hub/config/tdh*.kubeconfig 2>/dev/null); do
   nam=$(echo $n | awk -F'/' '{ print $NF }' | sed 's/\.kubeconfig//g')
 
-  kubectl --kubeconfig=$n --request-timeout 1s get cm -n default -o json > /tmp/output.json 2>/dev/null
-  if [ -s /tmp/output.json ]; then
-    cfm=$(jq -r '.items[].metadata | select(.name == "tanzu-demo-hub").name' /tmp/output.json 2>/dev/null)
-    if [ "$cfm" == "tanzu-demo-hub" ]; then
-      CONTEXT_LIST="$CONTEXT_LIST $nam:$n"
+  ret=1; cnt=0
+  while [ $ret -ne 0 -a $cnt -lt 5 ]; then 
+    kubectl --kubeconfig=$n --request-timeout 1s get cm -n default -o json > /tmp/output.json 2>/dev/null; ret=$?
+    if [ $ret -eq 0 -a -s /tmp/output.json ]; then
+      cfm=$(jq -r '.items[].metadata | select(.name == "tanzu-demo-hub").name' /tmp/output.json 2>/dev/null)
+      if [ "$cfm" == "tanzu-demo-hub" ]; then
+        CONTEXT_LIST="$CONTEXT_LIST $nam:$n"
+      fi
+      break
     fi
-  fi
+
+    let cnt=cnt+1
+    sleep 30
+  done
 done
 
 echo ""
