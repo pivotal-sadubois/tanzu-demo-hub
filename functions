@@ -12433,20 +12433,16 @@ runTDHtoolsDemos() {
     fi
   fi
 
-echo gaga10
   TDH_TOOLS_TYPE=tkg
   TDH_TOOLS_VERS=$(ls -1 $TDHHOME/files/tdh-tools/tdh-tools-${TDH_TOOLS_TYPE}-*.cfg | awk -F'-' '{ print $NF }' | sed 's/\.cfg//g' | sort -V | tail -1)
-echo gaga11
 
   TOOLS_TLAG=$TDH_TOOLS_TYPE
   TDH_TOOLS=tdh-tools-${TDH_TOOLS_TYPE}-$TDH_TOOLS_VERS
   POSTSCRIPT="tdh-postinstall-user.sh"
   TDH_TOOLS_PATH=".${TDH_TOOLS}"
-echo "TDH_TOOLS:$TDH_TOOLS"
-echo "TDH_TOOLS_PATH:$TDH_TOOLS_PATH"
-echo gaga13
 
   if [ ! -f /tdh_tools_docker_container  ]; then
+#gaga
     cnt=$(docker ps | grep -c "tdh-tools-${TDH_TOOLS_TYPE}-${TDH_TOOLS_VERS}:latest") 
     if [ $cnt -gt 0 ]; then 
       echo "ERROR: Docker Container tdh-tools-${TDH_TOOLS_TYPE}-${TDH_TOOLS_VERS}:latest is already running"
@@ -12459,6 +12455,7 @@ echo gaga13
     fi
 
     if [ $NATIVE -eq 0 ]; then
+      tdh_tools_build $TOOLS_TLAG $TOOLS_VERSION
       cid=$(docker ps -a | grep $TDH_TOOLS:latest | awk '{ print $1 }')
       [ "$cid" != "" ] && for n in $cid; do docker rm $n -f > /dev/null 2>&1; done
 
