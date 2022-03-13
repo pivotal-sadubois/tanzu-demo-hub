@@ -10590,7 +10590,7 @@ setK8sEnvironment() {
   CLUSTER=$1
 
   messagePrint " ▪ Set Kubernetes Cluster"               "$CLUSTER"
-  kubectl config set-cluster $CLUSTER > /dev/null 2>&1
+  cmdLoop kubectl config set-cluster $CLUSTER > /dev/null 2>&1
   if [ $? -ne 0 ]; then 
     echo "ERROR: failed to set cluster $CLUSTER"
     echo "       => kubectl config set-cluster $CLUSTER"
@@ -10599,7 +10599,7 @@ setK8sEnvironment() {
 
   CONTEXT=$(kubectl config get-contexts | grep " $CLUSTER " | sed 's/*//g' | awk '{ print $1 }')
   messagePrint " ▪ Set Kubernetes Context"               "$CONTEXT"
-  kubectl config use-context $CONTEXT > /dev/null 2>&1
+  cmdLoop kubectl config use-context $CONTEXT > /dev/null 2>&1
   if [ $? -ne 0 ]; then
     echo "ERROR: failed to set cluster context"
     echo "       => kubectl config use-context $CONTEXT"
@@ -10607,7 +10607,7 @@ setK8sEnvironment() {
   fi
 
   messagePrint " ▪ Set Kubernetes clusterrolebinding"    "tanzu-demo-hub-privileged-cluster-role-binding"
-  kubectl create clusterrolebinding tanzu-demo-hub-privileged-cluster-role-binding \
+  cmdLoop kubectl create clusterrolebinding tanzu-demo-hub-privileged-cluster-role-binding \
           --clusterrole=vmware-system-tmc-psp-privileged --group=system:authenticated > /dev/null 2>&1
 
 }
