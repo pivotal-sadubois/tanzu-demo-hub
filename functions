@@ -12435,11 +12435,11 @@ runTDHtoolsDemos() {
 #gaga
   for n in $(docker images --filter "reference=tdh*:CHKSUM*" | egrep "^tdh-tools" | awk '{ printf("%s:%s\n", $1,$2)}' | sed 's/CHKSUM-//g'); do
     img=$(echo $n | awk -F: '{ print $1 }' | sed 's/tdh-tools-//g') 
-    tag=$(echo $n | awk -F: '{ print $1 }') 
+    tag=$(echo $n | awk -F: '{ print $2 }') 
 
 echo "IMG:$img TAG:$tag"
     if [ -f $TDHHOME/files/tdh-tools/Dockerfile-$img ]; then 
-      DOCKER_CHKSUM=$(sum $TDHHOME/files/tdh-tools/$Dockerfile-$img | awk '{ print $1 }')
+      DOCKER_CHKSUM=$(sum $TDHHOME/files/tdh-tools/Dockerfile-$img | awk '{ print $1 }')
 echo "DOCKER_CHKSUM:$DOCKER_CHKSUM TAG:$tag"
     fi
 
