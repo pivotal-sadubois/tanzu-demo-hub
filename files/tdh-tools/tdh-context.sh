@@ -45,11 +45,18 @@ for n in $(ls -1 $HOME/.tanzu-demo-hub/config/*.kubeconfig 2>/dev/null | egrep "
     fi
   else
     # --- REGULAR CLUSTER (NOT-VSPHERE) ----
-    kubectl --kubeconfig=$n --request-timeout 1s get ns >/dev/null 2>&1; ret=$?
-    if [ $ret -eq 0 ]; then
-      nam=$(echo $n | awk -F'/' '{ print $NF }' | sed 's/\.kubeconfig//g')
-      CONTEXT_LIST="$CONTEXT_LIST $nam:$n"
-    fi
+    ret=1; cnt=0
+    while [ $ret -ne 0 -a $cnt -lt 5 ]; then 
+      kubectl --kubeconfig=$n --request-timeout 1s get ns >/dev/null 2>&1; ret=$?
+      if [ $ret -eq 0 ]; then
+        nam=$(echo $n | awk -F'/' '{ print $NF }' | sed 's/\.kubeconfig//g')
+        CONTEXT_LIST="$CONTEXT_LIST $nam:$n"
+        break
+      fi
+
+      let cnt=cnt+1
+      sleep 10
+    done
   fi
 done
 
@@ -59,17 +66,19 @@ for n in $(ls -1 $HOME/.tanzu-demo-hub/config/tdh*.kubeconfig 2>/dev/null); do
   ret=1; cnt=0
   while [ $ret -ne 0 -a $cnt -lt 5 ]; then 
     kubectl --kubeconfig=$n --request-timeout 1s get cm -n default -o json > /tmp/output.json 2>/dev/null; ret=$?
-    if [ $ret -eq 0 -a -s /tmp/output.json ]; then
-      cfm=$(jq -r '.items[].metadata | select(.name == "tanzu-demo-hub").name' /tmp/output.json 2>/dev/null)
-      if [ "$cfm" == "tanzu-demo-hub" ]; then
-        CONTEXT_LIST="$CONTEXT_LIST $nam:$n"
-      fi
-      break
-    fi
+    [ $ret -eq 0 ] && break
 
     let cnt=cnt+1
-    sleep 30
+    sleep 10
   done
+
+  if [ -s /tmp/output.json ]; then
+    cfm=$(jq -r '.items[].metadata | select(.name == "tanzu-demo-hub").name' /tmp/output.json 2>/dev/null)
+    if [ "$cfm" == "tanzu-demo-hub" ]; then
+      CONTEXT_LIST="$CONTEXT_LIST $nam:$n"
+    fi
+    break
+  fi
 done
 
 echo ""
