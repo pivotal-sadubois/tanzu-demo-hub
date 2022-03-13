@@ -6468,7 +6468,6 @@ installKubeapps() {
     messagePrint " ▪ Kubeapps Dashboard deployed"        "https://kubeapps.$DOMAIN"
   fi
 
-#gaga kubeapps
   cmdLoop helm ls -n $NAMESPACE -o json > /tmp/output.json
   if [ -s /tmp/output.json ]; then
     ver=$(jq -r --arg chart "$HELMCHART" '.[] | select(.name == $chart).app_version' /tmp/output.json)
@@ -6608,7 +6607,6 @@ installMinio() {
     # --- WAIT FOR PODS TO GET STARTED ---
     runningPods NAMESPACE
   fi
-#gaga minio
 
   cmdLoop helm ls -n $NAMESPACE -o json > /tmp/output.json
   if [ -s /tmp/output.json ]; then
@@ -12433,6 +12431,26 @@ runTDHtoolsDemos() {
     fi
   fi
 
+  # --- GET THE RIGHT TDH TOOLS CONTAINER ---
+#gaga
+  for n in $(docker images --filter "reference=tdh*:CHKSUM*" | egrep "^tdh-tools" | awk '{ printf("%s:%s\n", $1,$2)}' | sed 's/CHKSUM-//g'); do
+    img=$(echo $n | awk -F: '{ print $1 }' | sed 's/tdh-tools-//g') 
+    tag=$(echo $n | awk -F: '{ print $1 }') 
+
+echo "IMG:$img TAG:$tag"
+    if [ -f $TDHPATH/files/tdh-tools/Dockerfile-$img ]; then 
+      DOCKER_CHKSUM=$(sum $TDHPATH/files/tdh-tools/$Dockerfile-$img | awk '{ print $1 }')
+echo "DOCKER_CHKSUM:$DOCKER_CHKSUM TAG:$tag"
+    fi
+
+  done
+echo end
+sleep 10000
+  DOCKER_CHKSUM=$(sum $TDHPATH/files/tdh-tools/$TDH_TOOLS_DOCKERFILE | awk '{ print $1 }')
+  DOCKER_IMAGE_LATEST_ID=$(docker images | egrep "^$TDH_TOOLS_IMAGE " | grep "latest" | awk '{ print $3 }')
+  DOCKER_IMAGE_ID=$(docker images | egrep "^$TDH_TOOLS_IMAGE " | grep "CHKSUM" | grep "$DOCKER_IMAGE_LATEST_ID" | awk '{ print $3 }')
+  DOCKER_IMAGE_CHKSUM=$(docker images | egrep "^$TDH_TOOLS_IMAGE " | grep "CHKSUM" | grep "$DOCKER_IMAGE_LATEST_ID" | awk '{ print $2 }' | sed 's/CHKSUM-//g')
+
   TDH_TOOLS_TYPE=tkg
   TDH_TOOLS_VERS=$(ls -1 $TDHHOME/files/tdh-tools/tdh-tools-${TDH_TOOLS_TYPE}-*.cfg | awk -F'-' '{ print $NF }' | sed 's/\.cfg//g' | sort -V | tail -1)
 
@@ -12442,7 +12460,6 @@ runTDHtoolsDemos() {
   TDH_TOOLS_PATH=".${TDH_TOOLS}"
 
   if [ ! -f /tdh_tools_docker_container  ]; then
-#gaga
     cnt=$(docker ps | grep -c "tdh-tools-${TDH_TOOLS_TYPE}-${TDH_TOOLS_VERS}:latest") 
     if [ $cnt -gt 0 ]; then 
       echo "ERROR: Docker Container tdh-tools-${TDH_TOOLS_TYPE}-${TDH_TOOLS_VERS}:latest is already running"
@@ -12455,7 +12472,6 @@ runTDHtoolsDemos() {
     fi
 
     if [ $NATIVE -eq 0 ]; then
-      tdh_tools_build $TOOLS_TLAG $TOOLS_VERSION
       cid=$(docker ps -a | grep $TDH_TOOLS:latest | awk '{ print $1 }')
       [ "$cid" != "" ] && for n in $cid; do docker rm $n -f > /dev/null 2>&1; done
 
