@@ -46,7 +46,7 @@ for n in $(ls -1 $HOME/.tanzu-demo-hub/config/*.kubeconfig 2>/dev/null | egrep "
   else
     # --- REGULAR CLUSTER (NOT-VSPHERE) ----
     ret=1; cnt=0
-    while [ $ret -ne 0 -a $cnt -lt 5 ]; then 
+    while [ $ret -ne 0 -a $cnt -lt 5 ]; do 
       kubectl --kubeconfig=$n --request-timeout 1s get ns >/dev/null 2>&1; ret=$?
       if [ $ret -eq 0 ]; then
         nam=$(echo $n | awk -F'/' '{ print $NF }' | sed 's/\.kubeconfig//g')
@@ -64,7 +64,7 @@ for n in $(ls -1 $HOME/.tanzu-demo-hub/config/tdh*.kubeconfig 2>/dev/null); do
   nam=$(echo $n | awk -F'/' '{ print $NF }' | sed 's/\.kubeconfig//g')
 
   ret=1; cnt=0
-  while [ $ret -ne 0 -a $cnt -lt 5 ]; then 
+  while [ $ret -ne 0 -a $cnt -lt 5 ]; do 
     kubectl --kubeconfig=$n --request-timeout 1s get cm -n default -o json > /tmp/output.json 2>/dev/null; ret=$?
     [ $ret -eq 0 ] && break
 
