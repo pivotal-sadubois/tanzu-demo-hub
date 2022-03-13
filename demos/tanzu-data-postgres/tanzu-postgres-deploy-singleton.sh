@@ -52,8 +52,7 @@ echo '                                                                          
 # --- RUN SCRIPT INSIDE TDH-TOOLS OR NATIVE ON LOCAL HOST ---
 runTDHtoolsDemos
 
-exit
-kubectl get configmap tanzu-demo-hub > /dev/null 2>&1
+cmdLoop kubectl get configmap tanzu-demo-hub > /dev/null 2>&1
 if [ $? -ne 0 ]; then 
   echo "ERROR: Configmap tanzu-demo-hub does not exist"; exit
 fi
@@ -90,18 +89,24 @@ kubectl delete namespace $NAMESPACE > /dev/null 2>&1
 helm uninstall tdh-pgadmin > /dev/null 2>&1
 
 prtHead "Show the Tanzu Data with Postgres Helm Chart"
-execCmd "helm list"
-execCmd "helm status postgres-operator"
-execCmd "kubectl get all"
+execCmd "helm -n postgres-operator list"
+execCmd "helm -n postgres-operator status postgres-operator"
 
 prtHead "Create seperate namespace to host the Postgres Demo"
 execCmd "kubectl create namespace $NAMESPACE"
 execCmd "kubectl get namespace"
 
+# --- GET THE KUBERNETES DEFAULT STORAGE CLASSE ---
+STORAGE_CLASS=$(kubectl get sc | grep default | awk '{ print $1 }') 
+[ "$STORAGE_CLASS" == "" ] && STORAGE_CLASS=standard
+
 # --- PREPARATION ---
 cat $TDHDEMO/files/minio-s3-secret-backup.yaml | sed -e "s/MINIO_ACCESS_KEY/$TDH_SERVICE_MINIO_ACCESS_KEY/g" \
   -e "s/MINIO_SECRET_KEY/$TDH_SERVICE_MINIO_SECRET_KEY/g" > /tmp/minio-s3-secret-backup.yaml
-cat $TDHDEMO/files/tdh-postgres-singleton.yaml | sed -e "s/XXX_MEM_XXX/$CAPACITY_MEMORY/g" -e "s/XXX_CPU_XXX/$CAPACITY_CPU/g" -e "s/XXX_DISK_XXX/$CAPACITY_DISK/g" \
+cat $TDHDEMO/files/tdh-postgres-singleton.yaml | sed -e "s/XXX_MEM_XXX/$CAPACITY_MEMORY/g" \
+  -e "s/XXX_CPU_XXX/$CAPACITY_CPU/g" \
+  -e "s/XXX_STARTE_CLASS_XXX/$STORAGE_CLASS/g" \
+  -e "s/XXX_DISK_XXX/$CAPACITY_DISK/g" \
   > /tmp/tdh-postgres-singleton.yaml
 
 prtHead "Create S3 Secret (Minio) used for pgBackRest"
@@ -112,7 +117,7 @@ prtHead "Create Database Instance"
 execCat "/tmp/tdh-postgres-singleton.yaml"
 execCmd "kubectl -n $NAMESPACE create -f /tmp/tdh-postgres-singleton.yaml"
 
-sleep 30
+runningPods $NAMESPACE > /dev/null 2>&1
 
 execCmd "kubectl -n $NAMESPACE get all"
 prtText "Show the associated Persistent Volume Claims (PVC)"
@@ -179,45 +184,68 @@ echo "  username: pgadmin4@pgadmin.org"                                         
 echo "  ##pgadmin admin password"                                                                                           >> $HELM_VALUES
 echo "  password: admin"                                                                                                    >> $HELM_VALUES
 echo "  tls: false"                                                                                                         >> $HELM_VALUES
+echo "replicaCount: 1"                                                                                                      >> $HELM_VALUES
+echo "image:"                                                                                                               >> $HELM_VALUES
+echo "  registry: docker.io"                                                                                                >> $HELM_VALUES
+echo "  repository: dpage/pgadmin4"                                                                                         >> $HELM_VALUES
+echo "  pullPolicy: IfNotPresent"                                                                                           >> $HELM_VALUES
+echo ""                                                                                                                     >> $HELM_VALUES
 echo "service:"                                                                                                             >> $HELM_VALUES
-echo "  name: pgadmin"                                                                                                      >> $HELM_VALUES
 echo "  type: ClusterIP"                                                                                                    >> $HELM_VALUES
 echo "  port: 80"                                                                                                           >> $HELM_VALUES
-echo "  tlsport: 443"                                                                                                       >> $HELM_VALUES
+echo "  targetPort: 80"                                                                                                     >> $HELM_VALUES
+echo "  portName: http"                                                                                                     >> $HELM_VALUES
+echo ""                                                                                                                     >> $HELM_VALUES
+echo "serverDefinitions:"                                                                                                   >> $HELM_VALUES
+echo "  enabled: true"                                                                                                      >> $HELM_VALUES
+echo "  servers:"                                                                                                           >> $HELM_VALUES
+echo "     1:"                                                                                                              >> $HELM_VALUES
+echo "       Name: \"tdh-postgres-db\""                                                                                     >> $HELM_VALUES
+echo "       Group: \"Servers\""                                                                                            >> $HELM_VALUES
+echo "       Port: 5432"                                                                                                    >> $HELM_VALUES
+echo "       Username: \"$dbuser\""                                                                                         >> $HELM_VALUES
+echo "       Password: \"$dbpass\""                                                                                         >> $HELM_VALUES
+echo "       Host: \"$dbhost\""                                                                                             >> $HELM_VALUES
+echo "       SSLMode: \"prefer\""                                                                                           >> $HELM_VALUES
+echo "       MaintenanceDB: \"tdh-postgres-db\""                                                                            >> $HELM_VALUES
+echo ""                                                                                                                     >> $HELM_VALUES
+echo "networkPolicy:"                                                                                                       >> $HELM_VALUES
+echo "  enabled: true"                                                                                                      >> $HELM_VALUES
+echo "env:"                                                                                                                 >> $HELM_VALUES
+echo "  email: chart@example.local"                                                                                         >> $HELM_VALUES
+echo "  password: admin"                                                                                                    >> $HELM_VALUES
+echo "  enhanced_cookie_protection: \"False\""                                                                              >> $HELM_VALUES
+echo ""                                                                                                                     >> $HELM_VALUES
 echo "ingress:"                                                                                                             >> $HELM_VALUES
 echo "  enabled: true"                                                                                                      >> $HELM_VALUES
-echo "  annotations:"                                                                                                       >> $HELM_VALUES
+echo "  annotations: "                                                                                                      >> $HELM_VALUES
 echo "    kubernetes.io/ingress.class: contour"                                                                             >> $HELM_VALUES
 echo "    ingress.kubernetes.io/force-ssl-redirect: \"true\""                                                               >> $HELM_VALUES
-echo "  path: /"                                                                                                            >> $HELM_VALUES
 echo "  hosts:"                                                                                                             >> $HELM_VALUES
-echo "    - pgadmin.$DOMAIN"                                                                                                >> $HELM_VALUES
-echo "  tls:"                                                                                                               >> $HELM_VALUES
-echo "    - hosts:"                                                                                                         >> $HELM_VALUES
-echo "      - pgadmin.$DOMAIN"                                                                                              >> $HELM_VALUES
-echo "      secretName: tanzu-demo-hub-tls"                                                                                 >> $HELM_VALUES
-echo "servers:"                                                                                                             >> $HELM_VALUES
-echo "  enabled: true"                                                                                                      >> $HELM_VALUES
-echo "  config:"                                                                                                            >> $HELM_VALUES
-echo "    Servers:"                                                                                                         >> $HELM_VALUES
-echo "      1:"                                                                                                             >> $HELM_VALUES
-echo "        Name: \"tdh-postgres-db\""                                                                                    >> $HELM_VALUES
-echo "        Group: \"Servers\""                                                                                           >> $HELM_VALUES
-echo "        Port: 5432"                                                                                                   >> $HELM_VALUES
-echo "        Username: \"$dbuser\""                                                                                        >> $HELM_VALUES
-echo "        Password: \"$dbpass\""                                                                                        >> $HELM_VALUES
-echo "        Host: \"$dbhost\""                                                                                            >> $HELM_VALUES
-echo "        SSLMode: \"prefer\""                                                                                          >> $HELM_VALUES
-echo "        MaintenanceDB: \"tdh-postgres-db\""                                                                           >> $HELM_VALUES
+echo "    - host: pgadmin.$DOMAIN"                                                                                          >> $HELM_VALUES
+echo "      paths:"                                                                                                         >> $HELM_VALUES
+echo "        - path: /"                                                                                                    >> $HELM_VALUES
+echo "          pathType: Prefix"                                                                                           >> $HELM_VALUES
+echo "  tls: "                                                                                                              >> $HELM_VALUES
+echo "    - secretName: tanzu-demo-hub-tls"                                                                                 >> $HELM_VALUES
+echo "      hosts:"                                                                                                         >> $HELM_VALUES
+echo "        - pgadmin.$DOMAIN"                                                                                            >> $HELM_VALUES
 echo ""                                                                                                                     >> $HELM_VALUES
+echo "persistentVolume:"                                                                                                    >> $HELM_VALUES
+echo "  enabled: true"                                                                                                      >> $HELM_VALUES
+echo "  accessModes:"                                                                                                       >> $HELM_VALUES
+echo "    - ReadWriteOnce"                                                                                                  >> $HELM_VALUES
+echo "  size: 10Gi"                                                                                                         >> $HELM_VALUES
 
 prtHead "Install and configure pgAdmin4 Helm Chart"
 execCat "$HELM_VALUES"
-slntCmd "helm install tdh-pgadmin cetic/pgadmin -f $HELM_VALUES --wait-for-jobs --wait > /dev/null 2>&1"
+slntCmd "helm repo add runix https://helm.runix.net > /dev/null 2>&1"
+slntCmd "helm install pgadmin runix/pgadmin4 -f $HELM_VALUES --wait-for-jobs --wait > /dev/null 2>&1"
 execCmd "helm status tdh-pgadmin"
 
 prtHead "Open WebBrowser and verify the deployment"
-echo "     => https://pgadmin.${DOMAIN}       # User: pgadmin4@pgadmin.org Password: admin DBpassword: $dbpass"
+echo "     => https://pgadmin.${DOMAIN}"
+echo "        (User: chart@example.local Password: admin DBpassword: $dbpass)"
 echo ""
 echo -e "     presse 'return' to continue when ready\c"; read x
 
