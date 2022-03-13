@@ -12982,7 +12982,7 @@ createServiceAccount() {
 
   # --- WAIT UNTIL SERVICE ACCOUNT HAS BEEN CREATED ---
   uid=""; cnt=0
-  while [ "$uid" != "" -a $cnt -lt 5 ]; then 
+  while [ "$uid" != "" -a $cnt -lt 5 ]; do 
     cmdLoop kubectl get serviceaccount -n $TMP_NAMESPACE -o json > /tmp/output.json
     crb=$(jq -r --arg key "$SERVICE_ACCOUNT" '.items[] | select(.metadata.name == $key).metadata.uid' /tmp/output.json) 
     [ "$uid" != "" ] && break
