@@ -1579,7 +1579,7 @@ checkTMCintegration() {
           helm install wavefront wavefront/wavefront \
               --set wavefront.url=$TDH_TANZU_OBSERVABILITY_URL \
               --set wavefront.token=$TDH_TANZU_OBSERVABILITY_API_TOKEN \
-              --set clusterName=$TDH_CLUSTER_NAME --namespace wavefront > /dev/null 2>&1; ret=$?
+              --set clusterName=$TDH_CLUSTER_NAME --namespace wavefront --wait --wait-for-jobs --timeout 10m > /dev/null 2>&1; ret=$?
           [ $ret -eq 0 ] && break
           let cnt=cnt+1
           sleep 60
@@ -4025,7 +4025,7 @@ VerifyServiceDependancies() {
 
     stt=$(helm list -n $INGRESS_NAMESPACE -o json | jq -r --arg key "cert-manager-" '.[] | select(.chart | contains($key)).status')
     if [ "$stt" != "deployed" ]; then
-      helm install $HELM_CHART -n $INGRESS_NAMESPACE > /dev/null 2>&1
+      helm install $HELM_CHART -n $INGRESS_NAMESPACE --wait --wait-for-jobs --timeout 10m > /dev/null 2>&1
       if [ $? -ne 0 ]; then
         echo "ERROR: Failed to install $HELM_CHART"
         if [ "$NATIVE" == "0" ]; then
@@ -4050,7 +4050,7 @@ VerifyServiceDependancies() {
 
     stt=$(helm list -n nginx-ingress -o json | jq -r --arg key "ngress-controller" '.[] | select(.chart | contains($key)).status')
     if [ "$stt" != "deployed" ]; then
-      helm install bitnami bitnami/nginx-ingress-controller -n $INGRESS_NAMESPACE > /dev/null 2>&1
+      helm install bitnami bitnami/nginx-ingress-controller -n $INGRESS_NAMESPACE --wait --wait-for-jobs --timeout 10m > /dev/null 2>&1
       if [ $? -ne 0 ]; then
         echo "ERROR: Failed to install $HELM_CHART"
         if [ "$NATIVE" == "0" ]; then
@@ -4103,7 +4103,7 @@ VerifyServiceDependancies() {
     stt=$(helm list -n $INGRESS_NAMESPACE -o json | jq -r --arg key "contour-3" '.[] | select(.chart | contains($key)).status')
     if [ "$stt" != "deployed" ]; then
       messageTitle "Install Contour Ingress Controller" "$HELM_CHART"
-      helm install bitnami $HELM_CHART -n $INGRESS_NAMESPACE > /dev/null 2>&1
+      helm install bitnami $HELM_CHART -n $INGRESS_NAMESPACE --wait --wait-for-jobs --timeout 10m > /dev/null 2>&1
       if [ $? -ne 0 ]; then
         echo "ERROR: Failed to install $HELM_CHART"
         if [ "$NATIVE" == "0" ]; then
@@ -5992,8 +5992,7 @@ installArgoCD() {
 
     export TZ=UTC
     messagePrint " ▪ Deploy the ArgoCD Helm Chart" "argo-cd"
-    #helm install argo-cd --namespace $NAMESPACE bitnami/argo-cd -f $HELM_VALUES --wait > /dev/null 2>&1
-    helm install argo-cd --namespace $NAMESPACE bitnami/argo-cd -f $HELM_VALUES --wait
+    helm install argo-cd --namespace $NAMESPACE bitnami/argo-cd -f $HELM_VALUES --wait --wait-for-jobs --timeout 10m > /dev/null 2>&1
     if [ $? -ne 0 ]; then
       echo "ERROR: Failed to deploy ArgoCD Helm Chart"
       echo "       => helm install argo-cd --namespace $NAMESPACE bitnami/argo-cd -f $HELM_VALUES --wait"
@@ -6092,7 +6091,7 @@ installJenkins() {
     messagePrint " ▪ Deploy the Jenkins Helm Chart" "$HELMCHART"
     cnt=0; ret=1; stt="notdeployed"
     while [ $ret -ne 0 -a $cnt -lt 5 -a "$stt" != "deployed" ]; do
-      helm install $HELMCHART --namespace $NAMESPACE bitnami/$HELMCHART -f $HELM_VALUES --wait > /tmp/error.log 2>&1; ret=$?
+      helm install $HELMCHART --namespace $NAMESPACE bitnami/$HELMCHART -f $HELM_VALUES --wait --wait-for-jobs --timeout 10m > /tmp/error.log 2>&1; ret=$?
 
       # --- WAIT FOR PODS TO GET STARTED ---
       runningPods $NAMESPACE
@@ -6273,7 +6272,7 @@ installGitea() {
     messagePrint " ▪ Deploy the $HELMCHART Helm Chart" "$HELMCHART"
     cnt=0; ret=1; stt="notdeployed"
     while [ $ret -ne 0 -a $cnt -lt 5 -a "$stt" != "deployed" ]; do
-      helm install $HELMCHART --namespace $NAMESPACE $HELMREPO/$HELMCHART -f $HELM_VALUES --version $HELM_CHART_VERSION > /tmp/error.log 2>&1; ret=$?
+      helm install $HELMCHART --namespace $NAMESPACE $HELMREPO/$HELMCHART -f $HELM_VALUES --version $HELM_CHART_VERSION --wait --wait-for-jobs --timeout 10m > /tmp/error.log 2>&1; ret=$?
 
       # --- WAIT FOR PODS TO GET STARTED ---
       runningPods $NAMESPACE
@@ -6304,6 +6303,8 @@ installGitea() {
       exit 1
     fi
 
+    # --- WAIT FOR PODS TO GET STARTED ---
+    runningPods $NAMESPACE
   fi
 
   cmdLoop helm ls -n $NAMESPACE -o json > /tmp/output.json
@@ -6428,7 +6429,7 @@ installKubeapps() {
     messagePrint " ▪ Deploy the Kubeapps Helm Chart" "kubeapps"
     cnt=0; ret=1; stt="notdeployed"
     while [ $ret -ne 0 -a $cnt -lt 5 -a "$stt" != "deployed" ]; do
-      helm install $HELMCHART --namespace $NAMESPACE bitnami/$HELMCHART -f $HELM_VALUES --version $HELM_KUBEAPPS_VERSION > /tmp/error.log 2>&1; ret=$?
+      helm install $HELMCHART --namespace $NAMESPACE bitnami/$HELMCHART -f $HELM_VALUES --version $HELM_KUBEAPPS_VERSION --wait --wait-for-jobs --timeout 10m > /tmp/error.log 2>&1; ret=$?
 
       # --- WAIT FOR PODS TO GET STARTED ---
       runningPods $NAMESPACE
@@ -6573,7 +6574,7 @@ installMinio() {
     messagePrint " ▪ Deploy the Minio Helm Chart" "minio"
     cnt=0; ret=1; stt="notdeployed"
     while [ $ret -ne 0 -a $cnt -lt 5 -a "$stt" != "deployed" ]; do
-      helm install $HELMCHART bitnami/$HELMCHART --namespace $NAMESPACE -f ${HELM_VALUES} > /tmp/error.log 2>&1; ret=$?
+      helm install $HELMCHART bitnami/$HELMCHART --namespace $NAMESPACE -f ${HELM_VALUES} --wait --wait-for-jobs --timeout 10m > /tmp/error.log 2>&1; ret=$?
 
       # --- WAIT FOR PODS TO GET STARTED ---
       runningPods $NAMESPACE
@@ -6779,8 +6780,7 @@ installGitLab() {
 #gogo
     cnt=0; ret=1; stt="notdeployed"
     while [ $ret -ne 0 -a $cnt -lt 5 -a "$stt" != "deployed" ]; do
-      #helm install gitlab gitlab/gitlab -f ${HELM_VALUES} --namespace $NAMESPACE > /tmp/error.log 2>&1; ret=$?
-      helm install gitlab gitlab/gitlab -f ${HELM_VALUES} --namespace $NAMESPACE; ret=$?
+      helm install gitlab gitlab/gitlab -f ${HELM_VALUES} --namespace $NAMESPACE --wait --wait-for-jobs --timeout 10m > /tmp/error.log 2>&1; ret=$?
 
       cmdLoop helm ls -n $NAMESPACE -o json > /tmp/output.json
       stt=$(jq -r --arg chart "$HELMCHART" '.[] | select(.name == $chart).status' /tmp/output.json)
@@ -6997,7 +6997,7 @@ installTanzuDataPostgres() {
         messagePrint " ▪ Deploy the Postgres operator" "postgres-operator"
         cnt=0; ret=1; stt="notdeployed"
         while [ $ret -ne 0 -a $cnt -lt 5 -a "$stt" != "deployed" ]; do
-          helm install $HELMCHART --namespace $NAMESPACE -f /tmp/values-overrides.yaml ${POSTGRES_INSTALL_PATH}/operator/ > /tmp/error.log 2>&1; ret=$?
+          helm install $HELMCHART --namespace $NAMESPACE -f /tmp/values-overrides.yaml ${POSTGRES_INSTALL_PATH}/operator/ --wait --wait-for-jobs --timeout 10m > /tmp/error.log 2>&1; ret=$?
 
           # --- WAIT FOR PODS TO GET STARTED ---
           runningPods $NAMESPACE
@@ -7641,7 +7641,7 @@ InstallMetallLB() {
 
     cnt=0; ret=1
     while [ $ret -ne 0 -a $cnt -lt 5 ]; do
-      helm install metallb metallb/metallb -f $HELM_VALUES -n $NAMESPACE > /dev/null 2>&1; ret=$?
+      helm install metallb metallb/metallb -f $HELM_VALUES -n $NAMESPACE --wait --wait-for-jobs --timeout 10m > /dev/null 2>&1; ret=$?
       [ $ret -eq 0 ] && break
       let cnt=cnt+1
       sleep 30
@@ -7758,7 +7758,7 @@ InstallContour() {
 
     cnt=0; ret=1
     while [ $ret -ne 0 -a $cnt -lt 5 ]; do
-      helm install -f /tmp/contour_values.yaml ingress bitnami/contour -n $NAMESPACE --version $HELM_CONTOUR_VERSION > /dev/null 2>&1; ret=$?
+      helm install -f /tmp/contour_values.yaml ingress bitnami/contour -n $NAMESPACE --version $HELM_CONTOUR_VERSION --wait --wait-for-jobs --timeout 10m > /dev/null 2>&1; ret=$?
       [ $ret -eq 0 ] && break
       let cnt=cnt+1
       sleep 30
@@ -8142,7 +8142,7 @@ InstallCertManager() {
 
     cnt=0; ret=1
     while [ $ret -ne 0 -a $cnt -lt 5 ]; do
-      helm install cert-manager jetstack/cert-manager -n cert-manager --version v1.1.0 --set installCRDs=true > /dev/null 2>&1; ret=$?
+      helm install cert-manager jetstack/cert-manager -n cert-manager --version v1.1.0 --set installCRDs=true --wait --wait-for-jobs --timeout 10m > /dev/null 2>&1; ret=$?
       [ $ret -eq 0 ] && break
       let cnt=cnt+1
       sleep 30
@@ -8296,8 +8296,8 @@ InstallHarborRegistry() {
 
     cnt=0; ret=1
     while [ $ret -ne 0 -a $cnt -lt 10 ]; do
-      #helm install harbor bitnami/harbor -f $HARBOR_VALUES --version $HELM_HARBOR_VERSION -n $NAMESPACE --wait --wait-for-jobs > /dev/null 2>&1; ret=$?
-      helm install harbor bitnami/harbor -f $HARBOR_VALUES --version $HELM_HARBOR_VERSION -n $NAMESPACE --wait --wait-for-jobs --timeout 10m; ret=$?
+      helm install harbor bitnami/harbor -f $HARBOR_VALUES --version $HELM_HARBOR_VERSION -n $NAMESPACE --wait --wait-for-jobs > /dev/null 2>&1; ret=$?
+      #helm install harbor bitnami/harbor -f $HARBOR_VALUES --version $HELM_HARBOR_VERSION -n $NAMESPACE --wait --wait-for-jobs --timeout 10m; ret=$?
       [ $ret -eq 0 ] && break
       let cnt=cnt+1
       sleep 30
@@ -12771,7 +12771,7 @@ nodeType() {
 xxx() {
     cnt=0; ret=1
     while [ $ret -ne 0 -a $cnt -lt 5 ]; do
-      helm install kubeapps --namespace $NAMESPACE bitnami/kubeapps -f $HELM_VALUES --version $HELM_KUBEAPPS_VERSION > /tmp/error.log 2>&1; ret=$?
+      helm install kubeapps --namespace $NAMESPACE bitnami/kubeapps -f $HELM_VALUES --version $HELM_KUBEAPPS_VERSION --wait --wait-for-jobs --timeout 10m > /tmp/error.log 2>&1; ret=$?
 
       [ $ret -eq 0 ] && break
       let cnt=cnt+1
