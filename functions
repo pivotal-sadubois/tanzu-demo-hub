@@ -12219,6 +12219,7 @@ echo "tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace
   verifyHostedZone ${TDH_ENVNAME}.$AWS_HOSTED_DNS_DOMAIN
 
   [ "$TDH_TOOLS_CONTAINER_TYPE" == "tkg" ] && CONTOUR_NS=tanzu-system-ingress || CONTOUR_NS=projectcontour
+  CONTOUR_NS=tanzu-system-ingress
 
   ipa=""; cnt=0
   while [ "$ipa" == "" -a $cnt -lt 15 ]; do
