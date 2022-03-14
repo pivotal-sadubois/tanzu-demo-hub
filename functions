@@ -6302,9 +6302,6 @@ installGitea() {
 
       exit 1
     fi
-
-    # --- WAIT FOR PODS TO GET STARTED ---
-    runningPods $NAMESPACE
   fi
 
   cmdLoop helm ls -n $NAMESPACE -o json > /tmp/output.json
