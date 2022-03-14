@@ -99,9 +99,7 @@ execCmd "kubectl get namespace"
 # --- GET THE KUBERNETES DEFAULT STORAGE CLASSE ---
 cmdLoop kubectl get sc -o json > /tmp/output.json
 STORAGE_CLASS=$(jq -r '.items[].metadata | select(.annotations."storageclass.kubernetes.io/is-default-class" == "true").name' /tmp/output.json)
-echo "1 STORAGE_CLASS:$STORAGE_CLASS"
 [ "$STORAGE_CLASS" == "" ] && STORAGE_CLASS=standard
-echo "2 STORAGE_CLASS:$STORAGE_CLASS"
 
 # --- PREPARATION ---
 cat $TDHDEMO/files/minio-s3-secret-backup.yaml | sed -e "s/MINIO_ACCESS_KEY/$TDH_SERVICE_MINIO_ACCESS_KEY/g" \
@@ -111,10 +109,6 @@ cat $TDHDEMO/files/tdh-postgres-singleton.yaml | sed -e "s/XXX_MEM_XXX/$CAPACITY
   -e "s/XXX_STARTE_CLASS_XXX/$STORAGE_CLASS/g" \
   -e "s/XXX_DISK_XXX/$CAPACITY_DISK/g" \
   > /tmp/tdh-postgres-singleton.yaml
-
-cat $TDHDEMO/files/tdh-postgres-singleton.yaml
-cat /tmp/tdh-postgres-singleton.yaml
-exit
 
 prtHead "Create S3 Secret (Minio) used for pgBackRest"
 execCat "/tmp/minio-s3-secret-backup.yaml"
