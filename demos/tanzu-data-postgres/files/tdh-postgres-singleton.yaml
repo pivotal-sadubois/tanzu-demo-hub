@@ -5,7 +5,7 @@ metadata:
 spec:
   memory: XXX_MEM_XXX
   cpu: "XXX_CPU_XXX"
-  storageClassName: standard
+  storageClassName: XXX_STARTE_CLASS_XXX
   storageSize: XXX_DISK_XXX
   pgConfig:
      dbname: tdh-postgres-db
