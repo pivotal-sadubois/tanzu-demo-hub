@@ -5905,7 +5905,7 @@ installSpringCloudGateway() {
         messagePrint " ▪ Relocate the images" "$DNS_HARBOR/library/spring-cloud-gateway"
         cd /tmp/spring-cloud-gateway/spring-cloud-gateway-k8s-$TDH_SERVICE_SPRING_CLOUD_GATEWAY_VERSION
 
-        ./scripts/relocate-images.sh $DNS_HARBOR/library/spring-cloud-gateway 
+        ./scripts/relocate-images.sh $DNS_HARBOR/library/spring-cloud-gateway > /dev/null 2>&1
         if [ $? -ne 0 ]; then
           echo "ERROR: Image Relocation failed"
           echo "       => cd /tmp/spring-cloud-gateway/spring-cloud-gateway-k8s-$TDH_SERVICE_SPRING_CLOUD_GATEWAY_VERSION"
@@ -5913,15 +5913,23 @@ installSpringCloudGateway() {
         fi
 
         messagePrint " ▪ Deploy Spring Cloud Gateway" "$NAMESPACE"
-        echo "-----------------------------------------------------------------------------------------------------------"
-        cd /tmp/spring-cloud-gateway/spring-cloud-gateway-k8s-$TDH_SERVICE_SPRING_CLOUD_GATEWAY_VERSION
-        ./scripts/install-spring-cloud-gateway.sh
-        echo "-----------------------------------------------------------------------------------------------------------"
-        if [ $? -ne 0 ]; then
-          echo "ERROR: Image Relocation failed"
-          echo "       => cd /tmp/spring-cloud-gateway/spring-cloud-gateway-k8s-$TDH_SERVICE_SPRING_CLOUD_GATEWAY_VERSION"
-          echo "       => ./scripts/install-spring-cloud-gateway.sh"
-        fi
+        nam=""; cnt=0
+        while [ "$nam" != "scg-operator" -a $cnt -lt 5 ]; do
+          cd /tmp/spring-cloud-gateway/spring-cloud-gateway-k8s-$TDH_SERVICE_SPRING_CLOUD_GATEWAY_VERSION
+          ./scripts/install-spring-cloud-gateway.sh > /dev/null 2>&1
+          if [ $? -ne 0 ]; then
+            echo "ERROR: Image Relocation failed"
+            echo "       => cd /tmp/spring-cloud-gateway/spring-cloud-gateway-k8s-$TDH_SERVICE_SPRING_CLOUD_GATEWAY_VERSION"
+            echo "       => ./scripts/install-spring-cloud-gateway.sh"
+          fi
+
+          cmdLoop kubectl -n $NAMESPACE get deployment.apps/scg-operator -o json > /tmp/output.json
+          nam=$(jq -r '.metadata.name' /tmp/output.json) 
+          [ "$nam" == "scg-operator" ] && break
+        done
+
+        # --- WAIT FOR PODS TO GET STARTED ---
+        runningPods $NAMESPACE
       fi
     else
       messageTitle "Verify Spring Cloud Gateway"
@@ -6004,9 +6012,6 @@ installArgoCD() {
     messagePrint " ▪ Create Serviceaccount"              "argocd"
     kubectl delete serviceaccount argocd > /dev/null 2>&1
     kubectl create serviceaccount argocd > /dev/null 2>&1
-
-echo "kubectl port-forward -n argo-cd svc/argo-cd-server 8443:443 2>&1 > /dev/null &"
-echo "argocd login 127.0.0.1:8443 --password admin --username admin --plaintext"
   fi
 
   cmdLoop helm ls -n $NAMESPACE -o json > /tmp/output.json
@@ -6603,7 +6608,7 @@ installMinio() {
     fi
 
     # --- WAIT FOR PODS TO GET STARTED ---
-    runningPods NAMESPACE
+    runningPods $NAMESPACE
   fi
 
   cmdLoop helm ls -n $NAMESPACE -o json > /tmp/output.json
@@ -6951,9 +6956,6 @@ installTanzuDataPostgres() {
       if [ $cnt -eq 0 ]; then
         messagePrint " ▪ Install Postgres Operator" "$TDH_SERVICE_TANZU_DATA_POSTGRES_VERSION"
   
-        # --- CREATE NAMESPACE ---
-        createNamespace $NAMESPACE > /dev/null 2>&1
-  
         # --- INSTALL POSTGRES ---
         POSTGRES_INSTALL_PATH="/tmp/postgres-for-kubernetes/postgres-for-kubernetes-v$TDH_SERVICE_TANZU_DATA_POSTGRES_VERSION"
         # REGISTRY="harbor.apps-contour.local.pcfsdu.com/library"
@@ -6988,8 +6990,8 @@ installTanzuDataPostgres() {
         fi
 
         messagePrint " ▪ Create Kubernetes Namespace" "postgres-operator"
-        deleteNamespace $NAMESPACE
-        createNamespace $NAMESPACE
+        deleteNamespace $NAMESPACE > /dev/null 2>&1
+        createNamespace $NAMESPACE > /dev/null 2>&1
 
         messagePrint " ▪ Deploy the Postgres operator" "postgres-operator"
         cnt=0; ret=1; stt="notdeployed"
