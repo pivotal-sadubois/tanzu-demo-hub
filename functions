@@ -5926,6 +5926,10 @@ installSpringCloudGateway() {
           cmdLoop kubectl -n $NAMESPACE get deployment.apps/scg-operator -o json > /tmp/output.json
           nam=$(jq -r '.metadata.name' /tmp/output.json) 
           [ "$nam" == "scg-operator" ] && break
+echo "... Deploy Spring Cloud Gateway: $nam"
+     
+          sleep 30
+          let cnt=cnt+1
         done
 
         # --- WAIT FOR PODS TO GET STARTED ---
