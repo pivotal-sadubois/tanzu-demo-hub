@@ -6284,13 +6284,16 @@ installGitea() {
     messagePrint " ▪ Deploy the $HELMCHART Helm Chart" "$HELMCHART"
     cnt=0; ret=1; stt="notdeployed"
     while [ $ret -ne 0 -a $cnt -lt 5 -a "$stt" != "deployed" ]; do
-      helm install $HELMCHART --namespace $NAMESPACE $HELMREPO/$HELMCHART -f $HELM_VALUES --version $HELM_CHART_VERSION --wait --wait-for-jobs --timeout 10m > /tmp/error.log 2>&1; ret=$?
+#gaga
+      #helm install $HELMCHART --namespace $NAMESPACE $HELMREPO/$HELMCHART -f $HELM_VALUES --version $HELM_CHART_VERSION --wait --wait-for-jobs --timeout 10m > /tmp/error.log 2>&1; ret=$?
+      helm install $HELMCHART --namespace $NAMESPACE $HELMREPO/$HELMCHART -f $HELM_VALUES --version $HELM_CHART_VERSION --wait --wait-for-jobs --timeout 10m; ret=$?
 
       # --- WAIT FOR PODS TO GET STARTED ---
       runningPods $NAMESPACE
 
       cmdLoop helm ls -n $NAMESPACE -o json > /tmp/output.json
       stt=$(jq -r --arg chart "$HELMCHART" '.[] | select(.name == $chart).status' /tmp/output.json)
+echo "gaga $HELMCHART STT:$stt"
 
       [ $ret -eq 0 -a "$stt" == "deployed" ] && break
 
@@ -6447,6 +6450,7 @@ installKubeapps() {
 
       cmdLoop helm ls -n $NAMESPACE -o json > /tmp/output.json
       stt=$(jq -r --arg chart "$HELMCHART" '.[] | select(.name == $chart).status' /tmp/output.json)
+echo "gaga $HELMCHART STT:$stt"
 
       [ $ret -eq 0 -a "$stt" == "deployed" ] && break
 
@@ -6594,6 +6598,7 @@ installMinio() {
 
       cmdLoop helm ls -n $NAMESPACE -o json > /tmp/output.json
       stt=$(jq -r --arg chart "$HELMCHART" '.[] | select(.name == $chart).status' /tmp/output.json)
+echo "gaga $HELMCHART STT:$stt"
 
       [ $ret -eq 0 -a "$stt" == "deployed" ] && break
 
@@ -7016,6 +7021,7 @@ installTanzuDataPostgres() {
 
           cmdLoop helm ls -n $NAMESPACE -o json > /tmp/output.json
           stt=$(jq -r --arg chart "$HELMCHART" '.[] | select(.name == $chart).status' /tmp/output.json)
+echo "gaga $HELMCHART STT:$stt"
 
           [ $ret -eq 0 -a "$stt" == "deployed" ] && break
 
