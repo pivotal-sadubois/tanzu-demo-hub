@@ -5900,7 +5900,7 @@ installSpringCloudGateway() {
         echo "       => docker login $TDH_HARBOR_REGISTRY_DNS_HARBOR -u admin -p $TDH_HARBOR_REGISTRY_ADMIN_PASSWORD"; exit 1
       fi
   
-      kubectl get ns $NAMESPACE > /dev/null 2>&1
+      cmdLoop kubectl get ns $NAMESPACE > /dev/null 2>&1
       if [ $? -ne 0 ]; then
         messagePrint " ▪ Relocate the images" "$DNS_HARBOR/library/spring-cloud-gateway"
         cd /tmp/spring-cloud-gateway/spring-cloud-gateway-k8s-$TDH_SERVICE_SPRING_CLOUD_GATEWAY_VERSION
@@ -6435,7 +6435,9 @@ installKubeapps() {
     messagePrint " ▪ Deploy the Kubeapps Helm Chart" "kubeapps"
     cnt=0; ret=1; stt="notdeployed"
     while [ $ret -ne 0 -a $cnt -lt 5 -a "$stt" != "deployed" ]; do
-      helm install $HELMCHART --namespace $NAMESPACE bitnami/$HELMCHART -f $HELM_VALUES --version $HELM_KUBEAPPS_VERSION --wait --wait-for-jobs --timeout 10m > /tmp/error.log 2>&1; ret=$?
+#gaga
+      #helm install $HELMCHART --namespace $NAMESPACE bitnami/$HELMCHART -f $HELM_VALUES --version $HELM_KUBEAPPS_VERSION --wait --wait-for-jobs --timeout 10m > /tmp/error.log 2>&1; ret=$?
+      helm install $HELMCHART --namespace $NAMESPACE bitnami/$HELMCHART -f $HELM_VALUES --version $HELM_KUBEAPPS_VERSION --wait --wait-for-jobs --timeout 10m; ret=$?
 
       # --- WAIT FOR PODS TO GET STARTED ---
       runningPods $NAMESPACE
@@ -6580,7 +6582,9 @@ installMinio() {
     messagePrint " ▪ Deploy the Minio Helm Chart" "minio"
     cnt=0; ret=1; stt="notdeployed"
     while [ $ret -ne 0 -a $cnt -lt 5 -a "$stt" != "deployed" ]; do
-      helm install $HELMCHART bitnami/$HELMCHART --namespace $NAMESPACE -f ${HELM_VALUES} --wait --wait-for-jobs --timeout 10m > /tmp/error.log 2>&1; ret=$?
+#gaga
+      #helm install $HELMCHART bitnami/$HELMCHART --namespace $NAMESPACE -f ${HELM_VALUES} --wait --wait-for-jobs --timeout 10m > /tmp/error.log 2>&1; ret=$?
+      helm install $HELMCHART bitnami/$HELMCHART --namespace $NAMESPACE -f ${HELM_VALUES} --wait --wait-for-jobs --timeout 10m; ret=$?
 
       # --- WAIT FOR PODS TO GET STARTED ---
       runningPods $NAMESPACE
@@ -6892,7 +6896,7 @@ installGitLab() {
 }
 
 installTanzuDataPostgres() {
-  NAMESPACE=postgres-operator
+  NAMESPACE=default
   HELMCHART=postgres-operator
 
   if [ "$TDH_SERVICE_TANZU_DATA_POSTGRES" != "true" ]; then
@@ -6993,14 +6997,16 @@ installTanzuDataPostgres() {
           echo "-----------------------------------------------------------------------------------------------------------"
         fi
 
-        messagePrint " ▪ Create Kubernetes Namespace" "postgres-operator"
-        deleteNamespace $NAMESPACE > /dev/null 2>&1
-        createNamespace $NAMESPACE > /dev/null 2>&1
+        #messagePrint " ▪ Create Kubernetes Namespace" "postgres-operator"
+        #deleteNamespace $NAMESPACE > /dev/null 2>&1
+        #createNamespace $NAMESPACE > /dev/null 2>&1
 
         messagePrint " ▪ Deploy the Postgres operator" "postgres-operator"
         cnt=0; ret=1; stt="notdeployed"
         while [ $ret -ne 0 -a $cnt -lt 5 -a "$stt" != "deployed" ]; do
-          helm install $HELMCHART --namespace $NAMESPACE -f /tmp/values-overrides.yaml ${POSTGRES_INSTALL_PATH}/operator/ --wait --wait-for-jobs --timeout 10m > /tmp/error.log 2>&1; ret=$?
+#gaga
+          #helm install $HELMCHART --namespace $NAMESPACE -f /tmp/values-overrides.yaml ${POSTGRES_INSTALL_PATH}/operator/ --wait --wait-for-jobs --timeout 10m > /tmp/error.log 2>&1; ret=$?
+          helm install $HELMCHART --namespace $NAMESPACE -f /tmp/values-overrides.yaml ${POSTGRES_INSTALL_PATH}/operator/ --wait --wait-for-jobs --timeout 10m; ret=$?
 
           # --- WAIT FOR PODS TO GET STARTED ---
           runningPods $NAMESPACE
@@ -7039,7 +7045,7 @@ installTanzuDataPostgres() {
     fi
   fi
 
-  cmdLoop helm ls -n $NAMESPACE -o json > /tmp/output.json
+  cmdLoop helm ls -n default -o json > /tmp/output.json
   if [ -s /tmp/output.json ]; then
     ver=$(jq -r --arg chart "postgres-operator" '.[] | select(.name == $chart).app_version' /tmp/output.json)
     crt=$(jq -r --arg chart "postgres-operator" '.[] | select(.name == $chart).chart' /tmp/output.json)
