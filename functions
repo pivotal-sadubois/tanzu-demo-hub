@@ -4690,8 +4690,10 @@ tkgCreateCluster() {
     fi
 
 #hallo docker
-    tanzu cluster get $TDH_TKGWC_NAME >/dev/null 2>&1; ret=$?
-    if [ $ret -ne 0 ]; then
+
+    cmdLoop tanzu cluster list -o json > /tmp/output.json
+    stt=$(jq -r --arg key "$TDH_TKGWC_NAME" '.[] | select(.name == $key).status' /tmp/output.json)
+    if [ "$stt" != "running" ]; then
       echo "-----------------------------------------------------------------------------------------------------------"
       echo "=> tanzu cluster create $TDH_TKGWC_NAME -f $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml --tkr $TDH_TKGWC_K8S_VERSION"
       tanzu cluster create $TDH_TKGWC_NAME -f $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml --tkr $TDH_TKGWC_K8S_VERSION
@@ -4702,11 +4704,11 @@ tkgCreateCluster() {
     fi
 
     # --- GET CREDENTIALS AND SET ENVIRONMENT ---
-    tanzu cluster kubeconfig get $TDH_TKGWC_NAME --admin > /dev/null 2>&1
+    cmdLoop tanzu cluster kubeconfig get $TDH_TKGWC_NAME --admin > /dev/null 2>&1
 
     # --- CREATE GLOBAL KUBECONFIG FILE ---
     mv $HOME/.kube/config $HOME/.kube/config.bak
-    tanzu cluster kubeconfig get $TDH_TKGWC_NAME --admin > /dev/null 2>&1
+    cmdLoop tanzu cluster kubeconfig get $TDH_TKGWC_NAME --admin > /dev/null 2>&1
     mv $HOME/.kube/config $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.kubeconfig
     mv $HOME/.kube/config.bak $HOME/.kube/config
   fi
