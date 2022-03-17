@@ -4783,8 +4783,9 @@ tkgCreateCluster() {
     fi
 
 #hallo azure
-    tanzu cluster get $TDH_TKGWC_NAME >/dev/null 2>&1; ret=$?
-    if [ $ret -ne 0 ]; then
+    cmdLoop tanzu cluster list -o json > /tmp/output.json
+    stt=$(jq -r --arg key "$TDH_TKGWC_NAME" '.[] | select(.name == $key).status' /tmp/output.json)
+    if [ "$stt" != "running" ]; then
       echo "-----------------------------------------------------------------------------------------------------------"
       echo "=> tanzu cluster create $TDH_TKGWC_NAME -f $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml --tkr $TDH_TKGWC_K8S_VERSION"
       tanzu cluster create $TDH_TKGWC_NAME -f $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml --tkr $TDH_TKGWC_K8S_VERSION; ret=$?
@@ -7007,8 +7008,8 @@ installTanzuDataPostgres() {
         cnt=0; ret=1; stt="notdeployed"
         while [ $ret -ne 0 -a $cnt -lt 5 -a "$stt" != "deployed" ]; do
 #gaga
-          #helm install $HELMCHART --namespace $NAMESPACE -f /tmp/values-overrides.yaml ${POSTGRES_INSTALL_PATH}/operator/ --wait --wait-for-jobs --timeout 10m > /tmp/error.log 2>&1; ret=$?
-          helm install $HELMCHART --namespace $NAMESPACE -f /tmp/values-overrides.yaml ${POSTGRES_INSTALL_PATH}/operator/ --wait --wait-for-jobs --timeout 10m; ret=$?
+          helm install $HELMCHART --namespace $NAMESPACE -f /tmp/values-overrides.yaml ${POSTGRES_INSTALL_PATH}/operator/ --wait --wait-for-jobs --timeout 10m > /tmp/error.log 2>&1; ret=$?
+          #helm install $HELMCHART --namespace $NAMESPACE -f /tmp/values-overrides.yaml ${POSTGRES_INSTALL_PATH}/operator/ --wait --wait-for-jobs --timeout 10m; ret=$?
 
           # --- WAIT FOR PODS TO GET STARTED ---
           runningPods $NAMESPACE
