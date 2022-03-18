@@ -6100,16 +6100,19 @@ installJenkins() {
     echo "      - jenkins.$DOMAIN"                                                                                              >> $HELM_VALUES
     echo "    secretName: tanzu-demo-hub-tls"                                                                                   >> $HELM_VALUES
 
+#gaga Jenkins
     messagePrint " ▪ Deploy the Jenkins Helm Chart" "$HELMCHART"
     cnt=0; ret=1; stt="notdeployed"
     while [ $ret -ne 0 -a $cnt -lt 5 -a "$stt" != "deployed" ]; do
-      helm install $HELMCHART --namespace $NAMESPACE bitnami/$HELMCHART -f $HELM_VALUES --wait --wait-for-jobs --timeout 10m > /tmp/error.log 2>&1; ret=$?
+      #helm install $HELMCHART --namespace $NAMESPACE bitnami/$HELMCHART -f $HELM_VALUES --wait --wait-for-jobs --timeout 10m > /tmp/error.log 2>&1; ret=$?
+      helm install $HELMCHART --namespace $NAMESPACE bitnami/$HELMCHART -f $HELM_VALUES --wait --wait-for-jobs --timeout 10m; ret=$?
 
       # --- WAIT FOR PODS TO GET STARTED ---
       runningPods $NAMESPACE
 
       cmdLoop helm ls -n $NAMESPACE -o json > /tmp/output.json
       stt=$(jq -r --arg chart "$HELMCHART" '.[] | select(.name == $chart).status' /tmp/output.json)
+echo "gaga $HELMCHART STT:$stt RET:$ret"
 
       [ $ret -eq 0 -a "$stt" == "deployed" ] && break
 
@@ -6284,7 +6287,7 @@ installGitea() {
     messagePrint " ▪ Deploy the $HELMCHART Helm Chart" "$HELMCHART"
     cnt=0; ret=1; stt="notdeployed"
     while [ $ret -ne 0 -a $cnt -lt 5 -a "$stt" != "deployed" ]; do
-#gaga
+#gaga gitea
       #helm install $HELMCHART --namespace $NAMESPACE $HELMREPO/$HELMCHART -f $HELM_VALUES --version $HELM_CHART_VERSION --wait --wait-for-jobs --timeout 10m > /tmp/error.log 2>&1; ret=$?
       helm install $HELMCHART --namespace $NAMESPACE $HELMREPO/$HELMCHART -f $HELM_VALUES --version $HELM_CHART_VERSION --wait --wait-for-jobs --timeout 10m; ret=$?
 
@@ -6293,7 +6296,7 @@ installGitea() {
 
       cmdLoop helm ls -n $NAMESPACE -o json > /tmp/output.json
       stt=$(jq -r --arg chart "$HELMCHART" '.[] | select(.name == $chart).status' /tmp/output.json)
-echo "gaga $HELMCHART STT:$stt"
+echo "gaga $HELMCHART STT:$stt RET:$ret"
 
       [ $ret -eq 0 -a "$stt" == "deployed" ] && break
 
@@ -6441,7 +6444,7 @@ installKubeapps() {
     messagePrint " ▪ Deploy the Kubeapps Helm Chart" "kubeapps"
     cnt=0; ret=1; stt="notdeployed"
     while [ $ret -ne 0 -a $cnt -lt 5 -a "$stt" != "deployed" ]; do
-#gaga
+#gaga kubeapps
       #helm install $HELMCHART --namespace $NAMESPACE bitnami/$HELMCHART -f $HELM_VALUES --version $HELM_KUBEAPPS_VERSION --wait --wait-for-jobs --timeout 10m > /tmp/error.log 2>&1; ret=$?
       helm install $HELMCHART --namespace $NAMESPACE bitnami/$HELMCHART -f $HELM_VALUES --version $HELM_KUBEAPPS_VERSION --wait --wait-for-jobs --timeout 10m; ret=$?
 
@@ -6450,7 +6453,7 @@ installKubeapps() {
 
       cmdLoop helm ls -n $NAMESPACE -o json > /tmp/output.json
       stt=$(jq -r --arg chart "$HELMCHART" '.[] | select(.name == $chart).status' /tmp/output.json)
-echo "gaga $HELMCHART STT:$stt"
+echo "gaga $HELMCHART STT:$stt RET:$ret"
 
       [ $ret -eq 0 -a "$stt" == "deployed" ] && break
 
@@ -6589,7 +6592,7 @@ installMinio() {
     messagePrint " ▪ Deploy the Minio Helm Chart" "minio"
     cnt=0; ret=1; stt="notdeployed"
     while [ $ret -ne 0 -a $cnt -lt 5 -a "$stt" != "deployed" ]; do
-#gaga
+#gaga minio
       #helm install $HELMCHART bitnami/$HELMCHART --namespace $NAMESPACE -f ${HELM_VALUES} --wait --wait-for-jobs --timeout 10m > /tmp/error.log 2>&1; ret=$?
       helm install $HELMCHART bitnami/$HELMCHART --namespace $NAMESPACE -f ${HELM_VALUES} --wait --wait-for-jobs --timeout 10m; ret=$?
 
@@ -6598,7 +6601,7 @@ installMinio() {
 
       cmdLoop helm ls -n $NAMESPACE -o json > /tmp/output.json
       stt=$(jq -r --arg chart "$HELMCHART" '.[] | select(.name == $chart).status' /tmp/output.json)
-echo "gaga $HELMCHART STT:$stt"
+echo "gaga $HELMCHART STT:$stt RET:$ret"
 
       [ $ret -eq 0 -a "$stt" == "deployed" ] && break
 
@@ -7012,7 +7015,7 @@ installTanzuDataPostgres() {
         messagePrint " ▪ Deploy the Postgres operator" "postgres-operator"
         cnt=0; ret=1; stt="notdeployed"
         while [ $ret -ne 0 -a $cnt -lt 5 -a "$stt" != "deployed" ]; do
-#gaga
+#gaga postgress
           helm install $HELMCHART --namespace $NAMESPACE -f /tmp/values-overrides.yaml ${POSTGRES_INSTALL_PATH}/operator/ --wait --wait-for-jobs --timeout 10m > /tmp/error.log 2>&1; ret=$?
           #helm install $HELMCHART --namespace $NAMESPACE -f /tmp/values-overrides.yaml ${POSTGRES_INSTALL_PATH}/operator/ --wait --wait-for-jobs --timeout 10m; ret=$?
 
@@ -7021,7 +7024,7 @@ installTanzuDataPostgres() {
 
           cmdLoop helm ls -n $NAMESPACE -o json > /tmp/output.json
           stt=$(jq -r --arg chart "$HELMCHART" '.[] | select(.name == $chart).status' /tmp/output.json)
-echo "gaga $HELMCHART STT:$stt"
+echo "gaga $HELMCHART STT:$stt RET:$ret"
 
           [ $ret -eq 0 -a "$stt" == "deployed" ] && break
 
