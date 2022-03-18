@@ -13383,15 +13383,15 @@ echo xxx6
 cmdLoop() {
   CMD=$*
 
-  cnt=0; ret=1
-  while [ $ret -ne 0 -a $cnt -lt 5 ]; do
-    $CMD > /tmp/loopCmdIgnore.out 2>/tmp/cmdloop_error.log; ret=$?
-    [ $ret -eq 0 ] && break
-    let cnt=cnt+1
+  _cnt=0; _ret=1
+  while [ $_ret -ne 0 -a $_cnt -lt 5 ]; do
+    $CMD > /tmp/loopCmdIgnore.out 2>/tmp/cmdloop_error.log; _ret=$?
+    [ $_ret -eq 0 ] && break
+    let _cnt=_cnt+1
     sleep 30
   done
 
-  if [ $ret -ne 0 ]; then
+  if [ $_ret -ne 0 ]; then
     logMessages /tmp/cmdloop_error.log 1>&2
     echo "ERROR: Failed to run command, please try manually" 1>&2
     if [ "$NATIVE" == "0" ]; then
