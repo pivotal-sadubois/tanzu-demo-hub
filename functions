@@ -6101,35 +6101,27 @@ installJenkins() {
     echo "    secretName: tanzu-demo-hub-tls"                                                                                   >> $HELM_VALUES
 
 #gaga Jenkins
-echo "gaga1 $(date)"
     messagePrint " ▪ Deploy the Jenkins Helm Chart" "$HELMCHART"
     cnt=0; ret=1; stt="notdeployed"
     while [ $ret -ne 0 -a $cnt -lt 7 -a "$stt" != "deployed" ]; do
-echo "=> ($cnt) helm install $HELMCHART $(date)"
-      #helm install $HELMCHART --namespace $NAMESPACE bitnami/$HELMCHART -f $HELM_VALUES --create-namespace --wait --wait-for-jobs --timeout 10m > /tmp/error.log 2>&1; ret=$?
-      helm install $HELMCHART --namespace $NAMESPACE bitnami/$HELMCHART -f $HELM_VALUES --create-namespace --wait --wait-for-jobs --timeout 20m; ret=$?
+      helm install $HELMCHART --namespace $NAMESPACE bitnami/$HELMCHART -f $HELM_VALUES --create-namespace --wait --wait-for-jobs --timeout 10m > /tmp/error.log 2>&1; ret=$?
+      #helm install $HELMCHART --namespace $NAMESPACE bitnami/$HELMCHART -f $HELM_VALUES --create-namespace --wait --wait-for-jobs --timeout 20m; ret=$?
 
-echo "=> ($cnt) running pods $NAMESPACE"
       # --- WAIT FOR PODS TO GET STARTED ---
       runningPods $NAMESPACE
-echo "=> ($cnt) running pods-end $NAMESPACE"
 
       cmdLoop helm ls -n $NAMESPACE -o json > /tmp/output.json
       stt=$(jq -r --arg chart "$HELMCHART" '.[] | select(.name == $chart).status' /tmp/output.json)
-echo "=> gaga $HELMCHART STT:$stt RET:$ret"
 
       [ $ret -eq 0 -a "$stt" == "deployed" ] && break
 
-echo "=> ($cnt) helm uninstall $HELMCHART"
       # --- DELTE FAILED HELM CHART ---
-      deleteHelmChart $NAMESPACE $HELMCHART
+      deleteHelmChart $NAMESPACE $HELMCHART > /dev/null 2>&1
       deleteNamespace $NAMESPACE > /dev/null 2>&1
-echo "=> ($cnt) helm uninstalled $HELMCHART $(date)"
       
       let cnt=cnt+1
       sleep 60
     done
-echo "gaga2"
 
     if [ $ret -ne 0 -o "$stt" != "deployed" ]; then
       logMessages /tmp/error.log
@@ -6293,30 +6285,23 @@ installGitea() {
     echo "        - $HELMCHART.$DOMAIN"                                                                                         >> $HELM_VALUES
 
 #gaga gitea
-echo "gaga1"
     messagePrint " ▪ Deploy the $HELMCHART Helm Chart" "$HELMCHART"
     cnt=0; ret=1; stt="notdeployed"
     while [ $ret -ne 0 -a $cnt -lt 5 -a "$stt" != "deployed" ]; do
-echo "=> ($cnt) helm install $HELMCHART"
-      #helm install $HELMCHART --namespace $NAMESPACE $HELMREPO/$HELMCHART -f $HELM_VALUES --version $HELM_CHART_VERSION --create-namespace --wait --wait-for-jobs --timeout 10m > /tmp/error.log 2>&1; ret=$?
-      helm install $HELMCHART --namespace $NAMESPACE $HELMREPO/$HELMCHART -f $HELM_VALUES --version $HELM_CHART_VERSION --create-namespace --wait --wait-for-jobs --timeout 10m; ret=$?
+      helm install $HELMCHART --namespace $NAMESPACE $HELMREPO/$HELMCHART -f $HELM_VALUES --version $HELM_CHART_VERSION --create-namespace --wait --wait-for-jobs --timeout 10m > /tmp/error.log 2>&1; ret=$?
+      #helm install $HELMCHART --namespace $NAMESPACE $HELMREPO/$HELMCHART -f $HELM_VALUES --version $HELM_CHART_VERSION --create-namespace --wait --wait-for-jobs --timeout 10m; ret=$?
 
-echo "=> ($cnt) running pods $NAMESPACE"
       # --- WAIT FOR PODS TO GET STARTED ---
       runningPods $NAMESPACE
-echo "=> ($cnt) running pods-end $NAMESPACE"
 
       cmdLoop helm ls -n $NAMESPACE -o json > /tmp/output.json
       stt=$(jq -r --arg chart "$HELMCHART" '.[] | select(.name == $chart).status' /tmp/output.json)
-echo "gaga $HELMCHART STT:$stt RET:$ret"
 
       [ $ret -eq 0 -a "$stt" == "deployed" ] && break
 
-echo "=> ($cnt) helm uninstall $HELMCHART"
       # --- DELTE FAILED HELM CHART ---
-      deleteHelmChart $NAMESPACE $HELMCHART
+      deleteHelmChart $NAMESPACE $HELMCHART > /dev/null 2>&1
       deleteNamespace $NAMESPACE > /dev/null 2>&1
-echo "=> ($cnt) helm uninstalled $HELMCHART"
 
       let cnt=cnt+1
       sleep 30
@@ -6458,34 +6443,26 @@ installKubeapps() {
 
     messagePrint " ▪ Deploy the Kubeapps Helm Chart" "kubeapps"
 #gaga kubeapps
-echo gaga1
     cnt=0; ret=1; stt="notdeployed"
     while [ $ret -ne 0 -a $cnt -lt 5 -a "$stt" != "deployed" ]; do
-echo "=> ($cnt) helm install $HELMCHART"
-      #helm install $HELMCHART --namespace $NAMESPACE bitnami/$HELMCHART -f $HELM_VALUES --version $HELM_KUBEAPPS_VERSION --create-namespace --wait --wait-for-jobs --timeout 10m > /tmp/error.log 2>&1; ret=$?
-      helm install $HELMCHART --namespace $NAMESPACE bitnami/$HELMCHART -f $HELM_VALUES --version $HELM_KUBEAPPS_VERSION --create-namespace --wait --wait-for-jobs --timeout 10m; ret=$?
+      helm install $HELMCHART --namespace $NAMESPACE bitnami/$HELMCHART -f $HELM_VALUES --version $HELM_KUBEAPPS_VERSION --create-namespace --wait --wait-for-jobs --timeout 10m > /tmp/error.log 2>&1; ret=$?
+      #helm install $HELMCHART --namespace $NAMESPACE bitnami/$HELMCHART -f $HELM_VALUES --version $HELM_KUBEAPPS_VERSION --create-namespace --wait --wait-for-jobs --timeout 10m; ret=$?
 
-echo "=> ($cnt) running pods $NAMESPACE"
       # --- WAIT FOR PODS TO GET STARTED ---
       runningPods $NAMESPACE
-echo "=> ($cnt) running pods-end $NAMESPACE"
 
       cmdLoop helm ls -n $NAMESPACE -o json > /tmp/output.json
       stt=$(jq -r --arg chart "$HELMCHART" '.[] | select(.name == $chart).status' /tmp/output.json)
-echo "=> gaga $HELMCHART STT:$stt RET:$ret"
 
       [ $ret -eq 0 -a "$stt" == "deployed" ] && break
 
-echo "=> ($cnt) helm uninstall $HELMCHART"
       # --- DELTE FAILED HELM CHART ---
-      deleteHelmChart $NAMESPACE $HELMCHART
+      deleteHelmChart $NAMESPACE $HELMCHART > /dev/null 2>&1
       deleteNamespace $NAMESPACE > /dev/null 2>&1
-echo "=> ($cnt) helm uninstalled $HELMCHART"
 
       let cnt=cnt+1
       sleep 30
     done
-echo gaga2
 
     if [ $ret -ne 0 -o "$stt" != "deployed" ]; then
       logMessages /tmp/error.log
@@ -6615,33 +6592,25 @@ installMinio() {
 #gaga minio
     messagePrint " ▪ Deploy the Minio Helm Chart" "minio"
     cnt=0; ret=1; stt="notdeployed"
-echo gaga1
     while [ $ret -ne 0 -a $cnt -lt 5 -a "$stt" != "deployed" ]; do
-echo "=> ($cnt) helm install $HELMCHART"
-      #helm install $HELMCHART bitnami/$HELMCHART --namespace $NAMESPACE -f ${HELM_VALUES} --create-namespace --wait --wait-for-jobs --timeout 10m > /tmp/error.log 2>&1; ret=$?
-      helm install $HELMCHART bitnami/$HELMCHART --namespace $NAMESPACE -f ${HELM_VALUES} --create-namespace --wait --wait-for-jobs --timeout 10m; ret=$?
+      helm install $HELMCHART bitnami/$HELMCHART --namespace $NAMESPACE -f ${HELM_VALUES} --create-namespace --wait --wait-for-jobs --timeout 10m > /tmp/error.log 2>&1; ret=$?
+      #helm install $HELMCHART bitnami/$HELMCHART --namespace $NAMESPACE -f ${HELM_VALUES} --create-namespace --wait --wait-for-jobs --timeout 10m; ret=$?
 
-echo "=> ($cnt) running pods $NAMESPACE"
       # --- WAIT FOR PODS TO GET STARTED ---
       runningPods $NAMESPACE
-echo "=> ($cnt) running pods-end $NAMESPACE"
 
       cmdLoop helm ls -n $NAMESPACE -o json > /tmp/output.json
       stt=$(jq -r --arg chart "$HELMCHART" '.[] | select(.name == $chart).status' /tmp/output.json)
-echo "=> gaga $HELMCHART STT:$stt RET:$ret"
 
       [ $ret -eq 0 -a "$stt" == "deployed" ] && break
 
-echo "=> ($cnt) helm uninstall $HELMCHART"
       # --- DELTE FAILED HELM CHART ---
-      deleteHelmChart $NAMESPACE $HELMCHART
+      deleteHelmChart $NAMESPACE $HELMCHART > /dev/null 2>&1
       deleteNamespace $NAMESPACE > /dev/null 2>&1
-echo "=> ($cnt) helm uninstalled $HELMCHART"
 
       let cnt=cnt+1
       sleep 30
     done
-echo gaga2
 
     if [ $ret -ne 0 -o "$stt" != "deployed" ]; then
       logMessages /tmp/error.log
@@ -7044,35 +7013,27 @@ installTanzuDataPostgres() {
         #createNamespace $NAMESPACE > /dev/null 2>&1
 
 #gaga postgress
-echo gaga1
         messagePrint " ▪ Deploy the Postgres operator" "postgres-operator"
         cnt=0; ret=1; stt="notdeployed"
         while [ $ret -ne 0 -a $cnt -lt 5 -a "$stt" != "deployed" ]; do
-echo "=> ($cnt) helm install $HELMCHART"
           helm install $HELMCHART --namespace $NAMESPACE -f /tmp/values-overrides.yaml ${POSTGRES_INSTALL_PATH}/operator/ --create-namespace --wait --wait-for-jobs --timeout 10m > /tmp/error.log 2>&1; ret=$?
           #helm install $HELMCHART --namespace $NAMESPACE -f /tmp/values-overrides.yaml ${POSTGRES_INSTALL_PATH}/operator/ --create-namespace --wait --wait-for-jobs --timeout 10m; ret=$?
 
-echo "=> ($cnt) running pods $NAMESPACE"
           # --- WAIT FOR PODS TO GET STARTED ---
           runningPods $NAMESPACE
-echo "=> ($cnt) running pods-end $NAMESPACE"
 
           cmdLoop helm ls -n $NAMESPACE -o json > /tmp/output.json
           stt=$(jq -r --arg chart "$HELMCHART" '.[] | select(.name == $chart).status' /tmp/output.json)
-echo "=> gaga $HELMCHART STT:$stt RET:$ret"
 
           [ $ret -eq 0 -a "$stt" == "deployed" ] && break
 
-echo "=> ($cnt) helm uninstall $HELMCHART"
           # --- DELTE FAILED HELM CHART ---
-          deleteHelmChart $NAMESPACE $HELMCHART
+          deleteHelmChart $NAMESPACE $HELMCHART > /dev/null 2>&1
           deleteNamespace $NAMESPACE > /dev/null 2>&1
-echo "=> ($cnt) helm uninstalled $HELMCHART"
 
           let cnt=cnt+1
           sleep 30
         done
-echo gaga2
 
         if [ $ret -ne 0 -o "$stt" != "deployed" ]; then
           logMessages /tmp/error.log
