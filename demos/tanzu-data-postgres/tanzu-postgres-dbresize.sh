@@ -117,8 +117,14 @@ echo -e "        dbcpu=$dbcpu"
 echo "     -------------------------------------------------------------------------------------------------------------------------------------------------------"
 echo ""
 
+# --- GET THE KUBERNETES DEFAULT STORAGE CLASSE ---
+cmdLoop kubectl get sc -o json > /tmp/output.json
+STORAGE_CLASS=$(jq -r '.items[].metadata | select(.annotations."storageclass.kubernetes.io/is-default-class" == "true").name' /tmp/output.json)
+[ "$STORAGE_CLASS" == "" ] && STORAGE_CLASS=standard
+
 prtHead "Modify the memory and CPU allocation on the running instance ($INSTANCE)"
 cat $TDHDEMO/files/tdh-postgres-singleton.yaml | sed -e "s/XXX_MEM_XXX/1Gi/g" -e "s/XXX_CPU_XXX/0.4/g" -e "s/XXX_DISK_XXX/10G/g" \
+  -e "s/XXX_STARTE_CLASS_XXX/$STORAGE_CLASS/g" \
   > /tmp/tdh-postgres-singleton.yaml
 execCat "/tmp/tdh-postgres-singleton.yaml"
 execCmd "kubectl -n $NAMESPACE apply -f /tmp/tdh-postgres-singleton.yaml"
