@@ -10613,7 +10613,11 @@ setK8sEnvironment() {
     exit 1
   fi
 
-  CONTEXT=$(kubectl config get-contexts | grep " $CLUSTER " | sed 's/*//g' | awk '{ print $1 }')
+  ##DELETEME
+  #CONTEXT=$(kubectl config get-contexts | grep " $CLUSTER " | sed 's/*//g' | awk '{ print $1 }')
+
+  cmdLoop kubectl config view -o json > /tmp/output.json
+  CONTEXT=$(jq -r --arg key tdh-docker-sadubois '.contexts[] | select(.context.cluster == $key).name' /tmp/output.json) 
   messagePrint " ▪ Set Kubernetes Context"               "$CONTEXT"
   cmdLoop kubectl config use-context $CONTEXT > /dev/null 2>&1
   if [ $? -ne 0 ]; then
