@@ -6101,11 +6101,11 @@ installJenkins() {
     echo "    secretName: tanzu-demo-hub-tls"                                                                                   >> $HELM_VALUES
 
 #gaga Jenkins
-echo "gaga1"
+echo "gaga1 $(date)"
     messagePrint " ▪ Deploy the Jenkins Helm Chart" "$HELMCHART"
     cnt=0; ret=1; stt="notdeployed"
     while [ $ret -ne 0 -a $cnt -lt 5 -a "$stt" != "deployed" ]; do
-echo "=> ($cnt) helm install $HELMCHART"
+echo "=> ($cnt) helm install $HELMCHART $(date)"
       #helm install $HELMCHART --namespace $NAMESPACE bitnami/$HELMCHART -f $HELM_VALUES --create-namespace --wait --wait-for-jobs --timeout 10m > /tmp/error.log 2>&1; ret=$?
       helm install $HELMCHART --namespace $NAMESPACE bitnami/$HELMCHART -f $HELM_VALUES --create-namespace --wait --wait-for-jobs --timeout 20m; ret=$?
 
@@ -6124,7 +6124,7 @@ echo "=> ($cnt) helm uninstall $HELMCHART"
       # --- DELTE FAILED HELM CHART ---
       deleteHelmChart $NAMESPACE $HELMCHART
       deleteNamespace $NAMESPACE > /dev/null 2>&1
-echo "=> ($cnt) helm uninstalled $HELMCHART"
+echo "=> ($cnt) helm uninstalled $HELMCHART $(date)"
       
       let cnt=cnt+1
       sleep 30
@@ -13171,7 +13171,6 @@ deleteNamespace() {
       fi
     fi
 
-    let cnt=cnt+1
     sleep 10
   done
 }
