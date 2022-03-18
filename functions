@@ -6106,8 +6106,8 @@ echo "gaga1"
     cnt=0; ret=1; stt="notdeployed"
     while [ $ret -ne 0 -a $cnt -lt 5 -a "$stt" != "deployed" ]; do
 echo "=> ($cnt) helm install $HELMCHART"
-      #helm install $HELMCHART --namespace $NAMESPACE bitnami/$HELMCHART -f $HELM_VALUES --wait --wait-for-jobs --timeout 10m > /tmp/error.log 2>&1; ret=$?
-      helm install $HELMCHART --namespace $NAMESPACE bitnami/$HELMCHART -f $HELM_VALUES --wait --wait-for-jobs --timeout 20m; ret=$?
+      #helm install $HELMCHART --namespace $NAMESPACE bitnami/$HELMCHART -f $HELM_VALUES --create-namespace --wait --wait-for-jobs --timeout 10m > /tmp/error.log 2>&1; ret=$?
+      helm install $HELMCHART --namespace $NAMESPACE bitnami/$HELMCHART -f $HELM_VALUES --create-namespace --wait --wait-for-jobs --timeout 20m; ret=$?
 
 echo "=> ($cnt) running pods $NAMESPACE"
       # --- WAIT FOR PODS TO GET STARTED ---
@@ -6123,6 +6123,7 @@ echo "=> gaga $HELMCHART STT:$stt RET:$ret"
 echo "=> ($cnt) helm uninstall $HELMCHART"
       # --- DELTE FAILED HELM CHART ---
       deleteHelmChart $NAMESPACE $HELMCHART
+      deleteNamespace $NAMESPACE > /dev/null 2>&1
 echo "=> ($cnt) helm uninstalled $HELMCHART"
       
       let cnt=cnt+1
@@ -6297,8 +6298,8 @@ echo "gaga1"
     cnt=0; ret=1; stt="notdeployed"
     while [ $ret -ne 0 -a $cnt -lt 5 -a "$stt" != "deployed" ]; do
 echo "=> ($cnt) helm install $HELMCHART"
-      #helm install $HELMCHART --namespace $NAMESPACE $HELMREPO/$HELMCHART -f $HELM_VALUES --version $HELM_CHART_VERSION --wait --wait-for-jobs --timeout 10m > /tmp/error.log 2>&1; ret=$?
-      helm install $HELMCHART --namespace $NAMESPACE $HELMREPO/$HELMCHART -f $HELM_VALUES --version $HELM_CHART_VERSION --wait --wait-for-jobs --timeout 10m; ret=$?
+      #helm install $HELMCHART --namespace $NAMESPACE $HELMREPO/$HELMCHART -f $HELM_VALUES --version $HELM_CHART_VERSION --create-namespace --wait --wait-for-jobs --timeout 10m > /tmp/error.log 2>&1; ret=$?
+      helm install $HELMCHART --namespace $NAMESPACE $HELMREPO/$HELMCHART -f $HELM_VALUES --version $HELM_CHART_VERSION --create-namespace --wait --wait-for-jobs --timeout 10m; ret=$?
 
 echo "=> ($cnt) running pods $NAMESPACE"
       # --- WAIT FOR PODS TO GET STARTED ---
@@ -6314,6 +6315,7 @@ echo "gaga $HELMCHART STT:$stt RET:$ret"
 echo "=> ($cnt) helm uninstall $HELMCHART"
       # --- DELTE FAILED HELM CHART ---
       deleteHelmChart $NAMESPACE $HELMCHART
+      deleteNamespace $NAMESPACE > /dev/null 2>&1
 echo "=> ($cnt) helm uninstalled $HELMCHART"
 
       let cnt=cnt+1
@@ -6460,8 +6462,8 @@ echo gaga1
     cnt=0; ret=1; stt="notdeployed"
     while [ $ret -ne 0 -a $cnt -lt 5 -a "$stt" != "deployed" ]; do
 echo "=> ($cnt) helm install $HELMCHART"
-      #helm install $HELMCHART --namespace $NAMESPACE bitnami/$HELMCHART -f $HELM_VALUES --version $HELM_KUBEAPPS_VERSION --wait --wait-for-jobs --timeout 10m > /tmp/error.log 2>&1; ret=$?
-      helm install $HELMCHART --namespace $NAMESPACE bitnami/$HELMCHART -f $HELM_VALUES --version $HELM_KUBEAPPS_VERSION --wait --wait-for-jobs --timeout 10m; ret=$?
+      #helm install $HELMCHART --namespace $NAMESPACE bitnami/$HELMCHART -f $HELM_VALUES --version $HELM_KUBEAPPS_VERSION --create-namespace --wait --wait-for-jobs --timeout 10m > /tmp/error.log 2>&1; ret=$?
+      helm install $HELMCHART --namespace $NAMESPACE bitnami/$HELMCHART -f $HELM_VALUES --version $HELM_KUBEAPPS_VERSION --create-namespace --wait --wait-for-jobs --timeout 10m; ret=$?
 
 echo "=> ($cnt) running pods $NAMESPACE"
       # --- WAIT FOR PODS TO GET STARTED ---
@@ -6477,6 +6479,7 @@ echo "=> gaga $HELMCHART STT:$stt RET:$ret"
 echo "=> ($cnt) helm uninstall $HELMCHART"
       # --- DELTE FAILED HELM CHART ---
       deleteHelmChart $NAMESPACE $HELMCHART
+      deleteNamespace $NAMESPACE > /dev/null 2>&1
 echo "=> ($cnt) helm uninstalled $HELMCHART"
 
       let cnt=cnt+1
@@ -6615,8 +6618,8 @@ installMinio() {
 echo gaga1
     while [ $ret -ne 0 -a $cnt -lt 5 -a "$stt" != "deployed" ]; do
 echo "=> ($cnt) helm install $HELMCHART"
-      #helm install $HELMCHART bitnami/$HELMCHART --namespace $NAMESPACE -f ${HELM_VALUES} --wait --wait-for-jobs --timeout 10m > /tmp/error.log 2>&1; ret=$?
-      helm install $HELMCHART bitnami/$HELMCHART --namespace $NAMESPACE -f ${HELM_VALUES} --wait --wait-for-jobs --timeout 10m; ret=$?
+      #helm install $HELMCHART bitnami/$HELMCHART --namespace $NAMESPACE -f ${HELM_VALUES} --create-namespace --wait --wait-for-jobs --timeout 10m > /tmp/error.log 2>&1; ret=$?
+      helm install $HELMCHART bitnami/$HELMCHART --namespace $NAMESPACE -f ${HELM_VALUES} --create-namespace --wait --wait-for-jobs --timeout 10m; ret=$?
 
 echo "=> ($cnt) running pods $NAMESPACE"
       # --- WAIT FOR PODS TO GET STARTED ---
@@ -6632,6 +6635,7 @@ echo "=> gaga $HELMCHART STT:$stt RET:$ret"
 echo "=> ($cnt) helm uninstall $HELMCHART"
       # --- DELTE FAILED HELM CHART ---
       deleteHelmChart $NAMESPACE $HELMCHART
+      deleteNamespace $NAMESPACE > /dev/null 2>&1
 echo "=> ($cnt) helm uninstalled $HELMCHART"
 
       let cnt=cnt+1
@@ -7045,8 +7049,8 @@ echo gaga1
         cnt=0; ret=1; stt="notdeployed"
         while [ $ret -ne 0 -a $cnt -lt 5 -a "$stt" != "deployed" ]; do
 echo "=> ($cnt) helm install $HELMCHART"
-          helm install $HELMCHART --namespace $NAMESPACE -f /tmp/values-overrides.yaml ${POSTGRES_INSTALL_PATH}/operator/ --wait --wait-for-jobs --timeout 10m > /tmp/error.log 2>&1; ret=$?
-          #helm install $HELMCHART --namespace $NAMESPACE -f /tmp/values-overrides.yaml ${POSTGRES_INSTALL_PATH}/operator/ --wait --wait-for-jobs --timeout 10m; ret=$?
+          helm install $HELMCHART --namespace $NAMESPACE -f /tmp/values-overrides.yaml ${POSTGRES_INSTALL_PATH}/operator/ --create-namespace --wait --wait-for-jobs --timeout 10m > /tmp/error.log 2>&1; ret=$?
+          #helm install $HELMCHART --namespace $NAMESPACE -f /tmp/values-overrides.yaml ${POSTGRES_INSTALL_PATH}/operator/ --create-namespace --wait --wait-for-jobs --timeout 10m; ret=$?
 
 echo "=> ($cnt) running pods $NAMESPACE"
           # --- WAIT FOR PODS TO GET STARTED ---
@@ -7062,6 +7066,7 @@ echo "=> gaga $HELMCHART STT:$stt RET:$ret"
 echo "=> ($cnt) helm uninstall $HELMCHART"
           # --- DELTE FAILED HELM CHART ---
           deleteHelmChart $NAMESPACE $HELMCHART
+          deleteNamespace $NAMESPACE > /dev/null 2>&1
 echo "=> ($cnt) helm uninstalled $HELMCHART"
 
           let cnt=cnt+1
