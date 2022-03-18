@@ -6104,7 +6104,7 @@ installJenkins() {
 echo "gaga1 $(date)"
     messagePrint " ▪ Deploy the Jenkins Helm Chart" "$HELMCHART"
     cnt=0; ret=1; stt="notdeployed"
-    while [ $ret -ne 0 -a $cnt -lt 5 -a "$stt" != "deployed" ]; do
+    while [ $ret -ne 0 -a $cnt -lt 7 -a "$stt" != "deployed" ]; do
 echo "=> ($cnt) helm install $HELMCHART $(date)"
       #helm install $HELMCHART --namespace $NAMESPACE bitnami/$HELMCHART -f $HELM_VALUES --create-namespace --wait --wait-for-jobs --timeout 10m > /tmp/error.log 2>&1; ret=$?
       helm install $HELMCHART --namespace $NAMESPACE bitnami/$HELMCHART -f $HELM_VALUES --create-namespace --wait --wait-for-jobs --timeout 20m; ret=$?
@@ -6127,7 +6127,7 @@ echo "=> ($cnt) helm uninstall $HELMCHART"
 echo "=> ($cnt) helm uninstalled $HELMCHART $(date)"
       
       let cnt=cnt+1
-      sleep 30
+      sleep 60
     done
 echo "gaga2"
 
@@ -13158,8 +13158,8 @@ deleteNamespace() {
       nam=$(jq -r --arg key "$NAMESPACE" '.items[] | select(.metadata.name == $key).metadata.name' /tmp/output.json)
   
       if [ "$nam" != "" ]; then
-        stt=$(jq -r --arg key "$NAMESPACE" '.items[] | select(.metadata.name == $key).status.phase' /tmp/output.json)
-        if [ "$stt" == "Terminating" ]; then 
+        _stt=$(jq -r --arg key "$NAMESPACE" '.items[] | select(.metadata.name == $key).status.phase' /tmp/output.json)
+        if [ "$_stt" == "Terminating" ]; then 
           messagePrint " ▪ Deleting Namespace (force)"     "$NAMESPACE"
           cmdLoop kubectl get ns $NAMESPACE -o json | \
                   jq -r '. | select(.spec.finalizers[] == "kubernetes").spec.finalizers |= []' > /tmp/namespace.json
@@ -13341,17 +13341,16 @@ waitTanzuPackageReconsile() {
       tanzu package installed list -A -o json > /tmp/output.json 2>/dev/null
       stt=$(jq -r --arg key "$TANZU_PACKAGE" '.[] | select(.name == $key).status' /tmp/output.json)
 
-     if [ "$stt" != "Reconcile succeeded" -a "$stt" != "Reconciling" ]; then 
-       return 1
-     else
-       [ "$stt" == "Reconcile succeeded" ] && return 0
-     fi
+      if [ "$stt" != "Reconcile succeeded" -a "$stt" != "Reconciling" ]; then 
+        return 1
+      else
+        [ "$stt" == "Reconcile succeeded" ] && return 0
+      fi
 
-     let cnt=cnt+1
-     sleep 30
-   done
- fi 
-
+      let cnt=cnt+1
+      sleep 30
+    done
+  fi 
 }
 
 
