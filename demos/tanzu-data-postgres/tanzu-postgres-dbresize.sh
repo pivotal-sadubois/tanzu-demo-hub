@@ -151,22 +151,26 @@ echo "     ---------------------------------------------------------------------
 execCmd "kubectl -n tanzu-data-postgres-demo get pvc"
 
 prtHead "Check the standard storage class’s 'allowVolumeExpansion' attribute value"
-execCmd "kubectl get storageclass standard"
+execCmd "kubectl get storageclass $STORAGE_CLASS"
 
-volex=$(kubectl get storageclass standard -o jsonpath='{.allowVolumeExpansion}') 
+volex=$(kubectl get storageclass $STORAGE_CLASS -o jsonpath='{.allowVolumeExpansion}') 
 if [ "${volex}" != "true" ]; then 
   prtHead "Modify the storage class after checking the permissions"
   execCmd "kubectl auth can-i update storageclass"
-  slntCmd "kubectl get storageclass standard -o yaml > /tmp/storagesize.yaml"
+  slntCmd "kubectl get storageclass $STORAGE_CLASS -o yaml > /tmp/storagesize.yaml"
   slntCmd "echo \"allowVolumeExpansion: true\" >> /tmp/storagesize.yaml"
   execCat "/tmp/storagesize.yaml"
   execCmd "kubectl apply -f /tmp/storagesize.yaml"
-  slntCmd "kubectl get storageclass standard --output=jsonpath='{.allowVolumeExpansion}'"; echo
+  slntCmd "kubectl get storageclass $STORAGE_CLASS --output=jsonpath='{.allowVolumeExpansion}'"; echo
   echo ""
 fi
 
 # --- GENERATE NEW YAML ---
-cat $TDHDEMO/files/tdh-postgres-singleton.yaml | sed -e "s/XXX_MEM_XXX/1Gi/g" -e "s/XXX_CPU_XXX/0.4/g" -e "s/XXX_DISK_XXX/20G/g" \
+cat $TDHDEMO/files/tdh-postgres-singleton.yaml | sed \
+  -e "s/XXX_MEM_XXX/1Gi/g" \
+  -e "s/XXX_CPU_XXX/0.4/g" \
+  -e "s/XXX_DISK_XXX/20G/g" \
+  -e "s/XXX_STARTE_CLASS_XXX/$STORAGE_CLASS/g" \
   > /tmp/tdh-postgres-singleton.yaml
 execCat "/tmp/tdh-postgres-singleton.yaml"
 execCmd "kubectl -n $NAMESPACE apply -f /tmp/tdh-postgres-singleton.yaml"
