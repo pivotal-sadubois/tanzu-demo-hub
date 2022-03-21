@@ -6611,8 +6611,8 @@ installMinio() {
     messagePrint " ▪ Deploy the Minio Helm Chart" "minio"
     cnt=0; ret=1; stt="notdeployed"
     while [ $ret -ne 0 -a $cnt -lt 5 -a "$stt" != "deployed" ]; do
-      #helm install $HELMCHART bitnami/$HELMCHART --namespace $NAMESPACE -f ${HELM_VALUES} --create-namespace --wait --wait-for-jobs --timeout 10m > /tmp/error.log 2>&1; ret=$?
-      helm install $HELMCHART bitnami/$HELMCHART --namespace $NAMESPACE -f ${HELM_VALUES} --create-namespace --wait --wait-for-jobs --timeout 10m; ret=$?
+      helm install $HELMCHART bitnami/$HELMCHART --namespace $NAMESPACE -f ${HELM_VALUES} --create-namespace --wait --wait-for-jobs --timeout 10m > /tmp/error.log 2>&1; ret=$?
+      #helm install $HELMCHART bitnami/$HELMCHART --namespace $NAMESPACE -f ${HELM_VALUES} --create-namespace --wait --wait-for-jobs --timeout 10m; ret=$?
 
       # --- WAIT FOR PODS TO GET STARTED ---
       runningPods $NAMESPACE
@@ -6688,7 +6688,7 @@ installMinio() {
     fi
   fi
 
-  echo "     => mc alias set minio https://minio.$DOMAIN $ACCESS_KEY $SECRET_KEY"
+  echo "     => mc alias set minio https://minio-api.$DOMAIN $ACCESS_KEY $SECRET_KEY --api S3v4"
   echo "     => mc ls minio"
   echo "   -----------------------------------------------------------------------------------------------------------"
   
@@ -6697,7 +6697,7 @@ installMinio() {
     # --- WAIT FOR HARBOR TO COME ONLINE ---
     ret=1; cnt=0
     while [ $ret -ne 0 -a $cnt -le 5 ]; do
-      mc alias set minio https://minio.$DOMAIN $ACCESS_KEY $SECRET_KEY > /tmp/error.log 2>&1; ret=$?
+      mc alias set minio https://minio-api.$DOMAIN $ACCESS_KEY $SECRET_KEY --api S3v4 > /tmp/error.log 2>&1; ret=$?
       [ $ret -eq 0 ] && break
       sleep 60
       let cnt=cnt+1
@@ -6708,10 +6708,10 @@ installMinio() {
       echo "ERROR: Unable to configure Minio Client (mc)"
       if [ "$NATIVE" == "0" ]; then
         echo "       => tools/${TDH_TOOLS}.sh"
-        echo "          tdh-tools:/$ mc alias set minio https://minio.$DOMAIN $ACCESS_KEY $SECRET_KEY"
+        echo "          tdh-tools:/$ mc alias set minio https://minio-api.$DOMAIN $ACCESS_KEY $SECRET_KEY --api S3v4"
         echo "          tdh-tools:/$ exit"
       else
-        echo "       => mc alias set minio https://minio.$DOMAIN $ACCESS_KEY $SECRET_KEY"
+        echo "       => mc alias set minio https://minio-api.$DOMAIN $ACCESS_KEY $SECRET_KEY --api S3v4"
       fi
 
       exit 1
