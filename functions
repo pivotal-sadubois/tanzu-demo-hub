@@ -10641,6 +10641,7 @@ setK8sEnvironment() {
   #CONTEXT=$(kubectl config get-contexts | grep " $CLUSTER " | sed 's/*//g' | awk '{ print $1 }')
 
 echo gaga1
+  rm -f /tmp/output.json && touch /tmp/output.json
   while [ ! -s /tmp/output.json ]; do
 echo gaga11
     cmdLoop kubectl config view -o json > /tmp/output.json
