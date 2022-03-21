@@ -6576,8 +6576,26 @@ installMinio() {
     echo "    ingress.kubernetes.io/force-ssl-redirect: \"true\""                                                               >> $HELM_VALUES
     echo "  path: /"                                                                                                            >> $HELM_VALUES
     echo "  hostname: minio.$DOMAIN"                                                                                            >> $HELM_VALUES
+    #echo "  hostname: minio.local"                                                                                              >> $HELM_VALUES
     echo "  tls: true"                                                                                                          >> $HELM_VALUES
     echo "  servicePort: minio"                                                                                                 >> $HELM_VALUES
+    echo "  extraTls:"                                                                                                          >> $HELM_VALUES
+    echo "  - hosts:"                                                                                                           >> $HELM_VALUES
+    echo "      - minio.$DOMAIN"                                                                                                >> $HELM_VALUES
+    echo "    secretName: tanzu-demo-hub-tls"                                                                                   >> $HELM_VALUES
+    echo "  extraHosts:"                                                                                                        >> $HELM_VALUES
+    echo "    - name: tdh-postgres-backup.minio.$DOMAIN"                                                                        >> $HELM_VALUES
+    echo "      path: /"                                                                                                        >> $HELM_VALUES
+    echo "apiIngress:"                                                                                                          >> $HELM_VALUES
+    echo "  enabled: true"                                                                                                      >> $HELM_VALUES
+    echo "  certManager: false"                                                                                                 >> $HELM_VALUES
+    echo "  annotations:"                                                                                                       >> $HELM_VALUES
+    echo "    kubernetes.io/ingress.class: contour"                                                                             >> $HELM_VALUES
+    echo "    ingress.kubernetes.io/force-ssl-redirect: \"true\""                                                               >> $HELM_VALUES
+    echo "  path: /"                                                                                                            >> $HELM_VALUES
+    echo "  hostname: minio.$DOMAIN"                                                                                            >> $HELM_VALUES
+    echo "  tls: true"                                                                                                          >> $HELM_VALUES
+    echo "  servicePort: minio-api"                                                                                             >> $HELM_VALUES
     echo "  extraTls:"                                                                                                          >> $HELM_VALUES
     echo "  - hosts:"                                                                                                           >> $HELM_VALUES
     echo "      - minio.$DOMAIN"                                                                                                >> $HELM_VALUES
