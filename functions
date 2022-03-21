@@ -10640,23 +10640,15 @@ setK8sEnvironment() {
   ##DELETEME
   #CONTEXT=$(kubectl config get-contexts | grep " $CLUSTER " | sed 's/*//g' | awk '{ print $1 }')
 
-echo gaga1
   rm -f /tmp/output.json && touch /tmp/output.json
   while [ ! -s /tmp/output.json ]; do
-echo gaga11
     cmdLoop kubectl config view -o json > /tmp/output.json
     CONTEXT=$(jq -r --arg key tdh-docker-sadubois '.contexts[] | select(.context.cluster == $key).name' /tmp/output.json 2>/dev/null) 
-echo "CONTEXT:$CONTEXT"
-cat /tmp/output.json
-echo gaga12
     [ "$CONTEXT" == "" -o "$CONTEXT" == "null" ] && rm -f /tmp/output.json && touch /tmp/output.json
-echo gaga13
     [ -s /tmp/output.json ] && break
-echo gaga14
 
     sleep 10
   done
-echo "CONTEXT:$CONTEXT"
 
   messagePrint " ▪ Set Kubernetes Context"               "$CONTEXT"
   cmdLoop kubectl config use-context $CONTEXT > /dev/null 2>&1
