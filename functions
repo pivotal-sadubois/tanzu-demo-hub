@@ -6445,8 +6445,8 @@ installKubeapps() {
 #gaga kubeapps
     cnt=0; ret=1; stt="notdeployed"
     while [ $ret -ne 0 -a $cnt -lt 5 -a "$stt" != "deployed" ]; do
-      helm install $HELMCHART --namespace $NAMESPACE bitnami/$HELMCHART -f $HELM_VALUES --version $HELM_KUBEAPPS_VERSION --create-namespace --wait --wait-for-jobs --timeout 10m > /tmp/error.log 2>&1; ret=$?
-      #helm install $HELMCHART --namespace $NAMESPACE bitnami/$HELMCHART -f $HELM_VALUES --version $HELM_KUBEAPPS_VERSION --create-namespace --wait --wait-for-jobs --timeout 10m; ret=$?
+      #helm install $HELMCHART --namespace $NAMESPACE bitnami/$HELMCHART -f $HELM_VALUES --version $HELM_KUBEAPPS_VERSION --create-namespace --wait --wait-for-jobs --timeout 10m > /tmp/error.log 2>&1; ret=$?
+      helm install $HELMCHART --namespace $NAMESPACE bitnami/$HELMCHART -f $HELM_VALUES --version $HELM_KUBEAPPS_VERSION --create-namespace --wait --wait-for-jobs --timeout 10m; ret=$?
 
       # --- WAIT FOR PODS TO GET STARTED ---
       runningPods $NAMESPACE
