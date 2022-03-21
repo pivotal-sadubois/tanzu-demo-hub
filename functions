@@ -6567,7 +6567,10 @@ installMinio() {
     copySecretObject default $NAMESPACE tanzu-demo-hub-tls
 
     HELM_VALUES=/tmp/helm_values.yaml
-    echo ""                                                                                                                     >  $HELM_VALUES
+    echo "auth:"                                                                                                                >  $HELM_VALUES
+    echo "  rootUser: admin"                                                                                                    >> $HELM_VALUES
+    echo "  rootPassword: $TDH_HARBOR_ADMIN_PASSWORD"                                                                           >> $HELM_VALUES
+    echo "auth:"                                                                                                                >> $HELM_VALUES
     echo "ingress:"                                                                                                             >> $HELM_VALUES
     echo "  enabled: true"                                                                                                      >> $HELM_VALUES
     echo "  certManager: false"                                                                                                 >> $HELM_VALUES
