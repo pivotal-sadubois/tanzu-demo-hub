@@ -6567,10 +6567,10 @@ installMinio() {
     copySecretObject default $NAMESPACE tanzu-demo-hub-tls
 
     HELM_VALUES=/tmp/helm_values.yaml
-    echo "auth:"                                                                                                                >  $HELM_VALUES
+    echo ""                                                                                                                     >  $HELM_VALUES
+    echo "auth:"                                                                                                                >> $HELM_VALUES
     echo "  rootUser: admin"                                                                                                    >> $HELM_VALUES
     echo "  rootPassword: $TDH_HARBOR_ADMIN_PASSWORD"                                                                           >> $HELM_VALUES
-    echo "auth:"                                                                                                                >> $HELM_VALUES
     echo "ingress:"                                                                                                             >> $HELM_VALUES
     echo "  enabled: true"                                                                                                      >> $HELM_VALUES
     echo "  certManager: false"                                                                                                 >> $HELM_VALUES
@@ -6614,8 +6614,8 @@ installMinio() {
     messagePrint " ▪ Deploy the Minio Helm Chart" "minio"
     cnt=0; ret=1; stt="notdeployed"
     while [ $ret -ne 0 -a $cnt -lt 5 -a "$stt" != "deployed" ]; do
-      helm install $HELMCHART bitnami/$HELMCHART --namespace $NAMESPACE -f ${HELM_VALUES} --create-namespace --wait --wait-for-jobs --timeout 10m > /tmp/error.log 2>&1; ret=$?
-      #helm install $HELMCHART bitnami/$HELMCHART --namespace $NAMESPACE -f ${HELM_VALUES} --create-namespace --wait --wait-for-jobs --timeout 10m; ret=$?
+      #helm install $HELMCHART bitnami/$HELMCHART --namespace $NAMESPACE -f ${HELM_VALUES} --create-namespace --wait --wait-for-jobs --timeout 10m > /tmp/error.log 2>&1; ret=$?
+      helm install $HELMCHART bitnami/$HELMCHART --namespace $NAMESPACE -f ${HELM_VALUES} --create-namespace --wait --wait-for-jobs --timeout 10m; ret=$?
 
       # --- WAIT FOR PODS TO GET STARTED ---
       runningPods $NAMESPACE
