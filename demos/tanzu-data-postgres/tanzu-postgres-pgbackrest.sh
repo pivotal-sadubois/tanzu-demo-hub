@@ -101,8 +101,18 @@ else
   fi
 fi
 
-mc rb minio/tdh-postgres-backup --force > /dev/null 2>&1
 
+# --- GET MINIO CREDENTIOALS ---
+TDH_DOMAIN=$(getConfigMap tanzu-demo-hub TDH_DOMAIN)
+cmdLoop kubectl -n $NAMESPACE get secrets minio -o json > /tmp/output.json
+ROOT_USER=$(jq -r '.data."root-user"' /tmp/output.json | base64 --decode)
+ROOT_PASSWORD=$(jq -r '.data."root-password"' /tmp/output.json | base64 --decode)
+
+prtHead "Configure Minio Client"
+execCmd "mc alias set minio https://minio-api.$TDH_DOMAIN $ROOT_USER $ROOT_PASSWORD --api S3v4"
+execCmd "mc ls minio"
+
+mc rb minio/tdh-postgres-backup --force > /dev/null 2>&1
 prtHead "Create S3 Bucket"
 execCmd "mc mb minio/tdh-postgres-backup"
 execCmd "mc ls minio"
