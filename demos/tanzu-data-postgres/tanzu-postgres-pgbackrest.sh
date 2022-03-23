@@ -140,16 +140,16 @@ echo "--------------------------------------------------------------------------
 echo ""
 
 prtHead "Verify the Backup on Minio S3"
-execCmd "mc alias set minio https://minio.${DOMAIN} $TDH_SERVICE_MINIO_ACCESS_KEY $TDH_SERVICE_MINIO_SECRET_KEY"
+execCmd "mc alias set minio https://minio-api.${DOMAIN} $TDH_SERVICE_MINIO_ACCESS_KEY $TDH_SERVICE_MINIO_SECRET_KEY"
 execCmd "mc ls minio/tdh-postgres-backup/var/lib/pgbackrest/backup --recursive"
 
 prtHead "Use Minio CLI to verify the Backup"
-prtText "=> mc alias set minio https://minio.${DOMAIN} $TDH_SERVICE_MINIO_ACCESS_KEY $TDH_SERVICE_MINIO_SECRET_KEY"
+prtText "=> mc alias set minio https://minio-api.${DOMAIN} $TDH_SERVICE_MINIO_ACCESS_KEY $TDH_SERVICE_MINIO_SECRET_KEY"
 prtText "=> mc ls minio"
 prtText ""
 
 prtHead "Open WebBrowser and verify the Backup"
-prtText "=> https://minio.${DOMAIN}"
+prtText "=> https://minio-api.${DOMAIN}"
 prtText "   ACCESS_KEY: $TDH_SERVICE_MINIO_ACCESS_KEY"
 prtText "   SECRET_LEY: $TDH_SERVICE_MINIO_SECRET_KEY"
 prtText ""
