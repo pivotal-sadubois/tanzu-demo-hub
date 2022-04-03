@@ -65,8 +65,8 @@ if [ "${TKG_DEPLOYMENT}" == "" -o "${TMC_DEPLOYMENT}" == "" ]; then
 fi
 
 # --- VERIFY DEPLOYMENT ---
-if [ -f ${TDHPATH}/deployments/${TMC_DEPLOYMENT} -o ${HOME}/.tanzu-demo-hub/config/${TMC_DEPLOYMENT} ]; then
-  if [ -f ${TDHPATH}/deployments/${TMC_DEPLOYMENT} ]; then 
+if [ -f $TDHPATH/deployments/${TMC_DEPLOYMENT} -o -f $HOME/.tanzu-demo-hub/config/${TMC_DEPLOYMENT} ]; then
+  if [ -f $TDHPATH/deployments/${TMC_DEPLOYMENT} ]; then 
     TMC_DEPLOYMENT_CONFIG=${TDHPATH}/deployments/${TMC_DEPLOYMENT}
   else
     TMC_DEPLOYMENT_CONFIG=${HOME}/.tanzu-demo-hub/config/${TMC_DEPLOYMENT}
@@ -77,8 +77,8 @@ else
   exit 1
 fi
 
-if [ -f ${TDHPATH}/deployments/$TKG_DEPLOYMENT ]; then
-  . ${TDHPATH}/deployments/$TKG_DEPLOYMENT
+if [ -f $TDHPATH/deployments/$TKG_DEPLOYMENT -o -f $HOME/.tanzu-demo-hub/config/$TKG_DEPLOYMENT ]; then
+  . $TDHPATH/deployments/$TKG_DEPLOYMENT
 else
   echo "ERROR: Deployment file $TKG_DEPLOYMENT can not be found in the directory:"
   echo "       ${TDHPATH}/deployments or ${HOME}/.tanzu-demo-hub/config"
@@ -206,6 +206,8 @@ TanzuPackage_Contour        contour-pkg          contour.tanzu.vmware.com
 createClusterIssuer
 getRootCA tanzu-demo-hub-tls
 TanzuPackage_Harbor       harbor-pkg           harbor.tanzu.vmware.com
+
+exit
 
 installBuildService          ## Tanzu Build Service (TBS)
 installTanzuDataPostgres     ## Tanzu Data SQL
