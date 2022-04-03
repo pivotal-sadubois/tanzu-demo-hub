@@ -78,7 +78,11 @@ else
 fi
 
 if [ -f $TDHPATH/deployments/$TKG_DEPLOYMENT -o -f $HOME/.tanzu-demo-hub/config/$TKG_DEPLOYMENT ]; then
-  . $TDHPATH/deployments/$TKG_DEPLOYMENT
+  if [ -f $TDHPATH/deployments/${TKG_DEPLOYMENT} ]; then 
+    . $TDHPATH/deployments/$TKG_DEPLOYMENT
+  else
+    . $HOME/.tanzu-demo-hub/config/$TKG_DEPLOYMENT
+  fi
 else
   echo "ERROR: Deployment file $TKG_DEPLOYMENT can not be found in the directory:"
   echo "       ${TDHPATH}/deployments or ${HOME}/.tanzu-demo-hub/config"
@@ -88,6 +92,7 @@ fi
 #############################################################################################################################
 ################################### EXECUTING CODE WITHIN  TDH-TOOLS DOCKER CONTAINER  ######################################
 #############################################################################################################################
+
 runTDHtools $TDH_TOOLS_CONTAINER_TYPE $TDH_TOOLS_CONTAINER_VERS "Deploy TKG Cluster with Tanzu Mission Control (TMC)" "$TDHPATH/$CMD_EXEC" "$CMD_ARGS"
 
 cnt=$(egrep -c "^TDH_DEPLOYMENT_CLOUD=" $TMC_DEPLOYMENT_CONFIG)
@@ -151,6 +156,7 @@ if [ "$DNS_SUBDOMAIN" != "" ]; then
   TDH_ENVNAME=$DNS_SUBDOMAIN
 fi 
 
+echo gaga1
 export TDH_DEPLOYMENT_ENV_NAME=$TDH_INFRASTRUCTURE
 export TDH_TLS_CERT=tanzu-demo-hub
 export TDH_TLS_SECRET=${TDH_TLS_CERT}-tls
@@ -158,9 +164,14 @@ export TDH_TLS_ISSUER_NAME=letsencrypt-staging
 export TDH_TLS_ISSUER_CONFIG=/tmp/issuer-dns-manager1.yaml
 
 # --- VERYFY ACCESS TO CLOUD ---
+echo gaga2
 checkTDHenvironment
+echo gaga3
 checkKubernetesServices registry_docker
+echo gaga4
 checkKubernetesServices cert-manager
+echo gaga4
+sleep 1000
 
 # --- VERIFY TOOLS AND ACCESS ---
 checkCloudCLI
