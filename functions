@@ -7947,6 +7947,9 @@ createClusterIssuer() {
     echo "          - \"*.apps-contour.${TDH_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}\""  >> $TDH_TLS_ISSUER_FILE
     echo "          - \"*.apps-nginx.${TDH_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}\""    >> $TDH_TLS_ISSUER_FILE
     echo "          - \"*.gitlab.${TDH_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}\""        >> $TDH_TLS_ISSUER_FILE
+    echo "          - \"*.cnrs.${TDH_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}\""          >> $TDH_TLS_ISSUER_FILE
+    echo "          - \"learningcenter.${TDH_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}\""  >> $TDH_TLS_ISSUER_FILE
+    echo "          - \"tap-gui.${TDH_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}\""         >> $TDH_TLS_ISSUER_FILE
     echo "      dns01:"                                                            >> $TDH_TLS_ISSUER_FILE
     echo "        route53:"                                                        >> $TDH_TLS_ISSUER_FILE
     echo "          region: $AWS_REGION"                                           >> $TDH_TLS_ISSUER_FILE
