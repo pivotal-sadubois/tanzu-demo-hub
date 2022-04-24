@@ -10,6 +10,7 @@ MAINTAINER Sacha Dubois <sdubois@vmware.com>
 ENV TZ="Europe/Zurich"
 ENV ALLOW_INSTALL_AS_ROOT="true"
 ARG UID GID USER TZ HOME VMWUSER VMWPASS START ARCH
+ADD clitap          /tanzu-tap/cli
 ADD tdh-postinstall-root.sh        /usr/local/bin
 ADD tdh-postinstall-user.sh        /usr/local/bin
 ADD tdh-context.sh                 /usr/local/bin
