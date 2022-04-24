@@ -13,7 +13,7 @@ export COMMAND=bash
 export COMMAND=/usr/local/bin/tdh-context.sh
 export SILENT=0
 export TDH_TOOLS=tdh-tools-tce
-export TCE_VERSION=0.10.0
+export TCE_VERSION=0.11.0
 
 # --- SETTING FOR TDH-TOOLS ---
 export NATIVE=0                ## NATIVE=1 r(un on local host), NATIVE=0 (run within docker)
