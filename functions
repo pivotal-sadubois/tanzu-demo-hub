@@ -406,7 +406,6 @@ vSphereKubeconfig() {
   # --- SET LOGIN PASSWORD AS ENVIRONMENT VARIABLE ---
   export KUBECTL_VSPHERE_PASSWORD=$VSPHERE_TKGS_VCENTER_PASSWORD
 
-#hallo
   mv $HOME/.kube/config $HOME/.kube/config.bak
 
   ret=1; cnt=0
@@ -481,7 +480,6 @@ tmcCheckLogin() {
     _arch=$(uname) 
     _mach=$(uname -m) 
 
-#hallo
     [ "${_arch}" == "Darwin" -a "${_mach}" == "x86_64" ] && _type="darwinX64"
     [ "${_arch}" == "Darwin" -a "${_mach}" == "arm64" ] && _type="darwinX64"
     [ "${_arch}" == "Linux" -a "${_mach}" == "x86_64" ] && _type="linuxX64"
@@ -1045,8 +1043,9 @@ checkCloudAccess() {
         drv=$(cat ~/.minikube/profiles/$TDH_MINIKUBE_PROFILE/config.json | jq -r '.Driver')
       else
         echo "ERROR: Minukube is not running, start it first"
-        #echo "       => minikube -p $TDH_MINIKUBE_PROFILE start --driver=hyperkit --cpus $TDH_MINIKUBE_CONFIG_CPU --memory $TDH_MINIKUBE_CONFIG_MEMORY --disk-size $TDH_MINIKUBE_CONFIG_DISK --nodes=$TDH_MINIKUBE_NODES"; exit 1
-        echo "       => minikube -p $TDH_MINIKUBE_PROFILE start --driver=hyperkit --cpus $TDH_MINIKUBE_CONFIG_CPU --memory $TDH_MINIKUBE_CONFIG_MEMORY --disk-size $TDH_MINIKUBE_CONFIG_DISK"; exit 1
+#gaga
+        echo "       => export KUBECONFIG=$HOME/.tanzu-demo-hub/config/$TDH_MINIKUBE_PROFILE.kubeconfig"
+        echo "       => minikube -p $TDH_MINIKUBE_PROFILE start --driver=hyperkit --cpus $TDH_MINIKUBE_CONFIG_CPU --memory $TDH_MINIKUBE_CONFIG_MEMORY --disk-size $TDH_MINIKUBE_CONFIG_DISK --kubernetes-version $TDH_MINIKUBE_KUBERNETES"; exit 1
       fi
 
       stt=$(minikube status -p $TDH_MINIKUBE_PROFILE| grep "^host:" | awk '{ print $NF }' | head -1)
@@ -1065,7 +1064,8 @@ checkCloudAccess() {
 
       if [ "$stt" == "Stopped" -o "$stt" == "" ]; then 
         echo "ERROR: Minukube is not running, start it first"
-        echo "       => minikube -p $TDH_MINIKUBE_PROFILE start --driver=hyperkit --cpus $TDH_MINIKUBE_CONFIG_CPU --memory $TDH_MINIKUBE_CONFIG_MEMORY --disk-size $TDH_MINIKUBE_CONFIG_DISK"; exit 1
+        echo "       => export KUBECONFIG=$HOME/.tanzu-demo-hub/config/$TDH_MINIKUBE_PROFILE.kubeconfig"
+        echo "       => minikube -p $TDH_MINIKUBE_PROFILE start --driver=hyperkit --cpus $TDH_MINIKUBE_CONFIG_CPU --memory $TDH_MINIKUBE_CONFIG_MEMORY --disk-size $TDH_MINIKUBE_CONFIG_DISK --kubernetes-version $TDH_MINIKUBE_KUBERNETES"; exit 1
         echo "       => cat ~/.minikube/profiles/tanzu-demo-hub/config.json"
       fi
 
@@ -3981,8 +3981,10 @@ VerifyK8SDemoPlatform() {
     minikube profile $TDH_MINIKUBE_PROFILE > /dev/null 2>&1
     minikube status -p $TDH_MINIKUBE_PROFILE > /dev/null 2>&1
     if [ "$?" -ne 0 ]; then
+#gaga
       echo "ERROR: minikube is not running, please start it by:"
-      echo "       => minikube -p $TDH_MINIKUBE_PROFILE start --driver=hyperkit --cpus $TDH_MINIKUBE_CONFIG_CPU --memory $TDH_MINIKUBE_CONFIG_MEMORY --disk-size $TDH_MINIKUBE_CONFIG_DISK"; exit 1
+      echo "       => export KUBECONFIG=$HOME/.tanzu-demo-hub/config/$TDH_MINIKUBE_PROFILE.kubeconfig"
+      echo "       => minikube -p $TDH_MINIKUBE_PROFILE start --driver=hyperkit --cpus $TDH_MINIKUBE_CONFIG_CPU --memory $TDH_MINIKUBE_CONFIG_MEMORY --disk-size $TDH_MINIKUBE_CONFIG_DISK --kubernetes-version $TDH_MINIKUBE_KUBERNETES"; exit 1
     fi
 
     ctx=$(kubectl config current-context)
@@ -7122,6 +7124,105 @@ installTanzuDataPostgres() {
   uodateConfigMap tanzu-demo-hub TDH_SERVICE_TANZU_DATA_POSTGRES_VALIDATED      "$CURRENT_DATE"
 }
 
+
+# ------------------------------------------------------------------------------------------
+# Function Name ......: installClusterEssentials
+# Function Purpose ...: Installing Tanzu Cluster Essentials
+# ------------------------------------------------------------------------------------------
+# Argument ($1) ......: None
+# ------------------------------------------------------------------------------------------
+# Return Value .......: Status (HEALTY, DETACHING, FAILED)
+# ------------------------------------------------------------------------------------------
+# https://tanzu.vmware.com/developer/guides/tanzu-application-platform-local-devloper-install/
+# ------------------------------------------------------------------------------------------
+installClusterEssentials() {
+  if [ "$TDH_SERVICE_CLUSTER_ESSENTIALS" == "" ]; then
+    uodateConfigMap tanzu-demo-hub TDH_SERVICE_CLUSTER_ESSENTIALS        "false"
+    return
+  fi
+
+  # --- GET BUILD_SERVICE INFORMATION ---
+  TDH_SERVICE_CLUSTER_ESSENTIALS_INSTALLED=$(getConfigMap tanzu-demo-hub TDH_SERVICE_BUILD_SERVICE_INSTALLED)
+  TDH_SERVICE_CLUSTER_ESSENTIALS_VERIFIED=$(getConfigMap tanzu-demo-hub TDH_SERVICE_BUILD_SERVICE_VERIFIED)
+
+  # --- VERIFY IF BUILDSERVICE IS INSTALLED ---
+  messageTitle "Tanzu Cluster Essentials"
+  if [ "$TDH_SERVICE_CLUSTER_ESSENTIALS_INSTALLED" == "" -o "$TDH_SERVICE_CLUSTER_ESSENTIALS_INSTALLED" == "null" ]; then
+    # --- CLEANUP FROM PREVIOOUS INSTALLATION ---
+    rm -rf /tmp/tanzu-cluster-essentials 
+
+    messagePrint " ▪ Installing Tanzu Cluster Essentials" "$TDH_SERVICE_CLUSTER_ESSENTIALS"
+
+    # --- DOWNLOAD BUILD_SERVICE BINARIES ---
+    downloadFromPivnet tanzu-cluster-essentials $TDH_SERVICE_CLUSTER_ESSENTIALS "$TDH_SERVICE_CLUSTER_ESSENTIALS" "tanzu-cluster-essentials-linux-amd64-$TDH_SERVICE_CLUSTER_ESSENTIALS.tgz"
+    TMP_FILE="/tmp/tanzu-cluster-essentials-linux-amd64-$TDH_SERVICE_CLUSTER_ESSENTIALS.tgz"
+    mkdir /tmp/tanzu-cluster-essentials
+    tar xfz $TMP_FILE -C /tmp/tanzu-cluster-essentials
+
+    ns_name=tanzu-cluster-essentials
+    export INSTALL_BUNDLE="registry.tanzu.vmware.com/tanzu-cluster-essentials/cluster-essentials-bundle@sha256:ab0a3539da241a6ea59c75c0743e9058511d7c56312ea3906178ec0f3491f51d"
+    export INSTALL_REGISTRY_HOSTNAME="registry.tanzu.vmware.com"
+    export INSTALL_REGISTRY_USERNAME="$TDH_REGISTRY_VMWARE_USER"
+    export INSTALL_REGISTRY_PASSWORD="$TDH_REGISTRY_VMWARE_PASS"
+
+    createNamespace tanzu-cluster-essentials > /dev/null 2>&1
+    cd /tmp/tanzu-cluster-essentials 
+
+    export IMGPKG_REGISTRY_HOSTNAME_0=$INSTALL_REGISTRY_HOSTNAME
+    export IMGPKG_REGISTRY_USERNAME_0=$INSTALL_REGISTRY_USERNAME
+    export IMGPKG_REGISTRY_PASSWORD_0=$INSTALL_REGISTRY_PASSWORD
+    ./imgpkg pull -b $INSTALL_BUNDLE -o ./bundle/ > /dev/null 2>&1
+
+    export YTT_registry__server=$INSTALL_REGISTRY_HOSTNAME
+    export YTT_registry__username=$INSTALL_REGISTRY_USERNAME
+    export YTT_registry__password=$INSTALL_REGISTRY_PASSWORD
+
+    # --- Deploying kapp-controller ---
+    ./ytt -f ./bundle/kapp-controller/config/ \
+          -f ./bundle/registry-creds/ \
+          --data-values-env YTT \
+          --data-value-yaml kappController.deployment.concurrency=10 2>/dev/null | \
+    ./kbld -f- -f ./bundle/.imgpkg/images.yml > /tmp/kapp-controller.yaml 2>/dev/null
+    ./kapp -y deploy -a kapp-controller -n $ns_name -f /tmp/kapp-controller.yaml > /dev/null 2>&1
+
+    APP=kapp-controller; ANS=tanzu-cluster-essentials
+    cnt=$(kapp inspect -a $APP -n $ANS --json | jq -r '.Tables[].Rows[].reconcile_state' | grep -vc "ok")
+    while [ $cnt -ne 0 ]; do
+      cnt=$(kapp inspect -a $APP -n $ANS --json | jq -r '.Tables[].Rows[].reconcile_state' | grep -vc "ok")
+      sleep 360
+    done
+
+    # --- Deploying secretgen-controller ---
+    ./ytt -f ./bundle/secretgen-controller/config/ \
+          -f ./bundle/registry-creds-schema/ \
+          -f ./bundle/registry-creds/ \
+          --data-values-env YTT 2>/dev/null | \
+    ./kbld -f- -f ./bundle/.imgpkg/images.yml > /tmp/secretgen-controller.yaml 2>/dev/null
+    ./kapp -y deploy -a secretgen-controller -n $ns_name -f /tmp/secretgen-controller.yaml > /dev/null 2>&1
+
+    APP=secretgen-controller; ANS=tanzu-cluster-essentials
+    cnt=$(kapp inspect -a $APP -n $ANS --json | jq -r '.Tables[].Rows[].reconcile_state' | grep -vc "ok")
+    while [ $cnt -ne 0 ]; do
+      cnt=$(kapp inspect -a $APP -n $ANS --json | jq -r '.Tables[].Rows[].reconcile_state' | grep -vc "ok")
+      sleep 360
+    done
+
+    runningPods       kapp-controller > /dev/null 2>&1
+
+    CURRENT_DATE=$(date "+%Y-%m-%d %M:%H:%S")
+    uodateConfigMap tanzu-demo-hub TDH_SERVICE_CLUSTER_ESSENTIALS_INSTALLED "true"
+    uodateConfigMap tanzu-demo-hub TDH_SERVICE_CLUSTER_ESSENTIALS_VERIFIED  "$CURRENT_DATE"
+  fi
+}
+
+# ------------------------------------------------------------------------------------------
+# Function Name ......: installBuildService
+# Function Purpose ...: Installing Tanzu Build Service
+# ------------------------------------------------------------------------------------------
+# Argument ($1) ......: None
+# ------------------------------------------------------------------------------------------
+# Return Value .......: Status (HEALTY, DETACHING, FAILED)
+# ------------------------------------------------------------------------------------------
 installBuildService() {
   tbs_cleanup=0
   if [ "$TDH_SERVICE_BUILD_SERVICE" != "true" ]; then
@@ -7918,7 +8019,16 @@ createClusterIssuer() {
     messagePrint " ▪ LetsEnscript Solver ZoneID"       "$AWS_HOSTED_ZONE_ID"
     messagePrint " ▪ LetsEnscript DNSZone"             "*.apps-contour.${TDH_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}"
     messagePrint " ▪ LetsEnscript DNSZone"             "*.apps-nginx.${TDH_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}"
-    messagePrint " ▪ LetsEnscript DNSZone"             "*.gitlab.${TDH_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}"
+
+    if [ "$TDH_SERVICE_GITLAB" == "true" ]; then 
+      messagePrint " ▪ LetsEnscript DNSZone"           "*.gitlab.${TDH_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}"
+    fi
+
+    if [ "$TDH_SERVICE_TAP" == "true" ]; then 
+      messagePrint " ▪ LetsEnscript DNSZone"           "*.cnrs.${TDH_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}"
+      messagePrint " ▪ LetsEnscript DNSZone"           "learningcenter.${TDH_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}"
+      messagePrint " ▪ LetsEnscript DNSZone"           "tap-gui.${TDH_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}"
+    fi
 
     if [ "${AWS_CERT_ACCESS_KEY}" == "" -o "${AWS_CERT_SECRET_KEY}" == "" ]; then
       messagePrint " ▪ LetsEnscript using AWS Route53 AccessKey" $(maskPassword "$AWS_ACCESS_KEY")
@@ -8040,22 +8150,25 @@ createClusterIssuer() {
 
     messageTitle "Create LetsEnscript Certificate"
     CERTIFICATE_CONFIG=/tmp/certificate.yaml
-    echo "apiVersion: cert-manager.io/v1"                       >  $CERTIFICATE_CONFIG
-    echo "kind: Certificate"                                    >> $CERTIFICATE_CONFIG
-    echo "metadata:"                                            >> $CERTIFICATE_CONFIG
-    echo "  name: $TDH_TLS_CERT"                                >> $CERTIFICATE_CONFIG
-    echo "  namespace: default"                                 >> $CERTIFICATE_CONFIG
-    echo "spec:"                                                >> $CERTIFICATE_CONFIG
-    echo "  secretName: $TDH_TLS_SECRET"                        >> $CERTIFICATE_CONFIG
-    echo "  issuerRef:"                                         >> $CERTIFICATE_CONFIG
-    echo "    name: letsencrypt-staging"                        >> $CERTIFICATE_CONFIG
-    echo "    kind: ClusterIssuer"                              >> $CERTIFICATE_CONFIG
-    echo "  dnsNames:"                                          >> $CERTIFICATE_CONFIG
-    #echo "  - \"$HARBOR_HOSTNAME\""                             >> $CERTIFICATE_CONFIG
-    #echo "  - \"$NOTARY_HOSTNAME\""                             >> $CERTIFICATE_CONFIG
+    echo "apiVersion: cert-manager.io/v1"                                   >  $CERTIFICATE_CONFIG
+    echo "kind: Certificate"                                                >> $CERTIFICATE_CONFIG
+    echo "metadata:"                                                        >> $CERTIFICATE_CONFIG
+    echo "  name: $TDH_TLS_CERT"                                            >> $CERTIFICATE_CONFIG
+    echo "  namespace: default"                                             >> $CERTIFICATE_CONFIG
+    echo "spec:"                                                            >> $CERTIFICATE_CONFIG
+    echo "  secretName: $TDH_TLS_SECRET"                                    >> $CERTIFICATE_CONFIG
+    echo "  issuerRef:"                                                     >> $CERTIFICATE_CONFIG
+    echo "    name: letsencrypt-staging"                                    >> $CERTIFICATE_CONFIG
+    echo "    kind: ClusterIssuer"                                          >> $CERTIFICATE_CONFIG
+    echo "  dnsNames:"                                                      >> $CERTIFICATE_CONFIG
+    #echo "  - \"$HARBOR_HOSTNAME\""                                        >> $CERTIFICATE_CONFIG
+    #echo "  - \"$NOTARY_HOSTNAME\""                                        >> $CERTIFICATE_CONFIG
     echo "  - '*.apps-contour.${TDH_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}'"     >> $CERTIFICATE_CONFIG
     echo "  - '*.apps-nginx.${TDH_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}'"       >> $CERTIFICATE_CONFIG
-    echo "  - '*.gitlab.${TDH_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}'"       >> $CERTIFICATE_CONFIG
+    echo "  - '*.gitlab.${TDH_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}'"           >> $CERTIFICATE_CONFIG
+    echo "  - '*.cnrs.${TDH_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}'"             >> $CERTIFICATE_CONFIG
+    echo "  - 'learningcenter.${TDH_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}'"     >> $CERTIFICATE_CONFIG
+    echo "  - 'tap-gui.${TDH_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}'"            >> $CERTIFICATE_CONFIG
 
     messageTitle " - This may take a couple of minutes ...."
     kubectl create -f $CERTIFICATE_CONFIG > /dev/null 2>&1
@@ -8065,7 +8178,7 @@ createClusterIssuer() {
       exit 1
     fi
 
-    sleep 30
+    sleep 60
 
     cnt=0
 
@@ -9635,6 +9748,10 @@ tdh_tools_build() {
   else
     messagePrint " ▪ Tantzu Comnunity Edition CLI Bundle"                      "$(echo $TKG_COMNUNITY_EDITION_VERSION | sed 's/^v//g')"
   fi
+  messagePrint " ▪ Tanzu Application Platform (TAP)"                           "$TDH_SERVICE_TAP_VERSION"
+  messagePrint " ▪ Tanzu Application Platform (TAP) Gui - Blanc Catalog"       "$TDH_TAP_GUI_BLANK_CATALOG"
+  messagePrint " ▪ Tanzu Application Platform (TAP) Gui - Yelb Catalog"        "$TDH_TAP_GUI_YELB_CATALOG"
+  messagePrint " ▪ Tanzu Framework Bundle"                                     "$TDH_TAP_TANZU_FRAMEWORK"
   messagePrint " ▪ Carvel Tools: - Handle multiple k8s Ressources (kapp)"      "$TDH_CARVEL_KAPP"
   messagePrint " ▪ Carvel Tools: - Build/Reference container images (kbld)"    "$TDH_CARVEL_KBLD"
   messagePrint " ▪ Carvel Tools: - Template Overlay for k8s config (ytt)"      "$TDH_CARVEL_YTT"
@@ -9680,7 +9797,7 @@ tdh_tools_build() {
                jq -r --arg key "$TDH_SERVICE_TAP_VERSION" '.releases[] | select(.version == $key).id')
 
       pivnetAPIdownload $PCF_PIVNET_TOKEN $TAC_PRODUCT_SLUG $pid $TAC_PRODUCT_PNID ${TAC_PRODUCT_FILE}.tar > /tmp/error.log 2>&1
-      if [ ! -e /tmp/${TAC_PRODUCT_FILE}.tar ]; then 
+      if [ ! -s /tmp/${TAC_PRODUCT_FILE}.tar ]; then 
         logMessages /tmp/error.log
         echo "ERROR: failed to download file ${TAC_PRODUCT_FILE}.tar"
         if [ "$NATIVE" == "0" ]; then
@@ -9697,13 +9814,15 @@ tdh_tools_build() {
         rm -f $TDH_DOCKER_CACHE/tap-$TDH_SERVICE_TAP_VERSION/${TAC_PRODUCT_FILE}.tar
         ln -s ${TAC_PRODUCT_FILE}-${TAC_PRODUCT_VERS}.tar $TDH_DOCKER_CACHE/tap-$TDH_SERVICE_TAP_VERSION/${TAC_PRODUCT_FILE}.tar
       fi
+
+      REBUILD_REQUIRED_SOFTWARE=1       ## REBUILD REQUIRED BECAUSE OF SOFTWARE CHANGE
     fi
 
     (cd $TDH_DOCKER_FILES && tar xf $TDH_DOCKER_CACHE/tap-$TDH_SERVICE_TAP_VERSION/${TAC_PRODUCT_FILE}.tar) 
     rm -rf $TDH_DOCKER_FILES/clitap
     mv $TDH_DOCKER_FILES/cli $TDH_DOCKER_FILES/clitap
     find $TDH_DOCKER_FILES/clitap -type d -exec chmod 777 {} \; 2> /dev/null
-    chmod -R a+r $$TDH_DOCKER_FILES/clitap 2>/dev/null
+    chmod -R a+r $TDH_DOCKER_FILES/clitap 2>/dev/null
 
     # --- DOWNLOAD TANZU FRAMEWORK ---
     TAC_PRODUCT_SLUG="tanzu-application-platform"
@@ -9732,11 +9851,13 @@ tdh_tools_build() {
         rm -f $TDH_DOCKER_CACHE/tap-$TDH_SERVICE_TAP_VERSION/${TAC_PRODUCT_FILE}.tgz
         ln -s ${TAC_PRODUCT_FILE}-${TAC_PRODUCT_VERS}.tgz $TDH_DOCKER_CACHE/tap-$TDH_SERVICE_TAP_VERSION/${TAC_PRODUCT_FILE}.tgz
       fi
+
+      REBUILD_REQUIRED_SOFTWARE=1       ## REBUILD REQUIRED BECAUSE OF SOFTWARE CHANGE
     fi
 
     (cd $TDH_DOCKER_FILES && tar xf $TDH_DOCKER_CACHE/tap-$TDH_SERVICE_TAP_VERSION/${TAC_PRODUCT_FILE}.tgz)
     find $TDH_DOCKER_FILES/blank -type d -exec chmod 777 {} \; 2>/dev/null
-    chmod -R a+r $$TDH_DOCKER_FILES/blank 2>/dev/null
+    chmod -R a+r $TDH_DOCKER_FILES/blank 2>/dev/null
 
     # --- DOWNLOAD TANZU FRAMEWORK ---
     TAC_PRODUCT_SLUG="tanzu-application-platform"
@@ -9765,11 +9886,13 @@ tdh_tools_build() {
         rm -f $TDH_DOCKER_CACHE/tap-$TDH_SERVICE_TAP_VERSION/${TAC_PRODUCT_FILE}.tgz
         ln -s ${TAC_PRODUCT_FILE}-${TAC_PRODUCT_VERS}.tgz $TDH_DOCKER_CACHE/tap-$TDH_SERVICE_TAP_VERSION/${TAC_PRODUCT_FILE}.tgz
       fi
+
+      REBUILD_REQUIRED_SOFTWARE=1       ## REBUILD REQUIRED BECAUSE OF SOFTWARE CHANGE
     fi
 
     (cd $TDH_DOCKER_FILES && tar xf $TDH_DOCKER_CACHE/tap-$TDH_SERVICE_TAP_VERSION/${TAC_PRODUCT_FILE}.tgz)
     find $TDH_DOCKER_FILES/yelb-catalog -type d -exec chmod 777 {} \; 2>/dev/null
-    chmod -R a+r $$TDH_DOCKER_FILES/yelb-catalog 2>/dev/null
+    chmod -R a+r $TDH_DOCKER_FILES/yelb-catalog 2>/dev/null
   fi
 
   # --- TANZU MISSION CONTROL BINARY ---
@@ -11760,7 +11883,7 @@ TanzuPackage_CertManager() {
       nam=$(jq -r --arg key "${PACKAGE_NAME}-${PACKAGE_NAMESPACE}-cluster-rolebinding" '.items[] | select(.metadata.name == $key).metadata.name' /tmp/output.json)
       [ "$nam" != "" ] && cmdLoop kubectl -n tanzu-system-packages delete clusterrolebinding $nam
 
-echo "tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $PACKAGE_NAMESPACE --version $package_ver --create-namespace --poll-timeout 10m --wait=true"
+#echo "tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $PACKAGE_NAMESPACE --version $package_ver --create-namespace --poll-timeout 10m --wait=true"
       tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $PACKAGE_NAMESPACE --version $package_ver \
             --create-namespace --poll-timeout 10m --wait=true > /tmp/error.log 2>&1
       waitTanzuPackageReconsile $PACKAGE_NAME $PACKAGE_NAMESPACE; ret=$?
@@ -12044,6 +12167,7 @@ TanzuPackage_Harbor () {
     messagePrint " ▪ Tanzu Package ($PACKAGE_NAME) Namespace"       "$NAMESPACE"
     messagePrint " ▪ Tanzu Package ($PACKAGE_NAME) Version"         "$pkg_ver"
     messagePrint " ▪ Tanzu Package ($PACKAGE_NAME) Status"          "$pkg_stt"
+    messagePrint " ▪ Tanzu Package ($PACKAGE_NAME) URL"             "https://$HARBOR_HOSTNAME"
     messagePrint " ▪ Tanzu Package ($PACKAGE_NAME) User:"           "admin"
     messagePrint " ▪ Tanzu Package ($PACKAGE_NAME) Password:"       "$TDH_HARBOR_ADMIN_PASSWORD"
   else
@@ -12093,6 +12217,37 @@ TanzuPackage_Contour() {
       package_rel=$(jq -r '.[]."released-at"' /tmp/output.json | tail -1)
     else
       package_ver=""; package_rel=""
+    fi
+
+    if [ "${TDH_INFRASTRUCTURE}" == "minikube" ]; then
+      VALUE_FILE=/tmp/contour-data-values.yaml; rm -f $VALUE_FILE
+      echo "namespace: tanzu-system-ingress"                                            >  $VALUE_FILE
+      echo "contour:"                                                                   >> $VALUE_FILE
+      echo " configFileContents: {}"                                                    >> $VALUE_FILE
+      echo " useProxyProtocol: false"                                                   >> $VALUE_FILE
+      echo " replicas: 2"                                                               >> $VALUE_FILE
+      echo " pspNames: \"vmware-system-restricted\""                                    >> $VALUE_FILE
+      echo " logLevel: info"                                                            >> $VALUE_FILE
+      echo "envoy:"                                                                     >> $VALUE_FILE
+      echo " service:"                                                                  >> $VALUE_FILE
+      echo "   type: LoadBalancer"                                                      >> $VALUE_FILE
+      echo "   annotations: {}"                                                         >> $VALUE_FILE
+      echo "   nodePorts:"                                                              >> $VALUE_FILE
+      echo "     http: null"                                                            >> $VALUE_FILE
+      echo "     https: null"                                                           >> $VALUE_FILE
+      echo "   externalTrafficPolicy: Cluster"                                          >> $VALUE_FILE
+      echo "   disableWait: false"                                                      >> $VALUE_FILE
+      echo " hostPorts:"                                                                >> $VALUE_FILE
+      echo "   enable: true"                                                            >> $VALUE_FILE
+      echo "   http: 80"                                                                >> $VALUE_FILE
+      echo "   https: 443"                                                              >> $VALUE_FILE
+      echo " hostNetwork: false"                                                        >> $VALUE_FILE
+      echo " terminationGracePeriodSeconds: 300"                                        >> $VALUE_FILE
+      echo " logLevel: info"                                                            >> $VALUE_FILE
+      echo " pspNames: null"                                                            >> $VALUE_FILE
+      echo "certificates:"                                                              >> $VALUE_FILE
+      echo " duration: 8760h"                                                           >> $VALUE_FILE
+      echo " renewBefore: 360h"                                                         >> $VALUE_FILE
     fi
 
     if [ "${TDH_DEPLOYMENT_CLOUD}" == "docker" -o "${TDH_TKGMC_INFRASTRUCTURE}" == "docker" ]; then
@@ -12210,14 +12365,13 @@ TanzuPackage_Contour() {
       nam=$(jq -r --arg key "${PACKAGE_NAME}-${PACKAGE_NAMESPACE}-cluster-rolebinding" '.items[] | select(.metadata.name == $key).metadata.name' /tmp/output.json)
       [ "$nam" != "" ] && cmdLoop kubectl -n tanzu-system-packages delete clusterrolebinding $nam
 
-      #tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $PACKAGE_NAMESPACE \
-      #     --version $package_ver --create-namespace --poll-timeout 10m \
-      #     --values-file /tmp/contour-data-values.yaml --wait=true > /tmp/contour.log 2>&1; ret=$?
-
-echo "tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $PACKAGE_NAMESPACE --version $package_ver --create-namespace --poll-timeout 10m --values-file /tmp/contour-data-values.yaml --wait=true"
       tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $PACKAGE_NAMESPACE \
-           --version $package_ver --create-namespace --poll-timeout 30m \
-           --values-file /tmp/contour-data-values.yaml --wait=true 
+           --version $package_ver --create-namespace --poll-timeout 10m \
+           --values-file /tmp/contour-data-values.yaml --wait=true > /tmp/contour.log 2>&1; ret=$?
+
+      #tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $PACKAGE_NAMESPACE \
+      #     --version $package_ver --create-namespace --poll-timeout 30m \
+      #     --values-file /tmp/contour-data-values.yaml --wait=true 
 
       waitTanzuPackageReconsile $PACKAGE_NAME $PACKAGE_NAMESPACE; ret=$?
       if [ $ret -ne 0 ]; then
@@ -12543,6 +12697,7 @@ runTDHtoolsDemos() {
                "-v /var/run/docker.sock:/var/run/docker.sock"                           ## REQIORED FOR DOCKER
                "-v $HOME/.tanzu-demo-hub:$HOME/.tanzu-demo-hub:rw"
                "-v $HOME/.tanzu-demo-hub.cfg:$HOME/.tanzu-demo-hub.cfg:ro"
+               "-v $HOME/.minikube:$HOME/.minikube:ro"                                  ## MINIKUBE CONFIG FILES/KUBECOFIG/CERTS
                "-v $HOME/$TDH_TOOLS_PATH/.cache:$HOME/.cache:rw"                        ## CACHED TANZU CONFIG
                "-v $HOME/$TDH_TOOLS_PATH/.config:$HOME/.config:rw"                      ## CONFIG FOR HELM AND TANZU
                "-v $HOME/$TDH_TOOLS_PATH/.kube:$HOME/.kube:rw"                          ## KUBERNETES CLUSTER CONTEXTS
@@ -12556,6 +12711,7 @@ runTDHtoolsDemos() {
                "-v $HOME/$TDH_TOOLS_PATH/.gradle:$HOME/.gradle:rw"                      ## GRADLE CONFIG
                "-v $HOME/$TDH_TOOLS_PATH/.docker:$HOME/.docker:rw"                      ## DOCKER LOGIN CREDENTIALS
                "-v $HOME/$TDH_TOOLS_PATH/.mvn:$HOME/.mvn:rw"                            ## MAVEN 
+               "-v $HOME/$TDH_TOOLS_PATH/.minikube:$HOME/.minikube:rw"                  ## MINIKUBE CONFIG FILES
                "-v $HOME/$TDH_TOOLS_PATH/.mc:$HOME/.mc:rw"                              ## MINIO CLIENT
                "-v $HOME/$TDH_TOOLS_PATH/.aws:$HOME/.aws:rw"                            ## PERSISTANT AWS CREDENTIALS
                "-v $HOME/$TDH_TOOLS_PATH/.azure:$HOME/.azure:rw"                        ## PERSISTANT MICROSOFT AZURE CREDENTIALS
@@ -12743,6 +12899,7 @@ runTDHtools() {
                "-v /var/run/docker.sock:/var/run/docker.sock"                           ## REQIORED FOR DOCKER
                "-v $HOME/.tanzu-demo-hub:$HOME/.tanzu-demo-hub:rw"
                "-v $HOME/.tanzu-demo-hub.cfg:$HOME/.tanzu-demo-hub.cfg:ro"
+               "-v $HOME/.minikube:$HOME/.minikube:ro"                                  ## MINIKUBE CONFIG FILES/KUBECOFIG/CERTS
                "-v $HOME/$TDH_TOOLS_PATH/.cache:$HOME/.cache:rw"
                "-v $HOME/$TDH_TOOLS_PATH/.config:$HOME/.config:rw"                      ## CONFIG FOR HELM AND TANZU
                "-v $HOME/$TDH_TOOLS_PATH/.kube:$HOME/.kube:rw"                          ## KUBERNETES CLUSTER CONTEXTS
