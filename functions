@@ -286,7 +286,7 @@ vSphereLogin() {
   missing_variables=0
 
   if [ "${VSPHERE_TKGS_VCENTER_ADMIN}" == "" -o "${VSPHERE_TKGS_VCENTER_PASSWORD}" == "" -o "${VSPHERE_TKGS_VCENTER_SERVER}" == "" -o \
-       "${VSPHERE_TKGS_SUPERVISOR_STORAGE_CLASS}" == "" -o "${VSPHERE_TKGS_SUPERVISOR_STORAGE_POLIC}" == "" ] -o \
+       "${VSPHERE_TKGS_SUPERVISOR_STORAGE_CLASS}" == "" -o "${VSPHERE_TKGS_SUPERVISOR_STORAGE_POLIC}" == "" -o \
        "${VSPHERE_TKGS_SUPERVISOR_CLUSTER}" == "" -o "${TDH_USER}" == "" ]; then
  
     missing_variables=1
