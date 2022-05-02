@@ -173,7 +173,6 @@ if [ $cnt -gt 0 ]; then
 fi
 
 VSPHERE_NAMESPACE=tanzu-demo-hub
-VSPHERE_STORAGE_CLASS=tanzu
 TDH_VSPHERE_API_TOKEN=$(vSphereAPI_getToken "$VSPHERE_TKGS_VCENTER_SERVER" "$VSPHERE_TKGS_VCENTER_ADMIN" "$VSPHERE_TKGS_VCENTER_PASSWORD")
 vSphereAPI_createNamespace $TDH_VSPHERE_API_TOKEN $VSPHERE_TKGS_VCENTER_SERVER $VSPHERE_NAMESPACE
 
@@ -196,7 +195,7 @@ echo "TDH_DEPLOYMENT_DEBUG=false"                                              >
 echo "TDH_DEPLOYMENT_CLUSTERGROUP=$VSPHERE_NAMESPACE"                          >> $CONFIG_FILE
 echo "TDH_MANAGEMENT_CLUSTER=$TMC_DISPLAY_NAME"                                >> $CONFIG_FILE
 echo "TDH_DEPLOYMENT_CLUSTER_PLAN=dev"                                         >> $CONFIG_FILE
-echo "TDH_TKGWC_STORAGE_CLASS=tanzu"                                           >> $CONFIG_FILE
+echo "TDH_TKGWC_STORAGE_CLASS=$VSPHERE_TKGS_SUPERVISOR_STORAGE_CLASS"          >> $CONFIG_FILE
 echo "TDH_TKGWC_KUBERNETES=\"$KUBERNETES_RELEASE\""                            >> $CONFIG_FILE
 echo ""                                                                        >> $CONFIG_FILE
 echo "nodes[0]='best-effort-medium'"                                           >> $CONFIG_FILE
@@ -208,7 +207,7 @@ echo "TDH_TKGMC_INFRASTRUCTURE=vSphere"                                        >
 echo "TDH_TKGMC_NAME=$TMC_DISPLAY_NAME"                                        >> $CONFIG_FILE
 echo "TDH_TKGMC_ENVNAME=tkgs"                                                  >> $CONFIG_FILE
 echo "TDH_TKGMC_TMC_CONFIG="                                                   >> $CONFIG_FILE
-echo "TDH_TKGMC_STORAGE_CLASS=$VSPHERE_STORAGE_CLASS"                          >> $CONFIG_FILE
+echo "TDH_TKGMC_STORAGE_CLASS=$VSPHERE_TKGS_SUPERVISOR_STORAGE_CLASS"          >> $CONFIG_FILE
 echo "TDH_TKGMC_VSPHERE_NAMESPACE=$VSPHERE_NAMESPACE"                          >> $CONFIG_FILE
 echo "TDH_TKGMC_VSPHERE_USER=$VSPHERE_TKGS_VCENTER_ADMIN"                      >> $CONFIG_FILE
 echo "TDH_TKGMC_VSPHERE_PASS=$VSPHERE_TKGS_VCENTER_PASSWORD"                   >> $CONFIG_FILE
