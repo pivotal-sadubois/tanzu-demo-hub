@@ -277,6 +277,8 @@ checkIdentityProvider() {
 #                       VSPHERE_TKGS_VCENTER_ADMIN ........ (required) vCenter Amdinistrator
 #                       VSPHERE_TKGS_VCENTER_PASSWORD .... (required) vCenter Admin Password
 #                       VSPHERE_TKGS_SUPERVISOR_CLUSTER ...... (required) Supervisor Cluster
+#                       VSPHERE_TKGS_SUPERVISOR_STORAGE_CLASS ......(required) Storage Class
+#                       VSPHERE_TKGS_SUPERVISOR_STORAGE_POLICY ....(required) Storage Policy
 # ------------------------------------------------------------------------------------------
 # Return Value .......: 0 on Success, 1 on failure
 # ------------------------------------------------------------------------------------------
@@ -284,6 +286,7 @@ vSphereLogin() {
   missing_variables=0
 
   if [ "${VSPHERE_TKGS_VCENTER_ADMIN}" == "" -o "${VSPHERE_TKGS_VCENTER_PASSWORD}" == "" -o "${VSPHERE_TKGS_VCENTER_SERVER}" == "" -o \
+       "${VSPHERE_TKGS_SUPERVISOR_STORAGE_CLASS}" == "" -o "${VSPHERE_TKGS_SUPERVISOR_STORAGE_POLIC}" == "" -o \
        "${VSPHERE_TKGS_SUPERVISOR_CLUSTER}" == "" -o "${TDH_USER}" == "" ]; then
  
     missing_variables=1
@@ -308,6 +311,14 @@ vSphereLogin() {
       echo "  VSPHERE_TKGS_SUPERVISOR_CLUSTER       (required) vSphere Supervisor Cluster"
     fi
 
+    if [ "${VSPHERE_TKGS_SUPERVISOR_STORAGE_CLASS}" == "" ]; then
+      echo "  VSPHERE_TKGS_SUPERVISOR_STORAGE_CLASS       (required) vSphere Supervisor Storage Class"
+    fi
+
+    if [ "${VSPHERE_TKGS_SUPERVISOR_STORAGE_POLICY}" == "" ]; then
+      echo "  VSPHERE_TKGS_SUPERVISOR_STORAGE_POLICY       (required) vSphere Supervisor Stoage Policy"
+    fi
+
     if [ "${TDH_USER}" == "" ]; then
       echo "  TDH_USER                             (required) Tanzu Demo Hub User to tag TKG Clusters with your Name"
       echo "                                        => (usually you VMware User Name without @vmware.com)"
@@ -318,6 +329,8 @@ vSphereLogin() {
     messagePrint " ▪ vCenter Admin User"                 "$VSPHERE_TKGS_VCENTER_ADMIN"
     messagePrint " ▪ vCenter Admin Password"             $(maskPassword "$VSPHERE_TKGS_VCENTER_PASSWORD")
     messagePrint " ▪ vCenter Supervisor Cluster"         "$VSPHERE_TKGS_SUPERVISOR_CLUSTER"
+    messagePrint " ▪ vCenter Supervisor Storage Class"   "$VSPHERE_TKGS_SUPERVISOR_STORAGE_CLASS"
+    messagePrint " ▪ vCenter Supervisor Storage Policy"  "$VSPHERE_TKGS_SUPERVISOR_STORAGE_POLICY"
   fi
 
   if [ ${missing_variables} -eq 1 ]; then
@@ -11324,28 +11337,6 @@ tmcAPI_getCliBinary() {
                  ${TMC_SERVER}/v1alpha/system/binaries 2>/dev/null | jq -r ".versions.\"$latest\".$TMC_TYPE"
 }
 
-
-# ------------------------------------------------------------------------------------------
-# Function Name ......: vSphereAPI_getToken
-# Function Purpose ...: Create a vSphere Namespace
-# ------------------------------------------------------------------------------------------
-# Argument ($1) ......: vSphere API Token
-#          ($2) ......: vSphere Server Name
-#          ($3) ......: vSphere Namespace name
-# ------------------------------------------------------------------------------------------
-# Return Value .......: API Access Token
-# ------------------------------------------------------------------------------------------
-vSphereAPI_getToken() {
-  VCENTER_SERVER="$1"
-  VCENTER_USER="$2"
-  VCENTER_PASS="$3"
-  USERPASS="${VCENTER_USER}:${VCENTER_PASS}"
-
-  curl -k -X POST "${VCENTER_SERVER}/rest/com/vmware/cis/session" -u "$USERPASS" 2>/dev/null | jq -r '.value'
-
-}
-
-
 # ------------------------------------------------------------------------------------------
 # Function Name ......: vSphereAPI_getToken
 # Function Purpose ...: Create a vSphere Namespace
@@ -11422,7 +11413,7 @@ vSphereAPI_createNamespace() {
   # --- GET STORAGE POLICY ID FOR 'TANZU' ---
   vm_policy=$(curl -k -X GET -H 'Content-type: application/json' \
                    -H "vmware-api-session-id: $API_TOKEN" ${VCENTER_SERVER}/rest/vcenter/storage/policies 2>/dev/null | \
-                   jq -r '.value[] | select(.name == "tanzu" ).policy')
+                   jq -r --arg key ${VSPHERE_TKGS_SUPERVISOR_STORAGE_POLICY} '.value[] | select(.name == $key ).policy')
 
   # --- UPDATE VSPHERE NAMESPACE CONFIG ---
   VSPHERE_CONFIG=/tmp/vsphere_config.json; rm -f $OKTA_CONFIG
