@@ -10,13 +10,21 @@ export TANZU_DEMO_HUB=$(cd "$(pwd)/$(dirname $0)"; pwd)
 export TDHPATH=$(cd "$(pwd)/$(dirname $0)"; pwd)
 export DEBUG=0
 export NATIVE=0                ## NATIVE=1 r(un on local host), NATIVE=0 (run within docker)
-export START_COMMAND="$*"
 export K8S_CLEAN_DEPLOYMENT=false
+export TDH_TOOLS=tdh-tools
+export TDH_TOOLS_CONTAINER_TYPE=tkg
+
+# --- SETTING FOR TDH-TOOLS ---
+export START_COMMAND="$*"
 export CMD_EXEC=$(basename $0)
 export CMD_ARGS=$*
-export TDH_TOOLS=tdh-tools
 
-. $TANZU_DEMO_HUB/functions
+# --- SOUTCE FOUNCTIONS AND USER ENVIRONMENT ---
+[ -f $TANZU_DEMO_HUB/functions ] && . $TANZU_DEMO_HUB/functions
+[ -f $HOME/.tanzu-demo-hub.cfg ] && . $HOME/.tanzu-demo-hub.cfg
+
+# --- CHECK FOR BASIC COMANDS ---
+checkCLIcommands        BASIC
 
 listMiniKubeDeployments() {
   printf "%-32s %-8s  %-15s %-20s %-5s %s\n" "DEPLOYMENT" "PLATFORM" "PROFILE" "MGMT-CLUSTER" "PLAN" "CONFIGURATION"
@@ -60,11 +68,6 @@ if [ ! -f ${TDHPATH}/deployments/${K8S_DEPLOYMENT} ]; then
   exit 1
 else
   . ${TDHPATH}/deployments/${K8S_DEPLOYMENT}
-fi
-
-# --- CHECK ENVIRONMENT VARIABLES ---
-if [ -f ~/.tanzu-demo-hub.cfg ]; then
-  . ~/.tanzu-demo-hub.cfg
 fi
 
 InstallMetallb() {
@@ -154,75 +157,32 @@ fi
 
 # --- SET MINIKUBE PROFILE ---
 TDH_MINIKUBE_PROFILE="tdh-minikube-${TDH_USER}"
-
-if [ ! -f /tdh_tools_docker_container  ]; then
-  echo ""
-  echo "Tanzu Demo Hub - Deploy MiniKube cluster"
-  echo "by Sacha Dubois, VMware Inc,"
-  echo "-----------------------------------------------------------------------------------------------------------"
-
-  # --- MINIKUBE SETUP ----
-  VerifyK8SDemoPlatform
-  InstallMetallb
-  checkTDHAccess
-
-  # --- CLEANUP KUNECONFIG ---
-  cleanKubeconfig
-  checkCloudAccess
-
-  if [ $NATIVE -eq 0 ]; then
-    tdh_tools_build
-
-    messagePrint " ▪ Running TDH Tools Docker Container" "tdh-tools:latest $TDHPATH/$CMD_EXEC $CMD_ARGS"
-
-    cid=$(docker ps | grep tdh-tools:latest | awk '{ print $1 }')
-    [ "$cid" != "" ] && docker rm $cid -f > /dev/null 2>&1
-
-    mkdir -p $HOME/.mc $HOME/.cache $HOME/.config $HOME/.local
-    mkdir -p /tmp/docker && chmod a+w /tmp/docker
-    docker run -it --rm --name tdh-tools -v /var/run/docker.sock:/var/run/docker.sock tdh-tools:latest  chmod 666 /var/run/docker.sock > /dev/null 2>&1
-    docker run -u $(id -u):$(id -g) -it --rm --name tdh-tools --network=host --env-file /tmp/tdh.env \
-       -v $HOME:$HOME:ro -v $HOME/.tanzu-demo-hub:$HOME/.tanzu-demo-hub:rw \
-       -v $HOME/.config:$HOME/.config:rw -v $HOME/.config_tools/tanzu:$HOME/.config/tanzu:rw\
-       -v $HOME/.tanzu_tools:$HOME/.tanzu:rw -v $HOME/.cache_tools:$HOME/.cache:rw \
-       -v /var/run/docker.sock:/var/run/docker.sock \
-       -v $HOME/.vmware-cna-saas:$HOME/.vmware-cna-saas:rw -v $HOME/.azure:$HOME/.azure:rw \
-       -v /tmp:/tmp:rw -v /tmp/docker:$HOME/.docker:rw -v $HOME/.mc:$HOME/.mc:rw \
-       -v $HOME/.kube-tkg:$HOME/.kube-tkg:rw -v $HOME/.kube:$HOME/.kube:rw -v $HOME/.govmomi:$HOME/.govmomi:rw \
-       -v $HOME/.ssh:$HOME/.ssh:rw -v $HOME/.terraform:$HOME/.terraform:rw -v $HOME/.gradle:$HOME/.gradle:rw \
-       -v $HOME/.s3cfg:$HOME/.s3cfg:rw -v $HOME/.local_tools:$HOME/.local:rw \
-       -e "KUBECONFIG=$HOME/.kube/config" --hostname tdh-tools tdh-tools:latest $TDHPATH/$CMD_EXEC $CMD_ARGS; ret=$?
-
-#    docker run -u $(id -u):$(id -g) --group-add 0 -it --rm --name tdh-tools \
-#       -v $HOME:$HOME:ro -v $HOME/.local:$HOME/.local:rw -v $HOME/.tanzu-demo-hub:$HOME/.tanzu-demo-hub:rw \
-#       -v /var/run/docker.sock:/var/run/docker.sock:rw -v $HOME/.cache:$HOME/.cache:rw -v $HOME/.config:$HOME/.config:rw \
-#       -v $HOME/.aws:$HOME/.aws:rw -v $HOME/.vmware-cna-saas:$HOME/.vmware-cna-saas:rw -v $HOME/.azure:$HOME/.azure:rw \
-#       -v /tmp:/tmp:rw -v /tmp/docker:$HOME/.docker:rw -v $HOME/.mc:$HOME/.mc:rw -v $HOME/.tanzu:$HOME/.tanzu:rw \
-#       -v $HOME/.kube-tkg:$HOME/.kube-tkg:rw -v $HOME/.kube:$HOME/.kube:rw -v $HOME/.govmomi:$HOME/.govmomi:rw \
-#       -v $HOME/.ssh:$HOME/.ssh:rw \
-#       -e "KUBECONFIG=$HOME/.kube/config" --hostname tdh-tools tdh-tools:latest $TDHPATH/$CMD_EXEC $CMD_ARGS; ret=$?
-
-    # --- FINISH CURRENT SESSION AS WE RUN AS CONTAINER ---
-    exit $ret
-  else 
-    # --- VERIFY TOOLS AND ACCESS ---
-    checkCLIcommands TOOLS
-    checkCLIcommands TKG
-  fi
-fi
-
-# --- SWITCH TO MINIKUBE CONTEXT ---
-kubectl config use-context $TDH_MINIKUBE_PROFILE > /dev/null 2>&1
-if [ $? -ne 0 ]; then 
-  echo "ERROR: Unable to switch to context $TDH_MINIKUBE_PROFILE"
-  echo "       => kubectl config use-context $TDH_MINIKUBE_PROFILE"
-  exit 1
-fi
+export KUBECONFIG=$HOME/.tanzu-demo-hub/config/$TDH_MINIKUBE_PROFILE.kubeconfig
 
 # --- HARDCODED FOR MINIKUBE CLUSTER ---
 TDH_MANAGEMENT_CLUSTER=attached
 TDH_PROVISIONER_NAME=attached
 TDH_CLUSTER_GROUP=tanzu-demo-hub
+TDH_DEPLOYMENT_CLOUD=$TDH_INFRASTRUCTURE
+
+# --- MINIKUBE SETUP ----
+if [ ! -f /tdh_tools_docker_container  ]; then
+  VerifyK8SDemoPlatform
+  InstallMetallb
+  #checkTDHAccess
+
+  # --- CLEANUP KUBECONFIG ---
+  cleanKubeconfig
+  checkCloudAccess
+fi
+
+# --- SWITCH TO MINIKUBE CONTEXT ---
+kubectl config use-context $TDH_MINIKUBE_PROFILE > /dev/null 2>&1
+if [ $? -ne 0 ]; then 
+  echo "ERROR0: Unable to switch to context $TDH_MINIKUBE_PROFILE"
+  echo "       => kubectl config use-context $TDH_MINIKUBE_PROFILE"
+  exit 1
+fi
 
 uodateConfigMap tanzu-demo-hub TDH_CLUSTER_NAME         $TDH_MINIKUBE_PROFILE
 uodateConfigMap tanzu-demo-hub TDH_CLUSTER_GROUP        $TDH_CLUSTER_GROUP
@@ -233,30 +193,49 @@ uodateConfigMap tanzu-demo-hub TDH_ENVNAME              $TDH_ENVNAME
 uodateConfigMap tanzu-demo-hub TDH_DEPLOYMENT_TYPE      "minikube" 
 uodateConfigMap tanzu-demo-hub TDH_MANAGED_BY_TMC       "false" 
 
-# --- CLEANUP KUNECONFIG ---
+############################################################################################################################
+################################### EXECUTING CODE WITHIN  TDH-TOOLS DOCKER CONTAINER  ######################################
+#############################################################################################################################
+runTDHtools "$TDH_TOOLS_CONTAINER_TYPE" "$TDH_TOOLS_CONTAINER_VERS" "Deploy MiniKube cluster" "$TDHPATH/$CMD_EXEC" "$CMD_ARGS"
+
+# --- CLEANUP KUBECONFIG ---
+checkTDHAccess
 cleanKubeconfig
 
 # --- SWITCH TO MINIKUBE CONTEXT ---
 kubectl config use-context $TDH_MINIKUBE_PROFILE > /dev/null 2>&1
 if [ $? -ne 0 ]; then
-  echo "ERROR: Unable to switch to context $TDH_MINIKUBE_PROFILE"
+  echo "1ERROR: Unable to switch to context $TDH_MINIKUBE_PROFILE"
   echo "       => kubectl config use-context $TDH_MINIKUBE_PROFILE"
   exit 1
 fi
 
-# --- INSTALL K8 SERVICES ---
-InstallCertManager
-InstallContour
+installClusterEssentials
+TanzuPackage_AddRepo       $TDH_SERVICE_PACKAGE_REPOSITORY_NAMESPACE $TDH_SERVICE_PACKAGE_REPOSITORY_NAME $TDH_SERVICE_PACKAGE_REPOSITORY_ID
+TanzuPackage_RepoSync      $TDH_SERVICE_PACKAGE_REPOSITORY_NAMESPACE
+
+messageTitle "Tanzu Package Management"
+TanzuPackage_RepoSync      tkg-system
+
+TanzuPackage_CertManager   cert-manager-pkg     cert-manager.tanzu.vmware.com
+TanzuPackage_Contour       contour-pkg          contour.tanzu.vmware.com
+
 createClusterIssuer
-InstallHarborRegistry
 getRootCA tanzu-demo-hub-tls
+TanzuPackage_Harbor       harbor-pkg           harbor.tanzu.vmware.com
+
+# --- INSTALL K8 SERVICES ---
 installBuildService
 installTanzuDataPostgres
 installSpringCloudGateway
 installMinio
 installKubeapps
+installGitea
 installJenkins
 installArgoCD
+
+installTAP
+exit
 
 if [ "$TDH_TANZU_MISSION_CONTROL_REGISTRATION" == "true" ]; then 
   cnt=$(tmc cluster list --name $TDH_MINIKUBE_PROFILE -p $TDH_PROVISIONER_NAME -m $TDH_MANAGEMENT_CLUSTER 2> /dev/null | egrep -c " $TDH_MINIKUBE_PROFILE ")
