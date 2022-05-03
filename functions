@@ -5620,17 +5620,24 @@ a=1
 }
 
 installTAP() {
-  NAMESPACE=tap
+  NAMESPACE=tap-install
 
   if [ "$TDH_SERVICE_TAP" != "true" ]; then
     uodateConfigMap tanzu-demo-hub TDH_SERVICE_TAP        "false"
     return
   fi
 
+  DNS_DOMAIN=$(getConfigMap tanzu-demo-hub TDH_INGRESS_CONTOUR_LB_DOMAIN)
+  DNS_HARBOR=$(getConfigMap tanzu-demo-hub TDH_HARBOR_REGISTRY_DNS_HARBOR)
+  TDH_HARBOR_REGISTRY_DNS_HARBOR=$(getConfigMap tanzu-demo-hub TDH_HARBOR_REGISTRY_DNS_HARBOR)
+  TDH_HARBOR_REGISTRY_ADMIN_PASSWORD=$(getConfigMap tanzu-demo-hub TDH_HARBOR_REGISTRY_ADMIN_PASSWORD)
+
   NAMESPACE=tap-install
   export INSTALL_REGISTRY_USERNAME=$TDH_REGISTRY_VMWARE_USER
-  export INSTALL_REGISTRY_PASSWORD=$TDH_REGISTRY_VMWARE_PASS
-  export INSTALL_REGISTRY_HOSTNAME=registry.tanzu.vmware.com
+  export INSTALL_REGISTRY_PASSWORD=$TDH_HARBOR_REGISTRY_ADMIN_PASSWORD
+  export INSTALL_REGISTRY_HOSTNAME=$TDH_HARBOR_REGISTRY_DNS_HARBOR
+  export TAP_VERSION=$TDH_SERVICE_TAP_VERSION
+echo "TAP_VERSION:$TAP_VERSION"
 
   createNamespace $NAMESPACE > /dev/null 2>&1
   cnt=$(cmdLoop kubectl get secrets -n $NAMESPACE | egrep -c "^tap-registry") 
@@ -5641,27 +5648,25 @@ installTAP() {
   --server ${INSTALL_REGISTRY_HOSTNAME} \
   --export-to-all-namespaces --yes --namespace $NAMESPACE > /tmp/error.log 2>&1; ret=$? 
 
-      if [ $ret -ne 0 ]; then
-        logMessages /tmp/error.log
-        echo "ERROR: failed to create registry secret"
-        if [ "$NATIVE" == "0" ]; then
-          echo "       => tools/${TDH_TOOLS}.sh"
-          echo "          tdh-tools:/$ tanzu secret registry add tap-registry \\"
-          echo "                          --username ${INSTALL_REGISTRY_USERNAME} --password ${INSTALL_REGISTRY_PASSWORD} \\"
-          echo "                          --server ${INSTALL_REGISTRY_HOSTNAME} \\"
-          echo "                          --export-to-all-namespaces --yes --namespace $NAMESPACE"
-          echo "          tdh-tools:/$ exit"
-        else
-          echo "       => tanzu secret registry add tap-registry \\"
-          echo "                --username ${INSTALL_REGISTRY_USERNAME} --password ${INSTALL_REGISTRY_PASSWORD} \\"
-          echo "                --server ${INSTALL_REGISTRY_HOSTNAME} \\"
-          echo "                --export-to-all-namespaces --yes --namespace $NAMESPACE"
-        fi
+  if [ $ret -ne 0 ]; then
+    logMessages /tmp/error.log
+    echo "ERROR: failed to create registry secret"
+    if [ "$NATIVE" == "0" ]; then
+      echo "       => tools/${TDH_TOOLS}.sh"
+      echo "          tdh-tools:/$ tanzu secret registry add tap-registry \\"
+      echo "                          --username ${INSTALL_REGISTRY_USERNAME} --password ${INSTALL_REGISTRY_PASSWORD} \\"
+      echo "                          --server ${INSTALL_REGISTRY_HOSTNAME} \\"
+      echo "                          --export-to-all-namespaces --yes --namespace $NAMESPACE"
+      echo "          tdh-tools:/$ exit"
+    else
+      echo "       => tanzu secret registry add tap-registry \\"
+      echo "                --username ${INSTALL_REGISTRY_USERNAME} --password ${INSTALL_REGISTRY_PASSWORD} \\"
+      echo "                --server ${INSTALL_REGISTRY_HOSTNAME} \\"
+      echo "                --export-to-all-namespaces --yes --namespace $NAMESPACE"
+    fi
 
-        exit 1
-      fi
-
-exit
+    exit 1
+  fi
 
   if [ 2 -eq 1 ]; then 
 
@@ -5736,6 +5741,40 @@ exit
       echo "ERROR: Docker login does not work 5'"
       echo "       => docker login $TDH_HARBOR_REGISTRY_DNS_HARBOR -u admin -p $TDH_HARBOR_REGISTRY_ADMIN_PASSWORD"; exit 1
     fi
+
+    # --- RELOCATE IMAGES ---
+
+    messagePrint " ▪ Relocate images to" "${INSTALL_REGISTRY_HOSTNAME}/library/tap-packages"
+    cnt=0; ret=1
+    while [ $ret -ne 0 -a $cnt -lt 5 ]; do
+echo "gugus $cnt"
+      #imgpkg copy -b registry.tanzu.vmware.com/tanzu-application-platform/tap-packages:${TAP_VERSION} \
+      #            --to-repo ${INSTALL_REGISTRY_HOSTNAME}/library/tap-packages > /tmp/error.log 2>&1; ret=$?
+      imgpkg copy -b registry.tanzu.vmware.com/tanzu-application-platform/tap-packages:${TAP_VERSION} \
+                  --to-repo ${INSTALL_REGISTRY_HOSTNAME}/library/tap-packages; ret=$?
+      [ $ret -eq 0 ] && break
+      let cnt=cnt+1
+      sleep 30
+    done
+
+    if [ $ret -ne 0 ]; then
+      logMessages /tmp/error.log
+      echo "ERROR: Image Relocation failed"
+      if [ "$NATIVE" == "0" ]; then
+        echo "       => tools/${TDH_TOOLS}.sh"
+        echo "          tdh-tools:/$ imgpkg copy -b registry.tanzu.vmware.com/tanzu-application-platform/tap-packages:${TAP_VERSION} \\"
+        echo "                                   --to-repo ${INSTALL_REGISTRY_HOSTNAME}/library/tap-packages"; exit 1
+        echo "          tdh-tools:/$ exit"
+      else
+        echo "       => imgpkg copy -b registry.tanzu.vmware.com/tanzu-application-platform/tap-packages:${TAP_VERSION} \\"
+        echo "          --to-repo ${INSTALL_REGISTRY_HOSTNAME}/library/tap-packages"; exit 1
+      fi
+
+      exit 1
+    fi
+
+#gaga
+
 
     TAP_CONFIG=/tmp/tap_config.yaml
     echo ""                                                                                                                       >  $TAP_CONFIG
@@ -8152,12 +8191,16 @@ createClusterIssuer() {
   fi
 
   messageTitle "Verify LetsEnscript Certificate"
+  messagePrint " ▪ LetsEnscript Certificate Staging"    "$TDH_HARBOR_STAGING_TLS_CERT"
+  messagePrint " ▪ LetsEnscript Certificate Server"     "$LETSENSCRIPT_SERVER"
   messagePrint " ▪ LetsEnscript Certificate Name"       "$TDH_TLS_CERT"
   messagePrint " ▪ LetsEnscript Certificate Secret"     "$TDH_TLS_SECRET"
 
   # --- STORE SETTINGS IN CONFIGMAP ---
-  uodateConfigMap tanzu-demo-hub TDH_CERTIFICATE_NAME   "$TDH_TLS_CERT"
-  uodateConfigMap tanzu-demo-hub TDH_CERTIFICATE_SECRET "$TDH_TLS_SECRET"
+  uodateConfigMap tanzu-demo-hub TDH_CERTIFICATE_NAME         "$TDH_TLS_CERT"
+  uodateConfigMap tanzu-demo-hub TDH_CERTIFICATE_SECRET       "$TDH_TLS_SECRET"
+  uodateConfigMap tanzu-demo-hub TDH_HARBOR_STAGING_TLS_CERT  "$TDH_HARBOR_STAGING_TLS_CERT"
+  uodateConfigMap tanzu-demo-hub LETSENSCRIPT_SERVER          "$LETSENSCRIPT_SERVER"
 
   echo "------------------------------------------------------------------------------------------------------------------------"
   kubectl get secret tanzu-demo-hub-tls -o json | jq -r '.data."tls.crt"' | base64 -d | \
@@ -9571,6 +9614,7 @@ tdh_tools_build() {
   TOOLS_VERSION=$2
   REBUILD_REQUIRED=0
   REBUILD_REQUIRED_SOFTWARE=0
+
   verify_docker
   checkTDHenvironment
 
@@ -9845,7 +9889,7 @@ tdh_tools_build() {
 
   # --- DOWNLOAD PIVNET ---
   if [ ! -e $TDH_DOCKER_CACHE/pivnet/pivnet-linux-amd64-$TDH_PIVNET ]; then
-    curl -q https://github.com/pivotal-cf/pivnet-cli/releases/download/v${TDH_PIVNET}/pivnet-linux-amd64-$TDH_PIVNET \
+    curl -Ls https://github.com/pivotal-cf/pivnet-cli/releases/download/v${TDH_PIVNET}/pivnet-linux-amd64-$TDH_PIVNET \
          -o /tmp/pivnet-linux-amd64-$TDH_PIVNET > /tmp/error.log 2>&1
     if [ ! -s /tmp/pivnet-linux-amd64-$TDH_PIVNET ]; then
       logMessages /tmp/error.log
@@ -9866,10 +9910,49 @@ tdh_tools_build() {
       chmod a+x $TDH_DOCKER_FILES/pivnet
     fi
 
-    REBUILD_REQUIRED_SOFTWARE=1       ## REBUILD REQUIRED BECAUSE OF SOFTWARE CHANGE
+    4EBUILD_REQUIRED_SOFTWARE=1       ## REBUILD REQUIRED BECAUSE OF SOFTWARE CHANGE
   else
     cp $TDH_DOCKER_CACHE/pivnet/pivnet-linux-amd64-$TDH_PIVNET $TDH_DOCKER_FILES/pivnet
     chmod a+x $TDH_DOCKER_FILES/pivnet
+  fi
+
+  # --- VMWARE MARKETPLACE CLI ---
+  TDH_BNDL_NAM="mkpcli"
+  TDH_BNDL_VER=$TDH_VMWARE_MARKETPLACE
+  TDH_FILE_TAG="$TDH_BNDL_NAM"
+  TDH_FILE_VER=$TDH_BNDL_VER
+
+  TDH_FILE_STR="${TDH_FILE_TAG} - Linux"
+  TDH_FILE_NAM="$TDH_FILE_TAG-linux-amd64-$TDH_FILE_VER"
+  TDH_FILE_ALT="$TDH_FILE_TAG-linux-amd64"
+
+  # --- DOWNLOAD PIVNET ---
+  if [ ! -e $TDH_DOCKER_CACHE/$TDH_BNDL_NAM/$TDH_FILE_NAM ]; then
+    curl -Ls https://github.com/vmware-labs/marketplace-cli/releases/download/v$TDH_VMWARE_MARKETPLACE/$TDH_FILE_ALT \
+         -o /tmp/$TDH_FILE_ALT > /tmp/error.log 2>&1
+    if [ ! -s /tmp/$TDH_FILE_ALT ]; then
+      logMessages /tmp/error.log
+      echo "ERROR: failed to download pivnet binary"
+      if [ "$NATIVE" == "0" ]; then
+        echo "       => tools/${TDH_TOOLS}.sh"
+        echo "          tdh-tools:/$ curl -q https://github.com/vmware-labs/marketplace-cli/releases/download/v$TDH_VMWARE_MARKETPLACE/$TDH_FILE_ALT"
+        echo "          tdh-tools:/$ exit"
+      else
+        echo "       => curl -q https://github.com/vmware-labs/marketplace-cli/releases/download/v$TDH_VMWARE_MARKETPLACE/$TDH_FILE_ALT"
+      fi
+
+      exit 1
+    else
+      [ ! -d $TDH_DOCKER_CACHE/$TDH_BNDL_NAM ] && mkdir -p $TDH_DOCKER_CACHE/$TDH_BNDL_NAM
+      mv /tmp/$TDH_FILE_ALT $TDH_DOCKER_CACHE/$TDH_BNDL_NAM/$TDH_FILE_NAM
+      cp $TDH_DOCKER_CACHE/$TDH_BNDL_NAM/$TDH_FILE_NAM $TDH_DOCKER_FILES/$TDH_BNDL_NAM
+      chmod a+x $TDH_DOCKER_FILES/$TDH_BNDL_NAM
+    fi
+
+    REBUILD_REQUIRED_SOFTWARE=1       ## REBUILD REQUIRED BECAUSE OF SOFTWARE CHANGE
+  else
+    cp $TDH_DOCKER_CACHE/$TDH_BNDL_NAM/$TDH_FILE_NAM $TDH_DOCKER_FILES/$TDH_BNDL_NAM
+    chmod a+x $TDH_DOCKER_FILES/$TDH_BNDL_NAM
   fi
 
   # --- TANZU BUILD SERVICE CLI (kp) BINARY ---
@@ -10365,7 +10448,7 @@ tdh_tools_build() {
     time1=$(echo "($(hourInSec)*360)+($(minInSec)*60)+$(secInSec)" | bc)
     messagePrint " ▪ Building TDH Tools docker container" "$TDH_TOOLS_IMAGE:CHKSUM-$DOCKER_CHKSUM"
     #cd $TDH_DOCKER_FILES && docker build -q -t $TDH_TOOLS_IMAGE:CHKSUM-$DOCKER_CHKSUM \
-    cd $TDH_DOCKER_FILES && docker build -q -t $TDH_TOOLS_IMAGE:CHKSUM-$DOCKER_CHKSUM \
+    cd $TDH_DOCKER_FILES && docker build -t $TDH_TOOLS_IMAGE:CHKSUM-$DOCKER_CHKSUM \
       --build-arg UID=$(id -u) \
       --build-arg GID=$(id -g) \
       --build-arg USER=$USER \
@@ -12038,6 +12121,7 @@ TanzuPackage_Harbor () {
 
     messageTitle "Verify $PACKAGE_DES"
     messagePrint " ▪ Tanzu Package ($PACKAGE_NAME)"                 "$pkg_nam"
+    messagePrint " ▪ Tanzu Package ($PACKAGE_NAME) Hostname"        "$HARBOR_HOSTNAME"
     messagePrint " ▪ Tanzu Package ($PACKAGE_NAME) Namespace"       "$NAMESPACE"
     messagePrint " ▪ Tanzu Package ($PACKAGE_NAME) Version"         "$pkg_ver"
     messagePrint " ▪ Tanzu Package ($PACKAGE_NAME) Status"          "$pkg_stt"
@@ -13140,6 +13224,8 @@ createNamespace() {
 # ------------------------------------------------------------------------------------------
 deleteNamespace() {
   NAMESPACE=$1
+
+  [ "$NAMESPACE" == "default" ] && return
 
   nam=$NAMESPACE
   while [ "$nam" == "$NAMESPACE" ]; do
