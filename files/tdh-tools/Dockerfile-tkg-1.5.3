@@ -4,6 +4,7 @@
 # Author .......: Sacha Dubois, VMware
 # Description ..: Tanzu Demo Hub - Dockerfile for tdh-tools container
 # ############################################################################################
+                      
 FROM --platform=linux/amd64 ubuntu:20.04
 MAINTAINER Sacha Dubois <sdubois@vmware.com>
 ENV TZ="Europe/Zurich"
@@ -11,10 +12,8 @@ ARG UID GID USER TZ HOME VMWUSER VMWPASS START ARCH
 ADD tdh-postinstall-root.sh     /usr/local/bin
 ADD tdh-postinstall-user.sh     /usr/local/bin
 ADD tdh-context.sh              /usr/local/bin
-ADD mkpcli          /usr/local/bin
 ADD cli             /tanzu/cli
-ADD blank           /tanzu-tap/blank-catalog
-ADD yelb-catalog    /tanzu-tap/yelb-catalog
+ADD clitap          /tanzu-tap/cli
 ADD clusterctl      /usr/local/bin
 ADD kbld            /usr/local/bin
 ADD imgpkg          /usr/local/bin
@@ -61,7 +60,6 @@ RUN apt-get update -qq && apt-get install -qqy \
     zip \
     s3cmd \
     postgresql-client \
-    dnsutils \
     iptables
 RUN apt-get clean 
 
@@ -98,13 +96,13 @@ RUN apt-get update && apt-get install -y \
     git vim azure-cli jq awscli 
 
 # --- INSTALL TANZU UTILITIES ---
+RUN ls -la /
+RUN ls -la /tanzu/cli/
+RUN ls -la /tanzu/cli/core/v*
 RUN install /tanzu/cli/core/v*/tanzu-core-linux_amd64 /usr/local/bin/tanzu
 RUN gunzip -q /tanzu/cli/*.gz
 RUN cd /tanzu && tanzu plugin clean
 RUN cd /tanzu && tanzu plugin sync
-
-# --- INSTALL TAP ---
-#RUN cd /tanzu-tap && tanzu plugin install --local cli all
 
 # --- INSTQLL CARVEL TOOLS ---
 RUN cp /tanzu/cli/imgpkg-linux* /usr/local/bin/imgpkg && chmod a+x /usr/local/bin/imgpkg

@@ -69,12 +69,12 @@ tmcCheckLogin
 vSphereLogin
 vSphereKubeconfig
 
-# --- VERIFY ITS A PEZ CLUSTER ---
-cnt=$(echo $VSPHERE_TKGS_VCENTER_SERVER | egrep -c "\.haas-") 
+# --- VERIFY ITS A H2O CLUSTER ---
+cnt=$(echo $VSPHERE_TKGS_VCENTER_SERVER | egrep -c "\.h2o-") 
 if [ $cnt -gt 0 ]; then 
-  PEZ_ID=$(echo "$VSPHERE_TKGS_VCENTER_SERVER" | awk -F'.' '{ print $2 }') 
-  TMC_DISPLAY_NAME="tkgmc-vsphere-${PEZ_ID}-$TDH_USER"
-  TMC_CONFIG_NAME="tmc-vsphere-${PEZ_ID}"
+  H2O_ID=$(echo "$VSPHERE_TKGS_VCENTER_SERVER" | awk -F'.' '{ print $2 }') 
+  TMC_DISPLAY_NAME="tkgmc-vsphere-${H2O_ID}-$TDH_USER"
+  TMC_CONFIG_NAME="tmc-vsphere-${H2O_ID}"
 else
   TMC_CONFIG_NAME="tmc-vsphere-tkgs"
   TMC_DISPLAY_NAME="tkgmc-vsphere--$TDH_USER"
@@ -173,7 +173,6 @@ if [ $cnt -gt 0 ]; then
 fi
 
 VSPHERE_NAMESPACE=tanzu-demo-hub
-VSPHERE_STORAGE_CLASS=tanzu
 TDH_VSPHERE_API_TOKEN=$(vSphereAPI_getToken "$VSPHERE_TKGS_VCENTER_SERVER" "$VSPHERE_TKGS_VCENTER_ADMIN" "$VSPHERE_TKGS_VCENTER_PASSWORD")
 vSphereAPI_createNamespace $TDH_VSPHERE_API_TOKEN $VSPHERE_TKGS_VCENTER_SERVER $VSPHERE_NAMESPACE
 
@@ -190,13 +189,13 @@ CONFIG_FILE="$HOME/.tanzu-demo-hub/config/${TMC_CONFIG_NAME}.cfg"
 echo "TDH_INFRASTRUCTURE=tmc"                                                  >  $CONFIG_FILE
 echo "TDH_ENVNAME=tkgs"                                                        >> $CONFIG_FILE
 echo "TDH_DEPLOYMENT_CLOUD=vSphere"                                            >> $CONFIG_FILE
-echo "TDH_DEPLOYMENT_DESCRIPTION='VMware Tanzu for vSphere (TKGs) on PEZ'"     >> $CONFIG_FILE
+echo "TDH_DEPLOYMENT_DESCRIPTION='VMware Tanzu for vSphere (TKGs) on H2O'"     >> $CONFIG_FILE
 echo "TDH_DEPLOYMENT_MAINTAINER=$TDH_USER"                                     >> $CONFIG_FILE
 echo "TDH_DEPLOYMENT_DEBUG=false"                                              >> $CONFIG_FILE
 echo "TDH_DEPLOYMENT_CLUSTERGROUP=$VSPHERE_NAMESPACE"                          >> $CONFIG_FILE
 echo "TDH_MANAGEMENT_CLUSTER=$TMC_DISPLAY_NAME"                                >> $CONFIG_FILE
 echo "TDH_DEPLOYMENT_CLUSTER_PLAN=dev"                                         >> $CONFIG_FILE
-echo "TDH_TKGWC_STORAGE_CLASS=tanzu"                                           >> $CONFIG_FILE
+echo "TDH_TKGWC_STORAGE_CLASS=$VSPHERE_TKGS_SUPERVISOR_STORAGE_CLASS"          >> $CONFIG_FILE
 echo "TDH_TKGWC_KUBERNETES=\"$KUBERNETES_RELEASE\""                            >> $CONFIG_FILE
 echo ""                                                                        >> $CONFIG_FILE
 echo "nodes[0]='best-effort-medium'"                                           >> $CONFIG_FILE
@@ -208,7 +207,7 @@ echo "TDH_TKGMC_INFRASTRUCTURE=vSphere"                                        >
 echo "TDH_TKGMC_NAME=$TMC_DISPLAY_NAME"                                        >> $CONFIG_FILE
 echo "TDH_TKGMC_ENVNAME=tkgs"                                                  >> $CONFIG_FILE
 echo "TDH_TKGMC_TMC_CONFIG="                                                   >> $CONFIG_FILE
-echo "TDH_TKGMC_STORAGE_CLASS=$VSPHERE_STORAGE_CLASS"                          >> $CONFIG_FILE
+echo "TDH_TKGMC_STORAGE_CLASS=$VSPHERE_TKGS_SUPERVISOR_STORAGE_CLASS"          >> $CONFIG_FILE
 echo "TDH_TKGMC_VSPHERE_NAMESPACE=$VSPHERE_NAMESPACE"                          >> $CONFIG_FILE
 echo "TDH_TKGMC_VSPHERE_USER=$VSPHERE_TKGS_VCENTER_ADMIN"                      >> $CONFIG_FILE
 echo "TDH_TKGMC_VSPHERE_PASS=$VSPHERE_TKGS_VCENTER_PASSWORD"                   >> $CONFIG_FILE
