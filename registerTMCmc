@@ -69,12 +69,12 @@ tmcCheckLogin
 vSphereLogin
 vSphereKubeconfig
 
-# --- VERIFY ITS A PEZ CLUSTER ---
-cnt=$(echo $VSPHERE_TKGS_VCENTER_SERVER | egrep -c "\.haas-") 
+# --- VERIFY ITS A H2O CLUSTER ---
+cnt=$(echo $VSPHERE_TKGS_VCENTER_SERVER | egrep -c "\.h2o-") 
 if [ $cnt -gt 0 ]; then 
-  PEZ_ID=$(echo "$VSPHERE_TKGS_VCENTER_SERVER" | awk -F'.' '{ print $2 }') 
-  TMC_DISPLAY_NAME="tkgmc-vsphere-${PEZ_ID}-$TDH_USER"
-  TMC_CONFIG_NAME="tmc-vsphere-${PEZ_ID}"
+  H2O_ID=$(echo "$VSPHERE_TKGS_VCENTER_SERVER" | awk -F'.' '{ print $2 }') 
+  TMC_DISPLAY_NAME="tkgmc-vsphere-${H2O_ID}-$TDH_USER"
+  TMC_CONFIG_NAME="tmc-vsphere-${H2O_ID}"
 else
   TMC_CONFIG_NAME="tmc-vsphere-tkgs"
   TMC_DISPLAY_NAME="tkgmc-vsphere--$TDH_USER"
@@ -189,7 +189,7 @@ CONFIG_FILE="$HOME/.tanzu-demo-hub/config/${TMC_CONFIG_NAME}.cfg"
 echo "TDH_INFRASTRUCTURE=tmc"                                                  >  $CONFIG_FILE
 echo "TDH_ENVNAME=tkgs"                                                        >> $CONFIG_FILE
 echo "TDH_DEPLOYMENT_CLOUD=vSphere"                                            >> $CONFIG_FILE
-echo "TDH_DEPLOYMENT_DESCRIPTION='VMware Tanzu for vSphere (TKGs) on PEZ'"     >> $CONFIG_FILE
+echo "TDH_DEPLOYMENT_DESCRIPTION='VMware Tanzu for vSphere (TKGs) on H2O'"     >> $CONFIG_FILE
 echo "TDH_DEPLOYMENT_MAINTAINER=$TDH_USER"                                     >> $CONFIG_FILE
 echo "TDH_DEPLOYMENT_DEBUG=false"                                              >> $CONFIG_FILE
 echo "TDH_DEPLOYMENT_CLUSTERGROUP=$VSPHERE_NAMESPACE"                          >> $CONFIG_FILE
