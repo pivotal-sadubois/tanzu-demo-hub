@@ -5015,7 +5015,7 @@ tkgCreateCluster() {
         echo "      #class: best-effort-2xlarge"                                        >> $CLUSTER_CONFIG_FILE
         echo "      class: $TDH_TKGWC_WORKERNODES_MACHINE"                              >> $CLUSTER_CONFIG_FILE
         echo "      count: $TDH_TKGWC_WORKERNODES"                                      >> $CLUSTER_CONFIG_FILE
-        echo "      storageClass: tanzu"                                                >> $CLUSTER_CONFIG_FILE
+        echo "      storageClass: $TDH_TKGMC_STORAGE_CLASS"                             >> $CLUSTER_CONFIG_FILE
         echo "      volumes:"                                                           >> $CLUSTER_CONFIG_FILE
         echo "        - name: containerd"                                               >> $CLUSTER_CONFIG_FILE
         echo "          mountPath: /usr/lib/containerd"                                 >> $CLUSTER_CONFIG_FILE
