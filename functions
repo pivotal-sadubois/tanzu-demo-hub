@@ -5033,6 +5033,7 @@ tkgCreateCluster() {
         while [ "$stt" != "True" ]; do
           cmdLoop kubectl get clusters -n $TDH_TKGMC_VSPHERE_NAMESPACE -o json > /tmp/output.json 2>/dev/null
           stt=$(jq -r --arg key "$TDH_TKGWC_NAME" '.items[] | select(.metadata.name == $key).status.conditions[] | select(.type == "Ready").status' /tmp/output.json)
+          echo "  loop1: stt = $stt"
           [ "$stt" == "True" ] && break
           sleep 10
         done
@@ -5041,6 +5042,7 @@ tkgCreateCluster() {
         while [ "$stt" != "True" ]; do
           cmdLoop kubectl get tanzukubernetescluster -n $TDH_TKGMC_VSPHERE_NAMESPACE -o json > /tmp/output.json 2>/dev/null
           stt=$(jq -r --arg key "$TDH_TKGWC_NAME" '.items[] | select(.metadata.name == $key).status.conditions[] | select(.type == "Ready").status' /tmp/output.json)
+          echo "  loop2: stt = $stt"
           [ "$stt" == "True" ] && break
           sleep 10
         done
@@ -5049,6 +5051,7 @@ tkgCreateCluster() {
         cmdLoop kubectl get clusters -n $TDH_TKGMC_VSPHERE_NAMESPACE -o json > /tmp/output.json 2>/dev/null
         stt=$(jq -r --arg key "$TDH_TKGWC_NAME" '.items[] | select(.metadata.name == $key).status.conditions[].status' /tmp/output.json)
         typ=$(jq -r --arg key "$TDH_TKGWC_NAME" '.items[] | select(.metadata.name == $key).status.conditions[].type' /tmp/output.json)
+          echo "  loop3: stt = $stt typ = $typ"
       fi
     fi
 
@@ -10972,18 +10975,18 @@ setK8sEnvironment() {
     exit 1
   fi
 
-  ##DELETEME
-  #CONTEXT=$(kubectl config get-contexts | grep " $CLUSTER " | sed 's/*//g' | awk '{ print $1 }')
+  CONTEXT=$(kubectl config get-contexts | grep " $CLUSTER " | sed 's/*//g' | awk '{ print $1 }')
 
-  rm -f /tmp/output.json && touch /tmp/output.json
-  while [ ! -s /tmp/output.json ]; do
-    cmdLoop kubectl config view -o json > /tmp/output.json
-    CONTEXT=$(jq -r --arg key tdh-docker-sadubois '.contexts[] | select(.context.cluster == $key).name' /tmp/output.json 2>/dev/null) 
-    [ "$CONTEXT" == "" -o "$CONTEXT" == "null" ] && rm -f /tmp/output.json && touch /tmp/output.json
-    [ -s /tmp/output.json ] && break
+  ## steve: 3. May 2022 - did not work for H2O, reverted to code above ^^^
+  # rm -f /tmp/output.json && touch /tmp/output.json
+  # while [ ! -s /tmp/output.json ]; do
+  #   cmdLoop kubectl config view -o json > /tmp/output.json
+  #   CONTEXT=$(jq -r --arg key $CLUSTER '.contexts[] | select(.context.cluster == $key).name' /tmp/output.json 2>/dev/null) 
+  #   [ "$CONTEXT" == "" -o "$CONTEXT" == "null" ] && rm -f /tmp/output.json && touch /tmp/output.json
+  #   [ -s /tmp/output.json ] && break
 
-    sleep 10
-  done
+  #   sleep 10
+  # done
 
   messagePrint " ▪ Set Kubernetes Context"               "$CONTEXT"
   cmdLoop kubectl config use-context $CONTEXT > /dev/null 2>&1
