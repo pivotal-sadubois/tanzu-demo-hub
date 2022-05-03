@@ -286,7 +286,7 @@ vSphereLogin() {
   missing_variables=0
 
   if [ "${VSPHERE_TKGS_VCENTER_ADMIN}" == "" -o "${VSPHERE_TKGS_VCENTER_PASSWORD}" == "" -o "${VSPHERE_TKGS_VCENTER_SERVER}" == "" -o \
-       "${VSPHERE_TKGS_SUPERVISOR_STORAGE_CLASS}" == "" -o "${VSPHERE_TKGS_SUPERVISOR_STORAGE_POLIC}" == "" -o \
+       "${VSPHERE_TKGS_SUPERVISOR_STORAGE_CLASS}" == "" -o "${VSPHERE_TKGS_SUPERVISOR_STORAGE_POLICY}" == "" -o \
        "${VSPHERE_TKGS_SUPERVISOR_CLUSTER}" == "" -o "${TDH_USER}" == "" ]; then
  
     missing_variables=1
@@ -5733,7 +5733,6 @@ fi
 #gaga99
   TanzuPackage_AddRepo       $NAMESPACE tanzu-tap-repository ${INSTALL_REGISTRY_HOSTNAME}/library/tap-packages:$TAP_VERSION 
   TanzuPackage_RepoSync      $NAMESPACE
->>>>>>> cf4af6e4d942b167092b13c8106cfd79f854e86d
 
   if [ 2 -eq 1 ]; then 
     # --- TANZU BUILD SERVICE CLI (kp) BINARY ---
