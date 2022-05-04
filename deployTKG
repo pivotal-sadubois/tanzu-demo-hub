@@ -310,6 +310,10 @@ else
   exit
 fi
 
+installClusterEssentials
+TanzuPackage_AddRepo       $TDH_SERVICE_PACKAGE_REPOSITORY_NAMESPACE $TDH_SERVICE_PACKAGE_REPOSITORY_NAME $TDH_SERVICE_PACKAGE_REPOSITORY_ID
+TanzuPackage_RepoSync      $TDH_SERVICE_PACKAGE_REPOSITORY_NAMESPACE
+
 messageTitle "Tanzu Package Management"
 if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "vSphere" -a "$TDH_TKGMC_ENVNAME" == "tkgs" ]; then
   TanzuPackage_AddRepo      tanzu-package-repo-global tkg-repo $TKG_REPOSITORY
