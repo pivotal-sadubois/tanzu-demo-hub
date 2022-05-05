@@ -12810,7 +12810,7 @@ dockerRunPreparation() {
   export ROOT_OPTIONS="$CORE_OPTIONS --env-file /tmp/tdh.env -e \"KUBECONFIG=$HOME/.kube/config\""
 
 #gugu
-  echo "export PATH=\"~/.local/bin:\$PATH\" > $HOME/$TDH_TOOLS_PATH/.bashrc
+  echo "export PATH=\"~/.local/bin:\$PATH\"" > $HOME/$TDH_TOOLS_PATH/.bashrc
 
   export CORE_MOUNTS=(
            "-v /var/run/docker.sock:/var/run/docker.sock"                           ## REQIORED FOR DOCKER
@@ -13150,7 +13150,7 @@ runTDHtools() {
       export USER_OPTIONS="$CORE_OPTIONS -u $(id -u):$(id -g) --env-file /tmp/tdh.env -e \"KUBECONFIG=$HOME/.kube/config\""
       export ROOT_OPTIONS="$CORE_OPTIONS --env-file /tmp/tdh.env -e \"KUBECONFIG=$HOME/.kube/config\""
 #gugu
-      echo "export PATH=\"~/.local/bin:\$PATH\" > $HOME/$TDH_TOOLS_PATH/.bashrc
+      echo "export PATH=\"~/.local/bin:\$PATH\"" > $HOME/$TDH_TOOLS_PATH/.bashrc
 
       export CORE_MOUNTS=(
                "-v /var/run/docker.sock:/var/run/docker.sock"                           ## REQIORED FOR DOCKER
