@@ -343,7 +343,7 @@ vSphereLogin() {
   fi
 
   # --- SET LOGIN PASSWORD AS ENVIRONMENT VARIABLE ---
-  export KUBECTL_VSPHERE_PASSWORD=$VSPHERE_TKGS_VCENTER_PASSWORD
+  export KUBECTL_VSPHERE_PASSWORD="$VSPHERE_TKGS_VCENTER_PASSWORD"
 
   ret=1; cnt=0
   while [ $ret -ne 0 -a $cnt -lt 5 ]; do
@@ -355,7 +355,7 @@ vSphereLogin() {
 
   if [ $ret -ne 0 ]; then
     logMessages /tmp/error.log
-    echo "ERROR: failed to login into TMC"
+    echo "ERROR1: failed to login into vSphere"
     if [ "$NATIVE" == "0" ]; then
       echo "       => tools/${TDH_TOOLS}.sh"
       echo "          tdh-tools:/$ export KUBECTL_VSPHERE_PASSWORD=$VSPHERE_TKGS_VCENTER_PASSWORD"
@@ -404,7 +404,7 @@ vSphereLogin() {
       [ $first -eq 0 ] && messageTitle "vSphere Workload Clusters" && first=1
       messagePrint " ▪ Configure context for Cluster"                "$nam"
  
-      export KUBECTL_VSPHERE_PASSWORD=$VSPHERE_TKGS_VCENTER_PASSWORD
+      export KUBECTL_VSPHERE_PASSWORD="$VSPHERE_TKGS_VCENTER_PASSWORD"
       kubectl vsphere login --insecure-skip-tls-verify --server $VSPHERE_TKGS_SUPERVISOR_CLUSTER \
           -u $VSPHERE_TKGS_VCENTER_ADMIN --tanzu-kubernetes-cluster-name $nam \
           --tanzu-kubernetes-cluster-namespace $nsp > /dev/null 2>&1
@@ -417,7 +417,7 @@ vSphereLogin() {
 
 vSphereKubeconfig() {
   # --- SET LOGIN PASSWORD AS ENVIRONMENT VARIABLE ---
-  export KUBECTL_VSPHERE_PASSWORD=$VSPHERE_TKGS_VCENTER_PASSWORD
+  export KUBECTL_VSPHERE_PASSWORD="$VSPHERE_TKGS_VCENTER_PASSWORD"
 
   mv $HOME/.kube/config $HOME/.kube/config.bak
 
@@ -4834,6 +4834,7 @@ tkgCreateCluster() {
   ############################################## INSTALL TKG ON VSPHERE ###################################################
   #########################################################################################################################
   if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "vSphere" ]; then
+echo hallo1
     # --- GENERATE WORKLOAD CLUSTER CONFIG FILE ---
     CLUSTER_CONFIG_FILE=$HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml
 
@@ -4861,6 +4862,7 @@ tkgCreateCluster() {
         usage; exit 0
       fi
 
+echo hallo2
       messageTitle "Tanzu Kubernetes Grid Deployment"
       messagePrint " ▪ Management Cluster Name"               "$TDH_TKGMC_NAME"
       messagePrint " ▪ Management Cluster Configuration"      "deployments/${TDH_TKGMC_NAME}.cfg"
@@ -4906,10 +4908,14 @@ tkgCreateCluster() {
       echo "VSPHERE_CONTROL_PLANE_ENDPOINT: $TDH_TKGWC_CPIP_ADDRESS"                  >> $CLUSTER_CONFIG_FILE
     fi
 
+echo hallo3
     if [ "$TDH_TKGMC_ENVNAME" == "tkgs" ]; then
+echo hallo4
       [ -s $HOME/.tanzu-demo-hub/config/${TKG_DEPLOYMENT} ] && . $HOME/.tanzu-demo-hub/config/${TKG_DEPLOYMENT}
 
-      export KUBECTL_VSPHERE_PASSWORD=$TDH_TKGMC_VSPHERE_PASS
+echo "export KUBECTL_VSPHERE_PASSWORD=\"$TDH_TKGMC_VSPHERE_PASS\""
+      export KUBECTL_VSPHERE_PASSWORD="$TDH_TKGMC_VSPHERE_PASS"
+echo "kubectl vsphere login --insecure-skip-tls-verify --server $TDH_TKGMC_SUPERVISORCLUSTER -u $TDH_TKGMC_VSPHERE_USER"
       cmdLoop kubectl vsphere login --insecure-skip-tls-verify --server $TDH_TKGMC_SUPERVISORCLUSTER -u $TDH_TKGMC_VSPHERE_USER > /tmp/error.log 2>&1; ret=$?
       if [ $ret -ne 0 ]; then
         logMessages /tmp/error.log
@@ -4950,6 +4956,8 @@ tkgCreateCluster() {
       messagePrint " ▪ TKG Cluster Worker Node Type"          "$TDH_TKGWC_WORKERNODES_TYPE ($TDH_TKGWC_WORKERNODES_MACHINE)"
       messagePrint " ▪ TKG Control Plane Nodes"               "$TDH_TKGWC_CONTROPLANE"
       messagePrint " ▪ TKG Control Plane Nodes Type"          "$TDH_TKGWC_CONTROPLANE_NODETYPE ($TDH_TKGWC_CONTROPLANE_MACHINE)"
+      messagePrint " ▪ TKG Kubernetes Config"                 "$CLUSTER_CONFIG_FILE"
+      messagePrint " ▪ TKG Kubernetes Command"                "kubectl apply -f $CLUSTER_CONFIG_FILE --wait=true"
 
       # --- WRITE CLUSTER CONFIG ---
       echo "TDH_TKGMC_NAME=$TDH_TKGMC_NAME"                                                       >  $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.cfg
@@ -5027,7 +5035,22 @@ tkgCreateCluster() {
 #        echo "            storage: 50Gi"                                                >> $CLUSTER_CONFIG_FILE
       
         messagePrint " ▪ TKG Workload Cluster ($TDH_TKGWC_NAME)"          "deploying cluster ....."
-        cmdLoop kubectl apply -f $CLUSTER_CONFIG_FILE --wait=true > /dev/null 2>&1
+
+        cnt=0; ret=1
+        while [ $ret -ne 0 -a $cnt -lt 3 ]; do
+          kubectl apply -f $CLUSTER_CONFIG_FILE --wait=true > /tmp/error 2>&1; ret=$? 
+echo "  loop0: RET:$ret CNT:$cnt"
+          [ "$ret" -eq 9 ] && break
+          let cnt=cnt+1
+          sleep 10
+        done
+
+        if [ $ret -ne 0 ]; then 
+          logMessages /tmp/error.log
+          echo "ERROR: Failed to create cluster $TDH_TKGWC_NAME"
+          echo "       => kubectl apply -f $CLUSTER_CONFIG_FILE --wait=true"
+          exit 1
+        fi
 
         stt=""
         while [ "$stt" != "True" ]; do
@@ -5041,9 +5064,9 @@ tkgCreateCluster() {
         stt=""
         while [ "$stt" != "True" ]; do
           cmdLoop kubectl get tanzukubernetescluster -n $TDH_TKGMC_VSPHERE_NAMESPACE -o json > /tmp/output.json 2>/dev/null
-          stt=$(jq -r --arg key "$TDH_TKGWC_NAME" '.items[] | select(.metadata.name == $key).status.conditions[] | select(.type == "Ready").status' /tmp/output.json)
+          stt=$(jq -r --arg key "$TDH_TKGWC_NAME" '.items[] | select(.metadata.name == $key).status.phase' /tmp/output.json)
           echo "  loop2: stt = $stt"
-          [ "$stt" == "True" ] && break
+          [ "$stt" == "running" -o "$stt" == "updating" ] && break
           sleep 10
         done
 
@@ -5063,7 +5086,6 @@ tkgCreateCluster() {
       echo "       => vsphereWorkloadClusterLogin $TKG_DEPLOYMENT $TDH_TKGWC_NAME"
       exit 1
     fi
-
 
     # Deploying Workloads and Extensions on TKGS Clusters
     # https://docs.vmware.com/en/VMware-vSphere/7.0/vmware-vsphere-with-tanzu/GUID-E39346D8-320F-4B3D-B526-5313D99129CE.html
@@ -5155,7 +5177,7 @@ vsphereSupervisorClusterLogin() {
   [ -s $HOME/.kube/config ] && mv $HOME/.kube/config $HOME/.kube/config.old
 
   # --- SET LOGIN PASSWORD AS ENVIRONMENT VARIABLE ---
-  export KUBECTL_VSPHERE_PASSWORD=$TDH_TKGMC_VSPHERE_PASS
+  export KUBECTL_VSPHERE_PASSWORD="$TDH_TKGMC_VSPHERE_PASS"
 
   cnt=$(echo $TDH_TKGMC_SUPERVISORCLUSTER | egrep -c "pez.vmware.com")
   if [ $cnt -gt 0 ]; then 
@@ -5165,6 +5187,12 @@ vsphereSupervisorClusterLogin() {
       exit
     fi
   fi
+
+  [ ! -d $HOME/.local/bin ] && mkdir -p $HOME/.local/bin
+  echo "export KUBECTL_VSPHERE_PASSWORD='$TDH_TKGMC_VSPHERE_PASS'" > $HOME/.local/bin/slogin.sh
+  echo "kubectl vsphere login --tanzu-kubernetes-cluster-name $TKGWC_NAME --tanzu-kubernetes-cluster-namespace $TDH_TKGMC_VSPHERE_NAMESPACE --server $VSPHERE_TKGS_SUPERVISOR_CLUSTER --insecure-skip-tls-verify -u administrator@vsphere.local" >> $HOME/.local/bin/slogin.sh
+  chmod a+x $HOME/.local/bin/slogin.sh
+  
 
   ret=1; cnt=0
   while [ $ret -ne 0 -a $cnt -lt 5 ]; do
@@ -5193,7 +5221,7 @@ vsphereWorkloadClusterLogin() {
   [ -s $HOME/.tanzu-demo-hub/config/$MC_CONFIG ] && . $HOME/.tanzu-demo-hub/config/$MC_CONFIG
   [ -s $HOME/.kube/config ] && mv $HOME/.kube/config $HOME/.kube/config.old
  
-  export KUBECTL_VSPHERE_PASSWORD=$TDH_TKGMC_VSPHERE_PASS
+  export KUBECTL_VSPHERE_PASSWORD="$TDH_TKGMC_VSPHERE_PASS"
 
   cmdLoop kubectl vsphere login \
       --tanzu-kubernetes-cluster-name $TKGWC_NAME \
@@ -5202,9 +5230,15 @@ vsphereWorkloadClusterLogin() {
       --insecure-skip-tls-verify \
       -u administrator@vsphere.local > /dev/null 2>&1; ret=$?
 
-  if [ $ret -ne 0 ]; then
+  [ ! -d $HOME/.local/bin ] && mkdir -p $HOME/.local/bin
+  echo "#!/bin/bash"                                                  >  $HOME/.local/bin/wlogin.sh
+  echo "export KUBECTL_VSPHERE_PASSWORD='$TDH_TKGMC_VSPHERE_PASS'"  >> $HOME/.local/bin/wlogin.sh
+  echo "kubectl vsphere login --tanzu-kubernetes-cluster-name $TKGWC_NAME --tanzu-kubernetes-cluster-namespace $TDH_TKGMC_VSPHERE_NAMESPACE --server $VSPHERE_TKGS_SUPERVISOR_CLUSTER --insecure-skip-tls-verify -u administrator@vsphere.local" >> $HOME/.local/bin/wlogin.sh
+  echo "kubectl config use-context $TKGWC_NAME"                       >> $HOME/.local/bin/wlogin.sh
+  chmod a+x $HOME/.local/bin/wlogin.sh
 
-    mv $HOME/.kube/config.old $HOME/.kube/config 
+  if [ $ret -ne 0 ]; then
+    [ -s $HOME/.kube/config.old ] && mv $HOME/.kube/config.old $HOME/.kube/config 
     return 1
   fi
 
@@ -5471,7 +5505,6 @@ tmcCreateCluster() {
       messagePrint " ▪ TKG Control Plane Nodes"          "$TDH_TKGWC_CONTROPLANE"
       messagePrint " ▪ TKG Control Plane Nodes Type"     "$TDH_TKGWC_CONTROPLANE_NODETYPE ($TDH_TKGWC_CONTROPLANE_MACHINE)"
 
-
       # List of Tanzu Kubernetes Releases
       # https://docs.vmware.com/en/VMware-vSphere/7.0/vmware-vsphere-with-tanzu/GUID-292482C2-A5FA-44B5-B26E-F887A91BB19D.html
       tmc cluster create -t tkgs -m $TDH_MANAGEMENT_CLUSTER -p $TDH_PROVISIONER_NAME \
@@ -5489,7 +5522,7 @@ tmcCreateCluster() {
           echo "       => tools/${TDH_TOOLS}.sh"
           echo "          tdh-tools:/$ tmc cluster create -t tkgs -m $TDH_MANAGEMENT_CLUSTER -p $TDH_PROVISIONER_NAME \\"
           echo "                          --worker-instance-type $TDH_TKGWC_WORKERNODES_MACHINE \\"
-          echo "                          --instance-type $INSTANCE_TYPE \\"
+          echo "                          --instance-type $TDH_TKGWC_CONTROPLANE_MACHINE \\"
           echo "                          --default-storage-class $TDH_TKGWC_STORAGE_CLASS \\"
           echo "                          --worker-node-count $TDH_TKGWC_WORKERNODES \\"
           echo "                          --storage-class $TDH_TKGWC_STORAGE_CLASS \\"
@@ -5498,7 +5531,7 @@ tmcCreateCluster() {
         else
           echo "       => tmc cluster create -t tkgs -m $TDH_MANAGEMENT_CLUSTER -p $TDH_PROVISIONER_NAME \\"
           echo "                          --worker-instance-type $TDH_TKGWC_WORKERNODES_MACHINE \\"
-          echo "                          --instance-type $INSTANCE_TYPE \\"
+          echo "                          --instance-type $TDH_TKGWC_CONTROPLANE_MACHINE \\"
           echo "                          --default-storage-class $TDH_TKGWC_STORAGE_CLASS \\"
           echo "                          --worker-node-count $TDH_TKGWC_WORKERNODES \\"
           echo "                          --storage-class $TDH_TKGWC_STORAGE_CLASS \\"
@@ -5587,7 +5620,7 @@ getTDHClusterCredentials() {
     unset KUBECONFIG
 
     if [ "$TDH_DEPLOYMENT_CLOUD" == "vSphere" ]; then
-      export KUBECTL_VSPHERE_PASSWORD=$VSPHERE_TKGS_VCENTER_PASSWORD
+      export KUBECTL_VSPHERE_PASSWORD="$VSPHERE_TKGS_VCENTER_PASSWORD"
       kubectl vsphere login --insecure-skip-tls-verify --server $VSPHERE_TKGS_SUPERVISOR_CLUSTER \
         -u $VSPHERE_TKGS_VCENTER_ADMIN --tanzu-kubernetes-cluster-name $TDH_CLUSTER_NAME \
         --tanzu-kubernetes-cluster-namespace tanzu-demo-hub
@@ -5733,7 +5766,6 @@ if [ 1 -eq 1 ]; then
   fi
 fi
 
-#gaga99
   TanzuPackage_AddRepo       $NAMESPACE tanzu-tap-repository ${INSTALL_REGISTRY_HOSTNAME}/library/tap-packages:$TAP_VERSION 
   TanzuPackage_RepoSync      $NAMESPACE
 
@@ -5814,7 +5846,6 @@ fi
     messagePrint " ▪ Relocate images to" "${INSTALL_REGISTRY_HOSTNAME}/library/tap-packages"
     cnt=0; ret=1
     while [ $ret -ne 0 -a $cnt -lt 5 ]; do
-echo "gugus $cnt"
       #imgpkg copy -b registry.tanzu.vmware.com/tanzu-application-platform/tap-packages:${TAP_VERSION} \
       #            --to-repo ${INSTALL_REGISTRY_HOSTNAME}/library/tap-packages > /tmp/error.log 2>&1; ret=$?
       imgpkg copy -b registry.tanzu.vmware.com/tanzu-application-platform/tap-packages:${TAP_VERSION} \
@@ -5839,9 +5870,6 @@ echo "gugus $cnt"
 
       exit 1
     fi
-
-#gaga
-
 
     TAP_CONFIG=/tmp/tap_config.yaml
     echo ""                                                                                                                       >  $TAP_CONFIG
@@ -7350,8 +7378,8 @@ installClusterEssentials() {
           -f ./bundle/registry-creds/ \
           --data-values-env YTT \
           --data-value-yaml kappController.deployment.concurrency=10 2>/dev/null | \
-    ./kbld -f- -f ./bundle/.imgpkg/images.yml > /tmp/kapp-controller.yaml 2>/dev/null
-    ./kapp -y deploy -a kapp-controller -n $ns_name -f /tmp/kapp-controller.yaml > /dev/null 2>&1
+    ./kbld -f- -f ./bundle/.imgpkg/images.yml > /tmp/kapp-controller.yaml 2>/dev/null; ret=$?
+    ./kapp -y deploy -a kapp-controller -n $ns_name -f /tmp/kapp-controller.yaml > /dev/null 2>&1; ret=$?
 
     APP=kapp-controller; ANS=tanzu-cluster-essentials
     cnt=$(kapp inspect -a $APP -n $ANS --json | jq -r '.Tables[].Rows[].reconcile_state' | grep -vc "ok")
@@ -11840,8 +11868,8 @@ TanzuPackage_AddRepo() {
   TANZU_REPO_NAME=$2
   TANZU_REPO_URL=$3
 
-  stt=$(tanzu package repository list -n $NAMESPACE -o json 2>/dev/null | \
-        jq -r --arg pkg $TANZU_REPO_NAME '.[] | select(.name == $pkg).status' 2>/dev/null) 
+  cmdLoop tanzu package repository list -A -o json 2>/dev/null > /tmp/output.json
+  stt=$(jq -r --arg pkg $TANZU_REPO_NAME '.[] | select(.name == $pkg).status' /tmp/output.json 2>/dev/null) 
   if [ "$stt" == "" ]; then 
     messagePrint " ▪ Adding Tanzu Package Repository"   "$TANZU_REPO_URL"
     cnt=0; ret=1
@@ -11859,7 +11887,7 @@ TanzuPackage_AddRepo() {
       echo "ERROR: failed to reconsilte Tanzu Packages in $NAMESPACE"
       if [ "$NATIVE" == "0" ]; then
         echo "       => tools/${TDH_TOOLS}.sh"
-        echo "          tdh-tools:/$ tanzu tanzu package repository add $TANZU_REPO_NAME --url $TANZU_REPO_URL --namespace $NAMESPACE"
+        echo "          tdh-tools:/$ tanzu package repository add $TANZU_REPO_NAME --url $TANZU_REPO_URL --namespace $NAMESPACE"
         echo "          tdh-tools:/$ exit"
       else
         echo "       => tanzu tanzu package repository add $TANZU_REPO_NAME --url $TANZU_REPO_URL --namespace $NAMESPACE"
@@ -12055,7 +12083,6 @@ TanzuPackage_CertManager() {
     messageTitle "Installing $PACKAGE_DES in $PACKAGE_NAMESPACE"
     messagePrint " ▪ Tanzu Package ($PACKAGE_NAME)"   "$PACKAGE_ID ($package_ver/$package_rel)"
 
-#bbbb9
     cnt=0; ret=1
     while [ $ret -ne 0 -a $cnt -lt 5 ]; do
       # --- DELETE SERVICE ACCOUNT IF IT EXIST ----
@@ -12073,7 +12100,6 @@ TanzuPackage_CertManager() {
       nam=$(jq -r --arg key "${PACKAGE_NAME}-${PACKAGE_NAMESPACE}-cluster-rolebinding" '.items[] | select(.metadata.name == $key).metadata.name' /tmp/output.json)
       [ "$nam" != "" ] && cmdLoop kubectl -n tanzu-system-packages delete clusterrolebinding $nam
 
-#echo "tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $PACKAGE_NAMESPACE --version $package_ver --create-namespace --poll-timeout 10m --wait=true"
       tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $PACKAGE_NAMESPACE --version $package_ver \
             --create-namespace --poll-timeout 10m --wait=true > /tmp/error.log 2>&1
       waitTanzuPackageReconsile $PACKAGE_NAME $PACKAGE_NAMESPACE; ret=$?
@@ -12410,6 +12436,40 @@ TanzuPackage_Contour() {
       package_ver=""; package_rel=""
     fi
 
+   if [ "${TDH_INFRASTRUCTURE}" == "vSphere" ]; then
+      VALUE_FILE=/tmp/contour-data-values.yaml; rm -f $VALUE_FILE
+
+      echo "---"                                                                        >  $VALUE_FILE
+      echo "infrastructure_provider: vsphere"                                           >> $VALUE_FILE
+      echo "namespace: tanzu-system-ingress"                                            >> $VALUE_FILE
+      echo "contour:"                                                                   >> $VALUE_FILE
+      echo " configFileContents: {}"                                                    >> $VALUE_FILE
+      echo " useProxyProtocol: false"                                                   >> $VALUE_FILE
+      echo " replicas: 2"                                                               >> $VALUE_FILE
+      echo " pspNames: \"vmware-system-restricted\""                                    >> $VALUE_FILE
+      echo " logLevel: info"                                                            >> $VALUE_FILE
+      echo "envoy:"                                                                     >> $VALUE_FILE
+      echo " service:"                                                                  >> $VALUE_FILE
+      echo "   type: LoadBalancer"                                                      >> $VALUE_FILE
+      echo "   annotations: {}"                                                         >> $VALUE_FILE
+      echo "   nodePorts:"                                                              >> $VALUE_FILE
+      echo "     http: null"                                                            >> $VALUE_FILE
+      echo "     https: null"                                                           >> $VALUE_FILE
+      echo "   externalTrafficPolicy: Cluster"                                          >> $VALUE_FILE
+      echo "   disableWait: false"                                                      >> $VALUE_FILE
+      echo " hostPorts:"                                                                >> $VALUE_FILE
+      echo "   enable: true"                                                            >> $VALUE_FILE
+      echo "   http: 80"                                                                >> $VALUE_FILE
+      echo "   https: 443"                                                              >> $VALUE_FILE
+      echo " hostNetwork: false"                                                        >> $VALUE_FILE
+      echo " terminationGracePeriodSeconds: 300"                                        >> $VALUE_FILE
+      echo " logLevel: info"                                                            >> $VALUE_FILE
+      echo " pspNames: null"                                                            >> $VALUE_FILE
+      echo "certificates:"                                                              >> $VALUE_FILE
+      echo " duration: 8760h"                                                           >> $VALUE_FILE
+      echo " renewBefore: 360h"                                                         >> $VALUE_FILE
+    fi
+
     if [ "${TDH_INFRASTRUCTURE}" == "minikube" ]; then
       VALUE_FILE=/tmp/contour-data-values.yaml; rm -f $VALUE_FILE
       echo "namespace: tanzu-system-ingress"                                            >  $VALUE_FILE
@@ -12546,12 +12606,12 @@ TanzuPackage_Contour() {
       nam=$(jq -r --arg key "${PACKAGE_NAME}-${PACKAGE_NAMESPACE}-sa" '.items[] | select(.metadata.name == $key).metadata.name' /tmp/output.json)
       [ "$nam" != "" ] && cmdLoop kubectl -n tanzu-system-packages delete serviceaccount $nam
 
-      # --- DELETE SERVICE ACCOUNT IF IT EXIST ----
+      # --- DELETE CLUTERROLES IF IT EXIST ----
       cmdLoop kubectl get clusterroles -n tanzu-system-packages -o json > /tmp/output.json
       nam=$(jq -r --arg key "${PACKAGE_NAME}-${PACKAGE_NAMESPACE}-role" '.items[] | select(.metadata.name == $key).metadata.name' /tmp/output.json)
       [ "$nam" != "" ] && cmdLoop kubectl -n tanzu-system-packages delete clusterrole $nam
 
-      # --- DELETE SERVICE ACCOUNT IF IT EXIST ----
+      # --- DELETE CLUSTERROLEBINDING IF IT EXIST ----
       cmdLoop kubectl get clusterrolebinding -n tanzu-system-packages -o json > /tmp/output.json
       nam=$(jq -r --arg key "${PACKAGE_NAME}-${PACKAGE_NAMESPACE}-cluster-rolebinding" '.items[] | select(.metadata.name == $key).metadata.name' /tmp/output.json)
       [ "$nam" != "" ] && cmdLoop kubectl -n tanzu-system-packages delete clusterrolebinding $nam
@@ -12749,6 +12809,9 @@ dockerRunPreparation() {
   export USER_OPTIONS="$CORE_OPTIONS -u $(id -u):$(id -g) --env-file /tmp/tdh.env -e \"KUBECONFIG=$HOME/.kube/config\""
   export ROOT_OPTIONS="$CORE_OPTIONS --env-file /tmp/tdh.env -e \"KUBECONFIG=$HOME/.kube/config\""
 
+#gugu
+  echo "export PATH=\"~/.local/bin:\$PATH\" > $HOME/$TDH_TOOLS_PATH/.bashrc
+
   export CORE_MOUNTS=(
            "-v /var/run/docker.sock:/var/run/docker.sock"                           ## REQIORED FOR DOCKER
            "-v $HOME/.tanzu-demo-hub:$HOME/.tanzu-demo-hub:rw"
@@ -12766,6 +12829,7 @@ dockerRunPreparation() {
            "-v $HOME/$TDH_TOOLS_PATH/.gradle:$HOME/.gradle:rw"
            "-v $HOME/$TDH_TOOLS_PATH/.docker:$HOME/.docker:rw"                      ## DOCKER LOGIN CREDENTIALS
            "-v $HOME/$TDH_TOOLS_PATH/.mvn:$HOME/.mvn:rw"
+           "-v $HOME/$TDH_TOOLS_PATH/.bashrc:$HOME/.bashrc:rw"                      ## BASHRC
            "-v $HOME/$TDH_TOOLS_PATH/.aws:$HOME/.aws:rw"                            ## PERSISTANT AWS CREDENTIALS
            "-v $HOME/$TDH_TOOLS_PATH/.vmware-cna-saas:$HOME/.vmware-cna-saas:rw"    ## TANZU MISSION CONTROL (TMC) LOGIN CREDENTIALS
            "-v $HOME/$TDH_TOOLS_PATH/tmp:/tmp:rw"                                   ## KEEP TEMP PERSISTENT
@@ -13085,6 +13149,8 @@ runTDHtools() {
       export CORE_OPTIONS="-it --init --rm --hostname tdh-tools --name $TDH_TOOLS --network=host"
       export USER_OPTIONS="$CORE_OPTIONS -u $(id -u):$(id -g) --env-file /tmp/tdh.env -e \"KUBECONFIG=$HOME/.kube/config\""
       export ROOT_OPTIONS="$CORE_OPTIONS --env-file /tmp/tdh.env -e \"KUBECONFIG=$HOME/.kube/config\""
+#gugu
+      echo "export PATH=\"~/.local/bin:\$PATH\" > $HOME/$TDH_TOOLS_PATH/.bashrc
 
       export CORE_MOUNTS=(
                "-v /var/run/docker.sock:/var/run/docker.sock"                           ## REQIORED FOR DOCKER
@@ -13104,6 +13170,7 @@ runTDHtools() {
                "-v $HOME/$TDH_TOOLS_PATH/.govmomi:$HOME/.govmomi:rw"
                "-v $HOME/$TDH_TOOLS_PATH/.gradle:$HOME/.gradle:rw"
                "-v $HOME/$TDH_TOOLS_PATH/.docker:$HOME/.docker:rw"                      ## DOCKER LOGIN CREDENTIALS
+               "-v $HOME/$TDH_TOOLS_PATH/.bashrc:$HOME/.bashrc:rw"                      ## BASHRC
                "-v $HOME/$TDH_TOOLS_PATH/.mvn:$HOME/.mvn:rw"
                "-v $HOME/$TDH_TOOLS_PATH/.aws:$HOME/.aws:rw"                            ## PERSISTANT AWS CREDENTIALS
                "-v $HOME/$TDH_TOOLS_PATH/.azure:$HOME/.azure:rw"                        ## PERSISTANT MICROSOFT AZURE CREDENTIALS

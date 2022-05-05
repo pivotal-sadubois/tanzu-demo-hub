@@ -310,22 +310,20 @@ else
   exit
 fi
 
-installClusterEssentials
-TanzuPackage_AddRepo       $TDH_SERVICE_PACKAGE_REPOSITORY_NAMESPACE $TDH_SERVICE_PACKAGE_REPOSITORY_NAME $TDH_SERVICE_PACKAGE_REPOSITORY_ID
-TanzuPackage_RepoSync      $TDH_SERVICE_PACKAGE_REPOSITORY_NAMESPACE
-
 messageTitle "Tanzu Package Management"
-if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "vSphere" -a "$TDH_TKGMC_ENVNAME" == "tkgs" ]; then
-  TanzuPackage_AddRepo      tanzu-package-repo-global tkg-repo $TKG_REPOSITORY
+if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "vSphere" ]; then
+  installClusterEssentials
+  TanzuPackage_AddRepo       $TDH_SERVICE_PACKAGE_REPOSITORY_NAMESPACE $TDH_SERVICE_PACKAGE_REPOSITORY_NAME $TDH_SERVICE_PACKAGE_REPOSITORY_ID
+  TanzuPackage_RepoSync      $TDH_SERVICE_PACKAGE_REPOSITORY_NAMESPACE
 else
-  TanzuPackage_RepoSync     default
+  TanzuPackage_RepoSync      default
 fi
 
-TanzuPackage_CertManager  cert-manager-pkg     cert-manager.tanzu.vmware.com 
-TanzuPackage_Contour      contour-pkg          contour.tanzu.vmware.com
+TanzuPackage_CertManager     cert-manager-pkg     cert-manager.tanzu.vmware.com 
+TanzuPackage_Contour         contour-pkg          contour.tanzu.vmware.com
 createClusterIssuer
-getRootCA                 tanzu-demo-hub-tls
-TanzuPackage_Harbor       harbor-pkg           harbor.tanzu.vmware.com
+getRootCA                    tanzu-demo-hub-tls
+TanzuPackage_Harbor          harbor-pkg           harbor.tanzu.vmware.com
 
 installBuildService          ## Tanzu Build Service (TBS)
 installTanzuDataPostgres     ## Tanzu Data SQL
