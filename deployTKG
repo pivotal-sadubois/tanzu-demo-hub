@@ -266,6 +266,7 @@ tkgCreateCluster
 # --- CLEANUP KUNECONFIG ---
 cleanKubeconfig
 setK8sEnvironment $TDH_TKGWC_NAME
+checkTMCAccess
 tmcCheckLogin
 
 export TDH_TKGWC_CONTEXT=$(kubectl config current-context)
