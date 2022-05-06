@@ -5227,7 +5227,7 @@ vsphereWorkloadClusterLogin() {
   [ ! -d $HOME/.local/bin ] && mkdir -p $HOME/.local/bin
   echo "#!/bin/bash"                                                             >  $HOME/.local/bin/wlogin.sh
   echo "export KUBECTL_VSPHERE_PASSWORD='$TDH_TKGMC_VSPHERE_PASS'"               >> $HOME/.local/bin/wlogin.sh
-  echo "export KUBECONFIG=$HOME/.tanzu-demo-hub/config/$(TKGWC_NAME).kubeconfig" >> $HOME/.local/bin/wlogin.sh
+  echo "export KUBECONFIG=$HOME/.tanzu-demo-hub/config/${TKGWC_NAME}.kubeconfig" >> $HOME/.local/bin/wlogin.sh
   echo "kubectl vsphere login --tanzu-kubernetes-cluster-name $TKGWC_NAME --tanzu-kubernetes-cluster-namespace $TDH_TKGMC_VSPHERE_NAMESPACE --server $VSPHERE_TKGS_SUPERVISOR_CLUSTER --insecure-skip-tls-verify -u administrator@vsphere.local" >> $HOME/.local/bin/wlogin.sh
   echo "kubectl config use-context $TKGWC_NAME"                                  >> $HOME/.local/bin/wlogin.sh
   chmod a+x $HOME/.local/bin/wlogin.sh
