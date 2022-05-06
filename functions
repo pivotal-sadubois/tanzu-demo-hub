@@ -8216,7 +8216,8 @@ createClusterIssuer() {
     cmdLoop aws route53 list-hosted-zones-by-name --dns-name ${TDH_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN} > /tmp/output.json
     AWS_HOSTED_ZONE=$(jq -r ".HostedZones[] | select(.Name | scan(\"^${zone}.\")).Id" /tmp/output.json)
     cmdLoop aws route53 list-hosted-zones --output json > /tmp/output.json
-    AWS_HOSTED_ZONE_ID=$(jq -r --arg key "$${TDH_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}." '.HostedZones[] | select(.Name == $key).Id' /tmp/output.json | \
+
+    AWS_HOSTED_ZONE_ID=$(jq -r --arg key "${TDH_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}." '.HostedZones[] | select(.Name == $key).Id' /tmp/output.json | \
                          awk -F '/' '{ print $NF }')
 
     messageTitle "Create LetsEnscript ClusterIssuer"
@@ -8495,6 +8496,7 @@ InstallCertManager() {
   NAMESPACE=cert-manager
 
   cnt=$(kubectl get pods -A | egrep "^$NAMESPACE " | grep -c Running)
+echo "CNT:$cnt"
   if [ $cnt -eq 0 ]; then
     # --- INSTALL CONTOUR INGRESS ---
     messageTitle "Cert Manager"
@@ -8508,9 +8510,16 @@ InstallCertManager() {
     #helm install cert-manager jetstack/cert-manager --namespace cert-manager \
     #   --version v1.0.2 --set installCRDs=true > /dev/null 2>&1
 
+    if [ "$VSPHERE_TKGS_DNS_SERVER" != "" ]; then 
+      HELM_OPTIONS="--set 'extraArgs={--dns01-recursive-nameservers-only,--dns01-recursive-nameservers=$VSPHERE_TKGS_DNS_SERVER}' --set installCRDs=true"
+    else
+      HELM_OPTIONS="--set installCRDs=true"
+    fi
+
     cnt=0; ret=1
     while [ $ret -ne 0 -a $cnt -lt 5 ]; do
-      helm install cert-manager jetstack/cert-manager -n cert-manager --version v1.1.0 --set installCRDs=true --wait --wait-for-jobs --timeout 10m > /dev/null 2>&1; ret=$?
+      #eval helm install cert-manager jetstack/cert-manager -n cert-manager --version v1.1.0 $HELM_OPTIONS --wait --wait-for-jobs --timeout 10m > /dev/null 2>&1; ret=$?
+      eval helm install cert-manager jetstack/cert-manager -n cert-manager --version v1.1.0 $HELM_OPTIONS --wait --wait-for-jobs --timeout 10m; ret=$?
       [ $ret -eq 0 ] && break
       let cnt=cnt+1
       sleep 30
