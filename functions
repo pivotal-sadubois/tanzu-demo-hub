@@ -757,6 +757,8 @@ checkCloudCLI() {
         AWS_VERSION=$($AWSCLI --version 2>/dev/null | awk -F'/' '{ print $2 }' | awk '{ print $1}')
         AWS_CLI_ENABLED=1
         messagePrint " ▪ checking for AWS CLI utility (needed for AWS Route53)" "installed - ${AWS_VERSION}"
+
+        awsCredentials
       else
         echo ""
         echo "ERROR: the AWS cli utility does not seam to be correct, please reinstall it from:"
@@ -4568,28 +4570,7 @@ checkTMCAccess() {
       messagePrint " ▪ TMC AWS Account Name"            "$TMC_ACCOUNT_NAME_AWS"
       messagePrint " ▪ TMC Management Cluster"          "$TDH_MANAGEMENT_CLUSTER"
       messagePrint " ▪ TMC Provisioner Name"            "$TDH_PROVISIONER_NAME"
-
-      # --- CHECK IF AWS CLI IS CONFIGURED ---
-      [ ! -d $HOME/.aws ] && mkdir -p $HOME/.aws
-      if [ ! -f $HOME/.aws/credentials ]; then
-        if [ "$AWS_ACCESS_KEY" != "" -a "$AWS_SECRET_KEY" != "" ]; then
-          echo "[default]"                               >  $HOME/.aws/credentials
-          echo "aws_access_key_id = $AWS_ACCESS_KEY"     >> $HOME/.aws/credentials
-          echo "aws_secret_access_key = $AWS_SECRET_KEY" >> $HOME/.aws/credentials
-        else
-          echo "ERROR: AWS CLI is not configured yet, please run aws configure"
-          if [ "$NATIVE" == "0" ]; then
-            echo "       => tools/${TDH_TOOLS}.sh"
-            echo "          tdh-tools:/$ aws configure"
-            echo "          tdh-tools:/$ exit"
-          else
-            echo "       => aws configure"
-          fi
-        fi
-        exit 1
-      fi
     fi
-
 
     if [ "$TDH_SERVICE_TANZU_MISSION_CONTROL" == "true" ]; then 
      tmc clustergroup create -n tanzu-demo-hub -d "Tanzu Demo Hub by Sacha Dubois" > /dev/null 2>&1
@@ -4602,6 +4583,37 @@ checkTMCAccess() {
     echo "             configuration file ~/.tanzu-demo-hub.cfg and set all variables with the 'export' notation"
     echo "             ie. => export <environment_variable>=\"<value>\""
     echo "  --------------------------------------------------------------------------------------------------------------"
+    exit 1
+  fi
+}
+
+# ------------------------------------------------------------------------------------------
+# Function Name ......: awsCredentials
+# Function Purpose ...: Create local AWS Credentials
+# ------------------------------------------------------------------------------------------
+# Argument ($1) ......: None
+# ------------------------------------------------------------------------------------------
+# Return Value .......: 0 - SUCCEED, 1 - FAILED
+# ------------------------------------------------------------------------------------------
+awsCredentials() {
+  # --- CHECK IF AWS CLI IS CONFIGURED ---
+  [ ! -d $HOME/.aws ] && mkdir -p $HOME/.aws
+  if [ ! -f $HOME/.aws/credentials ]; then
+    if [ "$AWS_ACCESS_KEY" != "" -a "$AWS_SECRET_KEY" != "" ]; then
+      messagePrint " ▪ creating local AWS CLI credentials" "$HOME/.aws/credentials"
+      echo "[default]"                               >  $HOME/.aws/credentials
+      echo "aws_access_key_id = $AWS_ACCESS_KEY"     >> $HOME/.aws/credentials
+      echo "aws_secret_access_key = $AWS_SECRET_KEY" >> $HOME/.aws/credentials
+    else
+      echo "ERROR: AWS CLI is not configured yet, please run aws configure"
+      if [ "$NATIVE" == "0" ]; then
+        echo "       => tools/${TDH_TOOLS}.sh"
+        echo "          tdh-tools:/$ aws configure"
+        echo "          tdh-tools:/$ exit"
+      else
+        echo "       => aws configure"
+      fi
+    fi
     exit 1
   fi
 }
