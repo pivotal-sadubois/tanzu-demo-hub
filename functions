@@ -858,6 +858,10 @@ checkCloudCLI() {
     echo "       => sudo chmod a+x /usr/local/bin/kbld"
     exit 1
   fi
+
+  # ste: no matter which deployment target, we want the AWS Credentials for Route 53
+  awsCredentials
+
 }
 
 checkKubernetesServices() {
@@ -4614,7 +4618,6 @@ awsCredentials() {
         echo "       => aws configure"
       fi
     fi
-    exit 1
   fi
 }
 
