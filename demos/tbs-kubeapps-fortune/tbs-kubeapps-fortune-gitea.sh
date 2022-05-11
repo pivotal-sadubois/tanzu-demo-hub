@@ -294,7 +294,8 @@ prtText "  presse 'return' to continue when ready"; read x
 cnt=$(helm list -A | egrep -c "^fortune")
 if [ $cnt -eq 0 ]; then 
   prtHead "Install Redis from the Bitnami Application Catalog with helm"
-  execCmd "helm install fortune -n $NAMESPACE bitnami/redis -f files/redis-helm-values.yaml"
+  # execCmd "helm install fortune -n $NAMESPACE bitnami/redis -f files/redis-helm-values.yaml"
+  execCmd "helm install fortune bitnami/redis -n tbs-kubeapps-fortune --set auth.enabled=false --set volumePermissions.enabled=true --set replica.replicaCount=1"
 fi
 
 # --- WAIT UNTIL HELM CHART IS INSTALLED ---
