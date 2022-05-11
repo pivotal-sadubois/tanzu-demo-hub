@@ -6,7 +6,7 @@
 # --------------------------------------------------------------------------------------------
 # Description ..: Tanzu Build Service (TBS) Demo with the Fortune Application
 # ============================================================================================
-
+[ "$(hostname)" != "tdh-tools" ] && echo "ERROR: Need to run within a tdh-tools container" && exit
 export TDH_DEMO_DIR="tbs-kubeapps-fortune"
 export TDHHOME=$(echo -e "$(pwd)\n$(dirname $0)" | grep "tanzu-demo-hub" | head -1 | sed "s+\(^.*tanzu-demo-hub\).*+\1+g")
 export TDHDEMO=$TDHHOME/demos/$TDH_DEMO_DIR
@@ -49,7 +49,7 @@ echo '          ----------------------------------------------------------------
 echo '                                                                                      '
 
 # --- RUN SCRIPT INSIDE TDH-TOOLS OR NATIVE ON LOCAL HOST ---
-runTDHtoolsDemos
+#runTDHtoolsDemos
 
 kubectl get configmap tanzu-demo-hub > /dev/null 2>&1
 if [ $? -ne 0 ]; then 
@@ -180,7 +180,10 @@ if [ "$TDH_SERVICE_REGISTRY_HARBOR" == "true" ]; then
   fi
 
   prtHead "Show the Build Process ($TBS_SOURCE_APP)"
-  execCmd "kp build logs $TBS_SOURCE_APP"
+  #execCmd "kp build logs $TBS_SOURCE_APP"
+  prtText "kp build logs $TBS_SOURCE_APP"; read x
+  kp build logs $TBS_SOURCE_APP
+  echo 
 
   prtHead "Show the Build Process ($TBS_SOURCE_APP)"
   execCmd "kp build list $TBS_SOURCE_APP"
@@ -237,7 +240,10 @@ if [ "$TDH_SERVICE_REGISTRY_DOCKER" == "true" ]; then
   fi
 
   prtHead "Show the Build Process ($TBS_SOURCE_APP)"
-  execCmd "kp build logs $TBS_SOURCE_APP"
+  #execCmd "kp build logs $TBS_SOURCE_APP"
+  prtText "kp build logs $TBS_SOURCE_APP"; read x
+  kp build logs $TBS_SOURCE_APP
+  echo 
 fi
 
 
