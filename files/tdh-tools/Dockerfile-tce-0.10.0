@@ -15,6 +15,7 @@ ADD tdh-postinstall-user.sh        /usr/local/bin
 ADD tdh-context.sh                 /usr/local/bin
 ADD tce-linux-amd64 /tanzu/tce-linux-amd64
 ADD hostname                       /etc/hostname
+ADD mkpcli          /usr/local/bin
 ADD clusterctl      /usr/local/bin
 ADD kbld            /usr/local/bin
 ADD imgpkg          /usr/local/bin
@@ -65,6 +66,7 @@ RUN apt-get update -qq && apt-get install -qqy \
     s3cmd \
     sudo \
     postgresql-client \
+    dnsutils \
     iptables
 RUN apt-get clean 
 

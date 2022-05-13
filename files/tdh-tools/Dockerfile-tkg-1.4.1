@@ -12,6 +12,7 @@ ARG UID GID USER TZ HOME VMWUSER VMWPASS START ARCH
 ADD tdh-postinstall-root.sh     /usr/local/bin
 ADD tdh-postinstall-user.sh     /usr/local/bin
 ADD tdh-context.sh              /usr/local/bin
+ADD mkpcli          /usr/local/bin
 ADD cli             /tanzu/cli
 ADD clitap          /tanzu-tap/cli
 ADD clusterctl      /usr/local/bin
@@ -61,6 +62,7 @@ RUN apt-get update -qq && apt-get install -qqy \
     zip \
     s3cmd \
     postgresql-client \
+    dnsutils \
     iptables
 RUN apt-get clean 
 
