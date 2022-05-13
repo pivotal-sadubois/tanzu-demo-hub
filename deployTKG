@@ -298,11 +298,6 @@ if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "vSphere" -a "$TDH_TKGMC_ENVNAME" != "tkgs
   InstallMetallLB
 fi
 
-# --- INSTALL K8 SERVICES ---
-#InstallCertManager
-#InstallContour
-#InstallHarborRegistry
-
 if [ -s $TDHPATH/files/tanzu-packages/repo-${TDH_TOOLS_CONTAINER_TYPE}-${TDH_TOOLS_CONTAINER_VERS}.cfg ]; then 
  . $TDHPATH/files/tanzu-packages/repo-${TDH_TOOLS_CONTAINER_TYPE}-${TDH_TOOLS_CONTAINER_VERS}.cfg 
 else
