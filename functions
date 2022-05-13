@@ -418,6 +418,7 @@ vSphereLogin() {
 vSphereKubeconfig() {
   # --- SET LOGIN PASSWORD AS ENVIRONMENT VARIABLE ---
   export KUBECTL_VSPHERE_PASSWORD="$VSPHERE_TKGS_VCENTER_PASSWORD"
+  export KUBECONFIG=$HOME/.kube/config
 
   mv $HOME/.kube/config $HOME/.kube/config.bak
 
@@ -8391,28 +8392,17 @@ createClusterIssuer() {
 
     cmdLoop kubectl get certificate $TDH_TLS_CERT -o json > /tmp/output.json
     stt=$(jq -r '.status.conditions[] | select(.type == "Ready").status' /tmp/output.json)
-    #DELETEME
-    #stt=$(kubectl get certificate $TDH_TLS_CERT -o json 2>/dev/null | \
-    #        jq -r '.status.conditions[] | select(.type == "Ready").status')
-
-    while [ $cnt -lt 5 -a "$stt" != "True" ]; do
+    while [ $cnt -lt 10 -a "$stt" != "True" ]; do
       cmdLoop kubectl get certificate $TDH_TLS_CERT -o json > /tmp/output.json
       stt=$(jq -r '.status.conditions[] | select(.type == "Ready").status' /tmp/output.json)
 
-      #DELETEME
-      #stt=$(kubectl get certificate $TDH_TLS_CERT -o json 2>/dev/null | \
-      #      jq -r '.status.conditions[] | select(.type == "Ready").status')
       if [ "$stt" == "True" ]; then cnt=1; fi
-      sleep 30
+      sleep 60
       let cnt=cnt+1
     done
 
     cmdLoop kubectl get certificate $TDH_TLS_CERT -o json > /tmp/output.json
     stt=$(jq -r '.status.conditions[] | select(.type == "Ready").status' /tmp/output.json)
-
-    #DELETEME
-    #stt=$(kubectl get certificate $TDH_TLS_CERT -o json 2>/dev/null | \
-    #        jq -r '.status.conditions[] | select(.type == "Ready").status')
     if [ "$stt" != "True" ]; then 
       cmdLoop kubectl get challenge $challenge_obj -o json > /tmp/output.json
       challenge_pst=$(jq -r '.status.presented' /tmp/output.json)
@@ -8496,7 +8486,6 @@ InstallCertManager() {
   NAMESPACE=cert-manager
 
   cnt=$(kubectl get pods -A | egrep "^$NAMESPACE " | grep -c Running)
-echo "CNT:$cnt"
   if [ $cnt -eq 0 ]; then
     # --- INSTALL CONTOUR INGRESS ---
     messageTitle "Cert Manager"
