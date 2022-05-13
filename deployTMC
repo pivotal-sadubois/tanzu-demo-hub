@@ -156,7 +156,6 @@ if [ "$DNS_SUBDOMAIN" != "" ]; then
   TDH_ENVNAME=$DNS_SUBDOMAIN
 fi 
 
-echo gaga1
 export TDH_DEPLOYMENT_ENV_NAME=$TDH_INFRASTRUCTURE
 export TDH_TLS_CERT=tanzu-demo-hub
 export TDH_TLS_SECRET=${TDH_TLS_CERT}-tls
@@ -164,14 +163,9 @@ export TDH_TLS_ISSUER_NAME=letsencrypt-staging
 export TDH_TLS_ISSUER_CONFIG=/tmp/issuer-dns-manager1.yaml
 
 # --- VERYFY ACCESS TO CLOUD ---
-echo gaga2
 checkTDHenvironment
-echo gaga3
 checkKubernetesServices registry_docker
-echo gaga4
 checkKubernetesServices cert-manager
-echo gaga4
-sleep 1000
 
 # --- VERIFY TOOLS AND ACCESS ---
 checkCloudCLI
@@ -217,8 +211,6 @@ TanzuPackage_Contour        contour-pkg          contour.tanzu.vmware.com
 createClusterIssuer
 getRootCA tanzu-demo-hub-tls
 TanzuPackage_Harbor       harbor-pkg           harbor.tanzu.vmware.com
-
-exit
 
 installBuildService          ## Tanzu Build Service (TBS)
 installTanzuDataPostgres     ## Tanzu Data SQL
