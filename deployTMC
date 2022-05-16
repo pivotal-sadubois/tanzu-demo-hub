@@ -217,7 +217,6 @@ if [ -s /tmp/output.yaml ]; then
 fi
 
 messageTitle "Tanzu Package Management"
-messageTitle "Tanzu Package Management"
 if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "vSphere" ]; then
   installClusterEssentials
   TanzuPackage_AddRepo       $TDH_SERVICE_PACKAGE_REPOSITORY_NAMESPACE $TDH_SERVICE_PACKAGE_REPOSITORY_NAME $TDH_SERVICE_PACKAGE_REPOSITORY_ID

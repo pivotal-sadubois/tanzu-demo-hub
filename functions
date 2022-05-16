@@ -4649,7 +4649,7 @@ tkgCreateCluster() {
   [ "$TDH_DEPLOYMENT_CLOUD" == "" ] && TDH_DEPLOYMENT_CLOUD=$TDH_TKGMC_INFRASTRUCTURE
 
   #########################################################################################################################
-  ################################################ INSTALL TKG ON AZURE ###################################################
+  ################################################ INSTALL TKG ON AWS #####################################################
   #########################################################################################################################
   if [ "$TDH_DEPLOYMENT_CLOUD" == "AWS" ]; then
     [ "$TDH_DEPLOYMENT_CLUSTER_PLAN" == "dev" ] && DEP_SOURCE=$HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.yaml
@@ -4674,13 +4674,13 @@ tkgCreateCluster() {
     messagePrint " ▪ Workload Cluster Configuration"        "deployments/$TKG_DEPLOYMENT"
     messagePrint " ▪ Workload Cluster consolidated Config"  "$HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.yaml"
 
+#nnnnnnnnnnnn
     # --- WRITE CLUSTER CONFIG ---
     echo "TDH_TKGMC_NAME=$TDH_TKGMC_NAME"                                                       >  $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.cfg
     echo "TDH_TKGWC_K8S_VERSION=$TDH_TKGWC_KUBERNETES"                                          >> $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.cfg
     echo "TDH_TKGWC_K8S_IMAGE=$TDH_TKGWC_K8S_VERSION"                                           >> $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.cfg
     echo "TDH_TKGMC_CONFIG=\$HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.cfg"                 >> $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.cfg
     echo "TDH_TKGMC_KUBECONFIG=\$HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.kubeconfig"      >> $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.cfg
-
 
     [ "$TDH_DEPLOYMENT_CLUSTER_PLAN" == "" ] && TDH_DEPLOYMENT_CLUSTER_PLAN="dev"
     [ "$TDH_DEPLOYMENT_CLUSTER_PLAN" == "dev" ] && DEP_SOURCE=$HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.yaml
@@ -5304,6 +5304,7 @@ tmcCreateCluster() {
       messageTitle "TMC Create Workload Cluster"     
       messagePrint " ▪ TMC Cluster Name"                 "$TDH_CLUSTER_NAME"
       messagePrint " ▪ TMC Cluster Group"                "$TDH_CLUSTER_GROUP"
+      messagePrint " ▪ EMC Cluster Configuration"        "$HOME/.tanzu-demo-hub/config/${TDH_CLUSTER_NAME}.cfg"
       messagePrint " ▪ TMC Template"                     "$TMC_TKGWC_TEMPLATE"
       messagePrint " ▪ TMC Provisioner Name"             "$TDH_PROVISIONER_NAME"
       messagePrint " ▪ TKG Management Cluster"           "$TDH_MANAGEMENT_CLUSTER"
@@ -5324,6 +5325,14 @@ tmcCreateCluster() {
       messagePrint " ▪ TKG Cluster Worker Node Type"     "$TDH_TKGWC_WORKERNODES_TYPE ($TDH_TKGWC_WORKERNODES_MACHINE)"
       messagePrint " ▪ TKG Control Plane Nodes"          "$TDH_TKGWC_CONTROPLANE"
       messagePrint " ▪ TKG Control Plane Nodes Type"     "$TDH_TKGWC_CONTROPLANE_NODETYPE ($TDH_TKGWC_CONTROPLANE_MACHINE)"
+#nnnnnnnnnnnnnnn
+
+      # --- WRITE CLUSTER CONFIG ---
+      echo "TDH_TKGMC_NAME=$TDH_MANAGEMENT_CLUSTER"                                                       >  $HOME/.tanzu-demo-hub/config/${TDH_CLUSTER_NAME}.cfg
+      echo "TDH_TKGWC_K8S_VERSION=$KUBERNETES_VERSION"                                                    >> $HOME/.tanzu-demo-hub/config/${TDH_CLUSTER_NAME}.cfg
+      echo "TDH_TKGWC_K8S_IMAGE=$KUBERNETES_OSVER"                                                        >> $HOME/.tanzu-demo-hub/config/${TDH_CLUSTER_NAME}.cfg
+      echo "TDH_TKGMC_CONFIG=\$HOME/.tanzu-demo-hub/config/${TDH_MANAGEMENT_CLUSTER}.cfg"                 >> $HOME/.tanzu-demo-hub/config/${TDH_CLUSTER_NAME}.cfg
+      echo "TDH_TKGMC_KUBECONFIG=\$HOME/.tanzu-demo-hub/config/${TDH_MANAGEMENT_CLUSTER}.kubeconfig"      >> $HOME/.tanzu-demo-hub/config/${TDH_CLUSTER_NAME}.cfg
 
       if [ -f $HOME/.tanzu-demo-hub/KeyPair-Azure.pub ]; then 
         read ssh_key < $HOME/.tanzu-demo-hub/KeyPair-Azure.pub
@@ -8484,6 +8493,7 @@ createClusterIssuer() {
 
 InstallCertManager() {
   NAMESPACE=cert-manager
+echo "TDH_DEPLOYMENT_CLOUD:TDH_DEPLOYMENT_CLOUD"
 
   cnt=$(kubectl get pods -A | egrep "^$NAMESPACE " | grep -c Running)
   if [ $cnt -eq 0 ]; then
@@ -8494,12 +8504,7 @@ InstallCertManager() {
     createNamespace $NAMESPACE > /dev/null 2>&1
     helmRepoAdd jetstack https://charts.jetstack.io
 
-    #DELETEME
-    #helm repo add jetstack https://charts.jetstack.io -n $NAMESPACE > /dev/null 2>&1
-    #helm install cert-manager jetstack/cert-manager --namespace cert-manager \
-    #   --version v1.0.2 --set installCRDs=true > /dev/null 2>&1
-
-    if [ "$VSPHERE_TKGS_DNS_SERVER" != "" ]; then 
+    if [ "${TDH_DEPLOYMENT_CLOUD}" == "vSphere" -a "$VSPHERE_TKGS_DNS_SERVER" != "" ]; then 
       HELM_OPTIONS="--set 'extraArgs={--dns01-recursive-nameservers-only,--dns01-recursive-nameservers=$VSPHERE_TKGS_DNS_SERVER}' --set installCRDs=true"
     else
       HELM_OPTIONS="--set installCRDs=true"
