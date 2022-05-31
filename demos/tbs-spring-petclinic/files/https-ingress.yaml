@@ -4,7 +4,7 @@ metadata:
   name: https-ingress
   namespace: NAMESPACE
   annotations:
-    - kubernetes.io/ingress.class: contour
+    kubernetes.io/ingress.class: contour
   labels:
     app: echoserver
 spec:
@@ -17,6 +17,10 @@ spec:
     http:
       paths:
       - path: /
+        pathType: Prefix
         backend:
-          serviceName: petclinic
-          servicePort: 8080
+          service:
+            name: petclinic
+            port:
+              number: 8080
+

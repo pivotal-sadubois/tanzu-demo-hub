@@ -1,6 +1,6 @@
 #!/bin/bash
 # ============================================================================================
-# File: ........: tbs-pedclinic-harbor.sh
+# File: ........: tbs-petclinic-harbor.sh
 # Language .....: bash
 # Author .......: Sacha Dubois, VMware
 # --------------------------------------------------------------------------------------------
@@ -36,7 +36,6 @@ echo '           \___ \|  _ \|  __| |  _ \ / _  | | |_) / _ \ __| | |   | | |  _
 echo '            ___) | |_) | |  | | | | | (_| | |  __/  __/ |_  | |___| | | | | | | (__   '
 echo '           |____/| .__/|_|  |_|_| |_|\__, | |_|   \___|\__|  \____|_|_|_| |_|_|\___|  '
 echo '                 |_|                 |___/                                            '
-echo '                                                                                      '
 echo '                                   ____                                               '
 echo '                                  |  _ \  ___ _ __ ___   ___                          '
 echo '                                  | | | |/ _ \  _   _ \ / _ \                         '
@@ -60,8 +59,14 @@ fi
 # --- VERIFY SERVICES ---
 verifyRequiredServices TDH_INGRESS_CONTOUR_ENABLED "Ingress Contour"
 verifyRequiredServices TDH_SERVICE_BUILD_SERVICE   "Harbor Registry"
+verifyRequiredServices TDH_SERVICE_GITEA           "Harbor Registry"
 
-TDH_SERVICE_REGISTRY_DOCKER=$(getConfigMap tanzu-demo-hub TDH_SERVICE_REGISTRY_DOCKER)
+# --- GITEA CONFIGURATION ---
+TDH_SERVICE_GITEA_ADMIN_USER=$(getConfigMap tanzu-demo-hub TDH_SERVICE_GITEA_ADMIN_USER)
+TDH_SERVICE_GITEA_ADMIN_PASS=$(getConfigMap tanzu-demo-hub TDH_SERVICE_GITEA_ADMIN_PASS)
+TDH_SERVICE_GITEA_SERVER=$(getConfigMap tanzu-demo-hub TDH_SERVICE_GITEA_SERVER)
+TDH_SERVICE_GITEA_SERVER_URL=$(getConfigMap tanzu-demo-hub TDH_SERVICE_GITEA_SERVER_URL)
+
 TDH_SERVICE_REGISTRY_HARBOR=$(getConfigMap tanzu-demo-hub TDH_SERVICE_REGISTRY_HARBOR)
 TDH_DOMAIN=$(getConfigMap tanzu-demo-hub TDH_DOMAIN)
 TDH_DOMAIN=$(getConfigMap tanzu-demo-hub TDH_DOMAIN)
@@ -80,36 +85,43 @@ checkCLIcommands        DEMO_TOOLS
 checkCLIcommands        TANZU_DATA
 
 # --- READ ENVIRONMET VARIABLES ---
-[ -f $HOME/.tanzu-demo-hub.cfg ] && . $HOME/.tanzu-demo-hub.cfg
+#[ -f $HOME/.tanzu-demo-hub.cfg ] && . $HOME/.tanzu-demo-hub.cfg
 
-if [ "${TDH_TBS_DEMO_PET_CLINIC_GIT}" == "" ]; then
-  echo "  --------------------------------------------------------------------------------------------------------------"
-  echo "  IMPORTANT: Please clone the Git Repo: https://github.com/spring-petclinic/spring-framework-petclinic.git"
-  echo "             into your GitHub account and the TDH_TBS_DEMO_PET_CLINIC_GIT with repository in ~/.tanzu-demo-hub.cfg"
-  echo "             => export TDH_TBS_DEMO_PET_CLINIC_GIT=https://github.com/<git-repository>.git"
-  echo "  --------------------------------------------------------------------------------------------------------------"
-  exit 1
-fi
-
-if [ "${TDH_GITHUB_SSHKEY}" == "" ]; then
-  echo "  --------------------------------------------------------------------------------------------------------------"
-  echo "  IMPORTANT: Please create a GITHUB Access ssh-key for your account at: https://github.com/settings/keys and"
-  echo "             set the TDH_GITHUB_SSHKEY variable with your SSH Private Key file in ~/.tanzu-demo-hub.cfg"
-  echo "             => export TDH_GITHUB_SSHKEY=~/.ssh/<github_ssh_private_key_file>" 
-  echo "  --------------------------------------------------------------------------------------------------------------"
-  exit 1
-fi
-
-if [ "$TDH_SERVICE_REGISTRY_HARBOR" == "true" -a "$TDH_SERVICE_REGISTRY_DOCKER" == "true" ]; then 
-  echo "ERROR: This Demo requires a container registry either DockerHub or a deployed Harbor registry. Please enable "
-  echo "       one of them in the releated deployment filea and redeploy the kubernetes cluster"
-  echo "       TDH_SERVICE_REGISTRY_HARBOR=true     ## To use the Harbor Registry"
-  echo "       TDH_SERVICE_REGISTRY_DOCKER=true     ## To use DockerHub"
-  exit 1
-fi
-
+# https://github.com/spring-projects/spring-petclinic
+TDH_SERVICE_REGISTRY_HARBOR=true
 TBS_SOURCE_APP=spring-petclinic
 TBS_SOURCE_DIR=/tmp/$TBS_SOURCE_APP
+
+GIT_MIRR_ORG="sync"
+GIT_REPO_ORG="tanzu"
+GIT_REPO_NAM="spring-petclinic"
+GIT_REPO_BRANCH="master"
+GIT_REPO_SOURCE=https://github.com/spring-petclinic/spring-framework-petclinic.git
+GIT_REPO_TARGET=https://$TDH_SERVICE_GITEA_SERVER/$GIT_REPO_ORG/${GIT_REPO_NAM}.git
+
+#################################################################################################################################
+############################################# GITEA SETUP ADN DEMO REPRO ########################################################
+#################################################################################################################################
+createGiteaOrg   $GIT_MIRR_ORG "Tanzu Organisation"
+createGiteaOrg   $GIT_REPO_ORG "Tanzu Organisation"
+giteaMirrorRepo  $GIT_REPO_SOURCE $GIT_MIRR_ORG $GIT_REPO_NAM
+giteaForkRepo    sync $GIT_REPO_NAM $GIT_REPO_NAM tanzu
+
+prtHead "Login to the Git Envifonment (Gitea)"
+prtText " => http://$TDH_SERVICE_GITEA_SERVER"
+prtText "    ($TDH_SERVICE_GITEA_ADMIN_USER/$TDH_SERVICE_GITEA_ADMIN_PASS)"
+prtText " => tanzu/$TBS_SOURCE_APP   # $TBS_SOURCE_APP Demo Repository"
+prtText ""
+prtText "press 'return' to continue"; read x
+
+#################################################################################################################################
+############################################# CLONE THE GIT REPRO ###############################################################
+#################################################################################################################################
+
+[ -d $TBS_SOURCE_DIR ] && rm -rf $TBS_SOURCE_DIR
+prtHead "Clone Git Repository ($GIT_REPO_TARGET) to $TBS_SOURCE_DIR"
+execCmd "(cd /tmp; git clone $GIT_REPO_TARGET $TBS_SOURCE_DIR)"
+execCmd "(cd $TBS_SOURCE_DIR && git config --list)"
 
 #################################################################################################################################
 ########################################## CONFIGURE TBS WITH THE HARBOR REGISTRY ###############################################
@@ -129,11 +141,11 @@ if [ "$TDH_SERVICE_REGISTRY_HARBOR" == "true" ]; then
   fi
 
   # --- CLEANUP ---
-  kp secret delete secret-registry-vmware > /dev/null 2>&1
-  kp secret delete secret-registry-harbor > /dev/null 2>&1
-  kp secret delete secret-repo-git > /dev/null 2>&1
-  #kp image delete spring-petclinic > /dev/null 2>&1
-  rm -rf /tmp/spring-petclinic  ## REMOVE GIT REPOSITORY (PET-CLINIC)
+  for n in $(kp secret list list | sed -e '1d' -e '$d' | awk '{ print $1 }'); do
+    kp secret delete $n > /dev/null 2>&1
+  done
+
+  kp image delete $TBS_SOURCE_APP > /dev/null 2>&1
   pkill com.docker.cli
   kubectl delete namespace $NAMESPACE > /dev/null 2>&1
 
@@ -143,151 +155,48 @@ if [ "$TDH_SERVICE_REGISTRY_HARBOR" == "true" ]; then
   execCmd "kp secret create secret-registry-vmware --registry $TDH_HARBOR_REGISTRY_DNS_HARBOR --registry-user admin"
 
   prtHead "Create Secret (secret-repo-git)"
-  execCmd "kp secret create secret-repo-git --git-url git@github.com --git-ssh-key $TDH_GITHUB_SSHKEY"
+  export GIT_PASSWORD=$TDH_SERVICE_GITEA_ADMIN_PASS
+  slntCmd "export GIT_PASSWORD=$TDH_SERVICE_GITEA_ADMIN_PASS"
+  execCmd "kp secret create secret-repo-git --git-url https://$TDH_SERVICE_GITEA_SERVER --git-user $TDH_SERVICE_GITEA_ADMIN_USER"
+
   sleep 15
-
-  if [ -d $TBS_SOURCE_DIR ]; then
-    prtHead "Update Git Repository ($TDH_TBS_DEMO_PET_CLINIC_GIT) to $TBS_SOURCE_DIR"
-    execCmd "git clone $TDH_TBS_DEMO_PET_CLINIC_GIT $TBS_SOURCE_DIR"
-  else
-    prtHead "Clone Git Repository ($TDH_TBS_DEMO_PET_CLINIC_GIT) to $TBS_SOURCE_DIR"
-    execCmd "git clone $TDH_TBS_DEMO_PET_CLINIC_GIT $TBS_SOURCE_DIR"
-  fi
-
-  execCmd "(cd $TBS_SOURCE_DIR && git config --list)"
 
   prtHead "Create TBS Image ($TBS_SOURCE_APP)"
 
-  cnt=$(kp image list | egrep -c "^spring-petclinic")
+  cnt=$(kp image list 2>/dev/null | egrep -c "^fortune")
   if [ $cnt -eq 0 ]; then
-    execCmd "kp image create $TBS_SOURCE_APP --tag $TDH_HARBOR_REGISTRY_DNS_HARBOR/library/spring-petclinic \\
-              --git $TDH_TBS_DEMO_PET_CLINIC_GIT"
+    execCmd "kp image create $TBS_SOURCE_APP --tag $TDH_HARBOR_REGISTRY_DNS_HARBOR/library/$TBS_SOURCE_APP --git $GIT_REPO_TARGET --git-revision $GIT_REPO_BRANCH"
   else
-    execCmd "kp image create $TBS_SOURCE_APP --tag $TDH_HARBOR_REGISTRY_DNS_HARBOR/library/spring-petclinic \\
-              --git $TDH_TBS_DEMO_PET_CLINIC_GIT"
+    execCmd "kp image create $TBS_SOURCE_APP --tag $TDH_HARBOR_REGISTRY_DNS_HARBOR/library/$TBS_SOURCE_APP --git $GIT_REPO_TARGET --git-revision $GIT_REPO_BRANCH"
 
     prtHead "Patch TBS Image ($TBS_SOURCE_APP)"
     execCmd "kp image patch $TBS_SOURCE_APP"
   fi
 
   prtHead "Show the Build Process ($TBS_SOURCE_APP)"
-  execCmd "kp build logs $TBS_SOURCE_APP"
-fi
-
-#################################################################################################################################
-########################################### CONFIGURE TBS WITH THE DOCKER-HUB REGISTRY ##########################################
-#################################################################################################################################
-if [ "$TDH_SERVICE_REGISTRY_DOCKER" == "true" ]; then
-  TDH_REGISTRY_DOCKER_NAME=index.docker.io
-  TDH_REGISTRY_DOCKER_PASS=$(getConfigMap tanzu-demo-hub TDH_REGISTRY_DOCKER_PASS)
-  TDH_REGISTRY_DOCKER_USER=$(getConfigMap tanzu-demo-hub TDH_REGISTRY_DOCKER_USER)
-  if [ "$TDH_REGISTRY_DOCKER_NAME" == "" -o "TDH_REGISTRY_DOCKER_PASS" == "" -o "TDH_REGISTRY_DOCKER_USER" == "" ]; then
-    echo "ERROR: The docker.io registry credentials are required to run this demo. Please signup for an account and provide the credentials"
-    echo "       => TDH_REGISTRY_DOCKER_USER  ## docker.io User"
-    echo "       => TDH_REGISTRY_DOCKER_PASS  ## docker.io Password"
-    exit 1
-  else
-    docker login $TDH_REGISTRY_DOCKER_NAME -u $TDH_REGISTRY_DOCKER_USER -p $TDH_REGISTRY_DOCKER_PASS > /dev/null 2>&1; ret=$?
-    if [ $ret -ne 0 ]; then
-      echo "ERROR: failed to login to registry"
-      echo "       => docker login $TDH_REGISTRY_DOCKER_NAME -u $TDH_REGISTRY_DOCKER_USER -p $TDH_REGISTRY_DOCKER_PASS"
-      exit
-    fi
-  fi
-
-  # --- CLEANUP ---
-  kp secret delete secret-registry-vmware > /dev/null 2>&1
-  kp secret delete secret-registry-docker > /dev/null 2>&1
-  kp secret delete secret-repo-git > /dev/null 2>&1
-  #kp image delete spring-petclinic > /dev/null 2>&1
-  rm -rf /tmp/spring-petclinic  ## REMOVE GIT REPOSITORY (PET-CLINIC)
-  pkill com.docker.cli
-  kubectl delete namespace $NAMESPACE > /dev/null 2>&1
-
-  prtHead "Create Secret (secret-registry-docker) for Registry (docker.io)"
-  slntCmd "export DOCKER_PASSWORD=$(maskPassword \"$TDH_REGISTRY_DOCKER_PASS\")"
-  export DOCKER_PASSWORD=$TDH_REGISTRY_DOCKER_PASS
-  execCmd "kp secret create secret-registry-docker --dockerhub $TDH_REGISTRY_DOCKER_USER"
-
-  prtHead "Create Secret (secret-repo-git)"
-  execCmd "kp secret create secret-repo-git --git-url git@github.com --git-ssh-key $TDH_GITHUB_SSHKEY"
-  sleep 15
-
-  if [ -d $TBS_SOURCE_DIR ]; then
-    prtHead "Update Git Repository ($TDH_TBS_DEMO_PET_CLINIC_GIT) to $TBS_SOURCE_DIR"
-    execCmd "git clone $TDH_TBS_DEMO_PET_CLINIC_GIT $TBS_SOURCE_DIR"
-  else
-    prtHead "Clone Git Repository ($TDH_TBS_DEMO_PET_CLINIC_GIT) to $TBS_SOURCE_DIR"
-    execCmd "git clone $TDH_TBS_DEMO_PET_CLINIC_GIT $TBS_SOURCE_DIR"
-  fi
-
-  execCmd "(cd $TBS_SOURCE_DIR && git config --list)"
-
-  prtHead "Create TBS Image ($TBS_SOURCE_APP)"
-  cnt=$(kp image list | egrep -c "^spring-petclinic") 
-  if [ $cnt -eq 0 ]; then 
-    execCmd "kp image create $TBS_SOURCE_APP --tag $TDH_REGISTRY_DOCKER_NAME/$TDH_REGISTRY_DOCKER_USER/spring-petclinic \\
-              --git $TDH_TBS_DEMO_PET_CLINIC_GIT --git-revision=master"
-  else
-    execCmd "kp image create $TBS_SOURCE_APP --tag $TDH_REGISTRY_DOCKER_NAME/$TDH_REGISTRY_DOCKER_USER/spring-petclinic \\
-              --git $TDH_TBS_DEMO_PET_CLINIC_GIT --git-revision=master"
-
-    prtHead "Patch TBS Image ($TBS_SOURCE_APP)"
-    execCmd "kp image patch $TBS_SOURCE_APP"
-  fi
+  echo "     kp build logs $TBS_SOURCE_APP"
+  kp build logs $TBS_SOURCE_APP
+  echo
 
   prtHead "Show the Build Process ($TBS_SOURCE_APP)"
-  execCmd "kp build logs $TBS_SOURCE_APP"
-fi
+  execCmd "kp build list $TBS_SOURCE_APP"
 
+fi
 #################################################################################################################################3
 ######################################### RUN PETCLINIC CONTAINER ON LOCAL DOCKER ################################################
 #################################################################################################################################3
-echo -n "Do you want to deploy the (spring-petclinic:latest) container to local docker first ? (y/n): "; read local_docker
-answer_provided="n"
-while [ "${answer_provided}" == "n" ]; do
-  if [ "${local_docker}" == "y" -o "${local_docker}" == "Y" ]; then break; fi
-  if [ "${local_docker}" == "n" -o "${local_docker}" == "N" ]; then break; fi
-  echo -n "Do you want to deploy the ($TBS_SOURCE_APP:latest) container to local docker first ? (y/n): "; read local_docker
-done
-echo
 
-if [ "${local_docker}" == "y" -o "${local_docker}" == "Y" ]; then
-  alias chrome="/Applications/Google\\ \\Chrome.app/Contents/MacOS/Google\\ \\Chrome"
-  TMPEXE=/tmp/$$.sh; rm -f $TMPEXE
-  TMPPID=/tmp/$$.pid; rm -f $TMPPID
-  rm -f nohup.out 
-  prtHead "This command runs the container and forwards the local port 8080 to the container port 8080"
-
-  if [ "$TDH_SERVICE_REGISTRY_DOCKER" == "true" ]; then
-    echo "docker run --rm -p 8080:8080 $TDH_REGISTRY_DOCKER_NAME/$TDH_REGISTRY_DOCKER_USER/$TBS_SOURCE_APP:latest > /tmp/log 2>&1 &" >  $TMPEXE
-    echo "sleep 2" >> $TMPEXE
-    echo "echo \$! > $TMPPID" >> $TMPEXE
-    sh $TMPEXE > /dev/null 2>&1
-    fakeCmd "docker run --rm -p 8080:8080 $TDH_REGISTRY_DOCKER_NAME/$TDH_REGISTRY_DOCKER_USER/$TBS_SOURCE_APP:latest"
-  else
-    echo "docker run --rm -p 8080:8080 $TDH_HARBOR_REGISTRY_DNS_HARBOR/library/$TBS_SOURCE_APP:latest > /tmp/log 2>&1 &" >  $TMPEXE
-    echo "sleep 2" >> $TMPEXE
-    echo "echo \$! > $TMPPID" >> $TMPEXE
-    sh $TMPEXE > /dev/null 2>&1
-    fakeCmd "docker run --rm -p 8080:8080 $TDH_HARBOR_REGISTRY_DNS_HARBOR/library/$TBS_SOURCE_APP:latest"
-  fi
+prtHead "Run the docker container on the local workstation to test"
+prtText "This command runs the container and forwards the local port 8080 to the container port 8080"
+prtText "Run the following command in a seperate terminsal:"
+prtText "=> docker run --rm -p 8080:8080 $TDH_HARBOR_REGISTRY_DNS_HARBOR/library/$TBS_SOURCE_APP:latest"
+prtText ""
   
-  read pid < $TMPPID
-
-  prtHead "Open WebBrowser and verify the deployment"
-  echo "     # --- Context Based Routing"
-  echo "     => http://localhost:8080"
-  echo ""
-  echo "     presse 'return' to continue when ready"; read x
-
-  #CHROME="/Applications/Google\\ \\Chrome.app/Contents/MacOS/Google\\ \\Chrome"
-  #slntCmd "$CHROME http://localhost:8080"
-
-  # --- CLEANUP ---
-  kill $pid > /dev/null 2>&1
-  pkill com.docker.cli
-fi
+prtHead "Open WebBrowser and verify the deployment"
+echo "     # --- Context Based Routing"
+echo "     => http://localhost:8080"
+echo ""
+echo "     presse 'return' to continue when ready"; read x
 
 #################################################################################################################################3
 ######################################### DEPLOY PETCLINIC CONTAINER ON KUBERNETES ###############################################
@@ -333,13 +242,8 @@ prtHead "Create seperate namespace to host the Ingress Demo"
 execCmd "kubectl create namespace $NAMESPACE"
 
 prtHead "Create deployment for the ingress tesing app"
-if [ "$TDH_SERVICE_REGISTRY_DOCKER" == "true" ]; then
-  execCmd "kubectl create deployment petclinic --image=$TDH_REGISTRY_DOCKER_NAME/$TDH_REGISTRY_DOCKER_USER/$TBS_SOURCE_APP:latest --port=8080 -n $NAMESPACE"
-  execCmd "kubectl get pods -n $NAMESPACE"
-else
-  execCmd "kubectl create deployment petclinic --image=$TDH_HARBOR_REGISTRY_DNS_HARBOR/library/spring-petclinic:latest --port=8080 -n $NAMESPACE"
-  execCmd "kubectl get pods -n $NAMESPACE"
-fi
+execCmd "kubectl create deployment petclinic --image=$TDH_HARBOR_REGISTRY_DNS_HARBOR/library/spring-petclinic:latest --port=8080 -n $NAMESPACE"
+execCmd "kubectl get pods -n $NAMESPACE"
 
 prtHead "Wait for the deployment rollout (deployment/petclinic) to be compleed"
 execCmd "kubectl -n $NAMESPACE rollout status -w  deployment/petclinic"
