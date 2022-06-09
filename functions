@@ -9952,9 +9952,8 @@ tdh_tools_download() {
   TDH_TOOLS_SUM_S3=$(curl https://tanzu-demo-hub.s3.eu-central-1.amazonaws.com/${TDH_TOOLS_IMAGE}.sum 2>/dev/null) 
   if [ "$TDH_TOOLS_TAG_S3" != "" ]; then
     # --- LETS SEE IF WE HAVE THAT VERSION IN THE LOCAL CACHE ---
-    if [ -f $HOME/.tanzu-demo-hub/cache/tdh-tools/$TDH_TOOLS_IMAGE.sum ]; then 
+    if [ -f $HOME/.tanzu-demo-hub/cache/tdh-tools/$TDH_TOOLS_IMAGE.tag ]; then 
       TDH_TOOLS_TAG_LOCAL=$(cat $HOME/.tanzu-demo-hub/cache/tdh-tools/$TDH_TOOLS_IMAGE.tag)
-      TDH_TOOLS_SUM_LOCAL=$(cat $HOME/.tanzu-demo-hub/cache/tdh-tools/$TDH_TOOLS_IMAGE.sum)
 
       if [ "$TDH_TOOLS_TAG_S3" != "$TDH_TOOLS_TAG_LOCAL" ]; then 
         TDH_TOOLS_DOWNLOAD_REQUIRED=true
@@ -9963,6 +9962,7 @@ tdh_tools_download() {
         messagePrint " ▪ Local TDH Tools Container ($TDH_TOOLS_IMAGE) found" "$HOME/.tanzu-demo-hub/cache/tdh-tools/$TDH_TOOLS_IMAGE.tar"
       fi
     else
+      TDH_TOOLS_DOWNLOAD_REQUIRED=true
       messagePrint " ▪ No Local TDH Tools Container ($TDH_TOOLS_IMAGE) found" "Download from AWS S3 required"
     fi
   else
@@ -9976,6 +9976,7 @@ tdh_tools_download() {
     [ ! -d $HOME/.tanzu-demo-hub/cache/tdh-tools ] && mkdir -p $HOME/.tanzu-demo-hub/cache/tdh-tools
     messagePrint " ▪ Downloading ($TDH_TOOLS_IMAGE) from AWS S3" "https://tanzu-demo-hub.s3.eu-central-1.amazonaws.com/${TDH_TOOLS_IMAGE}.tar"
     wget -q https://tanzu-demo-hub.s3.eu-central-1.amazonaws.com/${TDH_TOOLS_IMAGE}.tar -O $HOME/.tanzu-demo-hub/cache/tdh-tools/${TDH_TOOLS_IMAGE}.tar
+    wget -q https://tanzu-demo-hub.s3.eu-central-1.amazonaws.com/${TDH_TOOLS_IMAGE}.tag -O $HOME/.tanzu-demo-hub/cache/tdh-tools/${TDH_TOOLS_IMAGE}.tag
 
     if [ -f $HOME/.tanzu-demo-hub/cache/tdh-tools/${TDH_TOOLS_IMAGE}.tar ]; then 
       TDH_TOOLS_SUM_LOCAL=$(sum $HOME/.tanzu-demo-hub/cache/tdh-tools/${TDH_TOOLS_IMAGE}.tar | awk '{ print $1 }')
@@ -9990,31 +9991,25 @@ tdh_tools_download() {
     fi
   fi
 
-# --- VERIFY IF DOCKER IMAGE IS THERE ---
-cnt=$(docker images -q $TDH_TOOLS_IMAGE:CHKSUM-$TDH_TOOLS_TAG_S3 | wc -l | awk '{ print $1 }') 
-if [ $cnt -eq 0 ]; then 
-  messagePrint " ▪ Importing (load) TDH Tools docker container" "$TDH_TOOLS_IMAGE:CHKSUM-$TDH_TOOLS_TAG_S3"
-  docker load -i $HOME/.tanzu-demo-hub/cache/tdh-tools/${TDH_TOOLS_IMAGE}.tar
+  # --- DOCKER CLEANUP ---
+  docker image prune -f > /dev/null 2>&1
+  docker container prune -f > /dev/null 2>&1
+  docker system prune -f > /dev/null 2>&1
 
-  messagePrint " ▪ Create Tag (latest) for  TDH Tools docker container" "$TDH_TOOLS_IMAGE:latest"
-echo "docker tag $TDH_TOOLS_IMAGE:CHKSUM-$TDH_TOOLS_TAG_S3 $TDH_TOOLS_IMAGE:latest"
-  docker tag $TDH_TOOLS_IMAGE:CHKSUM-$TDH_TOOLS_TAG_S3 $TDH_TOOLS_IMAGE:latest
-
-echo gaga
-fi
-exit
-
-echo "TDH_TOOLS_IMAGE:$TDH_TOOLS_IMAGE"
-echo "MODE:$MODE"
-echo "wget https://tanzu-demo-hub.s3.eu-central-1.amazonaws.com/${TDH_TOOLS_IMAGE}.sum"
-echo "TDH_TOOLS_TAG_S3:$TDH_TOOLS_TAG_S3"
-
-#    [ ! -d $HOME/.tanzu-demo-hub/cache/tdh-tools ] && mkdir -p $HOME/.tanzu-demo-hub/cache/tdh-tools
-#    docker save $TDH_TOOLS_IMAGE:latest > $HOME/.tanzu-demo-hub/cache/tdh-tools/$TDH_TOOLS_IMAGE.tar
-#    echo "$DOCKER_CHKSUM" > $HOME/.tanzu-demo-hub/cache/tdh-tools/$TDH_TOOLS_IMAGE.sum
-
-exit
-
+  # --- VERIFY IF DOCKER IMAGE IS THERE ---
+  cnt=$(docker images -q $TDH_TOOLS_IMAGE:CHKSUM-$TDH_TOOLS_TAG_S3 | wc -l | awk '{ print $1 }') 
+  if [ $cnt -eq 0 ]; then 
+    messagePrint " ▪ Importing (load) TDH Tools docker container" "$TDH_TOOLS_IMAGE:CHKSUM-$TDH_TOOLS_TAG_S3"
+    docker load -qi $HOME/.tanzu-demo-hub/cache/tdh-tools/${TDH_TOOLS_IMAGE}.tar > /dev/null 2>&1; ret=$?
+    if [ $ret -ne 0 ]; then 
+      echo "ERROR: Failed to load docker image, pleae try manually"
+      echo "       => docker load -qi $HOME/.tanzu-demo-hub/cache/tdh-tools/${TDH_TOOLS_IMAGE}.tar"
+      exit 1
+    fi
+  
+    messagePrint " ▪ Create Tag (latest) for  TDH Tools docker container" "$TDH_TOOLS_IMAGE:latest"
+    docker tag $TDH_TOOLS_IMAGE:CHKSUM-$TDH_TOOLS_TAG_S3 $TDH_TOOLS_IMAGE:latest
+  fi
 }
 
 # ------------------------------------------------------------------------------------------
@@ -13305,8 +13300,6 @@ runTDHtools() {
       export CORE_OPTIONS="-it --init --rm --hostname tdh-tools --name $TDH_TOOLS --network=host"
       export USER_OPTIONS="$CORE_OPTIONS -u $(id -u):$(id -g) --env-file /tmp/tdh.env -e \"KUBECONFIG=$HOME/.kube/config\""
       export ROOT_OPTIONS="$CORE_OPTIONS --env-file /tmp/tdh.env -e \"KUBECONFIG=$HOME/.kube/config\""
-#gugu
-      echo "export PATH=\"~/.local/bin:\$PATH\"" > $HOME/$TDH_TOOLS_PATH/.bashrc
 
       export CORE_MOUNTS=(
                "-v /var/run/docker.sock:/var/run/docker.sock"                           ## REQIORED FOR DOCKER
@@ -13326,7 +13319,6 @@ runTDHtools() {
                "-v $HOME/$TDH_TOOLS_PATH/.govmomi:$HOME/.govmomi:rw"
                "-v $HOME/$TDH_TOOLS_PATH/.gradle:$HOME/.gradle:rw"
                "-v $HOME/$TDH_TOOLS_PATH/.docker:$HOME/.docker:rw"                      ## DOCKER LOGIN CREDENTIALS
-               "-v $HOME/$TDH_TOOLS_PATH/.bashrc:$HOME/.bashrc:rw"                      ## BASHRC
                "-v $HOME/$TDH_TOOLS_PATH/.mvn:$HOME/.mvn:rw"
                "-v $HOME/$TDH_TOOLS_PATH/.aws:$HOME/.aws:rw"                            ## PERSISTANT AWS CREDENTIALS
                "-v $HOME/$TDH_TOOLS_PATH/.azure:$HOME/.azure:rw"                        ## PERSISTANT MICROSOFT AZURE CREDENTIALS
@@ -13341,6 +13333,9 @@ runTDHtools() {
         localdir=$(echo $n | awk -F: '{ print $1 }')
         [ ! -e $localdir ] && mkdir -p $localdir && chmod 777 $localdir 
       done
+
+      # --- CREATE TEMPORARY FILES ---
+      echo "export PATH=\"~/.local/bin:\$PATH\"" > $HOME/$TDH_TOOLS_PATH/.bashrc
 
       docker run $ROOT_OPTIONS ${CORE_MOUNTS[*]} $TDH_TOOLS:latest chmod 666 /var/run/docker.sock > /dev/null 2>&1
       docker run $USER_OPTIONS ${CORE_MOUNTS[*]} $TDH_TOOLS:latest /usr/local/bin/$POSTSCRIPT > /dev/null 2>&1
