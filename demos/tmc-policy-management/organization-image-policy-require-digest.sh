@@ -56,11 +56,14 @@ TDH_DOMAIN=$(getConfigMap tanzu-demo-hub TDH_DOMAIN)
 TDH_ENVNAME=$(getConfigMap tanzu-demo-hub TDH_ENVNAME)
 TDH_DEPLOYMENT_TYPE=$(getConfigMap tanzu-demo-hub TDH_DEPLOYMENT_TYPE)
 TDH_MANAGED_BY_TMC=$(getConfigMap tanzu-demo-hub TDH_MANAGED_BY_TMC)
+# ste: hack - not sure why my tdh cluster returned false here?
+TDH_MANAGED_BY_TMC="true"
 TDH_LB_CONTOUR=$(getConfigMap tanzu-demo-hub TDH_LB_CONTOUR)
 TDH_LB_NGINX=$(getConfigMap tanzu-demo-hub TDH_LB_NGINX)
 DOMAIN=${TDH_LB_CONTOUR}.${TDH_ENVNAME}.${TDH_DOMAIN}
 
-if [ ! -x "/usr/local/bin/docker" ]; then 
+# ste: changed from /usr/local/bin to /usr/bin as we run in the tdh-tools container
+if [ ! -x "/usr/bin/docker" ]; then 
   echo "ERROR: Docker binaries are not installed"
   echo "       => brew install docker"
   exit 1
@@ -87,7 +90,8 @@ if [ "$TDH_MANAGED_BY_TMC" == "true" ]; then
 
   TDH_CLUSTER_NAME=$(getConfigMap tanzu-demo-hub TDH_CLUSTER_NAME)
   TDH_MANAGEMENT_CLUSTER=$(getConfigMap tanzu-demo-hub TDH_MANAGEMENT_CLUSTER)
-  TDH_PROVISONER_NAME=$(getConfigMap tanzu-demo-hub TDH_PROVISONER_NAME)
+  # ste: bug - was: TDH_PROVISONER_NAME should be: TDH_PROVISIONER_NAME
+  TDH_PROVISIONER_NAME=$(getConfigMap tanzu-demo-hub TDH_PROVISIONER_NAME)
   TDH_MISSION_CONTROL_ACCOUNT_NAME=$(getConfigMap tanzu-demo-hub TDH_MISSION_CONTROL_ACCOUNT_NAME)
 
   tdh_verifyTKGcluster
@@ -98,12 +102,12 @@ fi
 
 # --- CLEANUP TMC RESSOURCES ---
 tmc workspace image-policy delete --workspace-name $WORKSPACE_PROD tdh-require-digest > /dev/null 2>&1
-tmc cluster namespace delete --cluster-name $TDH_CLUSTER_NAME -p $TDH_PROVISONER_NAME -m $TDH_MANAGEMENT_CLUSTER $NAMESPACE_TEST > /dev/null 2>&1
-tmc cluster namespace delete --cluster-name $TDH_CLUSTER_NAME -p $TDH_PROVISONER_NAME -m $TDH_MANAGEMENT_CLUSTER $NAMESPACE_PROD > /dev/null 2>&1
+tmc cluster namespace delete --cluster-name $TDH_CLUSTER_NAME -p $TDH_PROVISIONER_NAME -m $TDH_MANAGEMENT_CLUSTER $NAMESPACE_TEST > /dev/null 2>&1
+tmc cluster namespace delete --cluster-name $TDH_CLUSTER_NAME -p $TDH_PROVISIONER_NAME -m $TDH_MANAGEMENT_CLUSTER $NAMESPACE_PROD > /dev/null 2>&1
 tmc cluster namespace delete --cluster-name $TDH_CLUSTER_NAME \
-   -p $TDH_PROVISONER_NAME -m $TDH_MANAGEMENT_CLUSTER demo-apps-test > /dev/null 2>&1
+   -p $TDH_PROVISIONER_NAME -m $TDH_MANAGEMENT_CLUSTER demo-apps-test > /dev/null 2>&1
 tmc cluster namespace delete --cluster-name $TDH_CLUSTER_NAME \
-   -p $TDH_PROVISONER_NAME -m $TDH_MANAGEMENT_CLUSTER demo-apps-prod > /dev/null 2>&1
+   -p $TDH_PROVISIONER_NAME -m $TDH_MANAGEMENT_CLUSTER demo-apps-prod > /dev/null 2>&1
 tmc workspace delete "tdh-ws-prod" > /dev/null 2>&1
 tmc workspace delete "tdh-ws-test" > /dev/null 2>&1
 
@@ -115,27 +119,27 @@ prtHead "Create TMC Managed Namespace ($NAMESPACE_TEST) within the $TDH_CLUSTER_
 echo "     -----------------------------------------------------------------------------------------------------------"
 echo "     tmc cluster namespace create"
 echo "       -c $(alignStr $TDH_CLUSTER_NAME) # TKG Cluster Name"
-echo "       -p $(alignStr $TDH_PROVISONER_NAME) # TMC Provisioner Name"
+echo "       -p $(alignStr $TDH_PROVISIONER_NAME) # TMC Provisioner Name"
 echo "       -m $(alignStr $TDH_MANAGEMENT_CLUSTER) # TKG Management Cluster"
 echo "       -k $(alignStr $WORKSPACE_PROD) # TMC Workspace Name"
 echo "       -n $(alignStr $NAMESPACE_TEST) # Kubernetes Cluster Namespace"
 echo "     -----------------------------------------------------------------------------------------------------------"
 
-execCmd "tmc cluster namespace create -c $TDH_CLUSTER_NAME -m $TDH_MANAGEMENT_CLUSTER -p $TDH_PROVISONER_NAME -n $NAMESPACE_TEST -k $WORKSPACE_TEST"
-execCmd "tmc cluster namespace --cluster-name $TDH_CLUSTER_NAME -m $TDH_MANAGEMENT_CLUSTER -p $TDH_PROVISONER_NAME --workspace-name $WORKSPACE_TEST list"
+execCmd "tmc cluster namespace create -c $TDH_CLUSTER_NAME -m $TDH_MANAGEMENT_CLUSTER -p $TDH_PROVISIONER_NAME -n $NAMESPACE_TEST -k $WORKSPACE_TEST"
+execCmd "tmc cluster namespace --cluster-name $TDH_CLUSTER_NAME -m $TDH_MANAGEMENT_CLUSTER -p $TDH_PROVISIONER_NAME --workspace-name $WORKSPACE_TEST list"
 
 prtHead "Create TMC Managed Namespace ($NAMESPACE_PROD) within the $TDH_CLUSTER_NAME cluster"
 echo "     -----------------------------------------------------------------------------------------------------------"
 echo "     tmc cluster namespace create"
 echo "       -c $(alignStr $TDH_CLUSTER_NAME) # TKG Cluster Name"
-echo "       -p $(alignStr $TDH_PROVISONER_NAME) # TMC Provisioner Name"
+echo "       -p $(alignStr $TDH_PROVISIONER_NAME) # TMC Provisioner Name"
 echo "       -m $(alignStr $TDH_MANAGEMENT_CLUSTER) # TKG Management Cluster"
 echo "       -k $(alignStr $WORKSPACE_PROD) # TMC Workspace Name"
 echo "       -n $(alignStr $NAMESPACE_PROD) # Kubernetes Cluster Namespace"
 echo "     -----------------------------------------------------------------------------------------------------------"
 
-execCmd "tmc cluster namespace create -c $TDH_CLUSTER_NAME -m $TDH_MANAGEMENT_CLUSTER -p $TDH_PROVISONER_NAME -n $NAMESPACE_PROD -k $WORKSPACE_PROD"
-execCmd "tmc cluster namespace --cluster-name $TDH_CLUSTER_NAME -m $TDH_MANAGEMENT_CLUSTER -p $TDH_PROVISONER_NAME --workspace-name $WORKSPACE_PROD list"
+execCmd "tmc cluster namespace create -c $TDH_CLUSTER_NAME -m $TDH_MANAGEMENT_CLUSTER -p $TDH_PROVISIONER_NAME -n $NAMESPACE_PROD -k $WORKSPACE_PROD"
+execCmd "tmc cluster namespace --cluster-name $TDH_CLUSTER_NAME -m $TDH_MANAGEMENT_CLUSTER -p $TDH_PROVISIONER_NAME --workspace-name $WORKSPACE_PROD list"
 execCmd "kubectl get ns"
 
 prtHead "Show available Image-Policy templates"
