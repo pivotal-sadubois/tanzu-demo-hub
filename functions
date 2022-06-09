@@ -13297,34 +13297,37 @@ runTDHtools() {
       # --- DUMP ENVIRONMENT VARIABLES ---
       env | grep TDH > /tmp/tdh.env
 
+      export TANZU_HOME=/home/tanzu
       export CORE_OPTIONS="-it --init --rm --hostname tdh-tools --name $TDH_TOOLS --network=host"
-      export USER_OPTIONS="$CORE_OPTIONS -u $(id -u):$(id -g) --env-file /tmp/tdh.env -e \"KUBECONFIG=$HOME/.kube/config\""
+      export USER_OPTIONS="$CORE_OPTIONS -u 1000:1000 --env-file /tmp/tdh.env -e \"KUBECONFIG=$HOME/.kube/config\""
       export ROOT_OPTIONS="$CORE_OPTIONS --env-file /tmp/tdh.env -e \"KUBECONFIG=$HOME/.kube/config\""
+      echo "export PATH=\"~/.local/bin:\$PATH\"" > $HOME/$TDH_TOOLS_PATH/.bashrc
 
       export CORE_MOUNTS=(
                "-v /var/run/docker.sock:/var/run/docker.sock"                           ## REQIORED FOR DOCKER
-               "-v $HOME/.tanzu-demo-hub:$HOME/.tanzu-demo-hub:rw"
-               "-v $HOME/.tanzu-demo-hub.cfg:$HOME/.tanzu-demo-hub.cfg:ro"
-               "-v $HOME/.minikube:$HOME/.minikube:ro"                                  ## MINIKUBE CONFIG FILES/KUBECOFIG/CERTS
-               "-v $HOME/$TDH_TOOLS_PATH/.cache:$HOME/.cache:rw"
-               "-v $HOME/$TDH_TOOLS_PATH/.config:$HOME/.config:rw"                      ## CONFIG FOR HELM AND TANZU
-               "-v $HOME/$TDH_TOOLS_PATH/.kube:$HOME/.kube:rw"                          ## KUBERNETES CLUSTER CONTEXTS
-               "-v $HOME/$TDH_TOOLS_PATH/.kube-tkg:$HOME/.kube-tkg:rw"                  ## TANZU MANAGEMENT CLUSTER CONTEXTS
-               "-v $HOME/$TDH_TOOLS_PATH/.local:$HOME/.local:rw"
-               "-v $HOME/$TDH_TOOLS_PATH/.tanzu:$HOME/.tanzu:rw"
-               "-v $HOME/$TDH_TOOLS_PATH/.ssh:$HOME/.ssh:rw"                            ## SSH to AWS/AZURE AMDIN SERVER
-               "-v $HOME/$TDH_TOOLS_PATH/.terraform:$HOME/.terraform:rw"
-               "-v $HOME/$TDH_TOOLS_PATH/.terraform.d:$HOME/.terraform.d:rw"
-               "-v $HOME/$TDH_TOOLS_PATH/.s3cfg:$HOME/.s3cfg:rw"
-               "-v $HOME/$TDH_TOOLS_PATH/.govmomi:$HOME/.govmomi:rw"
-               "-v $HOME/$TDH_TOOLS_PATH/.gradle:$HOME/.gradle:rw"
-               "-v $HOME/$TDH_TOOLS_PATH/.docker:$HOME/.docker:rw"                      ## DOCKER LOGIN CREDENTIALS
-               "-v $HOME/$TDH_TOOLS_PATH/.mvn:$HOME/.mvn:rw"
-               "-v $HOME/$TDH_TOOLS_PATH/.aws:$HOME/.aws:rw"                            ## PERSISTANT AWS CREDENTIALS
-               "-v $HOME/$TDH_TOOLS_PATH/.azure:$HOME/.azure:rw"                        ## PERSISTANT MICROSOFT AZURE CREDENTIALS
-               "-v $HOME/$TDH_TOOLS_PATH/.vmware-cna-saas:$HOME/.vmware-cna-saas:rw"    ## TANZU MISSION CONTROL (TMC) LOGIN CREDENTIALS
+               "-v $HOME/.tanzu-demo-hub:$TANZU_HOME/.tanzu-demo-hub:rw"
+               "-v $HOME/.tanzu-demo-hub.cfg:$TANZU_HOME/.tanzu-demo-hub.cfg:ro"
+               "-v $HOME/.minikube:$TANZU_HOME/.minikube:ro"                                  ## MINIKUBE CONFIG FILES/KUBECOFIG/CERTS
+               "-v $HOME/$TDH_TOOLS_PATH/.cache:$TANZU_HOME/.cache:rw"
+               "-v $HOME/$TDH_TOOLS_PATH/.config:$TANZU_HOME/.config:rw"                      ## CONFIG FOR HELM AND TANZU
+               "-v $HOME/$TDH_TOOLS_PATH/.kube:$TANZU_HOME/.kube:rw"                          ## KUBERNETES CLUSTER CONTEXTS
+               "-v $HOME/$TDH_TOOLS_PATH/.kube-tkg:$TANZU_HOME/.kube-tkg:rw"                  ## TANZU MANAGEMENT CLUSTER CONTEXTS
+               "-v $HOME/$TDH_TOOLS_PATH/.local:$TANZU_HOME/.local:rw"
+               "-v $HOME/$TDH_TOOLS_PATH/.tanzu:$TANZU_HOME/.tanzu:rw"
+               "-v $HOME/$TDH_TOOLS_PATH/.ssh:$TANZU_HOME/.ssh:rw"                            ## SSH to AWS/AZURE AMDIN SERVER
+               "-v $HOME/$TDH_TOOLS_PATH/.terraform:$TANZU_HOME/.terraform:rw"
+               "-v $HOME/$TDH_TOOLS_PATH/.terraform.d:$TANZU_HOME/.terraform.d:rw"
+               "-v $HOME/$TDH_TOOLS_PATH/.s3cfg:$TANZU_HOME/.s3cfg:rw"
+               "-v $HOME/$TDH_TOOLS_PATH/.govmomi:$TANZU_HOME/.govmomi:rw"
+               "-v $HOME/$TDH_TOOLS_PATH/.gradle:$TANZU_HOME/.gradle:rw"
+               "-v $HOME/$TDH_TOOLS_PATH/.docker:$TANZU_HOME/.docker:rw"                      ## DOCKER LOGIN CREDENTIALS
+               "-v $HOME/$TDH_TOOLS_PATH/.bashrc:$TANZU_HOME/.bashrc:rw"                      ## BASHRC
+               "-v $HOME/$TDH_TOOLS_PATH/.mvn:$TANZU_HOME/.mvn:rw"
+               "-v $HOME/$TDH_TOOLS_PATH/.aws:$TANZU_HOME/.aws:rw"                            ## PERSISTANT AWS CREDENTIALS
+               "-v $HOME/$TDH_TOOLS_PATH/.azure:$TANZU_HOME/.azure:rw"                        ## PERSISTANT MICROSOFT AZURE CREDENTIALS
+               "-v $HOME/$TDH_TOOLS_PATH/.vmware-cna-saas:$TANZU_HOME/.vmware-cna-saas:rw"    ## TANZU MISSION CONTROL (TMC) LOGIN CREDENTIALS
                "-v $HOME/$TDH_TOOLS_PATH/tmp:/tmp:rw"                                   ## KEEP TEMP PERSISTENT
-               "-v $TDHPATH/:$TDHPATH:ro"                                               ## TANZU-DEMO-HUB DIRECTORY
+               "-v $TDHPATH/:$TANZU_HOME/tanzu-demo-hub:ro"                                               ## TANZU-DEMO-HUB DIRECTORY
              )
 
       # --- MAKE SURE DIRECTORIES ARE CREATED ---
