@@ -95,12 +95,9 @@ TBS_SOURCE_DIR=/tmp/$TBS_SOURCE_APP
 GIT_MIRR_ORG="sync"
 GIT_REPO_ORG="tanzu"
 GIT_REPO_NAM="fortune-demo"
+GIT_REPO_BRANCH="master"
 GIT_REPO_SOURCE=https://github.com/parth-pandit/fortune-demo
 GIT_REPO_TARGET=https://$TDH_SERVICE_GITEA_SERVER/$GIT_REPO_ORG/${GIT_REPO_NAM}.git
-
-#echo "TDH_TBS_DEMO_FORTUNE_GIT:$TDH_TBS_DEMO_FORTUNE_GIT"
-#echo "GIT_REPO_TARGET:$GIT_REPO_TARGET"
-#echo "TDH_TBS_DEMO_FORTUNE_GIT:$TDH_TBS_DEMO_FORTUNE_GIT"
 
 #################################################################################################################################
 ############################################# GITEA SETUP ADN DEMO REPRO ########################################################
@@ -113,7 +110,7 @@ giteaForkRepo    sync fortune-demo fortune-demo tanzu
 prtHead "Login to the Git Envifonment (Gitea)"
 prtText " => http://$TDH_SERVICE_GITEA_SERVER"
 prtText "    ($TDH_SERVICE_GITEA_ADMIN_USER/$TDH_SERVICE_GITEA_ADMIN_PASS)"
-prtText " => tanzu/fortune-demo   # Fortune Demo Repository"
+prtText " => tanzu/$TBS_SOURCE_APP   # $TBS_SOURCE_APP Demo Repository"
 prtText ""
 prtText "press 'return' to continue"; read x
 
@@ -148,9 +145,6 @@ if [ "$TDH_SERVICE_REGISTRY_HARBOR" == "true" ]; then
     kp secret delete $n > /dev/null 2>&1
   done
   
-  #kp secret delete secret-registry-vmware > /dev/null 2>&1
-  #kp secret delete secret-registry-harbor > /dev/null 2>&1
-  kp secret delete secret-repo-git > /dev/null 2>&1
   kp image delete $TBS_SOURCE_APP > /dev/null 2>&1
   pkill com.docker.cli
   kubectl delete namespace $NAMESPACE > /dev/null 2>&1
@@ -171,16 +165,15 @@ if [ "$TDH_SERVICE_REGISTRY_HARBOR" == "true" ]; then
 
   cnt=$(kp image list 2>/dev/null | egrep -c "^fortune")
   if [ $cnt -eq 0 ]; then
-    execCmd "kp image create $TBS_SOURCE_APP --tag $TDH_HARBOR_REGISTRY_DNS_HARBOR/library/$TBS_SOURCE_APP --git $GIT_REPO_TARGET --git-revision master"
+    execCmd "kp image create $TBS_SOURCE_APP --tag $TDH_HARBOR_REGISTRY_DNS_HARBOR/library/$TBS_SOURCE_APP --git $GIT_REPO_TARGET --git-revision $GIT_REPO_BRANCH"
   else
-    execCmd "kp image create $TBS_SOURCE_APP --tag $TDH_HARBOR_REGISTRY_DNS_HARBOR/library/$TBS_SOURCE_APP --git $GIT_REPO_TARGET --git-revision master"
+    execCmd "kp image create $TBS_SOURCE_APP --tag $TDH_HARBOR_REGISTRY_DNS_HARBOR/library/$TBS_SOURCE_APP --git $GIT_REPO_TARGET --git-revision $GIT_REPO_BRANCH"
 
     prtHead "Patch TBS Image ($TBS_SOURCE_APP)"
     execCmd "kp image patch $TBS_SOURCE_APP"
   fi
 
   prtHead "Show the Build Process ($TBS_SOURCE_APP)"
-  #execCmd "kp build logs $TBS_SOURCE_APP"
   prtText "kp build logs $TBS_SOURCE_APP"; read x
   kp build logs $TBS_SOURCE_APP
   echo 

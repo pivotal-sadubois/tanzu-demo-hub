@@ -9895,7 +9895,141 @@ verify_docker() {
   fi
 }
 
+# ------------------------------------------------------------------------------------------
+# Function Name ......: tdh_tools_download
+# Function Purpose ...: Download the TDH Tools Container from AWS S3
+# ------------------------------------------------------------------------------------------
+# Argument ($1) ......: tkg or tce (tkg=Tanzu Kubernetes Frid, tce=Tanzu Conmnunity Edition)
+#          ($2) ......: Tools Container Version based on TKG Release (ie 1.5.1)
+# ------------------------------- ENVIRONMENT VARIABLES -----------------------------------------------------------
+# Variables ..........: TDH_TOOLS_BUILD_ENABLED (True = tdh-tools will be builded from source, False = from AWS S3
+# Return Value .......: Status (HEALTY, DETACHING, FAILED)
+# ------------------------------------------------------------------------------------------
+tdh_tools_download() {
+  [ "$TDH_TOOLS_BUILD_ENABLED" == "true" ] && return
+
+  MODE=$1
+  TOOLS_VERSION=$2
+
+  if [ "$MODE" == "tce" ]; then
+    BUILD_MODE=tce
+    MACHINE=$(uname -m)
+    TDH_TOOLS_TAG=$(echo $TOOLS_VERSION | sed 's/^v//g')
+    TDH_TOOLS_IMAGE=tdh-tools-${BUILD_MODE}-$TDH_TOOLS_TAG
+    TDH_TOOLS_DOCKERFILE=Dockerfile-${BUILD_MODE}-$TDH_TOOLS_TAG
+    [ -f $TDHPATH/files/tdh-tools/tdh-tools-${BUILD_MODE}-${TDH_TOOLS_TAG}.cfg ] && . $TDHPATH/files/tdh-tools/tdh-tools-${BUILD_MODE}-${TDH_TOOLS_TAG}.cfg
+
+    TCE_DOWNLOAD_URL=https://github.com/vmware-tanzu/community-edition/releases/download/${TKG_COMNUNITY_EDITION_VERSION}
+    TCE_LINUX_PACKAGE=tce-linux-amd64-${TKG_COMNUNITY_EDITION_VERSION}
+    TCE_DARWIN_PACKAGE=tce-darwin-amd64-${TKG_COMNUNITY_EDITION_VERSION}
+    TDH_DOCKER_FILES=/tmp/tdh-tools-tce-$TDH_TOOLS_TAG
+    TDH_DOCKER_CACHE=$HOME/.tanzu-demo-hub/cache
+    [ ! -d $TDH_DOCKER_CACHE ] && mkdir -p $TDH_DOCKER_CACHE
+  fi
+
+  if [ "$MODE" == "tkg" ]; then
+    BUILD_MODE=tkg
+    MACHINE=$(uname -m)
+    TDH_TOOLS_TAG=$TOOLS_VERSION
+    TDH_TOOLS_IMAGE=tdh-tools-${BUILD_MODE}-$TDH_TOOLS_TAG
+    TDH_TOOLS_DOCKERFILE=Dockerfile-${BUILD_MODE}-$TDH_TOOLS_TAG
+    [ -f $TDHPATH/files/tdh-tools/tdh-tools-${BUILD_MODE}-${TDH_TOOLS_TAG}.cfg ] && . $TDHPATH/files/tdh-tools/tdh-tools-${BUILD_MODE}-${TDH_TOOLS_TAG}.cfg
+    TDH_DOCKER_FILES=/tmp/tdh-tools-${BUILD_MODE}-$TDH_TOOLS_TAG
+    TDH_DOCKER_CACHE=$HOME/.tanzu-demo-hub/cache
+    [ ! -d $TDH_DOCKER_CACHE ] && mkdir -p $TDH_DOCKER_CACHE
+  fi
+
+  # --- GET LATES TDH-TOOLS CONTAINER FROM AWS ---
+  curl -f https://tanzu-demo-hub.s3.eu-central-1.amazonaws.com/${TDH_TOOLS_IMAGE}.sum >/dev/null 2>&1; ret=$?
+  if [ $ret -ne 0 ]; then 
+    echo "ERROR: There is currently not tdh-tools container for version ($TDH_TOOLS_IMAGE) on AWS s3"
+    echo "       Please contact tanzu-demo-hub support team (#tanzu-demo-hub on slack)."
+    exit 0
+  fi
+
+  TDH_TOOLS_DOWNLOAD_REQUIRED=false
+  TDH_TOOLS_TAG_S3=$(curl https://tanzu-demo-hub.s3.eu-central-1.amazonaws.com/${TDH_TOOLS_IMAGE}.tag 2>/dev/null) 
+  TDH_TOOLS_SUM_S3=$(curl https://tanzu-demo-hub.s3.eu-central-1.amazonaws.com/${TDH_TOOLS_IMAGE}.sum 2>/dev/null) 
+  if [ "$TDH_TOOLS_TAG_S3" != "" ]; then
+    # --- LETS SEE IF WE HAVE THAT VERSION IN THE LOCAL CACHE ---
+    if [ -f $HOME/.tanzu-demo-hub/cache/tdh-tools/$TDH_TOOLS_IMAGE.sum ]; then 
+      TDH_TOOLS_TAG_LOCAL=$(cat $HOME/.tanzu-demo-hub/cache/tdh-tools/$TDH_TOOLS_IMAGE.tag)
+      TDH_TOOLS_SUM_LOCAL=$(cat $HOME/.tanzu-demo-hub/cache/tdh-tools/$TDH_TOOLS_IMAGE.sum)
+
+      if [ "$TDH_TOOLS_TAG_S3" != "$TDH_TOOLS_TAG_LOCAL" ]; then 
+        TDH_TOOLS_DOWNLOAD_REQUIRED=true
+        messagePrint " ▪ Local TDH Tools Container ($TDH_TOOLS_IMAGE) is old" "Download from AWS S3 required"
+      else
+        messagePrint " ▪ Local TDH Tools Container ($TDH_TOOLS_IMAGE) found" "$HOME/.tanzu-demo-hub/cache/tdh-tools/$TDH_TOOLS_IMAGE.tar"
+      fi
+    else
+      messagePrint " ▪ No Local TDH Tools Container ($TDH_TOOLS_IMAGE) found" "Download from AWS S3 required"
+    fi
+  else
+    echo "ERROR: Unexpected error apeared. The tdh-tools checksum files exists for release: $TDH_TOOLS_IMAGE in AWS S3"
+    echo "       https://tanzu-demo-hub.s3.eu-central-1.amazonaws.com/${TDH_TOOLS_IMAGE}.sum but its empty"
+    echo "       Please contact tanzu-demo-hub support team (#tanzu-demo-hub on slack)."
+    exit 0
+  fi
+
+  if [ "$TDH_TOOLS_DOWNLOAD_REQUIRED" == "true" ]; then
+    [ ! -d $HOME/.tanzu-demo-hub/cache/tdh-tools ] && mkdir -p $HOME/.tanzu-demo-hub/cache/tdh-tools
+    messagePrint " ▪ Downloading ($TDH_TOOLS_IMAGE) from AWS S3" "https://tanzu-demo-hub.s3.eu-central-1.amazonaws.com/${TDH_TOOLS_IMAGE}.tar"
+    wget -q https://tanzu-demo-hub.s3.eu-central-1.amazonaws.com/${TDH_TOOLS_IMAGE}.tar -O $HOME/.tanzu-demo-hub/cache/tdh-tools/${TDH_TOOLS_IMAGE}.tar
+
+    if [ -f $HOME/.tanzu-demo-hub/cache/tdh-tools/${TDH_TOOLS_IMAGE}.tar ]; then 
+      TDH_TOOLS_SUM_LOCAL=$(sum $HOME/.tanzu-demo-hub/cache/tdh-tools/${TDH_TOOLS_IMAGE}.tar | awk '{ print $1 }')
+      if [ "$TDH_TOOLS_SUM_S3" != "$TDH_TOOLS_SUM_LOCAL" ]; then 
+        echo "ERROR: Download of the tdh-tools container has been failed ($TDH_TOOLS_IMAGE), checksum is not correct. Please delete local file:"
+        echo "       $HOME/.tanzu-demo-hub/cache/tdh-tools/${TDH_TOOLS_IMAGE}.tar and restart the script"; exit 1
+      fi
+    else
+      echo "ERROR: Failed to download ${TDH_TOOLS_IMAGE}.tar from AWS S3, please try manually"
+      echo "       =>  wget -q https://tanzu-demo-hub.s3.eu-central-1.amazonaws.com/${TDH_TOOLS_IMAGE}.tar -O $HOME/.tanzu-demo-hub/cache/tdh-tools/${TDH_TOOLS_IMAGE}.tar"
+      exit
+    fi
+  fi
+
+# --- VERIFY IF DOCKER IMAGE IS THERE ---
+cnt=$(docker images -q $TDH_TOOLS_IMAGE:CHKSUM-$TDH_TOOLS_TAG_S3 | wc -l | awk '{ print $1 }') 
+if [ $cnt -eq 0 ]; then 
+  messagePrint " ▪ Importing (load) TDH Tools docker container" "$TDH_TOOLS_IMAGE:CHKSUM-$TDH_TOOLS_TAG_S3"
+  docker load -i $HOME/.tanzu-demo-hub/cache/tdh-tools/${TDH_TOOLS_IMAGE}.tar
+
+  messagePrint " ▪ Create Tag (latest) for  TDH Tools docker container" "$TDH_TOOLS_IMAGE:latest"
+echo "docker tag $TDH_TOOLS_IMAGE:CHKSUM-$TDH_TOOLS_TAG_S3 $TDH_TOOLS_IMAGE:latest"
+  docker tag $TDH_TOOLS_IMAGE:CHKSUM-$TDH_TOOLS_TAG_S3 $TDH_TOOLS_IMAGE:latest
+
+echo gaga
+fi
+exit
+
+echo "TDH_TOOLS_IMAGE:$TDH_TOOLS_IMAGE"
+echo "MODE:$MODE"
+echo "wget https://tanzu-demo-hub.s3.eu-central-1.amazonaws.com/${TDH_TOOLS_IMAGE}.sum"
+echo "TDH_TOOLS_TAG_S3:$TDH_TOOLS_TAG_S3"
+
+#    [ ! -d $HOME/.tanzu-demo-hub/cache/tdh-tools ] && mkdir -p $HOME/.tanzu-demo-hub/cache/tdh-tools
+#    docker save $TDH_TOOLS_IMAGE:latest > $HOME/.tanzu-demo-hub/cache/tdh-tools/$TDH_TOOLS_IMAGE.tar
+#    echo "$DOCKER_CHKSUM" > $HOME/.tanzu-demo-hub/cache/tdh-tools/$TDH_TOOLS_IMAGE.sum
+
+exit
+
+}
+
+# ------------------------------------------------------------------------------------------
+# Function Name ......: tdh_tools_build
+# Function Purpose ...: Build the TDH Tools Container from its source
+# ------------------------------------------------------------------------------------------
+# Argument ($1) ......: tkg or tce (tkg=Tanzu Kubernetes Frid, tce=Tanzu Conmnunity Edition)
+#          ($2) ......: Tools Container Version based on TKG Release (ie 1.5.1)
+# ------------------------------- ENVIRONMENT VARIABLES -----------------------------------------------------------
+# Variables ..........: TDH_TOOLS_BUILD_ENABLED (True = tdh-tools will be builded from source, False = from AWS S3 
+# Return Value .......: Status (HEALTY, DETACHING, FAILED)
+# ------------------------------------------------------------------------------------------
 tdh_tools_build() {
+  [ "$TDH_TOOLS_BUILD_ENABLED" != "true" ] && return
+
   MODE=$1
   TOOLS_VERSION=$2
   REBUILD_REQUIRED=0
@@ -10773,6 +10907,13 @@ tdh_tools_build() {
     messagePrint " ▪ Container Build for ($TDH_TOOLS_IMAGE) completed in" "$(duration $time3)"
     messagePrint " ▪ Create Tag (latest) for  TDH Tools docker container" "$TDH_TOOLS_IMAGE:latest"
     docker tag $TDH_TOOLS_IMAGE:CHKSUM-$DOCKER_CHKSUM $TDH_TOOLS_IMAGE:latest
+
+    messagePrint " ▪ Export Docker Container ($TDH_TOOLS_IMAGE)" "$HOME/.tanzu-demo-hub/cache/tdh-tools/$TDH_TOOLS_IMAGE.tar"
+    [ ! -d $HOME/.tanzu-demo-hub/cache/tdh-tools ] && mkdir -p $HOME/.tanzu-demo-hub/cache/tdh-tools
+    docker save $TDH_TOOLS_IMAGE:CHKSUM-$DOCKER_CHKSUM > $HOME/.tanzu-demo-hub/cache/tdh-tools/${TDH_TOOLS_IMAGE}.tar
+    chk=$(sum $HOME/.tanzu-demo-hub/cache/tdh-tools/$TDH_TOOLS_IMAGE.tar | awk '{ print $1 }') 
+    echo "$chk" > $HOME/.tanzu-demo-hub/cache/tdh-tools/$TDH_TOOLS_IMAGE.sum
+    echo "$DOCKER_CHKSUM" > $HOME/.tanzu-demo-hub/cache/tdh-tools/$TDH_TOOLS_IMAGE.tag
   fi
 }
 
@@ -13151,7 +13292,8 @@ runTDHtools() {
     checkKubernetesServices registry_docker
 
     if [ $NATIVE -eq 0 ]; then
-      tdh_tools_build $TOOLS_TLAG $TOOLS_VERSION
+      tdh_tools_build    $TOOLS_TLAG $TOOLS_VERSION
+      tdh_tools_download $TOOLS_TLAG $TOOLS_VERSION
       messagePrint " ▪ Running TDH Tools Docker Container" "$TDH_TOOLS:latest $TDHPATH/$CMD_EXEC $CMD_ARGS"
 
       cid=$(docker ps -a | grep $TDH_TOOLS:latest | awk '{ print $1 }')

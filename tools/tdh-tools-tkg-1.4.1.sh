@@ -55,6 +55,7 @@ usage() {
 
 if [ $SILENT -eq 1 ]; then 
   tdh_tools_build    tkg > /dev/null 2>&1
+  tdh_tools_download tkg > /dev/null 2>&1
   checkExecutionLock tdh-tools > /dev/null 2>&1
 else
   echo ""
@@ -65,6 +66,7 @@ else
 
   checkCLIcommands   BASIC
   tdh_tools_build    tkg
+  tdh_tools_download tkg
   checkExecutionLock tdh-tools
 fi
 

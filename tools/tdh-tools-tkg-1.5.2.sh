@@ -5,6 +5,7 @@
 # Author .......: Sacha Dubois, VMware
 # Description ..: Tanzu Demo Hub - TDH Tools Container
 # ############################################################################################
+[ "$(hostname)" == "tdh-tools" ] && echo "ERROR: Can not be run within the tdh-tools container" && exit
 
 export TANZU_DEMO_HUB=$(cd "$(pwd)/$(dirname $0)/../"; pwd)
 export TDHPATH=$(cd "$(pwd)/$(dirname $0)/../"; pwd)
@@ -55,6 +56,7 @@ usage() {
 
 if [ $SILENT -eq 1 ]; then 
   tdh_tools_build    tkg > /dev/null 2>&1
+  tdh_tools_download tkg > /dev/null 2>&1
   checkExecutionLock tdh-tools > /dev/null 2>&1
 else
   echo ""
@@ -65,6 +67,7 @@ else
 
   checkCLIcommands   BASIC
   tdh_tools_build    tkg
+  tdh_tools_download tkg
   checkExecutionLock tdh-tools
 fi
 
