@@ -7,12 +7,17 @@
 # ############################################################################################
 
 export TANZU_DEMO_HUB=$(cd "$(pwd)/$(dirname $0)"; pwd)
-export TDHPATH=$(cd "$(pwd)/$(dirname $0)"; pwd)
 export DEBUG=0
 export NATIVE=0
 export TDH_DEPLOYMENT_CLOUD="AWS"
 export DEPLOY_PCF_DEPLOYMENT=aws_tkg_default.cfg
 export TDH_TOOLS_CONTAINER_TYPE=tkg
+
+if [ "$(hostname)" == "tdh-tools" ]; then 
+  export TDHPATH=/home/tanzu/tanzu-demo-hub
+else
+  export TDHPATH=$(cd "$(pwd)/$(dirname $0)"; pwd)
+fi
 
 # --- SETTING FOR TDH-TOOLS ---
 export START_COMMAND="$*"
@@ -93,8 +98,10 @@ fi
 ################################### EXECUTING CODE WITHIN  TDH-TOOLS DOCKER CONTAINER  ######################################
 #############################################################################################################################
 
-runTDHtools $TDH_TOOLS_CONTAINER_TYPE $TDH_TOOLS_CONTAINER_VERS "Deploy TKG Cluster with Tanzu Mission Control (TMC)" "$TDHPATH/$CMD_EXEC" "$CMD_ARGS"
+runTDHtools $TDH_TOOLS_CONTAINER_TYPE $TDH_TOOLS_CONTAINER_VERS "Deploy TKG Cluster with Tanzu Mission Control (TMC)" "/home/tanzu/tanzu-demo-hub/$CMD_EXEC" "$CMD_ARGS"
 
+export TDHPATH=/home/tanzu/tanzu-demo-hub
+echo "TDHPATH:$TDHPATH"
 cnt=$(egrep -c "^TDH_DEPLOYMENT_CLOUD=" $TMC_DEPLOYMENT_CONFIG)
 if [ $cnt -eq 0 ]; then
   echo "ERROR: ${TMC_DEPLOYMENT_CONFIG} is not a correct TANZU-DEMO-HUB deployment configuration file"
