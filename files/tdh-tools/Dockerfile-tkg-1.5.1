@@ -35,14 +35,14 @@ ADD kubectl         /usr/local/bin
 #RUN ln -s /usr/lib/vmware-ovftool/ovftool /usr/local/bin/ovftool
 
 # --- LOCAL TIME AND USER ---
-RUN touch /tdh_tools_docker_container 
+RUN touch /tdh_tools_docker_container
 RUN ln -snf /usr/share/zoneinfo/${TZ} /etc/localtime && echo ${TZ} > /etc/timezone
-RUN grep ":$GID:" /etc/group || groupadd -g $GID $USER^
-RUN useradd -u $UID -d $HOME $USER 
+RUN mkdir /home/tanzu
+RUN useradd -u 1000 -d /home/tanzu tanzu
 RUN groupadd docker
-RUN usermod -a -G docker $USER
-RUN usermod -a -G daemon $USER
-RUN usermod -a -G root $USER
+RUN usermod -a -G docker tanzu
+RUN usermod -a -G daemon tanzu
+RUN usermod -a -G root tanzu
 
 # --- INSTALL REQUIRED UBUNTU PACKAGES --- 
 RUN apt-get update -qq && apt-get install -qqy \
