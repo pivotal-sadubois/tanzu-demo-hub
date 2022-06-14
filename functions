@@ -5436,17 +5436,22 @@ tmcCreateCluster() {
     fi
 
     if [ "$stt" == "" -o "$stt" != "READY" ]; then
-      KUBERNETES_VERSION=$(for n in $TMC_K8S_VERSIONS; do echo v$n; done | egrep "$TDH_TKGWC_KUBERNETES" | tail -1 | sed 's/^v//g') 
 
-      [ "$TMC_KUBERNETES_VERSION" != "" ] && KUBERNETES_VERSION=$TMC_KUBERNETES_VERSION
       [ "$TDH_TKGWC_CONTROPLANE" == "3" ] && TMC_TKGWC_TEMPLATE="aws-ha" || TMC_TKGWC_TEMPLATE="default"
 
-      # --- SEARCH KUBERNETES VERSIONS ---
-      KUBERNETES_VERSION=$(tmcGetKubernetesImage $TDH_TKGWC_KUBERNETES) 
+      #DEPRECATED
+      #[ "$TMC_KUBERNETES_VERSION" != "" ] && KUBERNETES_VERSION=$TMC_KUBERNETES_VERSION
+      KUBERNETES_VERSION=$(for n in $TMC_K8S_VERSIONS; do echo v$n; done | egrep "$TDH_TKGWC_KUBERNETES" | tail -1 | sed 's/^v//g') 
+      #KUBERNETES_VERSION=$(tmcGetKubernetesImage $TDH_TKGWC_KUBERNETES) 
 
-      if [ "$KUBERNETES_VERSION" == "" ]; then 
-        echo "ERROR: No supported image found for Kubernetes version: $TDH_TKGWC_KUBERNETES"
-        exit
+      cmdLoop tmc cluster options list -m $TDH_MANAGEMENT_CLUSTER -p $TDH_PROVISIONER_NAME --credential-name $TMC_ACCOUNT_NAME_AWS -o json > /tmp/output.json
+      KUBERNETES_VERSION=$(jq -r --arg key $AWS_REGION '.regionalOptions[] | select(.regionName == $key).versionList[].name' /tmp/output.json | \
+             egrep "^${TDH_TKGWC_KUBERNETES_VERSION}" | head -1)
+
+      if [ "$KUBERNETES_VERSION" == "" ]; then
+        echo "ERROR: failed to gather kubernetes image, please try manually"
+        echo "       => tmc cluster options list -m $TDH_MANAGEMENT_CLUSTER -p $TDH_PROVISIONER_NAME -o json"
+        exit 1
       fi
 
       messageTitle "TMC Create Workload Cluster"     
@@ -5473,6 +5478,7 @@ tmcCreateCluster() {
                          -r $AWS_REGION -n $TDH_CLUSTER_NAME \
                          -g $TDH_CLUSTER_GROUP -t $TMC_TKGWC_TEMPLATE \
                          --version $KUBERNETES_VERSION --availability-zone $AWS_PRIMARY_AZ
+
 
       if [ $? -ne 0 ]; then 
         echo "ERROR: failed to build TKG Cluster on AWS"
@@ -5525,6 +5531,17 @@ tmcCreateCluster() {
       messagePrint " ▪ TKG Control Plane Nodes"          "$TDH_TKGWC_CONTROPLANE"
       messagePrint " ▪ TKG Control Plane Nodes Type"     "$TDH_TKGWC_CONTROPLANE_NODETYPE ($TDH_TKGWC_CONTROPLANE_MACHINE)"
 
+      cmdLoop tmc cluster options list -m $TDH_MANAGEMENT_CLUSTER -p $TDH_PROVISIONER_NAME -o json > /tmp/output.json
+      KUBERNETES_VERSION=$(jq -r '.virtualMachineImages[].name' /tmp/output.json | egrep "v${TDH_TKGWC_KUBERNETES_VERSION}" | head -1)
+      if [ "$KUBERNETES_VERSION" == "" ]; then 
+        echo "ERROR: failed to gather kubernetes image, please try manually"
+        echo "       => tmc cluster options list -m $TDH_MANAGEMENT_CLUSTER -p $TDH_PROVISIONER_NAME -o json"
+        exit 1
+      fi
+
+#tmc cluster options list -m aws-hosted -p sadubois-aws --credential-name sadubois-aws
+#tmc cluster options list -m tkgmc-vsphere-h2o-4-482-sadubois -p tanzu-demo-hub
+
       # List of Tanzu Kubernetes Releases
       # https://docs.vmware.com/en/VMware-vSphere/7.0/vmware-vsphere-with-tanzu/GUID-292482C2-A5FA-44B5-B26E-F887A91BB19D.html
       tmc cluster create -t tkgs -m $TDH_MANAGEMENT_CLUSTER -p $TDH_PROVISIONER_NAME \
@@ -5533,7 +5550,7 @@ tmcCreateCluster() {
                            --worker-node-count $TDH_TKGWC_WORKERNODES \
                            --storage-class $TDH_TKGWC_STORAGE_CLASS \
                            --default-storage-class $TDH_TKGWC_STORAGE_CLASS \
-                           -g $TDH_CLUSTER_GROUP --version $TDH_TKGWC_KUBERNETES -n $TDH_CLUSTER_NAME > /tmp/error.log 2>&1; ret=$?
+                           -g $TDH_CLUSTER_GROUP --version $KUBERNETES_VERSION -n $TDH_CLUSTER_NAME > /tmp/error.log 2>&1; ret=$?
 
       if [ $ret -ne 0 ]; then
         logMessages /tmp/error.log
@@ -11950,6 +11967,20 @@ checkConnectivity() {
 
 #kubectl apply --validate=false -f https://github.com/jetstack/cert-manager/releases/download/v0.15.1/cert-manager.crds.yaml
 #kubectl -n cert-manager apply -f /tmp/letsencrypt-staging
+
+# ------------------------------------------------------------------------------------------
+# Function Name ......: installTanzuPlugin
+# Function Purpose ...: Install Tanzu Plugin
+# ------------------------------------------------------------------------------------------
+# Argument ($1) ......: Tanzi Plugin Name
+# ------------------------------------------------------------------------------------------
+# Return Value .......: 0 on Success, 1 on failure
+# ------------------------------------------------------------------------------------------
+installTanzuPlugin() {
+  PLUGIN_NAME=$1
+
+  tanzu plugin install package > /dev/null 2>&1
+}
 
 # ------------------------------------------------------------------------------------------
 # Function Name ......: installTanzuPackages
