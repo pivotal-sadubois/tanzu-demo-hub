@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    app: redis
+  name: redis-pod
+spec:
+  containers:
+  - name: redis
+    command:
+    - /bin/bash
+    args:
+    - -c
+    - "while true; do sleep 360; done"
+    image: docker.io/bitnami/redis:6.2.7-debian-10-r0
+    securityContext:
+      runAsUser: 1001

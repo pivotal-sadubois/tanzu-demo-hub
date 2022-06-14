@@ -7,10 +7,17 @@
 # ############################################################################################
 
 export TANZU_DEMO_HUB=$(cd "$(pwd)/$(dirname $0)"; pwd)
-export TDHPATH=$(cd "$(pwd)/$(dirname $0)"; pwd)
 export DEBUG=0
 export NATIVE=0
+export DEPLOY_PCF_DEPLOYMENT=aws_tkg_default.cfg
+export TDH_TOOLS_CONTAINER_TYPE=tkg
 unset TMC_MANAGEMENT_CLUSTER
+
+if [ "$(hostname)" == "tdh-tools" ]; then
+  export TDHPATH=/home/tanzu/tanzu-demo-hub
+else
+  export TDHPATH=$(cd "$(pwd)/$(dirname $0)"; pwd)
+fi
 
 # --- SETTING FOR TDH-TOOLS ---
 export START_COMMAND="$*"
@@ -53,7 +60,7 @@ done
 #############################################################################################################################
 ################################### EXECUTING CODE WITHIN  TDH-TOOLS DOCKER CONTAINER  ######################################
 #############################################################################################################################
-runTDHtools tkg $DEPLOY_TKG_VERSION "Deploy TKG Cluster with Tanzu Mission Control (TMC)" "$TDHPATH/$CMD_EXEC" "$CMD_ARGS"
+runTDHtools $TDH_TOOLS_CONTAINER_TYPE $DEPLOY_TKG_VERSION "Deploy TKG Cluster with Tanzu Mission Control (TMC)" "/home/tanzu/tanzu-demo-hub/$CMD_EXEC" "$CMD_ARGS"
 
 # --- VERIFY TOOLS AND ACCESS ---
 checkCloudCLI
@@ -80,7 +87,8 @@ else
   TMC_DISPLAY_NAME="tkgmc-vsphere--$TDH_USER"
 fi
 
-cnt=$(kubectl get ns | egrep -c "^svc-tmc-c8") 
+cnt=$(kubectl get ns | egrep -c "^svc-tmc-c") 
+echo "CNT:$cnt"
 if [ $cnt -gt 0 ]; then
   kubectl -n svc-tmc-c8 get cm stack-config -o json > /tmp/clinfo.yaml 2>/dev/null; ret=$? 
   if [ $ret -eq 0 ]; then 
@@ -219,8 +227,6 @@ echo ""                                                                        >
 echo "nodes[0]='best-effort-medium'"                                           >> $CONFIG_FILE
 echo "nodes[1]='best-effort-large'"                                            >> $CONFIG_FILE
 echo "nodes[2]='best-effort-xlarge'"                                           >> $CONFIG_FILE
-
-
 
 echo "vSphere for Tanzu supervisor cluster ($TMC_DISPLAY_NAME) successfilly registered"
 echo ""
