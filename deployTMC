@@ -238,6 +238,8 @@ TanzuPackage_CertManager    cert-manager-pkg     cert-manager.tanzu.vmware.com
 TanzuPackage_Contour        contour-pkg          contour.tanzu.vmware.com
 TanzuPackage_Harbor       harbor-pkg           harbor.tanzu.vmware.com
 
+installKubeernetesDashboard
+
 installBuildService          ## Tanzu Build Service (TBS)
 installTanzuDataPostgres     ## Tanzu Data SQL
 installSpringCloudGateway
