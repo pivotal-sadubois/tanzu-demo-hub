@@ -6481,7 +6481,13 @@ installGitea() {
 
     HELM_VALUES=/tmp/gitea_kubeapps_values.yaml
 
-    echo "images:"                                                                                                              >  $HELM_VALUES
+#ppppppp
+    echo "global:"                                                                                                              >  $HELM_VALUES
+    echo "  imageRegistry: docker.io"                                                                                           >> $HELM_VALUES
+    echo "  imagePullSecrets:"                                                                                                  >> $HELM_VALUES
+    echo "    - tdh-docker-repo"                                                                                                >> $HELM_VALUES
+    echo ""                                                                                                                     >> $HELM_VALUES
+    echo "images:"                                                                                                              >> $HELM_VALUES
     echo "  imageRegistry: docker.io"                                                                                           >> $HELM_VALUES
     echo "  imagePullPolicy: Always"                                                                                            >> $HELM_VALUES
     echo "  imagePullSecrets: tdh-docker-repo"                                                                                  >> $HELM_VALUES
