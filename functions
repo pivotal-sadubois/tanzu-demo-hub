@@ -6653,13 +6653,6 @@ installKubeernetesDashboard() {
     messagePrint " ▪ Copy TLS Secret" "tanzu-demo-hub-tls"
     copySecretObject default $NAMESPACE tanzu-demo-hub-tls
 
-    kubectl get secret tanzu-demo-hub-tls --namespace=default -oyaml | grep -v '^\s*namespace:\s' | \
-    sed 's/name: tanzu-demo-hub-tls/name: kubernetes-dashboard-certs/g' | 
-    kubectl apply --namespace=$NAMESPACE -f - > /dev/null 2>&1
-
-    #kubectl get secret tanzu-demo-hub-tls --namespace=default -oyaml | grep -v '^\s*namespace:\s' | \
-    #kubectl apply --namespace=$NAMESPACE -f - > /dev/null 2>&1
-
     # --- ADD GIT REPOSITORY ---
     messagePrint " ▪ Add the Kubernetes Repository"   "https://kubernetes.github.io/dashboard/"
     helmRepoAdd kubernetes-dashboard "https://kubernetes.github.io/dashboard/"
@@ -6670,48 +6663,29 @@ installKubeernetesDashboard() {
       HELMCHART_VER=$TDH_SERVICE_KUBERNETES_DASHBOARD
     fi
 
-    HELM_VALUES=/tmp/helm_kubeapps_dashboard_values.yaml
-
+    HELM_VALUES=/tmp/helm_kubernetes_dashboard_helm_values.yaml
     echo "global:"                                                                                                              >  $HELM_VALUES
     echo "  imageRegistry: docker.io"                                                                                           >> $HELM_VALUES
     echo "  imagePullSecrets:"                                                                                                  >> $HELM_VALUES
     echo "    - tdh-docker-repo"                                                                                                >> $HELM_VALUES
     echo ""                                                                                                                     >> $HELM_VALUES
-    echo "#service:"                                                                                                             >> $HELM_VALUES
-    echo "#  type: ClusterIP"                                                                                                    >> $HELM_VALUES
-    echo "#  externalPort: 443"                                                                                                  >> $HELM_VALUES
+    echo "image:"                                                                                                               >> $HELM_VALUES
+    echo "  repository: kubernetesui/dashboard"                                                                                 >> $HELM_VALUES
+    echo "  pullPolicy: IfNotPresent"                                                                                           >> $HELM_VALUES
+    echo "  pullSecrets:"                                                                                                       >> $HELM_VALUES
+    echo "   - tdh-docker-repo"                                                                                                 >> $HELM_VALUES
     echo ""                                                                                                                     >> $HELM_VALUES
-    echo "ingress:"                                                                                                             >> $HELM_VALUES
-    echo "  enabled: true"                                                                                                      >> $HELM_VALUES
-    echo "  annotations:"                                                                                                       >> $HELM_VALUES
-    echo "    kubernetes.io/ingress.class: contour"                                                                             >> $HELM_VALUES
-    echo "    ingress.kubernetes.io/force-ssl-redirect: \"true\""                                                               >> $HELM_VALUES
-    echo "    ingress.kubernetes.io/ssl-passthrough: \"true\""                                                                  >> $HELM_VALUES
-    echo "  paths:"                                                                                                             >> $HELM_VALUES
-    echo "    - /"                                                                                                              >> $HELM_VALUES
-    echo "    - /*"                                                                                                             >> $HELM_VALUES
-    echo "  hosts:"                                                                                                             >> $HELM_VALUES
-    echo "    - dashboard.$DOMAIN"                                                                                              >> $HELM_VALUES
-    echo "  tls:"                                                                                                               >> $HELM_VALUES
-    echo "  - secretName: tanzu-demo-hub-tls"                                                                                   >> $HELM_VALUES
-    echo "    hosts:"                                                                                                           >> $HELM_VALUES
-    echo "      - dashboard.$DOMAIN"                                                                                            >> $HELM_VALUES
+    echo "service:"                                                                                                             >> $HELM_VALUES
+    echo "  type: ClusterIP"                                                                                                    >> $HELM_VALUES
+    echo "  externalPort: 443"                                                                                                  >> $HELM_VALUES
+    echo ""                                                                                                                     >> $HELM_VALUES
 
-echo "HELM_VALUES:$HELM_VALUES"
-cat $HELM_VALUES
+    messagePrint " ▪ Deploy the Kubermetes Dashboard Helm Chart" "kubernetes-dashboard"
 
-echo "helm install $HELMCHART --namespace $NAMESPACE $HELMREPO/$HELMCHART -f $HELM_VALUES --version $HELMCHART_VER"
-
-exit
-    messagePrint " ▪ Deploy the Kubeapps Helm Chart" "kubeapps"
-helm install kubernetes-dashboardkubernetes-dashboard/kubernetes-dashboard
-    messagePrint " ▪ Deploy the Kubeapps Helm Chart" "kubeapps"
-#gaga kubernetes-dashboard
     cnt=0; ret=1; stt="notdeployed"
     while [ $ret -ne 0 -a $cnt -lt 5 -a "$stt" != "deployed" ]; do
-      #helm install $HELMCHART --namespace $NAMESPACE $HELMREPO/$HELMCHART -f $HELM_VALUES --version $HELMCHART_VER --create-namespace --wait --wait-for-jobs --timeout 10m > /tmp/error.log 2>&1; ret=$?
-echo "helm install $HELMCHART --namespace $NAMESPACE $HELMREPO/$HELMCHART -f $HELM_VALUES --version $HELMCHART_VER"
-      helm install $HELMCHART --namespace $NAMESPACE $HELMREPO/$HELMCHART -f $HELM_VALUES --version $HELMCHART_VER --create-namespace --wait --wait-for-jobs --timeout 10m; ret=$?
+      helm install $HELMCHART --namespace $NAMESPACE $HELMREPO/$HELMCHART -f $HELM_VALUES --version $HELMCHART_VER --create-namespace --wait --wait-for-jobs --timeout 10m > /tmp/error.log 2>&1; ret=$?
+      #helm install $HELMCHART --namespace $NAMESPACE $HELMREPO/$HELMCHART -f $HELM_VALUES --version $HELMCHART_VER --create-namespace --wait --wait-for-jobs --timeout 10m; ret=$?
 
       # --- WAIT FOR PODS TO GET STARTED ---
       runningPods $NAMESPACE
@@ -6728,7 +6702,107 @@ echo "helm install $HELMCHART --namespace $NAMESPACE $HELMREPO/$HELMCHART -f $HE
       let cnt=cnt+1
       sleep 30
     done
+
+    PROXY_VALUES=/tmp/helm_kubernetes_dashboard_proxy_values.yaml
+    echo "apiVersion: projectcontour.io/v1"                                                                                     >  $PROXY_VALUES
+    echo "kind: HTTPProxy"                                                                                                      >> $PROXY_VALUES
+    echo "metadata:"                                                                                                            >> $PROXY_VALUES
+    echo "  name: dashboard-httpproxy"                                                                                          >> $PROXY_VALUES
+    echo "  namespace: kubernetes-dashboard"                                                                                    >> $PROXY_VALUES
+    echo "spec:"                                                                                                                >> $PROXY_VALUES
+    echo "  virtualhost:"                                                                                                       >> $PROXY_VALUES
+    echo "    fqdn: dashboard.$DOMAIN"                                                                                          >> $PROXY_VALUES
+    echo "    tls:"                                                                                                             >> $PROXY_VALUES
+    echo "      secretName: tanzu-demo-hub-tls"                                                                                 >> $PROXY_VALUES
+    echo "  routes:"                                                                                                            >> $PROXY_VALUES
+    echo "    - conditions:"                                                                                                    >> $PROXY_VALUES
+    echo "        - prefix: /"                                                                                                  >> $PROXY_VALUES
+    echo "      services:"                                                                                                      >> $PROXY_VALUES
+    echo "        - name: kubernetes-dashboard"                                                                                 >> $PROXY_VALUES
+    echo "          port: 443"                                                                                                  >> $PROXY_VALUES
+    echo "          protocol: tls"                                                                                              >> $PROXY_VALUES
+
+    cmdLoop kubectl apply -f $PROXY_VALUES
+
+    TEMP_VALUES=/tmp/helm_kubernetes_dashboard_sa_values.yaml
+    echo "apiVersion: v1"                                                                                                       >  $TEMP_VALUES
+    echo "kind: ServiceAccount"                                                                                                 >> $TEMP_VALUES
+    echo "metadata:"                                                                                                            >> $TEMP_VALUES
+    echo "  name: admin-user"                                                                                                   >> $TEMP_VALUES
+    echo "  namespace: kubernetes-dashboard"                                                                                    >> $TEMP_VALUES
+
+    cmdLoop kubectl apply -f $TEMP_VALUES
+
+    TEMP_VALUES=/tmp/helm_kubernetes_dashboard_rbac_values.yaml
+    echo "apiVersion: rbac.authorization.k8s.io/v1"                                                                             >  $TEMP_VALUES
+    echo "kind: ClusterRoleBinding"                                                                                             >> $TEMP_VALUES
+    echo "metadata:"                                                                                                            >> $TEMP_VALUES
+    echo "  name: admin-user"                                                                                                   >> $TEMP_VALUES
+    echo "roleRef:"                                                                                                             >> $TEMP_VALUES
+    echo "  apiGroup: rbac.authorization.k8s.io"                                                                                >> $TEMP_VALUES
+    echo "  kind: ClusterRole"                                                                                                  >> $TEMP_VALUES
+    echo "  name: cluster-admin"                                                                                                >> $TEMP_VALUES
+    echo "subjects:"                                                                                                            >> $TEMP_VALUES
+    echo "- kind: ServiceAccount"                                                                                               >> $TEMP_VALUES
+    echo "  name: admin-user"                                                                                                   >> $TEMP_VALUES
+    echo "  namespace: kubernetes-dashboard"                                                                                    >> $TEMP_VALUES
+
+    cmdLoop kubectl apply -f $TEMP_VALUES
+
+    messagePrint " ▪ Kubeapps Dashboard deployed"        "https://kubeapps.$DOMAIN"
   fi
+
+  cmdLoop helm ls -n $NAMESPACE -o json > /tmp/output.json
+  if [ -s /tmp/output.json ]; then
+    ver=$(jq -r --arg chart "$HELMCHART" '.[] | select(.name == $chart).app_version' /tmp/output.json)
+    crt=$(jq -r --arg chart "$HELMCHART" '.[] | select(.name == $chart).chart' /tmp/output.json)
+    stt=$(jq -r --arg chart "$HELMCHART" '.[] | select(.name == $chart).status' /tmp/output.json)
+    dat=$(jq -r --arg chart "$HELMCHART" '.[] | select(.name == $chart).updated' /tmp/output.json)
+  else
+    ver=""; crt=""; stt=""; dat=""
+  fi
+
+  secret_name=$(getServiceAccountSecret kubeapps-operator)
+  if [ "$secret_name" != "" ]; then
+    cnt=0; ret=1
+    while [ $ret -ne 0 -a $cnt -lt 5 ]; do
+      KUBEAPPS_TOKEN=$(kubectl get secret $secret_name -o jsonpath='{.data.token}' -o go-template='{{.data.token | base64decode}}' 2>/tmp/error.log); ret=$?
+
+      [ $ret -eq 0 ] && break
+      let cnt=cnt+1
+      sleep 30
+    done
+  else
+    echo "ERROR: Failed to get kubeapps secret"
+  fi
+
+  messagePrint " ▪ Verify Helm Chart $HELMCHART"   "$crt"
+  messagePrint "   Helm Chart Name"                "$HELMCHART"
+  messagePrint "   Helm Chart Version"             "$ver"
+  messagePrint "   Helm Chart Status"              "$stt"
+  messagePrint "   Helm Chart Installed/Updated"   "$dat"
+  messagePrint "   Kubernetes Dashboard Internal"  "dashboard.kubeapps.svc.cluster.local"
+  messagePrint "   Kubernetes Dashboard"           "https://dashboard.$DOMAIN"
+
+  if [ $ret -ne 0 ]; then
+    logMessages /tmp/error.log
+    echo "ERROR: Failed to get Kubeapps Token"
+    if [ "$NATIVE" == "0" ]; then
+      echo "       => tools/${TDH_TOOLS}.sh"
+      echo "          tdh-tools:/$ kubectl get secret $secret_name -o jsonpath='{.data.token}' -o go-template='{{.data.token | base64decode}}'"
+      echo "          tdh-tools:/$ exit"
+    else
+      echo "       => kubectl get secret $secret_name -o jsonpath='{.data.token}' -o go-template='{{.data.token | base64decode}}'"
+    fi
+
+    exit 1
+  fi
+
+  TOKEN=$(kubectl -n kubernetes-dashboard get secret $(kubectl -n kubernetes-dashboard get sa/admin-user -o jsonpath="{.secrets[0].name}") -o go-template="{{.data.token | base64decode}}")
+
+  messageLine
+  echo "DASHBOARD TOKEN: $TOKEN"
+  messageLine
 
 exit
   # --- STORE SETTINGS IN CONFIGMAP ---
