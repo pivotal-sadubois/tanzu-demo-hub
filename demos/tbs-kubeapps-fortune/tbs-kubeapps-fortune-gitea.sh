@@ -332,6 +332,7 @@ fi
 
 prtHead "Create deployment for the fortune app"
 cat files/fortune-app.yaml | sed -e "s+FORTUNE_DOCKER_IMAGE+$IMAGE_PATH+g" -e "s/NAMESPACE/$NAMESPACE/g" > $TBS_SOURCE_DIR/fortune-app.yaml
+execCat "$TBS_SOURCE_DIR/fortune-app.yaml"
 execCmd "kubectl create -f $TBS_SOURCE_DIR/fortune-app.yaml"
 execCmd "kubectl get pods,svc -n $NAMESPACE"
 
