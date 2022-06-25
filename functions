@@ -6479,7 +6479,7 @@ installGitea() {
       HELM_CHART_VERSION=$TDH_SERVICE_GITEA_VERSION
     fi
 
-    HELM_VALUES=/tmp/gitea_kubeapps_values.yaml
+    HELM_VALUES=/tmp/gitea_values.yaml
 
 #ppppppp
     echo "global:"                                                                                                              >  $HELM_VALUES
@@ -6749,7 +6749,7 @@ installKubeernetesDashboard() {
 
     cmdLoop kubectl apply -f $TEMP_VALUES
 
-    messagePrint " ▪ Kubeapps Dashboard deployed"        "https://kubeapps.$DOMAIN"
+    messagePrint " ▪ Kubernetes Dashboard deployed"        "https://dashboard.$DOMAIN"
   fi
 
   cmdLoop helm ls -n $NAMESPACE -o json > /tmp/output.json
@@ -6762,26 +6762,12 @@ installKubeernetesDashboard() {
     ver=""; crt=""; stt=""; dat=""
   fi
 
-  secret_name=$(getServiceAccountSecret kubeapps-operator)
-  if [ "$secret_name" != "" ]; then
-    cnt=0; ret=1
-    while [ $ret -ne 0 -a $cnt -lt 5 ]; do
-      KUBEAPPS_TOKEN=$(kubectl get secret $secret_name -o jsonpath='{.data.token}' -o go-template='{{.data.token | base64decode}}' 2>/tmp/error.log); ret=$?
-
-      [ $ret -eq 0 ] && break
-      let cnt=cnt+1
-      sleep 30
-    done
-  else
-    echo "ERROR: Failed to get kubeapps secret"
-  fi
-
   messagePrint " ▪ Verify Helm Chart $HELMCHART"   "$crt"
   messagePrint "   Helm Chart Name"                "$HELMCHART"
   messagePrint "   Helm Chart Version"             "$ver"
   messagePrint "   Helm Chart Status"              "$stt"
   messagePrint "   Helm Chart Installed/Updated"   "$dat"
-  messagePrint "   Kubernetes Dashboard Internal"  "dashboard.kubeapps.svc.cluster.local"
+  messagePrint "   Kubernetes Dashboard Internal"  "dashboard.svc.cluster.local"
   messagePrint "   Kubernetes Dashboard"           "https://dashboard.$DOMAIN"
 
   if [ $ret -ne 0 ]; then
@@ -6804,7 +6790,6 @@ installKubeernetesDashboard() {
   echo "DASHBOARD TOKEN: $TOKEN"
   messageLine
 
-exit
   # --- STORE SETTINGS IN CONFIGMAP ---
   uodateConfigMap tanzu-demo-hub TDH_SERVICE_KUBERNETES_DASHBOARD             "true"
 }
@@ -6867,24 +6852,28 @@ installKubeapps() {
     echo "    - tdh-docker-repo"                                                                                                >> $HELM_VALUES
     echo ""                                                                                                                     >> $HELM_VALUES
     echo "ingress:"                                                                                                             >> $HELM_VALUES
-    echo "  enabled: true"                                                                                                      >> $HELM_VALUES
-    echo "  annotations:"                                                                                                       >> $HELM_VALUES
-    echo "    kubernetes.io/ingress.class: contour"                                                                             >> $HELM_VALUES
-    echo "    ingress.kubernetes.io/force-ssl-redirect: \"true\""                                                               >> $HELM_VALUES
-    echo "  path: /"                                                                                                            >> $HELM_VALUES
-    echo "  hostname: kubeapps.$DOMAIN"                                                                                         >> $HELM_VALUES
-    echo "  tls: true"                                                                                                          >> $HELM_VALUES
-    echo "  extraTls:"                                                                                                          >> $HELM_VALUES
-    echo "  - hosts:"                                                                                                           >> $HELM_VALUES
-    echo "      - kubeapps.$DOMAIN"                                                                                             >> $HELM_VALUES
-    echo "    secretName: tanzu-demo-hub-tls"                                                                                   >> $HELM_VALUES
+    echo "  enabled: false"                                                                                                      >> $HELM_VALUES
+
+
+    #echo "  annotations:"                                                                                                       >> $HELM_VALUES
+    #echo "    kubernetes.io/ingress.class: contour"                                                                             >> $HELM_VALUES
+    #echo "    ingress.kubernetes.io/force-ssl-redirect: \"true\""                                                               >> $HELM_VALUES
+    #echo "  path: /"                                                                                                            >> $HELM_VALUES
+    #echo "  hostname: kubeapps.$DOMAIN"                                                                                         >> $HELM_VALUES
+    #echo "  tls: true"                                                                                                          >> $HELM_VALUES
+    #echo "  extraTls:"                                                                                                          >> $HELM_VALUES
+    #echo "  - hosts:"                                                                                                           >> $HELM_VALUES
+    #echo "      - kubeapps.$DOMAIN"                                                                                             >> $HELM_VALUES
+    #echo "    secretName: tanzu-demo-hub-tls"                                                                                   >> $HELM_VALUES
+
+
 
     messagePrint " ▪ Deploy the Kubeapps Helm Chart" "kubeapps"
 #gaga kubeapps
     cnt=0; ret=1; stt="notdeployed"
     while [ $ret -ne 0 -a $cnt -lt 5 -a "$stt" != "deployed" ]; do
-      #helm install $HELMCHART --namespace $NAMESPACE bitnami/$HELMCHART -f $HELM_VALUES --version $HELM_KUBEAPPS_VERSION --create-namespace --wait --wait-for-jobs --timeout 10m > /tmp/error.log 2>&1; ret=$?
-      helm install $HELMCHART --namespace $NAMESPACE bitnami/$HELMCHART -f $HELM_VALUES --version $HELM_KUBEAPPS_VERSION --create-namespace --wait --wait-for-jobs --timeout 10m; ret=$?
+      helm install $HELMCHART --namespace $NAMESPACE bitnami/$HELMCHART -f $HELM_VALUES --version $HELM_KUBEAPPS_VERSION --create-namespace --wait --wait-for-jobs --timeout 10m > /tmp/error.log 2>&1; ret=$?
+      #helm install $HELMCHART --namespace $NAMESPACE bitnami/$HELMCHART -f $HELM_VALUES --version $HELM_KUBEAPPS_VERSION --create-namespace --wait --wait-for-jobs --timeout 10m; ret=$?
 
       # --- WAIT FOR PODS TO GET STARTED ---
       runningPods $NAMESPACE
@@ -6915,6 +6904,34 @@ installKubeapps() {
 
       exit 1
     fi
+
+    PROXY_VALUES=/tmp/helm_kubeapps_proxy_values.yaml
+    echo "apiVersion: projectcontour.io/v1"                                                                                     >  $PROXY_VALUES
+    echo "kind: HTTPProxy"                                                                                                      >> $PROXY_VALUES
+    echo "metadata:"                                                                                                            >> $PROXY_VALUES
+    echo "  name: kubeapps-grpc"                                                                                                >> $PROXY_VALUES
+    echo "  namespace: kubeapps"                                                                                                >> $PROXY_VALUES
+    echo "spec:"                                                                                                                >> $PROXY_VALUES
+    echo "  virtualhost:"                                                                                                       >> $PROXY_VALUES
+    echo "    fqdn: kubeapps.$DOMAIN"                                                                                           >> $PROXY_VALUES
+    echo "    tls:"                                                                                                             >> $PROXY_VALUES
+    echo "      secretName: tanzu-demo-hub-tls"                                                                                 >> $PROXY_VALUES
+    echo "  routes:"                                                                                                            >> $PROXY_VALUES
+    echo "    - conditions:"                                                                                                    >> $PROXY_VALUES
+    echo "        - prefix: /apis/"                                                                                             >> $PROXY_VALUES
+    echo "      pathRewritePolicy:"                                                                                             >> $PROXY_VALUES
+    echo "        replacePrefix:"                                                                                               >> $PROXY_VALUES
+    echo "          - replacement: /"                                                                                           >> $PROXY_VALUES
+    echo "      services:"                                                                                                      >> $PROXY_VALUES
+    echo "        - name: kubeapps-internal-kubeappsapis"                                                                       >> $PROXY_VALUES
+    echo "          port: 8080"                                                                                                 >> $PROXY_VALUES
+    echo "          protocol: h2c"                                                                                              >> $PROXY_VALUES
+    echo "    - services:"                                                                                                      >> $PROXY_VALUES
+    echo "      - name: kubeapps"                                                                                               >> $PROXY_VALUES
+    echo "        port: 80"                                                                                                     >> $PROXY_VALUES
+
+    messagePrint " ▪ Installing HTTProxy"        "$PROXY_VALUES"
+    cmdLoop kubectl apply -f $PROXY_VALUES
 
     messagePrint " ▪ Create Cluster Role Binding"        "default:kubeapps-operator"
     createClusterRoleBinding kubeapps-operator cluster-admin default:kubeapps-operator > /dev/null 2>&1

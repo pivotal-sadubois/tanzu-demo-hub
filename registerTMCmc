@@ -87,10 +87,10 @@ else
   TMC_DISPLAY_NAME="tkgmc-vsphere--$TDH_USER"
 fi
 
-cnt=$(kubectl get ns | egrep -c "^svc-tmc-c") 
+cnt=$(kubectl get ns | egrep -c "^svc-tmc-") 
 echo "CNT:$cnt"
 if [ $cnt -gt 0 ]; then
-  kubectl -n svc-tmc-c8 get cm stack-config -o json > /tmp/clinfo.yaml 2>/dev/null; ret=$? 
+  kubectl -n svc-tmc- get cm stack-config -o json > /tmp/clinfo.yaml 2>/dev/null; ret=$? 
   if [ $ret -eq 0 ]; then 
     clu_mgmt=$(jq -r '.data.management_cluster_name' /tmp/clinfo.yaml) 
     tmc_host=$(jq -r '.data.tmc_host' /tmp/clinfo.yaml) 
