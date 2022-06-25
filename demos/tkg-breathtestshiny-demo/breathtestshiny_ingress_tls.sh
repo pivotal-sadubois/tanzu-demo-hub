@@ -8,7 +8,7 @@
 # ============================================================================================
 
 export TDH_TKGWC_NAME=tdh-1
-export NAMESPACE="breathtestshiny1"
+export NAMESPACE="breathtestshiny"
 export APPNAME="breathtestshiny"
 export TANZU_DEMO_HUB=$(cd "$(pwd)/$(dirname $0)/../../"; pwd)
 export TDHPATH=$(cd "$(pwd)/$(dirname $0)/../../"; pwd)
@@ -37,7 +37,7 @@ echo '                                | |_| |  __/ | | | | | (_) |              
 echo '                                |____/ \___|_| |_| |_|\___/                           '
 echo '                                                                                      '
 echo '          ----------------------------------------------------------------------------'
-echo '                          Breth Test Shiny - Demo Application                         '
+echo '                          Breath Test Shiny - Demo Application                        '
 echo '                               by Sacha Dubois, VMware Inc                            '
 echo '          ----------------------------------------------------------------------------'
 echo '                                                                                      '
@@ -105,6 +105,10 @@ prtHead "Create deployment for the ingress tesing app"
 execCmd "kubectl create deployment $APPNAME --image=dmenne/breathtestshiny --port=3838 -n $NAMESPACE"
 execCmd "kubectl get pods -n $NAMESPACE"
 
+prtHead "Create two service (echoserver-1 and echoserver-2) for the ingress tesing app"
+execCmd "kubectl expose deployment breathtestshiny --port=3838 -n $NAMESPACE"
+execCmd "kubectl get svc,pods -n $NAMESPACE"
+
 prtHead "Create a secret with the certificates of domain $DOMAIN"
 #execCmd "cat /tmp/https-secret.yaml"
 execCat "/tmp/https-secret.yaml"
@@ -119,7 +123,7 @@ execCmd "kubectl get ingress,svc,pods -n $NAMESPACE"
 
 prtHead "Open WebBrowser and verify the deployment"
 echo "     # --- Context Based Routing"
-echo "     => curl https://$APPNAME.${DOMAIN}/"
+echo "     => https://$APPNAME.${DOMAIN}/"
 echo ""
 
 exit

@@ -4,6 +4,8 @@ metadata:
   name: http-ingress
   namespace: NAMESPACE
   annotations:
+    ingress.kubernetes.io/ssl-passthrough: "true"
+    ingress.kubernetes.io/force-ssl-redirect: "true"
     kubernetes.io/ingress.class: contour
   labels:
     app: breathtestshiny

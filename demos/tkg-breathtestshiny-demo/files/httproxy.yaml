@@ -1,0 +1,17 @@
+apiVersion: projectcontour.io/v1
+kind: HTTPProxy
+metadata:
+  name: breathtestshiny-httpproxy
+  namespace: breathtestshiny
+spec:
+  virtualhost:
+    fqdn: breathtestshiny.DNS_DOMAIN
+    tls:
+      secretName:  https-secret
+  routes:
+    - conditions:
+        - prefix: /
+      enableWebsockets: true
+      services:
+        - name: breathtestshiny
+          port: 3838

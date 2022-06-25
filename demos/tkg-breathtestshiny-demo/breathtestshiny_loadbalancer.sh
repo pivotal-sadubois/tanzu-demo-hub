@@ -8,7 +8,7 @@
 # ============================================================================================
 
 export TDH_TKGWC_NAME=tdh-1
-export NAMESPACE="breathtestshiny1"
+export NAMESPACE="breathtestshiny"
 export APPNAME="breathtestshiny"
 export TANZU_DEMO_HUB=$(cd "$(pwd)/$(dirname $0)/../../"; pwd)
 export TDHPATH=$(cd "$(pwd)/$(dirname $0)/../../"; pwd)
@@ -76,7 +76,7 @@ ipa=$(kubectl -n $NAMESPACE get service/$APPNAME -o json | jq -r '.status.loadBa
 
 prtHead "Open WebBrowser and verify the deployment"
 echo "        # loopup with the AWS Loadbalancer IP Address"
-echo "     => curl http://$ipa:3838"
+echo "     => http://$ipa:3838"
 echo ""
 echo ""
 
