@@ -10176,6 +10176,7 @@ tdh_tools_download() {
     [ ! -d $TDH_DOCKER_CACHE ] && mkdir -p $TDH_DOCKER_CACHE
   fi
 
+#sacha
   # --- GET LATES TDH-TOOLS CONTAINER FROM AWS ---
   curl -f https://tanzu-demo-hub.s3.eu-central-1.amazonaws.com/${TDH_TOOLS_IMAGE}.sum >/dev/null 2>&1; ret=$?
   if [ $ret -ne 0 ]; then 
@@ -11853,6 +11854,131 @@ vSphereAPI_getToken() {
 }
 
 # ------------------------------------------------------------------------------------------
+# Function Name ......: vSphereAPI_createContentLibrary
+# Function Purpose ...: Create a vSphere Content Library
+# ------------------------------------------------------------------------------------------
+# Argument ($1) ......: vSphere API Token
+#          ($2) ......: vSphere Server Name
+#          ($3) ......: vSphere Namespace name
+# ------------------------------------------------------------------------------------------
+# Return Value .......: 0 on Success, 1 on failure
+# ------------------------------------------------------------------------------------------
+# https://developer.vmware.com/apis/vsphere-automation/latest/content/api/content/library/itemlibrary_id/get/
+# ------------------------------------------------------------------------------------------
+vSphereAPI_createContentLibrary() {
+  API_TOKEN=$1
+  VCENTER_SERVER=$2
+  VCENTER_CONTENT_LIBRARY=$3
+  VCENTER_DATASTORE=$4
+
+  export GOVC_INSECURE=1
+  export GOVC_URL=${VSPHERE_TKGS_VCENTER_SERVER}/sdk
+  export GOVC_USERNAME=$VSPHERE_TKGS_VCENTER_ADMIN
+  export GOVC_PASSWORD=$VSPHERE_TKGS_VCENTER_PASSWORD
+
+  #########################################################################################################################
+  ############################################ DOWNLOAD IMAGE FROM S3 ####################################################
+  #########################################################################################################################
+  VMSERVICE_IMAGE_NAME=centos-stream-8-vmservice-v1alpha1-1638306496810
+  VMSERVICE_IMAGE=${VMSERVICE_IMAGE_NAME}.ova
+
+  # --- LETS SEE IF WE HAVE THAT VERSION IN THE LOCAL CACHE ---
+  [ ! -d $HOME/.tanzu-demo-hub/cache/tdh-vmservice ] && mkdir -p $HOME/.tanzu-demo-hub/cache/tdh-vmservice
+  if [ ! -f $HOME/.tanzu-demo-hub/cache/tdh-vmservice/$VMSERVICE_IMAGE ]; then
+    # --- GET LATEST TDH-VMSERVICE IMAGE FROM AWS ---
+    curl -f https://tanzu-demo-hub.s3.eu-central-1.amazonaws.com/$VMSERVICE_IMAGE >/dev/null 2>&1; ret=$?
+    if [ $ret -ne 0 ]; then
+      echo "ERROR: The VM Service image ($VMSERVICE_IMAGE) clould not been found on AWS s3"
+      echo "       Please contact tanzu-demo-hub support team (#tanzu-demo-hub on slack)."
+      exit 0
+    fi
+
+    messagePrint " ▪ Downloading ($VMSERVICE_IMAGE) from AWS S3" "https://tanzu-demo-hub.s3.eu-central-1.amazonaws.com/${VMSERVICE_IMAGE}"
+    wget -q https://tanzu-demo-hub.s3.eu-central-1.amazonaws.com/${VMSERVICE_IMAGE} -O $HOME/.tanzu-demo-hub/cache/tdh-vmservice/${VMSERVICE_IMAGE}
+
+    if [ ! -f $HOME/.tanzu-demo-hub/cache/tdh-vmservice/${VMSERVICE_IMAGE} ]; then
+      echo "ERROR: Failed to download ${TDH_TOOLS_IMAGE}.tar from AWS S3, please try manually"
+      echo "       =>  wget -q https://tanzu-demo-hub.s3.eu-central-1.amazonaws.com/${VMSERVICE_IMAGE} -O $HOME/.tanzu-demo-hub/cache/tdh-vmservice/${VMSERVICE_IMAGE}"
+      exit
+    fi
+  fi
+
+  #########################################################################################################################
+  ################################### CREATE CONTENT-LIBRARY AND UPLOAD IMAGE #############################################
+  #########################################################################################################################
+
+  # --- CREATE CONTENT-LIBRARY ---
+  cnt=$(govc library.ls | egrep -c "^/$VCENTER_CONTENT_LIBRARY") 
+  if [ $cnt -eq 0 ]; then 
+    govc library.create -d="Tanzu Demo Hub - VM Images" $VCENTER_CONTENT_LIBRARY > /dev/null 2>&1
+
+    cnt=$(govc library.ls | egrep -c "^/$VCENTER_CONTENT_LIBRARY")
+    if [ $cnt -eq 0 ]; then 
+      echo "ERROR: failed to create Content Library ($VCENTER_CONTENT_LIBRARY), please try manually"
+      echo "       => export GOVC_INSECURE=1"
+      echo "          export GOVC_URL=$GOVC_URL"
+      echo "          export GOVC_USERNAME=$GOVC_USERNAME"
+      echo "          export GOVC_PASSWORD='$GOVC_PASSWORD'"
+      echo "          govc library.create -d=\"Tanzu Demo Hub - VM Images\" $VCENTER_CONTENT_LIBRARY"
+      exit 1
+    fi
+  fi
+
+  VCENTER_CONTENT_LIBRARY_ID=$(govc library.info /tanzu-demo-hub | egrep "  ID:" | awk '{ print $2 }' )
+
+  # --- CREATE CONTENT-LIBRARY ---
+  cnt=$(govc library.ls /$VCENTER_CONTENT_LIBRARY/ | egrep -c "^/$VCENTER_CONTENT_LIBRARY/$VMSERVICE_IMAGE_NAME")
+  if [ $cnt -eq 0 ]; then 
+    govc library.import $VCENTER_CONTENT_LIBRARY $HOME/.tanzu-demo-hub/cache/tdh-vmservice/$VMSERVICE_IMAGE > /dev/null 2>&1
+
+    cnt=$(govc library.ls /$VCENTER_CONTENT_LIBRARY/ | egrep -c "^/$VCENTER_CONTENT_LIBRARY/$VMSERVICE_IMAGE_NAM")
+    if [ $cnt -eq 0 ]; then 
+      echo "ERROR: failed to create Content Library ($VCENTER_CONTENT_LIBRARY), please try manually"
+      echo "       => export GOVC_INSECURE=1"
+      echo "          export GOVC_URL=$GOVC_URL"
+      echo "          export GOVC_USERNAME=$GOVC_USERNAME"
+      echo "          export GOVC_PASSWORD='$GOVC_PASSWORD'"
+      echo "          govc library.import $VCENTER_CONTENT_LIBRARY $HOME/.tanzu-demo-hub/cache/tdh-vmservice/$VMSERVICE_IMAGE"
+      exit 1
+    fi
+  fi
+
+
+  # --- DUMP CURRENT NAMESPACE DEFINITION --
+  NAMESPACE=tanzu-demo-hub
+  curl -k -X GET -H 'Content-type: application/json' \
+                 -H "vmware-api-session-id: $API_TOKEN" ${VCENTER_SERVER}/api/vcenter/namespaces/instances/$NAMESPACE 2>/dev/null | \
+                 jq -r > /tmp/vsphere_config.json
+
+  # --- PATCH NAMESPACE TO ADD CONTENT LIBRARY ---
+  cnt=$(jq -r '.vm_service_spec.content_libraries[]' /tmp/vsphere_config.json | egrep -c "^$VCENTER_CONTENT_LIBRARY_ID") 
+  if [ $cnt -eq 0 ]; then
+    jq -r --arg key "$VCENTER_CONTENT_LIBRARY_ID" '.vm_service_spec.content_libraries += [$key]' /tmp/vsphere_config.json > /tmp/vsphere_config_new.json
+
+    curl -k -X PATCH -H 'Content-type: application/json' \
+                     -H "vmware-api-session-id: $API_TOKEN" ${VCENTER_SERVER}/api/vcenter/namespaces/instances/$NAMESPACE \
+                     -d "@/tmp/vsphere_config_new.json" > /tmp/error.log 2>/dev/null; ret=$?
+
+    if [ $ret -ne 0 ]; then
+      logMessages /tmp/error.log
+      logMessages $VSPHERE_CONFIG
+      echo "ERROR: failed to Patch vSphere Namespace $NAMESPACE"
+      if [ "$NATIVE" == "0" ]; then
+        echo "       => tools/${TDH_TOOLS}.sh"
+        echo "          tdh-tools:/$ curl -k -X PATH -H \"vmware-api-session-id: $API_TOKEN\" ${VCENTER_SERVER}/api/vcenter/namespaces/instances/$NAMESPACE \\"
+        echo "                            -H 'Content-type: application/json' -d \"@$VSPHERE_CONFIG\""
+        echo "          tdh-tools:/$ exit"
+      else
+        echo "       => curl -k -X PATH -H \"vmware-api-session-id: $API_TOKEN\" ${VCENTER_SERVER}/api/vcenter/namespaces/instances/$NAMESPACE \\"
+        echo "               -H 'Content-type: application/json' -d \"@$VSPHERE_CONFIG\""
+      fi
+  
+      exit 1
+    fi
+  fi
+}
+
+# ------------------------------------------------------------------------------------------
 # Function Name ......: vSphereAPI_createNamespace
 # Function Purpose ...: Create a vSphere Namespace
 # ------------------------------------------------------------------------------------------
@@ -11910,6 +12036,7 @@ vSphereAPI_createNamespace() {
                    -H "vmware-api-session-id: $API_TOKEN" ${VCENTER_SERVER}/rest/vcenter/storage/policies 2>/dev/null | \
                    jq -r --arg key ${VSPHERE_TKGS_SUPERVISOR_STORAGE_POLICY} '.value[] | select(.name == $key ).policy')
 
+#sacha
   # --- UPDATE VSPHERE NAMESPACE CONFIG ---
   VSPHERE_CONFIG=/tmp/vsphere_config.json; rm -f $OKTA_CONFIG
   echo '{'                                                                         >  $VSPHERE_CONFIG
