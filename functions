@@ -4677,7 +4677,7 @@ tkgCreateCluster() {
 #nnnnnnnnnnnn
     # --- WRITE CLUSTER CONFIG ---
     echo "TDH_TKGMC_NAME=$TDH_TKGMC_NAME"                                                       >  $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.cfg
-    echo "TDH_TKGWC_K8S_VERSION=$TDH_TKGWC_KUBERNETES"                                          >> $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.cfg
+    echo "TDH_TKGWC_K8S_VERSION=$TDH_TKGWC_KUBERNETES_VERSION"                                          >> $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.cfg
     echo "TDH_TKGWC_K8S_IMAGE=$TDH_TKGWC_K8S_VERSION"                                           >> $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.cfg
     echo "TDH_TKGMC_CONFIG=\$HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.cfg"                 >> $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.cfg
     echo "TDH_TKGMC_KUBECONFIG=\$HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.kubeconfig"      >> $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.cfg
@@ -4686,7 +4686,7 @@ tkgCreateCluster() {
     [ "$TDH_DEPLOYMENT_CLUSTER_PLAN" == "dev" ] && DEP_SOURCE=$HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.yaml
     [ "$TDH_DEPLOYMENT_CLUSTER_PLAN" == "prod" ] && DEP_SOURCE=$HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.yaml
 
-    messagePrint " ▪ Kubernetes Version"               "$TDH_TKGWC_KUBERNETES"
+    messagePrint " ▪ Kubernetes Version"               "$TDH_TKGWC_KUBERNETES_VERSION"
     messagePrint " ▪ Kubernetes Image"                 "$TDH_TKGWC_K8S_VERSION"
 
     # --- GENERATE WORKLOAD CLUSTER CONFIG FILE ---
@@ -4770,9 +4770,9 @@ tkgCreateCluster() {
     [ "$TDH_TKGWC_WORKERNODES_MACHINE" == "" ] && TDH_TKGWC_WORKERNODES_MACHINE=Standard_D4s_v3
 
     # --- GET KUBERNETES VERSION ---
-    TDH_TKGWC_K8S_VERSION=$(tanzu kubernetes-release get | egrep "$TDH_TKGWC_KUBERNETES" | tail -1 | awk '{ print $1 }')
+    TDH_TKGWC_K8S_VERSION=$(tanzu kubernetes-release get | egrep "$TDH_TKGWC_KUBERNETES_VERSION" | tail -1 | awk '{ print $1 }')
 
-    messagePrint " ▪ Kubernetes Version"               "$TDH_TKGWC_KUBERNETES"
+    messagePrint " ▪ Kubernetes Version"               "$TDH_TKGWC_KUBERNETES_VERSION"
     messagePrint " ▪ Kubernetes Image"                 "$TDH_TKGWC_K8S_VERSION"
     messagePrint " ▪ TKG Cluster Worker Nodes"         "$TDH_TKGWC_WORKERNODES"
     messagePrint " ▪ TKG Cluster Worker Node Type"     "$TDH_TKGWC_WORKERNODES_TYPE ($TDH_TKGWC_WORKERNODES_MACHINE)"
@@ -4887,7 +4887,7 @@ tkgCreateCluster() {
 
       # --- GET KUBERNETES VERSION ---
       if [ "$TDH_TKGWC_K8S_VERSION" == "" ]; then
-        TDH_TKGWC_K8S_VERSION=$(tanzu kubernetes-release get | egrep "$TDH_TKGWC_KUBERNETES" | tail -1 | awk '{ print $1 }')
+        TDH_TKGWC_K8S_VERSION=$(tanzu kubernetes-release get | egrep "$TDH_TKGWC_KUBERNETES_VERSION" | tail -1 | awk '{ print $1 }')
       fi
 
       # --- SET DEFAULT VALUES ---
@@ -4948,7 +4948,7 @@ tkgCreateCluster() {
       cmdLoop kubectl config use-context $TDH_TKGMC_SUPERVISORCLUSTER > /dev/null 2>&1
 
       TDH_TKGWC_K8S_VERSION=$(kubectl get tanzukubernetesreleases -n $TDH_TKGMC_VSPHERE_NAMESPACE | \
-           egrep "$TDH_TKGWC_KUBERNETES" | tail -1 | awk '{ print $1 }')
+           egrep "$TDH_TKGWC_KUBERNETES_VERSION" | tail -1 | awk '{ print $1 }')
 
       TDH_TKGWC_WORKERNODES_MACHINE=$(nodeType $TDH_TKGWC_WORKERNODES_TYPE)
       TDH_TKGWC_CONTROPLANE_MACHINE=$(nodeType $TDH_TKGWC_CONTROPLANE_NODETYPE)
@@ -5049,7 +5049,6 @@ tkgCreateCluster() {
         cnt=0; ret=1
         while [ $ret -ne 0 -a $cnt -lt 3 ]; do
           kubectl apply -f $CLUSTER_CONFIG_FILE --wait=true > /tmp/error 2>&1; ret=$? 
-echo "  loop0: RET:$ret CNT:$cnt"
           [ "$ret" -eq 9 ] && break
           let cnt=cnt+1
           sleep 10
@@ -5066,7 +5065,6 @@ echo "  loop0: RET:$ret CNT:$cnt"
         while [ "$stt" != "True" ]; do
           cmdLoop kubectl get clusters -n $TDH_TKGMC_VSPHERE_NAMESPACE -o json > /tmp/output.json 2>/dev/null
           stt=$(jq -r --arg key "$TDH_TKGWC_NAME" '.items[] | select(.metadata.name == $key).status.conditions[] | select(.type == "Ready").status' /tmp/output.json)
-          echo "  loop1: stt = $stt"
           [ "$stt" == "True" ] && break
           sleep 10
         done
@@ -5075,7 +5073,6 @@ echo "  loop0: RET:$ret CNT:$cnt"
         while [ "$stt" != "True" ]; do
           cmdLoop kubectl get tanzukubernetescluster -n $TDH_TKGMC_VSPHERE_NAMESPACE -o json > /tmp/output.json 2>/dev/null
           stt=$(jq -r --arg key "$TDH_TKGWC_NAME" '.items[] | select(.metadata.name == $key).status.phase' /tmp/output.json)
-          echo "  loop2: stt = $stt"
           [ "$stt" == "running" -o "$stt" == "updating" ] && break
           sleep 10
         done
@@ -5084,7 +5081,6 @@ echo "  loop0: RET:$ret CNT:$cnt"
         cmdLoop kubectl get clusters -n $TDH_TKGMC_VSPHERE_NAMESPACE -o json > /tmp/output.json 2>/dev/null
         stt=$(jq -r --arg key "$TDH_TKGWC_NAME" '.items[] | select(.metadata.name == $key).status.conditions[].status' /tmp/output.json)
         typ=$(jq -r --arg key "$TDH_TKGWC_NAME" '.items[] | select(.metadata.name == $key).status.conditions[].type' /tmp/output.json)
-          echo "  loop3: stt = $stt typ = $typ"
       fi
     fi
 
@@ -5705,6 +5701,69 @@ verifyVMwareRegistry() {
 a=1
 }
 
+# ------------------------------------------------------------------------------------------
+# Function Name ......: createCertDelegation
+# Function Purpose ...: Install Tanzu Application Platform
+# ------------------------------------------------------------------------------------------
+# Argument ($1) ......:
+#          ($2) ......:
+# ------------------------------------------------------------------------------------------
+# Return Value .......: Status (HEALTY, DETACHING, FAILED)
+# ------------------------------------------------------------------------------------------
+# Reference ..........: https://projectcontour.io/docs/v1.21.0/config/tls-delegation/
+# ------------------------------------------------------------------------------------------
+createCertDelegation() {
+  NAMESPACE=tdh-cert-admin
+  CERTNAME=tanzu-demo-hub-tls
+
+  messageTitle "TLS Certificate Delegation ($CERTNAME)"
+
+  cmdLoop kubectl get ns -o json > /tmp/output.json
+  nam=$(jq -r --arg key "$NAMESPACE" '.items[] | select(.metadata.name == $key).metadata.name' /tmp/output.json)
+  if [ "$nam" == "" ]; then 
+    # --- CREATE NAMESPACE ---
+    messagePrint " ▪ Create Namespace" "$NAMESPACE"
+    createNamespace $NAMESPACE > /dev/null 2>&1
+
+    # --- COPY SECRET TO NAMESPACE ---
+    messagePrint " ▪ Copy TLS Secret" "tanzu-demo-hub-tls"
+    copySecretObject default $NAMESPACE tanzu-demo-hub-tls
+  fi
+
+  cmdLoop kubectl -n $NAMESPACE get TLSCertificateDelegation -o json > /tmp/output.json 2>/dev/null
+  nam=$(jq -r --arg key "tanzu-demo-hub-tls" '.items[].metadata | select(.name == $key).name' /tmp/output.json)
+  if [ "$nam" == "" ]; then 
+    messagePrint " ▪ Create TLS Cert Delegation to all namespaces" "$CERTNAME"
+
+    TMP_CONFIG=/tmp/tap_config.yaml
+    echo ""                                                                                                                       >  $TMP_CONFIG
+    echo "apiVersion: projectcontour.io/v1"                                                                                       >> $TMP_CONFIG
+    echo "kind: TLSCertificateDelegation"                                                                                         >> $TMP_CONFIG
+    echo "metadata:"                                                                                                              >> $TMP_CONFIG
+    echo "  name: $CERTNAME"                                                                                                      >> $TMP_CONFIG
+    echo "  namespace: tdh-cert-admin"                                                                                            >> $TMP_CONFIG
+    echo "spec:"                                                                                                                  >> $TMP_CONFIG
+    echo "  delegations:"                                                                                                         >> $TMP_CONFIG
+    echo "    - secretName: $CERTNAME"                                                                                            >> $TMP_CONFIG
+    echo "      targetNamespaces:"                                                                                                >> $TMP_CONFIG
+    echo "      - tap-gui"                                                                                                        >> $TMP_CONFIG
+    echo "    - secretName: $CERTNAME"                                                                                            >> $TMP_CONFIG
+    echo "      targetNamespaces:"                                                                                                >> $TMP_CONFIG
+    echo "      - \"*\""                                                                                                          >> $TMP_CONFIG
+
+    cmdLoop kubectl apply -f $TMP_CONFIG
+  fi
+}
+
+# ------------------------------------------------------------------------------------------
+# Function Name ......: installTAP
+# Function Purpose ...: Install Tanzu Application Platform
+# ------------------------------------------------------------------------------------------
+# Argument ($1) ......: 
+#          ($2) ......: 
+# ------------------------------------------------------------------------------------------
+# Return Value .......: Status (HEALTY, DETACHING, FAILED)
+# ------------------------------------------------------------------------------------------
 installTAP() {
   NAMESPACE=tanzu-system-packages
   NAMESPACE=tap-install 
@@ -5713,6 +5772,9 @@ installTAP() {
     uodateConfigMap tanzu-demo-hub TDH_SERVICE_TAP        "false"
     return
   fi
+
+  # --- UPDATE SECRET PLUGIN TO LATEST ---
+  tanzu plugin install secret > /dev/null 2>&1
 
   DNS_DOMAIN=$(getConfigMap tanzu-demo-hub TDH_INGRESS_CONTOUR_LB_DOMAIN)
   DNS_HARBOR=$(getConfigMap tanzu-demo-hub TDH_HARBOR_REGISTRY_DNS_HARBOR)
@@ -5747,6 +5809,38 @@ installTAP() {
     echo "       => docker login $TDH_HARBOR_REGISTRY_DNS_HARBOR -u admin -p $TDH_HARBOR_REGISTRY_ADMIN_PASSWORD"; exit 1
   fi
 
+  # --- VERIFY SERVICE CONFIGURATION ---
+  checkKubernetesServices registry_vmware
+
+  export TDH_REGISTRY_VMWARE_NAME=registry.tanzu.vmware.com
+  messagePrint " ▪ Verify VMware Registry Access" "$TDH_REGISTRY_VMWARE_NAME"
+  messagePrint "   Registry User"                 "$TDH_REGISTRY_VMWARE_USER"
+  messagePrint "   Registry Password"             "$(maskPassword \"$TDH_REGISTRY_VMWARE_PASS\")"
+
+  cnt=0; ret=1
+  while [ $ret -ne 0 -a $cnt -lt 5 ]; do
+    docker login $TDH_REGISTRY_VMWARE_NAME -u $TDH_REGISTRY_VMWARE_USER -p $TDH_REGISTRY_VMWARE_PASS > /tmp/error 2>&1; ret=$?
+    sleep 10
+    let cnt=cnt+1
+  done
+
+  if [ $ret -ne 0 ]; then
+    logMessages /tmp/error.log
+    echo "ERROR: failed to login to docker registry $TDH_REGISTRY_VMWARE_NAME"
+    if [ "$NATIVE" == "0" ]; then
+      echo "       => tools/${TDH_TOOLS}.sh"
+      echo "          tdh-tools:/$ docker login $TDH_REGISTRY_VMWARE_NAME -u $TDH_REGISTRY_VMWARE_USER -p $TDH_REGISTRY_VMWARE_PASS"
+      echo "          tdh-tools:/$ exit"
+    else
+      echo "       => docker login $TDH_REGISTRY_VMWARE_NAME -u $TDH_REGISTRY_VMWARE_USER -p $TDH_REGISTRY_VMWARE_PASS"
+    fi
+
+    exit 1
+  fi
+
+  #########################################################################################################################
+  ###################################### RELOCATE IMAGES TO THE HARBOR REGISTRY ###########################################
+  #########################################################################################################################
 if [ 1 -eq 1 ]; then
   messagePrint " ▪ relocating tap images to local registry" "$INSTALL_REGISTRY_HOSTNAME/library/tap-packages"
   cnt=0; ret=1
@@ -5773,7 +5867,6 @@ if [ 1 -eq 1 ]; then
 
     exit 1
   fi
-
 
   # --- CREATE A REGISTRY SECRET ---
   messagePrint " ▪ creating registry secret" "$INSTALL_REGISTRY_HOSTNAME"
@@ -5806,151 +5899,171 @@ fi
   TanzuPackage_AddRepo       $NAMESPACE tanzu-tap-repository ${INSTALL_REGISTRY_HOSTNAME}/library/tap-packages:$TAP_VERSION 
   TanzuPackage_RepoSync      $NAMESPACE
 
-  if [ 2 -eq 1 ]; then 
-    # --- TANZU BUILD SERVICE CLI (kp) BINARY ---
-    TDH_BNDL_NAM="tanzu-application-platform"
-    TDH_BNDL_VER=$TDH_SERVICE_TAP_VERSION
-    TDH_FILE_TAG="kp"
-    TDH_FILE_STR="${TDH_FILE_TAG}-linux"
-    TDH_FILE_VER=$TDH_SERVICE_BUILD_SERVICE_KP
-    TDH_FILE_NAM="$TDH_FILE_TAG-linux-$TDH_FILE_VER"
-  
-    if [ ! -e $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER/$TDH_FILE_NAM ]; then
-      downloadFromPivnet $TDH_BNDL_NAM $TDH_BNDL_VER "$TDH_FILE_VER" "${TDH_FILE_STR}"
-      if [ -f /tmp/$TDH_FILE_NAM ]; then
-        [ ! -d $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER ] && mkdir -p $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER
-        mv /tmp/$TDH_FILE_NAM $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER
-        cp $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER/$TDH_FILE_NAM $TDH_DOCKER_FILES/$TDH_FILE_TAG
-        chmod a+x $TDH_DOCKER_FILES/$TDH_FILE_TAG
-      fi
-  
-      REBUILD_REQUIRED_SOFTWARE=1       ## REBUILD REQUIRED BECAUSE OF SOFTWARE CHANGE
-    else
-      cp $TDH_DOCKER_CACHE/$TDH_FILE_TAG-$TDH_FILE_VER/$TDH_FILE_NAM $TDH_DOCKER_FILES/$TDH_FILE_TAG
-      chmod a+x $TDH_DOCKER_FILES/$TDH_FILE_TAG
-    fi
-  fi
-
-  messageTitle "Tanzu Application Platform (TAP)"
-
   #cmdLoop tanzu package installed list -A -o json > /tmp/output.json 2>/dev/null
   #pkg=$(jq -r --arg key "$PACKAGE_NAME" '.[] | select(.name == $key).name' /tmp/output.json)
   #if [ "$pkg" != "$PACKAGE_NAME" ]; then
 
   cnt=0
   if [ $cnt -eq 0 ]; then
-    if [ "$TDH_INFRASTRUCTURE" == "minikube" ]; then
-      TDH_STORAGE_CLASS=$TDH_MINIKUBE_STORAGE_CLASS
-    fi
-
     TDH_SERVICE_TAP_VERSION=$(getConfigMap tanzu-demo-hub TDH_SERVICE_TAP_VERSION)
 
-    # --- VERIFY SERVICE CONFIGURATION ---
-    checkKubernetesServices registry_vmware
-    checkKubernetesServices registry_docker
-    checkKubernetesServices github
+    #########################################################################################################################
+    ######################################## CREATE GITEA REPOSITORY FOR CATALOG ############################################
+    #########################################################################################################################
+    GITEA_ORGANISATION=tanzu
+    for repo in yelb_catalog blank_catalog; do
+      createGiteaOrg  $GITEA_ORGANISATION
+      createGiteaRepo $GITEA_ORGANISATION $repo
 
-    export TDH_REGISTRY_VMWARE_NAME=registry.tanzu.vmware.com
-    messagePrint " ▪ Verify VMware Registry Access" "$TDH_REGISTRY_VMWARE_NAME"
-    messagePrint "   Registry User"                 "$TDH_REGISTRY_VMWARE_USER"
-    messagePrint "   Registry Password"             "$(maskPassword \"$TDH_REGISTRY_VMWARE_PASS\")"
+      echo "https://gitea.$DNS_DOMAIN/$GITEA_ORGANISATION/$repo/raw/branch/master/catalog-info.yaml"
+      curl -f https://gitea.$DNS_DOMAIN/$GITEA_ORGANISATION/$repo/raw/branch/master/catalog-info.yaml > /dev/null 2>&1; ret=$?
+      if [ $ret -ne 0 ]; then 
+        GIT_WORKDIR=/tmp/$repo
 
-    GITEA_ADMIN_TOKEN=$(getConfigMap tanzu-demo-hub TDH_SERVICE_GITEA_ADMIN_TOKEN_ID)
+        rm -rf $GIT_WORKDIR
+        cp -r /tanzu-tap/$repo /tmp
 
-    cnt=0; ret=1
-    while [ $ret -ne 0 -a $cnt -lt 5 ]; do
-      docker login $TDH_REGISTRY_VMWARE_NAME -u $TDH_REGISTRY_VMWARE_USER -p $TDH_REGISTRY_VMWARE_PASS > /tmp/error 2>&1; ret=$?
-      sleep 10
-      let cnt=cnt+1
+        TDH_SERVICE_GITEA_ADMIN_USER=$(getConfigMap tanzu-demo-hub TDH_SERVICE_GITEA_ADMIN_USER)
+        TDH_SERVICE_GITEA_ADMIN_PASS=$(getConfigMap tanzu-demo-hub TDH_SERVICE_GITEA_ADMIN_PASS)
+        TDH_SERVICE_GITEA_ADMIN_TOKEN_ID=$(getConfigMap tanzu-demo-hub TDH_SERVICE_GITEA_ADMIN_TOKEN_ID)
+
+        git --work-tree=$GIT_WORKDIR --git-dir=$GIT_WORKDIR/.git init > /dev/null 2>&1
+        git --work-tree=$GIT_WORKDIR --git-dir=$GIT_WORKDIR/.git add $GIT_WORKDIR > /dev/null 2>&1
+        git --work-tree=$GIT_WORKDIR --git-dir=$GIT_WORKDIR/.git config user.email "tanzu@example.com" > /dev/null 2>&1
+        git --work-tree=$GIT_WORKDIR --git-dir=$GIT_WORKDIR/.git config user.name "Gitea Admin"> /dev/null 2>&1
+        git --work-tree=$GIT_WORKDIR --git-dir=$GIT_WORKDIR/.git commit -m "adding files" > /dev/null 2>&1
+
+        git --work-tree=$GIT_WORKDIR --git-dir=$GIT_WORKDIR/.git remote add origin \
+            https://$TDH_SERVICE_GITEA_ADMIN_USER:$TDH_SERVICE_GITEA_ADMIN_PASS@gitea.$DNS_DOMAIN/$GITEA_ORGANISATION/${repo}.git > /dev/null 2>&1
+        git --work-tree=$GIT_WORKDIR --git-dir=$GIT_WORKDIR/.git push origin master > /dev/null 2>&1
+
+
+        curl -f https://gitea.$DNS_DOMAIN/$GITEA_ORGANISATION/$repo/raw/branch/master/catalog-info.yaml > /dev/null 2>&1; ret=$?
+        if [ $ret -ne 0 ]; then
+          echo "ERROR: failed to sync catalog files to gitea repository"; exit 1
+        fi
+      fi
     done
 
-    if [ $ret -ne 0 ]; then
-      logMessages /tmp/error.log
-      echo "ERROR: failed to login to docker registry $TDH_REGISTRY_VMWARE_NAME"
-      if [ "$NATIVE" == "0" ]; then
-        echo "       => tools/${TDH_TOOLS}.sh"
-        echo "          tdh-tools:/$ docker login $TDH_REGISTRY_VMWARE_NAME -u $TDH_REGISTRY_VMWARE_USER -p $TDH_REGISTRY_VMWARE_PASS"
-        echo "          tdh-tools:/$ exit"
-      else
-        echo "       => docker login $TDH_REGISTRY_VMWARE_NAME -u $TDH_REGISTRY_VMWARE_USER -p $TDH_REGISTRY_VMWARE_PASS"
-      fi
-  
-      exit 1
-    fi
+    TAP_CONFIG_1=/tmp/tap_config_stage_1.yaml
+    echo ""                                                                                                                       >  $TAP_CONFIG_1
+    echo "profile: full"                                                                                                          >> $TAP_CONFIG_1
+    echo ""                                                                                                                       >> $TAP_CONFIG_1
+    echo "excluded_packages:"                                                                                                     >> $TAP_CONFIG_1
+    echo "  - cert-manager.tanzu.vmware.com"                                                                                      >> $TAP_CONFIG_1
+    echo "  - contour.tanzu.vmware.com"                                                                                           >> $TAP_CONFIG_1
+    echo "  - accelerator.apps.tanzu.vmware.com"                                                                                  >> $TAP_CONFIG_1
+    echo "  - api-portal.tanzu.vmware.com"                                                                                        >> $TAP_CONFIG_1
+    echo "  - backend.appliveview.tanzu.vmware.com"                                                                               >> $TAP_CONFIG_1
+    echo "  - connector.appliveview.tanzu.vmware.com"                                                                             >> $TAP_CONFIG_1
+    echo "  - conventions.appliveview.tanzu.vmware.com"                                                                           >> $TAP_CONFIG_1
+    echo "  # buildservice.tanzu.vmware.com"                                                                                      >> $TAP_CONFIG_1
+    echo "  - cartographer.tanzu.vmware.com"                                                                                      >> $TAP_CONFIG_1
+    echo "  - cnrs.tanzu.vmware.com"                                                                                              >> $TAP_CONFIG_1
+    echo "  - controller.conventions.apps.tanzu.vmware.com"                                                                       >> $TAP_CONFIG_1
+    echo "  - developer-conventions.tanzu.vmware.com"                                                                             >> $TAP_CONFIG_1
+    echo "  - fluxcd.source.controller.tanzu.vmware.com"                                                                          >> $TAP_CONFIG_1
+    echo "  - grype.scanning.apps.tanzu.vmware.com"                                                                               >> $TAP_CONFIG_1
+    echo "  - image-policy-webhook.signing.apps.tanzu.vmware.com"                                                                 >> $TAP_CONFIG_1
+    echo "  - metadata-store.apps.tanzu.vmware.com"                                                                               >> $TAP_CONFIG_1
+    echo "  - ootb-delivery-basic.tanzu.vmware.com"                                                                               >> $TAP_CONFIG_1
+    echo "  - ootb-supply-chain-basic.tanzu.vmware.com"                                                                           >> $TAP_CONFIG_1
+    echo "  - ootb-templates.tanzu.vmware.com"                                                                                    >> $TAP_CONFIG_1
+    echo "  - scanning.apps.tanzu.vmware.com"                                                                                     >> $TAP_CONFIG_1
+    echo "  - service-bindings.labs.vmware.com"                                                                                   >> $TAP_CONFIG_1
+    echo "  - services-toolkit.tanzu.vmware.com"                                                                                  >> $TAP_CONFIG_1
+    echo "  - controller.source.apps.tanzu.vmware.com"                                                                            >> $TAP_CONFIG_1
+    echo "  - spring-boot-conventions.tanzu.vmware.com"                                                                           >> $TAP_CONFIG_1
+    echo "  - tap-auth.tanzu.vmware.com"                                                                                          >> $TAP_CONFIG_1
+    echo "  - tap-gui.tanzu.vmware.com"                                                                                           >> $TAP_CONFIG_1
+    echo "  - tap-telemetry.tanzu.vmware.com"                                                                                     >> $TAP_CONFIG_1
+    echo "  - tekton.tanzu.vmware.com"                                                                                            >> $TAP_CONFIG_1
+    echo "  # learningcenter.tanzu.vmware.com"                                                                                    >> $TAP_CONFIG_1
+    echo "  # workshops.learningcenter.tanzu.vmware.com"                                                                          >> $TAP_CONFIG_1
+    echo ""                                                                                                                       >> $TAP_CONFIG_1
 
-    # --- RELOCATE IMAGES ---
+    TAP_CONFIG_2=/tmp/tap_config_stage_2.yaml
+    echo ""                                                                                                                       >  $TAP_CONFIG_2
+    echo "profile: full"                                                                                                          >> $TAP_CONFIG_2
+    echo ""                                                                                                                       >> $TAP_CONFIG_2
+    echo "excluded_packages:"                                                                                                     >> $TAP_CONFIG_2
+    echo "  - cert-manager.tanzu.vmware.com"                                                                                      >> $TAP_CONFIG_2
+    echo "  - contour.tanzu.vmware.com"                                                                                           >> $TAP_CONFIG_2
+    echo "  # accelerator.apps.tanzu.vmware.com"                                                                                  >> $TAP_CONFIG_2
+    echo "  # api-portal.tanzu.vmware.com"                                                                                        >> $TAP_CONFIG_2
+    echo "  # backend.appliveview.tanzu.vmware.com"                                                                               >> $TAP_CONFIG_2
+    echo "  # connector.appliveview.tanzu.vmware.com"                                                                             >> $TAP_CONFIG_2
+    echo "  # conventions.appliveview.tanzu.vmware.com"                                                                           >> $TAP_CONFIG_2
+    echo "  # buildservice.tanzu.vmware.com"                                                                                      >> $TAP_CONFIG_2
+    echo "  # cartographer.tanzu.vmware.com"                                                                                      >> $TAP_CONFIG_2
+    echo "  # cnrs.tanzu.vmware.com"                                                                                              >> $TAP_CONFIG_2
+    echo "  # controller.conventions.apps.tanzu.vmware.com"                                                                       >> $TAP_CONFIG_2
+    echo "  # developer-conventions.tanzu.vmware.com"                                                                             >> $TAP_CONFIG_2
+    echo "  # fluxcd.source.controller.tanzu.vmware.com"                                                                          >> $TAP_CONFIG_2
+    echo "  # grype.scanning.apps.tanzu.vmware.com"                                                                               >> $TAP_CONFIG_2
+    echo "  # image-policy-webhook.signing.apps.tanzu.vmware.com"                                                                 >> $TAP_CONFIG_2
+    echo "  # metadata-store.apps.tanzu.vmware.com"                                                                               >> $TAP_CONFIG_2
+    echo "  # ootb-delivery-basic.tanzu.vmware.com"                                                                               >> $TAP_CONFIG_2
+    echo "  # ootb-supply-chain-basic.tanzu.vmware.com"                                                                           >> $TAP_CONFIG_2
+    echo "  - ootb-templates.tanzu.vmware.com"                                                                                    >> $TAP_CONFIG_2
+    echo "  # scanning.apps.tanzu.vmware.com"                                                                                     >> $TAP_CONFIG_2
+    echo "  # service-bindings.labs.vmware.com"                                                                                   >> $TAP_CONFIG_2
+    echo "  # services-toolkit.tanzu.vmware.com"                                                                                  >> $TAP_CONFIG_2
+    echo "  # controller.source.apps.tanzu.vmware.com"                                                                            >> $TAP_CONFIG_2
+    echo "  # spring-boot-conventions.tanzu.vmware.com"                                                                           >> $TAP_CONFIG_2
+    echo "  # tap-auth.tanzu.vmware.com"                                                                                          >> $TAP_CONFIG_2
+    echo "  # tap-gui.tanzu.vmware.com"                                                                                           >> $TAP_CONFIG_2
+    echo "  # tap-telemetry.tanzu.vmware.com"                                                                                     >> $TAP_CONFIG_2
+    echo "  - tekton.tanzu.vmware.com"                                                                                            >> $TAP_CONFIG_2
+    echo "  # learningcenter.tanzu.vmware.com"                                                                                    >> $TAP_CONFIG_2
+    echo "  # workshops.learningcenter.tanzu.vmware.com"                                                                          >> $TAP_CONFIG_2
+    echo ""                                                                                                                       >> $TAP_CONFIG_2
 
-    messagePrint " ▪ Relocate images to" "${INSTALL_REGISTRY_HOSTNAME}/library/tap-packages"
-    cnt=0; ret=1
-    while [ $ret -ne 0 -a $cnt -lt 5 ]; do
-      #imgpkg copy -b registry.tanzu.vmware.com/tanzu-application-platform/tap-packages:${TAP_VERSION} \
-      #            --to-repo ${INSTALL_REGISTRY_HOSTNAME}/library/tap-packages > /tmp/error.log 2>&1; ret=$?
-      imgpkg copy -b registry.tanzu.vmware.com/tanzu-application-platform/tap-packages:${TAP_VERSION} \
-                  --to-repo ${INSTALL_REGISTRY_HOSTNAME}/library/tap-packages; ret=$?
-      [ $ret -eq 0 ] && break
-      let cnt=cnt+1
-      sleep 30
-    done
+    TAP_CONFIG_3=/tmp/tap_config_stage_3.yaml
+    echo ""                                                                                                                       >  $TAP_CONFIG_3
+    echo "profile: full"                                                                                                          >> $TAP_CONFIG_3
+    echo ""                                                                                                                       >> $TAP_CONFIG_3
+    echo "excluded_packages:"                                                                                                     >> $TAP_CONFIG_3
+    echo "  - cert-manager.tanzu.vmware.com"                                                                                      >> $TAP_CONFIG_3
+    echo "  - contour.tanzu.vmware.com"                                                                                           >> $TAP_CONFIG_3
+    echo "  # accelerator.apps.tanzu.vmware.com"                                                                                  >> $TAP_CONFIG_3
+    echo "  # api-portal.tanzu.vmware.com"                                                                                        >> $TAP_CONFIG_3
+    echo "  # backend.appliveview.tanzu.vmware.com"                                                                               >> $TAP_CONFIG_3
+    echo "  # connector.appliveview.tanzu.vmware.com"                                                                             >> $TAP_CONFIG_3
+    echo "  # conventions.appliveview.tanzu.vmware.com"                                                                           >> $TAP_CONFIG_3
+    echo "  # buildservice.tanzu.vmware.com"                                                                                      >> $TAP_CONFIG_3
+    echo "  # cartographer.tanzu.vmware.com"                                                                                      >> $TAP_CONFIG_3
+    echo "  # cnrs.tanzu.vmware.com"                                                                                              >> $TAP_CONFIG_3
+    echo "  # controller.conventions.apps.tanzu.vmware.com"                                                                       >> $TAP_CONFIG_3
+    echo "  # developer-conventions.tanzu.vmware.com"                                                                             >> $TAP_CONFIG_3
+    echo "  # fluxcd.source.controller.tanzu.vmware.com"                                                                          >> $TAP_CONFIG_3
+    echo "  # grype.scanning.apps.tanzu.vmware.com"                                                                               >> $TAP_CONFIG_3
+    echo "  # image-policy-webhook.signing.apps.tanzu.vmware.com"                                                                 >> $TAP_CONFIG_3
+    echo "  # metadata-store.apps.tanzu.vmware.com"                                                                               >> $TAP_CONFIG_3
+    echo "  # ootb-delivery-basic.tanzu.vmware.com"                                                                               >> $TAP_CONFIG_3
+    echo "  # ootb-supply-chain-basic.tanzu.vmware.com"                                                                           >> $TAP_CONFIG_3
+    echo "  # ootb-templates.tanzu.vmware.com"                                                                                    >> $TAP_CONFIG_3
+    echo "  # scanning.apps.tanzu.vmware.com"                                                                                     >> $TAP_CONFIG_3
+    echo "  # service-bindings.labs.vmware.com"                                                                                   >> $TAP_CONFIG_3
+    echo "  # services-toolkit.tanzu.vmware.com"                                                                                  >> $TAP_CONFIG_3
+    echo "  # controller.source.apps.tanzu.vmware.com"                                                                            >> $TAP_CONFIG_3
+    echo "  # spring-boot-conventions.tanzu.vmware.com"                                                                           >> $TAP_CONFIG_3
+    echo "  # tap-auth.tanzu.vmware.com"                                                                                          >> $TAP_CONFIG_3
+    echo "  # tap-gui.tanzu.vmware.com"                                                                                           >> $TAP_CONFIG_3
+    echo "  # tap-telemetry.tanzu.vmware.com"                                                                                     >> $TAP_CONFIG_3
+    echo "  - tekton.tanzu.vmware.com"                                                                                            >> $TAP_CONFIG_3
+    echo "  # learningcenter.tanzu.vmware.com"                                                                                    >> $TAP_CONFIG_3
+    echo "  # workshops.learningcenter.tanzu.vmware.com"                                                                          >> $TAP_CONFIG_3
+    echo ""                                                                                                                       >> $TAP_CONFIG_3
 
-    if [ $ret -ne 0 ]; then
-      logMessages /tmp/error.log
-      echo "ERROR: Image Relocation failed"
-      if [ "$NATIVE" == "0" ]; then
-        echo "       => tools/${TDH_TOOLS}.sh"
-        echo "          tdh-tools:/$ imgpkg copy -b registry.tanzu.vmware.com/tanzu-application-platform/tap-packages:${TAP_VERSION} \\"
-        echo "                                   --to-repo ${INSTALL_REGISTRY_HOSTNAME}/library/tap-packages"; exit 1
-        echo "          tdh-tools:/$ exit"
-      else
-        echo "       => imgpkg copy -b registry.tanzu.vmware.com/tanzu-application-platform/tap-packages:${TAP_VERSION} \\"
-        echo "          --to-repo ${INSTALL_REGISTRY_HOSTNAME}/library/tap-packages"; exit 1
-      fi
-
-      exit 1
-    fi
-
-    TAP_CONFIG=/tmp/tap_config.yaml
-    echo ""                                                                                                                       >  $TAP_CONFIG
-    echo "profile: full"                                                                                                          >> $TAP_CONFIG
-    echo ""                                                                                                                       >> $TAP_CONFIG
-    echo "excluded_packages:"                                                                                                     >> $TAP_CONFIG
-    echo "  - cert-manager.tanzu.vmware.com"                                                                                      >> $TAP_CONFIG
-    echo "  - contour.tanzu.vmware.com"                                                                                           >> $TAP_CONFIG
-    echo "  - accelerator.apps.tanzu.vmware.com"                                                                                  >> $TAP_CONFIG
-    echo "  - api-portal.tanzu.vmware.com"                                                                                        >> $TAP_CONFIG
-    echo "  - backend.appliveview.tanzu.vmware.com"                                                                               >> $TAP_CONFIG
-    echo "  - connector.appliveview.tanzu.vmware.com"                                                                             >> $TAP_CONFIG
-    echo "  - conventions.appliveview.tanzu.vmware.com"                                                                           >> $TAP_CONFIG
-    echo "  # buildservice.tanzu.vmware.com"                                                                                      >> $TAP_CONFIG
-    echo "  - cartographer.tanzu.vmware.com"                                                                                      >> $TAP_CONFIG
-    echo "  - cnrs.tanzu.vmware.com"                                                                                              >> $TAP_CONFIG
-    echo "  - controller.conventions.apps.tanzu.vmware.com"                                                                       >> $TAP_CONFIG
-    echo "  - developer-conventions.tanzu.vmware.com"                                                                             >> $TAP_CONFIG
-    echo "  - fluxcd.source.controller.tanzu.vmware.com"                                                                          >> $TAP_CONFIG
-    echo "  - grype.scanning.apps.tanzu.vmware.com"                                                                               >> $TAP_CONFIG
-    echo "  - image-policy-webhook.signing.apps.tanzu.vmware.com"                                                                 >> $TAP_CONFIG
-    echo "  - metadata-store.apps.tanzu.vmware.com"                                                                               >> $TAP_CONFIG
-    echo "  - ootb-delivery-basic.tanzu.vmware.com"                                                                               >> $TAP_CONFIG
-    echo "  - ootb-supply-chain-basic.tanzu.vmware.com"                                                                           >> $TAP_CONFIG
-    echo "  - ootb-templates.tanzu.vmware.com"                                                                                    >> $TAP_CONFIG
-    echo "  - scanning.apps.tanzu.vmware.com"                                                                                     >> $TAP_CONFIG
-    echo "  - service-bindings.labs.vmware.com"                                                                                   >> $TAP_CONFIG
-    echo "  - services-toolkit.tanzu.vmware.com"                                                                                  >> $TAP_CONFIG
-    echo "  - controller.source.apps.tanzu.vmware.com"                                                                            >> $TAP_CONFIG
-    echo "  - spring-boot-conventions.tanzu.vmware.com"                                                                           >> $TAP_CONFIG
-    echo "  - tap-auth.tanzu.vmware.com"                                                                                          >> $TAP_CONFIG
-    echo "  - tap-gui.tanzu.vmware.com"                                                                                           >> $TAP_CONFIG
-    echo "  - tap-telemetry.tanzu.vmware.com"                                                                                     >> $TAP_CONFIG
-    echo "  - tekton.tanzu.vmware.com"                                                                                            >> $TAP_CONFIG
-    echo "  - learningcenter.tanzu.vmware.com"                                                                                    >> $TAP_CONFIG
-    echo "  - workshops.learningcenter.tanzu.vmware.com"                                                                          >> $TAP_CONFIG
-    echo ""                                                                                                                       >> $TAP_CONFIG
+    TAP_CONFIG=/tmp/tap_config_all.yaml
     echo "buildservice:"                                                                                                          >> $TAP_CONFIG
     echo "  kp_default_repository: $DNS_HARBOR/library/tap-build-service"                                                         >> $TAP_CONFIG
     echo "  kp_default_repository_username: admin"                                                                                >> $TAP_CONFIG
     echo "  kp_default_repository_password: $TDH_HARBOR_REGISTRY_ADMIN_PASSWORD"                                                  >> $TAP_CONFIG
     echo "  tanzunet_username: $TDH_REGISTRY_VMWARE_USER"                                                                         >> $TAP_CONFIG
     echo "  tanzunet_password: $TDH_REGISTRY_VMWARE_PASS"                                                                         >> $TAP_CONFIG
-    echo "  enable_automatic_dependency_updates: true"                                                                        >> $TAP_CONFIG
+    echo "  enable_automatic_dependency_updates: \"true\""                                                                        >> $TAP_CONFIG
     echo "  descriptor_name: \"full\""                                                                                            >> $TAP_CONFIG
     echo "supply_chain: basic"                                                                                                    >> $TAP_CONFIG
     echo ""                                                                                                                       >> $TAP_CONFIG
@@ -5980,31 +6093,48 @@ fi
     echo "        LBType: nlb"                                                                                                    >> $TAP_CONFIG
     echo ""                                                                                                                       >> $TAP_CONFIG
     echo "tap_gui:"                                                                                                               >> $TAP_CONFIG
-    echo "  service_type: LoadBalancer"                                                                                           >> $TAP_CONFIG
-    echo "  #ingressEnabled: \"true\""                                                                                            >> $TAP_CONFIG
-    echo "  ingressDomain: tap-gui.$DNS_DOMAIN"                                                                                   >> $TAP_CONFIG
+    echo "  ingressEnabled: \"true\""                                                                                             >> $TAP_CONFIG
+    echo "  ingressDomain: $DNS_DOMAIN"                                                                                           >> $TAP_CONFIG
+    echo "  storageClass: \"$TDH_STORAGE_CLASS\""                                                                                 >> $TAP_CONFIG
+    echo "  service_type: ClusterIP"                                                                                              >> $TAP_CONFIG
+    echo "  tls:"                                                                                                                 >> $TAP_CONFIG
+    echo "    secretName: tanzu-demo-hub-tls"                                                                                     >> $TAP_CONFIG
+    echo "    namespace: tdh-cert-admin"                                                                                          >> $TAP_CONFIG
+    echo ""                                                                                                                       >> $TAP_CONFIG
     echo "  app_config:"                                                                                                          >> $TAP_CONFIG
     echo "    organization:"                                                                                                      >> $TAP_CONFIG
     echo "      name: tanzu-demo-hub"                                                                                             >> $TAP_CONFIG
     echo "    app:"                                                                                                               >> $TAP_CONFIG
-    echo "      title: Tanzu Demo Hub"                                                                                            >> $TAP_CONFIG
-    echo "      baseUrl: http://xyz.$DNS_DOMAIN:7000"                                                                             >> $TAP_CONFIG
-#gaga99
-    echo "    integrations:"                                                                                                      >> $TAP_CONFIG
-    echo "      github:"                                                                                                          >> $TAP_CONFIG
-    echo "      - host: http://gitea.$DNS_DOMAIN"                                                                                 >> $TAP_CONFIG
-    echo "        token: $GITEA_ADMIN_TOKEN"                                                                                      >> $TAP_CONFIG
-#    echo "      github:"                                                                                                          >> $TAP_CONFIG
-#    echo "      - host: github.com"                                                                                               >> $TAP_CONFIG
-#    echo "        token: $git_token"                                                                                              >> $TAP_CONFIG
+    echo "      title: Tanzu Applicaiton Platform on Tanzu Demo Hub"                                                              >> $TAP_CONFIG
+    echo "      baseUrl: https://tap-gui.$DNS_DOMAIN"                                                                             >> $TAP_CONFIG
+
+    # Tanzu Application Platform GUI integrations
+    # https://docs.vmware.com/en/VMware-Tanzu-Application-Platform/1.1/tap/GUID-tap-gui-integrations.html
+
+    # Troubleshoot Tanzu Application Platform GUI
+    # https://docs.vmware.com/en/VMware-Tanzu-Application-Platform/1.1/tap/GUID-tap-gui-troubleshooting.html
+    # 2022-07-06T22:40:11.421Z catalog warn Unable to read url, Error: Incorrect url: https://gitea.apps-contour.awstkg.pcfsdu.com/tanzu/yelb_catalog/raw/branch/master/catalog-info.yaml, Error: Wrong GitLab URL type=plugin entity=location:default/generated-2c00d586b2fbd35aa8d0cf25570923d1f1416d1c
+
+    #echo "    integrations:"                                                                                                      >> $TAP_CONFIG
+    #echo "      github:"                                                                                                          >> $TAP_CONFIG
+    #echo "        - host: https://gitea.$DNS_DOMAIN"                                                                              >> $TAP_CONFIG
+    #echo "          apiBaseUrl: https://gitea.$DNS_DOMAIN/api/v1"                                                                 >> $TAP_CONFIG
+    #echo "          token: $TDH_SERVICE_GITEA_ADMIN_TOKEN_ID"                                                                     >> $TAP_CONFIG
     echo "    catalog:"                                                                                                           >> $TAP_CONFIG
     echo "      locations:"                                                                                                       >> $TAP_CONFIG
     echo "        - type: url"                                                                                                    >> $TAP_CONFIG
-    echo "          target: $catalog_info"                                                                                        >> $TAP_CONFIG
+    echo "          target: https://gitea.$DNS_DOMAIN/tanzu/yelb_catalog/raw/branch/master/catalog-info.yaml"                     >> $TAP_CONFIG
+    echo "        - type: url"                                                                                                    >> $TAP_CONFIG
+    echo "          target: https://gitea.$DNS_DOMAIN/tanzu//blank_catalog/raw/branch/master/catalog-info.yaml"                   >> $TAP_CONFIG
     echo "    backend:"                                                                                                           >> $TAP_CONFIG
-    echo "        baseUrl: http://xyz.$DNS_DOMAIN:7000:7000"                                                                      >> $TAP_CONFIG
+    echo "        baseUrl: https://tap-gui.$DNS_DOMAIN"                                                                           >> $TAP_CONFIG
     echo "        cors:"                                                                                                          >> $TAP_CONFIG
-    echo "            origin: http://xyz.$DNS_DOMAIN:7000:7000"                                                                   >> $TAP_CONFIG
+    echo "            origin: https://tap-gui.$DNS_DOMAIN"                                                                        >> $TAP_CONFIG
+    echo "        reading:"                                                                                                       >> $TAP_CONFIG
+    echo "          allow:"                                                                                                       >> $TAP_CONFIG
+    echo "            - host: acc-server.accelerator-system.svc.cluster.local"                                                    >> $TAP_CONFIG
+    echo "            - host: https://tap-gui.$DNS_DOMAIN"                                                                        >> $TAP_CONFIG
+
     echo ""                                                                                                                       >> $TAP_CONFIG
     echo ""                                                                                                                       >> $TAP_CONFIG
     echo "cnrs:"                                                                                                                  >> $TAP_CONFIG
@@ -6023,18 +6153,11 @@ fi
     echo "  ingressDomain: $DNS_DOMAIN"                                                                            >> $TAP_CONFIG
     # --- Minicube (standard), vsphere pez: tanzu"
     echo "  storageClass: \"$TDH_STORAGE_CLASS\""                                                                                 >> $TAP_CONFIG
-#    echo "  ingressSecret:"                                                                                        >> $TAP_CONFIG
-#    echo "    certificate: \"$crt\""                                                                                        >> $TAP_CONFIG
-#    echo "    privateKey: \"$key\""                                                                                              >> $TAP_CONFIG
-
     echo "  ingressSecret:"                                                                                                       >> $TAP_CONFIG
     echo "    certificate: |"                                                                                                     >> $TAP_CONFIG
     kubectl get secret tanzu-demo-hub-tls -o json | jq -r '.data."tls.crt"' | base64 -d | sed 's/^/      /g'                      >> $TAP_CONFIG
     echo "    privateKey: |"                                                                                                      >> $TAP_CONFIG
     kubectl get secret tanzu-demo-hub-tls -o json | jq -r '.data."tls.key"' | base64 -d | sed 's/^/      /g'                      >> $TAP_CONFIG
-    echo ""                                                                                                                       >> $TAP_CONFIG
-    echo "tap_gui:"                                                                                                               >> $TAP_CONFIG
-    echo "  service_type: LoadBalancer"                                                                                           >> $TAP_CONFIG
     echo ""                                                                                                                       >> $TAP_CONFIG
     echo "ceip_policy_disclosed: true"                                                                                            >> $TAP_CONFIG
     echo ""                                                                                                                       >> $TAP_CONFIG
@@ -6049,12 +6172,22 @@ fi
     echo "  app_service_type: LoadBalancer"                                                                                       >> $TAP_CONFIG
     echo ""                                                                                                                       >> $TAP_CONFIG
 
-echo "\$HOME/.tdh-tools-tkg-1.5.2/tmp/tap_config.yaml"
-echo "tools/tdh-tools-tkg-1.5.2.sh"
-echo "tanzu package install tap -p tap.tanzu.vmware.com -v 1.1.0 --values-file /tmp/tap_config.yaml -n tap-install"
-echo "tanzu package installed update tap -p tap.tanzu.vmware.com -v 1.1.0 --values-file /tmp/tap_config.yaml -n tap-install"
-#gaga99
 
+    cat $TAP_CONFIG >> $TAP_CONFIG_1
+    cat $TAP_CONFIG >> $TAP_CONFIG_2
+    cat $TAP_CONFIG >> $TAP_CONFIG_3
+
+    messagePrint " ▪ TAP Config (Stage-1) TBS, Learning Center" "\$HOME/.${TDH_TOOLS}/tmp/tap_config_stage_1.yaml (TDH-TOOLS: /tmp/tap_config_stage_1.yaml)"
+    messagePrint " ▪ TAP Config (Stage-2) Tap Gui, Accelerator" "\$HOME/.${TDH_TOOLS}/tmp/tap_config_stage_2.yaml (TDH-TOOLS: /tmp/tap_config_stage_2.yaml)"
+    messagePrint " ▪ TAP Config (Stage-3) All Tap Services"     "\$HOME/.${TDH_TOOLS}/tmp/tap_config_stage_3.yaml (TDH-TOOLS: /tmp/tap_config_stage_3.yaml)"
+    messagePrint " ▪ TAP Lerning Center" "https://learning-center-guided.$DNS_DOMAIN"
+    messagePrint " ▪ TAP GUI"            "https://tap-gui.$DNS_DOMAIN"
+
+    messageLine
+    echo "       => tools/${TDH_TOOLS}.sh"
+    echo "       => tanzu package install tap -p tap.tanzu.vmware.com -v 1.1.0 --values-file /tmp/tap_config_stage_1.yaml -n tap-install"
+    echo "       => tanzu package installed update tap -p tap.tanzu.vmware.com -v 1.1.0 --values-file /tmp/tap_config_stage_1.yaml -n tap-install"
+    messageLine
   fi
 }
 
@@ -7595,8 +7728,8 @@ installClusterEssentials() {
   fi
 
   # --- GET BUILD_SERVICE INFORMATION ---
-  TDH_SERVICE_CLUSTER_ESSENTIALS_INSTALLED=$(getConfigMap tanzu-demo-hub TDH_SERVICE_BUILD_SERVICE_INSTALLED)
-  TDH_SERVICE_CLUSTER_ESSENTIALS_VERIFIED=$(getConfigMap tanzu-demo-hub TDH_SERVICE_BUILD_SERVICE_VERIFIED)
+  TDH_SERVICE_CLUSTER_ESSENTIALS_INSTALLED=$(getConfigMap tanzu-demo-hub TDH_SERVICE_CLUSTER_ESSENTIALS_INSTALLED)
+  TDH_SERVICE_CLUSTER_ESSENTIALS_VERIFIED=$(getConfigMap tanzu-demo-hub TDH_SERVICE_CLUSTER_ESSENTIALS_VERIFIED)
 
   # --- VERIFY IF BUILDSERVICE IS INSTALLED ---
   messageTitle "Tanzu Cluster Essentials"
@@ -7639,9 +7772,9 @@ installClusterEssentials() {
     ./kapp -y deploy -a kapp-controller -n $ns_name -f /tmp/kapp-controller.yaml > /dev/null 2>&1; ret=$?
 
     APP=kapp-controller; ANS=tanzu-cluster-essentials
-    cnt=$(kapp inspect -a $APP -n $ANS --json | jq -r '.Tables[].Rows[].reconcile_state' | grep -vc "ok")
+    cnt=$(kapp inspect -a $APP -n $ANS --json | jq -r '.Tables[].Rows[].reconcile_state' 2>/dev/null | grep -vc "ok")
     while [ $cnt -ne 0 ]; do
-      cnt=$(kapp inspect -a $APP -n $ANS --json | jq -r '.Tables[].Rows[].reconcile_state' | grep -vc "ok")
+      cnt=$(kapp inspect -a $APP -n $ANS --json | jq -r '.Tables[].Rows[].reconcile_state' 2>/dev/null | grep -vc "ok")
       sleep 360
     done
 
@@ -8730,12 +8863,20 @@ createClusterIssuer() {
 
 InstallCertManager() {
   NAMESPACE=cert-manager
-echo "TDH_DEPLOYMENT_CLOUD:TDH_DEPLOYMENT_CLOUD"
+  HELMCHART=cert-manager
 
-  cnt=$(kubectl get pods -A | egrep "^$NAMESPACE " | grep -c Running)
-  if [ $cnt -eq 0 ]; then
+  cmdLoop helm list -n $NAMESPACE -o json 2>/dev/null > /tmp/output.json
+  cnn=$(jq -r --arg key $HELMCHART '.[] | select(.name == $key).status' /tmp/output.json 2>/dev/null)
+
+  cmdLoop kubectl get pods -n cert-manager -o json 2>/dev/null > /tmp/output_pods.json
+  cnt=$(jq -r '.items[].status.phase' /tmp/output_pods.json 2>/dev/null | grep -c Running) 
+
+  if [ $cnt -eq 0 -o "$cnn" != "deployed" ]; then
     # --- INSTALL CONTOUR INGRESS ---
     messageTitle "Cert Manager"
+
+    # --- REMOVE HELM CHART IF IT IS STILL THERE ----
+    [ "$cnn" != "" ] && cmdLoop helm uninstall $HELMCHART -n $NAMESPACE > /dev/null 2>&1
 
     deleteNamespace $NAMESPACE > /dev/null 2>&1
     createNamespace $NAMESPACE > /dev/null 2>&1
@@ -8749,8 +8890,8 @@ echo "TDH_DEPLOYMENT_CLOUD:TDH_DEPLOYMENT_CLOUD"
 
     cnt=0; ret=1
     while [ $ret -ne 0 -a $cnt -lt 5 ]; do
-      #eval helm install cert-manager jetstack/cert-manager -n cert-manager --version v1.1.0 $HELM_OPTIONS --wait --wait-for-jobs --timeout 10m > /dev/null 2>&1; ret=$?
-      eval helm install cert-manager jetstack/cert-manager -n cert-manager --version v1.1.0 $HELM_OPTIONS --wait --wait-for-jobs --timeout 10m; ret=$?
+      eval helm install cert-manager jetstack/cert-manager -n cert-manager --version v1.1.0 $HELM_OPTIONS --wait --wait-for-jobs --timeout 10m > /dev/null 2>&1; ret=$?
+      #eval helm install cert-manager jetstack/cert-manager -n cert-manager --version v1.1.0 $HELM_OPTIONS --wait --wait-for-jobs --timeout 10m; ret=$?
       [ $ret -eq 0 ] && break
       let cnt=cnt+1
       sleep 30
@@ -10413,6 +10554,7 @@ tdh_tools_build() {
     if [ ! -e $TDH_DOCKER_CACHE/tap-$TDH_SERVICE_TAP_VERSION/${TAC_PRODUCT_FILE}-${TAC_PRODUCT_VERS}.tgz ]; then
       pid=$(pivnetAPI $PCF_PIVNET_TOKEN GET products/$TAC_PRODUCT_SLUG/releases 2> /dev/null | \
                jq -r --arg key "$TDH_SERVICE_TAP_VERSION" '.releases[] | select(.version == $key).id')
+#mmmmmmmmmmmmmmmmmm
 
       pivnetAPIdownload $PCF_PIVNET_TOKEN $TAC_PRODUCT_SLUG $pid $TAC_PRODUCT_PNID ${TAC_PRODUCT_FILE}.tgz > /tmp/error.log 2>&1
       if [ ! -s /tmp/${TAC_PRODUCT_FILE}.tgz ]; then
@@ -10438,7 +10580,7 @@ tdh_tools_build() {
 
     (cd $TDH_DOCKER_FILES && tar xf $TDH_DOCKER_CACHE/tap-$TDH_SERVICE_TAP_VERSION/${TAC_PRODUCT_FILE}.tgz)
     find $TDH_DOCKER_FILES/blank -type d -exec chmod 777 {} \; 2>/dev/null
-    chmod -R a+r $TDH_DOCKER_FILES/blank 2>/dev/null
+    chmod -R a+r $TDH_DOCKER_FILES/blank_catalog 2>/dev/null
 
     # --- DOWNLOAD TANZU FRAMEWORK ---
     TAC_PRODUCT_SLUG="tanzu-application-platform"
@@ -10473,7 +10615,7 @@ tdh_tools_build() {
 
     (cd $TDH_DOCKER_FILES && tar xf $TDH_DOCKER_CACHE/tap-$TDH_SERVICE_TAP_VERSION/${TAC_PRODUCT_FILE}.tgz)
     find $TDH_DOCKER_FILES/yelb-catalog -type d -exec chmod 777 {} \; 2>/dev/null
-    chmod -R a+r $TDH_DOCKER_FILES/yelb-catalog 2>/dev/null
+    chmod -R a+r $TDH_DOCKER_FILES/yelb_catalog 2>/dev/null
   fi
 
   # --- TANZU MISSION CONTROL BINARY ---
@@ -11645,37 +11787,36 @@ giteaForkRepo() {
 # https://developer.vmware.com/apis/897/tanzu-mission-control
 # ------------------------------------------------------------------------------------------
 createGiteaRepo() {
-  GITEA_REPO=$1
-  
+  GITEA_ORG=$1
+  GITEA_REPO=$2
+
   TDH_SERVICE_GITEA_ADMIN_USER=$(getConfigMap tanzu-demo-hub TDH_SERVICE_GITEA_ADMIN_USER)
   TDH_SERVICE_GITEA_ADMIN_PASS=$(getConfigMap tanzu-demo-hub TDH_SERVICE_GITEA_ADMIN_PASS)
   TDH_SERVICE_GITEA_SERVER=$(getConfigMap tanzu-demo-hub TDH_SERVICE_GITEA_SERVER)
   TDH_SERVICE_GITEA_SERVER_URL=$(getConfigMap tanzu-demo-hub TDH_SERVICE_GITEA_SERVER_URL)
   TDH_SERVICE_GITEA_ADMIN_TOKEN_ID=$(getConfigMap tanzu-demo-hub TDH_SERVICE_GITEA_ADMIN_TOKEN_ID)
-  
-  curl -X 'GET' ${TDH_SERVICE_GITEA_SERVER_URL}/api/v1/orgs \
+
+  curl -X GET ${TDH_SERVICE_GITEA_SERVER_URL}/api/v1/repos/$GITEA_ORG/$GITEA_REPO \
        -H 'accept: application/json' 2>/dev/null > /tmp/output.json
-
-
-exit
-  nam=$(jq -r --arg key $GITEA_REPO '.[] | select(.username == $key).username' /tmp/output.json)
-  if [ "$nam" == "" ]; then 
+  nam=$(jq -r '.name' /tmp/output.json)
+  if [ "$nam" == "" -o "$nam" == "null" ]; then
     TMP_API_DATA=/tmp/gitea_api_data.json                       
     echo "{"                                                    >  $TMP_API_DATA
-    echo "  \"description\": \"Tanzu Organisation\","           >> $TMP_API_DATA
-    echo "  \"full_name\": \"Tanzu Demo Hub\","                 >> $TMP_API_DATA
-    echo "  \"location\": \"\","                                >> $TMP_API_DATA
-    echo "  \"repo_admin_change_team_access\": true,"           >> $TMP_API_DATA
-    echo "  \"username\": \"tdh\","                             >> $TMP_API_DATA
-    echo "  \"visibility\": \"public\","                        >> $TMP_API_DATA
-    echo "  \"website\": \"\""                                  >> $TMP_API_DATA
+    echo "  \"name\": \"$GITEA_REPO\""                          >> $TMP_API_DATA
     echo "}"                                                    >> $TMP_API_DATA
-    
-    cmdLoop curl -X POST ${TDH_SERVICE_GITEA_SERVER_URL}/api/v1/orgs \
-         -H 'accept: application/json' \
-         -u "$TDH_SERVICE_GITEA_ADMIN_USER:$TDH_SERVICE_GITEA_ADMIN_PASS" \
-         -H 'Content-Type: application/json' \
-         --data "@$TMP_API_DATA"
+
+    cnt=0; ret=1
+    while [ $ret -ne 0 -a $cnt -lt 5 ]; do
+      curl -X POST ${TDH_SERVICE_GITEA_SERVER_URL}/api/v1/org/$GITEA_ORG/repos \
+                 -H 'accept: application/json' \
+                 -H 'Content-Type: application/json' \
+                 -u "$TDH_SERVICE_GITEA_ADMIN_USER:$TDH_SERVICE_GITEA_ADMIN_PASS" \
+                 --data "@$TMP_API_DATA" >/dev/null 2>&1; ret=$?
+      [ $ret -eq 0 ] && break
+
+      let cnt=cnt+1
+      sleep 10
+    done
   fi
 }
 

@@ -232,8 +232,8 @@ if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "vSphere" ]; then
   TanzuPackage_RepoSync      $TDH_SERVICE_PACKAGE_REPOSITORY_NAMESPACE
 else
   TanzuPackage_RepoSync      default
-  #TanzuPackage_RepoSync       tanzu-package-repo-global
-  #TanzuPackage_RepoSync       tkg-system
+  #TanzuPackage_RepoSync     tanzu-package-repo-global
+  #TanzuPackage_RepoSync     tkg-system
 fi
 
 TanzuPackage_CertManager    cert-manager-pkg     cert-manager.tanzu.vmware.com
@@ -247,6 +247,8 @@ installMinio                 ## Required for Tanzu PostgreSQL Demos
 installKubeapps
 installGitea
 installJenkins
+nstallArgoCD
+installGitLab
 installTAP                   ## Tanzu Application Platform (TAP)
 installKubeernetesDashboard  ## Kubernetes Dashboard
 

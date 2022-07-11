@@ -30,12 +30,13 @@ checkCLIcommands        BASIC
 usage() {
   echo ""
   echo "USAGE: $0 [options] -d <tkg-deployment.cfg> -c <tkg-configuration.cfg> -n <cluster-name> [-k <kubernetes-version>] [--debug]"
-  echo "            Options:  -n  <cluster-name>        # Should reflect the environment and its purpose. Make sure"
+  echo "            Options:  [-n  <cluster-name>]      # Should reflect the environment and its purpose. Make sure"
   echo "                                                # to add your user name, to prevent conflicts in TMC"
   echo "                                                # ie. tdh-azure-sdubois or tdh-aws-sdubois-aws"
   echo ""
-  echo "                      -tag <name-tag>           # Cluster NameTag ie. TKG_CLUSTER_01 or TKG_CLUSTER_02"
-  echo "                      -k  <controlplane-ip>     # default (latest)"
+  echo "                      [-e <sub-domain>]         # Optional DNS Subdomain (<xyz>.domainname>"
+  echo "                      [-tag <name-tag>]         # Cluster NameTag ie. TKG_CLUSTER_01 or TKG_CLUSTER_02"
+  echo "                      [-k  <controlplane-ip>]   # default (latest)"
   echo "                                                # use 'tanzu kubernetes-release get' to see available"
   echo ""
   echo "                      --delete                  # Delete Workload Cluster"
@@ -49,6 +50,7 @@ while [ "$1" != "" ]; do
     -d)   TKG_DEPLOYMENT=$2;;
     -c)   TKG_CONFIGURATION=$2;;
     -n)   TDH_TKGWC_NAME=$2;;
+    -e)   DNS_SUBDOMAIN=$2;;
     -k)   TDH_TKGWC_K8S_VERSION=$2;;
     -tag) TDH_TKGWC_NAME_TAG=$2;;
     --debug)       DEBUG=1;;
@@ -80,7 +82,8 @@ else
 fi
 
 if [ -f $TDHPATH/deployments/$TKG_CONFIGURATION ]; then
-  TKG_TANZU_KUBERNETES_GRID=$(egrep "^TKG_TANZU_KUBERNETES_GRID=" $TDHPATH/deployments/$TKG_CONFIGURATION | awk -F'=' '{ print $2 }') 
+  #TKG_TANZU_KUBERNETES_GRID=$(egrep "^TKG_TANZU_KUBERNETES_GRID=" $TDHPATH/deployments/$TKG_CONFIGURATION | awk -F'=' '{ print $2 }') 
+  TKG_TANZU_KUBERNETES_GRID=$(egrep "^TDH_TOOLS_CONTAINER_VERS=" $TDHPATH/deployments/$TKG_CONFIGURATION | awk -F'=' '{ print $2 }') 
   K8S_TKGWC=$(echo $TKG_TANZU_KUBERNETES_GRID | awk -F'.' '{ printf("%s.%s\n",$1,$2) }')
 
   if [ "$K8S_TKGMC" != "$K8S_TKGWC" ]; then 
@@ -102,7 +105,7 @@ fi
 ############################################################################################################################
 ################################### EXECUTING CODE WITHIN  TDH-TOOLS DOCKER CONTAINER  ######################################
 #############################################################################################################################
-runTDHtools "$TDH_TOOLS_CONTAINER_TYPE" "$TDH_TOOLS_CONTAINER_VERS" "Deploy TKG Workload Cluster" "$TDHPATH/$CMD_EXEC" "$CMD_ARGS"
+runTDHtools "$TDH_TOOLS_CONTAINER_TYPE" "$TDH_TOOLS_CONTAINER_VERS" "Deploy TKG Workload Cluster" "/home/tanzu/tanzu-demo-hub/$CMD_EXEC" "$CMD_ARGS"
 
 listDeployments() {
   echo
@@ -269,8 +272,13 @@ setK8sEnvironment $TDH_TKGWC_NAME
 checkTMCAccess
 tmcCheckLogin
 
+if [ "$DNS_SUBDOMAIN" != "" ]; then
+  export TDH_ENVNAME=$DNS_SUBDOMAIN
+else
+  export TDH_ENVNAME=$TDH_TKGMC_ENVNAME
+fi
+
 export TDH_TKGWC_CONTEXT=$(kubectl config current-context)
-export TDH_ENVNAME=$TDH_TKGMC_ENVNAME
 export TMC_PROVISIONER_NAME="attached"
 export TDH_MANAGEMENT_CLUSTER=$TDH_TKGMC_NAME
 
@@ -318,6 +326,8 @@ if [ -s /tmp/output.yaml ]; then
   fi
 fi
 
+createCertDelegation
+
 messageTitle "Tanzu Package Management"
 if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "vSphere" ]; then
   installClusterEssentials
@@ -340,6 +350,8 @@ installGitea
 installJenkins
 installArgoCD
 installGitLab
+installTAP                   ## Tanzu Application Platform (TAP)
+installKubeernetesDashboard  ## Kubernetes Dashboard
 
 #########################################################################################################################
 ################################################ TMC INTEGRATION ########################################################
