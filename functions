@@ -5036,9 +5036,9 @@ tkgCreateCluster() {
         echo "      storageClass: $TDH_TKGMC_STORAGE_CLASS"                             >> $CLUSTER_CONFIG_FILE
         echo "      volumes:"                                                           >> $CLUSTER_CONFIG_FILE
         echo "        - name: containerd"                                               >> $CLUSTER_CONFIG_FILE
-        echo "          mountPath: /usr/lib/containerd"                                 >> $CLUSTER_CONFIG_FILE
+        echo "          mountPath: /var/lib/containerd"                                 >> $CLUSTER_CONFIG_FILE
         echo "          capacity:"                                                      >> $CLUSTER_CONFIG_FILE
-        echo "            storage: 30Gi"                                                >> $CLUSTER_CONFIG_FILE
+        echo "            storage: 50Gi"                                                >> $CLUSTER_CONFIG_FILE
 #        echo "        - name: varlib"                                                   >> $CLUSTER_CONFIG_FILE
 #        echo "          mountPath: /var/lib"                                            >> $CLUSTER_CONFIG_FILE
 #        echo "          capacity:"                                                      >> $CLUSTER_CONFIG_FILE
