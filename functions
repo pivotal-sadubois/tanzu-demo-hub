@@ -6063,7 +6063,7 @@ fi
     echo "  kp_default_repository_password: $TDH_HARBOR_REGISTRY_ADMIN_PASSWORD"                                                  >> $TAP_CONFIG
     echo "  tanzunet_username: $TDH_REGISTRY_VMWARE_USER"                                                                         >> $TAP_CONFIG
     echo "  tanzunet_password: $TDH_REGISTRY_VMWARE_PASS"                                                                         >> $TAP_CONFIG
-    echo "  enable_automatic_dependency_updates: \"true\""                                                                        >> $TAP_CONFIG
+    echo "  enable_automatic_dependency_updates: true"                                                                            >> $TAP_CONFIG
     echo "  descriptor_name: \"full\""                                                                                            >> $TAP_CONFIG
     echo "supply_chain: basic"                                                                                                    >> $TAP_CONFIG
     echo ""                                                                                                                       >> $TAP_CONFIG
