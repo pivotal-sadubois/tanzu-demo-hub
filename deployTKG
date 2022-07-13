@@ -326,8 +326,6 @@ if [ -s /tmp/output.yaml ]; then
   fi
 fi
 
-createCertDelegation
-
 messageTitle "Tanzu Package Management"
 if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "vSphere" ]; then
   installClusterEssentials
@@ -339,6 +337,7 @@ fi
 
 TanzuPackage_CertManager     cert-manager-pkg     cert-manager.tanzu.vmware.com 
 TanzuPackage_Contour         contour-pkg          contour.tanzu.vmware.com
+createCertDelegation
 TanzuPackage_Harbor          harbor-pkg           harbor.tanzu.vmware.com
 
 installBuildService          ## Tanzu Build Service (TBS)
