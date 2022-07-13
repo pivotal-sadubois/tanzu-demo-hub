@@ -1,0 +1,27 @@
+apiVersion: vmoperator.vmware.com/v1alpha1
+kind: VirtualMachine
+metadata:
+  name: vmsvc-centos-db
+  namespace: tanzu-demo-hub
+spec:
+  #imageName: centos-stream-8-vmservice-v1alpha1-xxxxxxxxxxxxx
+  imageName: centos-stream-8-vmservice-v1alpha1-1638306496810
+  className: best-effort-large
+  powerState: poweredOn
+  storageClass: VSPHERE_TKGS_SUPERVISOR_STORAGE_CLASS
+  networkInterfaces:
+  #- networkName: primary
+  - networkName: workload-1
+    networkType: vsphere-distributed
+  vmMetadata:
+      configMapName: vmsvc-centos-nginx-cm
+      transport: OvfEnv
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+    name: vmsvc-centos-nginx-cm
+    namespace: tanzu-demo-hub
+data:
+  user-data: >-
+    I2Nsb3VkLWNvbmZpZwoKcGFzc3dvcmQ6IFZNV0FSRQpzc2hfcHdhdXRoOiB0cnVlCgp1c2VyczoKICAtIG5hbWU6IHZtd2FyZQogICAgc3VkbzogQUxMPShBTEwpIE5PUEFTU1dEOkFMTAogICAgbG9ja19wYXNzd2Q6IGZhbHNlCiAgICAjIFBhc3N3b3JkIHNldCB0byBBZG1pbiEyMwogICAgcGFzc3dkOiAnJDEkc2FsdCRTT0MzM2ZWYkEvWnhlSXdENXl3MXUxJwogICAgc2hlbGw6IC9iaW4vYmFzaAoKd3JpdGVfZmlsZXM6CiAgLSBjb250ZW50OiB8CiAgICAgIFZNU1ZDIFNheXMgSGVsbG8gV29ybGQKICAgIHBhdGg6IC9oZWxsb3dvcmxkCgo=

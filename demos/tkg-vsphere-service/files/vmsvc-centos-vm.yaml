@@ -1,0 +1,25 @@
+apiVersion: vmoperator.vmware.com/v1alpha1
+kind: VirtualMachine
+metadata:
+  name: vmsvc-centos-vm
+  namespace: tanzu-demo-hub
+spec:
+  imageName: centos-stream-8-vmservice-v1alpha1-1638306496810
+  className: best-effort-large
+  powerState: poweredOn
+  storageClass: VSPHERE_TKGS_SUPERVISOR_STORAGE_CLASS
+  networkInterfaces:
+  - networkName: VSPHERE_TKGS_NETWORK_NAME
+    networkType: vsphere-distributed
+  vmMetadata:
+      configMapName: vmsvc-centos-nginx-cm
+      transport: OvfEnv
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+    name: vmsvc-centos-nginx-cm
+    namespace: tanzu-demo-hub
+data:
+  user-data: >-
+    VSPHERE_CLOUD_INIT

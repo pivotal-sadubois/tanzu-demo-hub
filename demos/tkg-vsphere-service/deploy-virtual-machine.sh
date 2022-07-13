@@ -1,13 +1,15 @@
 #!/bin/bash
 # ============================================================================================
-# File: ........: deploy-workload-cluster.sh
+# File: ........: deploy-virtual-machine.sh
 # Language .....: bash
 # Author .......: Sacha Dubois, VMware
 # --------------------------------------------------------------------------------------------
-# Description ..: Deploy the TKG Workload Cluster on vSphere
+# Description ..: Deploy a Virtual Machine trough vm-service
+# Example ......: https://cloudinit.readthedocs.io/en/latest/topics/examples.html
 # ============================================================================================
 [ "$(hostname)" != "tdh-tools" ] && echo "ERROR: Need to run within a tdh-tools container" && exit
 
+# https://docs.vmware.com/en/VMware-vSphere/7.0/vmware-vsphere-with-tanzu/GUID-F81E3535-C275-4DDE-B35F-CE759EA3B4A0.html#:~:text=vSphere%20with%20Tanzu%20offers%20a,machines%20in%20a%20vSphere%20Namespace.
 export TDH_DEMO_DIR="tkg-vsphere-service"
 export TDHHOME=$(echo -e "$(pwd)\n$(dirname $0)" | grep "tanzu-demo-hub" | head -1 | sed "s+\(^.*tanzu-demo-hub\).*+\1+g")
 export TDHDEMO=$TDHHOME/demos/$TDH_DEMO_DIR
@@ -37,7 +39,7 @@ echo '            |_| |_|\_\____| |_|  \___/|_|      \_/  |____/| .__/|_| |_|\__
 echo '                                                          |_|                         '
 echo '                                                                                      '
 echo '          ----------------------------------------------------------------------------'
-echo '               VMware vSphere for Tanzu Service - TKG Workload Cluster deployment     '  
+echo '               VMware vSphere for Tanzu Service - Deploy Virtual Machine              '  
 echo '                                  by Sacha Dubois, VMware Inc                         '
 echo '          ----------------------------------------------------------------------------'
 echo '                                                                                      '
@@ -63,14 +65,14 @@ fi
 
 # --- CLEANUP ---
 cmdLoop kubectl config use-context $VSPHERE_TKGS_SUPERVISOR_CLUSTER > /dev/null 2>&1
-cmdLoop kubectl get tanzukubernetescluster -n $VSPHERE_NAMESPACE -o json > /tmp/output.json 
-nam=$(jq -r --arg key "$GUEST_CLUSTER" '.items[] | select(.metadata.name == $key).metadata.name' /tmp/output.json)
-if [ "$nam" == "$GUEST_CLUSTER" ]; then 
-  echo " INFO: Deleting leftover TKG Cluster ($GUEST_CLUSTER) from previous demo. This"
-  echo "       may take a couple of minues."
-  echo ""
-  cmdLoop kubectl delete tanzukubernetescluster -n $VSPHERE_NAMESPACE $GUEST_CLUSTER --wait=true > /dev/null 2>&1
-fi
+#cmdLoop kubectl get tanzukubernetescluster -n $VSPHERE_NAMESPACE -o json > /tmp/output.json 
+#nam=$(jq -r --arg key "$GUEST_CLUSTER" '.items[] | select(.metadata.name == $key).metadata.name' /tmp/output.json)
+#if [ "$nam" == "$GUEST_CLUSTER" ]; then 
+#  echo " INFO: Deleting leftover TKG Cluster ($GUEST_CLUSTER) from previous demo. This"
+#  echo "       may take a couple of minues."
+#  echo ""
+#  cmdLoop kubectl delete tanzukubernetescluster -n $VSPHERE_NAMESPACE $GUEST_CLUSTER --wait=true > /dev/null 2>&1
+#fi
 
 prtHead "Login to the vSphere Envifonment on (http://$VSPHERE_TKGS_VCENTER_SERVER / $VSPHERE_TKGS_VCENTER_ADMIN)" 
 prtText " - inspect 'Hosts and Clusters'"
@@ -94,64 +96,46 @@ prtText "press 'return' to continue"; read x
 
 prtHead "Login to the vSphere Supervisor Cluster ($VSPHERE_TKGS_SUPERVISOR_CLUSTER) and set Environment and Context"
 execCmd "kubectl vsphere login --insecure-skip-tls-verify --server $VSPHERE_TKGS_SUPERVISOR_CLUSTER -u $VSPHERE_TKGS_VCENTER_ADMIN"
-#execCmd "kubectl config get-contexts"
-#execCmd "kubectl config get-clusters"
 execCmd "kubectl config use-context $VSPHERE_TKGS_SUPERVISOR_CLUSTER"
 
-cat files/tkg-cluster-1.yaml| sed "s/VSPHERE_TKGS_SUPERVISOR_STORAGE_CLASS/$VSPHERE_TKGS_SUPERVISOR_STORAGE_CLASS/g" > /tmp/tkg-cluster-1.yaml
 
-prtHead "Create a Kubernetes Cluster Config ($GUEST_CLUSTER)"
-execCmd "kubectl get tanzukubernetesreleases"
-execCat "/tmp/tkg-cluster-1.yaml"
+prtHead "Configure Cloud Config"
+prtText "Documentation: https://cloudinit.readthedocs.io"
+execCat "files/vmsvc-centos-cloud-config.yaml"
+prtText "encoded=\$(cat files/vmsvc-centos-cloud-config.yaml | base64)"
+encoded=$(cat files/vmsvc-centos-cloud-config.yaml | base64 --wrap=1000)
 
-execCmd "kubectl apply -f /tmp/tkg-cluster-1.yaml --wait=true"
-execCmd "kubectl get tanzukubernetescluster -n $VSPHERE_NAMESPACE"
+execCmd "echo \$encoded"
 
-stt=""
-while [ "$stt" != "True" ]; do
-  stt=$(kubectl get clusters -n $VSPHERE_NAMESPACE -o json 2>/dev/null | \
-   jq -r --arg key "$GUEST_CLUSTER" '.items[] | select(.metadata.name == $key).status.conditions[] | select(.type == "Ready").status' 2>/dev/null)
-  sleep 10
+net=$(kubectl -n tanzu-demo-hub get network -o json | jq -r '.items[].metadata.name') 
+
+cat files/vmsvc-centos-vm.yaml | sed \
+  -e "s/VSPHERE_TKGS_SUPERVISOR_STORAGE_CLASS/$VSPHERE_TKGS_SUPERVISOR_STORAGE_CLASS/g" \
+  -e "s/VSPHERE_TKGS_NETWORK_NAME/$net/g" > /tmp/vmsvc-centos-vm.yaml
+echo "  user-data: >-" >> /tmp/vmsvc-centos-vm.yaml
+echo "    $encoded" >> /tmp/vmsvc-centos-vm.yaml
+
+prtText ""
+prtHead "Create Virtual Machine (vmsvc-centos-vm)"
+execCat "/tmp/vmsvc-centos-vm.yaml"
+execCmd "kubectl apply -f /tmp/vmsvc-centos-vm.yaml  --wait=true"
+
+vmip=""
+while [ "$vmip" == "" -o "$vmip" == "null" ]; do
+  vmip=$(kubectl -n tanzu-demo-hub get virtualmachine vmsvc-centos-vm -o json | jq -r '.status.vmIp' 2>/dev/null)
+  sleep 5
 done
 
-execCmd "kubectl get clusters --all-namespaces"
+execCmd "kubectl get VirtualMachine -A -o wide"
+execCmd "kubectl -n tanzu-demo-hub describe virtualmachine vmsvc-centos-vm"
 
-prtHead "Access the kubernetes cluster ($GUEST_CLUSTER)"
-execCmd "kubectl vsphere login \\
-          --tanzu-kubernetes-cluster-name $GUEST_CLUSTER \\
-          --tanzu-kubernetes-cluster-namespace $VSPHERE_NAMESPACE \\
-          --server $VSPHERE_TKGS_SUPERVISOR_CLUSTER \\
-          --insecure-skip-tls-verify \\
-          -u administrator@vsphere.local"
-
-sleep 3
-execCmd "kubectl config use-context $GUEST_CLUSTER"
-execCmd "kubectl get ns"
-execCmd "kubectl get nodes -o wide"
-
-prtHead "Verify the new Workload cluster ($GUEST_CLUSTER) in vSphere ($VSPHERE_TKGS_VCENTER_SERVER)"
-prtText " - inspect 'Hosts and Clusters'"
-prtText ""
-prtText "press 'return' to continue"; read x
-
-prtHead "Cleanup and delete Kubernetes Cluster"
-if [ "$NATIVE" == "0" ]; then
-  echo "       To delete the cluster perform the following commands"
-  echo "       => ../../tools/${TDH_TOOLS}.sh"
-  echo "          tdh-tools:/$ kubectl config use-context $VSPHERE_TKGS_SUPERVISOR_CLUSTER"
-  echo "          tdh-tools:/$ kubectl delete tanzukubernetescluster -n $VSPHERE_NAMESPACE $GUEST_CLUSTER"
-  echo "          tdh-tools:/$ exit"
-else
-  echo "       To delete the cluster perform the following commands  "
-  echo "       => kubectl config use-context $VSPHERE_TKGS_SUPERVISOR_CLUSTER"
-  echo "       => kubectl delete tanzukubernetescluster -n $VSPHERE_NAMESPACE $GUEST_CLUSTER"
-fi
+ssh-keygen -f "/home/tanzu/.ssh/known_hosts" -R "$vmip" > /dev/null 2>&1
+prtHead "Access the Virtual Machine (User: vmware, Pawword: Admin!23)"
+prtText "ssh -o StrictHostKeyChecking=no vmware@$vmip"
 
 prtText ""
-
 echo "     -----------------------------------------------------------------------------------------------------------"
 echo "                                             * --- END OF THE DEMO --- *"
 echo "                                                THANKS FOR ATTENDING"
 echo "     -----------------------------------------------------------------------------------------------------------"
-
 exit

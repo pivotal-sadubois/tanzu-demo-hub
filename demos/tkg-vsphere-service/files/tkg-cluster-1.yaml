@@ -19,14 +19,14 @@ spec:
         cidrBlocks:
         - 10.96.0.0/16
     storage: 
-      defaultClass: tanzu
+      defaultClass: VSPHERE_TKGS_SUPERVISOR_STORAGE_CLASS
   topology:
     controlPlane:
       class: guaranteed-medium
       count: 1
-      storageClass: tanzu
+      storageClass: VSPHERE_TKGS_SUPERVISOR_STORAGE_CLASS
     workers:
       #class: best-effort-2xlarge
       class: guaranteed-medium
       count: 1
-      storageClass: tanzu
+      storageClass: VSPHERE_TKGS_SUPERVISOR_STORAGE_CLASS
