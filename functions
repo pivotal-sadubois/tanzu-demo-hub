@@ -5841,60 +5841,63 @@ installTAP() {
   #########################################################################################################################
   ###################################### RELOCATE IMAGES TO THE HARBOR REGISTRY ###########################################
   #########################################################################################################################
-if [ 1 -eq 1 ]; then
-  messagePrint " ▪ relocating tap images to local registry" "$INSTALL_REGISTRY_HOSTNAME/library/tap-packages"
-  cnt=0; ret=1
-  while [ $ret -ne 0 -a $cnt -lt 5 ]; do
-    imgpkg copy -b registry.tanzu.vmware.com/tanzu-application-platform/tap-packages:${TAP_VERSION} \
-                --to-repo ${INSTALL_REGISTRY_HOSTNAME}/library/tap-packages > /tmp/error.log 2>&1; ret=$?
-    [ $ret -eq 0 ] && break
-    sleep 10
-    let cnt=cnt+1
-  done
-
-  if [ $ret -ne 0 ]; then
-    logMessages /tmp/error.log
-    echo "ERROR: failed to relocate registryt"
-    if [ "$NATIVE" == "0" ]; then
-      echo "       => tools/${TDH_TOOLS}.sh"
-      echo "          tdh-tools:/$ imgpkg copy -b registry.tanzu.vmware.com/tanzu-application-platform/tap-packages:${TAP_VERSION} \\"
-      echo "                          --to-repo ${INSTALL_REGISTRY_HOSTNAME}/library/tap-packages"
-      echo "          tdh-tools:/$ exit"
-    else
-      echo "       => imgpkg copy -b registry.tanzu.vmware.com/tanzu-application-platform/tap-packages:${TAP_VERSION} \\"
-      echo "                --to-repo ${INSTALL_REGISTRY_HOSTNAME}/library/tap-packages"
+  TDH_SERVICE_TAP_IMAGE_RELOCATION=$(getConfigMap tanzu-demo-hub TDH_SERVICE_TAP_IMAGE_RELOCATION)
+  if [ "$TDH_SERVICE_TAP_IMAGE_RELOCATION" == "" -o "$TDH_SERVICE_TAP_IMAGE_RELOCATION" == "null" ]; then
+    messagePrint " ▪ relocating tap images to local registry" "$INSTALL_REGISTRY_HOSTNAME/library/tap-packages"
+    cnt=0; ret=1
+    while [ $ret -ne 0 -a $cnt -lt 5 ]; do
+      imgpkg copy -b registry.tanzu.vmware.com/tanzu-application-platform/tap-packages:${TAP_VERSION} \
+                  --to-repo ${INSTALL_REGISTRY_HOSTNAME}/library/tap-packages > /tmp/error.log 2>&1; ret=$?
+      [ $ret -eq 0 ] && break
+      sleep 10
+      let cnt=cnt+1
+    done
+  
+    if [ $ret -ne 0 ]; then
+      logMessages /tmp/error.log
+      echo "ERROR: failed to relocate registryt"
+      if [ "$NATIVE" == "0" ]; then
+        echo "       => tools/${TDH_TOOLS}.sh"
+        echo "          tdh-tools:/$ imgpkg copy -b registry.tanzu.vmware.com/tanzu-application-platform/tap-packages:${TAP_VERSION} \\"
+        echo "                          --to-repo ${INSTALL_REGISTRY_HOSTNAME}/library/tap-packages"
+        echo "          tdh-tools:/$ exit"
+      else
+        echo "       => imgpkg copy -b registry.tanzu.vmware.com/tanzu-application-platform/tap-packages:${TAP_VERSION} \\"
+        echo "                --to-repo ${INSTALL_REGISTRY_HOSTNAME}/library/tap-packages"
+      fi
+  
+      exit 1
     fi
-
-    exit 1
-  fi
-
-  # --- CREATE A REGISTRY SECRET ---
-  messagePrint " ▪ creating registry secret" "$INSTALL_REGISTRY_HOSTNAME"
-  tanzu secret registry add tap-registry \
-  --username ${INSTALL_REGISTRY_USERNAME} --password ${INSTALL_REGISTRY_PASSWORD} \
-  --server ${INSTALL_REGISTRY_HOSTNAME} \
-  --export-to-all-namespaces --yes --namespace $NAMESPACE > /tmp/error.log 2>&1; ret=$?
-
-  if [ $ret -ne 0 ]; then
-    logMessages /tmp/error.log
-    echo "ERROR: failed to create registry secret"
-    if [ "$NATIVE" == "0" ]; then
-      echo "       => tools/${TDH_TOOLS}.sh"
-      echo "          tdh-tools:/$ tanzu secret registry add tap-registry \\"
-      echo "                          --username ${INSTALL_REGISTRY_USERNAME} --password ${INSTALL_REGISTRY_PASSWORD} \\"
-      echo "                          --server ${INSTALL_REGISTRY_HOSTNAME} \\"
-      echo "                          --export-to-all-namespaces --yes --namespace $NAMESPACE"
-      echo "          tdh-tools:/$ exit"
-    else
-      echo "       => tanzu secret registry add tap-registry \\"
-      echo "                --username ${INSTALL_REGISTRY_USERNAME} --password ${INSTALL_REGISTRY_PASSWORD} \\"
-      echo "                --server ${INSTALL_REGISTRY_HOSTNAME} \\"
-      echo "                --export-to-all-namespaces --yes --namespace $NAMESPACE"
+  
+    # --- CREATE A REGISTRY SECRET ---
+    messagePrint " ▪ creating registry secret" "$INSTALL_REGISTRY_HOSTNAME"
+    tanzu secret registry add tap-registry \
+    --username ${INSTALL_REGISTRY_USERNAME} --password ${INSTALL_REGISTRY_PASSWORD} \
+    --server ${INSTALL_REGISTRY_HOSTNAME} \
+    --export-to-all-namespaces --yes --namespace $NAMESPACE > /tmp/error.log 2>&1; ret=$?
+  
+    if [ $ret -ne 0 ]; then
+      logMessages /tmp/error.log
+      echo "ERROR: failed to create registry secret"
+      if [ "$NATIVE" == "0" ]; then
+        echo "       => tools/${TDH_TOOLS}.sh"
+        echo "          tdh-tools:/$ tanzu secret registry add tap-registry \\"
+        echo "                          --username ${INSTALL_REGISTRY_USERNAME} --password ${INSTALL_REGISTRY_PASSWORD} \\"
+        echo "                          --server ${INSTALL_REGISTRY_HOSTNAME} \\"
+        echo "                          --export-to-all-namespaces --yes --namespace $NAMESPACE"
+        echo "          tdh-tools:/$ exit"
+      else
+        echo "       => tanzu secret registry add tap-registry \\"
+        echo "                --username ${INSTALL_REGISTRY_USERNAME} --password ${INSTALL_REGISTRY_PASSWORD} \\"
+        echo "                --server ${INSTALL_REGISTRY_HOSTNAME} \\"
+        echo "                --export-to-all-namespaces --yes --namespace $NAMESPACE"
+      fi
+  
+      exit 1
     fi
-
-    exit 1
+  
+    uodateConfigMap tanzu-demo-hub TDH_SERVICE_TAP_IMAGE_RELOCATION "true"
   fi
-fi
 
   TanzuPackage_AddRepo       $NAMESPACE tanzu-tap-repository ${INSTALL_REGISTRY_HOSTNAME}/library/tap-packages:$TAP_VERSION 
   TanzuPackage_RepoSync      $NAMESPACE
@@ -5915,7 +5918,6 @@ fi
       createGiteaOrg  $GITEA_ORGANISATION
       createGiteaRepo $GITEA_ORGANISATION $repo
 
-      echo "https://gitea.$DNS_DOMAIN/$GITEA_ORGANISATION/$repo/raw/branch/master/catalog-info.yaml"
       curl -f https://gitea.$DNS_DOMAIN/$GITEA_ORGANISATION/$repo/raw/branch/master/catalog-info.yaml > /dev/null 2>&1; ret=$?
       if [ $ret -ne 0 ]; then 
         GIT_WORKDIR=/tmp/$repo
@@ -6184,9 +6186,12 @@ fi
     messagePrint " ▪ TAP GUI"            "https://tap-gui.$DNS_DOMAIN"
 
     messageLine
+    echo "  Manually Reconcile TAP Packages"
     echo "       => tools/${TDH_TOOLS}.sh"
     echo "       => tanzu package install tap -p tap.tanzu.vmware.com -v 1.1.0 --values-file /tmp/tap_config_stage_1.yaml -n tap-install"
     echo "       => tanzu package installed update tap -p tap.tanzu.vmware.com -v 1.1.0 --values-file /tmp/tap_config_stage_1.yaml -n tap-install"
+    echo "       => tanzu package installed update tap -p tap.tanzu.vmware.com -v 1.1.0 --values-file /tmp/tap_config_stage_2.yaml -n tap-install"
+    echo "       => tanzu package installed update tap -p tap.tanzu.vmware.com -v 1.1.0 --values-file /tmp/tap_config_stage_3.yaml -n tap-install"
     messageLine
   fi
 }
@@ -7727,7 +7732,7 @@ installClusterEssentials() {
     return
   fi
 
-  # --- GET BUILD_SERVICE INFORMATION ---
+  # --- GET CLUSTER ESSENTIOALS INFORMATION ---
   TDH_SERVICE_CLUSTER_ESSENTIALS_INSTALLED=$(getConfigMap tanzu-demo-hub TDH_SERVICE_CLUSTER_ESSENTIALS_INSTALLED)
   TDH_SERVICE_CLUSTER_ESSENTIALS_VERIFIED=$(getConfigMap tanzu-demo-hub TDH_SERVICE_CLUSTER_ESSENTIALS_VERIFIED)
 
