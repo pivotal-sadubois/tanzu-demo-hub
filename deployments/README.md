@@ -3,12 +3,12 @@ There are two different deployment files within the Tanzu Demo Hub Environment. 
 ```
 Tanzu Demo Hub Configuration
 -----------------------------------------------------------------------------------------------------------------------------------
-tkg-tanzu-demo-hub-1.4.1.cfg               ##  Tanzu Demo Hub (TDH) Service Configuration on TKG-1.4.1 
-tkg-tanzu-demo-hub-1.5.1.cfg               ##  Tanzu Demo Hub (TDH) Service Configuration on TKG-1.5.1 
-tkg-tanzu-tap-demo-1.0.1.cfg               ##  Tanzu Applicaiton Platform (1.0.1) on TKG-1.5.1 
-tce-tanzu-demo-hub-0.10.0.cfg              ##  Tanzu Demo Hub (TDH) Service Configuration on TCE-0.10.0 
-tce-tanzu-demo-hub-0.9.1.cfg               ##  Tanzu Demo Hub (TDH) Service Configuration on TCE-0.9.1 
-tce-tanzu-tap-demo-1.0.1.cfg               ##  Tanzu Applicaiton Platform (1.0.1) on TCE-0.10.0 
+tkg-tanzu-demo-hub-1.4.cfg                 ##  Tanzu Demo Hub (TDH) Service Configuration on TKG-1.4.1 
+tkg-tanzu-demo-hub-1.5.cfg                 ##  Tanzu Demo Hub (TDH) Service Configuration on TKG-1.5.1 
+tce-tanzu-demo-hub-0.10.cfg                ##  Tanzu Demo Hub (TDH) Service Configuration on TCE-0.10.0 
+tce-tanzu-demo-hub-0.9.cfg                 ##  Tanzu Demo Hub (TDH) Service Configuration on TCE-0.9.1 
+tkg-tanzu-tap-demo-1.1.cfg                 ##  Tanzu Applicaiton Platform (1.1.1) on TKG-1.5.3 
+tkg-tanzu-tap-demo-1.2.cfg                 ##  Tanzu Applicaiton Platform (1.2.1) on TKG-1.5.4 
 minikube-tanzu-demo-hub.cfg                ##  Minikube Deployment Configuration 
 
 Tanzu Management Cluster Configuration
