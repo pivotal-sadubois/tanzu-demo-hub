@@ -692,10 +692,10 @@ Create config file for TKG Workload Clusters
 This option will install a TKG Management Server (TKGm) on vSphere. Only the deployment on [VMware PEZ Cloud Service](https://pez-portal.int-apps.pcfone.io/ "VMware PEZ Cloud") is currently supported. The support for other vSphere environments is planned for a later time. 
 
 ## Deployment on VMware H20 Cloud
-The VMware H2O Environment is ideal for a TKG deployment as all components such as Jump Server, DHCP enabled networks etc. has been preconfigured for use. From the list of different deployment options choose the 'IaaS Only - vSphere (7.0 U3)' option.
+The VMware H2O Environment is ideal for a TKG deployment as all components such as Jump Server, DHCP enabled networks etc. has been preconfigured for use. From the list of different deployment options choose the 'vSphere with Tanzu - AVI - vSphere (7.0.3' option.
 
 *Deployment Requirements*
-- H2O Environment - (vSphere with Tanzu - AVI - vSphere (7.0.3)
+- H2O Environment - (h20.vmware.com)
 - AWS Route53 Domain (ie. pcfsdu.com)
 - MacBook with Docker Desktop enabled
 
@@ -738,26 +738,31 @@ VSPHERE_TKGS_VCENTER_ADMIN=administrator@vsphere.local
 VSPHERE_TKGS_VCENTER_PASSWORD=E95AVveIF3aONpAgKi!
 VSPHERE_TKGS_SUPERVISOR_CLUSTER=wcp.haas-505.pez.vmware.com 
 ```
-The following variables are required to access AWS Route53 to manage your DNS Domain and create Let's Enscript certificates used in the Tanzu Demo Hub demo's
+## TDH Services
+
+TDH Services such as Harbor, Tanzu Build Service or Tanzu Postgres etc. require access to depending services such as (GitHub, Docker, PivNET etc). You can use your existing credentials if you already have an account or you need to signup if you don't have one. 
+*Supported Environments*
+- [AWS Route53 Account SignUp](https://signin.aws.amazon.com)
+- [docker SignUp](https://hub.docker.com/login)
+- [myVMware SignUp](https://my.vmware.com/web/vmware/registration)
+- [VMware Container Registry SignUp](https://account.run.pivotal.io/z/uaa/sign-up)
+- [Docker Registry SignUp](https://hub.docker.com/signup)
+
+the following variables are required to access AWS Route53 to manage your DNS Domain and create Let's Enscript certificates used in the Tanzu Demo Hub demo's
 ```
 ##########################################################################################################
 ########################## AWS CREDENTIALS AND ROUTE53 DOMAIN CONFIGURATION  #############################
 ##########################################################################################################
 
-export AWS_ACCESS_KEY="XXXXXXXXXXXXXXXXXXXX"                        
-export AWS_SECRET_KEY="XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"    
+export AWS_ACCESS_KEY="XXXXXXXXXXXXXXXXXXXX"
+export AWS_SECRET_KEY="XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 export AWS_REGION="eu-central-1"
 export AWS_HOSTED_DNS_DOMAIN="mydomain.com"  # YOUR PERSONAL DNS DOMAIN HOSTED ON ROUTE53
 ```
-TDH Services such as Harbor, Tanzu Build Service or Tanzu Postgres etc. require access to depending services such as (GitHub, Docker, PivNET etc). You can use your existing credentials if you already have an account or you need to signup if you don't have one. 
-*Supported Environments*
-- [GitHub Account SignUp](https://github.com/signup?ref_cta=Sign+up&ref_loc=header+logged+out&ref_page=%2F&source=header-home)
-- [myVMware SignUp](https://my.vmware.com/web/vmware/registration)
-- [VMware Container Registry SignUp](https://account.run.pivotal.io/z/uaa/sign-up)
-- [Docker Registry SignUp](https://hub.docker.com/signup)
+The following variables define access to VMware registry and Docker Registy as well as Pivnet access to download software such as TBS etc.
 ```
 #########################################################################################################################
-###################################################### TDH SERVICES #####################################################
+##################################### VMWARE REGISTRY/MYVMWARE, DOCKER REGISTRY #########################################
 #########################################################################################################################
 
 export TDH_USER=sadubois                                 ## TAKE YOUR PIVOTAL OR VMWARE USERID
@@ -769,9 +774,6 @@ export TDH_REGISTRY_VMWARE_PASS=XXXXXXXXX
 export TDH_REGISTRY_DOCKER_NAME=docker.io                ## Docker Registry (required for TBS and Harbor)
 export TDH_REGISTRY_DOCKER_USER=<docker-uid>             ## => SIGN-UP: https://hub.docker.com/signup
 export TDH_REGISTRY_DOCKER_PASS=XXXXXXXXX
-export TDH_GITHUB_USER=<github-user>                     ## Github Account (http://github.com)
-export TDH_GITHUB_PASS=XXXXXXXXXX
-export TDH_GITHUB_SSHKEY=~/.ssh/id_XXXXXXXX
 export TDH_HARBOR_ADMIN_PASSWORD=XXXXXXXXXXXX
 export PCF_PIVNET_TOKEN="XXXXXXXXXXXXXXXXXXXXXXXXXXX-r"  ## Pivnet APi Token (https://network.pivotal.io)
 ```
