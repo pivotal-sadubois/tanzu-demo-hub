@@ -691,6 +691,31 @@ Create config file for TKG Workload Clusters
 # Tanzu-Demo-Hub on vSphere
 This option will install a TKG Management Server (TKGm) on vSphere. Only the deployment on [VMware PEZ Cloud Service](https://pez-portal.int-apps.pcfone.io/ "VMware PEZ Cloud") is currently supported. The support for other vSphere environments is planned for a later time. 
 
+## Deployment on VMware H20 Cloud
+The VMware H2O Environment is ideal for a TKG deployment as all components such as Jump Server, DHCP enabled networks etc. has been preconfigured for use. From the list of different deployment options choose the 'IaaS Only - vSphere (7.0 U3)' option.
+
+*Deployment Requirements*
+- H2O Environment - (vSphere with Tanzu - AVI - vSphere (7.0.3)
+- AWS Route53 Domain (ie. pcfsdu.com)
+- MacBook with Docker Desktop enabled
+
+![H2O](https://github.com/pivotal-sadubois/tanzu-demo-hub/blob/main/files/H2O.png)
+Take the values provided from the VMware H2O environment details page and add them to your local $HOME/tanzu-demo-hub.cfg configuration file. If it does not yet exist, please create it.
+
+```
+##########################################################################################################
+##################################### VSPHERE ENVIRONMENT PEZ (TKGs) #####################################
+##########################################################################################################
+# For registerTMCmc H2o (vSphere with Tanzu - AVI - vSphere (7.0.3)) - tdh-sdubois-tap - expire Jul 29, 2022, 9:43:11 PM
+VSPHERE_TKGS_VCENTER_SERVER=https://vc01.h2o-4-935.h2o.vmware.com	
+VSPHERE_TKGS_VCENTER_ADMIN=administrator@vsphere.local
+VSPHERE_TKGS_VCENTER_PASSWORD='u5_1UGbOajvc9xgNNBL'
+VSPHERE_TKGS_SUPERVISOR_CLUSTER=vc01cl01-wcp.h2o-4-935.h2o.vmware.com
+VSPHERE_TKGS_SUPERVISOR_STORAGE_POLICY=vc01cl01-t0compute
+VSPHERE_TKGS_SUPERVISOR_STORAGE_CLASS=vc01cl01-t0compute
+VSPHERE_TKGS_DNS_SERVER="10.79.2.5:53"
+```
+
 ## Deployment on VMware PEZ Cloud
 The VMware PEZ Cloud is ideal for a TKG deployment as all components such as Jump Server, DHCP enabled networks etc. has been preconfigured for use. From the list of different deployment options choose the 'IaaS Only - vSphere (7.0 U2)' option. 
 
@@ -705,34 +730,13 @@ Take the values provided from the VMware PEZ Cloud environment details page and 
 *Tanzu Demo Hub Configuration ($HOME/.tanzu-demo-hub.cfg)*
 ```
 ##########################################################################################################
-##################################### VSPHERE ENVIRONMENT PEZ (TKGm) #####################################
+##################################### VSPHERE ENVIRONMENT PEZ (TKGs) #####################################
 ##########################################################################################################
 
-VSPHERE_TKGM_DNS_DOMAIN=haas-505.pez.vmware.com
-VSPHERE_TKGM_VCENTER_SERVER=vcsa-01.haas-505.pez.vmware.com
-VSPHERE_TKGM_VCENTER_ADMIN=administrator@vsphere.local
-VSPHERE_TKGM_VCENTER_PASSWORD=3Ezfgpmr47LI5aEisK!
-VSPHERE_TKGM_JUMPHOST_NAME=ubuntu-505.haas-505.pez.vmware.com
-VSPHERE_TKGM_JUMPHOST_USER=ubuntu
-VSPHERE_TKGM_JUMPHOST_PASSWORD=3Ezfgpmr47LI5aEisK!
-VSPHERE_TKGM_SSH_PRIVATE_KEY_FILE=$HOME/.tanzu-demo-hub/KeyPair-PEZ-private.pem
-VSPHERE_TKGM_SSH_PUBLIC_KEY_FILE=$HOME/.tanzu-demo-hub/KeyPair-PEZ-public.pem
-VSPHERE_TKGM_DATASTORE=LUN01
-VSPHERE_TKGM_DATACENTER=Datacenter
-VSPHERE_TKGM_CLUSTER=Cluster
-VSPHERE_TKGM_NETWORK="Extra"
-VSPHERE_TKGM_VMFOLDER="/Datacenter/vm"
-VSPHERE_TKGM_SUBNET=10.212.153
-VSPHERE_TKGM_CONTROL_PLANE_ENDPOINT=${VSPHERE_TKGM_SUBNET}.105
-VSPHERE_TKGM_WORKLOAD_CLUSTER_IP_LIST="${VSPHERE_TKGM_SUBNET}.111 ${VSPHERE_TKGM_SUBNET}.112 ${VSPHERE_TKGM_SUBNET}.113 ${VSPHERE_TKGM_SUBNET}.114"
-VSPHERE_TKGM_LOADBALANCER_IPPOOL="${VSPHERE_TKGM_SUBNET}.${VSPHERE_TKGM_SUBNET}.160"
-VSPHERE_TKGM_MGMT_CLUSTER_CONTROL_PLANE=${VSPHERE_TKGM_SUBNET}.105
-VSPHERE_TKGM_WKLD_CLUSTER01_CONTROL_PLANE=${VSPHERE_TKGM_SUBNET}.111
-VSPHERE_TKGM_WKLD_CLUSTER01_LOADBALANCER_POOL=${VSPHERE_TKGM_SUBNET}.115-${VSPHERE_TKGM_SUBNET}.119
-VSPHERE_TKGM_WKLD_CLUSTER02_CONTROL_PLANE=${VSPHERE_TKGM_SUBNET}.121
-VSPHERE_TKGM_WKLD_CLUSTER02_LOADBALANCER_POOL=${VSPHERE_TKGM_SUBNET}.125-${VSPHERE_TKGM_SUBNET}.129
-VSPHERE_TKGM_WKLD_CLUSTER03_CONTROL_PLANE=${VSPHERE_TKGM_SUBNET}.131
-VSPHERE_TKGM_WKLD_CLUSTER03_LOADBALANCER_POOL=${VSPHERE_TKGM_SUBNET}.135-${VSPHERE_TKGM_SUBNET}.139
+VSPHERE_TKGS_VCENTER_SERVER=pacific-vcsa.haas-505.pez.vmware.com
+VSPHERE_TKGS_VCENTER_ADMIN=administrator@vsphere.local
+VSPHERE_TKGS_VCENTER_PASSWORD=E95AVveIF3aONpAgKi!
+VSPHERE_TKGS_SUPERVISOR_CLUSTER=wcp.haas-505.pez.vmware.com 
 ```
 The following variables are required to access AWS Route53 to manage your DNS Domain and create Let's Enscript certificates used in the Tanzu Demo Hub demo's
 ```
