@@ -73,8 +73,8 @@ checkCLIcommands TMC
 cleanKubeconfig
 tmcCheckLogin
 #checkTDHAccess
-vSphereLogin
 vSphereKubeconfig
+vSphereLogin
 
 # --- VERIFY ITS A H2O CLUSTER ---
 cnt=$(echo $VSPHERE_TKGS_VCENTER_SERVER | egrep -c "\.h2o-") 

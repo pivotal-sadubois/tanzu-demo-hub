@@ -1,0 +1,20 @@
+kp image create tbs-sample-python \
+--tag harbor.apps-contour.tkgs.pcfsdu.com/library/tbs-sample-python \
+--git https://gitea.apps-contour.tkgs.pcfsdu.com/tanzu/tanzu-build-service-sample-apps.git \
+--sub-path sample-apps/python \
+--git-revision main
+  
+exit
+
+kp image create tbs-sample-python \
+--cluster-builder py-builder \
+--tag $REPOSITORY/tbs-sample-python \
+--git https://github.com/ccollicutt/tbs-sample-apps/ \
+--sub-path sample-apps/python \
+--git-revision main
+
+
+
+kp image create tbs-sample-python --tag harbor.apps-contour.tkgs.pcfsdu.com/library/tbs-sample-python --git https://gitea.apps-contour.tkgs.pcfsdu.com/tanzu/tanzu-build-service-sample-apps.git --git-revision master^
+
+

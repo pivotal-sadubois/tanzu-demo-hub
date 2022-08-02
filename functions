@@ -56,14 +56,28 @@ fakeCmd() {
   echo ""
 }
 
+fileCat() {
+  echo "     ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------"
+
+  if [ -f /usr/local/bin/bat -o /usr/bin/bat ]; then
+    bat -p --color always $1 | sed -e 's/^/     /g' -e '/^$/N;/^\n$/D'
+  else
+    cat $1 | sed '/^$/N;/^\n$/D'
+  fi
+
+  echo "     ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------"
+  echo ""
+}
+
 execCat() {
   echo -e "     => cat $1\c"; read x
   echo "     ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------"
 
   if [ -f /usr/local/bin/bat -o /usr/bin/bat ]; then
-    bat -p --color always $1 | sed 's/^/     /g'
+    #bat -p --color always $1 | sed 's/^/     /g'
+    bat -p --color always $1 | sed -e 's/^/     /g' -e '/^$/N;/^\n$/D'
   else
-    cat $1
+    cat $1 | sed '/^$/N;/^\n$/D'
   fi
 
   echo "     ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------"
@@ -4926,6 +4940,8 @@ tkgCreateCluster() {
       [ -s $HOME/.tanzu-demo-hub/config/${TKG_DEPLOYMENT} ] && . $HOME/.tanzu-demo-hub/config/${TKG_DEPLOYMENT}
 
       export KUBECTL_VSPHERE_PASSWORD="$TDH_TKGMC_VSPHERE_PASS"
+      kubectl vsphere login --insecure-skip-tls-verify --server $TDH_TKGMC_SUPERVISORCLUSTER -u $TDH_TKGMC_VSPHERE_USER > /tmp/error.log 2>&1; ret=$?
+      export KUBECTL_VSPHERE_PASSWORD="$TDH_TKGMC_VSPHERE_PASS"
       cmdLoop kubectl vsphere login --insecure-skip-tls-verify --server $TDH_TKGMC_SUPERVISORCLUSTER -u $TDH_TKGMC_VSPHERE_USER > /tmp/error.log 2>&1; ret=$?
       if [ $ret -ne 0 ]; then
         logMessages /tmp/error.log
@@ -4933,8 +4949,7 @@ tkgCreateCluster() {
         if [ "$NATIVE" == "0" ]; then
           echo "       => tools/${TDH_TOOLS}.sh"
           echo "          tdh-tools:/$ export KUBECTL_VSPHERE_PASSWORD=$TDH_TKGMC_VSPHERE_PASS"
-          echo "          tdh-tools:/$ kubectl vsphere login --insecure-skip-tls-verify --server $TDH_TKGMC_SUPERVISORCLUSTER \\"
-          echo "                               -u $TDH_TKGMC_VSPHERE_USER"
+          echo "          tdh-tools:/$ kubectl vsphere login --insecure-skip-tls-verify --server $TDH_TKGMC_SUPERVISORCLUSTER -u $TDH_TKGMC_VSPHERE_USER"
           echo "          tdh-tools:/$ exit"
         else
           echo "       => export KUBECTL_VSPHERE_PASSWORD=$TDH_TKGMC_VSPHERE_PASS"
@@ -5942,7 +5957,9 @@ installTAP() {
 
         curl -f https://gitea.$DNS_DOMAIN/$GITEA_ORGANISATION/$repo/raw/branch/master/catalog-info.yaml > /dev/null 2>&1; ret=$?
         if [ $ret -ne 0 ]; then
-          echo "ERROR: failed to sync catalog files to gitea repository"; exit 1
+          echo "ERROR: failed to sync catalog files to gitea repository, verify manually"
+          echo "       => curl -f https://gitea.$DNS_DOMAIN/$GITEA_ORGANISATION/$repo/raw/branch/master/catalog-info.yaml"
+          exit 1
         fi
       fi
     done
@@ -6053,7 +6070,7 @@ installTAP() {
     echo "  # tap-auth.tanzu.vmware.com"                                                                                          >> $TAP_CONFIG_3
     echo "  # tap-gui.tanzu.vmware.com"                                                                                           >> $TAP_CONFIG_3
     echo "  # tap-telemetry.tanzu.vmware.com"                                                                                     >> $TAP_CONFIG_3
-    echo "  - tekton.tanzu.vmware.com"                                                                                            >> $TAP_CONFIG_3
+    echo "  # tekton.tanzu.vmware.com"                                                                                            >> $TAP_CONFIG_3
     echo "  # learningcenter.tanzu.vmware.com"                                                                                    >> $TAP_CONFIG_3
     echo "  # workshops.learningcenter.tanzu.vmware.com"                                                                          >> $TAP_CONFIG_3
     echo ""                                                                                                                       >> $TAP_CONFIG_3
@@ -6189,9 +6206,11 @@ installTAP() {
     echo "  Manually Reconcile TAP Packages"
     echo "       => tools/${TDH_TOOLS}.sh"
     echo "       => tanzu package install tap -p tap.tanzu.vmware.com -v 1.1.0 --values-file /tmp/tap_config_stage_1.yaml -n tap-install"
-    echo "       => tanzu package installed update tap -p tap.tanzu.vmware.com -v 1.1.0 --values-file /tmp/tap_config_stage_1.yaml -n tap-install"
-    echo "       => tanzu package installed update tap -p tap.tanzu.vmware.com -v 1.1.0 --values-file /tmp/tap_config_stage_2.yaml -n tap-install"
-    echo "       => tanzu package installed update tap -p tap.tanzu.vmware.com -v 1.1.0 --values-file /tmp/tap_config_stage_3.yaml -n tap-install"
+    echo "       => tanzu package installed update tap -p tap.tanzu.vmware.com -v $TDH_SERVICE_TAP_VERSION --values-file /tmp/tap_config_stage_1.yaml -n tap-install"
+    echo "       => tanzu package installed update tap -p tap.tanzu.vmware.com -v $TDH_SERVICE_TAP_VERSION --values-file /tmp/tap_config_stage_2.yaml -n tap-install"
+    echo "       => tanzu package installed update tap -p tap.tanzu.vmware.com -v $TDH_SERVICE_TAP_VERSION --values-file /tmp/tap_config_stage_3.yaml -n tap-install"
+    echo "   Verify Status of installed Package"
+    echo "       => tanzu package installed list -A"
     messageLine
   fi
 }
@@ -7335,7 +7354,7 @@ installMinio() {
 # GitLab API ................: https://docs.gitlab.com/ee/api/
 # ------------------------------------------------------------------------------------------
 installGitLab() {
-  NAMESPACE=gitlab
+  NAMESPACE=gitlab1
   HELMCHART=gitlab
 
   if [ "$TDH_SERVICE_GITLAB" != "true" ]; then
@@ -7394,6 +7413,9 @@ installGitLab() {
     echo "    key: password"                                                                                                    >> $HELM_VALUES
     echo "  ingress:"                                                                                                           >> $HELM_VALUES
     echo "    configureCertmanager: false"                                                                                      >> $HELM_VALUES
+    echo "gitlab-runner:"                                                                                                       >> $HELM_VALUES
+    echo "  runners:"                                                                                                           >> $HELM_VALUES
+    echo "    privileged: \"true\""                                                                                             >> $HELM_VALUES
     echo "ingress:"                                                                                                             >> $HELM_VALUES
     echo "  apiVersion: \"\""                                                                                                   >> $HELM_VALUES
     echo "  configureCertmanager: true"                                                                                         >> $HELM_VALUES
@@ -7415,10 +7437,23 @@ installGitLab() {
 #gogo
     cnt=0; ret=1; stt="notdeployed"
     while [ $ret -ne 0 -a $cnt -lt 5 -a "$stt" != "deployed" ]; do
-      helm install gitlab gitlab/gitlab -f ${HELM_VALUES} --namespace $NAMESPACE --wait --wait-for-jobs --timeout 10m > /tmp/error.log 2>&1; ret=$?
+      #helm install gitlab gitlab/gitlab -f ${HELM_VALUES} --namespace $NAMESPACE --wait --wait-for-jobs --timeout 10m > /tmp/error.log 2>&1; ret=$?
+
+echo "helm install gitlab gitlab/gitlab -f ${HELM_VALUES} --namespace $NAMESPACE > /tmp/error.log"
+      helm install gitlab gitlab/gitlab -f ${HELM_VALUES} --namespace $NAMESPACE > /tmp/error.log; ret=$?
+echo "RET:$ret"
+
+      fileCat /tmp/error.log
+
+     
 
       cmdLoop helm ls -n $NAMESPACE -o json > /tmp/output.json
+cp /tmp/output.json /tmp/output1.json
+cat /tmp/output.json
+echo "HELMCHART:$HELMCHART"
+echo "NAMESPACE:$NAMESPACE"
       stt=$(jq -r --arg chart "$HELMCHART" '.[] | select(.name == $chart).status' /tmp/output.json)
+echo "stt:$stt"
 
       [ $ret -eq 0 -a "$stt" == "deployed" ] && break
 
@@ -7499,7 +7534,7 @@ installGitLab() {
     messageLine
     if [ "$NATIVE" == "0" ]; then
       echo "       => tools/${TDH_TOOLS}.sh"
-      echo "          tdh-tools:/$ kubectl get svc --namespace $NAMESPACE"
+      echo "          tdh-tools:/$ kubectl describe svc gitlab-nginx-ingress-controller --namespace $NAMESPACE"
       echo "          tdh-tools:/$ exit"
     else
       echo "       => kubectl get svc --namespace $NAMESPACE"
@@ -8687,7 +8722,7 @@ createClusterIssuer() {
 
     # --- RECREATE ISSUER ---
     kubectl -n $NAMESPACE delete --all clusterissuer,certificate,order,challenge > /dev/null 2>&1
-    sleep 120
+    sleep 300
     kubectl -n $NAMESPACE apply -f $TDH_TLS_ISSUER_FILE > /dev/null 2>&1
     if [ $? -ne 0 ]; then
       echo "ERROR: failed to deploy letsenscript issuer"
@@ -8770,7 +8805,7 @@ createClusterIssuer() {
       exit 1
     fi
 
-    sleep 60
+    sleep 120
 
     cnt=0
 
@@ -10084,6 +10119,8 @@ messageCount_old() {
 # ------------------------------------------------------------------------------------------
 # Function Name ......: messageCountFine
 # Function Category ..: messageCount - Tanzu Demo Hub automated testing facility for Demos
+
+     
 # Function Purpose ...: Finalize Counting and print the test Name
 # ------------------------------------------------------------------------------------------
 # Argument ($1) ......: Test Message Text (ie. "Deploy a Database") ............... (string)
@@ -12028,9 +12065,13 @@ vSphereAPI_createContentLibrary() {
   VMSERVICE_IMAGE_NAME=centos-stream-8-vmservice-v1alpha1-1638306496810
   VMSERVICE_IMAGE=${VMSERVICE_IMAGE_NAME}.ova
 
+  messageTitle "vSphere Content Library for Tanzu Demo Hub Environment"
+
   # --- LETS SEE IF WE HAVE THAT VERSION IN THE LOCAL CACHE ---
   [ ! -d $HOME/.tanzu-demo-hub/cache/tdh-vmservice ] && mkdir -p $HOME/.tanzu-demo-hub/cache/tdh-vmservice
   if [ ! -f $HOME/.tanzu-demo-hub/cache/tdh-vmservice/$VMSERVICE_IMAGE ]; then
+    messagePrint " ▪ Download Image (VMSERVICE_IMAGE) from S3"   "https://tanzu-demo-hub.s3.eu-central-1.amazonaws.com/$VMSERVICE_IMAGE"
+
     # --- GET LATEST TDH-VMSERVICE IMAGE FROM AWS ---
     curl -f https://tanzu-demo-hub.s3.eu-central-1.amazonaws.com/$VMSERVICE_IMAGE >/dev/null 2>&1; ret=$?
     if [ $ret -ne 0 ]; then
@@ -12047,6 +12088,8 @@ vSphereAPI_createContentLibrary() {
       echo "       =>  wget -q https://tanzu-demo-hub.s3.eu-central-1.amazonaws.com/${VMSERVICE_IMAGE} -O $HOME/.tanzu-demo-hub/cache/tdh-vmservice/${VMSERVICE_IMAGE}"
       exit
     fi
+  else
+    messagePrint " ▪ Verify Local cached Image (VMSERVICE_IMAGE) from S3"   "$HOME/.tanzu-demo-hub/cache/tdh-vmservice/$VMSERVICE_IMAGE"
   fi
 
   #########################################################################################################################
@@ -12056,6 +12099,8 @@ vSphereAPI_createContentLibrary() {
   # --- CREATE CONTENT-LIBRARY ---
   cnt=$(govc library.ls | egrep -c "^/$VCENTER_CONTENT_LIBRARY") 
   if [ $cnt -eq 0 ]; then 
+    messagePrint " ▪ Create Content Library"   "$VCENTER_CONTENT_LIBRARY"
+
     govc library.create -d="Tanzu Demo Hub - VM Images" $VCENTER_CONTENT_LIBRARY > /dev/null 2>&1
 
     cnt=$(govc library.ls | egrep -c "^/$VCENTER_CONTENT_LIBRARY")
@@ -12068,6 +12113,8 @@ vSphereAPI_createContentLibrary() {
       echo "          govc library.create -d=\"Tanzu Demo Hub - VM Images\" $VCENTER_CONTENT_LIBRARY"
       exit 1
     fi
+  else
+    messagePrint " ▪ Verify Content Library"   "$VCENTER_CONTENT_LIBRARY"
   fi
 
   VCENTER_CONTENT_LIBRARY_ID=$(govc library.info /tanzu-demo-hub | egrep "  ID:" | awk '{ print $2 }' )
@@ -12075,6 +12122,8 @@ vSphereAPI_createContentLibrary() {
   # --- CREATE CONTENT-LIBRARY ---
   cnt=$(govc library.ls /$VCENTER_CONTENT_LIBRARY/ | egrep -c "^/$VCENTER_CONTENT_LIBRARY/$VMSERVICE_IMAGE_NAME")
   if [ $cnt -eq 0 ]; then 
+    messagePrint " ▪ Upload OVF Image to Content Library (tanzu-demo-hub)"   "$VMSERVICE_IMAGE"
+
     govc library.import $VCENTER_CONTENT_LIBRARY $HOME/.tanzu-demo-hub/cache/tdh-vmservice/$VMSERVICE_IMAGE > /dev/null 2>&1
 
     cnt=$(govc library.ls /$VCENTER_CONTENT_LIBRARY/ | egrep -c "^/$VCENTER_CONTENT_LIBRARY/$VMSERVICE_IMAGE_NAM")
@@ -12087,6 +12136,8 @@ vSphereAPI_createContentLibrary() {
       echo "          govc library.import $VCENTER_CONTENT_LIBRARY $HOME/.tanzu-demo-hub/cache/tdh-vmservice/$VMSERVICE_IMAGE"
       exit 1
     fi
+  else
+    messagePrint " ▪ Verify OVF Image in Content Library (tanzu-demo-hub)"   "$VMSERVICE_IMAGE"
   fi
 
 
@@ -12886,11 +12937,16 @@ TanzuPackage_Harbor () {
   HARBOR_HOSTNAME="harbor.apps-contour.$TDH_ENVNAME.$AWS_HOSTED_DNS_DOMAIN"
   NOTARY_HOSTNAME="notary.apps-contour.$TDH_ENVNAME.$AWS_HOSTED_DNS_DOMAIN"
 
+  messageTitle "Harbor OCI Registry"
+
   #tanzu package installed delete harbor-pkg --namespace tanzu-system-packages
 
   cmdLoop tanzu package installed list -A -o json > /tmp/output.json 2>/dev/null
   pkg=$(jq -r --arg key "$PACKAGE_NAME" '.[] | select(.name == $key).name' /tmp/output.json)
+echo "gaga TanzuPackage_Harbor: pkg:$pkg"
   if [ "$pkg" != "$PACKAGE_NAME" ]; then
+    #cmdLoop tanzu package installed delete harbor-pkg --namespace $NAMESPACE
+
     messagePrint " ▪ Create Namespace"  "$NAMESPACE"
     deleteNamespace $NAMESPACE > /dev/null 2>&1
     createNamespace $NAMESPACE > /dev/null 2>&1
@@ -12982,7 +13038,7 @@ TanzuPackage_Harbor () {
     echo "      accessMode: ReadWriteOnce"                                                                                      >> $HARBOR_VALUES
     echo "      size: 10Gi"                                                                                                     >> $HARBOR_VALUES
 
-    messageTitle "Installing $PACKAGE_DES"
+    messagePrint "Installing Harbor OCI Registry"     "$PACKAGE_NAME"
     messagePrint " ▪ Tanzu Package ($PACKAGE_NAME)"   "$PACKAGE_ID ($package_ver/$package_rel)"
     cnt=0; ret=1
 #bbbbb
@@ -13042,7 +13098,6 @@ TanzuPackage_Harbor () {
     fi
   fi
 
-
   cmdLoop tanzu package installed list -A -o json > /tmp/output.json 2>/dev/null
   stt=$(jq -r --arg key "$PACKAGE_NAME" '.[] | select(.name == $key).name' /tmp/output.json)
   if [ "$stt" == "$PACKAGE_NAME" ]; then
@@ -13051,7 +13106,7 @@ TanzuPackage_Harbor () {
     pkg_nam=$(jq -r '.[]."package-name"' /tmp/pkg.json)
     pkg_ver=$(jq -r '.[]."package-version"' /tmp/pkg.json)
 
-    messageTitle "Verify $PACKAGE_DES"
+    messagePrint "Verify $PACKAGE_DES"                              "$PACKAGE_NAME"
     messagePrint " ▪ Tanzu Package ($PACKAGE_NAME)"                 "$pkg_nam"
     messagePrint " ▪ Tanzu Package ($PACKAGE_NAME) Hostname"        "$HARBOR_HOSTNAME"
     messagePrint " ▪ Tanzu Package ($PACKAGE_NAME) Namespace"       "$NAMESPACE"
@@ -13679,7 +13734,7 @@ runTDHtoolsDemos() {
       nam=$(echo $n | awk -F'/' '{ print $NF }' | sed 's/\.kubeconfig//g')
       vsphereSupervisorClusterLogin $nam
 
-      kubectl --kubeconfig=$n --request-timeout 1s get ns >/dev/null 2>&1; ret=$?
+      kubectl --kubeconfig=$n --request-timeout 3s get ns >/dev/null 2>&1; ret=$?
       if [ $ret -eq 0 ]; then
         nam=$(echo $n | awk -F'/' '{ print $NF }' | sed 's/\.kubeconfig//g') 
         CLUSTER_LIST="$CLUSTER_LIST $nam" 
@@ -13717,7 +13772,7 @@ runTDHtoolsDemos() {
     for n in $(ls -1 $HOME/.tanzu-demo-hub/config/tdh*.kubeconfig 2>/dev/null); do
       nam=$(echo $n | awk -F'/' '{ print $NF }' | sed 's/\.kubeconfig//g') 
   
-      cmdLoop kubectl --kubeconfig=$n --request-timeout 1s get cm -n default -o json > /tmp/output.json 2>/dev/null
+      cmdLoop kubectl --kubeconfig=$n --request-timeout 3s get cm -n default -o json > /tmp/output.json 2>/dev/null
       if [ -s /tmp/output.json ]; then
         cfm=$(jq -r '.items[].metadata | select(.name == "tanzu-demo-hub").name' /tmp/output.json 2>/dev/null)
         if [ "$cfm" == "tanzu-demo-hub" ]; then
@@ -14752,7 +14807,7 @@ dockerPullSecret() {
   cmdLoop kubectl -n $TMP_NAMESPACE get secret -o json > /tmp/output.json
   nam=$(jq -r --arg key "tdh-docker-repo" '.items[].metadata | select(.name == $key).name' /tmp/output.json) 
   if [ "$nam" != "tdh-docker-repo" ]; then 
-    messagePrint " ▪ Create Docker secret"  "tdh-docker-repo"
+    messagePrint " ▪ Create Docker PullSecret for ServiceAccount"  "$1/$2"
     cmdLoop kubectl -n $TMP_NAMESPACE create secret docker-registry tdh-docker-repo \
             --docker-server $TDH_REGISTRY_DOCKER_NAME \
             --docker-username $TDH_REGISTRY_DOCKER_USER \
@@ -14873,10 +14928,12 @@ attachClusterToTMC() {
   mgmtCluster=$3
   kubeconfig=$4
 
+  echo "" > /tmp/status.txt
+
   #########################################################################################################################
   ######################################### VERIFY CLUSTER AVAIABLILITY ###################################################
   #########################################################################################################################
-  kubectl --kubeconfig=$kubeconfig --request-timeout 1s get ns > /dev/null 2>&1; ret=$?
+  kubectl --kubeconfig=$kubeconfig --request-timeout 3s get ns > /dev/null 2>&1; ret=$?
   [ $ret -ne 0 ] && echo "UNREACHABLE" && return 1
 
   #########################################################################################################################
@@ -14926,7 +14983,8 @@ attachClusterToTMC() {
   hlt=$(jq -r --arg clu "$clusterName" --arg pvn "$provisioner" --arg mcl "$mgmtCluster" \
         '.clusters[] | select(.fullName.name == $clu and .fullName.provisionerName == $pvn and .fullName.managementClusterName == $mcl).status.health' /tmp/output.json)
 
-  echo "$stt/$hlt"; return 0
+  echo "$stt/$hlt" > /tmp/status.txt
+  return 0
 }
 
 
