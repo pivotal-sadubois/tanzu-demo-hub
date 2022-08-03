@@ -11487,7 +11487,7 @@ vsNamespaceCreate() {
   STORARGE_POLICY_ID=$(curl -k -H "vmware-api-session-id: $API_TOKEN" https://$API_HOST/api/vcenter/storage/policies 2>/dev/null | \
     jq --arg policy "$STORARGE_POLICY" -r '.[] | select(.name == $policy).policy')
 
-  curl -k -X POST -H "vmware-api-session-id: $API_TOKEN" -H "Content-Type: application/json" \
+  pn
   -d "{ \"cluster\": \"$CLUSTER_DOMAIN\", \"namespace\": \"$NAMESPACE\", \"storage_specs\": [{\"policy\":\"$STORARGE_POLICY_ID\"}], \"access_list\":[{\"domain\":\"vsphere.local\",\"role\":\"EDIT\",\"subject\":\"$USER\",\"subject_type\":\"USER\"}] }" \
   https://$API_HOST/api/vcenter/namespaces/instances 2>/dev/null; ret=$?
   
@@ -12032,6 +12032,11 @@ vSphereAPI_getToken() {
   VCENTER_PASS="$3"
   USERPASS="${VCENTER_USER}:${VCENTER_PASS}"
 
+  export GOVC_INSECURE=1
+  export GOVC_URL=${VSPHERE_TKGS_VCENTER_SERVER}/sdk
+  export GOVC_USERNAME=$VSPHERE_TKGS_VCENTER_ADMIN
+  export GOVC_PASSWORD=$VSPHERE_TKGS_VCENTER_PASSWORD
+
   curl -k -X POST "${VCENTER_SERVER}/rest/com/vmware/cis/session" -u "$USERPASS" 2>/dev/null | jq -r '.value'
 
 }
@@ -12096,6 +12101,7 @@ vSphereAPI_createContentLibrary() {
   ################################### CREATE CONTENT-LIBRARY AND UPLOAD IMAGE #############################################
   #########################################################################################################################
 
+#hhhhhh
   # --- CREATE CONTENT-LIBRARY ---
   cnt=$(govc library.ls | egrep -c "^/$VCENTER_CONTENT_LIBRARY") 
   if [ $cnt -eq 0 ]; then 
@@ -12176,6 +12182,76 @@ vSphereAPI_createContentLibrary() {
 }
 
 # ------------------------------------------------------------------------------------------
+# Function Name ......: vSphereAPI_updateNamespace
+# Function Purpose ...: Update a vSphere Namespace with vmservice content library
+# ------------------------------------------------------------------------------------------
+# Argument ($1) ......: vSphere API Token
+#          ($2) ......: vSphere Server Name
+#          ($3) ......: vSphere Namespace name
+# ------------------------------------------------------------------------------------------
+# Return Value .......: 0 on Success, 1 on failure
+# ------------------------------------------------------------------------------------------
+# https://developer.vmware.com/apis/vsphere-automation/latest/vcenter/namespace_management/
+# https://developer.vmware.com/apis/vsphere-automation/latest/vcenter/namespaces/
+# ------------------------------------------------------------------------------------------
+vSphereAPI_updateNamespace() {
+  API_TOKEN=$1
+  VCENTER_SERVER=$2
+  NAMESPACE=$3
+
+  export GOVC_INSECURE=1
+  export GOVC_URL=${VSPHERE_TKGS_VCENTER_SERVER}/sdk
+  export GOVC_USERNAME=$VSPHERE_TKGS_VCENTER_ADMIN
+  export GOVC_PASSWORD=$VSPHERE_TKGS_VCENTER_PASSWORD
+
+  VCENTER_CONTENT_LIBRARY_ID=$(govc library.info /tanzu-demo-hub | egrep "  ID:" | awk '{ print $2 }' )
+
+  # VERIFY IF CONTENT LIBRARY HAS BEEN CONFIGURED 
+  found=0
+  lst=$(curl -k -X GET -H "vmware-api-session-id: $API_TOKEN" ${VCENTER_SERVER}/api/vcenter/namespaces/instances/$NAMESPACE 2>/dev/null | \
+        jq -r '.vm_service_spec.content_libraries[]')
+
+  for n in $lst; do
+    [ "$n" == "$VCENTER_CONTENT_LIBRARY_ID" ] && found=1
+  done
+
+  if [ $found -eq 0 ]; then
+    messagePrint " ▪ Add content Library (tanzu-demo-hub)"  "$VCENTER_CONTENT_LIBRARY_ID"
+
+    # --- UPDATE VSPHERE NAMESPACE CONFIG ---
+    VSPHERE_CONFIG=/tmp/vsphere_config.json; rm -f $OKTA_CONFIG
+    echo '{'                                                                         >  $VSPHERE_CONFIG
+    echo '  "vm_service_spec": {'                                                    >> $VSPHERE_CONFIG
+    echo '    "content_libraries": ['                                                >> $VSPHERE_CONFIG
+    echo "      \"$VCENTER_CONTENT_LIBRARY_ID\""                                     >> $VSPHERE_CONFIG
+    echo '    ]'                                                                     >> $VSPHERE_CONFIG
+    echo '  }'                                                                       >> $VSPHERE_CONFIG
+    echo '}'                                                                         >> $VSPHERE_CONFIG
+  
+    curl -k -X PATCH -H 'Content-type: application/json' \
+                     -H "vmware-api-session-id: $API_TOKEN" ${VCENTER_SERVER}/api/vcenter/namespaces/instances/$NAMESPACE \
+                     -d "@$VSPHERE_CONFIG" > /tmp/error.log 2>&1; ret=$?
+  
+    if [ $ret -ne 0 ]; then
+      logMessages /tmp/error.log
+      logMessages $VSPHERE_CONFIG
+      echo "ERROR: failed to Patch vSphere Namespace $NAMESPACE"
+      if [ "$NATIVE" == "0" ]; then
+        echo "       => tools/${TDH_TOOLS}.sh"
+        echo "          tdh-tools:/$ curl -k -X PATH -H \"vmware-api-session-id: $API_TOKEN\" ${VCENTER_SERVER}/api/vcenter/namespaces/instances/$NAMESPACE \\"
+        echo "                            -H 'Content-type: application/json' -d \"@$VSPHERE_CONFIG\""
+        echo "          tdh-tools:/$ exit"
+      else
+        echo "       => curl -k -X PATH -H \"vmware-api-session-id: $API_TOKEN\" ${VCENTER_SERVER}/api/vcenter/namespaces/instances/$NAMESPACE \\"
+        echo "               -H 'Content-type: application/json' -d \"@$VSPHERE_CONFIG\""
+      fi
+  
+      exit 1
+    fi
+  fi
+}
+
+# ------------------------------------------------------------------------------------------
 # Function Name ......: vSphereAPI_createNamespace
 # Function Purpose ...: Create a vSphere Namespace
 # ------------------------------------------------------------------------------------------
@@ -12184,6 +12260,9 @@ vSphereAPI_createContentLibrary() {
 #          ($3) ......: vSphere Namespace name
 # ------------------------------------------------------------------------------------------
 # Return Value .......: 0 on Success, 1 on failure
+# ------------------------------------------------------------------------------------------
+# https://developer.vmware.com/apis/vsphere-automation/latest/vcenter/namespace_management/
+# https://developer.vmware.com/apis/vsphere-automation/latest/vcenter/namespaces/
 # ------------------------------------------------------------------------------------------
 vSphereAPI_createNamespace() {
   API_TOKEN=$1
