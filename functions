@@ -6114,7 +6114,7 @@ installTAP() {
     echo "tap_gui:"                                                                                                               >> $TAP_CONFIG
     echo "  ingressEnabled: \"true\""                                                                                             >> $TAP_CONFIG
     echo "  ingressDomain: $DNS_DOMAIN"                                                                                           >> $TAP_CONFIG
-    echo "  storageClass: \"$TDH_STORAGE_CLASS\""                                                                                 >> $TAP_CONFIG
+    echo "  storageClass: \"$VSPHERE_TKGS_SUPERVISOR_STORAGE_CLASS\""                                                             >> $TAP_CONFIG
     echo "  service_type: ClusterIP"                                                                                              >> $TAP_CONFIG
     echo "  tls:"                                                                                                                 >> $TAP_CONFIG
     echo "    secretName: tanzu-demo-hub-tls"                                                                                     >> $TAP_CONFIG
@@ -6143,8 +6143,8 @@ installTAP() {
     echo "      locations:"                                                                                                       >> $TAP_CONFIG
     echo "        - type: url"                                                                                                    >> $TAP_CONFIG
     echo "          target: https://gitea.$DNS_DOMAIN/tanzu/yelb_catalog/raw/branch/master/catalog-info.yaml"                     >> $TAP_CONFIG
-    echo "        - type: url"                                                                                                    >> $TAP_CONFIG
-    echo "          target: https://gitea.$DNS_DOMAIN/tanzu//blank_catalog/raw/branch/master/catalog-info.yaml"                   >> $TAP_CONFIG
+    echo "#       - type: url"                                                                                                    >> $TAP_CONFIG
+    echo "#         target: https://gitea.$DNS_DOMAIN/tanzu//blank_catalog/raw/branch/master/catalog-info.yaml"                   >> $TAP_CONFIG
     echo "    backend:"                                                                                                           >> $TAP_CONFIG
     echo "        baseUrl: https://tap-gui.$DNS_DOMAIN"                                                                           >> $TAP_CONFIG
     echo "        cors:"                                                                                                          >> $TAP_CONFIG
@@ -6153,6 +6153,7 @@ installTAP() {
     echo "          allow:"                                                                                                       >> $TAP_CONFIG
     echo "            - host: acc-server.accelerator-system.svc.cluster.local"                                                    >> $TAP_CONFIG
     echo "            - host: https://tap-gui.$DNS_DOMAIN"                                                                        >> $TAP_CONFIG
+    echo ""                                                                                                                       >> $TAP_CONFIG
 
     echo ""                                                                                                                       >> $TAP_CONFIG
     echo ""                                                                                                                       >> $TAP_CONFIG
@@ -6171,7 +6172,7 @@ installTAP() {
     #echo "  ingressDomain: learningcenter.$DNS_DOMAIN"                                                                            >> $TAP_CONFIG
     echo "  ingressDomain: $DNS_DOMAIN"                                                                            >> $TAP_CONFIG
     # --- Minicube (standard), vsphere pez: tanzu"
-    echo "  storageClass: \"$TDH_STORAGE_CLASS\""                                                                                 >> $TAP_CONFIG
+    echo "  storageClass: \"$VSPHERE_TKGS_SUPERVISOR_STORAGE_CLASS\""                                                              >> $TAP_CONFIG
     echo "  ingressSecret:"                                                                                                       >> $TAP_CONFIG
     echo "    certificate: |"                                                                                                     >> $TAP_CONFIG
     kubectl get secret tanzu-demo-hub-tls -o json | jq -r '.data."tls.crt"' | base64 -d | sed 's/^/      /g'                      >> $TAP_CONFIG
@@ -6188,9 +6189,22 @@ installTAP() {
     echo "  service_type: LoadBalancer"                                                                                           >> $TAP_CONFIG
     echo ""                                                                                                                       >> $TAP_CONFIG
     echo "metadata_store:"                                                                                                        >> $TAP_CONFIG
-    echo "  app_service_type: LoadBalancer"                                                                                       >> $TAP_CONFIG
+    echo "  app_service_type: ClusterIP"                                                                                          >> $TAP_CONFIG
+    echo "  storage_class_name: \"$DNS_DOMAIN\""                                                                                  >> $TAP_CONFIG
+    echo "  ingress_domain: apps-contour.vsptap.pcfsdu.com"                                                                       >> $TAP_CONFIG
+    echo "  ingress_enabled: \"true\""                                                                                            >> $TAP_CONFIG
+    echo "  use_cert_manager: \"true\""                                                                                           >> $TAP_CONFIG
+    echo "  #TLS not working, patch it with scripts/tap-metadata-store-patch-httpproxy.sh"                                        >> $TAP_CONFIG
+    echo "  tls:"                                                                                                                 >> $TAP_CONFIG
+    echo "    secretName: tanzu-demo-hub-tls"                                                                                     >> $TAP_CONFIG
+    echo "    namespace: tdh-cert-admin"                                                                                          >> $TAP_CONFIG
     echo ""                                                                                                                       >> $TAP_CONFIG
 
+  app_service_type: ClusterIP
+  storage_class_name: "vc01cl01-t0compute"
+  ingress_domain: apps-contour.vsptap.pcfsdu.com
+  ingress_enabled: "true"
+  use_cert_manager: "false"
 
     cat $TAP_CONFIG >> $TAP_CONFIG_1
     cat $TAP_CONFIG >> $TAP_CONFIG_2
@@ -6201,14 +6215,15 @@ installTAP() {
     messagePrint " ▪ TAP Config (Stage-3) All Tap Services"     "\$HOME/.${TDH_TOOLS}/tmp/tap_config_stage_3.yaml (TDH-TOOLS: /tmp/tap_config_stage_3.yaml)"
     messagePrint " ▪ TAP Lerning Center" "https://learning-center-guided.$DNS_DOMAIN"
     messagePrint " ▪ TAP GUI"            "https://tap-gui.$DNS_DOMAIN"
+    messagePrint " ▪ Metadata Store"     "https://metadata-store.$DNS_DOMAIN:8443"
 
     messageLine
     echo "  Manually Reconcile TAP Packages"
     echo "       => tools/${TDH_TOOLS}.sh"
-    echo "       => tanzu package install tap -p tap.tanzu.vmware.com -v 1.1.0 --values-file /tmp/tap_config_stage_1.yaml -n tap-install"
-    echo "       => tanzu package installed update tap -p tap.tanzu.vmware.com -v $TDH_SERVICE_TAP_VERSION --values-file /tmp/tap_config_stage_1.yaml -n tap-install"
-    echo "       => tanzu package installed update tap -p tap.tanzu.vmware.com -v $TDH_SERVICE_TAP_VERSION --values-file /tmp/tap_config_stage_2.yaml -n tap-install"
-    echo "       => tanzu package installed update tap -p tap.tanzu.vmware.com -v $TDH_SERVICE_TAP_VERSION --values-file /tmp/tap_config_stage_3.yaml -n tap-install"
+    echo "       => tanzu package install tap -p tap.tanzu.vmware.com -v $TAP_VERSION --values-file /tmp/tap_config_stage_1.yaml -n tap-install"
+    echo "       => tanzu package installed update tap -p tap.tanzu.vmware.com -v $TAP_VERSION --values-file /tmp/tap_config_stage_1.yaml -n tap-install"
+    echo "       => tanzu package installed update tap -p tap.tanzu.vmware.com -v $TAP_VERSION --values-file /tmp/tap_config_stage_2.yaml -n tap-install"
+    echo "       => tanzu package installed update tap -p tap.tanzu.vmware.com -v $TAP_VERSION --values-file /tmp/tap_config_stage_3.yaml -n tap-install"
     echo "   Verify Status of installed Package"
     echo "       => tanzu package installed list -A"
     messageLine
@@ -13022,7 +13037,6 @@ TanzuPackage_Harbor () {
 
   cmdLoop tanzu package installed list -A -o json > /tmp/output.json 2>/dev/null
   pkg=$(jq -r --arg key "$PACKAGE_NAME" '.[] | select(.name == $key).name' /tmp/output.json)
-echo "gaga TanzuPackage_Harbor: pkg:$pkg"
   if [ "$pkg" != "$PACKAGE_NAME" ]; then
     #cmdLoop tanzu package installed delete harbor-pkg --namespace $NAMESPACE
 
@@ -15007,13 +15021,13 @@ attachClusterToTMC() {
   mgmtCluster=$3
   kubeconfig=$4
 
-  echo "" > /tmp/status.txt
+  touch /tmp/status.txt
 
   #########################################################################################################################
   ######################################### VERIFY CLUSTER AVAIABLILITY ###################################################
   #########################################################################################################################
   kubectl --kubeconfig=$kubeconfig --request-timeout 3s get ns > /dev/null 2>&1; ret=$?
-  [ $ret -ne 0 ] && echo "UNREACHABLE" && return 1
+  [ $ret -ne 0 ] && echo "UNREACHABLE" > /tmp/status.txt && return 1
 
   #########################################################################################################################
   ########################################## DELETE CLUSTER IN FAILED STATE ###############################################
@@ -15030,7 +15044,7 @@ attachClusterToTMC() {
         '.clusters[] | select(.fullName.name == $clu and .fullName.provisionerName == $pvn and .fullName.managementClusterName == $mcl).status.phase' /tmp/output.json)
   hlt=$(jq -r --arg clu "$clusterName" --arg pvn "$provisioner" --arg mcl "$mgmtCluster" \
         '.clusters[] | select(.fullName.name == $clu and .fullName.provisionerName == $pvn and .fullName.managementClusterName == $mcl).status.health' /tmp/output.json)
-  [ "$nam" == "$clusterName" ] && echo "$stt/$hlt" && return 0
+  [ "$nam" == "$clusterName" ] && echo "$stt/$hlt" > /tmp/status.txt && return 0
 
   if [ "$nam" != "$clusterName" ]; then 
     (cd /tmp && tmc cluster attach --name $clusterName --kubeconfig=$kubeconfig -p $provisioner \

@@ -370,6 +370,7 @@ if [ "$TDH_TANZU_MISSION_CONTROL_REGISTRATION" == "true" ]; then
 
   attachClusterToTMC $TDH_TKGWC_NAME $TMC_PROVISIONER_NAME $TMC_MANAGEMENT_CLUSTER $KUBECONFIG
   read stt < /tmp/status.txt
+
   if [ "$stt" == "READY/HEALTHY" ]; then 
     # --- NO CONNECTION FROM A PEZ-INTERNAL CLUSTER ---
     if [ "${TDH_TKGMC_INFRASTRUCTURE}" != "vSphere" ]; then
