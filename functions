@@ -5964,6 +5964,9 @@ installTAP() {
       fi
     done
 
+    messagePrint " ▪ Create Cluster Role Binding"     "default-tkg-admin-privileged-binding"
+    kubectl create clusterrolebinding default-tkg-admin-privileged-binding --clusterrole=psp:vmware-system-privileged --group=system:authenticated > /dev/null 2>&1
+
     TAP_CONFIG_1=/tmp/tap_config_stage_1.yaml
     echo ""                                                                                                                       >  $TAP_CONFIG_1
     echo "profile: full"                                                                                                          >> $TAP_CONFIG_1
