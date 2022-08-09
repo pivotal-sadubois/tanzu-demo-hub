@@ -5053,7 +5053,7 @@ tkgCreateCluster() {
         echo "        - name: containerd"                                               >> $CLUSTER_CONFIG_FILE
         echo "          mountPath: /var/lib/containerd"                                 >> $CLUSTER_CONFIG_FILE
         echo "          capacity:"                                                      >> $CLUSTER_CONFIG_FILE
-        echo "            storage: 50Gi"                                                >> $CLUSTER_CONFIG_FILE
+        echo "            storage: 200Gi"                                                >> $CLUSTER_CONFIG_FILE
 #        echo "        - name: varlib"                                                   >> $CLUSTER_CONFIG_FILE
 #        echo "          mountPath: /var/lib"                                            >> $CLUSTER_CONFIG_FILE
 #        echo "          capacity:"                                                      >> $CLUSTER_CONFIG_FILE
@@ -6142,7 +6142,8 @@ installTAP() {
     echo "    catalog:"                                                                                                           >> $TAP_CONFIG
     echo "      locations:"                                                                                                       >> $TAP_CONFIG
     echo "        - type: url"                                                                                                    >> $TAP_CONFIG
-    echo "          target: https://gitea.$DNS_DOMAIN/tanzu/yelb_catalog/raw/branch/master/catalog-info.yaml"                     >> $TAP_CONFIG
+    echo "          target: https://github.com/dambor/yelb-catalog/blob/main/catalog-info.yaml"                                   >> $TAP_CONFIG
+    echo "#         target: https://gitea.$DNS_DOMAIN/tanzu/yelb_catalog/raw/branch/master/catalog-info.yaml"                     >> $TAP_CONFIG
     echo "#       - type: url"                                                                                                    >> $TAP_CONFIG
     echo "#         target: https://gitea.$DNS_DOMAIN/tanzu//blank_catalog/raw/branch/master/catalog-info.yaml"                   >> $TAP_CONFIG
     echo "    backend:"                                                                                                           >> $TAP_CONFIG
