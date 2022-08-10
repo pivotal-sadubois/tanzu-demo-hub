@@ -6079,7 +6079,7 @@ installTAP() {
     echo ""                                                                                                                       >> $TAP_CONFIG_3
 
     TAP_CONFIG=/tmp/tap_config_all.yaml
-    echo "buildservice:"                                                                                                          >> $TAP_CONFIG
+    echo "buildservice:"                                                                                                          >  $TAP_CONFIG
     echo "  kp_default_repository: $DNS_HARBOR/library/tap-build-service"                                                         >> $TAP_CONFIG
     echo "  kp_default_repository_username: admin"                                                                                >> $TAP_CONFIG
     echo "  kp_default_repository_password: $TDH_HARBOR_REGISTRY_ADMIN_PASSWORD"                                                  >> $TAP_CONFIG
@@ -6194,7 +6194,7 @@ installTAP() {
     echo ""                                                                                                                       >> $TAP_CONFIG
     echo "metadata_store:"                                                                                                        >> $TAP_CONFIG
     echo "  app_service_type: ClusterIP"                                                                                          >> $TAP_CONFIG
-    echo "  storage_class_name: \"$DNS_DOMAIN\""                                                                                  >> $TAP_CONFIG
+    echo "  storage_class_name: \"$VSPHERE_TKGS_SUPERVISOR_STORAGE_CLASS\""                                                       >> $TAP_CONFIG
     echo "  ingress_domain: apps-contour.vsptap.pcfsdu.com"                                                                       >> $TAP_CONFIG
     echo "  ingress_enabled: \"true\""                                                                                            >> $TAP_CONFIG
     echo "  use_cert_manager: \"true\""                                                                                           >> $TAP_CONFIG
