@@ -6204,12 +6204,6 @@ installTAP() {
     echo "    namespace: tdh-cert-admin"                                                                                          >> $TAP_CONFIG
     echo ""                                                                                                                       >> $TAP_CONFIG
 
-  app_service_type: ClusterIP
-  storage_class_name: "vc01cl01-t0compute"
-  ingress_domain: apps-contour.vsptap.pcfsdu.com
-  ingress_enabled: "true"
-  use_cert_manager: "false"
-
     cat $TAP_CONFIG >> $TAP_CONFIG_1
     cat $TAP_CONFIG >> $TAP_CONFIG_2
     cat $TAP_CONFIG >> $TAP_CONFIG_3
