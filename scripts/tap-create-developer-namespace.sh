@@ -1,8 +1,9 @@
 #!/bin/bash
 # ############################################################################################
-# File: ........: InstallTKGutilities.sh
+# File: ........: tap-create-developer-namespace.sh
 # Language .....: bash
 # Author .......: Sacha Dubois, VMware
+# Cathegory ....: TAP
 # Description ..: Tanzu Demo Hub - Installation Tanzu TKG utilities on Jump Host
 # ############################################################################################
 [ "$(hostname)" != "tdh-tools" ] && echo "ERROR: Need to run within a tdh-tools container" && exit
