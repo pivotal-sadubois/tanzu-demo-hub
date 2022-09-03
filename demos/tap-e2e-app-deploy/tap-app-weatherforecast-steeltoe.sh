@@ -39,7 +39,7 @@ echo '                 |_/_/   \_\_|      \___|_____\___| |____/ \___|_| |_| |_|
 echo '                                                                                      '
 echo '          ----------------------------------------------------------------------------'
 echo '               Tanzu Application Platform (TAP) - e2e Application Demo                '
-echo '                      by Sacha Dubois and Steve Schmidh, VMware Inc                   '
+echo '                      by Sacha Dubois and Steve Schmidt, VMware Inc                   '
 echo '          ----------------------------------------------------------------------------'
 echo '                                                                                      '
 
@@ -80,7 +80,7 @@ execCmd "cd $TDHHOME/scripts && ./tap-create-developer-namespace.sh $APP_NAME 2>
 
 prtHead "Create a GIT Repo for $APP_NAME"
 prtText " - Create a new Organization (tap) in Gitea"
-prtText " - Create a new Repository for the demo application ($APP_NAM)"
+prtText " - Create a new Repository for the demo application ($APP_NAME)"
 prtText ""
 execCmd "cd $TDHHOME/scripts && ./tap-create-gitea-repository.sh tap $APP_NAME"
 
