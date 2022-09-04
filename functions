@@ -2850,10 +2850,10 @@ cat $TKG_TEMPLATE
 echo "tanzu management-cluster create -i docker --file $TKG_TEMPLATE -v 0 --log-file=/tmp/${TDH_TKGMC_NAME}.log"
         if [ $DEBUG -gt 0 ]; then
           messageLine
-          tanzu management-cluster create -i docker --file $TKG_TEMPLATE -v 0 --log-file=/tmp/${TDH_TKGMC_NAME}.log; ret=$?
+          cmdLoop tanzu management-cluster create -i docker --file $TKG_TEMPLATE -v 0 --log-file=/tmp/${TDH_TKGMC_NAME}.log; ret=$?
           messageLine
         else
-          tanzu management-cluster create -i docker --file $TKG_TEMPLATE -v 0 --log-file=/tmp/${TDH_TKGMC_NAME}.log > /tmp/error.log 2>&1; ret=$?
+          cmdLoop tanzu management-cluster create -i docker --file $TKG_TEMPLATE -v 0 --log-file=/tmp/${TDH_TKGMC_NAME}.log > /tmp/error.log 2>&1; ret=$?
         fi
 
         [ $ret -eq 0 ] && break
