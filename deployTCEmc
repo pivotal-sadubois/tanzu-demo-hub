@@ -75,7 +75,8 @@ fi
 #############################################################################################################################
 ################################### EXECUTING CODE WITHIN  TDH-TOOLS DOCKER CONTAINER  ######################################
 #############################################################################################################################
-runTDHtools tce $DEPLOY_TKG_VERSION "Deploy TCE Management Cluster" "$TDHPATH/$CMD_EXEC" "$CMD_ARGS"
+runTDHtools tce $DEPLOY_TKG_VERSION "Deploy TCE Management Cluster" "/home/tanzu/tanzu-demo-hub/$CMD_EXEC" "$CMD_ARGS"
+
 
 export TDH_DEPLOYMENT_ENV_NAME=$TDH_TKGMC_INFRASTRUCTURE
 export TKG_CONFIG=~/.tanzu-demo-hub/$TDH_TKGMC_CONFIG
