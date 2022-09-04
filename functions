@@ -2856,6 +2856,10 @@ echo "tanzu management-cluster create -i docker --file $TKG_TEMPLATE -v 0 --log-
           cmdLoop tanzu management-cluster create -i docker --file $TKG_TEMPLATE -v 0 --log-file=/tmp/${TDH_TKGMC_NAME}.log > /tmp/error.log 2>&1; ret=$?
         fi
 
+messageLine
+cat  /tmp/error.log
+messageLine
+
         [ $ret -eq 0 ] && break
 
         sleep 300
