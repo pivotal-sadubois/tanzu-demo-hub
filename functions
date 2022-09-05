@@ -2773,6 +2773,8 @@ createTKGMCcluster() {
     echo "IDENTITY_MANAGEMENT_TYPE: none"                                              >> $TKG_TEMPLATE
     echo "INFRASTRUCTURE_PROVIDER: docker"                                             >> $TKG_TEMPLATE
     echo "TKG_HTTP_PROXY_ENABLED: \"false\""                                           >> $TKG_TEMPLATE
+    echo "CONTROL_PLANE_MACHINE_COUNT: \"1\""                                           >> $TKG_TEMPLATE
+    echo "WORKER_MACHINE_COUNT: \"1\""                                           >> $TKG_TEMPLATE
     #echo "CLUSTER_CIDR: 100.96.0.0/11"                                                 >> $TKG_TEMPLATE
     #echo "SERVICE_CIDR: 100.64.0.0/13"                                                 >> $TKG_TEMPLATE
 
@@ -2848,12 +2850,13 @@ cat $TKG_TEMPLATE
 
 #ppppppppp
 echo "tanzu management-cluster create -i docker --file $TKG_TEMPLATE -v 0 --log-file=/tmp/${TDH_TKGMC_NAME}.log"
+exit
         if [ $DEBUG -gt 0 ]; then
           messageLine
-          cmdLoop tanzu management-cluster create -i docker --file $TKG_TEMPLATE -v 0 --log-file=/tmp/${TDH_TKGMC_NAME}.log; ret=$?
+          tanzu management-cluster create -i docker --file $TKG_TEMPLATE -v 0 --log-file=/tmp/${TDH_TKGMC_NAME}.log; ret=$?
           messageLine
         else
-          cmdLoop tanzu management-cluster create -i docker --file $TKG_TEMPLATE -v 0 --log-file=/tmp/${TDH_TKGMC_NAME}.log > /tmp/error.log 2>&1; ret=$?
+          tanzu management-cluster create -i docker --file $TKG_TEMPLATE -v 0 --log-file=/tmp/${TDH_TKGMC_NAME}.log > /tmp/error.log 2>&1; ret=$?
         fi
 
 messageLine
@@ -2861,6 +2864,8 @@ cat  /tmp/error.log
 messageLine
 
         [ $ret -eq 0 ] && break
+
+exit
 
         sleep 300
         let cnt=cnt+1
