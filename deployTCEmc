@@ -250,17 +250,24 @@ checkCLIcommands TANZU
 checkCLIcommands TMC
 checkCLIcommands VSPHERE
 
+echo hallo1
 if [ "$DEPLOY_TKG_CLEAN" -eq 1 ]; then
   cleanupEnvironment
+echo hallo2
   cleanManagementCluster
+echo hallo3
   cleanKubeconfig $HOME/.kube/config
+echo hallo4
   cleanKubeconfig $HOME/.kube-tkg/config
+echo hallo5
 
   exit 0
 fi
 
 # --- INSTALL TANZU PLUGINS ---
+echo hallo6
 installTanzuPlugins
+echo hallo7
 
 # --- CLEANUP KUNECONFIG ---
 cleanKubeconfig
