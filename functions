@@ -11541,8 +11541,7 @@ vsNanespaceExists() {
 }
 
 installTanzuPlugins() {
-  cnt=$(tanzu plugin list | grep -v "alpha" | grep -c "not installed") 
-echo "installTanzuPlugins: gaga CNT:$cnt"
+  cnt=$(tanzu plugin list 2>/dev/null | grep -v "alpha" | grep -c "not installed") 
   if [ $cnt -gt 0 -a $NATIVE -eq 0 ]; then
     if [ -d /tanzu/tce-linux-amd64/default-local ]; then 
       messagePrint " ▪ Install Tanzu Plugins" "tanzu plugin install --local default-local all"
