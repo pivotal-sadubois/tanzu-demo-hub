@@ -24,6 +24,8 @@ if [ -f $HOME/.tanzu/config.yaml ]; then
   rm -f $HOME/.tanzu/config.yaml 
 fi
 
-docker kill $(docker ps  | grep -v tdh-tools | grep -v CONTAINER | awk '{ print $1 }')
+for n in $(docker ps  | grep -v tdh-tools | grep -v CONTAINER | awk '{ print $1 }'); do
+  docker kill $n
+done
 docker system prune -a --volumes -f
 
