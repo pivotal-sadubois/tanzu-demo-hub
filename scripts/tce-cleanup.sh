@@ -8,8 +8,12 @@
 # ============================================================================================
 [ "$(hostname)" != "tdh-tools" ] && echo "ERROR: Need to run within a tdh-tools container" && exit
 
-if [ -d /home/tanzu/.kube-tkg/tmp ]; then 
-  rm -rf /home/tanzu/.kube-tkg/tmp
+if [ -d $HOME/.kube-tkg/config ]; then 
+  rm -rf $HOME/.kube-tkg/config
+fi
+
+if [ -d $HOME/.kube-tkg/tmp ]; then 
+  rm -rf $HOME/.kube-tkg/tmp
 fi
 
 if [ -f $HOME/.config/tanzu/config.yaml ]; then 
@@ -20,6 +24,6 @@ if [ -f $HOME/.tanzu/config.yaml ]; then
   rm -f $HOME/.tanzu/config.yaml 
 fi
 
-docker kill $(docker ps -q)
+docker kill $(docker ps  | grep -v tdh-tools | grep -v CONTAINER | awk '{ print $1 }')
 docker system prune -a --volumes -f
 
