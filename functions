@@ -5671,7 +5671,7 @@ getTDHClusterCredentials() {
       export KUBECTL_VSPHERE_PASSWORD="$VSPHERE_TKGS_VCENTER_PASSWORD"
       kubectl vsphere login --insecure-skip-tls-verify --server $VSPHERE_TKGS_SUPERVISOR_CLUSTER \
         -u $VSPHERE_TKGS_VCENTER_ADMIN --tanzu-kubernetes-cluster-name $TDH_CLUSTER_NAME \
-        --tanzu-kubernetes-cluster-namespace tanzu-demo-hub
+        --tanzu-kubernetes-cluster-namespace tanzu-demo-hub > /dev/null 2>&1; ret=$?
 
       kubectl get clusterrolebinding -o json > /tmp/output.json
       nam=$(jq -r --arg key "default-tkg-admin-privileged-binding" '.items[].metadata | select(.name == $key).name' /tmp/output.json)
@@ -5681,7 +5681,7 @@ getTDHClusterCredentials() {
       fi
 
       # --- PATCH STORAGE CLASS
-      kubectl patch storageclass tanzu -p '{"metadata": {"annotations":{"storageclass.kubernetes.io/is-default-class":"true"}}}'
+      kubectl patch storageclass $VSPHERE_TKGS_SUPERVISOR_STORAGE_CLASS -p '{"metadata": {"annotations":{"storageclass.kubernetes.io/is-default-class":"true"}}}'
       kubectl config use-context ${TDH_CLUSTER_NAME}-admin@$TDH_CLUSTER_NAME
     else
       kubectl config use-context ${TDH_CLUSTER_NAME}-admin@$TDH_CLUSTER_NAME
