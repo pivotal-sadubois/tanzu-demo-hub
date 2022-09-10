@@ -2773,6 +2773,8 @@ createTKGMCcluster() {
     echo "IDENTITY_MANAGEMENT_TYPE: none"                                              >> $TKG_TEMPLATE
     echo "INFRASTRUCTURE_PROVIDER: docker"                                             >> $TKG_TEMPLATE
     echo "TKG_HTTP_PROXY_ENABLED: \"false\""                                           >> $TKG_TEMPLATE
+    echo "CONTROL_PLANE_MACHINE_COUNT: \"1\""                                           >> $TKG_TEMPLATE
+    echo "WORKER_MACHINE_COUNT: \"1\""                                           >> $TKG_TEMPLATE
     #echo "CLUSTER_CIDR: 100.96.0.0/11"                                                 >> $TKG_TEMPLATE
     #echo "SERVICE_CIDR: 100.64.0.0/13"                                                 >> $TKG_TEMPLATE
 
@@ -2844,6 +2846,11 @@ createTKGMCcluster() {
           fi
         fi
 
+cat $TKG_TEMPLATE
+
+#ppppppppp
+echo "tanzu management-cluster create -i docker --file $TKG_TEMPLATE -v 0 --log-file=/tmp/${TDH_TKGMC_NAME}.log"
+exit
         if [ $DEBUG -gt 0 ]; then
           messageLine
           tanzu management-cluster create -i docker --file $TKG_TEMPLATE -v 0 --log-file=/tmp/${TDH_TKGMC_NAME}.log; ret=$?
@@ -2852,11 +2859,19 @@ createTKGMCcluster() {
           tanzu management-cluster create -i docker --file $TKG_TEMPLATE -v 0 --log-file=/tmp/${TDH_TKGMC_NAME}.log > /tmp/error.log 2>&1; ret=$?
         fi
 
+messageLine
+cat  /tmp/error.log
+messageLine
+
         [ $ret -eq 0 ] && break
+
+exit
 
         sleep 300
         let cnt=cnt+1
       done
+
+
 
       cnt=$(tanzu management-cluster get 2>/dev/null | grep -c Error)
       if [ ${ret} -ne 0 -o ${cnt} -gt 0 ]; then
@@ -11531,10 +11546,17 @@ vsNanespaceExists() {
 }
 
 installTanzuPlugins() {
-  cnt=$(tanzu plugin list | grep -v "alpha" | grep -c "not installed") 
+  cnt=$(tanzu plugin list 2>/dev/null | grep -v "alpha" | grep -c "not installed") 
   if [ $cnt -gt 0 -a $NATIVE -eq 0 ]; then
-    messagePrint " ▪ Install Tanzu Plugins" "tanzu plugin install --local cli all"
-    cd /tanzu && tanzu plugin install --local cli all > /dev/null 2>&1
+    if [ -d /tanzu/tce-linux-amd64/default-local ]; then 
+      messagePrint " ▪ Install Tanzu Plugins" "tanzu plugin install --local default-local all"
+      cd /tanzu/tce-linux-amd64 && tanzu plugin install --local default-local  all > /dev/null 2>&1
+    fi
+
+    if [ -d /tanzu/cli ]; then 
+      messagePrint " ▪ Install Tanzu Plugins" "tanzu plugin install --local cli all"
+      cd /tanzu && tanzu plugin install --local cli all > /dev/null 2>&1
+    fi
   fi
 }
 
