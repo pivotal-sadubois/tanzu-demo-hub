@@ -1,0 +1,49 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ingress
+  namespace: NAMESPACE
+  annotations:
+    kubernetes.io/ingress.class: contour
+  labels:
+    app: my-app
+spec:
+  rules:
+  - host: myapp.DNS_DOMAIN
+    http:
+      paths:
+      - path: "/my-app-1"
+        pathType: Prefix
+        backend:
+          service:
+            name: my-app-1
+            port:
+              number: 8080
+      - path: "/my-app-2"
+        pathType: Prefix
+        backend:
+          service: 
+            name: my-app-2
+            port:
+              number: 8080
+  - host: myapp1.DNS_DOMAIN
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service: 
+            name: my-app-1
+            port:
+              number: 8080
+  - host: myapp2.DNS_DOMAIN
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service: 
+            name: my-app-2
+            port:
+              number: 8080
+

@@ -1,0 +1,52 @@
+# CONTEXT BASED ROUTING (<domain>/myapp1, <domain>/myapp2)
+apiVersion: projectcontour.io/v1
+kind: HTTPProxy
+metadata:
+  name: myapp
+spec:
+  virtualhost:
+    fqdn: myapp.DNS_DOMAIN
+    tls:
+      secretName: tdh-cert-admin/tanzu-demo-hub-tls
+  routes:
+    - conditions:
+      - prefix: /myapp1
+      enableWebsockets: true
+      services:
+        - name: my-app-1
+          port: 8080
+    - conditions:
+      - prefix: /myapp2
+      services:
+        - name: my-app-2
+          port: 8080
+---
+# DOMAIN/HOST BASED ROUTING (myapp1.<domain>)
+apiVersion: projectcontour.io/v1
+kind: HTTPProxy
+metadata:
+  name: myapp1
+spec:
+  virtualhost:
+    fqdn: myapp1.DNS_DOMAIN
+    tls:
+      secretName: tdh-cert-admin/tanzu-demo-hub-tls
+  routes:
+    - services:
+      - name: my-app-1
+        port: 8080
+---
+# DOMAIN/HOST BASED ROUTING (myapp2.<domain>)
+apiVersion: projectcontour.io/v1
+kind: HTTPProxy
+metadata:
+  name: myapp2
+spec:
+  virtualhost:
+    fqdn: myapp2.DNS_DOMAIN
+    tls:
+      secretName: tdh-cert-admin/tanzu-demo-hub-tls
+  routes:
+    - services:
+        - name: my-app-2
+          port: 8080

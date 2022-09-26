@@ -1,17 +1,20 @@
 #!/bin/bash
 # ============================================================================================
-# File: ........: deploy_tkgmc_azure.sh
+# File: ........: demo_ContourIngressTLS.sh
+# Cathegroy ....: tkg-kubernetes-services
 # Language .....: bash
-# Author .......: Sacha Dubois, Pivotal
+# Author .......: Sacha Dubois, VMware
 # --------------------------------------------------------------------------------------------
-# Description ..: Deploy the TKG Management Cluster on Azure
+# Description ..: Deploy an app with Service Type LoadBalancer
 # ============================================================================================
+[ "$(hostname)" != "tdh-tools" ] && echo "ERROR: Need to run within a tdh-tools container" && exit
 
 export TDH_TKGWC_NAME=tdh-1
-export NAMESPACE="contour-ingress-demo"
+export NAMESPACE="my-app-demo"
+export DEMO_CATEGRORY="tkg-kubernetes-services"
 export TANZU_DEMO_HUB=$(cd "$(pwd)/$(dirname $0)/../../"; pwd)
 export TDHPATH=$(cd "$(pwd)/$(dirname $0)/../../"; pwd)
-export TDHDEMO=${TDHPATH}/demos/$NAMESPACE
+export TDHDEMO=${TDHPATH}/demos/$DEMO_CATEGRORY
 
 if [ -f $TANZU_DEMO_HUB/functions ]; then
   . $TANZU_DEMO_HUB/functions
@@ -19,9 +22,18 @@ else
   echo "ERROR: can ont find ${TANZU_DEMO_HUB}/functions"; exit 1
 fi
 
+# --------------------------------------------------------------------------------------------
+# REQUIRED DOCKER ACCESS CREDENTIALS FROM ($HOME/.tanzu-demo-hub.cfg) FOR (dockerRateLimit)
+# --------------------------------------------------------------------------------------------
+# TDH_REGISTRY_DOCKER_NAME ........... Docker Registry Name
+# TDH_REGISTRY_DOCKER_USER ........... Docker Registry User
+# TDH_REGISTRY_DOCKER_PASS ........... Docker Registry Password
+# --------------------------------------------------------------------------------------------
+[ -f $HOME/.tanzu-demo-hub.cfg ] && $HOME/.tanzu-demo-hub.cfg
+
 # Created by /usr/local/bin/figlet
 clear
-echo '            ____            _                     ___                                 '
+echo '            ____            _                     ___                                 '                
 echo '           / ___|___  _ __ | |_ ___  _   _ _ __  |_ _|_ __   __ _ _ __ ___  ___ ___   '
 echo '          | |   / _ \|  _ \| __/ _ \| | | |  __|  | ||  _ \ / _  |  __/ _ \/ __/ __|  '
 echo '          | |__| (_) | | | | || (_) | |_| | |     | || | | | (_| | | |  __/\__ \__ \  '
@@ -57,8 +69,8 @@ DOMAIN=${TDH_INGRESS_CONTOUR_LB_DOMAIN}
 kubectl delete namespace $NAMESPACE > /dev/null 2>&1
 
 # --- DUMP TLS CERT FROM SECRET ---
-kubectl get secret tanzu-demo-hub-tls -o json | jq -r '.data."tls.crt"' | base64 -d > /tmp/tanzu-demo-hub-crt.pem
-kubectl get secret tanzu-demo-hub-tls -o json | jq -r '.data."tls.key"' | base64 -d > /tmp/tanzu-demo-hub-key.pem
+kubectl get secret tanzu-demo-hub-tls -o json -n tanzu-system-registry | jq -r '.data."tls.crt"' | base64 -d > /tmp/tanzu-demo-hub-crt.pem
+kubectl get secret tanzu-demo-hub-tls -o json -n tanzu-system-registry | jq -r '.data."tls.key"' | base64 -d > /tmp/tanzu-demo-hub-key.pem
 TLS_CERTIFICATE=/tmp/tanzu-demo-hub-crt.pem
 TLS_PRIVATE_KEY=/tmp/tanzu-demo-hub-key.pem
 
@@ -92,47 +104,72 @@ echo "  tls.key: \"$pkey\"" >> /tmp/https-secret.yaml
 TKG_EXTENSIONS=${TDHPATH}/extensions/tkg-extensions-v1.2.0+vmware.1
 
 # --- PREPARATION ---
-cat files/https-ingress.yaml | sed -e "s/DNS_DOMAIN/$DOMAIN/g" -e "s/NAMESPACE/$NAMESPACE/g" > /tmp/https-ingress.yaml
+cat files/https-ingress.yaml | sed -e "s/DNS_DOMAIN/${TDH_INGRESS_CONTOUR_LB_DOMAIN}/g" \
+            -e "s/NAMESPACE/$NAMESPACE/g" > /tmp/https-ingress.yaml
 
-prtHead "Show Countour Ingress Controller Helm Chart"
-execCmd "helm list -n ingress-contour"
+prtHead "Show Tanzu Package for Countour Ingress Controller"
+execCmd "tanzu package available list 2>/dev/null"
+execCmd "tanzu package installed list -A 2>/dev/null"
 
 prtHead "Get Contour Kubernetes objects (pod, svc)"
-execCmd "kubectl get pods,svc -n ingress-contour"
+execCmd "kubectl -n tanzu-system-ingress get pods,svc"
 
 prtHead "Show LoadBalancer and domain (*.$DOMAIN) DNS records"
-execCmd "nslookup $TDH_INGRESS_CONTOUR_LB_IP"
 execCmd "nslookup myapp.$TDH_INGRESS_CONTOUR_LB_DOMAIN"
+
+ZONE=$(aws route53 list-hosted-zones --query "HostedZones[?starts_with(to_string(Name), '$TDH_ENVNAME.$TDH_DOMAIN.')]" | jq -r '.[].Id' | awk -F'/' '{ print $NF }')
+prtHead "Show AWS Route53 Configuration for domain ($TDH_ENVNAME.$TDH_DOMAIN)"
+execCmd "aws route53 list-hosted-zones --query \"HostedZones[?starts_with(to_string(Name), '$TDH_ENVNAME.$TDH_DOMAIN.')]\""
+
+prtHead "Show AWS Hosted Zone $TDH_ENVNAME.$TDH_DOMAIN ($ZONE)"
+awsResourceRecordText $ZONE
+#execCmd "aws route53 list-resource-record-sets --hosted-zone-id $ZONE --output table"
+execCmd "kubectl -n tanzu-system-ingress get pods,svc"
 
 prtHead "Create seperate namespace to host the Ingress Demo"
 execCmd "kubectl create namespace $NAMESPACE"
 
-prtHead "Create deployment for the ingress tesing app"
-execCmd "kubectl create deployment echoserver-1 --image=datamanos/echoserver --port=8080 -n $NAMESPACE"
-execCmd "kubectl create deployment echoserver-2 --image=datamanos/echoserver --port=8080 -n $NAMESPACE"
+# --- PATCH DEFAULT SERVICE ACCOUNT IN NAMESPACE ---
+dockerRateLimit $NAMESPACE > /dev/null 2>&1
+
+prtHead "Create seperate namespace to host the Ingress Demo"
+execCmd "kubectl create namespace $NAMESPACE"
+
+prtHead "Create deployment for (my-app-1 and my-app-2) ingress tesing app"
+execCmd "kubectl create deployment my-app-1 --image=datamanos/echoserver --port=8080 -n $NAMESPACE"
+execCmd "kubectl create deployment my-app-2 --image=datamanos/echoserver --port=8080 -n $NAMESPACE"
 execCmd "kubectl get pods -n $NAMESPACE"
 
 prtHead "Create two service (echoserver-1 and echoserver-2) for the ingress tesing app"
-execCmd "kubectl expose deployment echoserver-1 --port=8080 -n $NAMESPACE"
-execCmd "kubectl expose deployment echoserver-2 --port=8080 -n $NAMESPACE"
+execCmd "kubectl expose deployment my-app-1 --port=8080 -n $NAMESPACE"
+execCmd "kubectl expose deployment my-app-2 --port=8080 -n $NAMESPACE"
 execCmd "kubectl get svc,pods -n $NAMESPACE"
 
 prtHead "Create a secret with the certificates of domain $DOMAIN"
-#execCmd "cat /tmp/https-secret.yaml"
 execCat "/tmp/https-secret.yaml"
 execCmd "kubectl create -f /tmp/https-secret.yaml -n $NAMESPACE"
 
 prtHead "Create the ingress route with context based routing"
-#execCmd "cat /tmp/https-ingress.yaml"
 execCat "/tmp/https-ingress.yaml"
 execCmd "kubectl create -f /tmp/https-ingress.yaml -n $NAMESPACE"
 execCmd "kubectl get ingress,svc,pods -n $NAMESPACE"
 
-prtHead "Open WebBrowser and verify the deployment"
-echo "     # --- Context Based Routing"
-echo "     => curl https://echoserver.${DOMAIN}/foo"
-echo "     => curl https://echoserver.${DOMAIN}/bar"
-echo ""
+prtHead "Inspect the TLS Certificate for (*.$DOMAIN)"
+echo | openssl s_client -showcerts -servername myapp.$DOMAIN myapp.$DOMAIN:443 2>/dev/null | \
+openssl x509 -inform pem -noout -text 2>/dev/null > /tmp/log 2>&1
+fakeCmd "openssl s_client -showcerts -servername myapp.$DOMAIN myapp.$DOMAIN:443 | openssl x509 -inform pem -noout -text"
+
+prtHead "Open WebBrowser and verify the deployment by using the DNS Name"
+execCmd "curl -s http://myapp1.${DOMAIN}/     # DOMAIN/HOST BASED ROUTING"
+execCmd "curl -s http://myapp2.${DOMAIN}/     # DOMAIN/HOST BASED ROUTING"
+prtText ""
+execCmd "curl -s http://myapp.${DOMAIN}/my-app-1     # CONTEXT BASED ROUTING"
+execCmd "curl -s http://myapp.${DOMAIN}/my-app-2     # CONTEXT BASED ROUTING"
+
+echo "     -----------------------------------------------------------------------------------------------------------"
+echo "                                             * --- END OF THE DEMO --- *"
+echo "                                                THANKS FOR ATTENDING"
+echo "     -----------------------------------------------------------------------------------------------------------"
 
 exit
 

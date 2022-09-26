@@ -1,0 +1,5 @@
+asciinema rec -i 2.5 -t "Kubernetes Service (ClusterIP) Demo" -y -q --overwrite /tmp/demo_ClusterIP.cast
+asciinema rec -i 2.5 -t "Kubernetes Service (LoadBalancer) Demo" -y -q --overwrite /tmp/demo_LoadBalancer.cast
+asciinema rec -i 2.5 -t "Kubernetes Service (Contour Ingress) Demo" -y -q --overwrite /tmp/demo_ContourIngress.cast
+asciinema rec -i 2.5 -t "Kubernetes Service (Contour Ingress) with TLS Demo" -y -q --overwrite /tmp/demo_ContourIngressTLS.cast
+asciinema rec -i 2.5 -t "Kubernetes Service (Contour HTTPProxy) with TLS Delegation Demo" -y -q --overwrite /tmp/demo_HTTPProxyTLS.cast
