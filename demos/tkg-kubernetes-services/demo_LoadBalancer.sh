@@ -81,7 +81,8 @@ execCmd "kubectl get pods -n $NAMESPACE"
 
 prtHead "Create a Service Type LoadBalancer for (my-app)"
 execCmd "kubectl expose deployment my-app --port=8080 --type=LoadBalancer -n $NAMESPACE"
-execCmd "kubectl get svc,pods -n $NAMESPACE"
+sleep 5
+execCmd "kubectl get svc -n $NAMESPACE"
 
 # --- TKGS with AVI LoadBalancer ----
 if [ "$TDH_ENVNAME" == "tkgs" ]; then 
