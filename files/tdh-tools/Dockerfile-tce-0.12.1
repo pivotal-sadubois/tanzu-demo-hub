@@ -67,6 +67,14 @@ RUN apt-get update -qq && apt-get install -qqy \
     iptables
 RUN apt-get clean 
 
+# --- INSTALL ASCIICINEMA ---
+RUN apt-add-repository ppa:zanchey/asciinema
+RUN apt-get update
+RUN apt-get install -qqy asciinema
+
+# --- INSTALL DNS TOOLS 
+RUN apt-get install -qqy dnsutils
+
 # --- INSTALL GOLANG ---
 RUN add-apt-repository ppa:longsleep/golang-backports
 RUN apt-get install -qqy golang-go
