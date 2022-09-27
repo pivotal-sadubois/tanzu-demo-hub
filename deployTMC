@@ -226,7 +226,10 @@ fi
 messageTitle "Tanzu Package Management"
 installTanzuPlugin package
 
+echo "TDH_TKGMC_INFRASTRUCTURE:$TDH_TKGMC_INFRASTRUCTURE"
 if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "vSphere" ]; then
+  ### deployTMC TDH_TKGMC_INFRASTRUCTURE is not set, code is not running through here, but kapp seams to work
+  ### tkgCreateCluster
   installClusterEssentials
   TanzuPackage_AddRepo       $TDH_SERVICE_PACKAGE_REPOSITORY_NAMESPACE $TDH_SERVICE_PACKAGE_REPOSITORY_NAME $TDH_SERVICE_PACKAGE_REPOSITORY_ID
   TanzuPackage_RepoSync      $TDH_SERVICE_PACKAGE_REPOSITORY_NAMESPACE

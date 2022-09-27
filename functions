@@ -5122,88 +5122,65 @@ tkgCreateCluster() {
       echo "       => vsphereWorkloadClusterLogin $TKG_DEPLOYMENT $TDH_TKGWC_NAME"
       exit 1
     fi
+  fi
+}
 
-    # Deploying Workloads and Extensions on TKGS Clusters
-    # https://docs.vmware.com/en/VMware-vSphere/7.0/vmware-vsphere-with-tanzu/GUID-E39346D8-320F-4B3D-B526-5313D99129CE.html
+# ------------------------------------------------------------------------------------------
+# Function Name ......: tkgInstallClusterExtensions
+# Function Purpose ...: Install TKG Cluster Extenstions
+# ------------------------------------------------------------------------------------------
+# Argument ($1) ......: None
+# ------------------------------------------------------------------------------------------
+# Return Value .......: 0 - SUCCEED, 1 - FAILED
+# ------------------------------------------------------------------------------------------
+# References:
+# https://docs.vmware.com/en/VMware-vSphere/7.0/vmware-vsphere-with-tanzu/
+# ------------------------------------------------------------------------------------------
+tkgInstallClusterExtensions() {
+  messageTitle "Tanzu Kubernetes Grid Extensions"
+  # Deploying Workloads and Extensions on TKGS Clusters
+  # https://docs.vmware.com/en/VMware-vSphere/7.0/vmware-vsphere-with-tanzu/GUID-E39346D8-320F-4B3D-B526-5313D99129CE.html
+  # Prepare a Tanzu Kubernetes Cluster Created by Using vSphere with Tanzu to Run Packages
 
-    # Prepare a Tanzu Kubernetes Cluster Created by Using the Tanzu Kubernetes Grid Service to Run Packages
-    # https://docs.vmware.com/en/VMware-Tanzu-Kubernetes-Grid/1.5/vmware-tanzu-kubernetes-grid-15/GUID-packages-prep-tkgs-kapp.html
+  [ "$TDH_TKGWC_POD_SECURITY_POLICY" == "" ] && TDH_TKGWC_POD_SECURITY_POLICY=tanzu-system-kapp-ctrl-privileged
 
-    cmdLoop kubectl get PodSecurityPolicy -o json > /tmp/outpus.json
-    nam=$(jq -r --arg key "tanzu-system-kapp-ctrl-restricted" '.items[].metadata | select(.name == $key).name' /tmp/output.json) 
-    if [ "$nam" != "tanzu-system-kapp-ctrl-restricted" ]; then 
-      PSP_CONFIG=/tmp/tanzu-system-kapp-ctrl-restricted.yaml
-      echo "apiVersion: policy/v1beta1"                                 >  $PSP_CONFIG
-      echo "kind: PodSecurityPolicy"                                    >> $PSP_CONFIG
-      echo "metadata:"                                                  >> $PSP_CONFIG
-      echo "  name: tanzu-system-kapp-ctrl-restricted"                  >> $PSP_CONFIG
-      echo "spec:"                                                      >> $PSP_CONFIG
-#      echo "  privileged: false"                                        >> $PSP_CONFIG
-#      echo "  allowPrivilegeEscalation: false"                          >> $PSP_CONFIG
-      echo "  privileged: true"                                         >> $PSP_CONFIG
-      echo "  allowPrivilegeEscalation: true"                           >> $PSP_CONFIG
-      echo "  requiredDropCapabilities:"                                >> $PSP_CONFIG
-      echo "    - ALL"                                                  >> $PSP_CONFIG
-      echo "  volumes:"                                                 >> $PSP_CONFIG
-      echo "    - configMap"                                            >> $PSP_CONFIG
-      echo "    - emptyDir"                                             >> $PSP_CONFIG
-      echo "    - projected"                                            >> $PSP_CONFIG
-      echo "    - secret"                                               >> $PSP_CONFIG
-      echo "    - downwardAPI"                                          >> $PSP_CONFIG
-      echo "    - persistentVolumeClaim"                                >> $PSP_CONFIG
-      echo "  hostNetwork: false"                                       >> $PSP_CONFIG
-      echo "  hostIPC: false"                                           >> $PSP_CONFIG
-      echo "  hostPID: false"                                           >> $PSP_CONFIG
-      echo "  runAsUser:"                                               >> $PSP_CONFIG
-      echo "    rule: MustRunAsNonRoot"                                 >> $PSP_CONFIG
-      echo "  seLinux:"                                                 >> $PSP_CONFIG
-      echo "    rule: RunAsAny"                                         >> $PSP_CONFIG
-      echo "  supplementalGroups:"                                      >> $PSP_CONFIG
-      echo "    rule: MustRunAs"                                        >> $PSP_CONFIG
-      echo "    ranges:"                                                >> $PSP_CONFIG
-      echo "      - min: 1"                                             >> $PSP_CONFIG
-      echo "        max: 65535"                                         >> $PSP_CONFIG
-      echo "  fsGroup:"                                                 >> $PSP_CONFIG
-      echo "    rule: MustRunAs"                                        >> $PSP_CONFIG
-      echo "    ranges:"                                                >> $PSP_CONFIG
-      echo "      - min: 1"                                             >> $PSP_CONFIG
-      echo "        max: 65535"                                         >> $PSP_CONFIG
-      echo "  readOnlyRootFilesystem: false"                            >> $PSP_CONFIG
+  cmdLoop kubectl get PodSecurityPolicy -o json > /tmp/outpus.json
+  nam=$(jq -r --arg key "$TDH_TKGWC_POD_SECURITY_POLICY" '.items[].metadata | select(.name == $key).name' /tmp/output.json) 
+  if [ "$nam" != "$TDH_TKGWC_POD_SECURITY_POLICY" ]; then 
+    if [ $DEBUG -eq 1 ]; then
+      messagePrint " ▪ Define PodSecurityPolicy"                 "$TDH_TKGWC_POD_SECURITY_POLICY"
+      messageLine
+      kubectl apply -f $TDHPATH/files/kapp/$TDH_TKGWC_POD_SECURITY_POLICY}.yaml 
+      messageLine
+    else
+      messagePrint " ▪ Define PodSecurityPolicy"                 "$TDH_TKGWC_POD_SECURITY_POLICY"
+      kubectl apply -f $TDHPATH/files/kapp/$TDH_TKGWC_POD_SECURITY_POLICY}.yaml >/dev/null 2>&1
+    fi
+  fi
 
-      if [ $DEBUG -eq 1 ]; then
-        messagePrint " ▪ Define PodSecurityPolicy"                 "tanzu-system-kapp-ctrl-restricted"
-        messageLine
-        kubectl apply -f $PSP_CONFIG 
-        messageLine
-      else
-        messagePrint " ▪ Define PodSecurityPolicy"                 "tanzu-system-kapp-ctrl-restricted"
-        kubectl apply -f $PSP_CONFIG > /dev/null 2>&1
-      fi
+  cnt=$(kubectl get pods -n tkg-system | grep -c kapp-controller)
+  if [ $cnt -eq 0 ]; then 
+    if [ $DEBUG -eq 1 ]; then
+      messagePrint " ▪ Installing Kapp Controller"               "$TDHPATH/files/kapp-controller.yaml"
+      messageLine
+      kubectl apply -f $TDHPATH/files/kapp/kapp-controller.yaml
+      messageLine
+    else
+      messagePrint " ▪ Installing Kapp Controller"               "$TDHPATH/files/kapp-controller.yaml"
+      kubectl apply -f $TDHPATH/files/kapp-controller.yaml > /dev/null 2>&1
     fi
 
-    cnt=$(kubectl get pods -n tkg-system | grep -c kapp-controller)
-    if [ $cnt -eq 0 ]; then 
-      if [ $DEBUG -eq 1 ]; then
-        messagePrint " ▪ Installing Kapp Controller"               "$TDHPATH/files/kapp-controller.yaml"
-        messageLine
-        kubectl apply -f $TDHPATH/files/kapp-controller.yaml
-        messageLine
-      else
-        messagePrint " ▪ Define PodSecurityPolicy"                 "tanzu-system-kapp-ctrl-restricted"
-        kubectl apply -f $TDHPATH/files/kapp-controller.yaml > /dev/null 2>&1
-      fi
-
-      runningPods kube-system
-      runningPods tkg-system
+    runningPods kube-system
+    runningPods tkg-system
 
       #tanzu package repository add REPOSITORY-NAME -n tanzu-package-repo-global --url projects.registry.vmware.com/tkg/packages/standard/repo:v1.5.0
       #tanzu package repository add tanzu-system-packages --url projects.registry.vmware.com/tkg/packages/standard/repo:v1.5.0
-    fi
-
-    # --- RELAXING POD SECUROTY ---
-    export KUBECONFIG=$HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.kubeconfig
-    kubectl apply -f $TDHPATH/files/psp/vmware-system-privileged.yaml > /dev/null 2>&1
   fi
+
+  # --- RELAXING POD SECUROTY ---
+  messagePrint " ▪ Relaxing Cluster Security"               "$TDHPATH/files/psp/vmware-system-privileged.yaml"
+  export KUBECONFIG=$HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.kubeconfig
+  kubectl apply -f $TDHPATH/files/psp/vmware-system-privileged.yaml > /dev/null 2>&1
 }
 
 vsphereSupervisorClusterLogin() {
@@ -5898,6 +5875,9 @@ installTAP() {
   
       exit 1
     fi
+
+#bbbbbb TAP
+    installSecretGenController
   
     # --- CREATE A REGISTRY SECRET ---
     messagePrint " ▪ creating registry secret" "$INSTALL_REGISTRY_HOSTNAME"
@@ -5928,6 +5908,10 @@ installTAP() {
   
     uodateConfigMap tanzu-demo-hub TDH_SERVICE_TAP_IMAGE_RELOCATION "true"
   fi
+
+  # NAME                  REPOSITORY                                                  TAG     STATUS               DETAILS  NAMESPACE                  
+  # tkg-packages-1-5-4    projects.registry.vmware.com/tkg/packages/standard/repo     v1.5.4  Reconcile succeeded           tanzu-package-repo-global  
+  # tanzu-tap-repository  harbor.apps-contour.vsptap.pcfsdu.com/library/tap-packages  1.2.2   Reconcile succeeded           tap-install                
 
   TanzuPackage_AddRepo       $NAMESPACE tanzu-tap-repository ${INSTALL_REGISTRY_HOSTNAME}/library/tap-packages:$TAP_VERSION 
   TanzuPackage_RepoSync      $NAMESPACE
@@ -7254,8 +7238,8 @@ installMinio() {
     messagePrint " ▪ Deploy the Minio Helm Chart" "minio"
     cnt=0; ret=1; stt="notdeployed"
     while [ $ret -ne 0 -a $cnt -lt 5 -a "$stt" != "deployed" ]; do
-      #helm install $HELMCHART bitnami/$HELMCHART --namespace $NAMESPACE -f ${HELM_VALUES} --create-namespace --wait --wait-for-jobs --timeout 10m > /tmp/error.log 2>&1; ret=$?
-      helm install $HELMCHART bitnami/$HELMCHART --namespace $NAMESPACE -f ${HELM_VALUES} --create-namespace --wait --wait-for-jobs --timeout 10m; ret=$?
+      helm install $HELMCHART bitnami/$HELMCHART --namespace $NAMESPACE -f ${HELM_VALUES} --create-namespace --wait --wait-for-jobs --timeout 10m > /tmp/error.log 2>&1; ret=$?
+      #helm install $HELMCHART bitnami/$HELMCHART --namespace $NAMESPACE -f ${HELM_VALUES} --create-namespace --wait --wait-for-jobs --timeout 10m; ret=$?
 
       # --- WAIT FOR PODS TO GET STARTED ---
       runningPods $NAMESPACE
@@ -7878,6 +7862,7 @@ installClusterEssentials() {
 # Return Value .......: Status (HEALTY, DETACHING, FAILED)
 # ------------------------------------------------------------------------------------------
 installBuildService() {
+  NAMESPACE=build-service
   tbs_cleanup=0
   if [ "$TDH_SERVICE_BUILD_SERVICE" != "true" ]; then
     uodateConfigMap tanzu-demo-hub TDH_SERVICE_BUILD_SERVICE        "false"
@@ -8026,7 +8011,7 @@ installBuildService() {
 
       if [ $ret -ne 0 ]; then
         logMessages /tmp/error.log
-        echo "ERROR: Image Relocation failed"
+        echo "ERROR: TBS Image Relocation failed"
         if [ "$NATIVE" == "0" ]; then
           echo "       => tools/${TDH_TOOLS}.sh"
           echo "          tdh-tools:/$ imgpkg copy -b registry.pivotal.io/build-service/bundle:$TDH_SERVICE_BUILD_SERVICE_VERSION \\"
@@ -8117,77 +8102,215 @@ installBuildService() {
         echo "       => docker login $TDH_HARBOR_REGISTRY_DNS_HARBOR -u admin -p $TDH_HARBOR_REGISTRY_ADMIN_PASSWORD"; exit 1
       fi
 
-      messagePrint " ▪ Relocate the images" "$TDH_REGISTRY_VMWARE_NAME/library/build-service"
-      imgpkg copy -b "$TDH_REGISTRY_VMWARE_NAME/build-service/bundle:$TDH_SERVICE_BUILD_SERVICE_VERSION" --to-repo $DNS_HARBOR/library/build-service > /dev/null 2>&1; ret=$?
+      messagePrint " ▪ Relocate images to" "$DNS_HARBOR/library/build-service:$TDH_SERVICE_BUILD_SERVICE_VERSION"
+      cnt=0; ret=1
+      while [ $ret -ne 0 -a $cnt -lt 5 ]; do
+        imgpkg copy -b "$TDH_REGISTRY_VMWARE_NAME/build-service/bundle:$TDH_SERVICE_BUILD_SERVICE_VERSION" \
+                    --include-non-distributable-layers \
+                    --registry-ca-cert-path $HOME/.tanzu-demo-hub/certificates/ca.pem \
+                    --to-repo $DNS_HARBOR/library/build-service --json 2> /tmp/error.log > /tmp/status.json; ret=$?
+        [ $ret -eq 0 ] && break
+        let cnt=cnt+1
+        sleep 30
+      done
+
       if [ $ret -ne 0 ]; then
-        echo "ERROR: Image Relocation failed"
-        echo "       => imgpkg copy -b \"$TDH_REGISTRY_VMWARE_NAME/build-service/bundle:$TDH_SERVICE_BUILD_SERVICE_VERSION\" --to-repo $DNS_HARBOR/library/build-service"
+        logMessages /tmp/error.log
+        echo "ERROR: TBS Image Relocation failed"
+        if [ "$NATIVE" == "0" ]; then
+          echo "       => tools/${TDH_TOOLS}.sh"
+          echo "          tdh-tools:/$ imgpkg copy -b $TDH_REGISTRY_VMWARE_NAME/build-service/bundle:$TDH_SERVICE_BUILD_SERVICE_VERSION \\"
+          echo "                                   --include-non-distributable-layers \\"
+          echo "                                   --registry-ca-cert-path $HOME/.tanzu-demo-hub/certificates/ca.pem \\"
+          echo "                                   --to-repo $DNS_HARBOR/library/build-service"; exit 1
+          echo "          tdh-tools:/$ exit"
+        else
+          echo "       => imgpkg copy -b $TDH_REGISTRY_VMWARE_NAME/build-service/bundle:$TDH_SERVICE_BUILD_SERVICE_VERSION \\"
+          echo "                      --include-non-distributable-layers \\"
+          echo "                      --registry-ca-cert-path $HOME/.tanzu-demo-hub/certificates/ca.pem \\"
+          echo "                      --to-repo $DNS_HARBOR/library/build-service"; exit 1
+        fi
+
+        exit 1
       fi
 
-      messagePrint " ▪ Pull the Tanzu Build Service bundle image locally" "$TDH_REGISTRY_VMWARE_NAME/library/build-service"
-      rm -rf /tmp/bundle
-      imgpkg pull -b "$DNS_HARBOR/library/build-service:$TDH_SERVICE_BUILD_SERVICE_VERSION" -o /tmp/bundle > /dev/null 2>&1; ret=$?
-      if [ $ret -ne 0 ]; then
-        echo "ERROR: Image Relocation failed"
-        echo "       => imgpkg pull -b \"$DNS_HARBOR/library/build-service\" -o /tmp/bundle"
-      fi
+      tbs_minor=$(echo $TDH_SERVICE_BUILD_SERVICE_VERSION | awk -F'.' '{ print $2 }') 
+      [ "$TDH_SERVICE_BUILD_SERVICE_PKG_REPOSITORY" == "" ] && TDH_SERVICE_BUILD_SERVICE_PKG_REPOSITORY=false
 
-      # --- DEPLOY KAPP ---
-      cnt=$(kapp inspect -a tanzu-build-service 2>/dev/null | grep -c "0 resources")
-      stt=$(kapp inspect -a tanzu-build-service 2>/dev/null | tail -1)
-      if [ "$stt" != "Succeeded" -o $cnt -eq 1 ]; then
-        kapp delete -a tanzu-build-service -y >/dev/null 2>&1
-        messagePrint " ▪ Deploy Build Service (kapp)" "/tmp/bundle/values.yaml"
-        echo "   -----------------------------------------------------------------------------------------------------------"
-        echo "   WARNING: This process may take up to 2h. You can run 'kapp inspect -a tanzu-build-service' to see progress "
-        echo "   -----------------------------------------------------------------------------------------------------------"
-        touch /tmp/bundle/values.yaml
+      # --- INSTALL TBS AS TANZU PACKAGE REPOSITORY ---
+      if [ $TDH_SERVICE_BUILD_SERVICE_PKG_REPOSITORY == "true" -a $tbs_minor -ge 5 ]; then
+        installSecretGenController
 
-        # --- 1.4.2 Tested ---
-	ytt -f /tmp/bundle/values.yaml \
-            -f /tmp/bundle/config/ \
-            -f $HOME/.tanzu-demo-hub/certificates/ca.pem \
-            -v kp_default_repository=$DNS_HARBOR/library/build-service \
-            -v kp_default_repository_username=admin \
-            -v kp_default_repository_password=$TDH_HARBOR_REGISTRY_ADMIN_PASSWORD \
-            -v tanzunet_username="$TDH_REGISTRY_VMWARE_USER" \
-            -v tanzunet_password="$TDH_REGISTRY_VMWARE_PASS" \
-	    -v descriptor_name='lite' 2>/dev/null \
-           | kbld -f /tmp/bundle/.imgpkg/images.yml -f- \
-           | kapp deploy -a tanzu-build-service -f- -y > /tmp/kapp.log 2>&1; ret=$?
+        # kapp with harbor is not working anymore
+        # Error: resource reconciliation failed: ytt: Error: Checking file '/etc/kappctrl-mem-tmp/kapp-controller-fetch-template-deploy2829798260/0/packages'
+        # Reconcile failed: Templating dir: Error (see .status.usefulErrorMessage for details)
+        # https://rguske.github.io/post/deploy-tanzu-packages-from-a-private-registry/
+        #
+        # deployTMC: (no idea where kapp-controller is installled and configured
+        #    tanzu@tdh-tools:/$ kubectl get pods -A | grep -i kapp
+        #    tanzu-system                   kapp-controller-7f46fdfb88-z8l6s 
+        # cat files/kapp-controller.yaml | sed -e '/^  caCerts/r /tmp/cert.yaml' -e '/^  caCerts:/d' > /tmp/kapp.yaml
 
-        # --- 1.2.1 Tested ---
-        #ytt -f /tmp/bundle/values.yaml \
-        #    -f /tmp/bundle/config/ \
-        #    -f $HOME/.tanzu-demo-hub/certificates/ca.pem \
-        #    -v tanzunet_username="$TDH_REGISTRY_VMWARE_USER" \
-        #    -v tanzunet_password="$TDH_REGISTRY_VMWARE_PASS" \
-        #    -v docker_repository="$DNS_HARBOR/library/build-service" \
-        #    -v docker_username="admin" \
-        #    -v docker_password="$TDH_HARBOR_REGISTRY_ADMIN_PASSWORD" 2>/dev/null \
-        #    | kbld -f /tmp/bundle/.imgpkg/images.yml -f- 2>/dev/null \
-        #    | kapp deploy -a tanzu-build-service -f- -y > /tmp/kapp.log 2>&1; ret=$?
+        NAMESPACE=tbs-install
+        export INSTALL_REGISTRY_HOSTNAME=$DNS_HARBOR
+        export INSTALL_REPOSITORY=$DNS_HARBOR/library/build-service
+        export INSTALL_REGISTRY_USERNAME=admin
+        export INSTALL_REGISTRY_PASSWORD=Password12345
+        export TANZUNET_REGISTRY_USERNAME=sadubois@pivotal.io
+        export TANZUNET_REGISTRY_PASSWORD="00Penwin$"
+        export TBS_VERSION=$TDH_SERVICE_BUILD_SERVICE_VERSION
 
-        cnt=$(kapp inspect -a tanzu-build-service --json | jq -r '.Tables[].Rows[].reconcile_state' | grep -vc "ok")
-        while [ $cnt -ne 0 ]; do
-          cnt=$(kapp inspect -a tanzu-build-service --json | jq -r '.Tables[].Rows[].reconcile_state' | grep -vc "ok")
-          sleep 360
+        messagePrint " ▪ Create Namespace" "$NAMESPACE"
+        deleteNamespace $NAMESPACE > /dev/null 2>&1
+        createNamespace $NAMESPACE > /dev/null 2>&1
+
+        cnt=0; ret=1
+        while [ $ret -ne 0 -a $cnt -lt 5 ]; do
+          tanzu secret registry add tbs-install-registry \
+            --username ${INSTALL_REGISTRY_USERNAME} --password ${INSTALL_REGISTRY_PASSWORD} \
+            --server ${INSTALL_REGISTRY_HOSTNAME} \
+            --export-to-all-namespaces --yes --namespace $NAMESPACE > /tmp/error.log 2>&1; ret=$?
+          sleep 10
+          let cnt=cnt+1
         done
-      else
-        messageTitle "Verify Tanzu Build Service"
-        messagePrint " ▪ Veriify Build Service (kapp)" "tanzu-build-service"
+
+        if [ $ret -ne 0 ]; then
+          logMessages /tmp/error.log
+          echo "ERROR: Faied to create TBS secret"
+          if [ "$NATIVE" == "0" ]; then
+            echo "       => tools/${TDH_TOOLS}.sh"
+            echo "          tdh-tools:/$ tanzu secret registry add tbs-install-registry \\"
+            echo "                             --username ${INSTALL_REGISTRY_USERNAME} --password ${INSTALL_REGISTRY_PASSWORD} \\"
+            echo "                             --server ${INSTALL_REGISTRY_HOSTNAME} \\"
+            echo "                             --export-to-all-namespaces --yes --namespace $NAMESPACE"
+            echo "          tdh-tools:/$ exit"
+          else
+            echo "       => tanzu secret registry add tbs-install-registry \\"
+            echo "                --username ${INSTALL_REGISTRY_USERNAME} --password ${INSTALL_REGISTRY_PASSWORD} \\"
+            echo "                --server ${INSTALL_REGISTRY_HOSTNAME} \\"
+            echo "                --export-to-all-namespaces --yes --namespace $NAMESPACE"; exit 1
+          fi
+
+          exit 1
+        fi
+#bbbbb TBS
+
+        # NAME                  REPOSITORY                                                  TAG     STATUS               DETAILS  NAMESPACE
+        # tkg-packages-1-5-4    projects.registry.vmware.com/tkg/packages/standard/repo     v1.5.4  Reconcile succeeded           tanzu-package-repo-global
+        # tanzu-tap-repository  harbor.apps-contour.vsptap.pcfsdu.com/library/tap-packages  1.2.2   Reconcile succeeded           tap-install
+      
+echo "TanzuPackage_AddRepo       $NAMESPACE tanzu-tbs-repository ${INSTALL_REPOSITORY}:$TBS_VERSION"
+        TanzuPackage_AddRepo       $NAMESPACE tanzu-tbs-repository ${INSTALL_REPOSITORY}:$TBS_VERSION
+        TanzuPackage_RepoSync      $NAMESPACE
+
+
+exit
+        cnt=0; ret=1
+        while [ $ret -ne 0 -a $cnt -lt 5 ]; do
+          tanzu package repository add tbs-repository \
+                --url "${INSTALL_REPOSITORY}:${TBS_VERSION}" \
+                --namespace $NAMESPACE > /tmp/error.log 2>&1; ret=$?
+          sleep 10
+          let cnt=cnt+1
+        done
+  
+        if [ $ret -ne 0 ]; then
+          logMessages /tmp/error.log
+          echo "ERROR: Faied to add repository"
+          if [ "$NATIVE" == "0" ]; then
+            echo "       => tools/${TDH_TOOLS}.sh"
+            echo "          tdh-tools:/$ tanzu package repository add tbs-repository \\"
+            echo "                             --url \"${INSTALL_REPOSITORY}:${TBS_VERSION}\" \\"
+            echo "                             --namespace $NAMESPACE"
+            echo "          tdh-tools:/$ exit"
+          else
+            echo "       => tanzu package repository add tbs-repository \\"
+            echo "                --url \"${INSTALL_REPOSITORY}:${TBS_VERSION}\" \\"
+            echo "                --namespace $NAMESPACE"; exit 
+          fi
+  
+          exit 1
+        fi
+
+        ret=""; cnt=0
+        while [ "$ret" != "Reconcile succeeded" -a $cnt -lt 10 ]; do
+          ret=$(tanzu package repository list -n $NAMESPACE -o json 2>/dev/null | \
+                jq -r --arg key "tbs-repository" '.[] | select(.name == $key) | select(.status != "Reconcile succeeded").status') 
+      
+          [ $ret -eq 0 ] && break
+          sleep 60
+          let cnt=cnt+1
+        done
+      
+        if [ $ret -gt 0 ]; then
+          echo "ERROR: failed to reconsilte Tanzu Packages tbs-repository in build-service"
+          if [ "$NATIVE" == "0" ]; then
+            echo "       => tools/${TDH_TOOLS}.sh"
+            echo "          tdh-tools:/$ tanzu package repository list -n $NAMESPACE"
+            echo "          tdh-tools:/$ exit"
+          else
+            echo "       => tanzu package repository list -n $NAMESPACE"
+          fi
+        fi
+      fi 
+
+      # --- TBS INSTALLATION HOWTO GUIDE --- 
+      # https://docs.vmware.com/en/Tanzu-Build-Service/1.5/vmware-tanzu-build-service/GUID-getting-started.html
+      tbs_minor=$(echo $TDH_SERVICE_BUILD_SERVICE_VERSION | awk -F'.' '{ print $2 }') 
+      if [ $TDH_SERVICE_BUILD_SERVICE_PKG_REPOSITORY == "false" ]; then
+        messagePrint " ▪ Pull the Tanzu Build Service bundle image locally" "$TDH_REGISTRY_VMWARE_NAME/library/build-service"
+        rm -rf /tmp/bundle
+        imgpkg pull -b "$DNS_HARBOR/library/build-service:$TDH_SERVICE_BUILD_SERVICE_VERSION" -o /tmp/bundle > /dev/null 2>&1; ret=$?
+        if [ $ret -ne 0 ]; then
+          echo "ERROR: Pull Images failed"
+          echo "       => imgpkg pull -b \"$DNS_HARBOR/library/build-service\" -o /tmp/bundle"
+        fi
+  
+        # --- DEPLOY KAPP ---
+        cnt=$(kapp inspect -a tanzu-build-service 2>/dev/null | grep -c "0 resources")
+        stt=$(kapp inspect -a tanzu-build-service 2>/dev/null | tail -1)
+        if [ "$stt" != "Succeeded" -o $cnt -eq 1 ]; then
+          kapp delete -a tanzu-build-service -y >/dev/null 2>&1
+          messagePrint " ▪ Deploy Build Service (kapp)" "/tmp/bundle/values.yaml"
+          echo "   -----------------------------------------------------------------------------------------------------------"
+          echo "   WARNING: This process may take up to 2h. You can run 'kapp inspect -a tanzu-build-service' to see progress "
+          echo "   -----------------------------------------------------------------------------------------------------------"
+          touch /tmp/bundle/values.yaml
+
+          # --- 1.4.2 Tested ---
+          ytt -f /tmp/bundle/values.yaml \
+              -f /tmp/bundle/config/ \
+              -f $HOME/.tanzu-demo-hub/certificates/ca.pem \
+              -v kp_default_repository=$DNS_HARBOR/library/build-service \
+              -v kp_default_repository_username=admin \
+              -v kp_default_repository_password=$TDH_HARBOR_REGISTRY_ADMIN_PASSWORD \
+              -v tanzunet_username="$TDH_REGISTRY_VMWARE_USER" \
+              -v tanzunet_password="$TDH_REGISTRY_VMWARE_PASS" \
+  	      -v descriptor_name='lite' 2>/dev/null \
+             | kbld -f /tmp/bundle/.imgpkg/images.yml -f- \
+             | kapp deploy -a tanzu-build-service -f- -y > /tmp/kapp.log 2>&1; ret=$?
+  
+          cnt=$(kapp inspect -a tanzu-build-service --json | jq -r '.Tables[].Rows[].reconcile_state' | grep -vc "ok")
+          while [ $cnt -ne 0 ]; do
+            cnt=$(kapp inspect -a tanzu-build-service --json | jq -r '.Tables[].Rows[].reconcile_state' | grep -vc "ok")
+            sleep 360
+          done
+        else
+          messageTitle "Verify Tanzu Build Service"
+          messagePrint " ▪ Veriify Build Service (kapp)" "tanzu-build-service"
+        fi
+  
+        stt=$(kubectl get TanzuNetDependencyUpdaters dependency-updater -n build-service | egrep "^dependency-updater" | awk '{ print $3 }')
+        ver=$(kubectl get TanzuNetDependencyUpdaters dependency-updater -n build-service | egrep "^dependency-updater" | awk '{ print $2 }')
+        messagePrint " ▪ Verify Dependancy Updater (dependency-updater)" "build-service/dependency-updater"
+        messagePrint "   Dependancy Version"         "$ver"
+        messagePrint "   Dependancy Statuws"         "$stt"
+  
+        messagePrint " ▪ Verify the cluster builders" "base, default, full and tiny"
+        messageLine
+        kp clusterbuilder list
+        messageLine
       fi
-
-      stt=$(kubectl get TanzuNetDependencyUpdaters dependency-updater -n build-service | egrep "^dependency-updater" | awk '{ print $3 }')
-      ver=$(kubectl get TanzuNetDependencyUpdaters dependency-updater -n build-service | egrep "^dependency-updater" | awk '{ print $2 }')
-      messagePrint " ▪ Verify Dependancy Updater (dependency-updater)" "build-service/dependency-updater"
-      messagePrint "   Dependancy Version"         "$ver"
-      messagePrint "   Dependancy Statuws"         "$stt"
-
-      messagePrint " ▪ Verify the cluster builders" "base, default, full and tiny"
-      messageLine
-      kp clusterbuilder list
-      messageLine
     fi
 
     CURRENT_DATE=$(date "+%Y-%m-%d %M:%H:%S") 
@@ -8472,13 +8595,16 @@ dockerRateLimit() {
  
     cnt=0; ret=1
     while [ $ret -ne 0 -a $cnt -lt 5 ]; do
-      cmdLoop kubectl patch serviceaccount default -p '{"imagePullSecrets": [{"name": "tdh-docker-repo"}]}' -n $TMP_NAMESPACE > /dev/null 2>&1; ret=$?
+        echo "       => kubectl patch serviceaccount default -p '{\"imagePullSecrets\": [{\"name\": \"tdh-docker-repo\"}]}' -n $TMP_NAMESPACE"
+        #kubectl patch serviceaccount default -p '{"imagePullSecrets": [{"name": "tdh-docker-repo"}]}' -n $TMP_NAMESPACE; ret=$?
+        kubectl patch serviceaccount default -p '{"imagePullSecrets": [{"name": "tdh-docker-repo"}]}' -n $TMP_NAMESPACE > /dev/null 2>&1; ret=$?
       [ $ret -eq 0 ] && break
       let cnt=cnt+1
       sleep 30
     done
 
     if [ $ret -ne 0 ]; then
+      logMessages /tmp/error.log
       echo "ERROR: Failed to Patch Service account"
       if [ "$NATIVE" == "0" ]; then
         echo "       => tools/${TDH_TOOLS}.sh"
@@ -8635,6 +8761,8 @@ InstallContour() {
 # Function Purpose ...: Execute Command in a Loop until its working
 # ------------------------------------------------------------------------------------------
 # Argument ($1) ......: Command to execure
+# Env Variables ($1) .: TDH_TLS_CERT
+# ............. ($2) .: TDH_TLS_ISSUER_NAME 
 # ------------------------------------------------------------------------------------------
 # Return Value .......: 0 - SUCCEED, 1 - FAILED
 # ------------------------------------------------------------------------------------------
@@ -8642,7 +8770,7 @@ InstallContour() {
 # ------------------------------------------------------------------------------------------
 createClusterIssuer() {
   #https://cert-manager.io/docs/tutorials/acme/dns-validation/
-  NAMESPACE=cert-manager
+  NAMESPACE=tdh-certificate
 
   if [ "${TDH_HARBOR_STAGING_TLS_CERT}" == "true" ]; then
     LETSENSCRIPT_SERVER="https://acme-staging-v02.api.letsencrypt.org/directory"
@@ -8655,18 +8783,69 @@ createClusterIssuer() {
   stt=$(jq -r --arg key "$TDH_TLS_CERT" '.items[] | select(.metadata.name == $key).status.conditions[].type' /tmp/output.json)
   if [ "${stt}" == "" -o "${stt}" == "False" ]; then
     messageTitle "Cleaning up Let's Enscript objects"
-    cmdLoop kubectl delete clusterissuer,order,challenge,certificate --all > /dev/null 2>&1
+    deleteNamespace $NAMESPACE > /dev/null 2>&1
+
+    cmdLoop kubectl delete ns $NAMESPACE --all > /dev/null 2>&1
+    cmdLoop kubectl delete clusterissuer $TDH_TLS_ISSUER_NAME > /dev/null 2>&1
+    cmdLoop kubectl delete secret tanzu-demo-hub-tls -n default > /dev/null 2>&1
+    cmdLoop kubectl -n cert-manager delete secret route53-credentials-secret > /dev/null 2>&1
   fi
 
   cmdLoop kubectl get clusterissuer -o json > /tmp/output.json
   stt=$(jq -r --arg key "$TDH_TLS_ISSUER_NAME" '.items[] | select(.metadata.name == $key).status.conditions[].type' /tmp/output.json) 
   if [ "${stt}" == "" -o "${stt}" == "False" ]; then
+    createNamespace $NAMESPACE > /dev/null 2>&1
+
     cmdLoop aws route53 list-hosted-zones-by-name --dns-name ${TDH_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN} > /tmp/output.json
     AWS_HOSTED_ZONE=$(jq -r ".HostedZones[] | select(.Name | scan(\"^${zone}.\")).Id" /tmp/output.json)
     cmdLoop aws route53 list-hosted-zones --output json > /tmp/output.json
 
     AWS_HOSTED_ZONE_ID=$(jq -r --arg key "${TDH_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}." '.HostedZones[] | select(.Name == $key).Id' /tmp/output.json | \
                          awk -F '/' '{ print $NF }')
+
+    # --- DELETE LEFTOVER LETSENSCRIPT (ACME) ENTRIES ---
+    cmdLoop aws route53 list-resource-record-sets --hosted-zone-id $AWS_HOSTED_ZONE_ID > /tmp/output.json
+
+    messageTitle "Delete leftover ACME Challenge records in AWS Route53"
+
+    for n in $(jq -r '.ResourceRecordSets[] | select(.Name | contains("_acme")).Name' /tmp/output.json 2>/dev/null); do
+      ttl=$(jq -r --arg key "$n" '.ResourceRecordSets[] | select(.Name == $key).TTL' /tmp/output.json | sed 's/"//g')
+      ttt=$(jq -r --arg key "$n" '.ResourceRecordSets[] | select(.Name == $key).Type' /tmp/output.json | sed 's/"//g')
+      rrc=$(jq -r --arg key "$n" '.ResourceRecordSets[] | select(.Name == $key).ResourceRecords[].Value' /tmp/output.json | sed 's/"//g')
+
+      TMPROUTE53=/tmp/tmp_route53.json
+      echo "{"                                                   >  $TMPROUTE53
+      echo "  \"Comment\": \"CREATE/DELETE/UPSERT a record \","  >> $TMPROUTE53
+      echo "  \"Changes\": [{"                                   >> $TMPROUTE53
+      echo "  \"Action\": \"DELETE\","                           >> $TMPROUTE53
+      echo "  \"ResourceRecordSet\": {"                          >> $TMPROUTE53
+      echo "    \"Name\": \"${n}\","                             >> $TMPROUTE53
+      echo "    \"Type\": \"$ttt\","                             >> $TMPROUTE53
+      echo "    \"TTL\": $ttl,"                                  >> $TMPROUTE53
+      echo "    \"ResourceRecords\": [ "                         >> $TMPROUTE53
+      echo "      { \"Value\": \"\\\"${rrc}\\\"\" }"                    >> $TMPROUTE53
+      echo "    ]"                                               >> $TMPROUTE53
+      echo "}}]"                                                 >> $TMPROUTE53
+      echo "}"                                                   >> $TMPROUTE53
+
+      messagePrint " ▪ Deleting Record in Zone: ${TDH_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}."    "$n"
+      cmdLoop aws route53 change-resource-record-sets --hosted-zone-id $AWS_HOSTED_ZONE_ID --change-batch file://${TMPROUTE53} > /tmp/error.log 2>&1; ret=$?
+
+      if [ $ret -ne 0 ]; then
+        logMessages /tmp/error.log
+        echo "ERROR: failed to delete leftover '_acme' challange records in AWS Route53"
+        if [ "$NATIVE" == "0" ]; then
+          echo "       => tools/${TDH_TOOLS}.sh"
+          echo "          tdh-tools:/$ cat $TMPROUTE53
+          echo "          tdh-tools:/$ aws route53 change-resource-record-sets --hosted-zone-id $AWS_HOSTED_ZONE_ID --change-batch file://${TMPROUTE53}"
+          echo "          tdh-tools:/$ exit"
+        else
+          echo "       => cat $TMPROUTE53
+          echo "       => aws route53 change-resource-record-sets --hosted-zone-id $AWS_HOSTED_ZONE_ID --change-batch file://${TMPROUTE53}"
+        fi
+        exit 1
+      fi
+    done
 
     messageTitle "Create LetsEnscript ClusterIssuer"
     messagePrint " ▪ LetsEnscript Issuer Name"         "$TDH_TLS_ISSUER_NAME"
@@ -8696,10 +8875,11 @@ createClusterIssuer() {
     fi
 
     TDH_TLS_ISSUER_FILE=/tmp/$TDH_TLS_ISSUER_NAME
-    echo "apiVersion: cert-manager.io/v1alpha2"                                    >  $TDH_TLS_ISSUER_FILE
+    echo "apiVersion: cert-manager.io/v1"                                          >  $TDH_TLS_ISSUER_FILE
     echo "kind: ClusterIssuer"                                                     >> $TDH_TLS_ISSUER_FILE
     echo "metadata:"                                                               >> $TDH_TLS_ISSUER_FILE
     echo "  name: $TDH_TLS_ISSUER_NAME"                                            >> $TDH_TLS_ISSUER_FILE
+    echo "  namespace: $NAMESPACE"                                                 >> $TDH_TLS_ISSUER_FILE
     echo "spec:"                                                                   >> $TDH_TLS_ISSUER_FILE
     echo "  acme:"                                                                 >> $TDH_TLS_ISSUER_FILE
     echo "    email: $TDH_CERTMANAGER_EMAIL"                                       >> $TDH_TLS_ISSUER_FILE
@@ -8722,14 +8902,8 @@ createClusterIssuer() {
     echo "          secretAccessKeySecretRef:"                                     >> $TDH_TLS_ISSUER_FILE
     echo "            name: route53-credentials-secret"                            >> $TDH_TLS_ISSUER_FILE
     echo "            key: aws-credentials"                                        >> $TDH_TLS_ISSUER_FILE
-    echo "          # you can also assume a role with these credentials"           >> $TDH_TLS_ISSUER_FILE
     echo "          hostedZoneID: $AWS_HOSTED_ZONE_ID"                             >> $TDH_TLS_ISSUER_FILE
 
-    # --- CREATE/RECREATE AWS ROUTE53 SECRET ---
-    #deleteSecret cert-manager route53-credentials-secret
-    #deleteSecret default route53-credentials-secret
-
-    #DELETEME
     kubectl -n cert-manager delete secret route53-credentials-secret > /dev/null 2>&1
     kubectl -n default delete secret route53-credentials-secret > /dev/null 2>&1
 
@@ -8737,7 +8911,7 @@ createClusterIssuer() {
     kubectl -n cert-manager create secret generic route53-credentials-secret \
             --from-file=aws-credentials=/tmp/aws-credentials > /dev/null 2>&1
 
-    # --- VERIFY CERTIFICATE ---
+    # --- VERIFY SECRET CREDENTIALS ---
     kubectl -n cert-manager get secret route53-credentials-secret -o json | jq -r '.data."aws-credentials"' | base64 -d > /tmp/aws-credentials_secret
     diff /tmp/aws-credentials /tmp/aws-credentials_secret > /dev/null 2>&1
     if [ $? -ne 0 ]; then 
@@ -8748,14 +8922,22 @@ createClusterIssuer() {
       rm -f /tmp/aws-credentials /tmp/aws-credentials_secret
     fi
 
-    # --- RECREATE ISSUER ---
+    # --- CLEANUP REMAINING OBJECTS ---
     kubectl -n $NAMESPACE delete --all clusterissuer,certificate,order,challenge > /dev/null 2>&1
-    sleep 300
-    kubectl -n $NAMESPACE apply -f $TDH_TLS_ISSUER_FILE > /dev/null 2>&1
+
+    # --- RECREATE CLUSTERISSUER ---
+    kubectl -n $NAMESPACE apply -f $TDH_TLS_ISSUER_FILE > /tmp/erroor.log 2>&1; ret=$?
     if [ $? -ne 0 ]; then
-      echo "ERROR: failed to deploy letsenscript issuer"
-      echo "       => kubectl -n $NAMESPACE apply -f $TDH_TLS_ISSUER_FILE"
-      exit 1
+      logMessages /tmp/error.log
+      echo "ERROR: failed to deploy letsenscript clusterissuer"
+      if [ "$NATIVE" == "0" ]; then
+        echo "       => tools/${TDH_TOOLS}.sh"
+        echo "          tdh-tools:/$ kubectl -n $NAMESPACE apply -f $TDH_TLS_ISSUER_FILE"
+        echo "          tdh-tools:/$ exit"
+      else
+        echo "       => kubectl -n $NAMESPACE apply -f $TDH_TLS_ISSUER_FILE"
+      fi
+      exit 0
     fi
 
     cnt=0
@@ -8794,6 +8976,7 @@ createClusterIssuer() {
             jq -r '.status.conditions[] | select(.type == "Ready").status')
   kubectl get secret $TDH_TLS_SECRET > /dev/null 2>&1; stt_sec=$?
   kubectl get certificate $TDH_TLS_CERT > /dev/null 2>&1; stt_crt=$?
+
   if [ "${stt_rdy}" == "False" -o $stt_sec -ne 0 -o $stt_crt -ne 0 ]; then
     # --- CLEANUP OLD STUFF ---
     #deleteSecret default $TDH_TLS_SECRET
@@ -8809,15 +8992,12 @@ createClusterIssuer() {
     echo "kind: Certificate"                                                >> $CERTIFICATE_CONFIG
     echo "metadata:"                                                        >> $CERTIFICATE_CONFIG
     echo "  name: $TDH_TLS_CERT"                                            >> $CERTIFICATE_CONFIG
-    echo "  namespace: default"                                             >> $CERTIFICATE_CONFIG
     echo "spec:"                                                            >> $CERTIFICATE_CONFIG
     echo "  secretName: $TDH_TLS_SECRET"                                    >> $CERTIFICATE_CONFIG
     echo "  issuerRef:"                                                     >> $CERTIFICATE_CONFIG
     echo "    name: letsencrypt-staging"                                    >> $CERTIFICATE_CONFIG
     echo "    kind: ClusterIssuer"                                          >> $CERTIFICATE_CONFIG
     echo "  dnsNames:"                                                      >> $CERTIFICATE_CONFIG
-    #echo "  - \"$HARBOR_HOSTNAME\""                                        >> $CERTIFICATE_CONFIG
-    #echo "  - \"$NOTARY_HOSTNAME\""                                        >> $CERTIFICATE_CONFIG
     echo "  - '*.apps-contour.${TDH_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}'"     >> $CERTIFICATE_CONFIG
     echo "  - '*.apps-nginx.${TDH_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}'"       >> $CERTIFICATE_CONFIG
     echo "  - '*.gitlab.${TDH_ENVNAME}.${AWS_HOSTED_DNS_DOMAIN}'"           >> $CERTIFICATE_CONFIG
@@ -8833,7 +9013,7 @@ createClusterIssuer() {
       exit 1
     fi
 
-    sleep 120
+    sleep 300
 
     cnt=0
 
@@ -8948,7 +9128,16 @@ InstallCertManager() {
 
     deleteNamespace $NAMESPACE > /dev/null 2>&1
     createNamespace $NAMESPACE > /dev/null 2>&1
+
+    messagePrint " ▪ Add the Bintnami Repository"   "https://charts.bitnami.com/bitnami"
     helmRepoAdd jetstack https://charts.jetstack.io
+    #helmRepoAdd bitnami https://charts.bitnami.com/bitnami
+
+    CHART_NAME=bitnami/cert-manager 
+    CHART_NAME=jetstack/cert-manager 
+    cmdLoop helm search repo $CHART_NAME -o json > /tmp/output.json 2>/dev/null
+    CHART_VERSION=$(jq -r --arg key "$CHART_NAME" '.[] | select(.name == $key).app_version' /tmp/output.json) 
+    CHART_VERSION="v1.8.2"
 
     if [ "${TDH_DEPLOYMENT_CLOUD}" == "vSphere" -a "$VSPHERE_TKGS_DNS_SERVER" != "" ]; then 
       HELM_OPTIONS="--set 'extraArgs={--dns01-recursive-nameservers-only,--dns01-recursive-nameservers=$VSPHERE_TKGS_DNS_SERVER}' --set installCRDs=true"
@@ -8958,17 +9147,17 @@ InstallCertManager() {
 
     cnt=0; ret=1
     while [ $ret -ne 0 -a $cnt -lt 5 ]; do
-      eval helm install cert-manager jetstack/cert-manager -n cert-manager --version v1.1.0 $HELM_OPTIONS --wait --wait-for-jobs --timeout 10m > /dev/null 2>&1; ret=$?
-      #eval helm install cert-manager jetstack/cert-manager -n cert-manager --version v1.1.0 $HELM_OPTIONS --wait --wait-for-jobs --timeout 10m; ret=$?
+      eval helm install cert-manager $CHART_NAME -n cert-manager --version $CHART_VERSION $HELM_OPTIONS --wait --wait-for-jobs --timeout 10m > /dev/null 2>&1; ret=$?
+      #eval helm install cert-manager $CHART_NAME -n cert-manager $HELM_OPTIONS --wait --wait-for-jobs --timeout 10m; ret=$?
       [ $ret -eq 0 ] && break
       let cnt=cnt+1
       sleep 30
     done
 
     if [ $? -ne 0 ]; then
-      echo "ERROR: failed to install jetstack/cert-manager "
-      echo "       => helm install cert-manager jetstack/cert-manager --namespace cert-manager \\"
-      echo "          --version v1.1.0 --set installCRDs=true"
+      echo "ERROR: failed to install $CHART_NAME "
+      echo "       => helm install cert-manager $CHART_NAME --namespace cert-manager \\"
+      echo "          --version $CHART_VERSION --set installCRDs=true"
       exit 1
     fi
 
@@ -11630,10 +11819,15 @@ setK8sEnvironment() {
     exit 1
   fi
 
-  messagePrint " ▪ Set Kubernetes clusterrolebinding"    "tanzu-demo-hub-privileged-cluster-role-binding"
+  messagePrint " ▪ Set Kubernetes clusterrolebinding (tanzu-demo-hub)"    "tanzu-demo-hub-privileged-cluster-role-binding"
   cmdLoop kubectl create clusterrolebinding tanzu-demo-hub-privileged-cluster-role-binding \
           --clusterrole=vmware-system-tmc-psp-privileged --group=system:authenticated > /dev/null 2>&1
 
+  messagePrint " ▪ Set Kubernetes clusterrolebinding (tkg-admin)"    "default-tkg-admin-privileged-binding"
+  # Required for TAP Installation
+  # https://docs.vmware.com/en/VMware-Tanzu-Application-Platform/1.2/tap/GUID-prerequisites.html
+  cmdLoop kubectl create clusterrolebinding default-tkg-admin-privileged-binding \
+          --clusterrole=psp:vmware-system-privileged --group=system:authenticated > /dev/null 2>&1
 }
 
 cleanKindCluster() {
@@ -12872,7 +13066,6 @@ TanzuPackage_LocalStorage() {
       nam=$(jq -r --arg key "${PACKAGE_NAME}-${PACKAGE_NAMESPACE}-cluster-rolebinding" '.items[] | select(.metadata.name == $key).metadata.name' /tmp/output.json)
       [ "$nam" != "" ] && cmdLoop kubectl -n tanzu-system-packages delete clusterrolebinding $nam
 
-#bbbbbbb1
       tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $PACKAGE_NAMESPACE --version $package_ver --create-namespace --wait=true > /tmp/error.log 2>&1
       waitTanzuPackageReconsile $PACKAGE_NAME $PACKAGE_NAMESPACE; ret=$? 
       if [ $ret -ne 0 ]; then 
@@ -13194,7 +13387,6 @@ TanzuPackage_Harbor () {
     messagePrint "Installing Harbor OCI Registry"     "$PACKAGE_NAME"
     messagePrint " ▪ Tanzu Package ($PACKAGE_NAME)"   "$PACKAGE_ID ($package_ver/$package_rel)"
     cnt=0; ret=1
-#bbbbb
     while [ $ret -ne 0 -a $cnt -lt 5 ]; do
       # --- DELETE SERVICE ACCOUNT IF IT EXIST ----
       cmdLoop kubectl get serviceaccount -n tanzu-system-packages -o json > /tmp/output.json
@@ -13854,6 +14046,7 @@ runTDHtoolsDemos() {
                "-v $HOME/$TDH_TOOLS_PATH/.cluster-api:$HOME/.cluster-api:rw"            ## PERSISTANT MICROSOFT AZURE CREDENTIALS
                "-v $HOME/$TDH_TOOLS_PATH/.vmware-cna-saas:$HOME/.vmware-cna-saas:rw"    ## TANZU MISSION CONTROL (TMC) LOGIN CREDENTIALS
                "-v $HOME/$TDH_TOOLS_PATH/tmp:/tmp:rw"                                   ## KEEP TEMP PERSISTENT
+               "-v $HOME/$TDH_TOOLS_PATH/etc/kappctrl-mem-tmp:/etc/kappctrl-mem-tmp:rw" ## BUILDSERVICE INSTALLATION
                "-v $TDHHOME/:$TDHHOME:ro"                                               ## TANZU-DEMO-HUB DIRECTORY
              )
 
@@ -14057,6 +14250,7 @@ runTDHtools() {
                "-v $HOME/$TDH_TOOLS_PATH/.azure:$TANZU_HOME/.azure:rw"                        ## PERSISTANT MICROSOFT AZURE CREDENTIALS
                "-v $HOME/$TDH_TOOLS_PATH/.vmware-cna-saas:$TANZU_HOME/.vmware-cna-saas:rw"    ## TANZU MISSION CONTROL (TMC) LOGIN CREDENTIALS
                "-v $HOME/$TDH_TOOLS_PATH/tmp:/tmp:rw"                                   ## KEEP TEMP PERSISTENT
+               "-v $HOME/$TDH_TOOLS_PATH/etc/kappctrl-mem-tmp:/etc/kappctrl-mem-tmp:rw" ## BUILDSERVICE INSTALLATION
                "-v $TDHPATH/:$TANZU_HOME/tanzu-demo-hub:ro"                                               ## TANZU-DEMO-HUB DIRECTORY
              )
 
@@ -14596,7 +14790,7 @@ copySecretObject() {
     fi
 
     # --- COPY SECRET ---
-    cmdLoop kubectl get secret $SECRET_NAME --namespace=default -oyaml | \
+    cmdLoop kubectl get secret $SECRET_NAME --namespace=$SOURCE_NAMESPACE -oyaml | \
             grep -v '^\s*namespace:\s' > /tmp/tmpfile.yaml
 
     if [ -s /tmp/tmpfile.yaml ]; then 
@@ -14613,7 +14807,7 @@ copySecretObject() {
     fi
 
     # --- COPY SECRET ---
-    cmdLoop kubectl get secret $SECRET_NAME --namespace=default -oyaml | \
+    cmdLoop kubectl get secret $SECRET_NAME --namespace=$SOURCE_NAMESPACE -oyaml | \
             grep -v '^\s*namespace:\s' | sed "s/name: $SECRET_NAME/name: $NEW_SECRET_NAME/g" > /tmp/tmpfile.yaml
 
     if [ -s /tmp/tmpfile.yaml ]; then
@@ -15095,6 +15289,7 @@ attachClusterToTMC() {
   #########################################################################################################################
   ################################################ ATTACH CLUSTER TO TMC ##################################################
   #########################################################################################################################
+echo "tmc cluster list --name $clusterName -p $provisioner -m $mgmtCluster"
   cmdLoop tmc cluster list --name $clusterName -p $provisioner -m $mgmtCluster -o json > /tmp/output.json
   nam=$(jq -r --arg clu "$clusterName" --arg pvn "$provisioner" --arg mcl "$mgmtCluster" \
         '.clusters[] | select(.fullName.name == $clu and .fullName.provisionerName == $pvn and .fullName.managementClusterName == $mcl).fullName.name' /tmp/output.json)
@@ -15128,6 +15323,7 @@ attachClusterToTMC() {
   #########################################################################################################################
   ################################################## VERIFY STATUS ########################################################
   #########################################################################################################################
+echo "tmc cluster list --name $clusterName -p $provisioner -m $mgmtCluster "
   cmdLoop tmc cluster list --name $clusterName -p $provisioner -m $mgmtCluster -o json > /tmp/output.json
   stt=$(jq -r --arg clu "$clusterName" --arg pvn "$provisioner" --arg mcl "$mgmtCluster" \
         '.clusters[] | select(.fullName.name == $clu and .fullName.provisionerName == $pvn and .fullName.managementClusterName == $mcl).status.phase' /tmp/output.json)
@@ -15137,6 +15333,123 @@ attachClusterToTMC() {
   echo "$stt/$hlt" > /tmp/status.txt
   return 0
 }
+
+# ------------------------------------------------------------------------------------------
+# Function Name ......: deleteCertRequest
+# Function Purpose ...: Delete Certificvate Request objects
+# ------------------------------------------------------------------------------------------
+# Argument ($1) ......: Namespace
+#          ($2) ......: Type (clusterissuer, certrequest, order, challange)
+#          ($3) ......: cert-issuer-name
+# ------------------------------------------------------------------------------------------
+# Return Value .......: Status (HEALTY, DETACHING, FAILED)
+# ------------------------------------------------------------------------------------------
+deleteCertRequest() {
+  NAMESPACE=$1
+  TYPE=$2
+  REQUEST=$3
+
+  kubectl get $TYPE -o json > /tmp/output.json 2> /dev/null
+  stt=$(jq -r --arg key "$REQUEST" '.items[] | select(.spec.issuerRef.name == $key).metadata.name' /tmp/output.json 2>/dev/null)
+  if [ "$stt" != "" ]; then
+          echo "=> kubectl delete $TYPE $stt -n $NAMESPACE"
+    #kubectl delete $TYPE $stt -n $NAMESPACE > /dev/null 2>&1
+    kubectl delete $TYPE $stt -n $NAMESPACE
+  fi
+}
+
+# ------------------------------------------------------------------------------------------
+# Function Name ......: installSecretGenController
+# Function Purpose ...: Delete Certificvate Request objects
+# ------------------------------------------------------------------------------------------
+# Argument ($1) ......: Namespace
+#          ($2) ......: Type (clusterissuer, certrequest, order, challange)
+#          ($3) ......: cert-issuer-name
+# ------------------------------------------------------------------------------------------
+# Return Value .......: Status (HEALTY, DETACHING, FAILED)
+# ------------------------------------------------------------------------------------------
+# TBS - Using SecretGen controller Secrets to use private cluster builders
+# https://docs.vmware.com/en/Tanzu-Build-Service/1.5/vmware-tanzu-build-service/GUID-synced-secrets.html
+# https://github.com/vmware-tanzu/carvel-secretgen-controller/blob/develop/docs/install.md
+# ------------------------------------------------------------------------------------------
+installSecretGenController() {
+  cmdLoop kapp list -A --json > /tmp/output.json 2>/dev/null
+  nam=$(jq -r --arg key "sc" '.Tables[].Rows[] | select(.name == $key).name' /tmp/output.json)
+
+  if [ "$nam" != "sg" ]; then 
+    messagePrint " ▪ Install SecretGen Controller"         "https://github.com/vmware-tanzu/carvel-secretgen-controller/releases/latest/download/release.yml"
+
+    kapp deploy -a sg -f https://github.com/vmware-tanzu/carvel-secretgen-controller/releases/latest/download/release.yml -y > /tmp/error.log 2>&1; ret=$?
+    if [ $ret -ne 0 ]; then
+      logMessages /tmp/error.log
+      echo "ERROR: failed to install Carvel SecretGen Controller"
+      if [ "$NATIVE" == "0" ]; then
+        echo "       => tools/${TDH_TOOLS}.sh"
+        echo "          tdh-tools:/$ kapp deploy -a sg -f https://github.com/vmware-tanzu/carvel-secretgen-controller/releases/latest/download/release.yml -y"
+        echo "          tdh-tools:/$ exit"
+      else
+        echo "       => kapp deploy -a sg -f https://github.com/vmware-tanzu/carvel-secretgen-controller/releases/latest/download/release.yml -y"
+      fi
+
+      exit 1
+    fi
+  fi
+
+  cmdLoop kapp list -A --json > /tmp/output.json 2>/dev/null
+  nam=$(jq -r --arg key "sg" '.Tables[].Rows[] | select(.name == $key).name' /tmp/output.json)
+  nsp=$(jq -r --arg key "sg" '.Tables[].Rows[] | select(.name == $key).namespace' /tmp/output.json)
+  stt=$(jq -r --arg key "sg" '.Tables[].Rows[] | select(.name == $key).last_change_successful' /tmp/output.json)
+    
+  messagePrint "Verify SecretGen Controller (sg)"  "Status: $stt"
+}
+
+# ------------------------------------------------------------------------------------------
+# Function Name ......: awsResourceRecordText
+# Function Purpose ...: Display AWS RessourceRecord in Text
+# ------------------------------------------------------------------------------------------
+# Argument ($1) ......: ZONE
+# ------------------------------------------------------------------------------------------
+# Return Value .......: Status (HEALTY, DETACHING, FAILED)
+# ------------------------------------------------------------------------------------------
+awsResourceRecordText() {
+  ZONE=$1
+  JSON_FILE=/tmp/aws.json
+
+  aws route53 list-resource-record-sets --hosted-zone-id $ZONE --output json 2>/dev/null > $JSON_FILE
+
+  max=$(jq -r '.ResourceRecordSets[].Name' $JSON_FILE | wc -l | sed 's/^  *//g')
+  cnt=0
+
+  echo ""
+  echo "                          HostedZone: $ZONE"
+  echo ""
+  printf "     %-40s %5s %32s\n" "Name" "Type" "ResourceRecordSets"
+  echo "     -------------------------------------------------------------------------------"
+
+  while [ $cnt -lt $max ]; do
+    nam=$(jq -r ".ResourceRecordSets[$cnt].Name" $JSON_FILE | sed 's/\\[0-9]*./*./g')
+    ttl=$(jq -r ".ResourceRecordSets[$cnt].TTL" $JSON_FILE)
+    typ=$(jq -r ".ResourceRecordSets[$cnt].Type" $JSON_FILE)
+
+    if [ "$typ" != "SOA" ]; then
+      first=1
+      for n in $(jq -r ".ResourceRecordSets[$cnt].ResourceRecords[].Value" $JSON_FILE); do
+        if [ $first -eq 1 ]; then
+          printf "     %-40s %5s %32s\n" $nam $typ $n
+        else
+          printf "     % 79s \n" $n
+        fi
+      first=0
+        done
+      echo "     -------------------------------------------------------------------------------"
+    fi
+
+    let cnt=cnt+1
+  done
+
+  echo
+}
+
 
 
 

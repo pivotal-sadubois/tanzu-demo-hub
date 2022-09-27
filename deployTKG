@@ -265,6 +265,7 @@ else
 fi
 
 tkgCreateCluster
+tkgInstallClusterExtensions
 
 # --- CLEANUP KUNECONFIG ---
 cleanKubeconfig
@@ -286,7 +287,7 @@ messageTitle "Waiting for system pods to have completed starting"
 runningPods kube-system
 runningPods tkg-system
 
-messageTitle "Waiting for Kapp Services to have completed starting"
+#messageTitle "Waiting for Kapp Services to have completed starting"
 #waitForKappServices   default     ${TDH_TKGWC_NAME}-kapp-controller-ctrl 
 #waitForKappServices   tkg-system  ${TDH_TKGWC_CNI}-ctrl 
 #waitForKappServices   tkg-system  tanzu-core-ctrl 
@@ -316,19 +317,17 @@ fi
 
 cmdLoop kubectl get secret -n default -o json > /tmp/output.yaml
 if [ -s /tmp/output.yaml ]; then
-  messageTitle "Helm Package Management"
   nam=$(jq -r --arg key "tanzu-demo-hub-tls" '.items[].metadata | select(.name == $key).name' /tmp/output.yaml)
   if [ "$nam" != "tanzu-demo-hub-tls" ]; then
     InstallCertManager
     createClusterIssuer
     getRootCA                    tanzu-demo-hub-tls
-    cmdLoop helm delete cert-manager -n cert-manager > /dev/null
   fi
 fi
 
 messageTitle "Tanzu Package Management"
+echo "TDH_TKGMC_INFRASTRUCTURE:$TDH_TKGMC_INFRASTRUCTURE"
 if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "vSphere" ]; then
-  installClusterEssentials
   TanzuPackage_AddRepo       $TDH_SERVICE_PACKAGE_REPOSITORY_NAMESPACE $TDH_SERVICE_PACKAGE_REPOSITORY_NAME $TDH_SERVICE_PACKAGE_REPOSITORY_ID
   TanzuPackage_RepoSync      $TDH_SERVICE_PACKAGE_REPOSITORY_NAMESPACE
 else
