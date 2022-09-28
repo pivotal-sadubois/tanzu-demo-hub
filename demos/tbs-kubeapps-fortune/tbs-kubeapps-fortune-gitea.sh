@@ -224,9 +224,10 @@ if [ "$TDH_SERVICE_REGISTRY_DOCKER" == "true" ]; then
   prtHead "Create TBS Image ($TBS_SOURCE_APP)"
   cnt=$(kp image list 2>/dev/null | egrep -c "^fortune") 
   if [ $cnt -eq 0 ]; then 
-    execCmd "kp image create $TBS_SOURCE_APP --tag $TDH_REGISTRY_DOCKER_NAME/$TDH_REGISTRY_DOCKER_USER/$TBS_SOURCE_APP --git $TDH_TBS_DEMO_FORTUNE_GIT --git-revision master"
+    execCmd "kp image create $TBS_SOURCE_APP --tag $TDH_HARBOR_REGISTRY_DNS_HARBOR/library/$TBS_SOURCE_APP --git $GIT_REPO_TARGET --git-revision $GIT_REPO_BRANCH -e BP_MAVEN_BUILD_ARGUMENTS=\"-Dmaven.test.skip=true package\""
+
   else
-    execCmd "kp image create $TBS_SOURCE_APP --tag $TDH_REGISTRY_DOCKER_NAME/$TDH_REGISTRY_DOCKER_USER/$TBS_SOURCE_APP --git $TDH_TBS_DEMO_FORTUNE_GIT --git-revision master"
+    execCmd "kp image create $TBS_SOURCE_APP --tag $TDH_HARBOR_REGISTRY_DNS_HARBOR/library/$TBS_SOURCE_APP --git $GIT_REPO_TARGET --git-revision $GIT_REPO_BRANCH -e BP_MAVEN_BUILD_ARGUMENTS=\"-Dmaven.test.skip=true package\""
 
     prtHead "Patch TBS Image ($TBS_SOURCE_APP)"
     execCmd "kp image patch $TBS_SOURCE_APP"

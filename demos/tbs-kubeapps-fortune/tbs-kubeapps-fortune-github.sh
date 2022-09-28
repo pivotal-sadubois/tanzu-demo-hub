@@ -169,10 +169,10 @@ if [ "$TDH_SERVICE_REGISTRY_HARBOR" == "true" ]; then
   prtHead "Create Secret (secret-registry-harbor) for Registry ($TDH_HARBOR_REGISTRY_DNS_HARBOR)"
   export REGISTRY_PASSWORD=$TDH_HARBOR_REGISTRY_ADMIN_PASSWORD
   slntCmd "export REGISTRY_PASSWORD=$TDH_HARBOR_REGISTRY_ADMIN_PASSWORD"
-  execCmd "kp secret create secret-registry-vmware --registry $TDH_HARBOR_REGISTRY_DNS_HARBOR --registry-user admin"
+  execCmd "kp secret create secret-registry-vmware --registry $TDH_HARBOR_REGISTRY_DNS_HARBOR --registry-user admin -e BP_MAVEN_BUILD_ARGUMENTS=\"-Dmaven.test.skip=true package\""
 
   prtHead "Create Secret (secret-repo-git)"
-  execCmd "kp secret create secret-repo-git --git-url git@github.com --git-ssh-key $TDH_GITHUB_SSHKEY"
+  execCmd "kp secret create secret-repo-git --git-url git@github.com --git-ssh-key $TDH_GITHUB_SSHKEY -e BP_MAVEN_BUILD_ARGUMENTS=\"-Dmaven.test.skip=true package\""
   sleep 15
 
   prtHead "Create TBS Image ($TBS_SOURCE_APP)"
