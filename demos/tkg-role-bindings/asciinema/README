@@ -1,0 +1,1 @@
+asciinema rec -i 2.5 -t "Kubernetes RBAC Demo" -y -q --overwrite /tmp/demo-local-user.cast
