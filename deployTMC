@@ -181,15 +181,16 @@ checkCLIcommands TKG
 checkCLIcommands TANZU
 checkCLIcommands TMC
 
-# --- CLEANUP KUNECONFIG ---
-cleanKubeconfig
-
 tmcCheckLogin
 checkTDHAccess
 checkTMCAccess
 checkTMCcontext
 
+#########################################################################################################################
+########################################## CREATE TKG CLUSTER WITH TMC ##################################################
+#########################################################################################################################
 tmcCreateCluster
+createClusterRoleBindingGroup  default-tkg-admin-privileged-binding "psp:vmware-system-privileged" "system:authenticated"
 getTDHClusterCredentials
 
 uodateConfigMap tanzu-demo-hub TDH_DOMAIN               $AWS_HOSTED_DNS_DOMAIN
@@ -224,6 +225,7 @@ if [ -s /tmp/output.yaml ]; then
 fi
 
 messageTitle "Tanzu Package Management"
+createNamespace $TDH_SERVICE_PACKAGE_REPOSITORY_NAMESPACE > /dev/null 2>&1
 installTanzuPlugin package
 
 echo "TDH_TKGMC_INFRASTRUCTURE:$TDH_TKGMC_INFRASTRUCTURE"

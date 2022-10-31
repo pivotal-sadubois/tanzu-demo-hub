@@ -13,9 +13,19 @@ else
   CLUSTER=$1
 fi
 
-cd /Users/sdu/workspace/tanzu-demo-hub
-. ./functions
+. ../functions
+. $HOME/.tanzu-demo-hub.cfg
 
+export KUNECONFIG=$HOME/.tanzu-demo-hub/config/${CLUSTER}.kubeconfig
+
+export TDH_SERVICE_TANZU_MISSION_CONTROL=true
+export TDH_SERVICE_TANZU_OBSERVABILITY=false
+export TDH_SERVICE_TANZU_DATA_PROTECTION=true
+
+tmcAttachCluster
+
+
+exit
 stt=$(attachClusterToTMC $CLUSTER attached attached $HOME/.tanzu-demo-hub/config/${CLUSTER}.kubeconfig)
 if [ "$stt" != "READY/HEALTHY" ]; then 
   echo "ERROR: TKG Worklaod Cluster ($CLUSTER) is currently in state: $stt. TMC Integration can not be"

@@ -1579,19 +1579,23 @@ checkTDHenvironment() {
 checkTMCintegration() {
   TMC_INTEGRATION=$1
 
-  TDH_DEPLOYMENT_TYPE=$(getConfigMap tanzu-demo-hub TDH_DEPLOYMENT_TYPE)
-  TDH_CLUSTER_NAME=$(getConfigMap tanzu-demo-hub TDH_CLUSTER_NAME)
-  TDH_CLUSTER_GROUP=$(getConfigMap tanzu-demo-hub TDH_CLUSTER_GROUP)
-  TDH_MANAGEMENT_CLUSTER=$(getConfigMap tanzu-demo-hub TDH_MANAGEMENT_CLUSTER)
-  TDH_PROVISIONER_NAME=$(getConfigMap tanzu-demo-hub TDH_PROVISIONER_NAME)
+  TANZU_TKGMC_NAME=$(getConfigMap tanzu-demo-hub TANZU_TKGMC_NAME)
+  TANZU_TKGWC_NAME=$(getConfigMap tanzu-demo-hub TANZU_TKGWC_NAME)
+  TANZU_TKGWC_TYPE=$(getConfigMap tanzu-demo-hub TANZU_TKGWC_TYPE)
+  TANZU_TKGWC_INFRASTRUCTURE=$(getConfigMap tanzu-demo-hub TANZU_TKGWC_INFRASTRUCTURE)
+  TANZU_TKGWC_DEPLOYMENT_MODEL=$(getConfigMap tanzu-demo-hub TANZU_TKGWC_DEPLOYMENT_MODEL)
+  TANZU_TKGWC_CLUSTER_GROUP="tanzu-demo-hub"
 
-  # Clusters created NOT with aws_hosted management-clusters show as attached
-  [ "$TDH_DEPLOYMENT_TYPE" == "tmc" ] && MGMG_CLUSTER="$TDH_MANAGEMENT_CLUSTER" || MGMG_CLUSTER="attached"
+  TANZU_TKGWC_TMC_PROVISIONER=$(getConfigMap tanzu-demo-hub TANZU_TKGWC_TMC_PROVISIONER)
+  TANZU_TKGWC_TMC_MANAGEMENT_CLUSTER=$(getConfigMap tanzu-demo-hub TANZU_TKGWC_TMC_MANAGEMENT_CLUSTER)
+
+#guguseli
 
   if [ "${TMC_INTEGRATION}" == "TO" ]; then
     if [ "${TDH_SERVICE_TANZU_OBSERVABILITY}" == "true" ]; then
       messageTitle "Tanzu Observability Integration into TMC"
 
+if [ 1 -eq 2 ]; then 
       NAMESPACE=wavefront
       kubectl get ns $NAMESPACE > /dev/null 2>&1
       if [ $? -ne 0 ]; then
@@ -1612,7 +1616,7 @@ checkTMCintegration() {
           helm install wavefront wavefront/wavefront \
               --set wavefront.url=$TDH_TANZU_OBSERVABILITY_URL \
               --set wavefront.token=$TDH_TANZU_OBSERVABILITY_API_TOKEN \
-              --set clusterName=$TDH_CLUSTER_NAME --namespace wavefront --wait --wait-for-jobs --timeout 10m > /dev/null 2>&1; ret=$?
+              --set clusterName=$TANZU_TKGWC_NAME --namespace wavefront --wait --wait-for-jobs --timeout 10m > /dev/null 2>&1; ret=$?
           [ $ret -eq 0 ] && break
           let cnt=cnt+1
           sleep 60
@@ -1625,12 +1629,12 @@ checkTMCintegration() {
             echo "          tdh-tools:/$ helm install wavefront wavefront/wavefront \\"
             echo "           --set wavefront.url=$TDH_TANZU_OBSERVABILITY_URL \\"
             echo "           --set wavefront.token=$TDH_TANZU_OBSERVABILITY_API_TOKEN \\"
-            echo "           --set clusterName=$TDH_CLUSTER_NAME --namespace wavefront"
+            echo "           --set clusterName=$TANZU_TKGWC_NAME --namespace wavefront"
           else
             echo "       => helm install wavefront wavefront/wavefront \\"
             echo "           --set wavefront.url=$TDH_TANZU_OBSERVABILITY_URL \\"
             echo "           --set wavefront.token=$TDH_TANZU_OBSERVABILITY_API_TOKEN \\"
-            echo "           --set clusterName=$TDH_CLUSTER_NAME --namespace wavefront"
+            echo "           --set clusterName=$TANZU_TKGWC_NAME --namespace wavefront"
           fi
           exit 1
         else
@@ -1639,17 +1643,19 @@ checkTMCintegration() {
       else
         messagePrint " ▪ Verify Wavefront Helm Chart"  "installed"      
       fi
+fi
 
-      cnt=$(tmc cluster integration list --cluster-name $TDH_CLUSTER_NAME -m $MGMG_CLUSTER  \
-            -p $TDH_PROVISIONER_NAME --name tanzu-observability-saas 2>/dev/null | egrep -c "tanzu-observability-saas") 
+      cnt=$(tmc cluster integration list --cluster-name $TANZU_TKGWC_NAME -m $TANZU_TKGWC_TMC_MANAGEMENT_CLUSTER  \
+            -p $TANZU_TKGWC_TMC_PROVISIONER --name tanzu-observability-saas 2>/dev/null | egrep -c "tanzu-observability-saas") 
+echo "gaga1 CNT:$cnt"
       if [ $cnt -eq 0 ]; then 
         TANZU_OBSERVABILITY=/tmp/tanzu_observability.yaml; rm -f $TANZU_OBSERVABILITY
         echo ""                                                                      >  $TANZU_OBSERVABILITY
         echo "{"                                                                     >> $TANZU_OBSERVABILITY
         echo "    \"full_name\": {"                                                  >> $TANZU_OBSERVABILITY
-        echo "        \"provisionerName\": \"$TDH_PROVISIONER_NAME\","               >> $TANZU_OBSERVABILITY
-        echo "        \"managementClusterName\": \"$MGMG_CLUSTER\","                 >> $TANZU_OBSERVABILITY
-        echo "        \"clusterName\": \"$TDH_CLUSTER_NAME\","                       >> $TANZU_OBSERVABILITY
+        echo "        \"provisionerName\": \"$TANZU_TKGWC_TMC_PROVISIONER\","               >> $TANZU_OBSERVABILITY
+        echo "        \"managementClusterName\": \"$TANZU_TKGWC_TMC_MANAGEMENT_CLUSTER\","                 >> $TANZU_OBSERVABILITY
+        echo "        \"clusterName\": \"$TANZU_TKGWC_NAME\","                       >> $TANZU_OBSERVABILITY
         echo "        \"name\": \"tanzu-observability-saas\""                        >> $TANZU_OBSERVABILITY
         echo "    },"                                                                >> $TANZU_OBSERVABILITY
         echo "    \"spec\": {"                                                       >> $TANZU_OBSERVABILITY
@@ -1675,11 +1681,11 @@ checkTMCintegration() {
           fi
           messageLine
         else
-          messagePrint " ▪ Setup Cluster Integration for ($TDH_CLUSTER_NAME)"  "configured"      
+          messagePrint " ▪ Setup Cluster Integration for ($TANZU_TKGWC_NAME)"  "configured"      
           rm -f $TANZU_OBSERVABILITY
         fi
       else
-        messagePrint " ▪ Verify Cluster Integration for ($TDH_CLUSTER_NAME)"  "configured"      
+        messagePrint " ▪ Verify Cluster Integration for ($TANZU_TKGWC_NAME)"  "configured"      
       fi
 
       uodateConfigMap tanzu-demo-hub TDH_SERVICE_TANZU_OBSERVABILITY        "true"
@@ -1691,36 +1697,36 @@ checkTMCintegration() {
   if [ "${TMC_INTEGRATION}" == "TDP" ]; then
     if [ "${TDH_SERVICE_TANZU_DATA_PROTECTION}" == "true" ]; then
       messageTitle "Data Protection Integration into TMC"
-      tmc cluster dataprotection get --cluster-name $TDH_CLUSTER_NAME -p $TDH_PROVISIONER_NAME -m $MGMG_CLUSTER  > /dev/null 2>&1; ret=$?
+      tmc cluster dataprotection get --cluster-name $TANZU_TKGWC_NAME -p $TANZU_TKGWC_TMC_PROVISIONER -m $TANZU_TKGWC_TMC_MANAGEMENT_CLUSTER  > /dev/null 2>&1; ret=$?
       if [ $ret -ne 0 ]; then 
-        messagePrint " ▪ Enable Data Protection for cluster"  "$TDH_CLUSTER_NAME"      
-        tmc cluster dataprotection create --cluster-name $TDH_CLUSTER_NAME -p $TDH_PROVISIONER_NAME -m $MGMG_CLUSTER  > /tmp/error.log 2>&1; ret=$?
+        messagePrint " ▪ Enable Data Protection for cluster"  "$TANZU_TKGWC_NAME"      
+        tmc cluster dataprotection create --cluster-name $TANZU_TKGWC_NAME -p $TANZU_TKGWC_TMC_PROVISIONER -m $TANZU_TKGWC_TMC_MANAGEMENT_CLUSTER  > /tmp/error.log 2>&1; ret=$?
         if [ $ret -ne 0 ]; then
           logMessages /tmp/error.log
-          echo "ERROR: failed to enable Data Protection for cluster $TDH_CLUSTER_NAME"
+          echo "ERROR: failed to enable Data Protection for cluster $TANZU_TKGWC_NAME"
           if [ "$NATIVE" == "0" ]; then
             echo "       => tools/${TDH_TOOLS}.sh"
-            echo "          tdh-tools:/$ tmc cluster dataprotection create --cluster-name $TDH_CLUSTER_NAME -p $TDH_PROVISIONER_NAME -m $MGMG_CLUSTER"
+            echo "          tdh-tools:/$ tmc cluster dataprotection create --cluster-name $TANZU_TKGWC_NAME -p $TANZU_TKGWC_TMC_PROVISIONER -m $TANZU_TKGWC_TMC_MANAGEMENT_CLUSTER"
             echo "          tdh-tools:/$ exit"
           else
-            echo "       => tmc cluster dataprotection create --cluster-name $TDH_CLUSTER_NAME -p $TDH_PROVISIONER_NAME -m $MGMG_CLUSTER"
+            echo "       => tmc cluster dataprotection create --cluster-name $TANZU_TKGWC_NAME -p $TANZU_TKGWC_TMC_PROVISIONER -m $TANZU_TKGWC_TMC_MANAGEMENT_CLUSTER"
           fi
   
           exit 1
         fi
       fi
 
-      cnt=$(tmc cluster dataprotection list --cluster-name $TDH_CLUSTER_NAME -p $TDH_PROVISIONER_NAME -m $MGMG_CLUSTER 2>/dev/null | grep -c " $TDH_CLUSTER_NAME ")
+      cnt=$(tmc cluster dataprotection list --cluster-name $TANZU_TKGWC_NAME -p $TANZU_TKGWC_TMC_PROVISIONER -m $TANZU_TKGWC_TMC_MANAGEMENT_CLUSTER 2>/dev/null | grep -c " $TANZU_TKGWC_NAME ")
       if [ $cnt -eq 0 ]; then
         # --- VERIFY SERVICE CONFIGURATION ---
         checkKubernetesServices tanzu_data_protection
 
         # --- VERIFY BACKUP LOCATION ---
-        cnt=$(tmc cluster dataprotection backuplocation list --cluster-name $TDH_CLUSTER_NAME -p $TDH_PROVISIONER_NAME -m $MGMG_CLUSTER | grep -c " $TDH_CLUSTER_NAME ") 
+        cnt=$(tmc cluster dataprotection backuplocation list --cluster-name $TANZU_TKGWC_NAME -p $TANZU_TKGWC_TMC_PROVISIONER -m $TANZU_TKGWC_TMC_MANAGEMENT_CLUSTER | grep -c " $TANZU_TKGWC_NAME ") 
         if [ $cnt -eq 0 ]; then
           ret=1; cnt=0
           while [ $ret -ne 0 -a $cnt -lt 50 ]; do
-          tmc cluster dataprotection create -c $TDH_CLUSTER_NAME -m $MGMG_CLUSTER  -p $TDH_PROVISIONER_NAME \
+          tmc cluster dataprotection create -c $TANZU_TKGWC_NAME -m $TANZU_TKGWC_TMC_MANAGEMENT_CLUSTER  -p $TANZU_TKGWC_TMC_PROVISIONER \
               --backup-location-names $TDH_TANZU_DATA_PROTECTION_BACKUP_LOCATION > /dev/null 2>&1; ret=$?
             [ $ret -eq 0 ] && break
             let cnt=cnt+1
@@ -1729,38 +1735,38 @@ checkTMCintegration() {
 
           if [ $? -ne 0 ]; then
             messageLine
-            echo "ERROR: failed to enable dataprotection for cluster $TDH_CLUSTER_NAME"
+            echo "ERROR: failed to enable dataprotection for cluster $TANZU_TKGWC_NAME"
             if [ "$NATIVE" == "0" ]; then
               echo "       => tools/${TDH_TOOLS}.sh"
-              echo "          tdh-tools:/$ tmc cluster dataprotection create -c $TDH_CLUSTER_NAME -m $MGMG_CLUSTER  \\"
-              echo "                          -p $TDH_PROVISIONER_NAME --backup-location-names $TDH_TANZU_DATA_PROTECTION_BACKUP_LOCATION"
+              echo "          tdh-tools:/$ tmc cluster dataprotection create -c $TANZU_TKGWC_NAME -m $TANZU_TKGWC_TMC_MANAGEMENT_CLUSTER  \\"
+              echo "                          -p $TANZU_TKGWC_TMC_PROVISIONER --backup-location-names $TDH_TANZU_DATA_PROTECTION_BACKUP_LOCATION"
               echo "          tdh-tools:/$ exit"
             else
-              echo "       => tmc cluster dataprotection create -c $TDH_CLUSTER_NAME -m $MGMG_CLUSTER  \\"
-              echo "            -p $TDH_PROVISIONER_NAME --backup-location-names $TDH_TANZU_DATA_PROTECTION_BACKUP_LOCATION"
+              echo "       => tmc cluster dataprotection create -c $TANZU_TKGWC_NAME -m $TANZU_TKGWC_TMC_MANAGEMENT_CLUSTER  \\"
+              echo "            -p $TANZU_TKGWC_TMC_PROVISIONER --backup-location-names $TDH_TANZU_DATA_PROTECTION_BACKUP_LOCATION"
             fi
             messageLine
           fi
         fi
 
-        messagePrint " ▪ Enable DataProtection for Cluster ($TDH_CLUSTER_NAME)"    "enabled"      
+        messagePrint " ▪ Enable DataProtection for Cluster ($TANZU_TKGWC_NAME)"    "enabled"      
         uodateConfigMap tanzu-demo-hub TDH_TANZU_DATA_PROTECTION_ARN               "$TDH_TANZU_DATA_PROTECTION_ARN"
         uodateConfigMap tanzu-demo-hub TDH_TANZU_DATA_PROTECTION_BACKUP_LOCATION   "$TDH_TANZU_DATA_PROTECTION_BACKUP_LOCATION"
         uodateConfigMap tanzu-demo-hub TDH_SERVICE_TANZU_DATA_PROTECTION           "true"
 
       else
-        messagePrint " ▪ Verify DataProtection for Cluster ($TDH_CLUSTER_NAME)"    "enabled"
+        messagePrint " ▪ Verify DataProtection for Cluster ($TANZU_TKGWC_NAME)"    "enabled"
         messagePrint " ▪ Backuo Lockation"                                         "$TDH_TANZU_DATA_PROTECTION_BACKUP_LOCATION" 
         messagePrint " ▪ AWS CloudFormation ARN"                                   "$TDH_TANZU_DATA_PROTECTION_ARN" 
       fi
 
       # --- CONFIGURE FULL BACKUP ---
-      cnt=$(tmc cluster dataprotection backup list --cluster-name $TDH_CLUSTER_NAME -p $TDH_PROVISIONER_NAME -m $MGMG_CLUSTER --name "full-backup" 2>/dev/null | egrep -c " full-backup ")
+      cnt=$(tmc cluster dataprotection backup list --cluster-name $TANZU_TKGWC_NAME -p $TANZU_TKGWC_TMC_PROVISIONER -m $TANZU_TKGWC_TMC_MANAGEMENT_CLUSTER --name "full-backup" 2>/dev/null | egrep -c " full-backup ")
       if [ $cnt -gt 0 ]; then 
-        stt=$(tmc cluster dataprotection backup list --cluster-name $TDH_CLUSTER_NAME -p $TDH_PROVISIONER_NAME -m $MGMG_CLUSTER --name "full-backup" | egrep " full-backup " | awk '{ print $NF }')
+        stt=$(tmc cluster dataprotection backup list --cluster-name $TANZU_TKGWC_NAME -p $TANZU_TKGWC_TMC_PROVISIONER -m $TANZU_TKGWC_TMC_MANAGEMENT_CLUSTER --name "full-backup" | egrep " full-backup " | awk '{ print $NF }')
         if [ "$stt" != "COMPLETED" -a "$stt" != "INPROGRESS" ]; then 
           # --- DELETE OLD BACKUP ---
-          tmc cluster dataprotection backup delete --cluster-name $TDH_CLUSTER_NAME -p $TDH_PROVISIONER_NAME -m $MGMG_CLUSTER "full-backup"  > /dev/null 2>&1
+          tmc cluster dataprotection backup delete --cluster-name $TANZU_TKGWC_NAME -p $TANZU_TKGWC_TMC_PROVISIONER -m $TANZU_TKGWC_TMC_MANAGEMENT_CLUSTER "full-backup"  > /dev/null 2>&1
           #tmc cluster dataprotection delete --cluster-name tdh-azure-sadubois -p attached -m attached --delete-backups 
           cnt=0
         fi
@@ -1773,7 +1779,7 @@ checkTMCintegration() {
 
         ret=1; cnt=0
         while [ $ret -ne 0 -a $cnt -lt 5 ]; do
-          tmc cluster dataprotection backup create -c $TDH_CLUSTER_NAME -p $TDH_PROVISIONER_NAME -m $MGMG_CLUSTER  \
+          tmc cluster dataprotection backup create -c $TANZU_TKGWC_NAME -p $TANZU_TKGWC_TMC_PROVISIONER -m $TANZU_TKGWC_TMC_MANAGEMENT_CLUSTER  \
             --name "full-backup" --backup-location-name $TDH_TANZU_DATA_PROTECTION_BACKUP_LOCATION > /dev/null 2>&1; ret=$?
           [ $ret -eq 0 ] && break
           let cnt=cnt+1
@@ -1785,11 +1791,11 @@ checkTMCintegration() {
           echo "ERROR: failed to configure a full-backup"
           if [ "$NATIVE" == "0" ]; then
             echo "       => tools/${TDH_TOOLS}.sh"
-            echo "          tdh-tools:/$ tmc cluster dataprotection backup create -c $TDH_CLUSTER_NAME -p $TDH_PROVISIONER_NAME \\"
-            echo "                          -m $MGMG_CLUSTER  --name \"full-backup\" --backup-location-name $TDH_TANZU_DATA_PROTECTION_BACKUP_LOCATION"
+            echo "          tdh-tools:/$ tmc cluster dataprotection backup create -c $TANZU_TKGWC_NAME -p $TANZU_TKGWC_TMC_PROVISIONER \\"
+            echo "                          -m $TANZU_TKGWC_TMC_MANAGEMENT_CLUSTER  --name \"full-backup\" --backup-location-name $TDH_TANZU_DATA_PROTECTION_BACKUP_LOCATION"
             echo "          tdh-tools:/$ exit"
           else
-            echo "       => tmc cluster dataprotection backup create -c $TDH_CLUSTER_NAME -p $TDH_PROVISIONER_NAME \\"
+            echo "       => tmc cluster dataprotection backup create -c $TANZU_TKGWC_NAME -p $TANZU_TKGWC_TMC_PROVISIONER \\"
             echo "            -m $MGMG_CLUSTER  --name \"full-backup\" --backup-location-name $TDH_TANZU_DATA_PROTECTION_BACKUP_LOCATION"
           fi
           messageLine
@@ -1814,51 +1820,56 @@ checkTMCintegration() {
 scanCluster() {
   TYPE=$1
 
+#  TANZU_TKGWC_TMC_PROVISIONER=$(getConfigMap tanzu-demo-hub TANZU_TKGWC_TMC_PROVISIONER)
+#  TANZU_TKGWC_TMC_MANAGEMENT_CLUSTER=$(getConfigMap tanzu-demo-hub TANZU_TKGWC_TMC_MANAGEMENT_CLUSTER)
+#  TANZU_TKGWC_NAME
+
   [ "$TYPE" == "LITE" ] && NAME=lite && TITLE="Lite Inspections"
   [ "$TYPE" == "CIS" ]  && NAME=cis && TITLE="CIS Inspections"
   [ "$TYPE" == "CONFORMANCE" ] && NAME=conformance && TITLE="Conformance Inspections"
 
-  completed=$(tmc cluster inspection scan list --cluster-name $TDH_CLUSTER_NAME -p $TDH_PROVISIONER_NAME -m $MGMG_CLUSTER -o json | \
-             jq -r '.scans[].status.report.info.scanType' | egrep -c "^$NAME")
+  cmdLoop tmc cluster inspection scan list --cluster-name $TANZU_TKGWC_NAME -p $TANZU_TKGWC_TMC_PROVISIONER -m $TANZU_TKGWC_TMC_MANAGEMENT_CLUSTER -o json > /tmp/output.json
+  completed=$(jq -r '.scans[].status.report.info.scanType' /tmp/output.json | egrep -c "^$NAME")
 
   if [ $completed -eq 0 ]; then 
     # --- VERIFY ACRIVE SCANNS ---
-    cnt=$(tmc cluster inspection scan list --cluster-name $TDH_CLUSTER_NAME -p $TDH_PROVISIONER_NAME -m $MGMG_CLUSTER  -o json | \
+    cnt=$(tmc cluster inspection scan list --cluster-name $TANZU_TKGWC_NAME -p $TANZU_TKGWC_TMC_PROVISIONER -m $TANZU_TKGWC_TMC_MANAGEMENT_CLUSTER  -o json | \
        jq -r '.scans[].status.phase' | grep -v "COMPLETE" | wc -l | sed 's/  *//g')
     while [ $cnt -ne 0 ]; do
-      cnt=$(tmc cluster inspection scan list --cluster-name $TDH_CLUSTER_NAME -p $TDH_PROVISIONER_NAME -m $MGMG_CLUSTER  -o json | \
+      cnt=$(tmc cluster inspection scan list --cluster-name $TANZU_TKGWC_NAME -p $TANZU_TKGWC_TMC_PROVISIONER -m $TANZU_TKGWC_TMC_MANAGEMENT_CLUSTER  -o json | \
         jq -r '.scans[].status.phase' | grep -v "COMPLETE" | wc -l | sed 's/  *//g')
       sleep 10
     done
 
-    stt=$(tmc cluster inspection scan list --cluster-name $TDH_CLUSTER_NAME -p $TDH_PROVISIONER_NAME -m $MGMG_CLUSTER  -o json | \
+    stt=$(tmc cluster inspection scan list --cluster-name $TANZU_TKGWC_NAME -p $TANZU_TKGWC_TMC_PROVISIONER -m $TANZU_TKGWC_TMC_MANAGEMENT_CLUSTER  -o json | \
       jq -r --arg key $NAME '.scans[].status.report.info | select(.scanType == $key).result' | tail -1)
+
     if [ "$stt" == "" ]; then 
-      messagePrint " ▪ Scan Cluster ($TDH_CLUSTER_NAME) with $TYPE"       "scanning"
-      tmc cluster inspection scan create -c $TDH_CLUSTER_NAME -p $TDH_PROVISIONER_NAME -m $MGMG_CLUSTER  --inspection-type $TYPE > /dev/null 2>&1
+      messagePrint " ▪ Scan Cluster ($TANZU_TKGWC_NAME) with $TYPE"       "scanning"
+      tmc cluster inspection scan create -c $TANZU_TKGWC_NAME -p $TANZU_TKGWC_TMC_PROVISIONER -m $TANZU_TKGWC_TMC_MANAGEMENT_CLUSTER  --inspection-type $TYPE > /dev/null 2>&1
       if [ $? -ne 0 ]; then 
         messageLine
-        echo "ERROR: failed to scan cluster $TDH_CLUSTER_NAME"
+        echo "ERROR: failed to scan cluster $TANZU_TKGWC_NAME"
         if [ "$NATIVE" == "0" ]; then
           echo "       => tools/${TDH_TOOLS}.sh"
-          echo "          tdh-tools:/$ tmc cluster inspection scan create -c $TDH_CLUSTER_NAME -p $TDH_PROVISIONER_NAME \\"
-          echo "                         -m $MGMG_CLUSTER  --inspection-type $TYPE"
+          echo "          tdh-tools:/$ tmc cluster inspection scan create -c $TANZU_TKGWC_NAME -p $TANZU_TKGWC_TMC_PROVISIONER \\"
+          echo "                         -m $TANZU_TKGWC_TMC_MANAGEMENT_CLUSTER  --inspection-type $TYPE"
           echo "          tdh-tools:/$ exit"
         else
-          echo "       => tmc cluster inspection scan create -c $TDH_CLUSTER_NAME -p $TDH_PROVISIONER_NAME \\"
-          echo "             -m $MGMG_CLUSTER  --inspection-type $TYPE"
+          echo "       => tmc cluster inspection scan create -c $TANZU_TKGWC_NAME -p $TANZU_TKGWC_TMC_PROVISIONER \\"
+          echo "             -m $TANZU_TKGWC_TMC_MANAGEMENT_CLUSTER  --inspection-type $TYPE"
         fi
         messageLine
       fi
     else
-      dat=$(tmc cluster inspection scan list --cluster-name $TDH_CLUSTER_NAME -p $TDH_PROVISIONER_NAME -m $MGMG_CLUSTER  -o json | \
+      dat=$(tmc cluster inspection scan list --cluster-name $TANZU_TKGWC_NAME -p $TANZU_TKGWC_TMC_PROVISIONER -m $TANZU_TKGWC_TMC_MANAGEMENT_CLUSTER  -o json | \
         jq -r --arg key $NAME '.scans[].status.report.info | select(.scanType == $key).runDatetime' | sort -n | tail -1)
-      messagePrint " ▪ Cluster Scan ($TDH_CLUSTER_NAME) with $TYPE completed"       "$dat"
+      messagePrint " ▪ Cluster Scan ($TANZU_TKGWC_NAME) with $TYPE completed"       "$dat"
     fi
   else
-    stt=$(tmc cluster inspection scan list --cluster-name $TDH_CLUSTER_NAME -p $TDH_PROVISIONER_NAME -m $MGMG_CLUSTER  -o json | \
+    stt=$(tmc cluster inspection scan list --cluster-name $TANZU_TKGWC_NAME -p $TANZU_TKGWC_TMC_PROVISIONER -m $TANZU_TKGWC_TMC_MANAGEMENT_CLUSTER  -o json | \
         jq -r --arg key $NAME '.scans[].status.report.info | select(.scanType == $key).result' | tail -1)
-    scd=$(tmc cluster inspection scan list --cluster-name $TDH_CLUSTER_NAME -p $TDH_PROVISIONER_NAME -m $MGMG_CLUSTER  -o json | \
+    scd=$(tmc cluster inspection scan list --cluster-name $TANZU_TKGWC_NAME -p $TANZU_TKGWC_TMC_PROVISIONER -m $TANZU_TKGWC_TMC_MANAGEMENT_CLUSTER  -o json | \
         jq -r --arg key $NAME '.scans[].status.report.info | select(.scanType == $key).runDatetime' | tail -1)
     [ "$stt" == "null" ] && stt="scanning"
 
@@ -4225,9 +4236,6 @@ getConfigMap() {
 
   cmdLoop kubectl get configmap tanzu-demo-hub -o json > /tmp/output.json
   jq -r ".data.$KEY" /tmp/output.json | sed 's/"//g'
-
-  #DELETEME
-  #kubectl get configmap tanzu-demo-hub -o json | jq -r ".data.$KEY" | sed 's/"//g'
 }
 
 createConfigMap() {
@@ -4675,6 +4683,7 @@ checkTMCcontext() {
 # https://docs.vmware.com/en/VMware-vSphere/7.0/vmware-vsphere-with-tanzu/
 # ------------------------------------------------------------------------------------------
 tkgCreateCluster() {
+
   [ "$TDH_DEPLOYMENT_CLOUD" == "" ] && TDH_DEPLOYMENT_CLOUD=$TDH_TKGMC_INFRASTRUCTURE
 
   #########################################################################################################################
@@ -5107,22 +5116,63 @@ tkgCreateCluster() {
           sleep 10
         done
 
-        # --- VERIFY STATZS ---
+        # --- VERIFY STATUS ---
         cmdLoop kubectl get clusters -n $TDH_TKGMC_VSPHERE_NAMESPACE -o json > /tmp/output.json 2>/dev/null
         stt=$(jq -r --arg key "$TDH_TKGWC_NAME" '.items[] | select(.metadata.name == $key).status.conditions[].status' /tmp/output.json)
         typ=$(jq -r --arg key "$TDH_TKGWC_NAME" '.items[] | select(.metadata.name == $key).status.conditions[].type' /tmp/output.json)
+
+
+        vsphereWorkloadClusterLogin $TKG_DEPLOYMENT $TDH_TKGWC_NAME; ret=$?
+        if [ ${ret} -eq 0 ]; then
+          messagePrint " ▪ TKG Workload Cluster Status"                 "Ready"
+        else
+          echo "ERROR: Login to TKG Workload Cluster Failed"
+          echo "       => vsphereWorkloadClusterLogin $TKG_DEPLOYMENT $TDH_TKGWC_NAME"
+          exit 1
+        fi
+
+        messageTitle "Waiting for system pods to have completed starting"
+        runningPods kube-system
+        runningPods kube-public
+
+        # --- STORE SETTINGS IN CONFIGMAP ---
+        uodateConfigMap tanzu-demo-hub TANZU_TKGMC_NAME                        "$TDH_TKGMC_NAME"
+        uodateConfigMap tanzu-demo-hub TANZU_TKGWC_NAME                        "$TDH_TKGWC_NAME"
+        uodateConfigMap tanzu-demo-hub TANZU_TKGWC_TYPE                        "tkg"
+        uodateConfigMap tanzu-demo-hub TANZU_TKGWC_INFRASTRUCTURE              "vSphere"
+        uodateConfigMap tanzu-demo-hub TANZU_TKGWC_DEPLOYMENT_MODEL            "$TDH_TKGMC_ENVNAME"
+        uodateConfigMap tanzu-demo-hub TANZU_TKGWC_VSPHERE_NAMESPACE           "$TDH_TKGMC_VSPHERE_NAMESPACE"
+        uodateConfigMap tanzu-demo-hub TANZU_TKGWC_SUPERVISOR_CLUSTER          "$VSPHERE_TKGS_SUPERVISOR_CLUSTER"
+
+        # --- STORE VSPEHRE INFOS ---
+        uodateConfigMap tanzu-demo-hub VSPHERE_TKGS_VCENTER_SERVER             "$VSPHERE_TKGS_VCENTER_SERVER"
+        uodateConfigMap tanzu-demo-hub VSPHERE_TKGS_VCENTER_ADMIN              "$VSPHERE_TKGS_VCENTER_ADMIN"
+        uodateConfigMap tanzu-demo-hub VSPHERE_TKGS_SUPERVISOR_CLUSTER         "$VSPHERE_TKGS_SUPERVISOR_CLUSTER"
+        uodateConfigMap tanzu-demo-hub VSPHERE_TKGS_SUPERVISOR_STORAGE_POLICY  "$VSPHERE_TKGS_SUPERVISOR_STORAGE_POLICY"
+        uodateConfigMap tanzu-demo-hub VSPHERE_TKGS_SUPERVISOR_STORAGE_CLASS   "$VSPHERE_TKGS_SUPERVISOR_STORAGE_CLASS"
+        uodateConfigMap tanzu-demo-hub VSPHERE_TKGS_DNS_SERVER                 "$VSPHERE_TKGS_DNS_SERVER"
+      else
+        vsphereWorkloadClusterLogin $TKG_DEPLOYMENT $TDH_TKGWC_NAME; ret=$?
+        if [ ${ret} -eq 0 ]; then
+          messagePrint " ▪ TKG Workload Cluster Status"                 "Ready"
+        else
+          echo "ERROR: Login to TKG Workload Cluster Failed"
+          echo "       => vsphereWorkloadClusterLogin $TKG_DEPLOYMENT $TDH_TKGWC_NAME"
+          exit 1
+        fi
+
+        TANZU_TKGMC_NAME=$(getConfigMap tanzu-demo-hub TANZU_TKGMC_NAME)
+        TANZU_TKGWC_NAME=$(getConfigMap tanzu-demo-hub TANZU_TKGWC_NAME)
+        TANZU_TKGWC_TYPE=$(getConfigMap tanzu-demo-hub TANZU_TKGWC_TYPE)
+        TANZU_TKGWC_INFRASTRUCTURE=$(getConfigMap tanzu-demo-hub TANZU_TKGWC_INFRASTRUCTURE)
+        TANZU_TKGWC_DEPLOYMENT_MODEL=$(getConfigMap tanzu-demo-hub TANZU_TKGWC_DEPLOYMENT_MODEL)
+        TANZU_TKGWC_VSPHERE_NAMESPACE=$(getConfigMap tanzu-demo-hub TANZU_TKGWC_VSPHERE_NAMESPACE)
+        TANZU_TKGWC_SUPERVISOR_CLUSTER=$(getConfigMap tanzu-demo-hub TANZU_TKGWC_SUPERVISOR_CLUSTER)
       fi
     fi
-
-    vsphereWorkloadClusterLogin $TKG_DEPLOYMENT $TDH_TKGWC_NAME; ret=$?
-    if [ ${ret} -eq 0 ]; then
-      messagePrint " ▪ TKG Workload Cluster Status"                 "Ready"
-    else
-      echo "ERROR: Login to TKG Workload Cluster Failed"
-      echo "       => vsphereWorkloadClusterLogin $TKG_DEPLOYMENT $TDH_TKGWC_NAME"
-      exit 1
-    fi
   fi
+
+  # --- STORE SETTINGS IN CONFIGMAP ---
 }
 
 # ------------------------------------------------------------------------------------------
@@ -5158,23 +5208,24 @@ tkgInstallClusterExtensions() {
     fi
   fi
 
+  [ "$TDH_KAPP_CONTROLLER" == "" ] && TDH_KAPP_CONTROLLER=kapp-controller_v0.38.4
+
   cnt=$(kubectl get pods -n tkg-system | grep -c kapp-controller)
   if [ $cnt -eq 0 ]; then 
     if [ $DEBUG -eq 1 ]; then
-      messagePrint " ▪ Installing Kapp Controller"               "$TDHPATH/files/kapp-controller.yaml"
+      messagePrint " ▪ Installing Kapp Controller"               "$TDHPATH/files/kapp/${TDH_KAPP_CONTROLLER}.yaml"
+      cat $TDHPATH/files/kapp/${TDH_KAPP_CONTROLLER}.info
       messageLine
-      kubectl apply -f $TDHPATH/files/kapp/kapp-controller.yaml
+      kubectl apply -f $TDHPATH/files/kapp/${TDH_KAPP_CONTROLLER}.yaml
       messageLine
     else
-      messagePrint " ▪ Installing Kapp Controller"               "$TDHPATH/files/kapp-controller.yaml"
-      kubectl apply -f $TDHPATH/files/kapp-controller.yaml > /dev/null 2>&1
+      messagePrint " ▪ Installing Kapp Controller"               "$TDHPATH/files/kapp/${TDH_KAPP_CONTROLLER}.yaml"
+      cat $TDHPATH/files/kapp/${TDH_KAPP_CONTROLLER}.info
+      kubectl apply -f $TDHPATH/files/kapp/${TDH_KAPP_CONTROLLER}.yaml > /dev/null 2>&1
     fi
 
     runningPods kube-system
     runningPods tkg-system
-
-      #tanzu package repository add REPOSITORY-NAME -n tanzu-package-repo-global --url projects.registry.vmware.com/tkg/packages/standard/repo:v1.5.0
-      #tanzu package repository add tanzu-system-packages --url projects.registry.vmware.com/tkg/packages/standard/repo:v1.5.0
   fi
 
   # --- RELAXING POD SECUROTY ---
@@ -5547,6 +5598,16 @@ tmcCreateCluster() {
 
       # List of Tanzu Kubernetes Releases
       # https://docs.vmware.com/en/VMware-vSphere/7.0/vmware-vsphere-with-tanzu/GUID-292482C2-A5FA-44B5-B26E-F887A91BB19D.html
+
+echo "tmc cluster create -t tkgs -m $TDH_MANAGEMENT_CLUSTER -p $TDH_PROVISIONER_NAME \
+                           --worker-instance-type $TDH_TKGWC_WORKERNODES_MACHINE \
+                           --instance-type $TDH_TKGWC_CONTROPLANE_MACHINE \
+                           --worker-node-count $TDH_TKGWC_WORKERNODES \
+                           --storage-class $TDH_TKGWC_STORAGE_CLASS \
+                           --default-storage-class $TDH_TKGWC_STORAGE_CLASS \
+                           -g $TDH_CLUSTER_GROUP --version $KUBERNETES_VERSION -n $TDH_CLUSTER_NAME"
+
+exit
       tmc cluster create -t tkgs -m $TDH_MANAGEMENT_CLUSTER -p $TDH_PROVISIONER_NAME \
                            --worker-instance-type $TDH_TKGWC_WORKERNODES_MACHINE \
                            --instance-type $TDH_TKGWC_CONTROPLANE_MACHINE \
@@ -5848,6 +5909,7 @@ installTAP() {
   #########################################################################################################################
   ###################################### RELOCATE IMAGES TO THE HARBOR REGISTRY ###########################################
   #########################################################################################################################
+#IMGPKG TAP
   TDH_SERVICE_TAP_IMAGE_RELOCATION=$(getConfigMap tanzu-demo-hub TDH_SERVICE_TAP_IMAGE_RELOCATION)
   if [ "$TDH_SERVICE_TAP_IMAGE_RELOCATION" == "" -o "$TDH_SERVICE_TAP_IMAGE_RELOCATION" == "null" ]; then
     messagePrint " ▪ relocating tap images to local registry" "$INSTALL_REGISTRY_HOSTNAME/library/tap-packages"
@@ -6264,18 +6326,9 @@ installSpringCloudGateway() {
       exit 1
     fi
 
+#guguseli
     messagePrint " ▪ Verify VMware Registry Access" "$TDH_REGISTRY_VMWARE_NAME"
-    cnt=0; ret=1
-    while [ $ret -ne 0 -a $cnt -lt 5 ]; do
-      docker login $TDH_REGISTRY_VMWARE_NAME -u $TDH_REGISTRY_VMWARE_USER -p $TDH_REGISTRY_VMWARE_PASS > /dev/null 2>&1; ret=$?
-      sleep 60
-      let cnt=cnt+1
-    done
-  
-    if [ $ret -ne 0 ]; then
-      echo "ERROR: Docker login does not work 3"
-      echo "       => docker login $TDH_REGISTRY_VMWARE_NAME -u $TDH_REGISTRY_VMWARE_USER -p $TDH_REGISTRY_VMWARE_PASS"; exit 1
-    fi
+    containerRegestryLogin $TDH_REGISTRY_VMWARE_NAME $TDH_REGISTRY_VMWARE_USER $TDH_REGISTRY_VMWARE_PASS
 
     #########################################################################################################################
     ######################################## INSTALL SPRING CLOUD GATEWAY ###################################################
@@ -6285,19 +6338,9 @@ installSpringCloudGateway() {
       DNS_HARBOR=$(getConfigMap tanzu-demo-hub TDH_HARBOR_REGISTRY_DNS_HARBOR)
       TDH_HARBOR_REGISTRY_DNS_HARBOR=$(getConfigMap tanzu-demo-hub TDH_HARBOR_REGISTRY_DNS_HARBOR)
       TDH_HARBOR_REGISTRY_ADMIN_PASSWORD=$(getConfigMap tanzu-demo-hub TDH_HARBOR_REGISTRY_ADMIN_PASSWORD)
+
       messagePrint " ▪ Verify Harbor Registry Access" "$TDH_HARBOR_REGISTRY_DNS_HARBOR"
-  
-      cnt=0; ret=1
-      while [ $ret -ne 0 -a $cnt -lt 5 ]; do
-        docker login $TDH_HARBOR_REGISTRY_DNS_HARBOR -u admin -p $TDH_HARBOR_REGISTRY_ADMIN_PASSWORD > /dev/null 2>&1; ret=$?
-        sleep 10
-        let cnt=cnt+1
-      done
-  
-      if [ $ret -ne 0 ]; then
-        echo "ERROR: Docker login does not work 11"
-        echo "       => docker login $TDH_HARBOR_REGISTRY_DNS_HARBOR -u admin -p $TDH_HARBOR_REGISTRY_ADMIN_PASSWORD"; exit 1
-      fi
+      containerRegestryLogin $TDH_HARBOR_REGISTRY_DNS_HARBOR admin $TDH_HARBOR_REGISTRY_ADMIN_PASSWORD 
   
       cmdLoop kubectl get ns $NAMESPACE > /dev/null 2>&1
       if [ $? -ne 0 ]; then
@@ -6540,7 +6583,7 @@ installJenkins() {
     #java -jar ~/Downloads/jenkins-cli.jar -s https://jenkins.apps-contour.local.pcfsdu.com/ -auth user:Idh5k5eZts create-job sacha_xxx2 < template.xml
 
     messagePrint " ▪ Create Cluster Role Binding"                 "default:jenkins-operator"
-    createClusterRoleBinding jenkins-tbs build-service-user-role  default:jenkins-tbs
+    createClusterRoleBindingSA jenkins-tbs build-service-user-role  default:jenkins-tbs
 
     #DELETEME
     #kubectl delete clusterrolebinding jenkins-tbs > /dev/null 2>&1
@@ -7103,7 +7146,7 @@ installKubeapps() {
     cmdLoop kubectl apply -f $PROXY_VALUES
 
     messagePrint " ▪ Create Cluster Role Binding"        "default:kubeapps-operator"
-    createClusterRoleBinding kubeapps-operator cluster-admin default:kubeapps-operator > /dev/null 2>&1
+    createClusterRoleBindingSA kubeapps-operator cluster-admin default:kubeapps-operator > /dev/null 2>&1
 
     messagePrint " ▪ Create Serviceaccount"              "kubeapps-operator"
     createServiceAccount default kubeapps-operator > /dev/null 2>&1
@@ -7581,56 +7624,37 @@ installTanzuDataPostgres() {
   messageTitle "VMware Tanzu Postgres"
   cnt=$(cmdLoop helm list --all-namespaces -q | egrep -c "^postgres-operator")
   if [ $cnt -eq 0 ]; then
-    # --- DOWNLOAD POSTGRES BINARIES ---
-    TBS_FILE="/tmp/postgres-for-kubernetes-v${TDH_SERVICE_TANZU_DATA_POSTGRES_VERSION}.tar.gz"
-    TBS_TAR_FILE="/tmp/postgres-for-kubernetes-v${TDH_SERVICE_TANZU_DATA_POSTGRES_VERSION}.tar"
-
-    rm -f $TBS_FILE $TBS_TAR_FILE
-
-    downloadFromPivnet tanzu-sql-postgres $TDH_SERVICE_TANZU_DATA_POSTGRES_VERSION "$TDH_SERVICE_TANZU_DATA_POSTGRES_VERSION" "Postgres for VMware Tanzu v$TDH_SERVICE_TANZU_DATA_POSTGRES_VERSION"
-    #https://network.pivotal.io/api/v2/products/tanzu-sql-postgres/releases/769686/product_files/819245/download
-
-    [ -d /tmp/postgres-for-kubernetes ] && rm -rf /tmp/postgres-for-kubernetes
-    [ -f $TBS_TAR_FILE ] && rm -f $TBS_TAR_FILE
-    mkdir -p /tmp/postgres-for-kubernetes
-    [ -f $TBS_FILE ] && gunzip $TBS_FILE
-    if [ -f $TBS_TAR_FILE ]; then
-      tar xf $TBS_TAR_FILE -C /tmp/postgres-for-kubernetes
-    else
-      echo "ERROR: can not find file $TBS_TAR_FILE"; exit 1
-    fi
+#    # --- DOWNLOAD POSTGRES BINARIES ---
+#    TBS_FILE="/tmp/postgres-for-kubernetes-v${TDH_SERVICE_TANZU_DATA_POSTGRES_VERSION}.tar.gz"
+#    TBS_TAR_FILE="/tmp/postgres-for-kubernetes-v${TDH_SERVICE_TANZU_DATA_POSTGRES_VERSION}.tar"
+#
+#    rm -f $TBS_FILE $TBS_TAR_FILE
+#
+#    downloadFromPivnet tanzu-sql-postgres $TDH_SERVICE_TANZU_DATA_POSTGRES_VERSION "$TDH_SERVICE_TANZU_DATA_POSTGRES_VERSION" "Postgres for VMware Tanzu v$TDH_SERVICE_TANZU_DATA_POSTGRES_VERSION"
+#    #https://network.pivotal.io/api/v2/products/tanzu-sql-postgres/releases/769686/product_files/819245/download
+#
+#    [ -d /tmp/postgres-for-kubernetes ] && rm -rf /tmp/postgres-for-kubernetes
+#    [ -f $TBS_TAR_FILE ] && rm -f $TBS_TAR_FILE
+#    mkdir -p /tmp/postgres-for-kubernetes
+#    [ -f $TBS_FILE ] && gunzip $TBS_FILE
+#    if [ -f $TBS_TAR_FILE ]; then
+#      tar xf $TBS_TAR_FILE -C /tmp/postgres-for-kubernetes
+#    else
+#      echo "ERROR: can not find file $TBS_TAR_FILE"; exit 1
+#    fi
 
     #########################################################################################################################
     ########################################### INSTALL POSTGRES OPERATOR ###################################################
     #########################################################################################################################
 
-    if [ "$TDH_SERVICE_REGISTRY_HARBOR" == "true" ]; then
+    if [ "$TDH_SERVICE_REGISTRY_HARBOR" == "true1" ]; then
       # DNS_HARBOR=$(getConfigMap tanzu-demo-hub TDH_HARBOR_REGISTRY_DNS_HARBOR)
       TDH_HARBOR_REGISTRY_DNS_HARBOR=$(getConfigMap tanzu-demo-hub TDH_HARBOR_REGISTRY_DNS_HARBOR)
       TDH_HARBOR_REGISTRY_ADMIN_PASSWORD=$(getConfigMap tanzu-demo-hub TDH_HARBOR_REGISTRY_ADMIN_PASSWORD)
-      messagePrint " ▪ Verify Harbor Registry Access" "$TDH_HARBOR_REGISTRY_DNS_HARBOR"
-     
-      cnt=0; ret=1
-      while [ $ret -ne 0 -a $cnt -lt 5 ]; do
-        docker login $TDH_HARBOR_REGISTRY_DNS_HARBOR -u admin -p $TDH_HARBOR_REGISTRY_ADMIN_PASSWORD > /tmp/error.log 2>&1; ret=$?
-        sleep 10
-        let cnt=cnt+1
-      done
 
-      if [ $ret -ne 0 ]; then
-        logMessages /tmp/error.log
-        echo "ERROR: Docker login does not work 1"
-        if [ "$NATIVE" == "0" ]; then
-          echo "       => tools/${TDH_TOOLS}.sh"
-          echo "          tdh-tools:/$ docker login $TDH_HARBOR_REGISTRY_DNS_HARBOR -u admin -p $TDH_HARBOR_REGISTRY_ADMIN_PASSWORD"; exit 1
-          echo "          tdh-tools:/$ exit"
-        else
-          echo "       => docker login $TDH_HARBOR_REGISTRY_DNS_HARBOR -u admin -p $TDH_HARBOR_REGISTRY_ADMIN_PASSWORD"; exit 1
-        fi
-  
-        exit 1
-      fi
-  
+      messagePrint " ▪ Verify Harbor Registry Access" "$TDH_HARBOR_REGISTRY_DNS_HARBOR"
+      containerRegestryLogin $TDH_HARBOR_REGISTRY_DNS_HARBOR admin $TDH_HARBOR_REGISTRY_ADMIN_PASSWORD
+
       messageTitle "Tanzu Postgres Operator"
       cnt=$(cmdLoop helm list --all-namespaces -q | egrep -c "^postgres-operator") 
       if [ $cnt -eq 0 ]; then
@@ -7715,6 +7739,87 @@ installTanzuDataPostgres() {
         patchServiceAccount postgres-operator-service-account default
 
       fi
+    else
+      messageTitle "Tanzu Postgres Operator"
+      cnt=$(cmdLoop helm list --all-namespaces -q | egrep -c "^postgres-operator")
+      if [ $cnt -eq 0 ]; then
+
+echo "helm registry login registry.tanzu.vmware.com --username=$TDH_REGISTRY_VMWARE_USER --password=$TDH_REGISTRY_VMWARE_PASS"
+        helm registry login registry.tanzu.vmware.com --username=$TDH_REGISTRY_VMWARE_USER --password=$TDH_REGISTRY_VMWARE_PASS > /tmp/error.log 2>&1; ret=$?
+        if [ $ret -ne 0 ]; then
+          logMessages /tmp/error.log
+          echo "ERROR: Failed to deploy $HELMCHART Helm Chart"
+          if [ "$NATIVE" == "0" ]; then
+            echo "       => tools/${TDH_TOOLS}.sh"
+            echo "          tdh-tools:/$ helm registry login registry.tanzu.vmware.com --username=$TDH_REGISTRY_VMWARE_USER --password=$TDH_REGISTRY_VMWARE_PASS"
+            echo "          tdh-tools:/$ exit"
+          else
+            echo "       => helm registry login registry.tanzu.vmware.com --username=$TDH_REGISTRY_VMWARE_USER --password=$TDH_REGISTRY_VMWARE_PASS"
+          fi
+   
+          exit 1
+        fi
+
+        rm -rf /tmp/postgres-operator /tmp/postgres-operator-chart
+        helm pull oci://registry.tanzu.vmware.com/tanzu-sql-postgres/postgres-operator-chart --version $TDH_SERVICE_TANZU_DATA_POSTGRES_VERSION --untar --untardir /tmp > /tmp/error.log 2>&1; ret=$?
+        if [ $ret -ne 0 ]; then
+          logMessages /tmp/error.log
+          echo "ERROR: Failed to deploy $HELMCHART Helm Chart"
+          if [ "$NATIVE" == "0" ]; then
+            echo "       => tools/${TDH_TOOLS}.sh"
+            echo "          tdh-tools:/$ helm pull oci://registry.tanzu.vmware.com/tanzu-sql-postgres/postgres-operator-chart --version $TDH_SERVICE_TANZU_DATA_POSTGRES_VERSION --untar --untardir /tmp"
+            echo "          tdh-tools:/$ exit"
+          else
+            echo "       => helm pull oci://registry.tanzu.vmware.com/tanzu-sql-postgres/postgres-operator-chart --version $TDH_SERVICE_TANZU_DATA_POSTGRES_VERSION --untar --untardir /tmp"
+          fi
+
+          exit 1
+        fi
+
+        cmdLoop kubectl create secret docker-registry regsecret \
+            --docker-server=https://registry.tanzu.vmware.com/ \
+            --docker-username=$TDH_REGISTRY_VMWARE_USER \
+            --docker-password=$TDH_REGISTRY_VMWARE_PASS > /tmp/error 2>&1; ret=$?
+        if [ $ret -ne 0 ]; then
+          logMessages /tmp/error.log
+          echo "ERROR: Failed to create secret"
+          if [ "$NATIVE" == "0" ]; then
+            echo "       => tools/${TDH_TOOLS}.sh"
+            echo "          tdh-tools:/$ kubectl create secret docker-registry regsecret \\"
+            echo "          tdh-tools:/$     --docker-server=https://registry.tanzu.vmware.com/ \\"
+            echo "          tdh-tools:/$     --docker-username=$TDH_REGISTRY_VMWARE_USER \\"
+            echo "          tdh-tools:/$     --docker-password=$TDH_REGISTRY_VMWARE_PASS"
+            echo "          tdh-tools:/$ exit"
+          else
+            echo "       => kubectl create secret docker-registry regsecret \\"
+            echo "               --docker-server=https://registry.tanzu.vmware.com/ \\"
+            echo "               --docker-username=$TDH_REGISTRY_VMWARE_USER \\"
+            echo "               --docker-password=$TDH_REGISTRY_VMWARE_PASS"
+          fi
+
+          exit 1
+        fi
+
+
+        helm install $HELMCHART --namespace $NAMESPACE /tmp/postgres-operator/ > /tmp/error.log 2>&1; ret=$?
+        if [ $ret -ne 0 ]; then
+          logMessages /tmp/error.log
+          echo "ERROR: Failed to deploy $HELMCHART Helm Chart"
+          if [ "$NATIVE" == "0" ]; then
+            echo "       => tools/${TDH_TOOLS}.sh"
+            echo "          tdh-tools:/$ helm install $HELMCHART --namespace $NAMESPACE /tmp/postgres-operator/"
+            echo "          tdh-tools:/$ exit"
+          else
+            echo "       => helm install $HELMCHART --namespace $NAMESPACE /tmp/postgres-operator/"
+          fi
+
+          exit 1
+        fi
+
+      fi
+
+
+
     fi
   fi
 
@@ -7773,7 +7878,13 @@ installTanzuDataPostgres() {
 # ------------------------------------------------------------------------------------------
 # https://tanzu.vmware.com/developer/guides/tanzu-application-platform-local-devloper-install/
 # ------------------------------------------------------------------------------------------
+# IMPORTANT: If you are using a VMware Tanzu Kubernetes Grid cluster, you do not need to 
+#            install Cluster Essentials because the contents of Cluster Essentials are 
+#            already installed on your cluster.
+# ------------------------------------------------------------------------------------------
 installClusterEssentials() {
+  NAMESPACE=kapp-controller
+
   if [ "$TDH_SERVICE_CLUSTER_ESSENTIALS" == "" ]; then
     uodateConfigMap tanzu-demo-hub TDH_SERVICE_CLUSTER_ESSENTIALS        "false"
     return
@@ -7798,12 +7909,12 @@ installClusterEssentials() {
     tar xfz $TMP_FILE -C /tmp/tanzu-cluster-essentials
 
     ns_name=tanzu-cluster-essentials
-    export INSTALL_BUNDLE="registry.tanzu.vmware.com/tanzu-cluster-essentials/cluster-essentials-bundle@sha256:ab0a3539da241a6ea59c75c0743e9058511d7c56312ea3906178ec0f3491f51d"
+    export INSTALL_BUNDLE=$TDH_SERVICE_CLUSTER_ESSENTIALS_BUNDLE
     export INSTALL_REGISTRY_HOSTNAME="registry.tanzu.vmware.com"
     export INSTALL_REGISTRY_USERNAME="$TDH_REGISTRY_VMWARE_USER"
     export INSTALL_REGISTRY_PASSWORD="$TDH_REGISTRY_VMWARE_PASS"
 
-    createNamespace tanzu-cluster-essentials > /dev/null 2>&1
+    createNamespace $NAMESPACE > /dev/null 2>&1
     cd /tmp/tanzu-cluster-essentials 
 
     export IMGPKG_REGISTRY_HOSTNAME_0=$INSTALL_REGISTRY_HOSTNAME
@@ -7950,19 +8061,9 @@ installBuildService() {
     messagePrint " ▪ Verify VMware Registry Access" "$TDH_REGISTRY_VMWARE_NAME"
     messagePrint "   Registry User"                 "$TDH_REGISTRY_VMWARE_USER"
     messagePrint "   Registry Password"             "$(maskPassword \"$TDH_REGISTRY_VMWARE_PASS\")"
-  
-    cnt=0; ret=1
-    while [ $ret -ne 0 -a $cnt -lt 5 ]; do
-      docker login $TDH_REGISTRY_VMWARE_NAME -u $TDH_REGISTRY_VMWARE_USER -p $TDH_REGISTRY_VMWARE_PASS > /dev/null 2>&1; ret=$?
-      sleep 10
-      let cnt=cnt+1
-    done
-  
-    if [ $ret -ne 0 ]; then
-      echo "ERROR: Docker login does not work 2"
-      echo "       => docker login $TDH_REGISTRY_VMWARE_NAME -u $TDH_REGISTRY_VMWARE_USER -p $TDH_REGISTRY_VMWARE_PASS"; exit 1
-    fi
 
+    containerRegestryLogin $TDH_REGISTRY_VMWARE_NAME $TDH_REGISTRY_VMWARE_USER $TDH_REGISTRY_VMWARE_PASS
+  
     if [ "$TDH_SERVICE_REGISTRY_DOCKER" == "true" -a "$TDH_SERVICE_REGISTRY_HARBOR" == "true" ]; then
       echo "ERROR: The Tanzu Build service can be installed with one registry only. Please set only ONE of the two variables to 'true'"
       echo "       => TDH_SERVICE_REGISTRY_DOCKER=\"<true|false>\""
@@ -8089,19 +8190,10 @@ installBuildService() {
       messagePrint " ▪ Verify Harbor Registry Access" "$TDH_HARBOR_REGISTRY_DNS_HARBOR"
       messagePrint "   Registry User"                 "admin"
       messagePrint "   Registry Password"             "$(maskPassword \"$TDH_HARBOR_REGISTRY_ADMIN_PASSWORD\")"
+
+      containerRegestryLogin $TDH_HARBOR_REGISTRY_DNS_HARBOR admin $TDH_HARBOR_REGISTRY_ADMIN_PASSWORD
   
-      cnt=0; ret=1
-      while [ $ret -ne 0 -a $cnt -lt 5 ]; do
-        docker login $TDH_HARBOR_REGISTRY_DNS_HARBOR -u admin -p $TDH_HARBOR_REGISTRY_ADMIN_PASSWORD > /dev/null 2>&1; ret=$?
-        sleep 10
-        let cnt=cnt+1
-      done
-
-      if [ $ret -ne 0 ]; then
-        echo "ERROR: Docker login does not work 5'"
-        echo "       => docker login $TDH_HARBOR_REGISTRY_DNS_HARBOR -u admin -p $TDH_HARBOR_REGISTRY_ADMIN_PASSWORD"; exit 1
-      fi
-
+#IMGPKG TBS
       messagePrint " ▪ Relocate images to" "$DNS_HARBOR/library/build-service:$TDH_SERVICE_BUILD_SERVICE_VERSION"
       cnt=0; ret=1
       while [ $ret -ne 0 -a $cnt -lt 5 ]; do
@@ -8203,8 +8295,8 @@ echo "TanzuPackage_AddRepo       $NAMESPACE tanzu-tbs-repository ${INSTALL_REPOS
         TanzuPackage_AddRepo       $NAMESPACE tanzu-tbs-repository ${INSTALL_REPOSITORY}:$TBS_VERSION
         TanzuPackage_RepoSync      $NAMESPACE
 
+tanzu package repisiitory list -A
 
-exit
         cnt=0; ret=1
         while [ $ret -ne 0 -a $cnt -lt 5 ]; do
           tanzu package repository add tbs-repository \
@@ -8300,11 +8392,11 @@ exit
           messagePrint " ▪ Veriify Build Service (kapp)" "tanzu-build-service"
         fi
   
-        stt=$(kubectl get TanzuNetDependencyUpdaters dependency-updater -n build-service | egrep "^dependency-updater" | awk '{ print $3 }')
-        ver=$(kubectl get TanzuNetDependencyUpdaters dependency-updater -n build-service | egrep "^dependency-updater" | awk '{ print $2 }')
-        messagePrint " ▪ Verify Dependancy Updater (dependency-updater)" "build-service/dependency-updater"
-        messagePrint "   Dependancy Version"         "$ver"
-        messagePrint "   Dependancy Statuws"         "$stt"
+        #stt=$(kubectl get TanzuNetDependencyUpdaters dependency-updater -n build-service | egrep "^dependency-updater" | awk '{ print $3 }')
+        #ver=$(kubectl get TanzuNetDependencyUpdaters dependency-updater -n build-service | egrep "^dependency-updater" | awk '{ print $2 }')
+        #messagePrint " ▪ Verify Dependancy Updater (dependency-updater)" "build-service/dependency-updater"
+        #messagePrint "   Dependancy Version"         "$ver"
+        #messagePrint "   Dependancy Statuws"         "$stt"
   
         messagePrint " ▪ Verify the cluster builders" "base, default, full and tiny"
         messageLine
@@ -9413,26 +9505,7 @@ InstallHarborRegistry() {
       let cnt=cnt+1
     done
 
-    ret=1; cnt=0
-    while [ $ret -ne 0 -a $cnt -le 9 ]; do
-      docker login $HARBOR_HOSTNAME -u admin -p $TDH_HARBOR_ADMIN_PASSWORD > /dev/null 2>&1; ret=$?
-      [ $ret -eq 0 ] && break
-      sleep 60
-      let cnt=cnt+1
-    done
-
-    if [ $ret -ne 0 ]; then
-      echo "ERROR: failed to login to registry"
-      if [ "$NATIVE" == "0" ]; then
-        echo "       => tools/${TDH_TOOLS}.sh"
-        echo "          tdh-tools:/$ docker login $HARBOR_HOSTNAME -u admin -p $TDH_HARBOR_ADMIN_PASSWORD"
-        echo "          tdh-tools:/$ exit"
-      else
-        echo "       => docker login $HARBOR_HOSTNAME -u admin -p $TDH_HARBOR_ADMIN_PASSWORD"
-      fi
-
-      exit 1
-    fi
+    containerRegestryLogin $HARBOR_HOSTNAME admin $TDH_HARBOR_REGISTRY_ADMIN_PASSWORD
   fi
 
   ver=$(helm -n $NAMESPACE ls -o json | jq -r '.[].app_version')
@@ -10124,10 +10197,17 @@ cleanKubeconfig() {
   fi
 
   messageTitle "Cleaning Up kubectl config ($CONFIG)"
-  for cluster in $(kubectl --kubeconfig=$CONFIG config get-clusters | sed '1d' | egrep "^tdh|^tkgmc|^tcemc^tdh-tce|^tcemc"); do
+echo "kubectl config get-contexts --kubeconfig=$CONFIG"
+kubectl config get-contexts --kubeconfig=$CONFIG
+  #for cluster in $(kubectl --kubeconfig=$CONFIG config get-clusters | sed '1d' | egrep "^tdh|^tkgmc|^tcemc^tdh-tce|^tcemc"); do
+  for cluster in $(kubectl --kubeconfig=$CONFIG config get-clusters | sed '1d'); do
+
+echo "--------------------------------"
+echo "gugu cleanKubeconfig: cluster:$cluster CNT:$cnt --kubeconfig=$CONFIG"
     ctx=$(kubectl --kubeconfig=$CONFIG config view -o json | jq -r --arg key $cluster '.contexts[] | select(.context.cluster == $key).name' 2>/dev/null)
     usr=$(kubectl --kubeconfig=$CONFIG config view -o json | jq -r --arg key $cluster '.contexts[] | select(.context.cluster == $key).context.user' 2>/dev/null)
     cnt=$(echo $cluster | grep -c minikube)
+echo "CTX:$ctx USR:$usr CNT:$cnt"
     if [ $cnt -gt 0 ]; then 
       if [ ! -d ~/.minikube/profiles/${cluster} ]; then
         messagePrint " ▪ Cleaning up k8s cluster ($cluster)" "Context: $ctx, User: $usr"
@@ -10136,11 +10216,14 @@ cleanKubeconfig() {
         kubectl --kubeconfig=$CONFIG config unset users.${cluster} > /dev/null 2>&1
       fi
     else
+echo "gugu4 CTX:$ctx USR:$usr "
       if [ "$ctx" != "" ]; then
+echo gugu41
         kubectl config use-context $ctx > /dev/null 2>&1
         kubectl config use-context $ctx > /dev/null 2>&1
         kubectl get ns > /dev/null 2>&1
         if [ $? -gt 0 ]; then
+echo gugu411
           messagePrint " ▪ Cleaning up k8s cluster ($cluster)" "Context: $ctx, User: $usr"
 
           kubectl --kubeconfig=$CONFIG config unset clusters.${cluster} > /dev/null 2>&1
@@ -10148,6 +10231,7 @@ cleanKubeconfig() {
           kubectl --kubeconfig=$CONFIG config unset users.${cluster} > /dev/null 2>&1
         fi
       else
+echo gugu42
         messagePrint " ▪ Cleaning up k8s cluster ($cluster)" "Context: $ctx, User: $usr"
         kubectl --kubeconfig=$CONFIG config unset clusters.${cluster} > /dev/null 2>&1
         kubectl --kubeconfig=$CONFIG config unset contexts.${cluster} > /dev/null 2>&1
@@ -11798,6 +11882,11 @@ setK8sEnvironment() {
     exit 1
   fi
 
+echo "gaga CLUSTER:$CLUSTER"
+echo "kubectl config get-contexts"
+
+kubectl config get-contexts
+
   CONTEXT=$(kubectl config get-contexts | grep " $CLUSTER " | sed 's/*//g' | awk '{ print $1 }')
 
   ## steve: 3. May 2022 - did not work for H2O, reverted to code above ^^^
@@ -11828,6 +11917,7 @@ setK8sEnvironment() {
   # https://docs.vmware.com/en/VMware-Tanzu-Application-Platform/1.2/tap/GUID-prerequisites.html
   cmdLoop kubectl create clusterrolebinding default-tkg-admin-privileged-binding \
           --clusterrole=psp:vmware-system-privileged --group=system:authenticated > /dev/null 2>&1
+#uuuuuuuuuuuu
 }
 
 cleanKindCluster() {
@@ -12251,39 +12341,6 @@ echo "curl -XPOST -H "Content-Type: application/json"  -k -d '{"name":"test"}' -
 
 #curl -XPOST -H "Content-Type: application/json"  -k -d '{"name":"test"}' -u username:password https://gitea.your.host/api/v1/users/<username>/tokens
 #{"id":1,"name":"test","sha1":"9fcb1158165773dd010fca5f0cf7174316c3e37d","token_last_eight":"16c3e37d"}
-
-# ------------------------------------------------------------------------------------------
-# Function Name ......: tmcAPI_getCliBinary
-# Function Purpose ...: Get TMC CLI Binary 
-# ------------------------------------------------------------------------------------------
-# Argument ($1) ......: TMC BEARER Token 
-#          ($2) ......: TMC Server URL
-# ------------------------------------------------------------------------------------------
-# Return Value .......: API Access Token
-# ------------------------------------------------------------------------------------------
-# darwinX86 .........: MacOS x86
-# darwinX64 .........: MacOS x86_64
-# linuxX86 ........ .: Linux x86
-# linuxX64 ..........: Linux x86_64
-# windowsX86 ........: Windows x86
-# windowsX64 ........: Windows x86_64
-# ------------------------------------------------------------------------------------------
-# Reference Documentation: 
-# https://developer.vmware.com/apis/897/tanzu-mission-control
-# ------------------------------------------------------------------------------------------
-tmcAPI_getCliBinary() {
-  REFRESH_TOKEN="$1"
-  TMC_SERVER="$2"
-  TMC_TYPE="$3"
-
-  latest=$(curl -k -X GET -H "Authorization: Bearer $REFRESH_TOKEN" \
-                          -H 'Content-Type: application/x-www-form-urlencoded' \
-                          ${TMC_SERVER}/v1alpha/system/binaries 2>/dev/null | jq -r '.latestVersion')
-
-  curl -k -X GET -H "Authdrization: Bearer $REFRESH_TOKEN" \
-                 -H 'Content-Type: application/x-www-form-urlencoded' \
-                 ${TMC_SERVER}/v1alpha/system/binaries 2>/dev/null | jq -r ".versions.\"$latest\".$TMC_TYPE"
-}
 
 # ------------------------------------------------------------------------------------------
 # Function Name ......: vSphereAPI_getToken
@@ -12888,6 +12945,7 @@ installTanzuPlugin() {
 installTanzuPackages() {
   PACKAGE_NAME=$1
   PACKAGE_NAMESPACE=tanzu-system-packages
+  PACKAGE_NAMESPACE=$TDH_SERVICE_PACKAGE_REPOSITORY_NAMESPACE
   NAMESPACE=$2
   PACKAGE_ID=$3
   PACKAGE_DES=$4
@@ -12979,6 +13037,7 @@ TanzuPackage_AddRepo() {
 TanzuPackage_RepoSync() {
   PACKAGE_REPOSITORY=$1
   PACKAGE_NAMESPACE=tanzu-system-packages
+  PACKAGE_NAMESPACE=$TDH_SERVICE_PACKAGE_REPOSITORY_NAMESPACE
 
   # --- CREATE PACKAGE_NAMESPACE NAMESPACE ---
   createNamespace $PACKAGE_NAMESPACE > /dev/null 2>&1
@@ -13028,6 +13087,7 @@ TanzuPackage_LocalStorage() {
   PACKAGE_NAME="$1"
   NAMESPACE="$1"
   PACKAGE_NAMESPACE=tanzu-system-packages
+  PACKAGE_NAMESPACE=$TDH_SERVICE_PACKAGE_REPOSITORY_NAMESPACE
   PACKAGE_ID="$2"
   PACKAGE_DES="Local Storage (RWO AccessMode)"
 
@@ -13136,6 +13196,7 @@ TanzuPackage_LocalStorage() {
 TanzuPackage_CertManager() {
   PACKAGE_NAME=$1
   PACKAGE_NAMESPACE=tanzu-system-packages
+  PACKAGE_NAMESPACE=$TDH_SERVICE_PACKAGE_REPOSITORY_NAMESPACE
   NAMESPACE=tanzu-system-ingress 
   PACKAGE_ID=$2
   PACKAGE_DES="Certificate management (cert-manager)"
@@ -13180,8 +13241,6 @@ TanzuPackage_CertManager() {
       else
         break
       fi
-
-#vvvvvvvvv
 
       let cnt=cnt+1
       sleep 30
@@ -13275,6 +13334,7 @@ TanzuPackage_Harbor () {
   PACKAGE_NAME=$1
   NAMESPACE=registry-harbor
   PACKAGE_NAMESPACE=tanzu-system-packages
+  PACKAGE_NAMESPACE=$TDH_SERVICE_PACKAGE_REPOSITORY_NAMESPACE
   NAMESPACE=tanzu-system-registry
   PACKAGE_ID=$2
   PACKAGE_DES="Harbor OCI Registry"
@@ -13494,6 +13554,7 @@ TanzuPackage_Contour() {
   PACKAGE_NAME=$1
   NAMESPACE=ingress-contour
   PACKAGE_NAMESPACE=tanzu-system-packages
+  PACKAGE_NAMESPACE=$TDH_SERVICE_PACKAGE_REPOSITORY_NAMESPACE
   NAMESPACE=tanzu-system-ingress
   PACKAGE_ID=$2
   PACKAGE_DES="Contour ingress controller"
@@ -14488,7 +14549,6 @@ waitForKappServices_old() {
 # Return Value .......: 0 - SUCCEED, 1 - FAILED
 # ------------------------------------------------------------------------------------------
 waitForKappServices() {
-echo idiot
   SVC=$2
   NAMESERVICE=$1
 
@@ -14498,13 +14558,11 @@ echo idiot
   while [ $cnt -ne 0 -a $ret -lt 15 ]; do
     cmdLoop kapp inspect -a $SVC -n $NAMESERVICE --json > /tmp/output.json
     cnt=$(jq -r '.Tables[].Rows[] | select(.reconcile_state != "ok").name' /tmp/output.json 2>/dev/null | wc -l | awk '{ print $1 }')
-echo "CNT:$cnt"
     [ $cnt -eq 0 ] && break
     sleep 60
     let ret=ret+1
   done
 
-echo "CNT:$cnt"
   if [ $cnt -ne 0 ]; then
     messageLine
     echo "ERROR: Kapp service ($SVC) in namespace $NAMESERVICE failed to start"
@@ -14560,7 +14618,7 @@ createServiceAccount() {
 }
 
 # ------------------------------------------------------------------------------------------
-# Function Name ......: createClusterRoleBinding
+# Function Name ......: createClusterRoleBindingGroup
 # Function Purpose ...: Create a new Cluster Role Binding  (delete if it already exists)
 # ------------------------------------------------------------------------------------------
 # Argument ($1) ......: Namespace
@@ -14568,20 +14626,45 @@ createServiceAccount() {
 # ------------------------------------------------------------------------------------------
 # Return Value .......: 0 - SUCCEED, 1 - FAILED
 # ------------------------------------------------------------------------------------------
-createClusterRoleBinding() {
-  CLUSTER_TOLE_BINDING=$1
+createClusterRoleBindingGroup() {
+  CLUSTER_ROLE_BINDING=$1
+  CLUSTER_ROLE=$2
+  GROUP=$3
+
+  cmdLoop kubectl get clusterrolebinding -o json > /tmp/output.json
+  if [ -s /tmp/output.json ]; then
+    crb=$(jq -r --arg key "$CLUSTER_ROLE_BINDING" '.items[] | select(.metadata.name == $key).metadata.name' /tmp/output.json)
+    if [ "$crb" != "" ]; then
+      cmdLoop kubectl delete clusterrolebinding $CLUSTER_ROLE_BINDING > /dev/null 2>&1
+    fi
+  fi
+
+  cmdLoop kubectl create clusterrolebinding $CLUSTER_ROLE_BINDING --clusterrole=$CLUSTER_ROLE --group=$GROUP > /dev/null 2>&1
+}
+
+# ------------------------------------------------------------------------------------------
+# Function Name ......: createClusterRoleBindingSA
+# Function Purpose ...: Create a new Cluster Role Binding  (delete if it already exists)
+# ------------------------------------------------------------------------------------------
+# Argument ($1) ......: Namespace
+#          ($2) ......: Service Account name
+# ------------------------------------------------------------------------------------------
+# Return Value .......: 0 - SUCCEED, 1 - FAILED
+# ------------------------------------------------------------------------------------------
+createClusterRoleBindingSA() {
+  CLUSTER_ROLE_BINDING=$1
   CLUSTER_ROLE=$2
   SERVICE_ACCOUNT=$3
 
   cmdLoop kubectl get clusterrolebinding -o json > /tmp/output.json
   if [ -s /tmp/output.json ]; then
-    crb=$(jq -r --arg key "$CLUSTER_TOLE_BINDING" '.items[] | select(.metadata.name == $key).metadata.name' /tmp/output.json) 
+    crb=$(jq -r --arg key "$CLUSTER_ROLE_BINDING" '.items[] | select(.metadata.name == $key).metadata.name' /tmp/output.json) 
     if [ "$crb" != "" ]; then
-      cmdLoop kubectl delete clusterrolebinding $CLUSTER_TOLE_BINDING > /dev/null 2>&1
+      cmdLoop kubectl delete clusterrolebinding $CLUSTER_ROLE_BINDING > /dev/null 2>&1
     fi
   fi
 
-  cmdLoop kubectl create clusterrolebinding $CLUSTER_TOLE_BINDING --clusterrole=$CLUSTER_ROLE --serviceaccount=$SERVICE_ACCOUNT
+  cmdLoop kubectl create clusterrolebinding $CLUSTER_ROLE_BINDING --clusterrole=$CLUSTER_ROLE --serviceaccount=$SERVICE_ACCOUNT > /dev/null 2>&1
 }
 
 # ------------------------------------------------------------------------------------------
@@ -15189,13 +15272,21 @@ detachClusterFromTMConFailure() {
   mgmtCluster=$3
   flag="$4"
 
+  TANZU_TKGWC_TMC_CLUSTER_ID=$(getConfigMap tanzu-demo-hub TANZU_TKGWC_TMC_CLUSTER_ID)
+
+#guguseli
+
   #########################################################################################################################
-  ############################################ FORCE DELETE OF CLUSTER  ###################################################
+  ################################################ DELETE OF CLUSTER ######################################################
   #########################################################################################################################
   cmdLoop tmc cluster list --name $clusterName -p $provisioner -m $mgmtCluster -o json > /tmp/output.json
   nam=$(jq -r --arg clu "$clusterName" --arg pvn "$provisioner" --arg mcl "$mgmtCluster" \
         '.clusters[] | select(.fullName.name == $clu and .fullName.provisionerName == $pvn and .fullName.managementClusterName == $mcl).fullName.name' 2>/dev/null /tmp/output.json) 
-  if [ "$nam" == "$clusterName" ]; then
+  uid=$(jq -r --arg clu "$clusterName" --arg pvn "$provisioner" --arg mcl "$mgmtCluster" \
+        '.clusters[] | select(.fullName.name == $clu and .fullName.provisionerName == $pvn and .fullName.managementClusterName == $mcl).meta.uid' 2>/dev/null /tmp/output.json) 
+
+echo "NAM:$nam clusterName:$clusterName TANZU_TKGWC_TMC_CLUSTER_ID:$TANZU_TKGWC_TMC_CLUSTER_ID UID:$uid" 1>&2
+  if [ "$nam" == "$clusterName" -a "$TANZU_TKGWC_TMC_CLUSTER_ID" == "$uid" ]; then
     # --- CLUSTER EXISTS - CHECK STATUS ---
     stt=$(jq -r --arg clu "$clusterName" --arg pvn "$provisioner" --arg mcl "$mgmtCluster" \
           '.clusters[] | select(.fullName.name == $clu and .fullName.provisionerName == $pvn and .fullName.managementClusterName == $mcl).status.phase' 2>/dev/null /tmp/output.json) 
@@ -15204,6 +15295,23 @@ detachClusterFromTMConFailure() {
 
     [ "$flag" == "force" ] && stt="FAILED"
     if [ ! "$stt" == "READY" -o ! "$hlt" == "HEALTHY" ]; then
+      messagePrint " ▪ Delete (old) Cluster from TMC"                       "$clusterName"
+      tmc cluster delete $clusterName -p $provisioner -m $mgmtCluster > /dev/null 2>&1
+  
+      # --- WAIT FOR THE CLUSTER TO BE DELETED ---
+      nam="$clusterName"; ccc=0
+      while [ "$nam" == "$clusterName" -a $ccc -lt 5 ]; do
+        cmdLoop tmc cluster list --name $clusterName -p $provisioner -m $mgmtCluster -o json > /tmp/output.json
+        nam=$(jq -r --arg clu "$clusterName" --arg pvn "$provisioner" --arg mcl "$mgmtCluster" \
+              '.clusters[] | select(.fullName.name == $clu and .fullName.provisionerName == $pvn and .fullName.managementClusterName == $mcl).fullName.name' 2>/dev/null /tmp/output.json) 
+        [ "$nam" != "$clusterName" ] && break
+        let ccc=ccc+1
+        sleep 60
+      done
+    fi
+  else
+    # --- THE CLUSTER IS AN OLD CLUSTER (TANZU_TKGWC_TMC_CLUSTER_ID and UID) ARE NOT THE SAME ---
+    if [ "$nam" == "$clusterName" -a "$TANZU_TKGWC_TMC_CLUSTER_ID" != "$uid" ]; then
       tmc cluster delete $clusterName -p $provisioner -m $mgmtCluster > /dev/null 2>&1
 
       # --- WAIT FOR THE CLUSTER TO BE DELETED ---
@@ -15211,7 +15319,7 @@ detachClusterFromTMConFailure() {
       while [ "$nam" == "$clusterName" -a $ccc -lt 5 ]; do
         cmdLoop tmc cluster list --name $clusterName -p $provisioner -m $mgmtCluster -o json > /tmp/output.json
         nam=$(jq -r --arg clu "$clusterName" --arg pvn "$provisioner" --arg mcl "$mgmtCluster" \
-              '.clusters[] | select(.fullName.name == $clu and .fullName.provisionerName == $pvn and .fullName.managementClusterName == $mcl).fullName.name' 2>/dev/null /tmp/output.json) 
+              '.clusters[] | select(.fullName.name == $clu and .fullName.provisionerName == $pvn and .fullName.managementClusterName == $mcl).fullName.name' 2>/dev/null /tmp/output.json)
         [ "$nam" != "$clusterName" ] && break
         let ccc=ccc+1
         sleep 60
@@ -15225,7 +15333,10 @@ detachClusterFromTMConFailure() {
   cmdLoop tmc cluster list --name $clusterName -p $provisioner -m $mgmtCluster -o json > /tmp/output.json
   nam=$(jq -r --arg clu "$clusterName" --arg pvn "$provisioner" --arg mcl "$mgmtCluster" \
         '.clusters[] | select(.fullName.name == $clu and .fullName.provisionerName == $pvn and .fullName.managementClusterName == $mcl).fullName.name' 2>/dev/null /tmp/output.json) 
-  if [ "$nam" == "$clusterName" ]; then
+  uid=$(jq -r --arg clu "$clusterName" --arg pvn "$provisioner" --arg mcl "$mgmtCluster" \
+        '.clusters[] | select(.fullName.name == $clu and .fullName.provisionerName == $pvn and .fullName.managementClusterName == $mcl).meta.uid' 2>/dev/null /tmp/output.json) 
+
+  if [ "$nam" == "$clusterName" -a "$TANZU_TKGWC_TMC_CLUSTER_ID" == "$uid" ]; then
     nam=$(jq -r --arg clu "$clusterName" --arg pvn "$provisioner" --arg mcl "$mgmtCluster" \
           '.clusters[] | select(.fullName.name == $clu and .fullName.provisionerName == $pvn and .fullName.managementClusterName == $mcl).fullName.name' /tmp/output.json)
     stt=$(jq -r --arg clu "$clusterName" --arg pvn "$provisioner" --arg mcl "$mgmtCluster" \
@@ -15233,6 +15344,7 @@ detachClusterFromTMConFailure() {
     hlt=$(jq -r --arg clu "$clusterName" --arg pvn "$provisioner" --arg mcl "$mgmtCluster" \
           '.clusters[] | select(.fullName.name == $clu and .fullName.provisionerName == $pvn and .fullName.managementClusterName == $mcl).status.health' 2>/dev/null /tmp/output.json)
     if [ ! "$stt" == "READY" -o ! "$hlt" == "HEALTHY" ]; then
+      messagePrint " ▪ Forcefully delete (old) Cluster from TMC"                       "$clusterName"
       tmc cluster delete $clusterName -p $provisioner -m $mgmtCluster -f > /dev/null 2>&1
 
       # --- WAIT FOR THE CLUSTER TO BE DELETED ---
@@ -15251,6 +15363,22 @@ detachClusterFromTMConFailure() {
     ######################################### CLEANUP NAMESPACE IF STILL THERE ##############################################
     #########################################################################################################################
     #deleteNamespace vmware-system-tmc 
+  else
+    # --- THE CLUSTER IS AN OLD CLUSTER (TANZU_TKGWC_TMC_CLUSTER_ID and UID) ARE NOT THE SAME ---
+    if [ "$nam" == "$clusterName" -a "$TANZU_TKGWC_TMC_CLUSTER_ID" != "$uid" ]; then
+      tmc cluster delete $clusterName -p $provisioner -m $mgmtCluster -f > /dev/null 2>&1
+
+      # --- WAIT FOR THE CLUSTER TO BE DELETED ---
+      nam="$clusterName"; ccc=0
+      while [ "$nam" == "$clusterName" -a $ccc -lt 5 ]; do
+        cmdLoop tmc cluster list --name $clusterName -p $provisioner -m $mgmtCluster -o json > /tmp/output.json
+        nam=$(jq -r --arg clu "$clusterName" --arg pvn "$provisioner" --arg mcl "$mgmtCluster" \
+              '.clusters[] | select(.fullName.name == $clu and .fullName.provisionerName == $pvn and .fullName.managementClusterName == $mcl).fullName.name' 2>/dev/null /tmp/output.json)
+        [ "$nam" != "$clusterName" ] && break
+        let ccc=ccc+1
+        sleep 60
+      done
+    fi
   fi
 }
 
@@ -15273,6 +15401,8 @@ attachClusterToTMC() {
   mgmtCluster=$3
   kubeconfig=$4
 
+  TANZU_TKGWC_TMC_CLUSTER_ID=$(getConfigMap tanzu-demo-hub TANZU_TKGWC_TMC_CLUSTER_ID)
+
   touch /tmp/status.txt
 
   #########################################################################################################################
@@ -15285,11 +15415,10 @@ attachClusterToTMC() {
   ########################################## DELETE CLUSTER IN FAILED STATE ###############################################
   #########################################################################################################################
   detachClusterFromTMConFailure $clusterName $provisioner $mgmtCluster
-  
+
   #########################################################################################################################
   ################################################ ATTACH CLUSTER TO TMC ##################################################
   #########################################################################################################################
-echo "tmc cluster list --name $clusterName -p $provisioner -m $mgmtCluster"
   cmdLoop tmc cluster list --name $clusterName -p $provisioner -m $mgmtCluster -o json > /tmp/output.json
   nam=$(jq -r --arg clu "$clusterName" --arg pvn "$provisioner" --arg mcl "$mgmtCluster" \
         '.clusters[] | select(.fullName.name == $clu and .fullName.provisionerName == $pvn and .fullName.managementClusterName == $mcl).fullName.name' /tmp/output.json)
@@ -15297,9 +15426,13 @@ echo "tmc cluster list --name $clusterName -p $provisioner -m $mgmtCluster"
         '.clusters[] | select(.fullName.name == $clu and .fullName.provisionerName == $pvn and .fullName.managementClusterName == $mcl).status.phase' /tmp/output.json)
   hlt=$(jq -r --arg clu "$clusterName" --arg pvn "$provisioner" --arg mcl "$mgmtCluster" \
         '.clusters[] | select(.fullName.name == $clu and .fullName.provisionerName == $pvn and .fullName.managementClusterName == $mcl).status.health' /tmp/output.json)
+  uid=$(jq -r --arg clu "$clusterName" --arg pvn "$provisioner" --arg mcl "$mgmtCluster" \
+        '.clusters[] | select(.fullName.name == $clu and .fullName.provisionerName == $pvn and .fullName.managementClusterName == $mcl).meta.uid' /tmp/output.json)
   [ "$nam" == "$clusterName" ] && echo "$stt/$hlt" > /tmp/status.txt && return 0
 
+#guguseli
   if [ "$nam" != "$clusterName" ]; then 
+    messagePrint " ▪ Attach Cluster to TMC"                       "$clusterName"
     (cd /tmp && tmc cluster attach --name $clusterName --kubeconfig=$kubeconfig -p $provisioner \
           -m $mgmtCluster -g tanzu-demo-hub --force > /tmp/error.log 2>&1); ret=$?
 
@@ -15314,16 +15447,21 @@ echo "tmc cluster list --name $clusterName -p $provisioner -m $mgmtCluster"
             '.clusters[] | select(.fullName.name == $clu and .fullName.provisionerName == $pvn and .fullName.managementClusterName == $mcl).status.phase' /tmp/output.json) 
       hlt=$(jq -r --arg clu "$clusterName" --arg pvn "$provisioner" --arg mcl "$mgmtCluster" \
           '.clusters[] | select(.fullName.name == $clu and .fullName.provisionerName == $pvn and .fullName.managementClusterName == $mcl).status.health' /tmp/output.json) 
+      uid=$(jq -r --arg clu "$clusterName" --arg pvn "$provisioner" --arg mcl "$mgmtCluster" \
+          '.clusters[] | select(.fullName.name == $clu and .fullName.provisionerName == $pvn and .fullName.managementClusterName == $mcl).meta.uid' /tmp/output.json) 
       [ "$stt/$hlt" == "READY/HEALTHY" ] && break
       let ccc=ccc+1
       sleep 60
     done
+
+    uodateConfigMap tanzu-demo-hub TANZU_TKGWC_TMC_PROVISIONER             "$provisioner"
+    uodateConfigMap tanzu-demo-hub TANZU_TKGWC_TMC_MANAGEMENT_CLUSTER      "$mgmtCluster"
+    uodateConfigMap tanzu-demo-hub TANZU_TKGWC_TMC_CLUSTER_ID              "$uid"
   fi
 
   #########################################################################################################################
   ################################################## VERIFY STATUS ########################################################
   #########################################################################################################################
-echo "tmc cluster list --name $clusterName -p $provisioner -m $mgmtCluster "
   cmdLoop tmc cluster list --name $clusterName -p $provisioner -m $mgmtCluster -o json > /tmp/output.json
   stt=$(jq -r --arg clu "$clusterName" --arg pvn "$provisioner" --arg mcl "$mgmtCluster" \
         '.clusters[] | select(.fullName.name == $clu and .fullName.provisionerName == $pvn and .fullName.managementClusterName == $mcl).status.phase' /tmp/output.json)
@@ -15400,7 +15538,44 @@ installSecretGenController() {
   nsp=$(jq -r --arg key "sg" '.Tables[].Rows[] | select(.name == $key).namespace' /tmp/output.json)
   stt=$(jq -r --arg key "sg" '.Tables[].Rows[] | select(.name == $key).last_change_successful' /tmp/output.json)
     
-  messagePrint "Verify SecretGen Controller (sg)"  "Status: $stt"
+  messagePrint " ▪ Verify Verify SecretGen Controller (sg)"  "Status: $stt"
+}
+
+# ------------------------------------------------------------------------------------------
+# Function Name ......: containerRegestryLogin
+# Function Purpose ...: Login to Container Registry
+# ------------------------------------------------------------------------------------------
+# Argument ($1) ......: Namespace
+#          ($2) ......: Type (clusterissuer, certrequest, order, challange)
+#          ($3) ......: cert-issuer-name
+# ------------------------------------------------------------------------------------------
+# Return Value .......: Status (HEALTY, DETACHING, FAILED)
+# ------------------------------------------------------------------------------------------
+containerRegestryLogin() {
+  REGISTRY_NAME=$1
+  REGISTRY_USER=$2
+  REGISTRY_PASS=$3
+
+  cnt=0; ret=1
+  while [ $ret -ne 0 -a $cnt -lt 5 ]; do
+    docker login $REGISTRY_NAME -u $REGISTRY_USER -p $REGISTRY_PASS > /tmp/error.log 2>&1; ret=$?
+    sleep 30
+    let cnt=cnt+1
+  done
+
+  if [ $ret -ne 0 ]; then
+    logMessages /tmp/error.log
+    echo "ERROR: Docker login to registry $REGISTRY_NAME failed does not work 1"
+    if [ "$NATIVE" == "0" ]; then
+      echo "       => tools/${TDH_TOOLS}.sh"
+      echo "          tdh-tools:/$ docker login $REGISTRY_NAME -u $REGISTRY_USER -p $REGISTRY_PASS"; exit 1
+      echo "          tdh-tools:/$ exit"
+    else
+      echo "       => docker login $REGISTRY_NAME -u $REGISTRY_USER -p $REGISTRY_PASS"; exit 1
+    fi
+
+    exit 1
+  fi
 }
 
 # ------------------------------------------------------------------------------------------
@@ -15450,8 +15625,119 @@ awsResourceRecordText() {
   echo
 }
 
+# ------------------------------------------------------------------------------------------
+# Function Name ......: tmcAttachCluster
+# Function Purpose ...: Attach TKG Cluster to TMC
+# ------------------------------------------------------------------------------------------
+# Argument ($1) ......: Command to execure
+# Env Variables ($1) .: TDH_TLS_CERT
+# ............. ($2) .: TDH_TLS_ISSUER_NAME
+# ------------------------------------------------------------------------------------------
+# Return Value .......: 0 - SUCCEED, 1 - FAILED
+# ------------------------------------------------------------------------------------------
 
+tmcAttachCluster() {
+  checkTMCAccess
+  tmcCheckLogin
 
+  API_TOKEN=$(tmcAPI_getToken $TMC_SERVICE_TOKEN)
+
+  TANZU_TKGMC_NAME=$(getConfigMap tanzu-demo-hub TANZU_TKGMC_NAME)
+  TANZU_TKGWC_NAME=$(getConfigMap tanzu-demo-hub TANZU_TKGWC_NAME)
+  TANZU_TKGWC_TYPE=$(getConfigMap tanzu-demo-hub TANZU_TKGWC_TYPE)
+  TANZU_TKGWC_INFRASTRUCTURE=$(getConfigMap tanzu-demo-hub TANZU_TKGWC_INFRASTRUCTURE)
+  TANZU_TKGWC_DEPLOYMENT_MODEL=$(getConfigMap tanzu-demo-hub TANZU_TKGWC_DEPLOYMENT_MODEL)
+
+  [ "$TDH_TANZU_MISSION_CONTROL_REGISTRATION" == "" ] && TDH_TANZU_MISSION_CONTROL_REGISTRATION=true
+
+#guguseli
+  if [ "$TDH_TANZU_MISSION_CONTROL_REGISTRATION" == "true" ]; then
+    messageTitle "Tanzu Mission Control"
+
+    if [ "$TANZU_TKGWC_INFRASTRUCTURE" == "vSphere" -a "$TANZU_TKGWC_DEPLOYMENT_MODEL" == "tkgs" ]; then 
+      TANZU_TKGWC_VSPHERE_NAMESPACE=$(getConfigMap tanzu-demo-hub TANZU_TKGWC_VSPHERE_NAMESPACE)
+  
+      TMC_PV=attached
+      TMC_MC=attached
+    else
+      TMC_PV=$TANZU_TKGWC_VSPHERE_NAMESPACE
+      TMC_MC=$TANZU_TKGWC_NAME
+      TMC_PV=attached
+      TMC_MC=attached
+    fi
+  
+    attachClusterToTMC $TANZU_TKGWC_NAME $TMC_MC $TMC_PV $HOME/.tanzu-demo-hub/config/${TANZU_TKGWC_NAME}.kubeconfig
+    read stt < /tmp/status.txt
+    messagePrint " ▪ Verify TMC Cluster ($TANZU_TKGWC_NAME) status"                         "$stt"
+
+    if [ "$stt" == "READY/HEALTHY" ]; then
+      # --- NO CONNECTION FROM A PEZ-INTERNAL CLUSTER ---
+      #checkTMCintegration      TO    ## Tanzu Observability (Wavefront)
+      checkTMCintegration      TDP   ## Tanzu Data Protection
+      checkTMCintegration      TCI   ## Tanzu Cluster Inspection
+    else
+      echo "ERROR: TKG Worklaod Cluster ($TANZU_TKGWC_NAME) is currently in state: $stt. TMC Integration can not be"
+      echo "       performed right now. Delete the Cluster manually in TMC or wait until it has disapiered and try again"
+      echo ""
+    fi
+
+    TANZU_TKGWC_TMC_PROVISIONER=$(getConfigMap tanzu-demo-hub TANZU_TKGWC_TMC_PROVISIONER)
+    TANZU_TKGWC_TMC_MANAGEMENT_CLUSTER=$(getConfigMap tanzu-demo-hub TANZU_TKGWC_TMC_MANAGEMENT_CLUSTER)
+    TANZU_TKGWC_TMC_CLUSTER_ID=$(getConfigMap tanzu-demo-hub TANZU_TKGWC_TMC_CLUSTER_ID)
+
+  fi
+}
+
+# ------------------------------------------------------------------------------------------
+# Function Name ......: tmcAPI_getCliBinary
+# Function Purpose ...: Get TMC CLI Binary 
+# ------------------------------------------------------------------------------------------
+# Argument ($1) ......: TMC BEARER Token 
+#          ($2) ......: TMC Server URL
+# ------------------------------------------------------------------------------------------
+# Return Value .......: API Access Token
+# ------------------------------------------------------------------------------------------
+# darwinX86 .........: MacOS x86
+# darwinX64 .........: MacOS x86_64
+# linuxX86 ........ .: Linux x86
+# linuxX64 ..........: Linux x86_64
+# windowsX86 ........: Windows x86
+# windowsX64 ........: Windows x86_64
+# ------------------------------------------------------------------------------------------
+# Reference Documentation: 
+# https://developer.vmware.com/apis/897/tanzu-mission-control
+# ------------------------------------------------------------------------------------------
+tmcAPI_getCliBinary() {
+  REFRESH_TOKEN="$1"
+  TMC_SERVER="$2"
+  TMC_TYPE="$3"
+
+  latest=$(curl -k -X GET -H "Authorization: Bearer $REFRESH_TOKEN" \
+                          -H 'Content-Type: application/x-www-form-urlencoded' \
+                          ${TMC_SERVER}/v1alpha/system/binaries 2>/dev/null | jq -r '.latestVersion')
+
+  curl -k -X GET -H "Authdrization: Bearer $REFRESH_TOKEN" \
+                 -H 'Content-Type: application/x-www-form-urlencoded' \
+                 ${TMC_SERVER}/v1alpha/system/binaries 2>/dev/null | jq -r ".versions.\"$latest\".$TMC_TYPE"
+}
+
+# ------------------------------------------------------------------------------------------
+# Function Name ......: tmcAPI_getCliBinary
+# Function Purpose ...: Get TMC CLI Binary
+# ------------------------------------------------------------------------------------------
+# Argument ($1) ......: TMC BEARER Token
+#          ($2) ......: TMC Server URL
+# ------------------------------------------------------------------------------------------
+# Return Value .......: API Access Token
+# ------------------------------------------------------------------------------------------
+tmcAPI_getClusters() {
+   REFRESH_TOKEN="$1"
+   TMC_SERVER="$2"
+
+   curl -k -X GET -H "Authdrization: Bearer $REFRESH_TOKEN" \
+                 -H 'Content-Type: application/x-www-form-urlencoded' \
+                 "${TMC_SERVER}/v1alpha/system/binaries" 2>/dev/null | jq -r '.latestVersion'
+}
 
 #kubectl get tanzukubernetescluster -n tanzu-demo-hub tdh-vsphere-sadubois
 #kubectl delete tanzukubernetescluster -n tanzu-demo-hub tdh-vsphere-sadubois
