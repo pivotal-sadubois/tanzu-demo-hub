@@ -70,11 +70,16 @@ checkCLIcommands TANZU
 checkCLIcommands TMC
 
 # --- CLEANUP KUNECONFIG ---
+echo gaga1
 #cleanKubeconfig
 tmcCheckLogin
+echo gaga2
 #checkTDHAccess
+echo gaga3
 vSphereKubeconfig
+echo gaga4
 vSphereLogin
+echo gaga5
 
 # --- VERIFY ITS A H2O CLUSTER ---
 cnt=$(echo $VSPHERE_TKGS_VCENTER_SERVER | egrep -c "\.h2o-") 
@@ -186,9 +191,13 @@ VSPHERE_NAMESPACE=tanzu-demo-hub
 VSPHERE_DATASTORE=datastore-19 
 VSPHERE_CONTENT_LIBRARY=tanzu-demo-hub
 TDH_VSPHERE_API_TOKEN=$(vSphereAPI_getToken "$VSPHERE_TKGS_VCENTER_SERVER" "$VSPHERE_TKGS_VCENTER_ADMIN" "$VSPHERE_TKGS_VCENTER_PASSWORD")
+echo gaga10
 vSphereAPI_createNamespace      $TDH_VSPHERE_API_TOKEN $VSPHERE_TKGS_VCENTER_SERVER $VSPHERE_NAMESPACE
+echo gaga11
 vSphereAPI_createContentLibrary $TDH_VSPHERE_API_TOKEN $VSPHERE_TKGS_VCENTER_SERVER $VSPHERE_CONTENT_LIBRARY $VSPHERE_DATASTORE
+echo gaga12
 vSphereAPI_updateNamespace      $TDH_VSPHERE_API_TOKEN $VSPHERE_TKGS_VCENTER_SERVER $VSPHERE_NAMESPACE
+echo gaga13
 
 messageTitle "TMC Management Server Configuration"
 messagePrint " ▪ Tanzu Mission Control (TMC) - Management Cluster"       "$HOME/.tanzu-demo-hub/config/${TMC_DISPLAY_NAME}.cfg"
