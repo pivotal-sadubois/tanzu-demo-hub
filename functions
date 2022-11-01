@@ -12363,6 +12363,8 @@ vSphereAPI_getToken() {
   export GOVC_USERNAME=$VSPHERE_TKGS_VCENTER_ADMIN
   export GOVC_PASSWORD=$VSPHERE_TKGS_VCENTER_PASSWORD
 
+echo "gaga curl -k -X POST \"${VCENTER_SERVER}/rest/com/vmware/cis/session\" -u \"$USERPASS\"" 1>&2
+
   curl -k -X POST "${VCENTER_SERVER}/rest/com/vmware/cis/session" -u "$USERPASS" 2>/dev/null | jq -r '.value'
 
 }
