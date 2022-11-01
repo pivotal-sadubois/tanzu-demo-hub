@@ -434,7 +434,7 @@ vSphereKubeconfig() {
   export KUBECTL_VSPHERE_PASSWORD="$VSPHERE_TKGS_VCENTER_PASSWORD"
   export KUBECONFIG=$HOME/.kube/config
 
-  [ -f $HOME/.kube/config ] && mv $HOME/.kube/config $HOME/.kube/config.bak
+  mv $HOME/.kube/config $HOME/.kube/config.bak
 
   ret=1; cnt=0
   while [ $ret -ne 0 -a $cnt -lt 5 ]; do
@@ -8370,17 +8370,35 @@ tanzu package repisiitory list -A
           touch /tmp/bundle/values.yaml
 
           # --- 1.4.2 Tested ---
-          ytt -f /tmp/bundle/values.yaml \
-              -f /tmp/bundle/config/ \
-              -f $HOME/.tanzu-demo-hub/certificates/ca.pem \
-              -v kp_default_repository=$DNS_HARBOR/library/build-service \
-              -v kp_default_repository_username=admin \
-              -v kp_default_repository_password=$TDH_HARBOR_REGISTRY_ADMIN_PASSWORD \
-              -v tanzunet_username="$TDH_REGISTRY_VMWARE_USER" \
-              -v tanzunet_password="$TDH_REGISTRY_VMWARE_PASS" \
-  	      -v descriptor_name='lite' 2>/dev/null \
-             | kbld -f /tmp/bundle/.imgpkg/images.yml -f- \
-             | kapp deploy -a tanzu-build-service -f- -y > /tmp/kapp.log 2>&1; ret=$?
+          # ste: updated for TBS 1.6 and later - added the two '--data-value-yaml ...' lines
+          #      docu - https://docs.vmware.com/en/Tanzu-Build-Service/1.7/vmware-tanzu-build-service/GUID-installing-no-kapp.html
+          if [ $tbs_minor -ge 6 ]; then
+            ytt -f /tmp/bundle/values.yaml \
+                -f /tmp/bundle/config/ \
+                -f $HOME/.tanzu-demo-hub/certificates/ca.pem \
+                -v kp_default_repository=$DNS_HARBOR/library/build-service \
+                -v kp_default_repository_username=admin \
+                -v kp_default_repository_password=$TDH_HARBOR_REGISTRY_ADMIN_PASSWORD \
+                --data-value-yaml pull_from_kp_default_repo=true \
+                -v tanzunet_username="$TDH_REGISTRY_VMWARE_USER" \
+                -v tanzunet_password="$TDH_REGISTRY_VMWARE_PASS" \
+  	        -v descriptor_name='lite' \
+                --data-value-yaml enable_automatic_dependency_updates=true 2>/dev/null \
+               | kbld -f /tmp/bundle/.imgpkg/images.yml -f- \
+               | kapp deploy -a tanzu-build-service -f- -y > /tmp/kapp.log 2>&1; ret=$?
+          else
+            ytt -f /tmp/bundle/values.yaml \
+                -f /tmp/bundle/config/ \
+                -f $HOME/.tanzu-demo-hub/certificates/ca.pem \
+                -v kp_default_repository=$DNS_HARBOR/library/build-service \
+                -v kp_default_repository_username=admin \
+                -v kp_default_repository_password=$TDH_HARBOR_REGISTRY_ADMIN_PASSWORD \
+                -v tanzunet_username="$TDH_REGISTRY_VMWARE_USER" \
+                -v tanzunet_password="$TDH_REGISTRY_VMWARE_PASS" \
+  	        -v descriptor_name='lite' 2>/dev/null \
+               | kbld -f /tmp/bundle/.imgpkg/images.yml -f- \
+               | kapp deploy -a tanzu-build-service -f- -y > /tmp/kapp.log 2>&1; ret=$?
+          fi
   
           cnt=$(kapp inspect -a tanzu-build-service --json | jq -r '.Tables[].Rows[].reconcile_state' | grep -vc "ok")
           while [ $cnt -ne 0 ]; do
@@ -12363,8 +12381,6 @@ vSphereAPI_getToken() {
   export GOVC_USERNAME=$VSPHERE_TKGS_VCENTER_ADMIN
   export GOVC_PASSWORD=$VSPHERE_TKGS_VCENTER_PASSWORD
 
-echo "gaga curl -k -X POST \"${VCENTER_SERVER}/rest/com/vmware/cis/session\" -u \"$USERPASS\"" 1>&2
-
   curl -k -X POST "${VCENTER_SERVER}/rest/com/vmware/cis/session" -u "$USERPASS" 2>/dev/null | jq -r '.value'
 
 }
@@ -12597,10 +12613,6 @@ vSphereAPI_createNamespace() {
   VCENTER_SERVER=$2
   NAMESPACE=$3
 
-echo "vSphereAPI_createNamespace: API_TOKEN:$API_TOKEN"
-echo "vSphereAPI_createNamespace: VCENTER_SERVER:$VCENTER_SERVER"
-echo "vSphereAPI_createNamespace: NAMESPACE:$NAMESPACE"
-
   # --- CREATE VSPHERE NAMESPACE ---
   stt=$(curl -k -X GET -H "vmware-api-session-id: $API_TOKEN" ${VCENTER_SERVER}/api/vcenter/namespaces/instances/$NAMESPACE 2>/dev/null | jq -r '.cluster')
   if [ "$stt" == "" -o "$stt" == "null" ]; then
@@ -12608,18 +12620,12 @@ echo "vSphereAPI_createNamespace: NAMESPACE:$NAMESPACE"
     messagePrint " ▪ vSphere Server"     "$VCENTER_SERVER"
     messagePrint " ▪ vSphere Namespace"  "$NAMESPACE"
 
-echo "curl -k -X GET -H \"vmware-api-session-id: $API_TOKEN\" ${VCENTER_SERVER}/api/vcenter/namespace-management/clusters"
     vs_cluster=$(curl -k -X GET -H "vmware-api-session-id: $API_TOKEN" ${VCENTER_SERVER}/api/vcenter/namespace-management/clusters 2>/dev/null | jq -r '.[].cluster')
-
-echo "vs_cluster:$vs_cluster"
-
     VSPHERE_CONFIG=/tmp/vsphere_config.json; rm -f $OKTA_CONFIG
     echo '{'                                                                         >  $VSPHERE_CONFIG
     echo "  \"cluster\": \"$vs_cluster\","                                           >> $VSPHERE_CONFIG
     echo "  \"namespace\": \"$NAMESPACE\""                                           >> $VSPHERE_CONFIG
     echo '}'                                                                         >> $VSPHERE_CONFIG
-
-cat $VSPHERE_CONFIG
 
     curl -k -X POST -H "vmware-api-session-id: $API_TOKEN" ${VCENTER_SERVER}/api/vcenter/namespaces/instances \
          -H 'Content-type: application/json' -d "@$VSPHERE_CONFIG" > /tmp/error.log 2>&1; ret=$?
