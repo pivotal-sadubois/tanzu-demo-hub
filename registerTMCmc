@@ -63,23 +63,18 @@ done
 runTDHtools $TDH_TOOLS_CONTAINER_TYPE $DEPLOY_TKG_VERSION "Deploy TKG Cluster with Tanzu Mission Control (TMC)" "/home/tanzu/tanzu-demo-hub/$CMD_EXEC" "$CMD_ARGS"
 
 # --- VERIFY TOOLS AND ACCESS ---
-checkCloudCLI
+#checkCloudCLI
 checkCLIcommands TOOLS
 checkCLIcommands TKG
 checkCLIcommands TANZU
 checkCLIcommands TMC
 
 # --- CLEANUP KUNECONFIG ---
-echo gaga1
 #cleanKubeconfig
 tmcCheckLogin
-echo gaga2
 #checkTDHAccess
-echo gaga3
 vSphereKubeconfig
-echo gaga4
 vSphereLogin
-echo gaga5
 
 # --- VERIFY ITS A H2O CLUSTER ---
 cnt=$(echo $VSPHERE_TKGS_VCENTER_SERVER | egrep -c "\.h2o-") 
