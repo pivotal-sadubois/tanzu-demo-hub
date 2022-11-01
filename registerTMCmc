@@ -13,6 +13,9 @@ export DEPLOY_PCF_DEPLOYMENT=aws_tkg_default.cfg
 export TDH_TOOLS_CONTAINER_TYPE=tkg
 unset TMC_MANAGEMENT_CLUSTER
 
+# --- PRESETUP ---
+mkdir -p $HOME/.hube  $HOME/.tanzu-demo-hub/config $HOME/.tanzu-demo-hub/cache
+
 if [ "$(hostname)" == "tdh-tools" ]; then
   export TDHPATH=/home/tanzu/tanzu-demo-hub
 else
@@ -186,24 +189,15 @@ VSPHERE_NAMESPACE=tanzu-demo-hub
 VSPHERE_DATASTORE=datastore-19 
 VSPHERE_CONTENT_LIBRARY=tanzu-demo-hub
 
-echo "registerTMCmc: VSPHERE_NAMESPACE:$VSPHERE_NAMESPACE"
-
 echo "VSPHERE_TKGS_VCENTER_SERVER:$VSPHERE_TKGS_VCENTER_SERVER"
 echo "VSPHERE_TKGS_VCENTER_ADMIN:$VSPHERE_TKGS_VCENTER_ADMIN"
 echo "VSPHERE_TKGS_VCENTER_PASSWORD:$VSPHERE_TKGS_VCENTER_PASSWORD"
 
 TDH_VSPHERE_API_TOKEN=$(vSphereAPI_getToken "$VSPHERE_TKGS_VCENTER_SERVER" "$VSPHERE_TKGS_VCENTER_ADMIN" "$VSPHERE_TKGS_VCENTER_PASSWORD")
 
-echo "registerTMCmc: TDH_VSPHERE_API_TOKEN:$TDH_VSPHERE_API_TOKEN"
-
-
-echo gaga10
 vSphereAPI_createNamespace      $TDH_VSPHERE_API_TOKEN $VSPHERE_TKGS_VCENTER_SERVER $VSPHERE_NAMESPACE
-echo gaga11
 vSphereAPI_createContentLibrary $TDH_VSPHERE_API_TOKEN $VSPHERE_TKGS_VCENTER_SERVER $VSPHERE_CONTENT_LIBRARY $VSPHERE_DATASTORE
-echo gaga12
 vSphereAPI_updateNamespace      $TDH_VSPHERE_API_TOKEN $VSPHERE_TKGS_VCENTER_SERVER $VSPHERE_NAMESPACE
-echo gaga13
 
 messageTitle "TMC Management Server Configuration"
 messagePrint " ▪ Tanzu Mission Control (TMC) - Management Cluster"       "$HOME/.tanzu-demo-hub/config/${TMC_DISPLAY_NAME}.cfg"

@@ -7,7 +7,7 @@
 # Description ..: Play an asciinema recording
 # ============================================================================================
 
-if [ ! -f /usr/local/bin/asciinema -a ! -f /opt/homebrew/bin/asciinema ]; then 
+if [ ! -f /usr/local/bin/asciinema -a ! -f /opt/homebrew/bin/asciinema -a ! -f /usr/bin/asciinema ]; then 
   echo "ERROR: asciinema is not installed, please install it first:"
   echo "       => brew update"
   echo "       => brew install asciinema"
