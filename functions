@@ -434,7 +434,7 @@ vSphereKubeconfig() {
   export KUBECTL_VSPHERE_PASSWORD="$VSPHERE_TKGS_VCENTER_PASSWORD"
   export KUBECONFIG=$HOME/.kube/config
 
-  mv $HOME/.kube/config $HOME/.kube/config.bak
+  [ -f $HOME/.kube/config ] && mv $HOME/.kube/config $HOME/.kube/config.bak
 
   ret=1; cnt=0
   while [ $ret -ne 0 -a $cnt -lt 5 ]; do
@@ -12595,6 +12595,10 @@ vSphereAPI_createNamespace() {
   VCENTER_SERVER=$2
   NAMESPACE=$3
 
+echo "vSphereAPI_createNamespace: API_TOKEN:$API_TOKEN"
+echo "vSphereAPI_createNamespace: VCENTER_SERVER:$VCENTER_SERVER"
+echo "vSphereAPI_createNamespace: NAMESPACE:$NAMESPACE"
+
   # --- CREATE VSPHERE NAMESPACE ---
   stt=$(curl -k -X GET -H "vmware-api-session-id: $API_TOKEN" ${VCENTER_SERVER}/api/vcenter/namespaces/instances/$NAMESPACE 2>/dev/null | jq -r '.cluster')
   if [ "$stt" == "" -o "$stt" == "null" ]; then
@@ -12602,12 +12606,18 @@ vSphereAPI_createNamespace() {
     messagePrint " ▪ vSphere Server"     "$VCENTER_SERVER"
     messagePrint " ▪ vSphere Namespace"  "$NAMESPACE"
 
+echo "curl -k -X GET -H \"vmware-api-session-id: $API_TOKEN\" ${VCENTER_SERVER}/api/vcenter/namespace-management/clusters"
     vs_cluster=$(curl -k -X GET -H "vmware-api-session-id: $API_TOKEN" ${VCENTER_SERVER}/api/vcenter/namespace-management/clusters 2>/dev/null | jq -r '.[].cluster')
+
+echo "vs_cluster:$vs_cluster"
+
     VSPHERE_CONFIG=/tmp/vsphere_config.json; rm -f $OKTA_CONFIG
     echo '{'                                                                         >  $VSPHERE_CONFIG
     echo "  \"cluster\": \"$vs_cluster\","                                           >> $VSPHERE_CONFIG
     echo "  \"namespace\": \"$NAMESPACE\""                                           >> $VSPHERE_CONFIG
     echo '}'                                                                         >> $VSPHERE_CONFIG
+
+cat $VSPHERE_CONFIG
 
     curl -k -X POST -H "vmware-api-session-id: $API_TOKEN" ${VCENTER_SERVER}/api/vcenter/namespaces/instances \
          -H 'Content-type: application/json' -d "@$VSPHERE_CONFIG" > /tmp/error.log 2>&1; ret=$?
