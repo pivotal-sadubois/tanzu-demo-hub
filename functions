@@ -1647,7 +1647,6 @@ fi
 
       cnt=$(tmc cluster integration list --cluster-name $TANZU_TKGWC_NAME -m $TANZU_TKGWC_TMC_MANAGEMENT_CLUSTER  \
             -p $TANZU_TKGWC_TMC_PROVISIONER --name tanzu-observability-saas 2>/dev/null | egrep -c "tanzu-observability-saas") 
-echo "gaga1 CNT:$cnt"
       if [ $cnt -eq 0 ]; then 
         TANZU_OBSERVABILITY=/tmp/tanzu_observability.yaml; rm -f $TANZU_OBSERVABILITY
         echo ""                                                                      >  $TANZU_OBSERVABILITY
@@ -6470,13 +6469,15 @@ installArgoCD() {
     ver=""; crt=""; stt=""; dat=""
   fi
 
-  messagePrint " ▪ Verify ArgoCD"                "$crt"
+  messagePrint " ▪ Verify ArgoCD"                  "$crt"
   messagePrint "   Helm Chart Name"                "argo-cd"
   messagePrint "   Helm Chart Version"             "$ver"
   messagePrint "   Helm Chart Status"              "$stt"
   messagePrint "   Helm Chart Installed/Updated"   "$dat"
-  messagePrint "   ArgoCD Internal Name"         "argocd.argo-cd.svc.cluster.local"
-  messagePrint "   ArgoCD Management Portal"     "https://argocd.$DOMAIN"
+  messagePrint "   ArgoCD Internal Name"           "argocd.argo-cd.svc.cluster.local"
+  messagePrint "   ArgoCD Management Portal"       "https://argocd.$DOMAIN"
+  messagePrint "   ArgoCD Admin User"              "admin"
+  messagePrint "   ArgoCD Admin Password"          "admin"
 
   # --- STORE SETTINGS IN CONFIGMAP ---
   uodateConfigMap tanzu-demo-hub TDH_SERVICE_ARGOCD             "true"
@@ -11900,11 +11901,6 @@ setK8sEnvironment() {
     exit 1
   fi
 
-echo "gaga CLUSTER:$CLUSTER"
-echo "kubectl config get-contexts"
-
-kubectl config get-contexts
-
   CONTEXT=$(kubectl config get-contexts | grep " $CLUSTER " | sed 's/*//g' | awk '{ print $1 }')
 
   ## steve: 3. May 2022 - did not work for H2O, reverted to code above ^^^
@@ -15690,7 +15686,7 @@ tmcAttachCluster() {
 
     if [ "$stt" == "READY/HEALTHY" ]; then
       # --- NO CONNECTION FROM A PEZ-INTERNAL CLUSTER ---
-      #checkTMCintegration      TO    ## Tanzu Observability (Wavefront)
+      checkTMCintegration      TO    ## Tanzu Observability (Wavefront)
       checkTMCintegration      TDP   ## Tanzu Data Protection
       checkTMCintegration      TCI   ## Tanzu Cluster Inspection
     else

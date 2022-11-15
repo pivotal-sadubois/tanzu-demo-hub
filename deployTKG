@@ -332,11 +332,8 @@ TanzuPackage_Harbor          harbor-pkg           harbor.tanzu.vmware.com
 
 installBuildService          ## Tanzu Build Service (TBS)
 installTanzuDataPostgres     ## Tanzu Data SQL
-echo gaga1
 installSpringCloudGateway
-echo gaga2
 installMinio
-echo gaga3
 installKubeapps
 installGitea
 installJenkins
