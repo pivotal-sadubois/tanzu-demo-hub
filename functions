@@ -1589,8 +1589,6 @@ checkTMCintegration() {
   TANZU_TKGWC_TMC_PROVISIONER=$(getConfigMap tanzu-demo-hub TANZU_TKGWC_TMC_PROVISIONER)
   TANZU_TKGWC_TMC_MANAGEMENT_CLUSTER=$(getConfigMap tanzu-demo-hub TANZU_TKGWC_TMC_MANAGEMENT_CLUSTER)
 
-#guguseli
-
   if [ "${TMC_INTEGRATION}" == "TO" ]; then
     if [ "${TDH_SERVICE_TANZU_OBSERVABILITY}" == "true" ]; then
       messageTitle "Tanzu Observability Integration into TMC"
@@ -5120,7 +5118,6 @@ tkgCreateCluster() {
         stt=$(jq -r --arg key "$TDH_TKGWC_NAME" '.items[] | select(.metadata.name == $key).status.conditions[].status' /tmp/output.json)
         typ=$(jq -r --arg key "$TDH_TKGWC_NAME" '.items[] | select(.metadata.name == $key).status.conditions[].type' /tmp/output.json)
 
-
         vsphereWorkloadClusterLogin $TKG_DEPLOYMENT $TDH_TKGWC_NAME; ret=$?
         if [ ${ret} -eq 0 ]; then
           messagePrint " ▪ TKG Workload Cluster Status"                 "Ready"
@@ -5134,6 +5131,7 @@ tkgCreateCluster() {
         runningPods kube-system
         runningPods kube-public
 
+#gigi tkgCreateCluster
         # --- STORE SETTINGS IN CONFIGMAP ---
         uodateConfigMap tanzu-demo-hub TANZU_TKGMC_NAME                        "$TDH_TKGMC_NAME"
         uodateConfigMap tanzu-demo-hub TANZU_TKGWC_NAME                        "$TDH_TKGWC_NAME"
@@ -5170,8 +5168,6 @@ tkgCreateCluster() {
       fi
     fi
   fi
-
-  # --- STORE SETTINGS IN CONFIGMAP ---
 }
 
 # ------------------------------------------------------------------------------------------
@@ -5286,6 +5282,10 @@ vsphereWorkloadClusterLogin() {
  
   export KUBECTL_VSPHERE_PASSWORD="$TDH_TKGMC_VSPHERE_PASS"
 
+  # deployTKG Uses TDH_TKGMC_VSPHERE_NAMESPACE / deployTMC uses TDH_PROVISIONER_NAME
+  [ "$TDH_TKGMC_VSPHERE_NAMESPACE" == "" ] && TDH_TKGMC_VSPHERE_NAMESPACE=$TDH_PROVISIONER_NAME
+  [ "$KUBECTL_VSPHERE_PASSWORD" == "" ] && KUBECTL_VSPHERE_PASSWORD=$VSPHERE_TKGS_VCENTER_PASSWORD
+
   cmdLoop kubectl vsphere login \
       --tanzu-kubernetes-cluster-name $TKGWC_NAME \
       --tanzu-kubernetes-cluster-namespace $TDH_TKGMC_VSPHERE_NAMESPACE \
@@ -5306,8 +5306,8 @@ vsphereWorkloadClusterLogin() {
     return 1
   fi
 
-  mv $HOME/.kube/config $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.kubeconfig
-  mv $HOME/.kube/config.old $HOME/.kube/config 
+  [ -f $HOME/.kube/config ] && mv $HOME/.kube/config $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.kubeconfig
+  [ -f $HOME/.kube/config.old ] && mv $HOME/.kube/config.old $HOME/.kube/config 
 
   # --- DO THE SAME AGAIN TO UPDATE (HOME/.kube/config) AS WELL ---
   cmdLoop kubectl vsphere login \
@@ -5315,7 +5315,7 @@ vsphereWorkloadClusterLogin() {
       --tanzu-kubernetes-cluster-namespace $TDH_TKGMC_VSPHERE_NAMESPACE \
       --server $VSPHERE_TKGS_SUPERVISOR_CLUSTER \
       --insecure-skip-tls-verify \
-      -u administrator@vsphere.local > /dev/null 2>&1
+      -u administrator@vsphere.local > /dev/null 2>&1; ret=$?
 
   return 0
 }
@@ -5598,15 +5598,14 @@ tmcCreateCluster() {
       # List of Tanzu Kubernetes Releases
       # https://docs.vmware.com/en/VMware-vSphere/7.0/vmware-vsphere-with-tanzu/GUID-292482C2-A5FA-44B5-B26E-F887A91BB19D.html
 
-echo "tmc cluster create -t tkgs -m $TDH_MANAGEMENT_CLUSTER -p $TDH_PROVISIONER_NAME \
-                           --worker-instance-type $TDH_TKGWC_WORKERNODES_MACHINE \
-                           --instance-type $TDH_TKGWC_CONTROPLANE_MACHINE \
-                           --worker-node-count $TDH_TKGWC_WORKERNODES \
-                           --storage-class $TDH_TKGWC_STORAGE_CLASS \
-                           --default-storage-class $TDH_TKGWC_STORAGE_CLASS \
-                           -g $TDH_CLUSTER_GROUP --version $KUBERNETES_VERSION -n $TDH_CLUSTER_NAME"
+#echo "tmc cluster create -t tkgs -m $TDH_MANAGEMENT_CLUSTER -p $TDH_PROVISIONER_NAME \
+#                           --worker-instance-type $TDH_TKGWC_WORKERNODES_MACHINE \
+#                           --instance-type $TDH_TKGWC_CONTROPLANE_MACHINE \
+#                           --worker-node-count $TDH_TKGWC_WORKERNODES \
+#                           --storage-class $TDH_TKGWC_STORAGE_CLASS \
+#                           --default-storage-class $TDH_TKGWC_STORAGE_CLASS \
+#                           -g $TDH_CLUSTER_GROUP --version $KUBERNETES_VERSION -n $TDH_CLUSTER_NAME"
 
-exit
       tmc cluster create -t tkgs -m $TDH_MANAGEMENT_CLUSTER -p $TDH_PROVISIONER_NAME \
                            --worker-instance-type $TDH_TKGWC_WORKERNODES_MACHINE \
                            --instance-type $TDH_TKGWC_CONTROPLANE_MACHINE \
@@ -5652,6 +5651,41 @@ exit
   
       sleep 300
 
+      # --- STORE SETTINGS IN CONFIGMAP ---
+      uodateConfigMap tanzu-demo-hub TANZU_TKGMC_NAME                        "$TDH_MANAGEMENT_CLUSTER"
+      uodateConfigMap tanzu-demo-hub TANZU_TKGWC_NAME                        "$TDH_CLUSTER_NAME"
+      uodateConfigMap tanzu-demo-hub TANZU_TKGWC_TYPE                        "tkg"
+      uodateConfigMap tanzu-demo-hub TANZU_TKGWC_INFRASTRUCTURE              "vSphere"
+      uodateConfigMap tanzu-demo-hub TANZU_TKGWC_DEPLOYMENT_MODEL            "$TDH_TKGMC_ENVNAME"
+      uodateConfigMap tanzu-demo-hub TANZU_TKGWC_VSPHERE_NAMESPACE           "$TDH_PROVISIONER_NAME"
+      uodateConfigMap tanzu-demo-hub TANZU_TKGWC_SUPERVISOR_CLUSTER          "$VSPHERE_TKGS_SUPERVISOR_CLUSTER"
+
+      # --- STORE VSPEHRE INFOS ---
+      uodateConfigMap tanzu-demo-hub VSPHERE_TKGS_VCENTER_SERVER             "$VSPHERE_TKGS_VCENTER_SERVER"
+      uodateConfigMap tanzu-demo-hub VSPHERE_TKGS_VCENTER_ADMIN              "$VSPHERE_TKGS_VCENTER_ADMIN"
+      uodateConfigMap tanzu-demo-hub VSPHERE_TKGS_SUPERVISOR_CLUSTER         "$VSPHERE_TKGS_SUPERVISOR_CLUSTER"
+      uodateConfigMap tanzu-demo-hub VSPHERE_TKGS_SUPERVISOR_STORAGE_POLICY  "$VSPHERE_TKGS_SUPERVISOR_STORAGE_POLICY"
+      uodateConfigMap tanzu-demo-hub VSPHERE_TKGS_SUPERVISOR_STORAGE_CLASS   "$VSPHERE_TKGS_SUPERVISOR_STORAGE_CLASS"
+      uodateConfigMap tanzu-demo-hub VSPHERE_TKGS_DNS_SERVER                 "$VSPHERE_TKGS_DNS_SERVER"
+    else
+      vsphereWorkloadClusterLogin $TMC_DEPLOYMENT $TDH_CLUSTER_NAME; ret=$?
+      if [ ${ret} -eq 0 ]; then
+        messagePrint " ▪ TKG Workload Cluster Status"                 "Ready"
+      else
+        echo "ERROR: Login to TKG Workload Cluster Failed"
+        echo "       => vsphereWorkloadClusterLogin $TKG_DEPLOYMENT $TDH_TKGWC_NAME"
+        exit 1
+      fi
+
+      TANZU_TKGMC_NAME=$(getConfigMap tanzu-demo-hub TANZU_TKGMC_NAME)
+      TANZU_TKGWC_NAME=$(getConfigMap tanzu-demo-hub TANZU_TKGWC_NAME)
+      TANZU_TKGWC_TYPE=$(getConfigMap tanzu-demo-hub TANZU_TKGWC_TYPE)
+      TANZU_TKGWC_INFRASTRUCTURE=$(getConfigMap tanzu-demo-hub TANZU_TKGWC_INFRASTRUCTURE)
+      TANZU_TKGWC_DEPLOYMENT_MODEL=$(getConfigMap tanzu-demo-hub TANZU_TKGWC_DEPLOYMENT_MODEL)
+      TANZU_TKGWC_VSPHERE_NAMESPACE=$(getConfigMap tanzu-demo-hub TANZU_TKGWC_VSPHERE_NAMESPACE)
+      TANZU_TKGWC_SUPERVISOR_CLUSTER=$(getConfigMap tanzu-demo-hub TANZU_TKGWC_SUPERVISOR_CLUSTER)
+      TANZU_TKGWC_TMC_PROVISIONER=$(getConfigMap tanzu-demo-hub TANZU_TKGWC_TMC_PROVISIONER)
+      TANZU_TKGWC_TMC_MANAGEMENT_CLUSTER=$(getConfigMap tanzu-demo-hub TANZU_TKGWC_TMC_MANAGEMENT_CLUSTER)
     fi
   fi
 
@@ -5734,9 +5768,9 @@ getTDHClusterCredentials() {
 
       # --- PATCH STORAGE CLASS
       kubectl patch storageclass $VSPHERE_TKGS_SUPERVISOR_STORAGE_CLASS -p '{"metadata": {"annotations":{"storageclass.kubernetes.io/is-default-class":"true"}}}'
-      kubectl config use-context ${TDH_CLUSTER_NAME}-admin@$TDH_CLUSTER_NAME
+      kubectl config use-context ${TDH_CLUSTER_NAME}-admin@$TDH_CLUSTER_NAME > /dev/null 2>&1
     else
-      kubectl config use-context ${TDH_CLUSTER_NAME}-admin@$TDH_CLUSTER_NAME
+      kubectl config use-context ${TDH_CLUSTER_NAME}-admin@$TDH_CLUSTER_NAME > /dev/null 2>&1
     fi
 
     kubectl get clusterrolebinding -o json > /tmp/output.json
@@ -6325,7 +6359,6 @@ installSpringCloudGateway() {
       exit 1
     fi
 
-#guguseli
     messagePrint " ▪ Verify VMware Registry Access" "$TDH_REGISTRY_VMWARE_NAME"
     containerRegestryLogin $TDH_REGISTRY_VMWARE_NAME $TDH_REGISTRY_VMWARE_USER $TDH_REGISTRY_VMWARE_PASS
 
@@ -6429,7 +6462,7 @@ installArgoCD() {
     echo "server:"                                                                                                                >> $HELM_VALUES
     echo "  insecure: true"                                                                                                       >> $HELM_VALUES
     echo "  ingress:"                                                                                                             >> $HELM_VALUES
-    echo "    enabled: true"                                                                                                      >> $HELM_VALUES
+    echo "    enabled: false"                                                                                                      >> $HELM_VALUES
     echo "    certManager: false"                                                                                                 >> $HELM_VALUES
     echo "    annotations:"                                                                                                       >> $HELM_VALUES
     echo "      kubernetes.io/ingress.class: contour"                                                                             >> $HELM_VALUES
@@ -6453,6 +6486,46 @@ installArgoCD() {
     fi
 
     messagePrint " ▪ ArgoCD Dashboard deployed"        "https://argocd.$DOMAIN"
+
+#jjjj
+    PROXY_VALUES=/tmp/helm_argocd_proxy_values.yaml
+    echo "apiVersion: projectcontour.io/v1"                                                                                     >  $PROXY_VALUES
+    echo "kind: HTTPProxy"                                                                                                      >> $PROXY_VALUES
+    echo "metadata:"                                                                                                            >> $PROXY_VALUES
+    echo "  name: argocd-grpc"                                                                                                  >> $PROXY_VALUES
+    echo "  namespace: argo-cd"                                                                                                 >> $PROXY_VALUES
+    echo "spec:"                                                                                                                >> $PROXY_VALUES
+    echo "  virtualhost:"                                                                                                       >> $PROXY_VALUES
+    echo "    fqdn: argocd.$DOMAIN"                                                                                             >> $PROXY_VALUES
+    echo "    tls:"                                                                                                             >> $PROXY_VALUES
+    echo "      secretName: tanzu-demo-hub-tls"                                                                                 >> $PROXY_VALUES
+    echo "  routes:"                                                                                                            >> $PROXY_VALUES
+    echo "    - conditions:"                                                                                                    >> $PROXY_VALUES
+    echo "        - prefix: /"                                                                                                  >> $PROXY_VALUES
+    echo "      services:"                                                                                                      >> $PROXY_VALUES
+    echo "        - name: argo-cd-server"                                                                                       >> $PROXY_VALUES
+    echo "          port: 443"                                                                                                  >> $PROXY_VALUES
+    echo "---"                                                                                                                  >> $PROXY_VALUES
+    echo "apiVersion: projectcontour.io/v1"                                                                                     >> $PROXY_VALUES
+    echo "kind: HTTPProxy"                                                                                                      >> $PROXY_VALUES
+    echo "metadata:"                                                                                                            >> $PROXY_VALUES
+    echo "  name: argocdapi"                                                                                                    >> $PROXY_VALUES
+    echo "  namespace: argo-cd"                                                                                                 >> $PROXY_VALUES
+    echo "spec:"                                                                                                                >> $PROXY_VALUES
+    echo "  virtualhost:"                                                                                                       >> $PROXY_VALUES
+    echo "    fqdn: argocdapi.$DOMAIN"                                                                                          >> $PROXY_VALUES
+    echo "    tls:"                                                                                                             >> $PROXY_VALUES
+    echo "      secretName: tanzu-demo-hub-tls"                                                                                 >> $PROXY_VALUES
+    echo "  routes:"                                                                                                            >> $PROXY_VALUES
+    echo "    - conditions:"                                                                                                    >> $PROXY_VALUES
+    echo "        - prefix: /"                                                                                                  >> $PROXY_VALUES
+    echo "      services:"                                                                                                      >> $PROXY_VALUES
+    echo "        - name: argo-cd-server"                                                                                       >> $PROXY_VALUES
+    echo "          port: 443"                                                                                                  >> $PROXY_VALUES
+    echo "          protocol: h2c"                                                                                              >> $PROXY_VALUES
+
+    messagePrint " ▪ Installing HTTProxy"        "$PROXY_VALUES"
+    cmdLoop kubectl apply -f $PROXY_VALUES
 
     messagePrint " ▪ Create Serviceaccount"              "argocd"
     kubectl delete serviceaccount argocd > /dev/null 2>&1
@@ -6478,6 +6551,8 @@ installArgoCD() {
   messagePrint "   ArgoCD Management Portal"       "https://argocd.$DOMAIN"
   messagePrint "   ArgoCD Admin User"              "admin"
   messagePrint "   ArgoCD Admin Password"          "admin"
+  messagePrint "   ArgoCD CLI Login:"              "argocd login argocd.$DOMAIN"
+#jjjj
 
   # --- STORE SETTINGS IN CONFIGMAP ---
   uodateConfigMap tanzu-demo-hub TDH_SERVICE_ARGOCD             "true"
@@ -7067,7 +7142,6 @@ installKubeapps() {
     echo "ingress:"                                                                                                             >> $HELM_VALUES
     echo "  enabled: false"                                                                                                      >> $HELM_VALUES
 
-
     #echo "  annotations:"                                                                                                       >> $HELM_VALUES
     #echo "    kubernetes.io/ingress.class: contour"                                                                             >> $HELM_VALUES
     #echo "    ingress.kubernetes.io/force-ssl-redirect: \"true\""                                                               >> $HELM_VALUES
@@ -7145,6 +7219,8 @@ installKubeapps() {
 
     messagePrint " ▪ Installing HTTProxy"        "$PROXY_VALUES"
     cmdLoop kubectl apply -f $PROXY_VALUES
+
+#jjjj
 
     messagePrint " ▪ Create Cluster Role Binding"        "default:kubeapps-operator"
     createClusterRoleBindingSA kubeapps-operator cluster-admin default:kubeapps-operator > /dev/null 2>&1
@@ -10221,12 +10297,9 @@ kubectl config get-contexts --kubeconfig=$CONFIG
   #for cluster in $(kubectl --kubeconfig=$CONFIG config get-clusters | sed '1d' | egrep "^tdh|^tkgmc|^tcemc^tdh-tce|^tcemc"); do
   for cluster in $(kubectl --kubeconfig=$CONFIG config get-clusters | sed '1d'); do
 
-echo "--------------------------------"
-echo "gugu cleanKubeconfig: cluster:$cluster CNT:$cnt --kubeconfig=$CONFIG"
     ctx=$(kubectl --kubeconfig=$CONFIG config view -o json | jq -r --arg key $cluster '.contexts[] | select(.context.cluster == $key).name' 2>/dev/null)
     usr=$(kubectl --kubeconfig=$CONFIG config view -o json | jq -r --arg key $cluster '.contexts[] | select(.context.cluster == $key).context.user' 2>/dev/null)
     cnt=$(echo $cluster | grep -c minikube)
-echo "CTX:$ctx USR:$usr CNT:$cnt"
     if [ $cnt -gt 0 ]; then 
       if [ ! -d ~/.minikube/profiles/${cluster} ]; then
         messagePrint " ▪ Cleaning up k8s cluster ($cluster)" "Context: $ctx, User: $usr"
@@ -10235,14 +10308,11 @@ echo "CTX:$ctx USR:$usr CNT:$cnt"
         kubectl --kubeconfig=$CONFIG config unset users.${cluster} > /dev/null 2>&1
       fi
     else
-echo "gugu4 CTX:$ctx USR:$usr "
       if [ "$ctx" != "" ]; then
-echo gugu41
         kubectl config use-context $ctx > /dev/null 2>&1
         kubectl config use-context $ctx > /dev/null 2>&1
         kubectl get ns > /dev/null 2>&1
         if [ $? -gt 0 ]; then
-echo gugu411
           messagePrint " ▪ Cleaning up k8s cluster ($cluster)" "Context: $ctx, User: $usr"
 
           kubectl --kubeconfig=$CONFIG config unset clusters.${cluster} > /dev/null 2>&1
@@ -10250,7 +10320,6 @@ echo gugu411
           kubectl --kubeconfig=$CONFIG config unset users.${cluster} > /dev/null 2>&1
         fi
       else
-echo gugu42
         messagePrint " ▪ Cleaning up k8s cluster ($cluster)" "Context: $ctx, User: $usr"
         kubectl --kubeconfig=$CONFIG config unset clusters.${cluster} > /dev/null 2>&1
         kubectl --kubeconfig=$CONFIG config unset contexts.${cluster} > /dev/null 2>&1
@@ -13957,7 +14026,6 @@ dockerRunPreparation() {
   export USER_OPTIONS="$CORE_OPTIONS -u $(id -u):$(id -g) --env-file /tmp/tdh.env -e \"KUBECONFIG=$HOME/.kube/config\""
   export ROOT_OPTIONS="$CORE_OPTIONS --env-file /tmp/tdh.env -e \"KUBECONFIG=$HOME/.kube/config\""
 
-#gugu
   #echo "export PATH=\"~/.local/bin:\$PATH\"" > $HOME/$TDH_TOOLS_PATH/.bashrc
 
   export CORE_MOUNTS=(
@@ -14129,7 +14197,8 @@ runTDHtoolsDemos() {
       for n in $(echo ${CORE_MOUNTS[*]} | sed 's/\-. //g'); do
         [ $n == "/var/run/docker.sock" ] && continue
         localdir=$(echo $n | awk -F: '{ print $1 }')
-        [ ! -e $localdir ] && mkdir -p $localdir && chmod 777 $localdir
+        [ -e $localdir ] && continue
+        [ ! -d $localdir ] && mkdir -p $localdir && chmod 777 $localdir
       done
 
       docker run $ROOT_OPTIONS ${CORE_MOUNTS[*]} $TDH_TOOLS:latest chmod 666 /var/run/docker.sock > /dev/null 2>&1
@@ -14316,6 +14385,7 @@ runTDHtools() {
                "-v $HOME/$TDH_TOOLS_PATH/.ssh:$TANZU_HOME/.ssh:rw"                            ## SSH to AWS/AZURE AMDIN SERVER
                "-v $HOME/$TDH_TOOLS_PATH/.terraform:$TANZU_HOME/.terraform:rw"
                "-v $HOME/$TDH_TOOLS_PATH/.terraform.d:$TANZU_HOME/.terraform.d:rw"
+               "-v $HOME/$TDH_TOOLS_PATH/.argocd:$TANZU_HOME/.argocd:rw"                      ## ARGOCD CLI
                "-v $HOME/$TDH_TOOLS_PATH/.s3cfg:$TANZU_HOME/.s3cfg:rw"
                "-v $HOME/$TDH_TOOLS_PATH/.govmomi:$TANZU_HOME/.govmomi:rw"
                "-v $HOME/$TDH_TOOLS_PATH/.gradle:$TANZU_HOME/.gradle:rw"
@@ -15288,8 +15358,6 @@ detachClusterFromTMConFailure() {
 
   TANZU_TKGWC_TMC_CLUSTER_ID=$(getConfigMap tanzu-demo-hub TANZU_TKGWC_TMC_CLUSTER_ID)
 
-#guguseli
-
   #########################################################################################################################
   ################################################ DELETE OF CLUSTER ######################################################
   #########################################################################################################################
@@ -15444,7 +15512,6 @@ attachClusterToTMC() {
         '.clusters[] | select(.fullName.name == $clu and .fullName.provisionerName == $pvn and .fullName.managementClusterName == $mcl).meta.uid' /tmp/output.json)
   [ "$nam" == "$clusterName" ] && echo "$stt/$hlt" > /tmp/status.txt && return 0
 
-#guguseli
   if [ "$nam" != "$clusterName" ]; then 
     messagePrint " ▪ Attach Cluster to TMC"                       "$clusterName"
     (cd /tmp && tmc cluster attach --name $clusterName --kubeconfig=$kubeconfig -p $provisioner \
@@ -15664,7 +15731,6 @@ tmcAttachCluster() {
 
   [ "$TDH_TANZU_MISSION_CONTROL_REGISTRATION" == "" ] && TDH_TANZU_MISSION_CONTROL_REGISTRATION=true
 
-#guguseli
   if [ "$TDH_TANZU_MISSION_CONTROL_REGISTRATION" == "true" ]; then
     messageTitle "Tanzu Mission Control"
 
