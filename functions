@@ -1693,6 +1693,7 @@ fi
 
   if [ "${TMC_INTEGRATION}" == "TDP" ]; then
     if [ "${TDH_SERVICE_TANZU_DATA_PROTECTION}" == "true" ]; then
+#huhu
       messageTitle "Data Protection Integration into TMC"
       tmc cluster dataprotection get --cluster-name $TANZU_TKGWC_NAME -p $TANZU_TKGWC_TMC_PROVISIONER -m $TANZU_TKGWC_TMC_MANAGEMENT_CLUSTER  > /dev/null 2>&1; ret=$?
       if [ $ret -ne 0 ]; then 
@@ -5679,6 +5680,9 @@ tmcCreateCluster() {
       uodateConfigMap tanzu-demo-hub VSPHERE_TKGS_SUPERVISOR_STORAGE_POLICY  "$VSPHERE_TKGS_SUPERVISOR_STORAGE_POLICY"
       uodateConfigMap tanzu-demo-hub VSPHERE_TKGS_SUPERVISOR_STORAGE_CLASS   "$VSPHERE_TKGS_SUPERVISOR_STORAGE_CLASS"
       uodateConfigMap tanzu-demo-hub VSPHERE_TKGS_DNS_SERVER                 "$VSPHERE_TKGS_DNS_SERVER"
+
+      uodateConfigMap tanzu-demo-hub TANZU_TKGWC_TMC_PROVISIONER             "$TDH_PROVISIONER_NAME"
+      uodateConfigMap tanzu-demo-hub TANZU_TKGWC_TMC_MANAGEMENT_CLUSTER      "$TDH_MANAGEMENT_CLUSTER"
     else
       vsphereWorkloadClusterLogin $TMC_DEPLOYMENT $TDH_CLUSTER_NAME; ret=$?
       if [ ${ret} -eq 0 ]; then
