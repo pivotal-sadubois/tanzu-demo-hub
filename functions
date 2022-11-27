@@ -5291,7 +5291,7 @@ vsphereWorkloadClusterLogin() {
       --tanzu-kubernetes-cluster-namespace $TDH_TKGMC_VSPHERE_NAMESPACE \
       --server $VSPHERE_TKGS_SUPERVISOR_CLUSTER \
       --insecure-skip-tls-verify \
-      -u administrator@vsphere.local > /dev/null 2>&1; ret=$?
+      -u administrator@vsphere.local > /tmp/error.log 2>&1; ret=$?
 
   [ ! -d $HOME/.local/bin ] && mkdir -p $HOME/.local/bin
   echo "#!/bin/bash"                                                             >  $HOME/.local/bin/wlogin.sh
@@ -5306,16 +5306,18 @@ vsphereWorkloadClusterLogin() {
     return 1
   fi
 
-  [ -f $HOME/.kube/config ] && mv $HOME/.kube/config $HOME/.tanzu-demo-hub/config/${TDH_TKGWC_NAME}.kubeconfig
+  [ -f $HOME/.kube/config ] && mv $HOME/.kube/config $HOME/.tanzu-demo-hub/config/${TKGWC_NAME}.kubeconfig
   [ -f $HOME/.kube/config.old ] && mv $HOME/.kube/config.old $HOME/.kube/config 
 
   # --- DO THE SAME AGAIN TO UPDATE (HOME/.kube/config) AS WELL ---
   cmdLoop kubectl vsphere login \
-      --tanzu-kubernetes-cluster-name $TDH_TKGWC_NAME \
+      --tanzu-kubernetes-cluster-name $TKGWC_NAME \
       --tanzu-kubernetes-cluster-namespace $TDH_TKGMC_VSPHERE_NAMESPACE \
       --server $VSPHERE_TKGS_SUPERVISOR_CLUSTER \
       --insecure-skip-tls-verify \
       -u administrator@vsphere.local > /dev/null 2>&1; ret=$?
+
+  export KUBECONFIG=$HOME/.tanzu-demo-hub/config/${TKGWC_NAME}.kubeconfig
 
   return 0
 }
@@ -5648,11 +5650,21 @@ tmcCreateCluster() {
   
         sleep 10
       done
-  
+
       sleep 300
+
+      vsphereWorkloadClusterLogin $TMC_DEPLOYMENT $TDH_CLUSTER_NAME; ret=$?
+      if [ ${ret} -eq 0 ]; then
+        messagePrint " ▪ TKG Workload Cluster Status"                 "Ready"
+      else
+        echo "ERROR: Login to TKG Workload Cluster Failed"
+        echo "       => vsphereWorkloadClusterLogin $TKG_DEPLOYMENT $TDH_TKGWC_NAME"
+        exit 1
+      fi
 
       # --- STORE SETTINGS IN CONFIGMAP ---
       uodateConfigMap tanzu-demo-hub TANZU_TKGMC_NAME                        "$TDH_MANAGEMENT_CLUSTER"
+
       uodateConfigMap tanzu-demo-hub TANZU_TKGWC_NAME                        "$TDH_CLUSTER_NAME"
       uodateConfigMap tanzu-demo-hub TANZU_TKGWC_TYPE                        "tkg"
       uodateConfigMap tanzu-demo-hub TANZU_TKGWC_INFRASTRUCTURE              "vSphere"
@@ -5706,6 +5718,9 @@ alignStr() {
 }
 
 getTDHClusterCredentials() {
+  # duboissa deployTMC and vSphere lead to a bad context: tdh-vsphere-sadubois-admin@tdh-vsphere-sadubois
+  [ "$TDH_DEPLOYMENT_CLOUD" == "vSphere" ] && return
+
   cnt=$(kubectl config get-clusters | egrep -c "^$TDH_CLUSTER_NAME$")
   if [ $cnt -eq 0 ]; then 
     messageTitle "Request TKG Cluster Credentials from TMC"

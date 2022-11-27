@@ -190,7 +190,9 @@ checkTMCcontext
 #########################################################################################################################
 tmcCreateCluster
 createClusterRoleBindingGroup  default-tkg-admin-privileged-binding "psp:vmware-system-privileged" "system:authenticated"
-getTDHClusterCredentials
+
+# sdubois: context should be set withing tmcCreateCluster
+#getTDHClusterCredentials 
 
 uodateConfigMap tanzu-demo-hub TDH_DOMAIN               $AWS_HOSTED_DNS_DOMAIN
 uodateConfigMap tanzu-demo-hub TDH_ENVNAME              $TDH_ENVNAME
