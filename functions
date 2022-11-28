@@ -4228,6 +4228,24 @@ uodateConfigMap() {
   #kubectl create configmap $CONFIG_MAP --from-env-file=/tmp/$CONFIG_MAP --dry-run=client -o yaml | kubectl apply -f - > /dev/null 2>&1
 }
 
+clearConfigMapCache() {
+  TDH_CM_CACHE=/tmp/tdh_configmap_cache.json
+
+  rm -f $TDH_CM_CACHE
+}
+
+getConfigMapCache() {
+  TDH_CM_CACHE=/tmp/tdh_configmap_cache.json
+  CONFIG_MAP=$1
+  KEY=$2
+
+  if [ ! -f $TDH_CM_CACHE ]; then 
+    cmdLoop kubectl get configmap tanzu-demo-hub -o json > $TDH_CM_CACHE
+  fi
+
+  jq -r ".data.$KEY" $TDH_CM_CACHE | sed 's/"//g'
+}
+
 getConfigMap() {
   CONFIG_MAP=$1
   KEY=$2
@@ -6804,9 +6822,11 @@ installGitea() {
     echo ""                                                                                                                     >> $HELM_VALUES
     echo "gitea:"                                                                                                               >> $HELM_VALUES
     echo "  admin:"                                                                                                             >> $HELM_VALUES
-    echo "    # NOTE: Password can not be changed its stays 'r8sA8CPHD9!bt6d'"                                                  >> $HELM_VALUES
+#    echo "    # NOTE: Password can not be changed its stays 'r8sA8CPHD9!bt6d'"                                                  >> $HELM_VALUES
+#    echo "    username: gitea_admin"                                                                                            >> $HELM_VALUES
+#    echo "    password: r8sA8CPHD9!bt6d"                                                                                        >> $HELM_VALUES
     echo "    username: gitea_admin"                                                                                            >> $HELM_VALUES
-    echo "    password: r8sA8CPHD9!bt6d"                                                                                        >> $HELM_VALUES
+    echo "    password: $TDH_HARBOR_ADMIN_PASSWORD"                                                                             >> $HELM_VALUES
     echo "    email: \"gi@tea.com\""                                                                                            >> $HELM_VALUES
     echo ""                                                                                                                     >> $HELM_VALUES
     echo "ingress:"                                                                                                             >> $HELM_VALUES
@@ -6823,6 +6843,8 @@ installGitea() {
     echo "    - secretName: tanzu-demo-hub-tls"                                                                                 >> $HELM_VALUES
     echo "      hosts:"                                                                                                         >> $HELM_VALUES
     echo "        - $HELMCHART.$DOMAIN"                                                                                         >> $HELM_VALUES
+
+#huhu
 
 #gaga gitea
     messagePrint " ▪ Deploy the $HELMCHART Helm Chart" "$HELMCHART"
