@@ -241,7 +241,7 @@ echo "TDH_TKGMC_TOOLS_CONTAINER=tdh-tools-tkg-$DEPLOY_TKG_VERSION"             >
 echo ""                                                                        >> $CONFIG_FILE
 echo "nodes[0]='best-effort-medium'"                                           >> $CONFIG_FILE
 echo "nodes[1]='best-effort-large'"                                            >> $CONFIG_FILE
-echo "nodes[2]='best-effort-xlarge'"                                           >> $CONFIG_FILE
+echo "nodes[2]='best-effort-2xlarge'"                                           >> $CONFIG_FILE
 
 echo "vSphere for Tanzu supervisor cluster ($TMC_DISPLAY_NAME) successfilly registered"
 echo ""
