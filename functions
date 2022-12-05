@@ -6361,8 +6361,16 @@ installTAP() {
     echo ""                                                                                                                       >> $TAP_CONFIG
     echo "ceip_policy_disclosed: true"                                                                                            >> $TAP_CONFIG
     echo ""                                                                                                                       >> $TAP_CONFIG
+    echo "#! https://docs.vmware.com/en/VMware-Tanzu-Application-Platform/1.3/tap/GUID-application-accelerator-install-app-acc.html" >> $TAP_CONFIG
+    echo "#! $ tanzu accelerator generate tanzu-java-web-app --server-url https://accelerator.apps-contour.<your.domain>"         >> $TAP_CONFIG
     echo "accelerator:"                                                                                                           >> $TAP_CONFIG
-    echo "  service_type: \"LoadBalancer\""                                                                                       >> $TAP_CONFIG
+    echo "  ingress:"                                                                                                             >> $TAP_CONFIG
+    echo "    include: \"true\""                                                                                                  >> $TAP_CONFIG
+    echo "    enable_tls: \"true\""                                                                                               >> $TAP_CONFIG
+    echo "  tls:"                                                                                                                 >> $TAP_CONFIG
+    echo "    secret_name: tanzu-demo-hub-tls"                                                                                    >> $TAP_CONFIG
+    echo "    namespace: tdh-cert-admin"                                                                                          >> $TAP_CONFIG
+    echo "  domain: $DNS_DOMAIN"                                                                                                  >> $TAP_CONFIG
     echo ""                                                                                                                       >> $TAP_CONFIG
     echo "appliveview:"                                                                                                           >> $TAP_CONFIG
     echo "  connector_namespaces: [default]"                                                                                      >> $TAP_CONFIG
