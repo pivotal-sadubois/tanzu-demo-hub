@@ -12408,9 +12408,35 @@ createGiteaRepo() {
 # Reference Documentation:
 # ------------------------------------------------------------------------------------------
 createHarborProject() {
+  HARBOR_PROJECT=$1
+  TDH_HARBOR_REGISTRY_DNS_HARBOR=$(getConfigMapCache tanzu-demo-hub TDH_HARBOR_REGISTRY_DNS_HARBOR)
+  TDH_HARBOR_REGISTRY_ADMIN_PASSWORD=$(getConfigMapCache tanzu-demo-hub TDH_HARBOR_REGISTRY_ADMIN_PASSWORD)
+  TDH_HARBOR_REGISTRY_ENABLED=$(getConfigMapCache tanzu-demo-hub TDH_HARBOR_REGISTRY_ENABLED)
 
-a=1
+  AUTH_OPTIONS="--basic -u admin:$TDH_HARBOR_REGISTRY_ADMIN_PASSWORD"
 
+  curl $AUTH_OPTIONS -X 'GET' -H 'accept: application/json' \
+      https://${TDH_HARBOR_REGISTRY_DNS_HARBOR}/api/v2.0/projects 2>/dev/null > /tmp/output.json 
+  nam=$(jq -r --arg key "$HARBOR_PROJECT" '.[] | select(.name == $key).name' /tmp/output.json)
+  if [ "$nam" == "" -o "$nam" == "null" ]; then
+    TMP_API_DATA=/tmp/harbor_api_data.json
+    echo "{"                                                     >  $TMP_API_DATA
+    echo "  \"project_name\": \"$HARBOR_PROJECT\"",              >> $TMP_API_DATA
+    echo "  \"public\": true"                                >> $TMP_API_DATA
+    echo "}"                                                     >> $TMP_API_DATA
+
+    cnt=0; ret=1
+    while [ $ret -ne 0 -a $cnt -lt 5 ]; do
+      curl $AUTH_OPTIONS -X POST https://${TDH_HARBOR_REGISTRY_DNS_HARBOR}/api/v2.0/projects \
+           -H 'accept: application/json' \
+           -H 'Content-Type: application/json' \
+           --data "@$TMP_API_DATA" >/dev/null 2>&1; ret=$?
+      [ $ret -eq 0 ] && break
+
+      let cnt=cnt+1
+      sleep 10
+    done
+  fi
 }
 
 # ------------------------------------------------------------------------------------------
@@ -12434,7 +12460,8 @@ createGiteaOrg() {
   TDH_SERVICE_GITEA_SERVER_URL=$(getConfigMap tanzu-demo-hub TDH_SERVICE_GITEA_SERVER_URL)
   TDH_SERVICE_GITEA_ADMIN_TOKEN_ID=$(getConfigMap tanzu-demo-hub TDH_SERVICE_GITEA_ADMIN_TOKEN_ID)
 
-  curl -X 'GET' ${TDH_SERVICE_GITEA_SERVER_URL}/api/v1/orgs \
+#huhu
+  curl -X GET ${TDH_SERVICE_GITEA_SERVER_URL}/api/v1/orgs \
        -H 'accept: application/json' 2>/dev/null > /tmp/output.json
   nam=$(jq -r --arg key $GITEA_REPO '.[] | select(.username == $key).username' /tmp/output.json) 
   if [ "$nam" == "" ]; then 
