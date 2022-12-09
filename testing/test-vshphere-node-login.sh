@@ -9,17 +9,20 @@
 . ../functions
 . $HOME/.tanzu-demo-hub.cfg
 
-cfg=$(grep "TDH_TKGMC_SUPERVISORCLUSTER=$VSPHERE_TKGS_SUPERVISOR_CLUSTER" $HOME/.tanzu-demo-hub/config/*.cfg | \
-      head -1 | awk -F: '{ print $1 }')
+if [ "$1" == "" ]; then 
+  echo "USAGE: $0 <config-file.cfg>"
+  ls -1 $HOME/.tanzu-demo-hub/config/tkgmc*.cfg | sed 's/^/        => /g'
+  exit
+else
+  . $1
+fi
 
-fil=$(grep "TDH_TKGMC_KUBECONFIG" $cfg | awk -F'=' '{ printf("$%s\n", $NF )}')
-eval export KUBECONFIG=$fil
-
+export KUBECONFIG="$HOME/.tanzu-demo-hub/config/$TDH_TKGMC_KUBECONFIG"
 kubectl get virtualmachines -A -o json > /tmp/output.json
 CLUSTERS=$(jq -r '.items[].metadata.labels | select(."capw.vmware.com/cluster.role" == "controlplane")."capw.vmware.com/cluster.name"' /tmp/output.json) 
 
 for n in $CLUSTERS; do
-  sec=$(kubectl get secrets ${n}-ssh-password -o json | jq -r '.data."ssh-passwordkey"' | base64 -d )
+  sec=$(kubectl get secrets ${n}-ssh-password -n $TDH_TKGMC_VSPHERE_NAMESPACE -o json | jq -r '.data."ssh-passwordkey"' | base64 -d )
   printf "Cluster: %-55s SSH Password: %s\n"  $n $sec
 
   NODELIST=$(jq -r --arg key "$n" '.items[] | select(.spec.resourcePolicyName == $key).metadata.name' /tmp/output.json) 
