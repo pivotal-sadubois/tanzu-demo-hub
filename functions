@@ -75,7 +75,7 @@ execCat() {
 
   if [ -f /usr/local/bin/bat -o /usr/bin/bat ]; then
     #bat -p --color always $1 | sed 's/^/     /g'
-    bat -p --color always $1 | sed -e 's/^/     /g' -e '/^$/N;/^\n$/D'
+    bat -p --color always $1 | sed -e '/^$/d' -e 's/^/     /g' -e '/^$/N;/^\n$/D'
   else
     cat $1 | sed '/^$/N;/^\n$/D'
   fi
@@ -101,7 +101,7 @@ execCmd() {
     sleep 3
   done
 
-  $SED '${/^$/d;}' /tmp/execCmd.log | $SED 's/^/     /g'
+  $SED '${/^$/d;}' /tmp/execCmd.log | $SED -e '/^$/d' -e 's/^/     /g'
 
   #DELETEME
   #eval "$1" 2>&1 | $SED '${/^$/d;}' | $SED 's/^/     /g' 
@@ -119,9 +119,17 @@ loopCmd() {
   echo "     ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------"
   
   ret=1
-  while [ $ret -ne 0 ]; do
+  while [ $ret -ne 0 -a $cnt -lt 3 ]; do
     eval "$1" 2>&1; ret=$? | $SED -e 's/^/     /g'; ret=$?
+    let cnt=cnt+1
   done
+
+  if [ $ret -ne 0 ]; then
+    echo "XXX-1"
+    kubectl get ns
+    kubectl config get-contexts
+    echo "XXX-1"
+  fi
 
   echo "     ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------"
   echo ""
@@ -983,6 +991,27 @@ checkKubernetesServices() {
       fi
     fi
 
+    if [ "${service}" == "github-tap" ]; then
+      if [ "${TAP_GITHUB_USER}" == "" -o "${TAP_GITHUB_PASS}" == "" -o "${TAP_GITHUB_TOKEN}" == "" ]; then
+        missing_variables=1
+        echo ""
+        echo "  4MISSING ENVIRONMENT-VARIABES    DESCRIPTION        "
+        echo "  -------------------------------------------------------------------------------------------------------------------------------------------------------"
+
+        if [ "${TAP_GITHUB_USER}" == "" ]; then
+          echo "  TAP_GITHUB_USER                  (required) TAP Github User"
+        fi
+
+        if [ "${TAP_GITHUB_PASS}" == "" ]; then
+          echo "  TAP_GITHUB_PASS                  (required) TAP Github Password"
+        fi
+
+        if [ "${TAP_GITHUB_TOKEN}" == "" ]; then
+          echo "  TAP_GITHUB_TOKEN                 (required) TAP Github Access Token (https://github.com/settings/tokens)"
+        fi
+      fi
+    fi
+
     if [ "${service}" == "registry_vmware" ]; then
       if [ "${TDH_REGISTRY_VMWARE_NAME}" == "" -o "${TDH_REGISTRY_VMWARE_USER}" == "" -o "${TDH_REGISTRY_VMWARE_PASS}" == "" ]; then
         missing_variables=1
@@ -1752,7 +1781,7 @@ fi
         uodateConfigMap tanzu-demo-hub TDH_SERVICE_TANZU_DATA_PROTECTION           "true"
 
       else
-        messagePrint " ▪ Verify DataProtection for Cluster ($TANZU_TKGWC_NAME)"    "enabled"
+        messagePrint " ▪ DataProtection for Cluster ($TANZU_TKGWC_NAME)"    "enabled"
         messagePrint " ▪ Backuo Lockation"                                         "$TDH_TANZU_DATA_PROTECTION_BACKUP_LOCATION" 
         messagePrint " ▪ AWS CloudFormation ARN"                                   "$TDH_TANZU_DATA_PROTECTION_ARN" 
       fi
@@ -5746,7 +5775,6 @@ exit
       uodateConfigMap tanzu-demo-hub TANZU_TKGWC_TMC_PROVISIONER             "$TDH_PROVISIONER_NAME"
       uodateConfigMap tanzu-demo-hub TANZU_TKGWC_TMC_MANAGEMENT_CLUSTER      "$TDH_MANAGEMENT_CLUSTER"
     else
-#huhu tmcCreateCluster
       vsphereWorkloadClusterLogin $TMC_DEPLOYMENT $TDH_CLUSTER_NAME; ret=$?
       if [ ${ret} -eq 0 ]; then
         messagePrint " ▪ TKG Workload Cluster Status"                 "Ready"
@@ -6143,6 +6171,13 @@ installTAP() {
     messagePrint " ▪ Create Cluster Role Binding"     "default-tkg-admin-privileged-binding"
     kubectl create clusterrolebinding default-tkg-admin-privileged-binding --clusterrole=psp:vmware-system-privileged --group=system:authenticated > /dev/null 2>&1
 
+#huhu
+    messagePrint " ▪ Create supply chain (basic) repository"       "$DNS_HARBOR/tap-supply-chain-basic"
+    $TDHHOME/testing/harbor_create_project.sh tap-supply-chain-basic
+
+    messagePrint " ▪ Create supply chain (testing) repository"     "$DNS_HARBOR/tap-supply-chain-testing"
+    $TDHHOME/testing/harbor_create_project.sh tap-supply-chain-testing
+
     TAP_CONFIG_1=/tmp/tap_config_stage_1.yaml
     echo ""                                                                                                                       >  $TAP_CONFIG_1
     echo "profile: full"                                                                                                          >> $TAP_CONFIG_1
@@ -6268,17 +6303,17 @@ installTAP() {
     echo "ootb_supply_chain_basic:"                                                                                               >> $TAP_CONFIG
     echo "  registry:"                                                                                                            >> $TAP_CONFIG
     echo "    server: $DNS_HARBOR"                                                                                                >> $TAP_CONFIG
-    echo "    repository: \"tap-supply-chain\""                                                                                   >> $TAP_CONFIG
+    echo "    repository: \"tap-supply-chain-basic\""                                                                             >> $TAP_CONFIG
     echo "    "                                                                                                                   >> $TAP_CONFIG
     echo "ootb_supply_chain_testing:"                                                                                             >> $TAP_CONFIG
-    echo " registry:"                                                                                                             >> $TAP_CONFIG
-    echo "  server: \"source-lab.io\""                                                                                            >> $TAP_CONFIG
-    echo "  repository: \"tap/supply-chain\""                                                                                     >> $TAP_CONFIG
+    echo "  registry:"                                                                                                            >> $TAP_CONFIG
+    echo "    server: $DNS_HARBOR"                                                                                                >> $TAP_CONFIG
+    echo "    repository: \"tap-supply-chain-testing\""                                                                           >> $TAP_CONFIG
     echo "  "                                                                                                                     >> $TAP_CONFIG
     echo "ootb_supply_chain_testing_scanning:"                                                                                    >> $TAP_CONFIG
-    echo " registry:"                                                                                                             >> $TAP_CONFIG
-    echo "  server: \"source-lab.io\""                                                                                            >> $TAP_CONFIG
-    echo "  repository: \"tap/supply-chain\""                                                                                     >> $TAP_CONFIG
+    echo "  registry:"                                                                                                            >> $TAP_CONFIG
+    echo "    server: $DNS_HARBOR"                                                                                                >> $TAP_CONFIG
+    echo "    repository: \"tap-supply-chain-scanning\""                                                                          >> $TAP_CONFIG
     echo ""                                                                                                                       >> $TAP_CONFIG
     echo "grype:"                                                                                                                 >> $TAP_CONFIG
     echo "  targetImagePullSecret: \"supply-chain\""                                                                              >> $TAP_CONFIG
@@ -12440,6 +12475,86 @@ createHarborProject() {
 }
 
 # ------------------------------------------------------------------------------------------
+# Function Name ......: deleteGitHubRepository
+# Function Purpose ...: Delete Github Repository
+# ------------------------------------------------------------------------------------------
+# Argument ($1) ......: n/a
+# ------------------------------------------------------------------------------------------
+# Return Value .......: n/a
+# ------------------------------------------------------------------------------------------
+# Reference Documentation:
+# ------------------------------------------------------------------------------------------
+deleteGitHubRepository() {
+  GITHUB_TOKEN=$TAP_GITHUB_TOKEN
+  GITHUB_OWNER=$TAP_GITHUB_USER
+  GITHUB_REPO=$1
+  GITHUB_URL=https://api.github.com
+
+  curl -s -X GET --url https://api.github.com/users/$GITHUB_OWNER/repos \
+    -H "authorization: Bearer $GITHUB_TOKEN" \
+    -H 'content-type: application/json' 2>/dev/null > /tmp/output.json
+  nam=$(jq -r --arg key $GITHUB_REPO '.[] | select(.name == $key).name' /tmp/output.json)
+  if [ "$nam" == "$GITHUB_REPO" ]; then
+    cnt=0; ret=1
+    while [ $ret -ne 0 -a $cnt -lt 5 ]; do
+      curl -X DELETE --url https://api.github.com/repos/$GITHUB_OWNER/$GITHUB_REPO \
+           -H "Accept: application/vnd.github+json" \
+           -H "authorization: Bearer $GITHUB_TOKEN" \
+           -H 'Content-Type: application/json' >/dev/null 2>&1; ret=$?
+      [ $ret -eq 0 ] && break
+
+      let cnt=cnt+1
+      sleep 10
+    done
+  fi
+}
+
+# ------------------------------------------------------------------------------------------
+# Function Name ......: createGitHubRepository
+# Function Purpose ...: Create Github Repository
+# ------------------------------------------------------------------------------------------
+# Argument ($1) ......: n/a
+# ------------------------------------------------------------------------------------------
+# Return Value .......: n/a
+# ------------------------------------------------------------------------------------------
+# Reference Documentation:
+# ------------------------------------------------------------------------------------------
+createGitHubRepository() {
+  GITHUB_OWNER=$TAP_GITHUB_USER
+  GITHUB_TOKEN=$TAP_GITHUB_TOKEN
+  GITHUB_REPO=$1
+  GITHUB_URL=https://api.github.com
+
+  curl -s -X GET --url https://api.github.com/users/$GITHUB_OWNER/repos \
+    -H "authorization: Bearer $GITHUB_TOKEN" \
+    -H 'content-type: application/json' 2>/dev/null > /tmp/output.json
+  nam=$(jq -r --arg key $GITHUB_REPO '.[] | select(.name == $key).name' /tmp/output.json)
+  if [ "$nam" == "" -o "$nam" == "null" ]; then
+    TMP_API_DATA=/tmp/github_api_data.json
+
+    echo "{"                                                     >  $TMP_API_DATA
+    echo "  \"name\":\"$GITHUB_REPO\","                          >> $TMP_API_DATA
+    echo "  \"description\":\"Generated by tanzu-demo-hub\","    >> $TMP_API_DATA
+    echo "  \"private\":false,"                                  >> $TMP_API_DATA
+    echo "  \"is_template\":true"                                >> $TMP_API_DATA
+    echo "}"                                                     >> $TMP_API_DATA
+
+    cnt=0; ret=1
+    while [ $ret -ne 0 -a $cnt -lt 5 ]; do
+      curl -X POST --url https://api.github.com/user/repos \
+           -H "Accept: application/vnd.github+json" \
+           -H "authorization: Bearer $GITHUB_TOKEN" \
+           -H 'Content-Type: application/json' \
+           --data "@$TMP_API_DATA" >/dev/null 2>&1; ret=$?
+      [ $ret -eq 0 ] && break
+
+      let cnt=cnt+1
+      sleep 10
+    done
+  fi
+}
+
+# ------------------------------------------------------------------------------------------
 # Function Name ......: createGiteaOrg
 # Function Purpose ...: Get Gitea Org
 # ------------------------------------------------------------------------------------------
@@ -12460,7 +12575,6 @@ createGiteaOrg() {
   TDH_SERVICE_GITEA_SERVER_URL=$(getConfigMap tanzu-demo-hub TDH_SERVICE_GITEA_SERVER_URL)
   TDH_SERVICE_GITEA_ADMIN_TOKEN_ID=$(getConfigMap tanzu-demo-hub TDH_SERVICE_GITEA_ADMIN_TOKEN_ID)
 
-#huhu
   curl -X GET ${TDH_SERVICE_GITEA_SERVER_URL}/api/v1/orgs \
        -H 'accept: application/json' 2>/dev/null > /tmp/output.json
   nam=$(jq -r --arg key $GITEA_REPO '.[] | select(.username == $key).username' /tmp/output.json) 
@@ -15938,6 +16052,25 @@ tmcAPI_getCliBinary() {
 }
 
 # ------------------------------------------------------------------------------------------
+# Function Name ......: deleteAppWorkload
+# Function Purpose ...: delete TAP Application Workload
+# ------------------------------------------------------------------------------------------
+# Argument ($1) ......: <namespace>
+# Argument ($1) ......: <workload>
+# ------------------------------------------------------------------------------------------
+# Return Value .......: 0 SUCCESS, 1 ON-FAILURE
+# ------------------------------------------------------------------------------------------
+deleteAppWorkload() {
+  TAP_NAMESPACE=$1
+  TAP_WORKLOAD=$2
+
+  cnt=$(tanzu -n $TAP_NAMESPACE apps workload list 2>/dev/null | egrep -c "^${TAP_WORKLOAD}$")
+  if [ $cnt -gt 0 ]; then 
+    tanzu -n $$TAP_NAMESPACE apps workload delete $TAP_WORKLOAD 2>/dev/null
+  fi
+}
+
+# ------------------------------------------------------------------------------------------
 # Function Name ......: tmcAPI_getCliBinary
 # Function Purpose ...: Get TMC CLI Binary
 # ------------------------------------------------------------------------------------------
@@ -15954,6 +16087,7 @@ tmcAPI_getClusters() {
                  -H 'Content-Type: application/x-www-form-urlencoded' \
                  "${TMC_SERVER}/v1alpha/system/binaries" 2>/dev/null | jq -r '.latestVersion'
 }
+
 
 #kubectl get tanzukubernetescluster -n tanzu-demo-hub tdh-vsphere-sadubois
 #kubectl delete tanzukubernetescluster -n tanzu-demo-hub tdh-vsphere-sadubois
