@@ -6171,12 +6171,14 @@ installTAP() {
     messagePrint " ▪ Create Cluster Role Binding"     "default-tkg-admin-privileged-binding"
     kubectl create clusterrolebinding default-tkg-admin-privileged-binding --clusterrole=psp:vmware-system-privileged --group=system:authenticated > /dev/null 2>&1
 
-#huhu
     messagePrint " ▪ Create supply chain (basic) repository"       "$DNS_HARBOR/tap-supply-chain-basic"
-    $TDHHOME/testing/harbor_create_project.sh tap-supply-chain-basic
+    createHarborProject tap-supply-chain-basic
 
     messagePrint " ▪ Create supply chain (testing) repository"     "$DNS_HARBOR/tap-supply-chain-testing"
-    $TDHHOME/testing/harbor_create_project.sh tap-supply-chain-testing
+    createHarborProject tap-supply-chain-testing
+
+    messagePrint " ▪ Create supply chain (scanning) repository"     "$DNS_HARBOR/tap-supply-chain-scanning"
+    createHarborProject tap-supply-chain-scanning
 
     TAP_CONFIG_1=/tmp/tap_config_stage_1.yaml
     echo ""                                                                                                                       >  $TAP_CONFIG_1
