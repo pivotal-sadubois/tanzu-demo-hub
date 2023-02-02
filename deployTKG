@@ -292,7 +292,24 @@ runningPods vmware-system-csi
 runningPods vmware-system-tmc
 
 messageTitle "Waiting for Kapp Services to have completed starting"
-waitForKappServices    tanzu-package-repo-global tanzu-standard-ctrl 
+kapp list -n tanzu-package-repo-global > /dev/null 2>&1; ret=$?
+if [ $ret -eq 0 ]; then 
+  app=$(kapp list -n tanzu-package-repo-global --json 2>/dev/null | jq -r '.Tables[].Rows[].name')
+  for n in $app; do
+    messagePrint " ▪ Verify Kapp Application"        "$n"
+    waitForKappServices    tanzu-package-repo-global $n 
+  done
+else
+  echo "ERROR: kapp controller ist not installed correctly"
+  if [ "$NATIVE" == "0" ]; then
+    echo "       => tools/${TDH_TOOLS}.sh"
+    echo "          tdh-tools:/$ kapp list -n tanzu-package-repo-global"
+    echo "          tdh-tools:/$ exit"
+  else
+    echo "       => kapp list -n tanzu-package-repo-global"
+  fi
+  exit 1
+fi
 
 uodateConfigMap tanzu-demo-hub TDH_DOMAIN                         $AWS_HOSTED_DNS_DOMAIN
 uodateConfigMap tanzu-demo-hub TDH_ENVNAME                        $TDH_TKGMC_ENVNAME

@@ -14,7 +14,7 @@ export TDH_TOOLS_CONTAINER_TYPE=tkg
 unset TMC_MANAGEMENT_CLUSTER
 
 # --- PRESETUP ---
-mkdir -p $HOME/.hube  $HOME/.tanzu-demo-hub/config $HOME/.tanzu-demo-hub/cache
+mkdir -p $HOME/.kube  $HOME/.tanzu-demo-hub/config $HOME/.tanzu-demo-hub/cache
 
 if [ "$(hostname)" == "tdh-tools" ]; then
   export TDHPATH=/home/tanzu/tanzu-demo-hub

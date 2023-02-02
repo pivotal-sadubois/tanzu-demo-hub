@@ -6350,18 +6350,19 @@ installTAP() {
     # https://docs.vmware.com/en/VMware-Tanzu-Application-Platform/1.1/tap/GUID-tap-gui-troubleshooting.html
     # 2022-07-06T22:40:11.421Z catalog warn Unable to read url, Error: Incorrect url: https://gitea.apps-contour.awstkg.pcfsdu.com/tanzu/yelb_catalog/raw/branch/master/catalog-info.yaml, Error: Wrong GitLab URL type=plugin entity=location:default/generated-2c00d586b2fbd35aa8d0cf25570923d1f1416d1c
 
-    #echo "    integrations:"                                                                                                      >> $TAP_CONFIG
-    #echo "      github:"                                                                                                          >> $TAP_CONFIG
-    #echo "        - host: https://gitea.$DNS_DOMAIN"                                                                              >> $TAP_CONFIG
-    #echo "          apiBaseUrl: https://gitea.$DNS_DOMAIN/api/v1"                                                                 >> $TAP_CONFIG
-    #echo "          token: $TDH_SERVICE_GITEA_ADMIN_TOKEN_ID"                                                                     >> $TAP_CONFIG
+    echo "   integrations:"                                                                                                       >> $TAP_CONFIG
+    echo "     github:"                                                                                                           >> $TAP_CONFIG
+    echo "       - host: github.com"                                                                                              >> $TAP_CONFIG
+    echo "         token: $TAP_GITHUB_TOKEN"                                                                                      >> $TAP_CONFIG
     echo "    catalog:"                                                                                                           >> $TAP_CONFIG
     echo "      locations:"                                                                                                       >> $TAP_CONFIG
     echo "        - type: url"                                                                                                    >> $TAP_CONFIG
     echo "          target: https://github.com/dambor/yelb-catalog/blob/main/catalog-info.yaml"                                   >> $TAP_CONFIG
-    echo "#         target: https://gitea.$DNS_DOMAIN/tanzu/yelb_catalog/raw/branch/master/catalog-info.yaml"                     >> $TAP_CONFIG
-    echo "#       - type: url"                                                                                                    >> $TAP_CONFIG
-    echo "#         target: https://gitea.$DNS_DOMAIN/tanzu//blank_catalog/raw/branch/master/catalog-info.yaml"                   >> $TAP_CONFIG
+    echo "        - type: url"                                                                                                    >> $TAP_CONFIG
+    echo "          target: https://gitea.$DNS_DOMAIN/tanzu//blank_catalog/raw/branch/master/catalog-info.yaml"                   >> $TAP_CONFIG
+    echo "        - type: url"                                                                                                    >> $TAP_CONFIG
+    echo "          target: https://github.com/sample-accelerators/tanzu-java-web-app/blob/main/catalog/catalog-info.yaml"        >> $TAP_CONFIG
+
     echo "    backend:"                                                                                                           >> $TAP_CONFIG
     echo "        baseUrl: https://tap-gui.$DNS_DOMAIN"                                                                           >> $TAP_CONFIG
     echo "        cors:"                                                                                                          >> $TAP_CONFIG
@@ -13766,9 +13767,9 @@ TanzuPackage_Harbor () {
     echo "    registry:"                                                                                                        >> $HARBOR_VALUES
     echo "      accessMode: ReadWriteOnce"                                                                                      >> $HARBOR_VALUES
     echo "      size: 50Gi"                                                                                                     >> $HARBOR_VALUES
-    echo "    jobservice:"                                                                                                        >> $HARBOR_VALUES
-    echo "      accessMode: ReadWriteOnce"                                                                                      >> $HARBOR_VALUES
-    echo "      size: 5Gi"                                                                                                      >> $HARBOR_VALUES
+#    echo "    jobservice:"                                                                                                        >> $HARBOR_VALUES
+#    echo "      accessMode: ReadWriteOnce"                                                                                      >> $HARBOR_VALUES
+#    echo "      size: 5Gi"                                                                                                      >> $HARBOR_VALUES
     echo "    database:"                                                                                                        >> $HARBOR_VALUES
     echo "      accessMode: ReadWriteOnce"                                                                                      >> $HARBOR_VALUES
     echo "      size: 50Gi"                                                                                                     >> $HARBOR_VALUES
@@ -14892,9 +14893,11 @@ waitForKappServices() {
 
   cnt=1; ret=0
   while [ $cnt -ne 0 -a $ret -lt 15 ]; do
-    cmdLoop kapp inspect -a $SVC -n $NAMESERVICE --json > /tmp/output.json
-    cnt=$(jq -r '.Tables[].Rows[] | select(.reconcile_state != "ok").name' /tmp/output.json 2>/dev/null | wc -l | awk '{ print $1 }')
-    [ $cnt -eq 0 ] && break
+    kapp inspect -a $SVC -n $NAMESERVICE --json > /tmp/output.json 2>/dev/null; ret=$?
+    if [ $ret -eq 0 ]; then
+      cnt=$(jq -r '.Tables[].Rows[] | select(.reconcile_state != "ok").name' /tmp/output.json 2>/dev/null | wc -l | awk '{ print $1 }')
+      [ $cnt -eq 0 ] && break
+    fi
     sleep 60
     let ret=ret+1
   done
@@ -16099,5 +16102,4 @@ tmcAPI_getClusters() {
 
 #tanzu package install cert-manager-pkg --package-name cert-manager.tanzu.vmware.com --namespace tanzu-system-packages --version 1.5.3+vmware.2-tkg.1 --create-namespace 
 #kapp list -A
-#kapp inspect -a cert-manager-pkg-ctrl -n tanzu-system-packages
 
