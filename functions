@@ -6457,7 +6457,7 @@ installTAP() {
     echo "        origin: https://tap-gui.$DNS_DOMAIN"                                                                             >> $TAP_CONFIG
     echo "      reading:"                                                                                                          >> $TAP_CONFIG
     echo "        allow:"                                                                                                          >> $TAP_CONFIG
-    echo "          - host: https://*.$DNS_DOMAIN"                                                                                 >> $TAP_CONFIG
+    echo "          - host: '*.$DNS_DOMAIN'"                                                                                       >> $TAP_CONFIG
     echo ""                                                                                                                        >> $TAP_CONFIG
 
     echo "#    proxy:"                                                                                                            >> $TAP_CONFIG
