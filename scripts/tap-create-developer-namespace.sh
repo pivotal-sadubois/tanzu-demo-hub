@@ -7,18 +7,15 @@
 # Description ..: Tanzu Demo Hub - Installation Tanzu TKG utilities on Jump Host
 # ############################################################################################
 [ "$(hostname)" != "tdh-tools" ] && echo "ERROR: Need to run within a tdh-tools container" && exit
+
+export TDHHOME=$HOME/tanzu-demo-hub
 export NAMESPACE=$1
-export TANZU_DEMO_HUB=$(cd "$(pwd)/$(dirname $0)/.."; pwd)
-export TDHPATH=$(cd "$(pwd)/$(dirname $0)/.."; pwd)
-export DEPLOY_TKG_TEMPLATE=tkgmc-dev-vsphere-macbook.cfg
-export TANZU_DEMO_HUB=$(cd "$(pwd)/$(dirname $0)/.."; pwd)
-export TDHPATH=$(cd "$(pwd)/$(dirname $0)/.."; pwd)
 
 if  [ "$NAMESPACE" == "" ]; then 
   echo "Usage: $0 <namespace>"; exit 1
 fi
 
-[ -f $TANZU_DEMO_HUB/functions ] && . $TANZU_DEMO_HUB/functions
+[ -f $TDHHOME/functions ] && . $TDHHOME/functions
 [ -f $HOME/.tanzu-demo-hub.cfg ] && . $HOME/.tanzu-demo-hub.cfg
 
 # --- VERIFY CLUSTER ACCESS ---
@@ -35,15 +32,16 @@ REGISTRY_PASSWORD=$(getConfigMap tanzu-demo-hub TDH_HARBOR_REGISTRY_ADMIN_PASSWO
 REGISTRY_SERVER=$(getConfigMap tanzu-demo-hub TDH_HARBOR_REGISTRY_DNS_HARBOR)
 
 # --- CREATE NAMESPACE If IT DOES NOT EXIST ----
-createNamespace $NAMESPACE > /dev/null 2>&1
+[ "$NAMESPACE" != "default" ] && kubectl create ns --dry-run=client -o yaml $NAMESPACE | kubectl apply -f -
 
-kubectl create ns --dry-run=client -o yaml $NAMESPACE | kubectl apply -f -
 tanzu secret registry add registry-credentials \
   --server $REGISTRY_SERVER \
   --username "$REGISTRY_USERNAME" \
   --password "$REGISTRY_PASSWORD" \
-  --namespace "$NAMESPACE"
-cat <<EOF | kubectl -n "$NAMESPACE" apply -f -
+  --namespace "$NAMESPACE" \
+  --verbose 0 >/dev/null 2>&1
+
+cat <<EOF | kubectl -n "$NAMESPACE" apply -f - 2>/dev/null
 apiVersion: v1
 kind: Secret
 metadata:

@@ -6187,6 +6187,11 @@ installTAP() {
     echo "excluded_packages:"                                                                                                     >> $TAP_CONFIG_1
     echo "  - cert-manager.tanzu.vmware.com"                                                                                      >> $TAP_CONFIG_1
     echo "  - contour.tanzu.vmware.com"                                                                                           >> $TAP_CONFIG_1
+    echo "  - sso.apps.tanzu.vmware.com"                                                                                          >> $TAP_CONFIG_1
+    echo "  - eventing.tanzu.vmware.com"                                                                                          >> $TAP_CONFIG_1
+    echo "  - namespace-provisioner.apps.tanzu.vmware.com"                                                                        >> $TAP_CONFIG_1
+    echo "  - policy.tanzu.vmware.com"                                                                                            >> $TAP_CONFIG_1
+    echo "  - apis.apps.tanzu.vmware.com"                                                                                         >> $TAP_CONFIG_1
     echo "  - accelerator.apps.tanzu.vmware.com"                                                                                  >> $TAP_CONFIG_1
     echo "  - eventing.apps.tanzu.vmware.com"                                                                                     >> $TAP_CONFIG_1
     echo "  - api-portal.tanzu.vmware.com"                                                                                        >> $TAP_CONFIG_1
@@ -6225,8 +6230,13 @@ installTAP() {
     echo "excluded_packages:"                                                                                                     >> $TAP_CONFIG_2
     echo "  - cert-manager.tanzu.vmware.com"                                                                                      >> $TAP_CONFIG_2
     echo "  - contour.tanzu.vmware.com"                                                                                           >> $TAP_CONFIG_2
+    echo "  - sso.apps.tanzu.vmware.com"                                                                                          >> $TAP_CONFIG_2
+    echo "  - eventing.tanzu.vmware.com"                                                                                          >> $TAP_CONFIG_2
+    echo "  - namespace-provisioner.apps.tanzu.vmware.com"                                                                        >> $TAP_CONFIG_2
+    echo "  - policy.tanzu.vmware.com"                                                                                            >> $TAP_CONFIG_2
+    echo "  - apis.apps.tanzu.vmware.com"                                                                                         >> $TAP_CONFIG_2
     echo "  # accelerator.apps.tanzu.vmware.com"                                                                                  >> $TAP_CONFIG_2
-    echo "  # eventing.apps.tanzu.vmware.com"                                                                                     >> $TAP_CONFIG_1
+    echo "  # eventing.apps.tanzu.vmware.com"                                                                                     >> $TAP_CONFIG_2
     echo "  # api-portal.tanzu.vmware.com"                                                                                        >> $TAP_CONFIG_2
     echo "  # backend.appliveview.tanzu.vmware.com"                                                                               >> $TAP_CONFIG_2
     echo "  # connector.appliveview.tanzu.vmware.com"                                                                             >> $TAP_CONFIG_2
@@ -6263,8 +6273,13 @@ installTAP() {
     echo "excluded_packages:"                                                                                                     >> $TAP_CONFIG_3
     echo "  - cert-manager.tanzu.vmware.com"                                                                                      >> $TAP_CONFIG_3
     echo "  - contour.tanzu.vmware.com"                                                                                           >> $TAP_CONFIG_3
+    echo "  # sso.apps.tanzu.vmware.com"                                                                                          >> $TAP_CONFIG_3
+    echo "  # eventing.tanzu.vmware.com"                                                                                          >> $TAP_CONFIG_3
+    echo "  # namespace-provisioner.apps.tanzu.vmware.com"                                                                        >> $TAP_CONFIG_3
+    echo "  # policy.tanzu.vmware.com"                                                                                            >> $TAP_CONFIG_3
+    echo "  # apis.apps.tanzu.vmware.com"                                                                                         >> $TAP_CONFIG_3
     echo "  # accelerator.apps.tanzu.vmware.com"                                                                                  >> $TAP_CONFIG_3
-    echo "  # eventing.apps.tanzu.vmware.com"                                                                                     >> $TAP_CONFIG_1
+    echo "  # eventing.apps.tanzu.vmware.com"                                                                                     >> $TAP_CONFIG_3
     echo "  # api-portal.tanzu.vmware.com"                                                                                        >> $TAP_CONFIG_3
     echo "  # backend.appliveview.tanzu.vmware.com"                                                                               >> $TAP_CONFIG_3
     echo "  # connector.appliveview.tanzu.vmware.com"                                                                             >> $TAP_CONFIG_3
@@ -6309,19 +6324,29 @@ installTAP() {
     echo "  registry:"                                                                                                            >> $TAP_CONFIG
     echo "    server: $DNS_HARBOR"                                                                                                >> $TAP_CONFIG
     echo "    repository: \"tap-supply-chain-basic\""                                                                             >> $TAP_CONFIG
-    echo "    "                                                                                                                   >> $TAP_CONFIG
+    echo ""                                                                                                                       >> $TAP_CONFIG
     echo "ootb_supply_chain_testing:"                                                                                             >> $TAP_CONFIG
     echo "  registry:"                                                                                                            >> $TAP_CONFIG
     echo "    server: $DNS_HARBOR"                                                                                                >> $TAP_CONFIG
     echo "    repository: \"tap-supply-chain-testing\""                                                                           >> $TAP_CONFIG
-    echo "  "                                                                                                                     >> $TAP_CONFIG
+    echo "  gitops:"
+    echo "    server_address: https://github.com/"                                                                                >> $TAP_CONFIG
+    echo "    repository_owner: repository-owner"                                                                                 >> $TAP_CONFIG
+    echo "    repository_name: tap-gitops"                                                                                        >> $TAP_CONFIG
+    echo "    branch: prod"                                                                                                       >> $TAP_CONFIG
+    echo "    ssh_secret: git-https"                                                                                              >> $TAP_CONFIG
+    echo "    commit_strategy: pull_request"                                                                                      >> $TAP_CONFIG
+    echo "    pull_request:"                                                                                                      >> $TAP_CONFIG
+    echo "      server_kind: github"                                                                                              >> $TAP_CONFIG
+    echo "      pull_request_title: Approval for Production deployment"                                                           >> $TAP_CONFIG
+    echo "      pull_request_body: Please review the configuration and approve the deployment to production"                      >> $TAP_CONFIG
+    echo "      commit_branch: \"\""                                                                                              >> $TAP_CONFIG
+
+    echo ""                                                                                                                       >> $TAP_CONFIG
     echo "ootb_supply_chain_testing_scanning:"                                                                                    >> $TAP_CONFIG
     echo "  registry:"                                                                                                            >> $TAP_CONFIG
     echo "    server: $DNS_HARBOR"                                                                                                >> $TAP_CONFIG
     echo "    repository: \"tap-supply-chain-scanning\""                                                                          >> $TAP_CONFIG
-    echo ""                                                                                                                       >> $TAP_CONFIG
-    echo "grype:"                                                                                                                 >> $TAP_CONFIG
-    echo "  targetImagePullSecret: \"supply-chain\""                                                                              >> $TAP_CONFIG
     echo ""                                                                                                                       >> $TAP_CONFIG
     echo "contour:"                                                                                                               >> $TAP_CONFIG
     echo "  infrastructure_provider: aws"                                                                                         >> $TAP_CONFIG
@@ -6330,11 +6355,15 @@ installTAP() {
     echo "      aws:"                                                                                                             >> $TAP_CONFIG
     echo "        LBType: nlb"                                                                                                    >> $TAP_CONFIG
     echo ""                                                                                                                       >> $TAP_CONFIG
-    echo ""                                                                                                                       >> $TAP_CONFIG
     echo "cnrs:"                                                                                                                  >> $TAP_CONFIG
     echo "  domain_name: cnrs.$DNS_DOMAIN"                                                                                        >> $TAP_CONFIG
     echo ""                                                                                                                       >> $TAP_CONFIG
+    echo "grype:"                                                                                                                 >> $TAP_CONFIG
+    #echo "  targetImagePullSecret: \"supply-chain\""                                                                              >> $TAP_CONFIG
+    #echo "  namespace: dev-space"                                                                                                 >> $TAP_CONFIG
+    #echo "  targetImagePullSecret: registry-credentials"                                                                          >> $TAP_CONFIG
     echo ""                                                                                                                       >> $TAP_CONFIG
+
     echo "image_policy_webhook:"                                                                                                  >> $TAP_CONFIG
     echo "   allow_unmatched_images: true"                                                                                        >> $TAP_CONFIG
     echo ""                                                                                                                       >> $TAP_CONFIG
@@ -6342,10 +6371,9 @@ installTAP() {
     crt=$(kubectl get secret tanzu-demo-hub-tls -o json | jq -r '.data."tls.crt"') 
     key=$(kubectl get secret tanzu-demo-hub-tls -o json | jq -r '.data."tls.key"') 
 
+gaga0
     echo "learningcenter:"                                                                                                        >> $TAP_CONFIG
-    #echo "  ingressDomain: learningcenter.$DNS_DOMAIN"                                                                            >> $TAP_CONFIG
     echo "  ingressDomain: $DNS_DOMAIN"                                                                            >> $TAP_CONFIG
-    # --- Minicube (standard), vsphere pez: tanzu"
     echo "  storageClass: \"$VSPHERE_TKGS_SUPERVISOR_STORAGE_CLASS\""                                                              >> $TAP_CONFIG
     echo "  ingressSecret:"                                                                                                       >> $TAP_CONFIG
     echo "    certificate: |"                                                                                                     >> $TAP_CONFIG
@@ -6353,17 +6381,19 @@ installTAP() {
     echo "    privateKey: |"                                                                                                      >> $TAP_CONFIG
     kubectl get secret tanzu-demo-hub-tls -o json | jq -r '.data."tls.key"' | base64 -d | sed 's/^/      /g'                      >> $TAP_CONFIG
     echo ""                                                                                                                       >> $TAP_CONFIG
+
     echo "ceip_policy_disclosed: true"                                                                                            >> $TAP_CONFIG
     echo ""                                                                                                                       >> $TAP_CONFIG
     echo "#! https://docs.vmware.com/en/VMware-Tanzu-Application-Platform/1.3/tap/GUID-application-accelerator-install-app-acc.html" >> $TAP_CONFIG
     echo "#! $ tanzu accelerator generate tanzu-java-web-app --server-url https://accelerator.apps-contour.<your.domain>"         >> $TAP_CONFIG
+    echo ""                                                                                                                       >> $TAP_CONFIG
     echo "accelerator:"                                                                                                           >> $TAP_CONFIG
     echo "  ingress:"                                                                                                             >> $TAP_CONFIG
     echo "    include: \"true\""                                                                                                  >> $TAP_CONFIG
     echo "    enable_tls: \"true\""                                                                                               >> $TAP_CONFIG
     echo "  tls:"                                                                                                                 >> $TAP_CONFIG
-    echo "    secret_name: tanzu-demo-hub-tls"                                                                                    >> $TAP_CONFIG
     echo "    namespace: tdh-cert-admin"                                                                                          >> $TAP_CONFIG
+    echo "    secret_name: tanzu-demo-hub-tls"                                                                                    >> $TAP_CONFIG
     echo "  domain: $DNS_DOMAIN"                                                                                                  >> $TAP_CONFIG
     echo ""                                                                                                                       >> $TAP_CONFIG
     echo "appliveview:"                                                                                                           >> $TAP_CONFIG
@@ -6371,15 +6401,20 @@ installTAP() {
     echo "  service_type: LoadBalancer"                                                                                           >> $TAP_CONFIG
     echo ""                                                                                                                       >> $TAP_CONFIG
     echo "metadata_store:"                                                                                                        >> $TAP_CONFIG
+    echo "  ns_for_export_app_cert: '*'"                                                                                          >> $TAP_CONFIG
     echo "  app_service_type: ClusterIP"                                                                                          >> $TAP_CONFIG
     echo "  storage_class_name: \"$VSPHERE_TKGS_SUPERVISOR_STORAGE_CLASS\""                                                       >> $TAP_CONFIG
-    echo "  ingress_domain: apps-contour.vsptap.pcfsdu.com"                                                                       >> $TAP_CONFIG
+    echo "  ingress_domain: $DNS_DOMAIN"                                                                       >> $TAP_CONFIG
     echo "  ingress_enabled: \"true\""                                                                                            >> $TAP_CONFIG
     echo "  use_cert_manager: \"true\""                                                                                           >> $TAP_CONFIG
-    echo "  #TLS not working, patch it with scripts/tap-metadata-store-patch-httpproxy.sh"                                        >> $TAP_CONFIG
     echo "  tls:"                                                                                                                 >> $TAP_CONFIG
-    echo "    secretName: tanzu-demo-hub-tls"                                                                                     >> $TAP_CONFIG
     echo "    namespace: tdh-cert-admin"                                                                                          >> $TAP_CONFIG
+    echo "    secretName: tanzu-demo-hub-tls"                                                                                     >> $TAP_CONFIG
+    echo ""                                                                                                                       >> $TAP_CONFIG
+
+    echo "scanning:"                                                                                                              >> $TAP_CONFIG
+    echo "  metadataStore:"                                                                                                       >> $TAP_CONFIG
+    echo "    url: \"\""                                                                                                          >> $TAP_CONFIG
     echo ""                                                                                                                       >> $TAP_CONFIG
 
     echo "tap_gui:"                                                                                                               >> $TAP_CONFIG
@@ -6409,42 +6444,51 @@ installTAP() {
     echo "      github:"                                                                                                           >> $TAP_CONFIG
     echo "        - host: github.com"                                                                                              >> $TAP_CONFIG
     echo "          token: $TAP_GITHUB_TOKEN"                                                                                      >> $TAP_CONFIG
-    echo "    catalog:"                                                                                                           >> $TAP_CONFIG
-    echo "      locations:"                                                                                                       >> $TAP_CONFIG
-    echo "        - type: url"                                                                                                    >> $TAP_CONFIG
-    echo "          target: https://github.com/dambor/yelb-catalog/blob/main/catalog-info.yaml"                                   >> $TAP_CONFIG
-    echo "        - type: url"                                                                                                    >> $TAP_CONFIG
-    echo "          target: https://gitea.$DNS_DOMAIN/tanzu//blank_catalog/raw/branch/master/catalog-info.yaml"                   >> $TAP_CONFIG
-    echo "        - type: url"                                                                                                    >> $TAP_CONFIG
-    echo "          target: https://github.com/sample-accelerators/tanzu-java-web-app/blob/main/catalog/catalog-info.yaml"        >> $TAP_CONFIG
 
-    echo "    backend:"                                                                                                           >> $TAP_CONFIG
-    echo "        baseUrl: https://tap-gui.$DNS_DOMAIN"                                                                           >> $TAP_CONFIG
-    echo "        cors:"                                                                                                          >> $TAP_CONFIG
-    echo "            origin: https://tap-gui.$DNS_DOMAIN"                                                                        >> $TAP_CONFIG
-    echo "        reading:"                                                                                                       >> $TAP_CONFIG
-    echo "          allow:"                                                                                                       >> $TAP_CONFIG
-    echo "            - host: acc-server.accelerator-system.svc.cluster.local"                                                    >> $TAP_CONFIG
-    echo "            - host: https://tap-gui.$DNS_DOMAIN"                                                                        >> $TAP_CONFIG
+    echo "    catalog:"                                                                                                            >> $TAP_CONFIG
+    echo "      locations:"                                                                                                        >> $TAP_CONFIG
+    echo "        - type: url"                                                                                                     >> $TAP_CONFIG
+    echo "          target: https://github.com/tsalm-pivotal/spring-cloud-demo-tap/blob/main/tap/catalog/catalog-info.yaml"        >> $TAP_CONFIG
+    echo "        - type: url"                                                                                                     >> $TAP_CONFIG
+    echo "          target: https://github.com/dambor/yelb-catalog/blob/main/catalog-info.yaml"                                    >> $TAP_CONFIG
+
+    echo "    backend:"                                                                                                            >> $TAP_CONFIG
+    echo "      baseUrl: https://tap-gui.$DNS_DOMAIN"                                                                              >> $TAP_CONFIG
+    echo "      cors:"                                                                                                             >> $TAP_CONFIG
+    echo "        origin: https://tap-gui.$DNS_DOMAIN"                                                                             >> $TAP_CONFIG
+    echo "      reading:"                                                                                                          >> $TAP_CONFIG
+    echo "        allow:"                                                                                                          >> $TAP_CONFIG
+    echo "          - host: https://*.$DNS_DOMAIN"                                                                                 >> $TAP_CONFIG
+    echo ""                                                                                                                        >> $TAP_CONFIG
+
+    echo "#    proxy:"                                                                                                            >> $TAP_CONFIG
+    echo "#      /metadata-store:"                                                                                                >> $TAP_CONFIG
+    echo "#        target: https://metadata-store-app.metadata-store:8443/api/v1"                                                 >> $TAP_CONFIG
+    echo "#        changeOrigin: true"                                                                                            >> $TAP_CONFIG
+    echo "#        secure: false"                                                                                                 >> $TAP_CONFIG
+    echo "#        headers:"                                                                                                      >> $TAP_CONFIG
+    echo "#          Authorization: Bearer ey..."                                                                                 >> $TAP_CONFIG
+    echo "#          X-Custom-Source: project-star"                                                                               >> $TAP_CONFIG
 
     cat $TAP_CONFIG >> $TAP_CONFIG_1
     cat $TAP_CONFIG >> $TAP_CONFIG_2
     cat $TAP_CONFIG >> $TAP_CONFIG_3
 
-    messagePrint " ▪ TAP Config (Stage-1) TBS, Learning Center" "\$HOME/.${TDH_TOOLS}/tmp/tap_config_stage_1.yaml (TDH-TOOLS: /tmp/tap_config_stage_1.yaml)"
-    messagePrint " ▪ TAP Config (Stage-2) Tap Gui, Accelerator" "\$HOME/.${TDH_TOOLS}/tmp/tap_config_stage_2.yaml (TDH-TOOLS: /tmp/tap_config_stage_2.yaml)"
-    messagePrint " ▪ TAP Config (Stage-3) All Tap Services"     "\$HOME/.${TDH_TOOLS}/tmp/tap_config_stage_3.yaml (TDH-TOOLS: /tmp/tap_config_stage_3.yaml)"
+    messagePrint " ▪ TAP Config (Stage-1) TAP and TAP Telemetry, no modules"  "\$HOME/.${TDH_TOOLS}/tmp/tap_config_stage_1.yaml (TDH-TOOLS: /tmp/tap_config_stage_1.yaml)"
+    messagePrint " ▪ TAP Config (Stage-2) TBS, Learning Center, TAP Gui"      "\$HOME/.${TDH_TOOLS}/tmp/tap_config_stage_2.yaml (TDH-TOOLS: /tmp/tap_config_stage_2.yaml)"
+    messagePrint " ▪ TAP Config (Stage-3) APIS, Accelerator, Tektron"         "\$HOME/.${TDH_TOOLS}/tmp/tap_config_stage_3.yaml (TDH-TOOLS: /tmp/tap_config_stage_3.yaml)"
     messagePrint " ▪ TAP Lerning Center" "https://learning-center-guided.$DNS_DOMAIN"
     messagePrint " ▪ TAP GUI"            "https://tap-gui.$DNS_DOMAIN"
-    messagePrint " ▪ Metadata Store"     "https://metadata-store.$DNS_DOMAIN:8443"
+    messagePrint " ▪ Metadata Store"     "https://metadata-store.$DNS_DOMAIN:8443/api/v1"
+    messagePrint " ▪ Accelerator Store"  "https://accelerator.$DNS_DOMAIN:8443"
 
     messageLine
     echo "  Manually Reconcile TAP Packages"
     echo "       => tools/${TDH_TOOLS}.sh"
     echo "       => tanzu package install tap -p tap.tanzu.vmware.com -v $TAP_VERSION --values-file /tmp/tap_config_stage_1.yaml -n tap-install"
-    echo "       => tanzu package installed update tap -p tap.tanzu.vmware.com -v $TAP_VERSION --values-file /tmp/tap_config_stage_1.yaml -n tap-install"
     echo "       => tanzu package installed update tap -p tap.tanzu.vmware.com -v $TAP_VERSION --values-file /tmp/tap_config_stage_2.yaml -n tap-install"
     echo "       => tanzu package installed update tap -p tap.tanzu.vmware.com -v $TAP_VERSION --values-file /tmp/tap_config_stage_3.yaml -n tap-install"
+    echo "       => tanzu package installed update tap -p tap.tanzu.vmware.com -v $TAP_VERSION --values-file /tmp/tap_config_stage_1.yaml -n tap-install   #Back to Stage-1"
     echo "   Verify Status of installed Package"
     echo "       => tanzu package installed list -A"
     messageLine
@@ -13848,8 +13892,8 @@ TanzuPackage_Harbor () {
     pkg_nam=$(jq -r '.[]."package-name"' /tmp/pkg.json)
     pkg_ver=$(jq -r '.[]."package-version"' /tmp/pkg.json)
 
-    messagePrint "Verify $PACKAGE_DES"                              "$PACKAGE_NAME"
-    messagePrint " ▪ Tanzu Package ($PACKAGE_NAME)"                 "$pkg_nam"
+    messageTitle "Verify $PACKAGE_DES"
+    messagePrint " ▪ Tanzu Package ($PACKAGE_NAME)"                 "$pkg_nam ($PACKAGE_NAME)"
     messagePrint " ▪ Tanzu Package ($PACKAGE_NAME) Hostname"        "$HARBOR_HOSTNAME"
     messagePrint " ▪ Tanzu Package ($PACKAGE_NAME) Namespace"       "$NAMESPACE"
     messagePrint " ▪ Tanzu Package ($PACKAGE_NAME) Version"         "$pkg_ver"
