@@ -6371,7 +6371,6 @@ installTAP() {
     crt=$(kubectl get secret tanzu-demo-hub-tls -o json | jq -r '.data."tls.crt"') 
     key=$(kubectl get secret tanzu-demo-hub-tls -o json | jq -r '.data."tls.key"') 
 
-gaga0
     echo "learningcenter:"                                                                                                        >> $TAP_CONFIG
     echo "  ingressDomain: $DNS_DOMAIN"                                                                            >> $TAP_CONFIG
     echo "  storageClass: \"$VSPHERE_TKGS_SUPERVISOR_STORAGE_CLASS\""                                                              >> $TAP_CONFIG
