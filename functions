@@ -6460,6 +6460,23 @@ installTAP() {
     echo "          - host: '*.$DNS_DOMAIN'"                                                                                       >> $TAP_CONFIG
     echo ""                                                                                                                        >> $TAP_CONFIG
 
+    # Tanzu Application Platform - TechDocs Documentation (how to setup an AWS S3 Bucket)
+    # https://docs.vmware.com/en/VMware-Tanzu-Application-Platform/1.4/tap/tap-gui-techdocs-usage.html
+    if [ "$TAP_S3_TECH_DOC_BUCKET" != "" -a "$TAP_S3_ACCESS_KEY" != "" -a "$TAP_S3_REGION" != "" ]; then 
+      echo "    techdocs:"                                                                                                         >> $TAP_CONFIG
+      echo "      builder: 'external'"                                                                                             >> $TAP_CONFIG
+      echo "      publisher:"                                                                                                      >> $TAP_CONFIG
+      echo "        type: 'awsS3'"                                                                                                 >> $TAP_CONFIG
+      echo "        awsS3:"                                                                                                        >> $TAP_CONFIG
+      echo "          bucketName: \"tdh-tap-tech-docs\""                                                                           >> $TAP_CONFIG
+      echo "          credentials:"                                                                                                >> $TAP_CONFIG
+      echo "            accessKeyId: \"$TAP_S3_ACCESS_KEY\""                                                                       >> $TAP_CONFIG
+      echo "            secretAccessKey: \"$TAP_S3_SECRET_KEY\""                                                                   >> $TAP_CONFIG
+      echo "          region: \"$TAP_S3_REGION\""                                                                                  >> $TAP_CONFIG
+      echo "          s3ForcePathStyle: false"                                                                                     >> $TAP_CONFIG
+      echo ""                                                                                                                      >> $TAP_CONFIG
+    fi
+
     echo "#    proxy:"                                                                                                            >> $TAP_CONFIG
     echo "#      /metadata-store:"                                                                                                >> $TAP_CONFIG
     echo "#        target: https://metadata-store-app.metadata-store:8443/api/v1"                                                 >> $TAP_CONFIG
