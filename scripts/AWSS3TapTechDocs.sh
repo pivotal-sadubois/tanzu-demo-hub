@@ -89,21 +89,5 @@ for n in $(yq -o=json $CATALOG_INFO | jq -r '.spec.targets[]'); do
 
   echo ""
 done
-
-
-
 exit
-
-techdocs:
-  builder: 'external'
-  publisher:
-    type: 'awsS3'
-    awsS3:
-      bucketName: tdh-tap-tech-docs
-      credentials:
-        accessKeyId: "AKIAWRX6KKSGA5PWUBH2"
-        secretAccessKey: "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"
-      region: "eu-central-1"
-      s3ForcePathStyle: false
-
 
