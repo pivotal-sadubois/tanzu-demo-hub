@@ -221,6 +221,7 @@ fi
 
 # --- VERYFY ACCESS TO CLOUD ---
 checkTDHenvironment
+clearConfigMapCache
 
 # --- VERIFY TOOLS AND ACCESS ---
 checkTanzuCLI

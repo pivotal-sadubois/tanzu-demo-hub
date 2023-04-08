@@ -4268,7 +4268,7 @@ getConfigMapCache() {
   KEY=$2
 
   if [ ! -f $TDH_CM_CACHE ]; then 
-    cmdLoop kubectl get configmap tanzu-demo-hub -o json > $TDH_CM_CACHE
+    cmdLoop kubectl -n default get configmap tanzu-demo-hub -o json > $TDH_CM_CACHE
   fi
 
   jq -r ".data.$KEY" $TDH_CM_CACHE | sed 's/"//g'
@@ -4278,7 +4278,7 @@ getConfigMap() {
   CONFIG_MAP=$1
   KEY=$2
 
-  cmdLoop kubectl get configmap tanzu-demo-hub -o json > /tmp/output.json
+  cmdLoop kubectl -n default get configmap tanzu-demo-hub -o json > /tmp/output.json
   jq -r ".data.$KEY" /tmp/output.json | sed 's/"//g'
 }
 
@@ -6180,8 +6180,11 @@ installTAP() {
     messagePrint " ▪ Create supply chain (scanning) repository"     "$DNS_HARBOR/tap-supply-chain-scanning"
     createHarborProject tap-supply-chain-scanning
 
+
     TAP_CONFIG_1=/tmp/tap_config_stage_1.yaml
-    echo ""                                                                                                                       >  $TAP_CONFIG_1
+    echo "#! Tanzu Application Platform Documentation - View possible configuration settings for your package"                    >  $TAP_CONFIG_1
+    echo "#! https://docs.vmware.com/en/VMware-Tanzu-Application-Platform/1.4/tap/view-package-config.html"                       >> $TAP_CONFIG_1
+    echo ""                                                                                                                       >> $TAP_CONFIG_1
     echo "profile: full"                                                                                                          >> $TAP_CONFIG_1
     echo ""                                                                                                                       >> $TAP_CONFIG_1
     echo "excluded_packages:"                                                                                                     >> $TAP_CONFIG_1
@@ -6356,7 +6359,9 @@ installTAP() {
     echo "        LBType: nlb"                                                                                                    >> $TAP_CONFIG
     echo ""                                                                                                                       >> $TAP_CONFIG
     echo "cnrs:"                                                                                                                  >> $TAP_CONFIG
-    echo "  domain_name: cnrs.$DNS_DOMAIN"                                                                                        >> $TAP_CONFIG
+    echo "  domain_name: $DNS_DOMAIN"                                                                                             >> $TAP_CONFIG
+    echo "  domain_template: '{{.Name}}.{{.Domain}}'"                                                                             >> $TAP_CONFIG
+    echo "  default_tls_secret: tdh-cert-admin/tanzu-demo-hub-tls"                                                                >> $TAP_CONFIG
     echo ""                                                                                                                       >> $TAP_CONFIG
     echo "grype:"                                                                                                                 >> $TAP_CONFIG
     #echo "  targetImagePullSecret: \"supply-chain\""                                                                              >> $TAP_CONFIG
@@ -6371,9 +6376,17 @@ installTAP() {
     crt=$(kubectl get secret tanzu-demo-hub-tls -o json | jq -r '.data."tls.crt"') 
     key=$(kubectl get secret tanzu-demo-hub-tls -o json | jq -r '.data."tls.key"') 
 
+    # https://docs.vmware.com/en/VMware-Tanzu-Application-Platform/1.4/tap/api-auto-registration-installation.html?hWord=N4IghgNiBc4A4EsD6YCuAXA9kgTgUwHMEBndHMdBTAOxAF8g
+    echo "api_auto_registration:"                                                                                                 >> $TAP_CONFIG
+    echo "  auto_generate_cert: false"                                                                                            >> $TAP_CONFIG
+    echo "  ca_cert_data:  |"                                                                                                     >> $TAP_CONFIG
+    echo "    certificate: |"                                                                                                     >> $TAP_CONFIG
+    kubectl get secret tanzu-demo-hub-tls -o json | jq -r '.data."tls.crt"' | base64 -d | sed 's/^/    /g'                        >> $TAP_CONFIG
+    echo ""                                                                                                                       >> $TAP_CONFIG
+
     echo "learningcenter:"                                                                                                        >> $TAP_CONFIG
-    echo "  ingressDomain: $DNS_DOMAIN"                                                                            >> $TAP_CONFIG
-    echo "  storageClass: \"$VSPHERE_TKGS_SUPERVISOR_STORAGE_CLASS\""                                                              >> $TAP_CONFIG
+    echo "  ingressDomain: $DNS_DOMAIN"                                                                                           >> $TAP_CONFIG
+    echo "  storageClass: \"$VSPHERE_TKGS_SUPERVISOR_STORAGE_CLASS\""                                                             >> $TAP_CONFIG
     echo "  ingressSecret:"                                                                                                       >> $TAP_CONFIG
     echo "    certificate: |"                                                                                                     >> $TAP_CONFIG
     kubectl get secret tanzu-demo-hub-tls -o json | jq -r '.data."tls.crt"' | base64 -d | sed 's/^/      /g'                      >> $TAP_CONFIG
@@ -6449,7 +6462,9 @@ installTAP() {
     echo "        - type: url"                                                                                                     >> $TAP_CONFIG
     echo "          target: https://github.com/tsalm-pivotal/spring-cloud-demo-tap/blob/main/tap/catalog/catalog-info.yaml"        >> $TAP_CONFIG
     echo "        - type: url"                                                                                                     >> $TAP_CONFIG
-    echo "          target: https://github.com/dambor/yelb-catalog/blob/main/catalog-info.yaml"                                    >> $TAP_CONFIG
+    echo "          target: https://github.com/pivotal-sadubois/guestbook/blob/main/catalog/catalog-info.yaml"                     >> $TAP_CONFIG
+#    echo "        - type: url"                                                                                                     >> $TAP_CONFIG
+#    echo "          target: https://github.com/dambor/yelb-catalog/blob/main/catalog-info.yaml"                                    >> $TAP_CONFIG
 
     echo "    backend:"                                                                                                            >> $TAP_CONFIG
     echo "      baseUrl: https://tap-gui.$DNS_DOMAIN"                                                                              >> $TAP_CONFIG
@@ -15635,7 +15650,7 @@ dockerPullSecret() {
   cmdLoop kubectl -n $TMP_NAMESPACE get secret -o json > /tmp/output.json
   nam=$(jq -r --arg key "tdh-docker-repo" '.items[].metadata | select(.name == $key).name' /tmp/output.json) 
   if [ "$nam" != "tdh-docker-repo" ]; then 
-    messagePrint " ▪ Create Docker PullSecret for ServiceAccount"  "$1/$2"
+    messagePrint " ▪ Create Docker PullSecret for Namespace/ServiceAccount"  "$TMP_NAMESPACE/$TMP_SERVICEACCOUNT"
     cmdLoop kubectl -n $TMP_NAMESPACE create secret docker-registry tdh-docker-repo \
             --docker-server $TDH_REGISTRY_DOCKER_NAME \
             --docker-username $TDH_REGISTRY_DOCKER_USER \

@@ -125,7 +125,7 @@ echo " TANZU-DEMO-HUB ENVIRONMENT"
 echo " ---------------------------------------------------------------------------------------------------------------------------------------------------"
 for n in $CONTEXT_BAD; do
   nam=$(echo $n | awk -F: '{ print $1 }')
-  pth=$(echo $n | awk -F: '{ print $2 }')
+  pth=$(echo $n | awk -F: '{ print $2 }' | sed 's+/home/tanzu+$HOME+g')
 
   printf " export KUBECONFIG=%-80s   ## *UNREACHABLE* %s\n" $pth $nam
   export KUBECONFIG=$pth
@@ -133,7 +133,7 @@ done
 
 for n in $CONTEXT_LIST; do
   nam=$(echo $n | awk -F: '{ print $1 }')
-  pth=$(echo $n | awk -F: '{ print $2 }')
+  pth=$(echo $n | awk -F: '{ print $2 }' | sed 's+/home/tanzu+$HOME+g')
 
   printf " export KUBECONFIG=%-82s   ## %s\n" $pth $nam
   export KUBECONFIG=$pth
