@@ -16,6 +16,8 @@ if [ "$TDH_TOOLS_NAME" == "" ]; then
   echo "                 - https://github.com/tsalm-pivotal/spring-cloud-demo-tap"
   echo "                 - https://github.com/dambor/yelb-catalog"
   echo "                 - https://github.com/dambor/blank"
+  echo "                 - https://github.com/pivotal-sadubois/blockchain-api"
+  echo "                 - https://github.com/pivotal-sadubois/newsletter"
   exit 0
 fi
 
@@ -39,8 +41,8 @@ else
   echo "ERROR: failed to find a catalog-info.yaml in $GIT_TMPREPO"
 fi
 
-CATALOG_NMSP=$(yq -o=json $CATALOG_INFO | jq -r '.namespace') 
 CATALOG_KIND=$(yq -o=json $CATALOG_INFO | jq -r '.kind') 
+CATALOG_NMSP=$(yq -o=json $CATALOG_INFO | jq -r '.metadata.namespace') 
 CATALOG_NAME=$(yq -o=json $CATALOG_INFO | jq -r '.metadata.name') 
 [ "$CATALOG_NMSP" == "" -o "$CATALOG_NMSP" == "null" ] && CATALOG_NMSP="default"
 
@@ -75,8 +77,8 @@ echo "--------------------------------------------------------------------------
 for n in $(yq -o=json $CATALOG_INFO | jq -r '.spec.targets[]'); do
   TARGET_PATH=$(dirname $CATALOG_PATH/$n) 
 
-  TARGET_NMSP=$(yq -o=json $CATALOG_PATH/$n | jq -r '.namespace' | head -1)  
   TARGET_KIND=$(yq -o=json $CATALOG_PATH/$n | jq -r '.kind' | head -1)
+  TARGET_NMSP=$(yq -o=json $CATALOG_PATH/$n | jq -r '.metadata.namespace' | head -1)  
   TARGET_NAME=$(yq -o=json $CATALOG_PATH/$n | jq -r '.metadata.name' | head -1)
   [ "$TARGET_NMSP" == "" -o "$TARGET_NMSP" == "null" ] && TARGET_NMSP="default"
 
