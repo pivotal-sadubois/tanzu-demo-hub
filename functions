@@ -14723,9 +14723,10 @@ runTDHtools() {
                "-v $HOME/$TDH_TOOLS_PATH/.aws:$TANZU_HOME/.aws:rw"                            ## PERSISTANT AWS CREDENTIALS
                "-v $HOME/$TDH_TOOLS_PATH/.azure:$TANZU_HOME/.azure:rw"                        ## PERSISTANT MICROSOFT AZURE CREDENTIALS
                "-v $HOME/$TDH_TOOLS_PATH/.vmware-cna-saas:$TANZU_HOME/.vmware-cna-saas:rw"    ## TANZU MISSION CONTROL (TMC) LOGIN CREDENTIALS
-               "-v $HOME/$TDH_TOOLS_PATH/tmp:/tmp:rw"                                   ## KEEP TEMP PERSISTENT
-               "-v $HOME/$TDH_TOOLS_PATH/etc/kappctrl-mem-tmp:/etc/kappctrl-mem-tmp:rw" ## BUILDSERVICE INSTALLATION
-               "-v $TDHPATH/:$TANZU_HOME/tanzu-demo-hub:ro"                                               ## TANZU-DEMO-HUB DIRECTORY
+               "-v $HOME/$TDH_TOOLS_PATH/tmp:/tmp:rw"                                         ## KEEP TEMP PERSISTENT
+               "-v $HOME/$TDH_TOOLS_PATH/etc/kappctrl-mem-tmp:/etc/kappctrl-mem-tmp:rw"       ## BUILDSERVICE INSTALLATION
+               "-v $TDHPATH/:$TANZU_HOME/tanzu-demo-hub:ro"                                   ## TANZU-DEMO-HUB DIRECTORY
+               "-v $HOME/workspace/newsletter:$TANZU_HOME/newsletter:ro"                      ## NEWSLETTER TAP DEMO APPLICATION
              )
 
       # --- MAKE SURE DIRECTORIES ARE CREATED ---
