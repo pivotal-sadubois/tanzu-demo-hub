@@ -69,7 +69,7 @@ fi
 
 npx @techdocs/cli publish --publisher-type awsS3 --storage-name $TAP_S3_TECH_DOC_BUCKET --entity $CATALOG_NMSP/$CATALOG_KIND/$CATALOG_NAME --directory $GIT_TMPSITE 2>/dev/null; ret=$?
 if [ $ret -ne 0 ]; then 
-  echo "ERROR: failed to generate documentation"
+  echo "ERROR: failed to Publish documentation"
   echo " => npx @techdocs/cli publish --publisher-type awsS3 --storage-name $TAP_S3_TECH_DOC_BUCKET --entity $CATALOG_NMSP/$CATALOG_KIND/$CATALOG_NAME --directory $GIT_TMPSITE"; exit
 fi
 
@@ -81,6 +81,8 @@ for n in $(yq -o=json $CATALOG_INFO | jq -r '.spec.targets[]'); do
   TARGET_NMSP=$(yq -o=json $CATALOG_PATH/$n | jq -r '.metadata.namespace' | head -1)  
   TARGET_NAME=$(yq -o=json $CATALOG_PATH/$n | jq -r '.metadata.name' | head -1)
   [ "$TARGET_NMSP" == "" -o "$TARGET_NMSP" == "null" ] && TARGET_NMSP="default"
+
+  npx @techdocs/cli generate --source-dir $CATALOG_PATH --output-dir $GIT_TMPSITE 2>/dev/null; ret=$?
 
   echo "=> Processing: $n ($TARGET_NMSP/$TARGET_KIND/$TARGET_NAME) $TARGET_PATH"
   npx @techdocs/cli publish \
