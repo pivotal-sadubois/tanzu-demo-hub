@@ -61,12 +61,14 @@ echo "export AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY"
 echo "export AWS_SECRET_ACCESS_KEY=$AWS_SECRET_KEY"
 echo "export AWS_REGION=$TAP_S3_REGION"
 
+echo "npx @techdocs/cli generate --source-dir $CATALOG_PATH --output-dir $GIT_TMPSITE" >  /tmp/tech.txt
 npx @techdocs/cli generate --source-dir $CATALOG_PATH --output-dir $GIT_TMPSITE 2>/dev/null; ret=$?
 if [ $ret -ne 0 ]; then
   echo "ERROR: failed to generate the TechDocs for the catalog root"
   echo " => npx @techdocs/cli generate --source-dir $CATALOG_INFO --output-dir $GIT_TMPSITE"; exit
 fi
 
+echo "npx @techdocs/cli publish --publisher-type awsS3 --storage-name $TAP_S3_TECH_DOC_BUCKET --entity $CATALOG_NMSP/$CATALOG_KIND/$CATALOG_NAME --directory $GIT_TMPSITE" >> /tmp/tech.txt
 npx @techdocs/cli publish --publisher-type awsS3 --storage-name $TAP_S3_TECH_DOC_BUCKET --entity $CATALOG_NMSP/$CATALOG_KIND/$CATALOG_NAME --directory $GIT_TMPSITE 2>/dev/null; ret=$?
 if [ $ret -ne 0 ]; then 
   echo "ERROR: failed to Publish documentation"
@@ -82,14 +84,22 @@ for n in $(yq -o=json $CATALOG_INFO | jq -r '.spec.targets[]'); do
   TARGET_NAME=$(yq -o=json $CATALOG_PATH/$n | jq -r '.metadata.name' | head -1)
   [ "$TARGET_NMSP" == "" -o "$TARGET_NMSP" == "null" ] && TARGET_NMSP="default"
 
-  npx @techdocs/cli generate --source-dir $CATALOG_PATH --output-dir $GIT_TMPSITE 2>/dev/null; ret=$?
+  echo "=> Generating: $n $CATALOG_PATH"
+echo "npx @techdocs/cli generate --source-dir $TARGET_PATH --output-dir $GIT_TMPSITE" >> /tmp/tech.txt
+  npx @techdocs/cli generate --source-dir $TARGET_PATH/ --output-dir $GIT_TMPSITE 2>/dev/null | sed 's/^/   /g'
 
   echo "=> Processing: $n ($TARGET_NMSP/$TARGET_KIND/$TARGET_NAME) $TARGET_PATH"
+echo "npx @techdocs/cli publish \
+      --publisher-type awsS3 \
+      --storage-name $TAP_S3_TECH_DOC_BUCKET \
+      --entity $TARGET_NMSP/$TARGET_KIND/$TARGET_NAME \
+      --directory $GIT_TMPSITE" >> /tmp/tech.txt
+
   npx @techdocs/cli publish \
       --publisher-type awsS3 \
       --storage-name $TAP_S3_TECH_DOC_BUCKET \
       --entity $TARGET_NMSP/$TARGET_KIND/$TARGET_NAME \
-      --directory $GIT_TMPSITE 2>/dev/null | sed 's/^/   /g' ; ret=$?
+      --directory $GIT_TMPSITE 2>/dev/null | sed 's/^/   /g'
 
   echo ""
 done
