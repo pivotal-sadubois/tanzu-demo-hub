@@ -6321,35 +6321,49 @@ installTAP() {
     echo "  tanzunet_password: $TDH_REGISTRY_VMWARE_PASS"                                                                         >> $TAP_CONFIG
     echo "  enable_automatic_dependency_updates: true"                                                                            >> $TAP_CONFIG
     echo "  descriptor_name: \"full\""                                                                                            >> $TAP_CONFIG
-    echo "supply_chain: basic"                                                                                                    >> $TAP_CONFIG
+    echo "supply_chain: testing_scanning"                                                                                         >> $TAP_CONFIG
     echo ""                                                                                                                       >> $TAP_CONFIG
     echo "ootb_supply_chain_basic:"                                                                                               >> $TAP_CONFIG
     echo "  registry:"                                                                                                            >> $TAP_CONFIG
     echo "    server: $DNS_HARBOR"                                                                                                >> $TAP_CONFIG
     echo "    repository: \"tap-supply-chain-basic\""                                                                             >> $TAP_CONFIG
+    echo "  gitops:"                                                                                                              >> $TAP_CONFIG
+    echo "    ssh_secret: \"\""                                                                                                   >> $TAP_CONFIG
+    echo "  cluster_builder: default"                                                                                             >> $TAP_CONFIG
+    echo "  service_account: default"                                                                                             >> $TAP_CONFIG
     echo ""                                                                                                                       >> $TAP_CONFIG
     echo "ootb_supply_chain_testing:"                                                                                             >> $TAP_CONFIG
     echo "  registry:"                                                                                                            >> $TAP_CONFIG
     echo "    server: $DNS_HARBOR"                                                                                                >> $TAP_CONFIG
     echo "    repository: \"tap-supply-chain-testing\""                                                                           >> $TAP_CONFIG
-    echo "  gitops:"
-    echo "    server_address: https://github.com/"                                                                                >> $TAP_CONFIG
-    echo "    repository_owner: repository-owner"                                                                                 >> $TAP_CONFIG
-    echo "    repository_name: tap-gitops"                                                                                        >> $TAP_CONFIG
-    echo "    branch: prod"                                                                                                       >> $TAP_CONFIG
-    echo "    ssh_secret: git-https"                                                                                              >> $TAP_CONFIG
-    echo "    commit_strategy: pull_request"                                                                                      >> $TAP_CONFIG
-    echo "    pull_request:"                                                                                                      >> $TAP_CONFIG
-    echo "      server_kind: github"                                                                                              >> $TAP_CONFIG
-    echo "      pull_request_title: Approval for Production deployment"                                                           >> $TAP_CONFIG
-    echo "      pull_request_body: Please review the configuration and approve the deployment to production"                      >> $TAP_CONFIG
-    echo "      commit_branch: \"\""                                                                                              >> $TAP_CONFIG
+    echo "  gitops:"                                                                                                              >> $TAP_CONFIG
+    echo "    ssh_secret: \"\""                                                                                                   >> $TAP_CONFIG
+    echo "  cluster_builder: default"                                                                                             >> $TAP_CONFIG
+    echo "  service_account: default"                                                                                             >> $TAP_CONFIG
+    echo ""                                                                                                                       >> $TAP_CONFIG
+
+#    echo "  gitops:"
+#    echo "    server_address: https://github.com/"                                                                                >> $TAP_CONFIG
+#    echo "    repository_owner: repository-owner"                                                                                 >> $TAP_CONFIG
+#    echo "    repository_name: tap-gitops"                                                                                        >> $TAP_CONFIG
+#    echo "    branch: prod"                                                                                                       >> $TAP_CONFIG
+#    echo "    ssh_secret: git-https"                                                                                              >> $TAP_CONFIG
+#    echo "    commit_strategy: pull_request"                                                                                      >> $TAP_CONFIG
+#    echo "    pull_request:"                                                                                                      >> $TAP_CONFIG
+#    echo "      server_kind: github"                                                                                              >> $TAP_CONFIG
+#    echo "      pull_request_title: Approval for Production deployment"                                                           >> $TAP_CONFIG
+#    echo "      pull_request_body: Please review the configuration and approve the deployment to production"                      >> $TAP_CONFIG
+#    echo "      commit_branch: \"\""                                                                                              >> $TAP_CONFIG
 
     echo ""                                                                                                                       >> $TAP_CONFIG
     echo "ootb_supply_chain_testing_scanning:"                                                                                    >> $TAP_CONFIG
     echo "  registry:"                                                                                                            >> $TAP_CONFIG
     echo "    server: $DNS_HARBOR"                                                                                                >> $TAP_CONFIG
     echo "    repository: \"tap-supply-chain-scanning\""                                                                          >> $TAP_CONFIG
+    echo "  gitops:"                                                                                                              >> $TAP_CONFIG
+    echo "    ssh_secret: \"\""                                                                                                   >> $TAP_CONFIG
+    echo "  cluster_builder: default"                                                                                             >> $TAP_CONFIG
+    echo "  service_account: default"                                                                                             >> $TAP_CONFIG
     echo ""                                                                                                                       >> $TAP_CONFIG
     echo "contour:"                                                                                                               >> $TAP_CONFIG
     echo "  infrastructure_provider: aws"                                                                                         >> $TAP_CONFIG
@@ -6364,9 +6378,16 @@ installTAP() {
     echo "  default_tls_secret: tdh-cert-admin/tanzu-demo-hub-tls"                                                                >> $TAP_CONFIG
     echo ""                                                                                                                       >> $TAP_CONFIG
     echo "grype:"                                                                                                                 >> $TAP_CONFIG
-    #echo "  targetImagePullSecret: \"supply-chain\""                                                                              >> $TAP_CONFIG
-    #echo "  namespace: dev-space"                                                                                                 >> $TAP_CONFIG
-    #echo "  targetImagePullSecret: registry-credentials"                                                                          >> $TAP_CONFIG
+    echo "  namespace: default"                                                                                                   >> $TAP_CONFIG
+    echo "  targetImagePullSecret: tap-registry"                                                                                  >> $TAP_CONFIG
+    echo "  metadataStore:"                                                                                                       >> $TAP_CONFIG
+    echo "    url: https://metadata-store.$DNS_DOMAIN"                                                                            >> $TAP_CONFIG
+    echo "    caSecret:"                                                                                                          >> $TAP_CONFIG
+    echo "      name: store-ca-cert"                                                                                              >> $TAP_CONFIG
+    echo "      importFromNamespace: metadata-store-secrets"                                                                      >> $TAP_CONFIG
+    echo "    authSecret:"                                                                                                        >> $TAP_CONFIG
+    echo "      name: store-auth-token"                                                                                           >> $TAP_CONFIG
+    echo "      importFromNamespace: metadata-store-secrets"                                                                      >> $TAP_CONFIG
     echo ""                                                                                                                       >> $TAP_CONFIG
 
     echo "image_policy_webhook:"                                                                                                  >> $TAP_CONFIG
@@ -6460,11 +6481,11 @@ installTAP() {
     echo "    catalog:"                                                                                                            >> $TAP_CONFIG
     echo "      locations:"                                                                                                        >> $TAP_CONFIG
     echo "        - type: url"                                                                                                     >> $TAP_CONFIG
-    echo "          target: https://github.com/tsalm-pivotal/spring-cloud-demo-tap/blob/main/tap/catalog/catalog-info.yaml"        >> $TAP_CONFIG
-    echo "        - type: url"                                                                                                     >> $TAP_CONFIG
-    echo "          target: https://github.com/pivotal-sadubois/guestbook/blob/main/catalog/catalog-info.yaml"                     >> $TAP_CONFIG
-#    echo "        - type: url"                                                                                                     >> $TAP_CONFIG
-#    echo "          target: https://github.com/dambor/yelb-catalog/blob/main/catalog-info.yaml"                                    >> $TAP_CONFIG
+    echo "          target: https://github.com/pivotal-sadubois/newsletter/blob/main/catalog/catalog-info.yaml"                    >> $TAP_CONFIG
+    echo "#       - type: url"                                                                                                     >> $TAP_CONFIG
+    echo "#         target: https://github.com/tsalm-pivotal/spring-cloud-demo-tap/blob/main/tap/catalog/catalog-info.yaml"        >> $TAP_CONFIG
+    echo "#       - type: url"                                                                                                     >> $TAP_CONFIG
+    echo "#         target: https://github.com/dambor/yelb-catalog/blob/main/catalog-info.yaml"                                    >> $TAP_CONFIG
 
     echo "    backend:"                                                                                                            >> $TAP_CONFIG
     echo "      baseUrl: https://tap-gui.$DNS_DOMAIN"                                                                              >> $TAP_CONFIG
@@ -11050,7 +11071,7 @@ tdh_tools_build() {
   verify_docker
   checkTDHenvironment
 
-  # 05-03-2022 sdubois no, we always do amd64, as arm has some libraries missing
+  # 05-03-2022 sdubois no, we always do amd64, as arm has some libraries missing ie. kubectl-vsphere
   #[ "$(uname -p)" == "arm" ] && ARCH=arm64 || ARCH=amd64
   ARCH=amd64
 
@@ -11430,7 +11451,7 @@ tdh_tools_build() {
     #TDH_FILE_STR="${TDH_FILE_TAG} - Linux"
     #TDH_FILE_NAM="$TDH_FILE_TAG-linux-amd64-$TDH_FILE_VER"
   
-    MACHINE=x86_64 ## sadbois 21.02.2022 - HACK as there is not yet an arm package on pivnet
+    #MACHINE=x86_64 ## sadbois 21.02.2022 - HACK as there is not yet an arm package on pivnet
     if [ "$MACHINE" == "arm" ]; then
       TDH_FILE_STR="$TDH_FILE_TAG-linux-arm64-$TDH_FILE_VER"
       TDH_FILE_NAM="$TDH_FILE_TAG-linux-arm64-$TDH_FILE_VER"
