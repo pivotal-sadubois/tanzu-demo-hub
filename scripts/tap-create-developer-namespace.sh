@@ -34,13 +34,28 @@ REGISTRY_SERVER=$(getConfigMap tanzu-demo-hub TDH_HARBOR_REGISTRY_DNS_HARBOR)
 # --- CREATE NAMESPACE If IT DOES NOT EXIST ----
 [ "$NAMESPACE" != "default" ] && kubectl create ns --dry-run=client -o yaml $NAMESPACE | kubectl apply -f -
 
-tanzu secret registry add registry-credentials \
+tanzu secret registry add harbor-registry-credentials \
   --server $REGISTRY_SERVER \
   --username "$REGISTRY_USERNAME" \
   --password "$REGISTRY_PASSWORD" \
   --namespace "$NAMESPACE" \
   --verbose 0 >/dev/null 2>&1
 
+kubectl -n $NAMESPACE create secret docker-registry vmware-registry-credentials \
+          --docker-server=https://registry.tanzu.vmware.com/ \
+          --docker-username=$TDH_REGISTRY_VMWARE_USER \
+          --docker-password=$TDH_REGISTRY_VMWARE_PASS >/dev/null 2>&1
+
+# --- CREATE TAP LABEL ---
+kubectl label namespaces $NAMESPACE apps.tanzu.vmware.com/tap-ns=""
+
+sleep 60
+
+kubectl get secrets,serviceaccount,rolebinding,pods,workload,configmap -n $NAMESPACE 
+
+exit
+
+# not needed anymore because of tap namespace provisioner
 cat <<EOF | kubectl -n "$NAMESPACE" apply -f - 2>/dev/null
 apiVersion: v1
 kind: Secret
