@@ -6549,14 +6549,16 @@ installTAP() {
     messageLineIntend
     echo "   Manually Reconcile TAP Packages"
     echo "       => tools/${TDH_TOOLS}.sh"
-    echo "       => tanzu package install tap -p tap.tanzu.vmware.com -v $TAP_VERSION --values-file /tmp/tap_config_stage_1.yaml -n tap-install            # ALREADY COMPLETED"
-    echo "       => tanzu package installed update tap -p tap.tanzu.vmware.com -v $TAP_VERSION --values-file /tmp/tap_config_stage_2.yaml -n tap-install"
-    echo "       => tanzu package installed update tap -p tap.tanzu.vmware.com -v $TAP_VERSION --values-file /tmp/tap_config_stage_3.yaml -n tap-install"
-    echo "       => tanzu package installed update tap -p tap.tanzu.vmware.com -v $TAP_VERSION --values-file /tmp/tap_config_stage_1.yaml -n tap-install   # BACK TO STAGE-1"
-    echo "       => tanzu package installed delete tap -n tap-install                                                                                      # DELETE ALL TAP PACKAGES"
+    echo "          tdh-tools:/$ tanzu package install tap -p tap.tanzu.vmware.com -v $TAP_VERSION --values-file /tmp/tap_config_stage_1.yaml -n tap-install            # INSTALL STAGE-1 - DONE"
+    echo "          tdh-tools:/$ tanzu package installed update tap -p tap.tanzu.vmware.com -v $TAP_VERSION --values-file /tmp/tap_config_stage_2.yaml -n tap-install"  # INSTALL STAGE-2"
+    echo "          tdh-tools:/$ tanzu package installed update tap -p tap.tanzu.vmware.com -v $TAP_VERSION --values-file /tmp/tap_config_stage_3.yaml -n tap-install   # INSTALL STAGE-3 ALL"
+    echo "          tdh-tools:/$ tanzu package installed update tap -p tap.tanzu.vmware.com -v $TAP_VERSION --values-file /tmp/tap_config_stage_1.yaml -n tap-install   # BACK TO STAGE-1"
     echo "   Verify Status of installed Package"
-    echo "       => tanzu package installed list -n tap-install"
-    messageLineIntend
+    echo "       => tools/${TDH_TOOLS}.sh"
+    echo "          tdh-tools:/$ tanzu package installed list -n tap-install"
+    echo "   Delete all TAP Packages"
+    echo "       => tools/${TDH_TOOLS}.sh"
+    echo "          tdh-tools:/$ tanzu package installed delete tap -n tap-install"
 
     # Supply Chain Choreographer in Tanzu Application Platform GUI
     # https://docs.vmware.com/en/VMware-Tanzu-Application-Platform/1.4/tap/tap-gui-plugins-scc-tap-gui.html
