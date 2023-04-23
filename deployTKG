@@ -340,7 +340,6 @@ if [ -s /tmp/output.yaml ]; then
 fi
 
 messageTitle "Tanzu Package Management"
-echo "TDH_SERVICE_PACKAGE_REPOSITORY_NAMESPACE:$TDH_SERVICE_PACKAGE_REPOSITORY_NAMESPACE"
 TDH_SERVICE_PACKAGE_REPOSITORY_NAMESPACE=tanzu-package-repo-global
 
 TanzuPackage_CertManager     cert-manager-pkg     cert-manager.tanzu.vmware.com 
