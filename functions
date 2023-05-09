@@ -5032,7 +5032,8 @@ tkgCreateCluster() {
       fi
 
       # --- SET CONTEXT TO SUPERVISOR CLUSTER ---
-      cmdLoop kubectl config use-context $TDH_TKGMC_SUPERVISORCLUSTER > /dev/null 2>&1
+      #cmdLoop kubectl config use-context $TDH_TKGMC_SUPERVISORCLUSTER > /dev/null 2>&1
+      kubectl config use-context $TDH_TKGMC_SUPERVISORCLUSTER 
 
       TDH_TKGWC_K8S_VERSION=$(kubectl get tanzukubernetesreleases -n $TDH_TKGMC_VSPHERE_NAMESPACE | \
            egrep "$TDH_TKGWC_KUBERNETES_VERSION" | tail -1 | awk '{ print $1 }')
@@ -5695,7 +5696,6 @@ tmcCreateCluster() {
       echo "  version: v1alpha1"                                                                                                     >> $TMC_CONFIG
 
 echo "TMC_CONFIG:$TMC_CONFIG"
-#hulu
 exit
 
       # List of Tanzu Kubernetes Releases
@@ -6002,17 +6002,28 @@ installTAP() {
   TDH_HARBOR_REGISTRY_DNS_HARBOR=$(getConfigMap tanzu-demo-hub TDH_HARBOR_REGISTRY_DNS_HARBOR)
   TDH_HARBOR_REGISTRY_ADMIN_PASSWORD=$(getConfigMap tanzu-demo-hub TDH_HARBOR_REGISTRY_ADMIN_PASSWORD)
 
+#gugu
   NAMESPACE=tap-install
-  export INSTALL_REGISTRY_USERNAME=$TDH_REGISTRY_VMWARE_USER
+  #export INSTALL_REGISTRY_USERNAME=$TDH_REGISTRY_VMWARE_USER
+  export INSTALL_REGISTRY_USERNAME=admin
   export INSTALL_REGISTRY_PASSWORD=$TDH_HARBOR_REGISTRY_ADMIN_PASSWORD
   export INSTALL_REGISTRY_HOSTNAME=$TDH_HARBOR_REGISTRY_DNS_HARBOR
   export TAP_VERSION=$TDH_SERVICE_TAP_VERSION
+  export IMGPKG_REGISTRY_HOSTNAME_0=registry.tanzu.vmware.com
+  export IMGPKG_REGISTRY_USERNAME_0=$TDH_REGISTRY_VMWARE_USER
+  export IMGPKG_REGISTRY_PASSWORD_0=$TDH_REGISTRY_VMWARE_PASS
+  export IMGPKG_REGISTRY_HOSTNAME_1=$TDH_HARBOR_REGISTRY_DNS_HARBOR
+  export IMGPKG_REGISTRY_USERNAME_1=$TDH_REGISTRY_VMWARE_USER
+  export IMGPKG_REGISTRY_PASSWORD_1=$TDH_HARBOR_REGISTRY_ADMIN_PASSWORD
+  #export INSTALL_REPO=TARGET-REPOSITORY
 
   createNamespace $NAMESPACE > /dev/null 2>&1
   cnt=$(cmdLoop kubectl get secrets -n $NAMESPACE | egrep -c "^tap-registry")
 
   messageTitle "Tanzu Application Platform (TAP)"
 
+# 26.04.2023 sdubois, not needed anymore because of tdh-tools-carvel-carvel
+if [ 1 -eq 2 ]; then 
   messagePrint " ▪ Verify Harbor Registry Access" "$TDH_HARBOR_REGISTRY_DNS_HARBOR"
   messagePrint "   Registry User"                 "admin"
   messagePrint "   Registry Password"             "$(maskPassword \"$TDH_HARBOR_REGISTRY_ADMIN_PASSWORD\")"
@@ -6058,16 +6069,59 @@ installTAP() {
 
     exit 1
   fi
+fi
 
   #########################################################################################################################
   ###################################### RELOCATE IMAGES TO THE HARBOR REGISTRY ###########################################
   #########################################################################################################################
+
+  dockerPullSecret default
+  kubectl delete pod tdh-tools-carvel-carvel > /dev/null 2>&1
+  kubectl run --image=docker.io/sadubois/tdh-tools-carvel-carvel-1.6.1:latest tdh-tools-carvel-carvel sleep 10000000
+
+  cnt=0; ret=1
+  while [ $ret -ne 0 -a $cnt -lt 5 ]; do
+    kubectl exec -it tdh-tools-carvel-carvel -- docker login $TDH_HARBOR_REGISTRY_DNS_HARBOR -u admin -p $TDH_HARBOR_REGISTRY_ADMIN_PASSWORD > /dev/null 2>&1; ret=$?
+    [ $ret -eq 0 ] && break
+    sleep 10
+    let cnt=cnt+1
+  done
+
+  if [ $ret -ne 0 ]; then
+    echo "ERROR: Docker login does not work 5'"
+    echo "       => kubectl exec -it tdh-tools-carvel-carvel -- docker login $TDH_HARBOR_REGISTRY_DNS_HARBOR -u admin -p $TDH_HARBOR_REGISTRY_ADMIN_PASSWORD"; exit 1
+  fi
+
+ cnt=0; ret=1
+  while [ $ret -ne 0 -a $cnt -lt 5 ]; do
+    kubectl exec -it tdh-tools-carvel-carvel -- docker login registry.tanzu.vmware.com -u $TDH_REGISTRY_VMWARE_USER -p $TDH_REGISTRY_VMWARE_PASS > /tmp/error 2>&1; ret=$?
+    sleep 10
+    let cnt=cnt+1
+  done
+
+  if [ $ret -ne 0 ]; then
+    logMessages /tmp/error.log
+    echo "ERROR: failed to login to docker registry $TDH_REGISTRY_VMWARE_NAME"
+    if [ "$NATIVE" == "0" ]; then
+      echo "       => tools/${TDH_TOOLS}.sh"
+      echo "          tdh-tools:/$ kubectl exec -it tdh-tools-carvel-carvel -- docker login $TDH_REGISTRY_VMWARE_NAME -u $TDH_REGISTRY_VMWARE_USER -p $TDH_REGISTRY_VMWARE_PASS"
+      echo "          tdh-tools:/$ exit"
+    else
+      echo "       => docker login $TDH_REGISTRY_VMWARE_NAME -u $TDH_REGISTRY_VMWARE_USER -p $TDH_REGISTRY_VMWARE_PASS"
+    fi
+
+    exit 1
+  fi
+
+  #kubectl exec -it tdh-tools-carvel-carvel -- imgpkg copy -b registry.tanzu.vmware.com/tanzu-application-platform/tap-packages:${TAP_VERSION} \
+  #                --to-repo ${INSTALL_REGISTRY_HOSTNAME}/library/tap-packages 
+
   TDH_SERVICE_TAP_IMAGE_RELOCATION=$(getConfigMap tanzu-demo-hub TDH_SERVICE_TAP_IMAGE_RELOCATION)
   if [ "$TDH_SERVICE_TAP_IMAGE_RELOCATION" == "" -o "$TDH_SERVICE_TAP_IMAGE_RELOCATION" == "null" ]; then
     messagePrint " ▪ relocating tap images to local registry" "$INSTALL_REGISTRY_HOSTNAME/library/tap-packages"
     cnt=0; ret=1
     while [ $ret -ne 0 -a $cnt -lt 5 ]; do
-      imgpkg copy -b registry.tanzu.vmware.com/tanzu-application-platform/tap-packages:${TAP_VERSION} \
+      kubectl exec -it tdh-tools-carvel-carvel -- imgpkg copy -b registry.tanzu.vmware.com/tanzu-application-platform/tap-packages:${TAP_VERSION} \
                   --to-repo ${INSTALL_REGISTRY_HOSTNAME}/library/tap-packages > /tmp/error.log 2>&1; ret=$?
       [ $ret -eq 0 ] && break
       sleep 10
@@ -6090,36 +6144,81 @@ installTAP() {
       exit 1
     fi
 
-#bbbbbb TAP
-    installSecretGenController
-  
-    # --- CREATE A REGISTRY SECRET ---
-    messagePrint " ▪ creating registry secret" "$INSTALL_REGISTRY_HOSTNAME"
-    tanzu secret registry add tap-registry \
-    --username ${INSTALL_REGISTRY_USERNAME} --password ${INSTALL_REGISTRY_PASSWORD} \
-    --server ${INSTALL_REGISTRY_HOSTNAME} \
-    --export-to-all-namespaces --yes --namespace $NAMESPACE > /tmp/error.log 2>&1; ret=$?
-  
-    if [ $ret -ne 0 ]; then
-      logMessages /tmp/error.log
-      echo "ERROR: failed to create registry secret"
-      if [ "$NATIVE" == "0" ]; then
-        echo "       => tools/${TDH_TOOLS}.sh"
-        echo "          tdh-tools:/$ tanzu secret registry add tap-registry \\"
-        echo "                          --username ${INSTALL_REGISTRY_USERNAME} --password ${INSTALL_REGISTRY_PASSWORD} \\"
-        echo "                          --server ${INSTALL_REGISTRY_HOSTNAME} \\"
-        echo "                          --export-to-all-namespaces --yes --namespace $NAMESPACE"
-        echo "          tdh-tools:/$ exit"
-      else
-        echo "       => tanzu secret registry add tap-registry \\"
-        echo "                --username ${INSTALL_REGISTRY_USERNAME} --password ${INSTALL_REGISTRY_PASSWORD} \\"
-        echo "                --server ${INSTALL_REGISTRY_HOSTNAME} \\"
-        echo "                --export-to-all-namespaces --yes --namespace $NAMESPACE"
-      fi
-  
-      exit 1
+
+    if [ "$TDH_SERVICE_SECRETGEN_CONTROLLER" == "true" -o "$TDH_SERVICE_SECRETGEN_CONTROLLER" == "" ]; then 
+      installSecretGenController
     fi
   
+    # --- CREATE A REGISTRY SECRET ---
+    cmdLoop kubectl get secrets -o json > /tmp/outpot.json
+    nam=$(jq -r --arg key "tap-registry" '.items[].metadata | select(.name == $key).name' /tmp/outpot.json)
+    if [ "$nam" != "tap-registry" ]; then 
+      messagePrint " ▪ Creating registry secret (tap-registry)" "$INSTALL_REGISTRY_HOSTNAME"
+      tanzu secret registry add tap-registry \
+        --username ${INSTALL_REGISTRY_USERNAME} --password ${INSTALL_REGISTRY_PASSWORD} \
+        --server ${INSTALL_REGISTRY_HOSTNAME} \
+        --export-to-all-namespaces --yes --namespace $NAMESPACE > /tmp/error.log 2>&1; ret=$?
+  
+      if [ $ret -ne 0 ]; then
+        logMessages /tmp/error.log
+        echo "ERROR: failed to create registry secret"
+        if [ "$NATIVE" == "0" ]; then
+          echo "       => tools/${TDH_TOOLS}.sh"
+          echo "          tdh-tools:/$ tanzu secret registry add tap-registry \\"
+          echo "                          --username ${INSTALL_REGISTRY_USERNAME} --password ${INSTALL_REGISTRY_PASSWORD} \\"
+          echo "                          --server ${INSTALL_REGISTRY_HOSTNAME} \\"
+          echo "                          --export-to-all-namespaces --yes --namespace $NAMESPACE"
+          echo "          tdh-tools:/$ exit"
+        else
+          echo "       => tanzu secret registry add tap-registry \\"
+          echo "                --username ${INSTALL_REGISTRY_USERNAME} --password ${INSTALL_REGISTRY_PASSWORD} \\"
+          echo "                --server ${INSTALL_REGISTRY_HOSTNAME} \\"
+          echo "                --export-to-all-namespaces --yes --namespace $NAMESPACE"
+        fi
+
+        exit 1
+      fi
+    else
+       messagePrint " ▪ Verify registry secret" "$INSTALL_REGISTRY_HOSTNAME"
+    fi
+
+#gugu
+    # --- CREATE A REGISTRY SECRET ---
+    cmdLoop kubectl get secrets -o json > /tmp/outpot.json
+    nam=$(jq -r --arg key "registry-credentials" '.items[].metadata | select(.name == $key).name' /tmp/outpot.json)
+    if [ "$nam" != "registry-credentials" ]; then
+      messagePrint " ▪ Creating registry secret (registry-credentials)" "$TDH_HARBOR_REGISTRY_DNS_HARBOR"
+      # --- CREATE A INTERNAL REGISTRY SECRET ---
+      tanzu secret registry add registry-credentials \
+        --server   ${TDH_HARBOR_REGISTRY_DNS_HARBOR} \
+        --username admin \
+        --password ${TDH_HARBOR_REGISTRY_ADMIN_PASSWORD} \
+        --namespace tap-install \
+        --export-to-all-namespaces \
+        --yes
+  
+      if [ $ret -ne 0 ]; then
+        logMessages /tmp/error.log
+        echo "ERROR: failed to create registry secret"
+        if [ "$NATIVE" == "0" ]; then
+          echo "       => tools/${TDH_TOOLS}.sh"
+          echo "          tdh-tools:/$ tanzu secret registry add tap-registry \\"
+          echo "                          --username ${INSTALL_REGISTRY_USERNAME} --password ${INSTALL_REGISTRY_PASSWORD} \\"
+          echo "                          --server ${INSTALL_REGISTRY_HOSTNAME} \\"
+          echo "                          --export-to-all-namespaces --yes --namespace $NAMESPACE"
+          echo "          tdh-tools:/$ exit"
+        else
+          echo "       => tanzu secret registry add tap-registry \\"
+          echo "                --username ${INSTALL_REGISTRY_USERNAME} --password ${INSTALL_REGISTRY_PASSWORD} \\"
+          echo "                --server ${INSTALL_REGISTRY_HOSTNAME} \\"
+          echo "                --export-to-all-namespaces --yes --namespace $NAMESPACE"
+        fi
+
+        exit 1
+      fi
+    else
+      messagePrint " ▪ Verify registry secret (registry-credentials)" "$TDH_HARBOR_REGISTRY_DNS_HARBOR"
+    fi
     uodateConfigMap tanzu-demo-hub TDH_SERVICE_TAP_IMAGE_RELOCATION "true"
   fi
 
@@ -6175,6 +6274,7 @@ installTAP() {
       done
     fi
 
+
     messagePrint " ▪ Create Cluster Role Binding"     "default-tkg-admin-privileged-binding"
     kubectl create clusterrolebinding default-tkg-admin-privileged-binding --clusterrole=psp:vmware-system-privileged --group=system:authenticated > /dev/null 2>&1
 
@@ -6187,8 +6287,10 @@ installTAP() {
     messagePrint " ▪ Create supply chain (scanning) repository"     "$DNS_HARBOR/tap-supply-chain-scanning"
     createHarborProject tap-supply-chain-scanning
 
+
     messagePrint " ▪ Create TAP Configuration Files"                "Stage-1, Stage-2 and Stage-3"
-    TAP_CONFIG_1=/tmp/tap_config_stage_1.yaml
+    mkdir -p /tmp/$TDH_TKGWC_NAME
+    TAP_CONFIG_1=/tmp/$TDH_TKGWC_NAME/tap_config_stage_1.yaml
     echo "#! Tanzu Application Platform Documentation - View possible configuration settings for your package"                    >  $TAP_CONFIG_1
     echo "#! https://docs.vmware.com/en/VMware-Tanzu-Application-Platform/1.4/tap/view-package-config.html"                       >> $TAP_CONFIG_1
     echo ""                                                                                                                       >> $TAP_CONFIG_1
@@ -6232,9 +6334,10 @@ installTAP() {
     echo "  - tekton.tanzu.vmware.com"                                                                                            >> $TAP_CONFIG_1
     echo "  # learningcenter.tanzu.vmware.com"                                                                                    >> $TAP_CONFIG_1
     echo "  # workshops.learningcenter.tanzu.vmware.com"                                                                          >> $TAP_CONFIG_1
+    echo "  - bitnami.services.tanzu.vmware.com"                                                                                  >> $TAP_CONFIG_1
     echo ""                                                                                                                       >> $TAP_CONFIG_1
 
-    TAP_CONFIG_2=/tmp/tap_config_stage_2.yaml
+    TAP_CONFIG_2=/tmp/$TDH_TKGWC_NAME/tap_config_stage_2.yaml
     echo ""                                                                                                                       >  $TAP_CONFIG_2
     echo "profile: full"                                                                                                          >> $TAP_CONFIG_2
     echo ""                                                                                                                       >> $TAP_CONFIG_2
@@ -6276,9 +6379,10 @@ installTAP() {
     echo "  - tekton.tanzu.vmware.com"                                                                                            >> $TAP_CONFIG_2
     echo "  # learningcenter.tanzu.vmware.com"                                                                                    >> $TAP_CONFIG_2
     echo "  # workshops.learningcenter.tanzu.vmware.com"                                                                          >> $TAP_CONFIG_2
+    echo "  - bitnami.services.tanzu.vmware.com"                                                                                  >> $TAP_CONFIG_1
     echo ""                                                                                                                       >> $TAP_CONFIG_2
 
-    TAP_CONFIG_3=/tmp/tap_config_stage_3.yaml
+    TAP_CONFIG_3=/tmp/$TDH_TKGWC_NAME/tap_config_stage_3.yaml
     echo ""                                                                                                                       >  $TAP_CONFIG_3
     echo "profile: full"                                                                                                          >> $TAP_CONFIG_3
     echo ""                                                                                                                       >> $TAP_CONFIG_3
@@ -6320,21 +6424,34 @@ installTAP() {
     echo "  # tekton.tanzu.vmware.com"                                                                                            >> $TAP_CONFIG_3
     echo "  # learningcenter.tanzu.vmware.com"                                                                                    >> $TAP_CONFIG_3
     echo "  # workshops.learningcenter.tanzu.vmware.com"                                                                          >> $TAP_CONFIG_3
+    echo "  - bitnami.services.tanzu.vmware.com"                                                                                  >> $TAP_CONFIG_1
     echo ""                                                                                                                       >> $TAP_CONFIG_3
 
-    TAP_CONFIG=/tmp/tap_config_all.yaml
-    echo "namespace_provisioner:"                                                                                                 >  $TAP_CONFIG
+    TAP_CONFIG=/tmp/$TDH_TKGWC_NAME/tap_config_all.yaml
+    echo "shared:"                                                                                                                >  $TAP_CONFIG
+    echo "  ca_cert_data:  |"                                                                                                     >> $TAP_CONFIG
+    echo "    certificate: |"                                                                                                     >> $TAP_CONFIG
+    kubectl get secret tanzu-demo-hub-tls -o json | jq -r '.data."tls.crt"' | base64 -d | sed 's/^/    /g'                        >> $TAP_CONFIG
+    echo ""
+    echo "  image_registry:"                                                                                                      >> $TAP_CONFIG
+    echo "    project_path: "$DNS_HARBOR/library/tap-build-service""                                                              >> $TAP_CONFIG
+    echo "    secret:"                                                                                                            >> $TAP_CONFIG
+    echo "      name: "registry-credentials""                                                                                     >> $TAP_CONFIG
+    echo "      namespace: "tap-install""                                                                                         >> $TAP_CONFIG
+    echo ""                                                                                                                       >> $TAP_CONFIG
+
+    echo "namespace_provisioner:"                                                                                                 >> $TAP_CONFIG
     echo "  controller: true"                                                                                                     >> $TAP_CONFIG
     echo ""                                                                                                                       >> $TAP_CONFIG
 
     echo "buildservice:"                                                                                                          >> $TAP_CONFIG
-    echo "  kp_default_repository: $DNS_HARBOR/library/tap-build-service"                                                         >> $TAP_CONFIG
-    echo "  kp_default_repository_username: admin"                                                                                >> $TAP_CONFIG
-    echo "  kp_default_repository_password: $TDH_HARBOR_REGISTRY_ADMIN_PASSWORD"                                                  >> $TAP_CONFIG
-    echo "  tanzunet_username: $TDH_REGISTRY_VMWARE_USER"                                                                         >> $TAP_CONFIG
-    echo "  tanzunet_password: $TDH_REGISTRY_VMWARE_PASS"                                                                         >> $TAP_CONFIG
-    echo "  enable_automatic_dependency_updates: true"                                                                            >> $TAP_CONFIG
-    echo "  descriptor_name: \"full\""                                                                                            >> $TAP_CONFIG
+    #echo "  kp_default_repository: $DNS_HARBOR/library/tap-build-service"                                                         >> $TAP_CONFIG
+    #echo "  kp_default_repository_username: admin"                                                                                >> $TAP_CONFIG
+    #echo "  kp_default_repository_password: $TDH_HARBOR_REGISTRY_ADMIN_PASSWORD"                                                  >> $TAP_CONFIG
+    #echo "  tanzunet_username: $TDH_REGISTRY_VMWARE_USER"                                                                         >> $TAP_CONFIG
+    #echo "  tanzunet_password: $TDH_REGISTRY_VMWARE_PASS"                                                                         >> $TAP_CONFIG
+    #echo "  enable_automatic_dependency_updates: true"                                                                            >> $TAP_CONFIG
+    #echo "  descriptor_name: \"full\""                                                                                            >> $TAP_CONFIG
     echo ""                                                                                                                       >> $TAP_CONFIG
     echo "supply_chain: testing_scanning"                                                                                         >> $TAP_CONFIG
     echo ""                                                                                                                       >> $TAP_CONFIG
@@ -6404,6 +6521,16 @@ installTAP() {
     echo "  ca_cert_data:  |"                                                                                                     >> $TAP_CONFIG
     echo "    certificate: |"                                                                                                     >> $TAP_CONFIG
     kubectl get secret tanzu-demo-hub-tls -o json | jq -r '.data."tls.crt"' | base64 -d | sed 's/^/    /g'                        >> $TAP_CONFIG
+    echo ""                                                                                                                       >> $TAP_CONFIG
+
+    # https://docs.vmware.com/en/VMware-Tanzu-Application-Platform/1.5/tap/api-portal-install-api-portal.html
+    # https://docs.vmware.com/en/API-portal-for-VMware-Tanzu/1.3/api-portal/GUID-installing-tanzu-cli.html    
+    echo "api_portal:"                                                                                                            >> $TAP_CONFIG
+    echo "  apiPortalServer:"                                                                                                     >> $TAP_CONFIG
+    echo "    ingressDomain: $DNS_DOMAIN"                                                                                         >> $TAP_CONFIG
+    echo "    ingressIssuer: tap-ingress-selfsigned1"                                                                             >> $TAP_CONFIG
+    echo "    caCertData: |"                                                                                                      >> $TAP_CONFIG
+    kubectl get secret tanzu-demo-hub-tls -o json | jq -r '.data."tls.crt"' | base64 -d | sed 's/^/      /g'                      >> $TAP_CONFIG
     echo ""                                                                                                                       >> $TAP_CONFIG
 
     echo "learningcenter:"                                                                                                        >> $TAP_CONFIG
@@ -6512,23 +6639,48 @@ installTAP() {
       echo ""                                                                                                                      >> $TAP_CONFIG
     fi
 
-    messagePrint " ▪ TAP Config (Stage-1) TAP and TAP Telemetry, no modules"  "\$HOME/.${TDH_TOOLS}/tmp/tap_config_stage_1.yaml (TDH-TOOLS: /tmp/tap_config_stage_1.yaml)"
-    messagePrint " ▪ TAP Config (Stage-2) TBS, Learning Center, TAP Gui"      "\$HOME/.${TDH_TOOLS}/tmp/tap_config_stage_2.yaml (TDH-TOOLS: /tmp/tap_config_stage_2.yaml)"
-    messagePrint " ▪ TAP Config (Stage-3) APIS, Accelerator, Tektron"         "\$HOME/.${TDH_TOOLS}/tmp/tap_config_stage_3.yaml (TDH-TOOLS: /tmp/tap_config_stage_3.yaml)"
+    messagePrint " ▪ TAP Config (Stage-1) TAP and TAP Telemetry, no modules"  "\$HOME/.${TDH_TOOLS}/tmp/$TDH_TKGWC_NAME/tap_config_stage_1.yaml ## From outside tdh-tools"
+    messagePrint " ▪ TAP Config (Stage-2) TBS, Learning Center, TAP Gui"      "\$HOME/.${TDH_TOOLS}/tmp/$TDH_TKGWC_NAME/tap_config_stage_2.yaml ## From outside tdh-tools"
+    messagePrint " ▪ TAP Config (Stage-3) APIS, Accelerator, Tektron"         "\$HOME/.${TDH_TOOLS}/tmp/$TDH_TKGWC_NAME/tap_config_stage_3.yaml ## From outside tdh-tools"
     messagePrint " ▪ TAP Lerning Center" "https://learning-center-guided.$DNS_DOMAIN"
     messagePrint " ▪ TAP GUI"            "https://tap-gui.$DNS_DOMAIN"
-    messagePrint " ▪ Metadata Store"     "https://metadata-store.$DNS_DOMAIN:8443/api/v1"
-    messagePrint " ▪ Accelerator Store"  "https://accelerator.$DNS_DOMAIN:8443"
+    messagePrint " ▪ API Portal"         "https://api-portal.$DNS_DOMAIN:84431"
+    #messagePrint " ▪ Metadata Store"     "https://metadata-store.$DNS_DOMAIN:8443/api/v1"
+    #messagePrint " ▪ Accelerator Store"  "https://accelerator.$DNS_DOMAIN:8443"
 
     cat $TAP_CONFIG >> $TAP_CONFIG_1
 
-    messagePrint " ▪ TAP Install (Stage-1)"     "/tmp/tap_config_stage_1.yaml"
-    tanzu package install tap -p tap.tanzu.vmware.com -v $TAP_VERSION --values-file /tmp/tap_config_stage_1.yaml -n tap-install > /tmp/tap.log 2>&1
-    cnt=1; while [ $cnt -ne 0 ]; do
-      cnt=$(tanzu package installed list -n tap-install -o json | jq -r '.[].status' | grep -v "Reconcile succeeded" | wc -l)
-      [ $cnt -eq 0 ] && break
-      sleep 30
-    done
+    messagePrint " ▪ TAP Install (Stage-1)"     "/tmp/$TDH_TKGWC_NAME/tap_config_stage_1.yaml"
+    tanzu package install tap -p tap.tanzu.vmware.com -v $TAP_VERSION --values-file /tmp/$TDH_TKGWC_NAME/tap_config_stage_1.yaml -n tap-install --wait  > /tmp/error.log 2>&1; ret=$?
+
+    if [ $ret -eq 0 ]; then 
+      comp=10; fail=0
+      while [ $comp -ne 0 -a $fail -eq 0 ]; do
+        tanzu package installed list -n tap-install -o json > /tmp/output.json 2>/dev/null
+        comp=$(jq -r '.[].status' /tmp/output.json | grep -v "Reconcile succeeded" | wc -l)
+        fail=$(jq -r '.[].status' /tmp/output.json | grep -i "fail" | wc -l)
+        [ $comp -eq 0 -o $fail -gt 0 ] && break
+        sleep 30
+      done
+    else
+      # Dont need to wait as command failed before hand
+      fail=1
+    fi
+
+    if [ $fail -ne 0 ]; then
+      logMessages /tmp/error.log 
+      echo "ERROR: Failed to install TAP packages"
+      if [ "$NATIVE" == "0" ]; then
+        echo "       => tools/${TDH_TOOLS}.sh"
+        echo "          tdh-tools:/$ tanzu package install tap -p tap.tanzu.vmware.com -v $TAP_VERSION --values-file /tmp/$TDH_TKGWC_NAME/tap_config_stage_1.yaml -n tap-install"
+        echo "          tdh-tools:/$ exit"
+      else
+        echo "       => tanzu package install tap -p tap.tanzu.vmware.com -v $TAP_VERSION --values-file /tmp/$TDH_TKGWC_NAME/tap_config_stage_1.yaml -n tap-install"
+      fi
+      
+      exit 1
+    fi
+
     messageLine
     tanzu package installed list -n tap-install 2>/dev/null | sed 1d
 
@@ -6549,10 +6701,10 @@ installTAP() {
     messageLineIntend
     echo "   Manually Reconcile TAP Packages"
     echo "       => tools/${TDH_TOOLS}.sh"
-    echo "          tdh-tools:/$ tanzu package install tap -p tap.tanzu.vmware.com -v $TAP_VERSION --values-file /tmp/tap_config_stage_1.yaml -n tap-install            # INSTALL STAGE-1 - DONE"
-    echo "          tdh-tools:/$ tanzu package installed update tap -p tap.tanzu.vmware.com -v $TAP_VERSION --values-file /tmp/tap_config_stage_2.yaml -n tap-install"  # INSTALL STAGE-2"
-    echo "          tdh-tools:/$ tanzu package installed update tap -p tap.tanzu.vmware.com -v $TAP_VERSION --values-file /tmp/tap_config_stage_3.yaml -n tap-install   # INSTALL STAGE-3 ALL"
-    echo "          tdh-tools:/$ tanzu package installed update tap -p tap.tanzu.vmware.com -v $TAP_VERSION --values-file /tmp/tap_config_stage_1.yaml -n tap-install   # BACK TO STAGE-1"
+    echo "          tdh-tools:/$ tanzu package install tap -p tap.tanzu.vmware.com -v $TAP_VERSION --values-file /tmp/$TDH_TKGWC_NAME/tap_config_stage_1.yaml -n tap-install            # INSTALL STAGE-1 - DONE"
+    echo "          tdh-tools:/$ tanzu package installed update tap -p tap.tanzu.vmware.com -v $TAP_VERSION --values-file /tmp/$TDH_TKGWC_NAME/tap_config_stage_2.yaml -n tap-install"  # INSTALL STAGE-2"
+    echo "          tdh-tools:/$ tanzu package installed update tap -p tap.tanzu.vmware.com -v $TAP_VERSION --values-file /tmp/$TDH_TKGWC_NAME/tap_config_stage_3.yaml -n tap-install   # INSTALL STAGE-3 ALL"
+    echo "          tdh-tools:/$ tanzu package installed update tap -p tap.tanzu.vmware.com -v $TAP_VERSION --values-file /tmp/$TDH_TKGWC_NAME/tap_config_stage_1.yaml -n tap-install   # BACK TO STAGE-1"
     echo "   Verify Status of installed Package"
     echo "       => tools/${TDH_TOOLS}.sh"
     echo "          tdh-tools:/$ tanzu package installed list -n tap-install"
@@ -8247,10 +8399,6 @@ installClusterEssentials() {
     export IMGPKG_REGISTRY_PASSWORD_0=$INSTALL_REGISTRY_PASSWORD
     ./imgpkg pull -b $INSTALL_BUNDLE -o ./bundle/ > /dev/null 2>&1
 
-    export YTT_registry__server=$INSTALL_REGISTRY_HOSTNAME
-    export YTT_registry__username=$INSTALL_REGISTRY_USERNAME
-    export YTT_registry__password=$INSTALL_REGISTRY_PASSWORD
-
     # --- Deploying kapp-controller ---
     ./ytt -f ./bundle/kapp-controller/config/ \
           -f ./bundle/registry-creds/ \
@@ -8573,8 +8721,8 @@ installBuildService() {
         export INSTALL_REPOSITORY=$DNS_HARBOR/library/build-service
         export INSTALL_REGISTRY_USERNAME=admin
         export INSTALL_REGISTRY_PASSWORD=Password12345
-        export TANZUNET_REGISTRY_USERNAME=sadubois@pivotal.io
-        export TANZUNET_REGISTRY_PASSWORD="00Penwin$"
+        export TANZUNET_REGISTRY_USERNAME=$TDH_REGISTRY_VMWARE_USER
+        export TANZUNET_REGISTRY_PASSWORD="$TDH_REGISTRY_VMWARE_PASS"
         export TBS_VERSION=$TDH_SERVICE_BUILD_SERVICE_VERSION
 
         messagePrint " ▪ Create Namespace" "$NAMESPACE"
@@ -11071,6 +11219,140 @@ tdh_tools_download() {
 }
 
 # ------------------------------------------------------------------------------------------
+# Function Name ......: tdh_carvel_tools_build
+# Function Purpose ...: Build the TDH Carvel Tools Container from its source
+# ------------------------------------------------------------------------------------------
+# Argument ($1) ......: tkg or tce (tkg=Tanzu Kubernetes Frid, tce=Tanzu Conmnunity Edition)
+#          ($2) ......: Tools Container Version based on TKG Release (ie 1.5.1)
+# ------------------------------- ENVIRONMENT VARIABLES -----------------------------------------------------------
+# Variables ..........: TDH_TOOLS_BUILD_ENABLED (True = tdh-tools will be builded from source, False = from AWS S3
+# Return Value .......: Status (HEALTY, DETACHING, FAILED)
+# ------------------------------------------------------------------------------------------
+tdh_carvel_tools_build() {
+  MODE=$1
+  TOOLS_VERSION=$2
+  REBUILD_REQUIRED=0
+  REBUILD_REQUIRED_SOFTWARE=0
+  
+  verify_docker 
+  checkTDHenvironment
+
+  BUILD_MODE=carvel
+  MACHINE=$(uname -m)
+  TDH_TOOLS_TAG=$TOOLS_VERSION
+  TDH_TOOLS_IMAGE=tdh-tools-carvel-${BUILD_MODE}-$TDH_TOOLS_TAG
+  TDH_TOOLS_DOCKERFILE=Dockerfile-${BUILD_MODE}-$TDH_TOOLS_TAG
+  [ -f $TDHPATH/files/tdh-tools/tdh-tools-${BUILD_MODE}-${TDH_TOOLS_TAG}.cfg ] && . $TDHPATH/files/tdh-tools/tdh-tools-${BUILD_MODE}-${TDH_TOOLS_TAG}.cfg
+  TDH_DOCKER_FILES=/tmp/tdh-tools-${BUILD_MODE}-$TDH_TOOLS_TAG 
+  [ -d "$TDH_DOCKER_FILES" -a "$TDH_DOCKER_FILES" != "" ] && rm -rf $TDH_DOCKER_FILES 
+  mkdir -p $TDH_DOCKER_FILES
+
+  TDH_DOCKER_CACHE=$HOME/.tanzu-demo-hub/cache
+  [ ! -d "$TDH_DOCKER_CACHE" ] && mkdir -p $TDH_DOCKER_CACHE
+
+  cp $TDHPATH/files/tdh-tools/$TDH_TOOLS_DOCKERFILE       $TDH_DOCKER_FILES/Dockerfile
+  cp $TDHPATH/files/tdh-tools/wrapdocker                  $TDH_DOCKER_FILES
+
+  # --- CHECK WETHER THE BUNDLE IS INSTALLED ---
+  if [ ! -d $TDH_DOCKER_FILES/cli-${TKG_TANZU_KUBERNETES_GRID} -o $TDH_DOCKER_FILES/cli-${TKG_TANZU_KUBERNETES_GRID}/core/v*/tanzu-core-linux_amd64 ]; then
+    TANZU_DEMO_HUB_CACHE=$HOME/.tanzu-demo-hub/cache.orig
+    TANZU_DEMO_HUB_CACHE=$HOME/.tanzu-demo-hub/cache
+    TANZU_CLI_BUNDLE=$TDH_DOCKER_FILES/tkg-${TKG_TANZU_KUBERNETES_GRID}
+    TANZU_CLI_BUNDLE=$TANZU_DEMO_HUB_CACHE/tkg-${TKG_TANZU_KUBERNETES_GRID}
+  
+    if [ -f $TANZU_CLI_BUNDLE/tanzu-cli-bundle-linux-amd64.tar ]; then
+      TANZU_CLI_BUNDLE=${TANZU_DEMO_HUB_CACHE}/tkg-${TKG_TANZU_KUBERNETES_GRID}/tanzu-cli-bundle-linux-amd64.tar
+    else
+      TANZU_CLI_BUNDLE=${TANZU_DEMO_HUB_CACHE}/tkg-${TKG_TANZU_KUBERNETES_GRID}/tanzu-cli-bundle-v${TKG_TANZU_KUBERNETES_GRID}-linux-amd64.tar
+    fi
+
+    if [ ! -f $TDH_DOCKER_FILES/imgpkg  ]; then
+      rm -f ${TDH_DOCKER_FILES}/cli
+      tar xf $TANZU_CLI_BUNDLE && mv cli ${TDH_DOCKER_FILES}/cli-$TKG_TANZU_KUBERNETES_GRID
+      cd $TDH_DOCKER_FILES && mv cli-$TKG_TANZU_KUBERNETES_GRID/imgpkg* . && gunzip imgpkg* && mv imgpkg* imgpkg && chmod a+x imgpkg
+
+    fi
+  else
+    echo "ERROR: $$TDH_DOCKER_FILES/cli-${TKG_TANZU_KUBERNETES_GRID} no found in the cache, run tdh-tools container first"; exit 1
+  fi
+
+
+  REBUILD_REQUIRED=1
+
+  if [ $REBUILD_REQUIRED -gt 0 ]; then
+    #if [ ! -s $TDH_DOCKER_FILES/kubectl ]; then
+    #  curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+    #  chmod a+x kubectl
+    #  mv kubectl $TDH_DOCKER_FILES/kubectl
+    #fi
+
+    # --- CLEANUP SOME DISK SPACE ---
+    messagePrint " ▪ Cleanup unsued Docker images" "docker system prune, docker container prune"
+    docker rmi $(docker images -q) > /dev/null 2>&1
+    docker rm -v $(docker ps -qa) > /dev/null 2>&1
+    docker container prune -f > /dev/null 2>&1
+    docker system prune -f > /dev/null 2>&1
+
+    time1=$(echo "($(hourInSec)*360)+($(minInSec)*60)+$(secInSec)" | bc)
+    messagePrint " ▪ Building TDH Tools docker container" "$TDH_TOOLS_IMAGE:CHKSUM-$DOCKER_CHKSUM"
+    #cd $TDH_DOCKER_FILES && docker build -q -t $TDH_TOOLS_IMAGE:CHKSUM-$DOCKER_CHKSUM \
+    cd $TDH_DOCKER_FILES && docker build -t $TDH_TOOLS_IMAGE:CHKSUM-$DOCKER_CHKSUM \
+      --build-arg ARCH=$ARCH \
+      --build-arg TZ=$(ls -l /etc/localtime | /usr/bin/cut -d '/' -f 8,9) .; ret=$?
+    time2=$(echo "($(hourInSec)*360)+($(minInSec)*60)+$(secInSec)" | bc)
+    let time3=time2-time1
+    
+    if [ $ret -ne 0 ]; then 
+      echo "ERROR: failed to create $TDH_TOOLS_IMAGE container"
+      echo "       => cd $TDH_DOCKER_FILES && docker build -q -t $TDH_TOOLS_IMAGE:CHKSUM-$DOCKER_CHKSUM \\"
+      echo "             --build-arg UID=$(id -u) \\"
+      echo "             --build-arg GID=$(id -g) \\"
+      echo "             --build-arg USER=$USER \\"
+      echo "             --build-arg HOME=$HOME \\"
+      echo "             --build-arg TANZU_DEMO_HUB=$TANZU_DEMO_HUB \\"
+      echo "             --build-arg TDHPATH=$TDHPATH \\"
+      echo "             --build-arg ARCH=$ARCH \\"
+      echo "             --build-arg TZ=$(ls -l /etc/localtime | /usr/bin/cut -d '/' -f 8,9) ."
+      exit 1
+    fi
+      
+    messagePrint " ▪ Container Build for ($TDH_TOOLS_IMAGE) completed in" "$(duration $time3)"
+    messagePrint " ▪ Create Tag (latest) for  TDH Tools docker container" "$TDH_TOOLS_IMAGE:latest"
+    docker tag $TDH_TOOLS_IMAGE:CHKSUM-$DOCKER_CHKSUM $TDH_TOOLS_IMAGE:latest
+
+    messagePrint " ▪ Export Docker Container ($TDH_TOOLS_IMAGE)" "$HOME/.tanzu-demo-hub/cache/tdh-tools/$TDH_TOOLS_IMAGE.tar"
+    [ ! -d $HOME/.tanzu-demo-hub/cache/tdh-tools ] && mkdir -p $HOME/.tanzu-demo-hub/cache/tdh-tools
+    docker save $TDH_TOOLS_IMAGE:CHKSUM-$DOCKER_CHKSUM > $HOME/.tanzu-demo-hub/cache/tdh-tools/${TDH_TOOLS_IMAGE}.tar
+    #chk=$(sum $HOME/.tanzu-demo-hub/cache/tdh-tools/$TDH_TOOLS_IMAGE.tar | awk '{ print $1 }') 
+    #echo "$chk" > $HOME/.tanzu-demo-hub/cache/tdh-tools/$TDH_TOOLS_IMAGE.sum
+    #echo "$DOCKER_CHKSUM" > $HOME/.tanzu-demo-hub/cache/tdh-tools/$TDH_TOOLS_IMAGE.tag
+
+#hulu
+    docker login $TDH_REGISTRY_DOCKER_NAME -u $TDH_REGISTRY_DOCKER_USER -p $TDH_REGISTRY_DOCKER_PASS > /tmp/error.log 2>&1; ret=$?
+    if [ $ret -ne 0 ]; then
+      logMessages /tmp/error.log
+      echo "ERROR: Docker login to registry $REGISTRY_NAME failed does not work 1"
+      if [ "$NATIVE" == "0" ]; then
+        echo "       => tools/${TDH_TOOLS}.sh"
+        echo "          tdh-tools:/$ docker login $REGISTRY_NAME -u $REGISTRY_USER -p $REGISTRY_PASS"; exit 1
+        echo "          tdh-tools:/$ exit"
+      else
+        echo "       => docker login $REGISTRY_NAME -u $REGISTRY_USER -p $REGISTRY_PASS"; exit 1
+      fi     
+  
+      exit 1
+    fi
+
+    messagePrint " ▪ Tag Docker image $$TDH_TOOLS_IMAGE:latest" "$TDH_REGISTRY_DOCKER_NAME/$TDH_REGISTRY_DOCKER_USER/$TDH_TOOLS_IMAGE:latest"
+    docker tag $TDH_TOOLS_IMAGE:latest $TDH_REGISTRY_DOCKER_NAME/$TDH_REGISTRY_DOCKER_USER/$TDH_TOOLS_IMAGE:latest
+    messagePrint " ▪ Push container to registry" "$TDH_REGISTRY_DOCKER_NAME/$TDH_REGISTRY_DOCKER_USER/$TDH_TOOLS_IMAGE:latest"
+    docker push $TDH_REGISTRY_DOCKER_NAME/$TDH_REGISTRY_DOCKER_USER/$TDH_TOOLS_IMAGE:latest
+  fi
+exit
+
+}
+
+# ------------------------------------------------------------------------------------------
 # Function Name ......: tdh_tools_build
 # Function Purpose ...: Build the TDH Tools Container from its source
 # ------------------------------------------------------------------------------------------
@@ -11811,6 +12093,7 @@ tdh_tools_build() {
       TANZU_DEMO_HUB_CACHE=$HOME/.tanzu-demo-hub/cache
       TANZU_CLI_BUNDLE=$TDH_DOCKER_FILES/tkg-${TKG_TANZU_KUBERNETES_GRID}
       TANZU_CLI_BUNDLE=$TANZU_DEMO_HUB_CACHE/tkg-${TKG_TANZU_KUBERNETES_GRID}
+#hallo
 
       [ -s $TANZU_CLI_BUNDLE/tanzu-cli-bundle-v${TKG_TANZU_KUBERNETES_GRID}-linux-amd64.tar.gz ] && gunzip $TANZU_CLI_BUNDLE/tanzu-cli-bundle-v${TKG_TANZU_KUBERNETES_GRID}-linux-amd64.tar
       [ -s $TANZU_CLI_BUNDLE/tanzu-cli-bundle-linux-amd64.tar.gz ] && gunzip $TANZU_CLI_BUNDLE/tanzu-cli-bundle-linux-amd64.tar
@@ -14779,11 +15062,13 @@ runTDHtools() {
 
       # --- CREATE TEMPORARY FILES ---
       #echo "export PATH=\"~/.local/bin:\$PATH\"" > $HOME/$TDH_TOOLS_PATH/.bashrc
+      [ "$SUPERVISOR" == "" ] && export SUPERVISOR="false"
 
-      docker run $ROOT_OPTIONS ${CORE_MOUNTS[*]} $TDH_TOOLS:latest chmod 666 /var/run/docker.sock > /dev/null 2>&1
-      docker run $USER_OPTIONS ${CORE_MOUNTS[*]} $TDH_TOOLS:latest /usr/local/bin/$POSTSCRIPT > /dev/null 2>&1
+      #docker run $ROOT_OPTIONS ${CORE_MOUNTS[*]} $TDH_TOOLS:latest chmod 666 /var/run/docker.sock > /dev/null 2>&1
+      #docker run $USER_OPTIONS ${CORE_MOUNTS[*]} -e SUPERVISOR $TDH_TOOLS:latest /usr/local/bin/$POSTSCRIPT > /dev/null 2>&1
+
       [ $ROOT_SHELL -eq 1 ] && SEXEC_OPTIONS=$ROOT_OPTIONS || SEXEC_OPTIONS=$USER_OPTIONS
-      docker run $SEXEC_OPTIONS ${CORE_MOUNTS[*]} $TDH_TOOLS:latest $DOCKER_EXEC $DOCKER_ARGS; ret=$?
+      docker run $SEXEC_OPTIONS ${CORE_MOUNTS[*]} -e SUPERVISOR $TDH_TOOLS:latest $DOCKER_EXEC $DOCKER_ARGS; ret=$?
   
       # --- FINISH CURRENT SESSION AS WE RUN AS CONTAINER ---
       exit $ret

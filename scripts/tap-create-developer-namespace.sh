@@ -41,13 +41,31 @@ tanzu secret registry add harbor-registry-credentials \
   --namespace "$NAMESPACE" \
   --verbose 0 >/dev/null 2>&1
 
+#tanzu secret registry add tbs-registry-credentials \
+#  --server $REGISTRY_SERVER \
+#  --username "$REGISTRY_USERNAME" \
+#  --password "$REGISTRY_PASSWORD" \
+#  --namespace "$NAMESPACE" \
+#  --verbose 0 >/dev/null 2>&1
+#
+#tanzu secret registry add registry-credentials \
+#  --server $REGISTRY_SERVER \
+#  --username "$REGISTRY_USERNAME" \
+#  --password "$REGISTRY_PASSWORD" \
+#  --namespace "$NAMESPACE" \
+#  --yes \
+#  --verbose 0 >/dev/null 2>&1
+
+
 kubectl -n $NAMESPACE create secret docker-registry vmware-registry-credentials \
-          --docker-server=https://registry.tanzu.vmware.com/ \
-          --docker-username=$TDH_REGISTRY_VMWARE_USER \
-          --docker-password=$TDH_REGISTRY_VMWARE_PASS >/dev/null 2>&1
+          --docker-server=registry.tanzu.vmware.com \
+          --docker-username="$TDH_REGISTRY_VMWARE_USER" \
+          --docker-password="$TDH_REGISTRY_VMWARE_PASS" 
 
 # --- CREATE TAP LABEL ---
 kubectl label namespaces $NAMESPACE apps.tanzu.vmware.com/tap-ns=""
+
+dockerPullSecret $NAMESPACE
 
 sleep 60
 

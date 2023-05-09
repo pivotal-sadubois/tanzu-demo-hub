@@ -26,6 +26,6 @@ export AWS_DEFAULT_REGION=$AWS_REGION
 echo "------------------------------------------------------------------------------------------------------------"
 for n in $(aws s3 ls $BUCKET | awk '{ print $NF }'); do
 
-  aws s3 rm --recursive $BUCKET/$n
+  aws s3 rm --recursive --recursive $BUCKET/$n
 
 done

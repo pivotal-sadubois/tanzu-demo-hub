@@ -359,9 +359,9 @@ installGitLab
 installTAP                   ## Tanzu Application Platform (TAP)
 installKubeernetesDashboard  ## Kubernetes Dashboard
 
-echo "-----------------------------------------------------------------------------------------------------------"
+messageLine
 echo "Tanzu Kubernetes Grid Cluster ($TDH_TKGWC_NAME) build completed"
-echo "-----------------------------------------------------------------------------------------------------------"
+messageLine
 if [ "$NATIVE" == "0" ]; then
   printf "\e[1m1.) Set KUBECONFIG and set the cluster context\e[0m\n"
   echo "    => tools/${TDH_TOOLS}.sh"
