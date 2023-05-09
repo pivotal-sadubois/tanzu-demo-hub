@@ -139,4 +139,5 @@ while [ $INDEX -lt ${#TKG_CLUSTER_NAME[@]} ]; do
 done
 
 echo  
-#/bin/bash
+/bin/bash
+
