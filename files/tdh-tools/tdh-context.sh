@@ -88,12 +88,11 @@ if [ -d $HOME/.tanzu-demo-hub/config ]; then
           kubectl vsphere login --insecure-skip-tls-verify --server $TDH_TKGMC_SUPERVISORCLUSTER \
              -u $TDH_TKGMC_VSPHERE_USER > /tmp/error.log 2>&1; ret=$?
   
-          if [ $ret -ne 0 ]; then 
+          if [ $ret -eq 0 ]; then 
             kubectl get secrets ${cnm}-kubeconfig -o jsonpath='{.data.value}' | base64 -d > ${TKG_CLUSTER_KUBECONFIG[$INDEX]}
             TKG_CLUSTER_STATUS[$INDEX]="ok"
           fi
   
-          [ -s $HOME/.kube/config ] && mv $HOME/.kube/config ${TKG_CLUSTER_KUBECONFIG[$INDEX]}
           [ -s $HOME/.kube/config.old ] && mv $HOME/.kube/config.old $HOME/.kube/config
   
           # --- VERIFY CLUSTER ACCESS AGAIN---
@@ -118,7 +117,7 @@ if [ -d $HOME/.tanzu-demo-hub/config ]; then
     INDEX=0 
     while [ $INDEX -lt ${#TKG_CLUSTER_NAME[@]} ]; do
       if [ "${TKG_CLUSTER_IS_MGMT[$INDEX]}" == "true" ]; then 
-        pth=$(echo ${TKG_CLUSTER_KUBECONFIG[$INDEX]} | sed "s+/home/tanzu+$HOME+g")
+        pth=$(echo ${TKG_CLUSTER_KUBECONFIG[$INDEX]} | sed 's+/home/tanzu+$HOME+g')
         printf " export KUBECONFIG=%-82s   ## %-40s %25s\n" $pth $cnm  "[${TKG_CLUSTER_STATUS_MSG[$INDEX]}]"
       fi
           
@@ -132,7 +131,7 @@ if [ -d $HOME/.tanzu-demo-hub/config ]; then
   INDEX=0 
   while [ $INDEX -lt ${#TKG_CLUSTER_NAME[@]} ]; do
     if [ "${TKG_CLUSTER_IS_MGMT[$INDEX]}" != "true" ]; then 
-      pth=$(echo ${TKG_CLUSTER_KUBECONFIG[$INDEX]} | sed "s+/home/tanzu+$HOME+g")
+      pth=$(echo ${TKG_CLUSTER_KUBECONFIG[$INDEX]} | sed 's+/home/tanzu+$HOME+g')
       printf " export KUBECONFIG=%-82s   ## %-40s %25s\n" $pth $cnm  "[${TKG_CLUSTER_STATUS_MSG[$INDEX]}]"
     fi
   

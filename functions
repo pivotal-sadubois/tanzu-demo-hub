@@ -6202,13 +6202,13 @@ fi
         echo "ERROR: failed to create registry secret"
         if [ "$NATIVE" == "0" ]; then
           echo "       => tools/${TDH_TOOLS}.sh"
-          echo "          tdh-tools:/$ tanzu secret registry add tap-registry \\"
+          echo "          tdh-tools:/$ tanzu secret registry add registry-credentials \\"
           echo "                          --username ${INSTALL_REGISTRY_USERNAME} --password ${INSTALL_REGISTRY_PASSWORD} \\"
           echo "                          --server ${INSTALL_REGISTRY_HOSTNAME} \\"
           echo "                          --export-to-all-namespaces --yes --namespace $NAMESPACE"
           echo "          tdh-tools:/$ exit"
         else
-          echo "       => tanzu secret registry add tap-registry \\"
+          echo "       => tanzu secret registry add registry-credentials \\"
           echo "                --username ${INSTALL_REGISTRY_USERNAME} --password ${INSTALL_REGISTRY_PASSWORD} \\"
           echo "                --server ${INSTALL_REGISTRY_HOSTNAME} \\"
           echo "                --export-to-all-namespaces --yes --namespace $NAMESPACE"
@@ -16386,7 +16386,9 @@ tmcAttachCluster() {
   TANZU_TKGWC_INFRASTRUCTURE=$(getConfigMap tanzu-demo-hub TANZU_TKGWC_INFRASTRUCTURE)
   TANZU_TKGWC_DEPLOYMENT_MODEL=$(getConfigMap tanzu-demo-hub TANZU_TKGWC_DEPLOYMENT_MODEL)
 
-  [ "$TDH_TANZU_MISSION_CONTROL_REGISTRATION" == "" ] && TDH_TANZU_MISSION_CONTROL_REGISTRATION=true
+  [ "$TDH_TANZU_MISSION_CONTROL_REGISTRATION" == "" ] && TDH_TANZU_MISSION_CONTROL_REGISTRATION="true"
+  [ "$TDH_TANZU_MISSION_CONTROL_INSPECTION" == "" ] && TDH_TANZU_MISSION_CONTROL_INSPECTION="false"
+  [ "$TDH_TANZU_MISSION_CONTROL_BACKUP" == "" ] && TDH_TANZU_MISSION_CONTROL_BACKUP="false"
 
   if [ "$TDH_TANZU_MISSION_CONTROL_REGISTRATION" == "true" ]; then
     messageTitle "Tanzu Mission Control"
@@ -16409,9 +16411,9 @@ tmcAttachCluster() {
 
     if [ "$stt" == "READY/HEALTHY" ]; then
       # --- NO CONNECTION FROM A PEZ-INTERNAL CLUSTER ---
-      checkTMCintegration      TO    ## Tanzu Observability (Wavefront)
-      checkTMCintegration      TDP   ## Tanzu Data Protection
-      checkTMCintegration      TCI   ## Tanzu Cluster Inspection
+      #checkTMCintegration      TO    ## Tanzu Observability (Wavefront)
+      [ "$TDH_TANZU_MISSION_CONTROL_BACKUP" == "true" ] && checkTMCintegration      TDP   ## Tanzu Data Protection
+      [ "$TDH_TANZU_MISSION_CONTROL_INSPECTION" == "true" ] && checkTMCintegration      TCI   ## Tanzu Cluster Inspection
     else
       echo "ERROR: TKG Worklaod Cluster ($TANZU_TKGWC_NAME) is currently in state: $stt. TMC Integration can not be"
       echo "       performed right now. Delete the Cluster manually in TMC or wait until it has disapiered and try again"
