@@ -5170,6 +5170,7 @@ tkgCreateCluster() {
         stt=$(jq -r --arg key "$TDH_TKGWC_NAME" '.items[] | select(.metadata.name == $key).status.conditions[].status' /tmp/output.json)
         typ=$(jq -r --arg key "$TDH_TKGWC_NAME" '.items[] | select(.metadata.name == $key).status.conditions[].type' /tmp/output.json)
 
+#111111111111
         vsphereWorkloadClusterLogin $TKG_DEPLOYMENT $TDH_TKGWC_NAME; ret=$?
         if [ ${ret} -eq 0 ]; then
           messagePrint " ▪ TKG Workload Cluster Status"                 "Ready"
@@ -5327,6 +5328,12 @@ vsphereSupervisorClusterLogin() {
 vsphereWorkloadClusterLogin() {
   MC_CONFIG=$1
   TKGWC_NAME=$2
+
+  kubectl get secrets ${TKGWC_NAME}-kubeconfig -n tanzu-demo-hub -o jsonpath='{.data.value}' | base64 -d > $HOME/.tanzu-demo-hub/config/${TKGWC_NAME}.kubeconfig
+
+  export KUBECONFIG=$HOME/.tanzu-demo-hub/config/${TKGWC_NAME}.kubeconfig
+
+  return
 
   [ -s $HOME/.tanzu-demo-hub/config/$MC_CONFIG ] && . $HOME/.tanzu-demo-hub/config/$MC_CONFIG
   [ -s $HOME/.kube/config ] && mv $HOME/.kube/config $HOME/.kube/config.old
@@ -5753,7 +5760,7 @@ exit
         sleep 10
       done
 
-      sleep 300
+      sleep 500
 
       vsphereWorkloadClusterLogin $TMC_DEPLOYMENT $TDH_CLUSTER_NAME; ret=$?
       if [ ${ret} -eq 0 ]; then
