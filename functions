@@ -5330,7 +5330,7 @@ vsphereWorkloadClusterLogin() {
   TKGWC_NAME=$2
 
   kubectl get secrets ${TKGWC_NAME}-kubeconfig -n tanzu-demo-hub -o jsonpath='{.data.value}' | base64 -d > $HOME/.tanzu-demo-hub/config/${TKGWC_NAME}.kubeconfig
-  chmod u=rw- $HOME/.tanzu-demo-hub/config/${TKGWC_NAME}.kubeconfig
+  chmod 600 $HOME/.tanzu-demo-hub/config/${TKGWC_NAME}.kubeconfig
 
   export KUBECONFIG=$HOME/.tanzu-demo-hub/config/${TKGWC_NAME}.kubeconfig
 
