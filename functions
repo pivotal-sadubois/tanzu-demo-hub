@@ -6569,6 +6569,9 @@ fi
     echo "  connector_namespaces: [default]"                                                                                      >> $TAP_CONFIG
     echo "  service_type: LoadBalancer"                                                                                           >> $TAP_CONFIG
     echo ""                                                                                                                       >> $TAP_CONFIG
+    echo "appliveview_connector:"                                                                                                 >> $TAP_CONFIG
+    echo "  activateSensitiveOperations: true"                                                                                    >> $TAP_CONFIG
+    echo ""                                                                                                                       >> $TAP_CONFIG
     echo "metadata_store:"                                                                                                        >> $TAP_CONFIG
     echo "  ns_for_export_app_cert: '*'"                                                                                          >> $TAP_CONFIG
     echo "  url: \"\""                                                                                                            >> $TAP_CONFIG
