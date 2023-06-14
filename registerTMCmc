@@ -80,7 +80,6 @@ checkCLIcommands TMC
 
 # --- CLEANUP KUNECONFIG ---
 tmcCheckLogin
-#checkTDHAccess
 vSphereKubeconfig
 vSphereLogin
 

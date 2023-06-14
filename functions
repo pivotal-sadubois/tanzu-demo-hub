@@ -483,7 +483,7 @@ tmcCheckLogin() {
   [ "${TDH_TANZU_MISSION_CONTROL_REGISTRATION}" == "false" ] && return
   missing_variables=0
 
-  if [ "${TMC_SERVICE_TOKEN}" == "" -o "${TMC_CONTEXT_NAME}" == "" -o "${TMC_SERVER_URL}" == "" ]; then
+  if [ "${TMC_SERVICE_TOKEN}" == "" -o "${TMC_SERVER_URL}" == "" ]; then
     missing_variables=1
     echo ""
     echo "  ?MISSING ENVIRONMENT-VARIABES    DESCRIPTION        "
@@ -496,10 +496,6 @@ tmcCheckLogin() {
     if [ "${TMC_SERVER_URL}" == "" ]; then
       echo "  TMC_SERVER_URL                   (required) The TMC Server Url"
       echo "                                   ie. TMC_SERVER_URL=\"https://tanzuemea.tmc.cloud.vmware.com\""
-    fi
-
-    if [ "${TMC_CONTEXT_NAME}" == "" ]; then
-      echo "  TMC_CONTEXT_NAME                 (required) The TMC Context Name"
     fi
   fi
 
@@ -545,7 +541,7 @@ tmcCheckLogin() {
   export TMC_API_TOKEN=$TMC_SERVICE_TOKEN
   ret=1; cnt=0
   while [ $ret -ne 0 -a $cnt -lt 5 ]; do
-    tmc login --name $TMC_CONTEXT_NAME --no-configure > /dev/null 2>&1; ret=$?
+    tmc login --name "tanzu-demo-hub" --no-configure > /dev/null 2>&1; ret=$?
     [ $ret -eq 0 ] && break
     let cnt=cnt+1
     sleep 30
@@ -556,13 +552,13 @@ tmcCheckLogin() {
     if [ "$NATIVE" == "0" ]; then
       echo "       => tools/${TDH_TOOLS}.sh"
       echo "          tdh-tools:/$ export TMC_API_TOKEN=$TMC_SERVICE_TOKEN"
-      echo "          tdh-tools:/$ tmc login --name $TMC_CONTEXT_NAME --no-configure"
+      echo "          tdh-tools:/$ tmc login --name \"tanzu-demo-hub\" --no-configure"
       echo "          tdh-tools:/$ exit"
       echo "       => Verify you API token, mabe a new token is required"
       echo "          TMC => My Account => API Token"
     else
       echo "       => export TMC_API_TOKEN=$TMC_SERVICE_TOKEN"
-      echo "       => tmc login --name $TMC_CONTEXT_NAME --no-configure"
+      echo "       => tmc login --name "tanzu-demo-hub" --no-configure"
       echo "       => Verify you API token, mabe a new token is required"
       echo "          TMC => My Account => API Token"
     fi
@@ -4656,7 +4652,7 @@ checkTMCAccess() {
       messagePrint " ▪ TMC User"                        "$TDH_USER"
       messagePrint " ▪ TMC Cluster Group"               "$TDH_CLUSTER_GROUP"
       messagePrint " ▪ TMC Cluster Name"                "$TDH_CLUSTER_NAME"
-      messagePrint " ▪ TMC Context Name"                "$TMC_CONTEXT_NAME"
+      messagePrint " ▪ TMC Context Name"                "tanzu-demo-hub"
       messagePrint " ▪ TMC AWS Account Name"            "$TMC_ACCOUNT_NAME_AWS"
       messagePrint " ▪ TMC Management Cluster"          "$TDH_MANAGEMENT_CLUSTER"
       messagePrint " ▪ TMC Provisioner Name"            "$TDH_PROVISIONER_NAME"
@@ -4709,11 +4705,11 @@ awsCredentials() {
 
 checkTMCcontext() {
   tmc_context=$(tmc system context current -o json 2>/dev/null | jq -r '.full_name.name')
-  if [ "$tmc_context" == "" -o "$tmc_context" != "$TMC_CONTEXT_NAME" ]; then 
-    tmc system context use $TMC_CONTEXT_NAME > /dev/null 2>&1
+  if [ "$tmc_context" == "" -o "$tmc_context" != "tanzu-demo-hub" ]; then 
+    tmc system context use "tanzu-demo-hub" > /dev/null 2>&1
     if [ $? -ne 0 ]; then
-      echo "ERROR: Can not set TMC Context to $TMC_CONTEXT_NAME"
-      echo "       => tmc system context use $TMC_CONTEXT_NAME"
+      echo "ERROR: Can not set TMC Context to tanzu-demo-hub"
+      echo "       => tmc system context use tanzu-demo-hub"
       exit 1
     fi 
   fi 
