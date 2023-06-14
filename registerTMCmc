@@ -39,8 +39,10 @@ usage() {
   echo "USAGE: $0 <options> [-d <display-name> -v <tkg-version>] [-debug|-clean]"
   echo "           Options:  -d <display-name>           # Tanzu Mission Control (TMC) Deployment Name"
   echo "                                                 # (default: tkgmc-vsphere-<tmc-user>"
-  echo "                     -v <tkg-version>            # TKG Version (ie. $str)"
-  echo "                                                 # (default latest: $DEPLOY_TKG_VERSION"
+  echo "                     --vcenter_server <name>     # vCenter Server Name or IP Address"
+  echo "                     --vcenter_user <user_name>  # vCenter Server Administrator User"
+  echo "                     --vcenter_pass <password>   # vCenter Server Administrator Password"
+  echo "                     --supervisor <name>         # vSphere Supervisor Cluster Name"
   echo ""
   echo "                     --native                    # Native execution without tdh-tools container"
   echo "                     --debug                     # default (disabled)"
@@ -50,12 +52,16 @@ usage() {
 
 while [ "$1" != "" ]; do
   case $1 in
-    -d)            TMC_DISPLAY_NAME=$2;;
-    -v)            DEPLOY_TKG_VERSION=$2;;
-    --clean)       DEPLOY_TKG_CLEAN=1;;
-    --debug)       DEBUG=1;;
-    --native)      NATIVE=1;;
-    --usage)       usage; exit;;
+    -d)                    TMC_DISPLAY_NAME=$2;;
+    --vcenter_server)      TMC_DISPLAY_NAME=$2;;
+    --vcenter_user)        TMC_DISPLAY_NAME=$2;;
+    --vcenter_pass)        TMC_DISPLAY_NAME=$2;;
+    --supervisor)          TMC_DISPLAY_NAME=$2;;
+    -v)                    DEPLOY_TKG_VERSION=$2;;
+    --clean)               DEPLOY_TKG_CLEAN=1;;
+    --debug)               DEBUG=1;;
+    --native)              NATIVE=1;;
+    --usage)               usage; exit;;
   esac
   shift
 done
@@ -73,11 +79,17 @@ checkCLIcommands TANZU
 checkCLIcommands TMC
 
 # --- CLEANUP KUNECONFIG ---
-#cleanKubeconfig
 tmcCheckLogin
 #checkTDHAccess
 vSphereKubeconfig
 vSphereLogin
+
+#VSPHERE_TKGS_VCENTER_SERVER=https://vc01.h2o-4-2705.h2o.vmware.com	
+#VSPHERE_TKGS_VCENTER_ADMIN=administrator@vsphere.local
+#VSPHERE_TKGS_VCENTER_PASSWORD='8j9hnHTTc%7YxtSMeIw'
+#VSPHERE_TKGS_SUPERVISOR_CLUSTER=vc01cl01-wcp.h2o-4-2705.h2o.vmware.com
+
+exit
 
 # --- VERIFY ITS A H2O CLUSTER ---
 cnt=$(echo $VSPHERE_TKGS_VCENTER_SERVER | egrep -c "\.h2o-") 
@@ -85,6 +97,9 @@ if [ $cnt -gt 0 ]; then
   H2O_ID=$(echo "$VSPHERE_TKGS_VCENTER_SERVER" | awk -F'.' '{ print $2 }') 
   TMC_DISPLAY_NAME="tkgmc-vsphere-${H2O_ID}-$TDH_USER"
   TMC_CONFIG_NAME="tmc-vsphere-${H2O_ID}"
+  VSPHERE_TKGS_SUPERVISOR_STORAGE_POLICY=vc01cl01-t0compute
+  VSPHERE_TKGS_SUPERVISOR_STORAGE_CLASS=vc01cl01-t0compute
+  VSPHERE_TKGS_DNS_SERVER="10.79.2.5:53"
 else
   TMC_CONFIG_NAME="tmc-vsphere-tkgs"
   TMC_DISPLAY_NAME="tkgmc-vsphere--$TDH_USER"
