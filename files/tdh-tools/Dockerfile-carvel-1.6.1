@@ -1,0 +1,12 @@
+# ############################################################################################
+# File: ........: files/tdh-tools/Dockerfile-carvel
+# Language .....: docker  
+# Author .......: Sacha Dubois, VMware
+# Description ..: Tanzu Demo Hub - Dockerfile for tdh-tools container
+# ############################################################################################
+                                
+FROM --platform=linux/amd64 docker:dind 
+#COPY --from=docker:dind /usr/local/bin/docker /usr/local/bin/
+MAINTAINER Sacha Dubois <sdubois@vmware.com>
+#ENV TZ="Europe/Zurich"
+ADD imgpkg             /usr/bin/imgpkg

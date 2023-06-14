@@ -4,8 +4,9 @@
 # Author .......: Sacha Dubois, VMware
 # Description ..: Tanzu Demo Hub - Dockerfile for tdh-tools container
 # ############################################################################################
-                             
+                                            
 FROM --platform=linux/amd64 ubuntu:20.04
+#FROM --platform=linux/arm64 ubuntu:20.04
 MAINTAINER Sacha Dubois <sdubois@vmware.com>
 ENV TZ="Europe/Zurich"
 ARG UID GID USER TZ HOME VMWUSER VMWPASS START ARCH
@@ -22,7 +23,7 @@ ADD imgpkg          /usr/local/bin
 ADD kapp            /usr/local/bin
 ADD ytt             /usr/local/bin
 ADD argocd          /usr/local/bin
-ADD kubectl         /usr/local/bin
+#ADD kubectl         /usr/local/bin
 ADD kp              /usr/local/bin
 ADD mc              /usr/local/bin
 ADD jenkins-cli.jar /usr/local
@@ -62,8 +63,13 @@ RUN apt-get update -qq && apt-get install -qqy \
     zip \
     s3cmd \
     postgresql-client \
+    python3-pip \
     iptables
 RUN apt-get clean 
+
+# --- INSTALL YQ ---
+RUN wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+RUN chmod a+x /usr/local/bin/yq
 
 # --- INSTALL ASCIICINEMA ---
 RUN apt-add-repository ppa:zanchey/asciinema
@@ -80,6 +86,10 @@ RUN apt-get install -qqy golang-go
 # --- INSTALL KUSTOMIZE 
 RUN curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh"  | bash
 RUN chmod a+x kustomize && mv kustomize /usr/bin
+
+# --- INSTALL KUBECTL ---
+RUN curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+RUN install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
 
 # --- INSTALL BAT ----
 RUN curl -s https://api.github.com/repos/sharkdp/bat/releases/latest |grep browser_download_url | cut -d '"' -f 4 | grep "${ARCH}.deb" | grep -v musl | wget -i -
@@ -106,14 +116,11 @@ RUN apt-get update && apt-get install -y \
     git vim azure-cli jq awscli 
 
 # --- INSTALL TANZU UTILITIES ---
-RUN ls -la /
-RUN ls -la /tanzu/cli/
-RUN ls -la /tanzu/cli/core/v*
 RUN install /tanzu/cli/core/v*/tanzu-core-linux_amd64 /usr/local/bin/tanzu
 RUN gunzip -q /tanzu/cli/*.gz
-RUN cd /tanzu && tanzu plugin clean
-RUN cd /tanzu-tap && tanzu plugin install --local cli all > /dev/null 2>&1
-RUN cd /tanzu && tanzu plugin sync
+#RUN cd /tanzu && tanzu plugin clean
+#RUN cd /tanzu-tap && tanzu plugin install --local cli all > /dev/null 2>&1
+#RUN cd /tanzu && tanzu plugin sync
 
 # --- INSTQLL CARVEL TOOLS ---
 RUN cp /tanzu/cli/imgpkg-linux* /usr/local/bin/imgpkg && chmod a+x /usr/local/bin/imgpkg
@@ -125,5 +132,8 @@ RUN cp /tanzu/cli/vendir-linux* /usr/local/bin/vendir && chmod a+x /usr/local/bi
 # --- DIRTY FIX TO GET LATEST TOOLS (https://github.com/vmware-tanzu/carvel) ---
 RUN curl -sL https://github.com/vmware-tanzu/carvel-imgpkg/releases/download/v0.13.0/imgpkg-linux-amd64 -o /tanzu/cli/imgpkg-linux-amd64
 RUN mv /tanzu/cli/imgpkg-linux-amd64 /usr/local/bin/imgpkg && chmod a+x /usr/local/bin/imgpkg
+
+RUN pip install yasha
+
 
 
