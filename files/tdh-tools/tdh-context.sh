@@ -7,7 +7,7 @@
 # ############################################################################################
 
 #########################################################################################################################
-##################################### VERIFY MANAGEMENT / SUPERVISOR CLUSTER ############################################
+#Execute a command"#################################### VERIFY MANAGEMENT / SUPERVISOR CLUSTER ############################################
 #########################################################################################################################
 if [ -d $HOME/.tanzu-demo-hub/config ]; then 
   declare -a TKG_CLUSTER_KUBECONFIG
@@ -19,11 +19,13 @@ if [ -d $HOME/.tanzu-demo-hub/config ]; then
   declare -a TKG_CLUSTER
   declare -a TKG_CLUSTER_NAME
   declare -a TKG_CLUSTER_TYPE
+  declare -a TKG_CLUSTER_TDHV2
 
   TIMEOUT=3s
   TKG_MC_LIST=""
   TKG_WC_LIST=""
   [ "$SUPERVISOR" == "" ] && export SUPERVISOR="false"
+  [ "$VERIFY" == "" ] && export VERIFY="false"
 
   # --- VERIFY VPN"
   curl -k --head -m 3 https://h2o.vmware.com > /dev/null 2>&1; ret=$?
@@ -31,26 +33,44 @@ if [ -d $HOME/.tanzu-demo-hub/config ]; then
 
   CONTEXT_LIST=""; INDEX=0
   # --- GATHER RIGHT KUBECONFIG ---
-  for n in $(ls -1 $HOME/.tanzu-demo-hub/config/*.kubeconfig 2>/dev/null | egrep "tkgmc|tcemc|/tdh"); do
+  for n in $(find $HOME/.tanzu-demo-hub -name "*.kubeconfig" 2>/dev/null | egrep "tkgmc|tcemc|/tdh"); do
     cnm=$(echo $n | awk -F'/' '{ print $NF }' | awk -F'.' '{ print $1 }')
     vsp=$(echo $n | egrep -c "tkgmc-vsphere|tcemc-vsphere") 
-    mgt=$(echo $n | egrep -c "tkgmc|tcemc") 
+    dh2=$(echo $n | egrep -c "deployment") 
+    mgt=$(echo $n | awk -F'/' '{ print $NF }' | egrep -c "tkgmc|tcemc") 
     [ $vsp -gt 0 ] && TKG_MC_LIST="$TKG_MC_LIST $cnm" || TKG_WC_LIST="$TKG_WC_LIST $cnm"
   
-    TKG_CLUSTER_NAME[$INDEX]="$cnm"
-    TKG_CLUSTER_STATUS_MSG[$INDEX]="KUBERNETES-API-OK"
-    TKG_CLUSTER_CONFIG[$INDEX]=$HOME/.tanzu-demo-hub/config/${cnm}.cfg
-    TKG_CLUSTER_KUBECONFIG[$INDEX]=$HOME/.tanzu-demo-hub/config/${cnm}.kubeconfig
+    [ "$dh2" -eq 1 ] && TKG_CLUSTER_TDHV2[$INDEX]="true" || TKG_CLUSTER_TDHV2[$INDEX]="false"
+    if [ "${TKG_CLUSTER_TDHV2[$INDEX]}" == "true" ]; then
+      dep=$(echo $n | awk -F '/' '{ print $(NF-2) }')
+      mcn=$(echo $n | awk -F '/' '{ print $(NF-3) }')
+      TKG_CLUSTER_NAME[$INDEX]="$cnm"
+      TKG_CLUSTER_STATUS_MSG[$INDEX]="KUBERNETES-API-NOT-TESTED"
+      TKG_CLUSTER_CONFIG[$INDEX]=$HOME/.tanzu-demo-hub/deployments/${mcn}/${dep}/${cnm}/${cnm}.cfg
+      TKG_CLUSTER_KUBECONFIG[$INDEX]=$HOME/.tanzu-demo-hub/deployments/${mcn}/${dep}/${cnm}/${cnm}.kubeconfig
+    else
+      TKG_CLUSTER_NAME[$INDEX]="$cnm"
+      TKG_CLUSTER_STATUS_MSG[$INDEX]="KUBERNETES-API-NOT-TESTED"
+      TKG_CLUSTER_CONFIG[$INDEX]=$HOME/.tanzu-demo-hub/config/${cnm}.cfg
+      TKG_CLUSTER_KUBECONFIG[$INDEX]=$HOME/.tanzu-demo-hub/config/${cnm}.kubeconfig
+    fi
+
     vsp=$(egrep -c "TDH_TKGMC_INFRASTRUCTURE=vSphere|TDH_TKGMC_VSPHERE_NAMESPACE=" ${TKG_CLUSTER_CONFIG[$INDEX]})
     [ "$vsp" -gt 0 ] && TKG_CLUSTER_IS_VSPHERE[$INDEX]="true" || TKG_CLUSTER_IS_VSPHERE[$INDEX]="false"
     [ "$mgt" == "1" ] && TKG_CLUSTER_IS_MGMT[$INDEX]="true" || TKG_CLUSTER_IS_MGMT[$INDEX]="false"
   
     # --- ONLY DO MANAGEMENT CLUSTERS IF NEEDED ---
-    [ "${TKG_CLUSTER_IS_MGMT[$INDEX]}" == "true" -a "$SUPERVISOR" == "false" ] && continue
+    [ "${TKG_CLUSTER_IS_MGMT[$INDEX]}" == "true" -a "$SUPERVSOR" == "false" ] && continue
   
     # --- VERIFY CLUSTER ---
-    kubectl --kubeconfig=${TKG_CLUSTER_KUBECONFIG[$INDEX]} --request-timeout $TIMEOUT get ns >/dev/null 2>&1; ret=$?
-    [ $ret -ne 0 ] && TKG_CLUSTER_STATUS[$INDEX]="nok" || TKG_CLUSTER_STATUS[$INDEX]="ok"
+    if [ "$VERIFY" == "true" ]; then
+      kubectl --kubeconfig=${TKG_CLUSTER_KUBECONFIG[$INDEX]} --request-timeout $TIMEOUT get ns >/dev/null 2>&1; ret=$?
+      [ $ret -eq 0 ] && TKG_CLUSTER_STATUS[$INDEX]="ok"  && TKG_CLUSTER_STATUS_MSG[$INDEX]="KUBERNETES-API-OK"
+      [ $ret -ne 0 ] && TKG_CLUSTER_STATUS[$INDEX]="nok" && TKG_CLUSTER_STATUS_MSG[$INDEX]="KUBERNETES-API-NOK"
+    else
+      TKG_CLUSTER_STATUS[$INDEX]="na"
+      TKG_CLUSTER_STATUS_MSG[$INDEX]="KUBERNETES-API-NOT-TESTED"
+    fi
   
     # --- IF THE CLUSTER STATUS IS 'NOK' AND THE CKUSTER IS OF TYPE VSPHERE, THEN LOGIN AND MAKE NEW KUBECONFIG ---
     if [ "${TKG_CLUSTER_STATUS[$INDEX]}" == "nok" -a "${TKG_CLUSTER_IS_VSPHERE[$INDEX]}" == "true" ]; then
@@ -67,13 +87,16 @@ if [ -d $HOME/.tanzu-demo-hub/config ]; then
           export KUBECTL_VSPHERE_PASSWORD=$TDH_TKGMC_VSPHERE_PASS
   
           kubectl vsphere login --insecure-skip-tls-verify --server $TDH_TKGMC_SUPERVISORCLUSTER -u $TDH_TKGMC_VSPHERE_USER > /tmp/error.log 2>&1; ret=$?
-  
+          if [ $ret -eq 0 ]; then
+            TKG_CLUSTER_STATUS[$INDEX]="ok" 
+            TKG_CLUSTER_STATUS_MSG[$INDEX]="KUBERNETES-API-OK"
+          else
+            TKG_CLUSTER_STATUS[$INDEX]="na"
+            TKG_CLUSTER_STATUS_MSG[$INDEX]="KUBERNETES-API-NOT-TESTED"
+          fi
+
           [ -s $HOME/.kube/config ] && mv $HOME/.kube/config ${TKG_CLUSTER_KUBECONFIG[$INDEX]}
           [ -s $HOME/.kube/config.old ] && mv $HOME/.kube/config.old $HOME/.kube/config
-
-          # --- VERIFY CLUSTER ACCESS AGAIN---
-          kubectl --kubeconfig=${TKG_CLUSTER_KUBECONFIG[$INDEX]} --request-timeout $TIMEOUT get ns >/dev/null 2>&1; ret=$?
-          [ $ret -ne 0 ] && TKG_CLUSTER_STATUS[$INDEX]="nok" || TKG_CLUSTER_STATUS[$INDEX]="ok"
         else
           [ -s ${TKG_CLUSTER_CONFIG[$INDEX]} ] && . ${TKG_CLUSTER_CONFIG[$INDEX]}   ## READ ENVIRONMENT VARIABLES FROM CONFIG FILE
           [ -s $HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.cfg ] && . $HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.cfg
@@ -91,14 +114,20 @@ if [ -d $HOME/.tanzu-demo-hub/config ]; then
           if [ $ret -eq 0 ]; then 
             kubectl get secrets ${cnm}-kubeconfig -o jsonpath='{.data.value}' | base64 -d > ${TKG_CLUSTER_KUBECONFIG[$INDEX]}
             TKG_CLUSTER_STATUS[$INDEX]="ok"
+            TKG_CLUSTER_STATUS_MSG[$INDEX]="KUBERNETES-API-OK"
           fi
   
           [ -s $HOME/.kube/config.old ] && mv $HOME/.kube/config.old $HOME/.kube/config
   
           # --- VERIFY CLUSTER ACCESS AGAIN---
-          kubectl --kubeconfig=${TKG_CLUSTER_KUBECONFIG[$INDEX]} --request-timeout $TIMEOUT get ns >/dev/null 2>&1; ret=$?
-          [ $ret -ne 0 ] && TKG_CLUSTER_STATUS[$INDEX]="nok" || TKG_CLUSTER_STATUS[$INDEX]="ok"
-          [ "${TKG_CLUSTER_STATUS[$INDEX]}" == "nok" ] && TKG_CLUSTER_STATUS_MSG[$INDEX]="VSPHERE-LOGIN-FAILED"
+          if [ "$VERIFY" == "true" ]; then
+            kubectl --kubeconfig=${TKG_CLUSTER_KUBECONFIG[$INDEX]} --request-timeout $TIMEOUT get ns >/dev/null 2>&1; ret=$?
+            [ $ret -eq 0 ] && TKG_CLUSTER_STATUS[$INDEX]="ok"  && TKG_CLUSTER_STATUS_MSG[$INDEX]="KUBERNETES-API-OK"
+            [ $ret -ne 0 ] && TKG_CLUSTER_STATUS[$INDEX]="nok" && TKG_CLUSTER_STATUS_MSG[$INDEX]="KUBERNETES-API-NOK"
+          else
+            TKG_CLUSTER_STATUS[$INDEX]="na"
+            TKG_CLUSTER_STATUS_MSG[$INDEX]="KUBERNETES-API-NOT-TESTED"
+          fi
         fi
       else
         TKG_CLUSTER_STATUS_MSG[$INDEX]="VMWARE-VPN-NOT-ACTIVE"
@@ -113,12 +142,12 @@ if [ -d $HOME/.tanzu-demo-hub/config ]; then
   if [ "$SUPERVISOR" == "true" ]; then 
     echo "" 
     echo " TANZU-DEMO-HUB MANAGEMENT CLUSTERS"
-    echo " ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------"
+    echo " -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------"
     INDEX=0 
     while [ $INDEX -lt ${#TKG_CLUSTER_NAME[@]} ]; do
       if [ "${TKG_CLUSTER_IS_MGMT[$INDEX]}" == "true" ]; then 
         pth=$(echo ${TKG_CLUSTER_KUBECONFIG[$INDEX]} | sed 's+/home/tanzu+$HOME+g')
-        printf " export KUBECONFIG=%-82s   ## %-40s %25s\n" $pth $cnm  "[${TKG_CLUSTER_STATUS_MSG[$INDEX]}]"
+        printf " export KUBECONFIG=%-107s   ## %-40s %25s\n" $pth $cnm  "[${TKG_CLUSTER_STATUS_MSG[$INDEX]}]"
       fi
           
       let INDEX=INDEX+1
@@ -127,12 +156,12 @@ if [ -d $HOME/.tanzu-demo-hub/config ]; then
 
   echo ""
   echo " TANZU-DEMO-HUB WORKLOAD CLUSTERS"
-  echo " ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------"
+  echo " -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------"
   INDEX=0 
   while [ $INDEX -lt ${#TKG_CLUSTER_NAME[@]} ]; do
     if [ "${TKG_CLUSTER_IS_MGMT[$INDEX]}" != "true" ]; then 
       pth=$(echo ${TKG_CLUSTER_KUBECONFIG[$INDEX]} | sed 's+/home/tanzu+$HOME+g')
-      printf " export KUBECONFIG=%-82s   ## %-40s %25s\n" $pth $cnm  "[${TKG_CLUSTER_STATUS_MSG[$INDEX]}]"
+      printf " export KUBECONFIG=%-156s  %21s\n" "$pth"  "[${TKG_CLUSTER_STATUS_MSG[$INDEX]}]"
     fi
   
     let INDEX=INDEX+1
