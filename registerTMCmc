@@ -200,9 +200,11 @@ vSphereAPI_createContentLibrary $TDH_VSPHERE_API_TOKEN $VSPHERE_TKGS_VCENTER_SER
 vSphereAPI_updateNamespace      $TDH_VSPHERE_API_TOKEN $VSPHERE_TKGS_VCENTER_SERVER $VSPHERE_NAMESPACE
 
 messageTitle "TMC Management Server Configuration"
-messagePrint " ▪ Tanzu Mission Control (TMC) - Management Cluster"       "$HOME/.tanzu-demo-hub/config/${TMC_DISPLAY_NAME}.cfg"
-messagePrint " ▪ Tanzu Mission Control (TMC) - Kubeconfig"               "$HOME/.tanzu-demo-hub/config/${TMC_DISPLAY_NAME}.kubeconfig"
-messagePrint " ▪ Tanzu Mission Control (TMC) - Configuration Files"      "$HOME/.tanzu-demo-hub/config/${TMC_CONFIG_NAME}.cfg"
+messagePrint " ▪ Management Cluster - Configuration"                     "$HOME/.tanzu-demo-hub/config/${TMC_DISPLAY_NAME}.cfg"
+messagePrint " ▪ Management Cluster - Config YAML"                       "$HOME/.tanzu-demo-hub/config/${TMC_DISPLAY_NAME}.yml"
+messagePrint " ▪ Management Cluster - Kubeconfig"                        "$HOME/.tanzu-demo-hub/config/${TMC_DISPLAY_NAME}.kubeconfig"
+messagePrint " ▪ Tanzu Mission Control (TMC) - Configuration Envfile"    "$HOME/.tanzu-demo-hub/config/${TMC_CONFIG_NAME}.cfg"
+messagePrint " ▪ Tanzu Mission Control (TMC) - Configuration YAML"       "$HOME/.tanzu-demo-hub/config/${TMC_CONFIG_NAME}.yml"
 
 mv $HOME/.kube/config_$VSPHERE_TKGS_SUPERVISOR_CLUSTER $HOME/.tanzu-demo-hub/config/${TMC_DISPLAY_NAME}.kubeconfig
 
@@ -241,7 +243,40 @@ echo "TDH_TKGMC_TOOLS_CONTAINER=tdh-tools-tkg-$DEPLOY_TKG_VERSION"             >
 echo ""                                                                        >> $CONFIG_FILE
 echo "nodes[0]='best-effort-medium'"                                           >> $CONFIG_FILE
 echo "nodes[1]='best-effort-large'"                                            >> $CONFIG_FILE
-echo "nodes[2]='best-effort-2xlarge'"                                           >> $CONFIG_FILE
+echo "nodes[2]='best-effort-2xlarge'"                                          >> $CONFIG_FILE
+
+VSPHERE_TKGS_VCENTER_URL=$(echo $VSPHERE_TKGS_VCENTER_SERVER | awk -F'/' '{ print $NF }')
+VSPHERE_TKGS_VCENTER_ID=$(echo $VSPHERE_TKGS_DNS_USER | awk -F'-' '{ print $NF }')
+CFGPATH="\$HOME/.tanzu-demo-hub/config"
+CONFIG_FILE="$HOME/.tanzu-demo-hub/config/${TMC_DISPLAY_NAME}.yml"
+echo "tkg_management_cluster:"                                                 >  $CONFIG_FILE
+echo "  name: '$TMC_DISPLAY_NAME'"                                             >> $CONFIG_FILE
+echo "  infrastructure:"                                                       >> $CONFIG_FILE
+echo "    type: 'vSphere'"                                                     >> $CONFIG_FILE
+echo "    env: 'tkgs'"                                                         >> $CONFIG_FILE
+echo "  config:"                                                               >> $CONFIG_FILE
+echo "    network:"                                                            >> $CONFIG_FILE
+echo "      dns_server: '$VSPHERE_TKGS_DNS_SERVER'"                            >> $CONFIG_FILE
+echo "      dns_user: '$VSPHERE_TKGS_DNS_USER'"                                >> $CONFIG_FILE
+echo "    vcenter:"                                                            >> $CONFIG_FILE
+echo "      id: '$VSPHERE_TKGS_VCENTER_ID'"                                    >> $CONFIG_FILE
+echo "      url: '$VSPHERE_TKGS_VCENTER_SERVER'"                               >> $CONFIG_FILE
+echo "      server: '$VSPHERE_TKGS_VCENTER_URL'"                               >> $CONFIG_FILE
+echo "      serverid: '$VSPHERE_TKGS_DNS_USER'"                                >> $CONFIG_FILE
+echo "      admin_user: '$VSPHERE_TKGS_VCENTER_ADMIN'"                         >> $CONFIG_FILE
+echo "      admin_pass: '$VSPHERE_TKGS_VCENTER_PASSWORD'"                      >> $CONFIG_FILE
+echo "    supervisor_cluster:"                                                 >> $CONFIG_FILE
+echo "      name: '$VSPHERE_TKGS_SUPERVISOR_CLUSTER'"                          >> $CONFIG_FILE
+echo "      storage_policy: '$VSPHERE_TKGS_SUPERVISOR_STORAGE_POLICY'"         >> $CONFIG_FILE
+echo "      storage_class: '$VSPHERE_TKGS_SUPERVISOR_STORAGE_CLASS'"           >> $CONFIG_FILE
+echo "    vsphere_namespace:"                                                  >> $CONFIG_FILE
+echo "      - name: '$VSPHERE_NAMESPACE'"                                      >> $CONFIG_FILE
+echo "        vm_classes:"                                                     >> $CONFIG_FILE
+echo "          - 'best-effort-medium'"                                        >> $CONFIG_FILE
+echo "          - 'best-effort-large'"                                         >> $CONFIG_FILE
+echo "          - 'best-effort-2xlarge'"                                       >> $CONFIG_FILE
+echo "  config_files:"                                                         >> $CONFIG_FILE
+echo "    kubeconfig: '$CFGPATH/${TMC_DISPLAY_NAME}.kubeconfig'"               >> $CONFIG_FILE
 
 echo "vSphere for Tanzu supervisor cluster ($TMC_DISPLAY_NAME) successfilly registered"
 echo ""
