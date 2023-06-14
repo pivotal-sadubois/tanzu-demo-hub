@@ -1,6 +1,6 @@
 #!/bin/bash
 # ############################################################################################
-# File: ........: tdh-tools.sh
+# File: ........: tdh-tools-carvel.sh
 # Language .....: bash
 # Author .......: Sacha Dubois, VMware
 # Description ..: Tanzu Demo Hub - TDH Tools Container
@@ -11,10 +11,10 @@ export TANZU_DEMO_HUB=$(cd "$(pwd)/$(dirname $0)/../"; pwd)
 export TDHPATH=$(cd "$(pwd)/$(dirname $0)/../"; pwd)
 export ROOT_SHELL=0
 export COMMAND=bash
-export COMMAND="bash -c cd /home/tanzu/tanzu-demo-hub"
+export COMMAND=/usr/local/bin/tdh-context.sh
 export SILENT=0
 export TDH_TOOLS=tdh-tools-tkg
-export TKG_VERSION=1.6.0
+export TKG_VERSION=1.6.1
 
 # --- SETTING FOR TDH-TOOLS ---
 export NATIVE=0                ## NATIVE=1 r(un on local host), NATIVE=0 (run within docker)
@@ -39,10 +39,12 @@ while [ "$1" != "" ]; do
   shift
 done
 
+echo "tdh-tools-carvel-1.6.1.sh gugu1"
+
 #############################################################################################################################
 ################################### EXECUTING CODE WITHIN  TDH-TOOLS DOCKER CONTAINER  ######################################
 #############################################################################################################################
-runTDHtools tkg $TKG_VERSION "Run TDH Tools Docker Container" "$COMMAND" ""
+#runTDHtoolsCarvel tkg $TKG_VERSION "Run TDH Tools Docker Container" "$COMMAND" ""
 
 usage() {
   echo "USAGE: $0 [oprions] <deployment>"
@@ -55,21 +57,30 @@ usage() {
 }
 
 if [ $SILENT -eq 1 ]; then 
-  tdh_tools_build    tkg > /dev/null 2>&1
+  tdh_carvel_tools_build    tkg > /dev/null 2>&1
+exit
   tdh_tools_download tkg > /dev/null 2>&1
   checkExecutionLock tdh-tools > /dev/null 2>&1
 else
   echo ""
-  echo "Tanzu Demo Hub - TDH Tools Docker Container"
+  echo "Tanzu Demo Hub - TDH Tools Carvel Docker Container"
   echo "by Sacha Dubois, VMware Inc,"
   echo "-----------------------------------------------------------------------------------------------------------"
   echo ""
 
-  checkCLIcommands   BASIC
-  tdh_tools_build    tkg
-  tdh_tools_download tkg
-  checkExecutionLock tdh-tools
+export TDH_TOOLS_BUILD_ENABLED=true
+
+echo "tdh-tools-carvel-1.6.1.sh gugu2"
+  checkCLIcommands          BASIC
+echo "tdh-tools-carvel-1.6.1.sh gugu3"
+  tdh_carvel_tools_build    carvel "$TKG_VERSION"
+echo "tdh-tools-carvel-1.6.1.sh gugu4"
+exit
+  tdh_tools_download        carvel
+  checkExecutionLock        tdh-tools-carvel
 fi
+
+exit
 
 if [ $? -ne 0 ]; then 
   echo "ERROR: $0 is already running, plese stop it first"

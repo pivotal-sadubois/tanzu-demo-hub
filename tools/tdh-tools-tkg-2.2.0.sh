@@ -10,11 +10,13 @@
 export TANZU_DEMO_HUB=$(cd "$(pwd)/$(dirname $0)/../"; pwd)
 export TDHPATH=$(cd "$(pwd)/$(dirname $0)/../"; pwd)
 export ROOT_SHELL=0
-export COMMAND=bash
 export COMMAND="bash -c cd /home/tanzu/tanzu-demo-hub"
+export COMMAND=/usr/local/bin/tdh-context.sh
 export SILENT=0
+export VERIFY="false"
 export TDH_TOOLS=tdh-tools-tkg
-export TKG_VERSION=1.6.0
+export TKG_VERSION=2.2.0
+export SUPERVISOR="false"
 
 # --- SETTING FOR TDH-TOOLS ---
 export NATIVE=0                ## NATIVE=1 r(un on local host), NATIVE=0 (run within docker)
@@ -26,15 +28,30 @@ export CMD_ARGS=$*
 [ -f $TANZU_DEMO_HUB/functions ] && . $TANZU_DEMO_HUB/functions
 [ -f $HOME/.tanzu-demo-hub.cfg ] && . $HOME/.tanzu-demo-hub.cfg
 
+usage() {
+  echo "USAGE: $0 [oprions] <deployment>"
+  echo "                   --usage        # Show this info"
+  echo "                   --help         # Show this info"
+  echo "                   --root         # Get a Root Shell"
+  echo "                   --debug        # Show Debugging information"
+  echo "                   --cmd          # Execute a command"
+  echo "                   --verify       # Verify Kubernetes Access"
+  echo "                   --supervisor   # Login to Supervisor Cluster"
+  exit
+}
+
 while [ "$1" != "" ]; do
   case $1 in
-    --usage)  usage;;
-    --help)   usage;;
-    --root)   ROOT_SHELL=1;;
-    --cmd)    COMMAND="$2";;
-    --debug)  DEBUG=1;;
-    --silent) SILENT=1;;
-    --version) VERSION=$2
+    --usage)      usage;;
+    --help)       usage;;
+    -h)           usage;;
+    --verify)     VERIFY="true";;
+    --root)       ROOT_SHELL=1;;
+    --cmd)        COMMAND="$2";;
+    --debug)      DEBUG=1;;
+    --silent)     SILENT=1;;
+    --version)    VERSION=$2;;
+    --supervisor) SUPERVISOR=true;;
   esac
   shift
 done
@@ -43,16 +60,6 @@ done
 ################################### EXECUTING CODE WITHIN  TDH-TOOLS DOCKER CONTAINER  ######################################
 #############################################################################################################################
 runTDHtools tkg $TKG_VERSION "Run TDH Tools Docker Container" "$COMMAND" ""
-
-usage() {
-  echo "USAGE: $0 [oprions] <deployment>"
-  echo "                   --usage     # Show this info"
-  echo "                   --help      # Show this info"
-  echo "                   --root      # Get a Root Shell"
-  echo "                   --debug     # Show Debugging information"
-  echo "                   --cmd       # Execute a command"
-  exit
-}
 
 if [ $SILENT -eq 1 ]; then 
   tdh_tools_build    tkg > /dev/null 2>&1

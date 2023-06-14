@@ -13,6 +13,7 @@ export ROOT_SHELL=0
 export COMMAND=bash
 export COMMAND=/usr/local/bin/tdh-context.sh
 export SILENT=0
+export VERIFY="false"
 export TDH_TOOLS=tdh-tools-tkg
 export TKG_VERSION=1.6.1
 export SUPERVISOR="false"
@@ -34,6 +35,7 @@ usage() {
   echo "                   --root         # Get a Root Shell"
   echo "                   --debug        # Show Debugging information"
   echo "                   --cmd          # Execute a command"
+  echo "                   --verify       # Verify Kubernetes Access"
   echo "                   --supervisor   # Login to Supervisor Cluster"
   exit
 }
@@ -43,6 +45,7 @@ while [ "$1" != "" ]; do
     --usage)      usage;;
     --help)       usage;;
     -h)           usage;;
+    --verify)     VERIFY="true";;
     --root)       ROOT_SHELL=1;;
     --cmd)        COMMAND="$2";;
     --debug)      DEBUG=1;;
