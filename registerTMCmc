@@ -37,26 +37,32 @@ usage() {
   str=$(ls -1 $TDHPATH/files/tdh-tools/tdh-tools-tkg-*.cfg | sed -e 's/^.*tools-tkg-//g' -e 's/\.cfg//g' | paste - - | awk '{ printf("%s or %s\n", $1, $2) }')
   echo ""
   echo "USAGE: $0 <options> [-d <display-name> -v <tkg-version>] [-debug|-clean]"
-  echo "           Options:  -d <display-name>           # Tanzu Mission Control (TMC) Deployment Name"
-  echo "                                                 # (default: tkgmc-vsphere-<tmc-user>"
-  echo "                     --vcenter_server <name>     # vCenter Server Name or IP Address"
-  echo "                     --vcenter_user <user_name>  # vCenter Server Administrator User"
-  echo "                     --vcenter_pass <password>   # vCenter Server Administrator Password"
-  echo "                     --supervisor <name>         # vSphere Supervisor Cluster Name"
+  echo "           Options:  -d <display-name>                 # Tanzu Mission Control (TMC) Deployment Name"
+  echo "                                                       # (default: tkgmc-vsphere-<tmc-user>"
+  echo "                     --vcenter_server '<name>'         # vCenter Server Name or IP Address"
+  echo "                     --vcenter_user '<user_name>'      # vCenter Server Administrator User"
+  echo "                     --vcenter_pass '<password>'       # vCenter Server Administrator Password"
+  echo "                     --supervisor '<name>'             # vSphere Supervisor Cluster Name"
   echo ""
-  echo "                     --native                    # Native execution without tdh-tools container"
-  echo "                     --debug                     # default (disabled)"
-  echo "                     --clean                     # cleanuo the deployment"
+  echo "                     --native                          # Native execution without tdh-tools container"
+  echo "                     --debug                           # default (disabled)"
+  echo "                     --clean                           # cleanuo the deployment"
   echo ""
 }
+
+# --- SET DEFAULTS ---
+unset VSPHERE_TKGS_VCENTER_SERVER && export VSPHERE_TKGS_VCENTER_SERVER=""
+unset VSPHERE_TKGS_VCENTER_PASSWORD && export VSPHERE_TKGS_VCENTER_PASSWORD=""
+unset VSPHERE_TKGS_VCENTER_ADMIN && export VSPHERE_TKGS_VCENTER_ADMIN=""
+unset VSPHERE_TKGS_SUPERVISOR_CLUSTER && export VSPHERE_TKGS_SUPERVISOR_CLUSTER=""
 
 while [ "$1" != "" ]; do
   case $1 in
     -d)                    TMC_DISPLAY_NAME=$2;;
-    --vcenter_server)      TMC_DISPLAY_NAME=$2;;
-    --vcenter_user)        TMC_DISPLAY_NAME=$2;;
-    --vcenter_pass)        TMC_DISPLAY_NAME=$2;;
-    --supervisor)          TMC_DISPLAY_NAME=$2;;
+    --vcenter_server)      VSPHERE_TKGS_VCENTER_SERVER=$2;;
+    --vcenter_user)        VSPHERE_TKGS_VCENTER_ADMIN=$2;;
+    --vcenter_pass)        VSPHERE_TKGS_VCENTER_PASSWORD=$2;;
+    --supervisor)          VSPHERE_TKGS_SUPERVISOR_CLUSTER=$2;;
     -v)                    DEPLOY_TKG_VERSION=$2;;
     --clean)               DEPLOY_TKG_CLEAN=1;;
     --debug)               DEBUG=1;;
@@ -65,6 +71,21 @@ while [ "$1" != "" ]; do
   esac
   shift
 done
+
+VSPHERE_TKGS_VCENTER_SERVER=$(echo $VSPHERE_TKGS_VCENTER_SERVER | sed 's+^http.*//++g' | awk '{ printf("https://%s\n", $NF )}')
+
+echo "VSPHERE_TKGS_VCENTER_SERVER:$VSPHERE_TKGS_VCENTER_SERVER"
+echo "VSPHERE_TKGS_VCENTER_ADMIN:$VSPHERE_TKGS_VCENTER_ADMIN"
+echo "VSPHERE_TKGS_VCENTER_PASSWORD:$VSPHERE_TKGS_VCENTER_PASSWORD"
+echo "VSPHERE_TKGS_SUPERVISOR_CLUSTER:$VSPHERE_TKGS_SUPERVISOR_CLUSTER"
+
+if [ "$VSPHERE_TKGS_VCENTER_SERVER" == "" -o "$VSPHERE_TKGS_VCENTER_PASSWORD" == "" -o \
+     "$VSPHERE_TKGS_VCENTER_ADMIN" == "" -o "$VSPHERE_TKGS_SUPERVISOR_CLUSTER" == "" ]; then
+
+  usage; exit 1
+fi
+
+
 
 #############################################################################################################################
 ################################### EXECUTING CODE WITHIN  TDH-TOOLS DOCKER CONTAINER  ######################################
@@ -80,13 +101,11 @@ checkCLIcommands TMC
 
 # --- CLEANUP KUNECONFIG ---
 tmcCheckLogin
+echo gaga1
 vSphereKubeconfig
+echo gaga2
 vSphereLogin
-
-#VSPHERE_TKGS_VCENTER_SERVER=https://vc01.h2o-4-2705.h2o.vmware.com	
-#VSPHERE_TKGS_VCENTER_ADMIN=administrator@vsphere.local
-#VSPHERE_TKGS_VCENTER_PASSWORD='8j9hnHTTc%7YxtSMeIw'
-#VSPHERE_TKGS_SUPERVISOR_CLUSTER=vc01cl01-wcp.h2o-4-2705.h2o.vmware.com
+echo gaga3
 
 exit
 

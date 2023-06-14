@@ -442,7 +442,7 @@ vSphereKubeconfig() {
   export KUBECTL_VSPHERE_PASSWORD="$VSPHERE_TKGS_VCENTER_PASSWORD"
   export KUBECONFIG=$HOME/.kube/config
 
-  mv $HOME/.kube/config $HOME/.kube/config.bak
+  [ -s $HOME/.kube/config ] && mv $HOME/.kube/config $HOME/.kube/config.bak
 
   ret=1; cnt=0
   while [ $ret -ne 0 -a $cnt -lt 5 ]; do
@@ -474,8 +474,8 @@ vSphereKubeconfig() {
     exit 1
   fi
 
-  mv $HOME/.kube/config $HOME/.kube/config_$VSPHERE_TKGS_SUPERVISOR_CLUSTER
-  mv $HOME/.kube/config.bak $HOME/.kube/config
+  [ -s $HOME/.kube/config ] && mv $HOME/.kube/config $HOME/.kube/config_$VSPHERE_TKGS_SUPERVISOR_CLUSTER
+  [ -s $HOME/.kube/config.bak ] && mv $HOME/.kube/config.bak $HOME/.kube/config
 }
 
 tmcCheckLogin() {
