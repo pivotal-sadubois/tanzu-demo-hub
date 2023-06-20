@@ -55,6 +55,9 @@ unset VSPHERE_TKGS_VCENTER_SERVER && export VSPHERE_TKGS_VCENTER_SERVER=""
 unset VSPHERE_TKGS_VCENTER_PASSWORD && export VSPHERE_TKGS_VCENTER_PASSWORD=""
 unset VSPHERE_TKGS_VCENTER_ADMIN && export VSPHERE_TKGS_VCENTER_ADMIN=""
 unset VSPHERE_TKGS_SUPERVISOR_CLUSTER && export VSPHERE_TKGS_SUPERVISOR_CLUSTER=""
+unset VSPHERE_TKGS_SUPERVISOR_STORAGE_POLICY && export VSPHERE_TKGS_SUPERVISOR_STORAGE_POLICY=""
+unset VSPHERE_TKGS_SUPERVISOR_STORAGE_CLASS && export VSPHERE_TKGS_SUPERVISOR_STORAGE_CLASS=""
+unset VSPHERE_TKGS_DNS_SERVER && export VSPHERE_TKGS_DNS_SERVER=""
 
 while [ "$1" != "" ]; do
   case $1 in
@@ -73,16 +76,24 @@ while [ "$1" != "" ]; do
 done
 
 VSPHERE_TKGS_VCENTER_SERVER=$(echo $VSPHERE_TKGS_VCENTER_SERVER | sed 's+^http.*//++g' | awk '{ printf("https://%s\n", $NF )}')
-
-echo "VSPHERE_TKGS_VCENTER_SERVER:$VSPHERE_TKGS_VCENTER_SERVER"
-echo "VSPHERE_TKGS_VCENTER_ADMIN:$VSPHERE_TKGS_VCENTER_ADMIN"
-echo "VSPHERE_TKGS_VCENTER_PASSWORD:$VSPHERE_TKGS_VCENTER_PASSWORD"
-echo "VSPHERE_TKGS_SUPERVISOR_CLUSTER:$VSPHERE_TKGS_SUPERVISOR_CLUSTER"
-
 if [ "$VSPHERE_TKGS_VCENTER_SERVER" == "" -o "$VSPHERE_TKGS_VCENTER_PASSWORD" == "" -o \
      "$VSPHERE_TKGS_VCENTER_ADMIN" == "" -o "$VSPHERE_TKGS_SUPERVISOR_CLUSTER" == "" ]; then
 
   usage; exit 1
+fi
+
+# --- VERIFY ITS A H2O CLUSTER ---
+cnt=$(echo $VSPHERE_TKGS_VCENTER_SERVER | egrep -c "\.h2o-")
+if [ $cnt -gt 0 ]; then
+  H2O_ID=$(echo "$VSPHERE_TKGS_VCENTER_SERVER" | awk -F'.' '{ print $2 }')
+  TMC_DISPLAY_NAME="tkgmc-vsphere-${H2O_ID}-$TDH_USER"
+  TMC_CONFIG_NAME="tmc-vsphere-${H2O_ID}"
+  VSPHERE_TKGS_SUPERVISOR_STORAGE_POLICY=vc01cl01-t0compute
+  VSPHERE_TKGS_SUPERVISOR_STORAGE_CLASS=vc01cl01-t0compute
+  VSPHERE_TKGS_DNS_SERVER="10.79.2.5:53"
+else
+  TMC_CONFIG_NAME="tmc-vsphere-tkgs"
+  TMC_DISPLAY_NAME="tkgmc-vsphere--$TDH_USER"
 fi
 
 
@@ -101,27 +112,8 @@ checkCLIcommands TMC
 
 # --- CLEANUP KUNECONFIG ---
 tmcCheckLogin
-echo gaga1
 vSphereKubeconfig
-echo gaga2
 vSphereLogin
-echo gaga3
-
-exit
-
-# --- VERIFY ITS A H2O CLUSTER ---
-cnt=$(echo $VSPHERE_TKGS_VCENTER_SERVER | egrep -c "\.h2o-") 
-if [ $cnt -gt 0 ]; then 
-  H2O_ID=$(echo "$VSPHERE_TKGS_VCENTER_SERVER" | awk -F'.' '{ print $2 }') 
-  TMC_DISPLAY_NAME="tkgmc-vsphere-${H2O_ID}-$TDH_USER"
-  TMC_CONFIG_NAME="tmc-vsphere-${H2O_ID}"
-  VSPHERE_TKGS_SUPERVISOR_STORAGE_POLICY=vc01cl01-t0compute
-  VSPHERE_TKGS_SUPERVISOR_STORAGE_CLASS=vc01cl01-t0compute
-  VSPHERE_TKGS_DNS_SERVER="10.79.2.5:53"
-else
-  TMC_CONFIG_NAME="tmc-vsphere-tkgs"
-  TMC_DISPLAY_NAME="tkgmc-vsphere--$TDH_USER"
-fi
 
 cnt=$(tmc managementcluster list | grep -c "$TMC_DISPLAY_NAME") 
 if [ $cnt -eq 0 ]; then
