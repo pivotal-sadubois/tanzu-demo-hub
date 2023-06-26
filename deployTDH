@@ -95,7 +95,6 @@ runTDHtools "tkg" "$tdh_tools" "Deploy TKG Workload Cluster" "/home/tanzu/tanzu-
 # https://github.com/carvel-dev/ytt/blob/develop/examples/data-values/run.sh
 convertTDHconfig 
 convertTDHsecrets
-exit
 createTDHdeployment
 
 # --- VERYFY ACCESS TO CLOUD ---
