@@ -18607,30 +18607,30 @@ listTMCDeployments() {
 # ------------------------------------------------------------------------------------------
 listTKGmcV2() {
   echo
-  printf "%-40s %-7s %8s  %s\n" "TKG MANAGEMENT-CLUSTER" "CLOUD" "VERSION" "STATUS"
+  printf "%-40s %-7s %7s %8s  %s\n" "TKG MANAGEMENT-CLUSTER" "CLOUD" "K8S" "VERSION" "STATUS"
   messageLine
 
-  for deployment in $(ls -1 $HOME/.tanzu-demo-hub/config/tkgmc*.j2 2>/dev/null ); do
-
-echo "deployment:$deployment"
-
-exit
+  for deployment in $(ls -1 $HOME/.tanzu-demo-hub/config/tkgmc*.cfg $HOME/.tanzu-demo-hub/config/tcemc*.cfg 2>/dev/null ); do
     TDH_TKGMC_INFRASTRUCTURE=$(egrep "^TDH_TKGMC_INFRASTRUCTURE=" $deployment | awk -F'=' '{ print $2 }' | sed 's/"//g')
     TDH_TKGMC_ENVNAME=$(egrep "^TDH_TKGMC_ENVNAME=" $deployment | awk -F'=' '{ print $2 }' | sed 's/"//g')
     TDH_TKGMC_NAME=$(egrep "^TDH_TKGMC_NAME=" $deployment | awk -F'=' '{ print $2 }' | sed 's/"//g')
     TDH_TKGMC_TOOLS_CONTAINER=$(egrep "^TDH_TKGMC_TOOLS_CONTAINER=" $deployment | awk -F'=' '{ print $2 }' | sed 's/"//g' | awk -F'-' '{ print $NF }')
     TDH_TKGMC_KUBECONFIG=$(egrep "^TDH_TKGMC_KUBECONFIG=" $deployment | awk -F'=' '{ print $2 }' | sed 's/"//g')
+    TDH_TKGMC_ENVNAME=$(egrep "^TDH_TKGMC_ENVNAME=" $deployment | awk -F'=' '{ print $2 }' | sed 's/"//g')
+    TDH_TKGMC_SUPERVISORCLUSTER=$(egrep "^TDH_TKGMC_SUPERVISORCLUSTER=" $deployment | awk -F'=' '{ print $2 }' | sed 's/"//g')
 
-    kubectl get nodes --kubeconfig $HOME/.tanzu-demo-hub/config/$TDH_TKGMC_KUBECONFIG > /dev/null 2>&1; ret=$?
-    if [ $ret -ne 0 ]; then
-      stt="configured / unavailable"
-    else
-      stt="configured / ready"
+    if [ "$TDH_TKGMC_ENVNAME" == "tkgs" ]; then 
+      curl -k https://$TDH_TKGMC_SUPERVISORCLUSTER:6443 > /dev/null 2>&1; ret=$?
+      if [ $ret -eq 0 ]; then 
+        stt="available"
+      else
+        stt="unavailable"
+      fi
     fi
 
     dep=$(basename $deployment | sed 's/\.cfg//g')
 
-    printf "%-40s %-7s %8s  %s\n" $dep $TDH_TKGMC_INFRASTRUCTURE "$TDH_TKGMC_TOOLS_CONTAINER" "$stt"
+    printf "%-40s %-7s %8s %7s  %s\n" $dep $TDH_TKGMC_INFRASTRUCTURE $TDH_TKGMC_ENVNAME "$TDH_TKGMC_TOOLS_CONTAINER" "$stt"
 
   done
 
@@ -19492,6 +19492,9 @@ tmcAPI_getClusters() {
 convertTDHconfig() { 
   CREDENTIALS_SRC=$HOME/.tanzu-demo-hub.cfg
   CREDENTIALS_DST=$HOME/.tanzu-demo-hub.yml
+
+echo "CREDENTIALS_SRC:$CREDENTIALS_SRC"
+ls -la $CREDENTIALS_SRC
 
   grep "=" $CREDENTIALS_SRC | sed -e "s/'//g" -e '/^#/d' -e 's/export //g' -e "s/=/: '/g" -e 's/"//g' -e 's/  *#.*$//g' -e "s/$/'/g" >  $CREDENTIALS_DST
   egrep "TMC_SERVER_URL" $HOME/.tanzu-demo-hub.cfg | sed -e "s/'//g" -e 's/"//g' -e "s+^.*//\(.*\)$+TMC_SERVER_TENNANT: '\1'+g"      >> $CREDENTIALS_DST

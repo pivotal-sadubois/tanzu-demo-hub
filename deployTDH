@@ -93,9 +93,20 @@ export TDHV2_SECRETS=$HOME/.tanzu-demo-hub
 runTDHtools "tkg" "$tdh_tools" "Deploy TKG Workload Cluster" "/home/tanzu/tanzu-demo-hub/$CMD_EXEC" "$CMD_ARGS"
 
 # https://github.com/carvel-dev/ytt/blob/develop/examples/data-values/run.sh
+echo "deployTDH: debug-1"
+ls -la $HOME/.tanzu-demo-hub.yml
 convertTDHconfig 
+ls -la $HOME/.tanzu-demo-hub.yml
+
+exit
+echo "deployTDH: debug-2"
+ls -la $HOME/.tanzu-demo-hub.yml
 convertTDHsecrets
+echo "deployTDH: debug-3"
+ls -la $HOME/.tanzu-demo-hub.yml
 createTDHdeployment
+echo "deployTDH: debug-4"
+ls -la $HOME/.tanzu-demo-hub.yml
 
 # --- VERYFY ACCESS TO CLOUD ---
 checkTDHenvironment
