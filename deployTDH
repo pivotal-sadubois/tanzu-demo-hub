@@ -51,6 +51,10 @@ while [ "$1" != "" ]; do
   shift
 done
 
+echo "deployTDH: debug-10"
+ls -la $HOME/.tanzu-demo-hub.yml
+echo "deployTDH: debug-11"
+
 if [ "${TDHV2_MANAGEMENT_CLUSTER}" == "" -o "${TDHV2_DEPLOYMENT}" == "" -o "${TDHV2_DNS_SUBDOMAIN}" == "" ]; then
   #[ "${TDHV2_MANAGEMENT_CLUSTER}" == "" ] && listTKGmcV2
   [ "${TDHV2_MANAGEMENT_CLUSTER}" == "" ] && listTKGmc
@@ -58,8 +62,14 @@ if [ "${TDHV2_MANAGEMENT_CLUSTER}" == "" -o "${TDHV2_DEPLOYMENT}" == "" -o "${TD
 
   usage; exit 0
 fi
+echo "deployTDH: debug-12"
+ls -la $HOME/.tanzu-demo-hub.yml
+echo "deployTDH: debug-13"
 
 [ -f $HOME/.tanzu-demo-hub/config/${TDHV2_MANAGEMENT_CLUSTER}.cfg ] && TDHV2_MANAGEMENT_CLUSTER=${TDHV2_MANAGEMENT_CLUSTER}
+echo "deployTDH: debug-14"
+ls -la $HOME/.tanzu-demo-hub.yml
+echo "deployTDH: debug-15"
 
 # --- VERIFY DEPLOYMENT ---
 if [ -f $HOME/.tanzu-demo-hub/config/${TDHV2_MANAGEMENT_CLUSTER}.cfg ]; then
@@ -74,6 +84,9 @@ else
   echo "       $HOME/.tanzu-demo-hub/config"
   exit 1
 fi
+echo "deployTDH: debug-15"
+ls -la $HOME/.tanzu-demo-hub.yml
+echo "deployTDH: debug-16"
 
 if [ -f $TDHPATH/deployments/${TDHV2_DEPLOYMENT}.j2 ]; then
  tdh_tools=$(head -5 $TDHPATH/deployments/${TDHV2_DEPLOYMENT}.j2 | yq -o json | jq -r '.tdh_deployment.tdh_tools')
@@ -83,6 +96,9 @@ else
   exit 1
 fi
 
+echo "deployTDH: debug-18"
+ls -la $HOME/.tanzu-demo-hub.yml
+echo "deployTDH: debug-19"
 export TDHV2_MC_CONFIG=$HOME/.tanzu-demo-hub/config/${TDHV2_MANAGEMENT_CLUSTER}
 export TDHV2_WC_CONFIG=$HOME/.tanzu-demo-hub/config/${TDHV2_MANAGEMENT_CLUSTER}
 export TDHV2_SECRETS=$HOME/.tanzu-demo-hub
