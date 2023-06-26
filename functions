@@ -17810,6 +17810,8 @@ runTDHtools() {
       export ROOT_OPTIONS="$CORE_OPTIONS --env-file /tmp/tdh.env -e \"KUBECONFIG=$HOME/.kube/config\""
       #echo "export PATH=\"~/.local/bin:\$PATH\"" > $HOME/$TDH_TOOLS_PATH/.bashrc
 
+      [ ! -s $HOME/.tanzu-demo-hub.yml ] && touch $HOME/.tanzu-demo-hub.yml
+
 #hulu
       export CORE_MOUNTS=(
                "-v /var/run/docker.sock:/var/run/docker.sock"                           ## REQIORED FOR DOCKER
