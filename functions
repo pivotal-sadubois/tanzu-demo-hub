@@ -19495,12 +19495,7 @@ convertTDHconfig() {
   export CREDENTIALS_SRC=$HOME/.tanzu-demo-hub.cfg
   export CREDENTIALS_DST=$HOME/.tanzu-demo-hub.yml
 
-echo "CREDENTIALS_SRC:$CREDENTIALS_SRC"
-echo "CREDENTIALS_DST:$CREDENTIALS_DST"
-ls -la $CREDENTIALS_SRC
-ls -la $CREDENTIALS_DST
-
-  grep "=" $CREDENTIALS_SRC | sed -e "s/'//g" -e '/^#/d' -e 's/export //g' -e "s/=/: '/g" -e 's/"//g' -e 's/  *#.*$//g' -e "s/$/'/g" >  $CREDENTIALS_DST
+  grep "=" $CREDENTIALS_SRC | egrep -v "^#" | sed -e "s/'//g" -e '/^#/d' -e 's/export //g' -e "s/=/: '/g" -e 's/"//g' -e 's/  *#.*$//g' -e "s/$/'/g" >  $CREDENTIALS_DST
   egrep "TMC_SERVER_URL" $HOME/.tanzu-demo-hub.cfg | sed -e "s/'//g" -e 's/"//g' -e "s+^.*//\(.*\)$+TMC_SERVER_TENNANT: '\1'+g"      >> $CREDENTIALS_DST
   chmod 600 $CREDENTIALS_DST
 }           
