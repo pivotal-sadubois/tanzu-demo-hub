@@ -17811,6 +17811,7 @@ runTDHtools() {
       #echo "export PATH=\"~/.local/bin:\$PATH\"" > $HOME/$TDH_TOOLS_PATH/.bashrc
 
       [ ! -s $HOME/.tanzu-demo-hub.yml ] && touch $HOME/.tanzu-demo-hub.yml
+      [ ! -s $HOME/.tanzu-demo-hub-secrets.yml ] && touch $HOME/.tanzu-demo-hub-secrets.yml
 
 #hulu
       export CORE_MOUNTS=(
