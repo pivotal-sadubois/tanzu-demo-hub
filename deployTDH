@@ -15,7 +15,7 @@ export TDHV2_MANAGEMENT_CLUSTER
 export TDHV2_WORKLOAD_CLUSTER
 export TDHV2_DEPLOYMENT
 export TDHV2_DNS_SUBDOMAIN
-#DNS_SUBDOMAIN
+export TDH_USER=$USER
 
 # --- SETTING FOR TDH-TOOLS ---
 export START_COMMAND="$*"
@@ -52,8 +52,7 @@ while [ "$1" != "" ]; do
 done
 
 if [ "${TDHV2_MANAGEMENT_CLUSTER}" == "" -o "${TDHV2_DEPLOYMENT}" == "" -o "${TDHV2_DNS_SUBDOMAIN}" == "" ]; then
-  #[ "${TDHV2_MANAGEMENT_CLUSTER}" == "" ] && listTKGmcV2
-  [ "${TDHV2_MANAGEMENT_CLUSTER}" == "" ] && listTKGmc
+  [ "${TDHV2_MANAGEMENT_CLUSTER}" == "" ] && listTKGmcV2
   [ "${TDHV2_DEPLOYMENT}" == "" ] && listClusterConfigV2
 
   usage; exit 0
@@ -92,22 +91,31 @@ export TDHV2_SECRETS=$HOME/.tanzu-demo-hub
 #############################################################################################################################
 runTDHtools "tkg" "$tdh_tools" "Deploy TKG Workload Cluster" "/home/tanzu/tanzu-demo-hub/$CMD_EXEC" "$CMD_ARGS"
 
-# https://github.com/carvel-dev/ytt/blob/develop/examples/data-values/run.sh
-convertTDHconfig 
-convertTDHsecrets
-createTDHdeployment
+# --- VERIFY TDH CONFIGURATION ---
+checkTDHsettings header
+checkTDHsettings tdh_user
+checkTDHsettings tmc
+checkTDHsettings registry_docker
+checkTDHsettings registry_vmware
+checkTDHsettings aws_route53
+checkTDHsettings cert-manager
 
 # --- VERYFY ACCESS TO CLOUD ---
-checkTDHenvironment
-clearConfigMapCache
+#checkTDHenvironment   ## pivnet, vmw_cli
 
 # --- VERIFY TOOLS AND ACCESS ---
+clearConfigMapCache
 checkTanzuCLI
 checkCloudCLI
 checkCLIcommands TOOLS
 checkCLIcommands TKG
 checkCLIcommands TANZU
 checkCLIcommands TMC
+
+# --- CONVERT TDH CONFIG VARIABLES TO YAML ---
+convertTDHconfig
+convertTDHsecrets
+createTDHdeployment
 
 #############################################################################################################################
 ######################### CREATE TKG CLUSTER AND ATTACH TO TMC AND INSTALL TMC INTEGRATION ##################################

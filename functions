@@ -911,6 +911,19 @@ checkTDHsettings() {
     fi
   fi 
 
+  if [ "${service}" == "cert-manager" ]; then                                    
+    if [ "${TDH_CERTMANAGER_EMAIL}" == "" ]; then                                
+      missing_variables=1 
+      echo ""     
+      echo "   MISSING ENVIRONMENT-VARIABES       DESCRIPTION        "
+      echo "   -----------------------------------------------------------------------------------------------------------------------------------------------------"
+    
+      if [ "${TDH_CERTMANAGER_EMAIL}" == "" ]; then
+        echo "   TDH_CERTMANAGER_EMAIL              (required) Personal Email address to receive update from Let's Enscript"
+      fi
+    fi
+  fi
+
   if [ "${service}" == "tmc" ]; then   
     if [ "${TMC_SERVICE_TOKEN}" == "" -o "${TMC_SERVER_URL}" == "" ]; then
       missing_variables=1
@@ -1032,8 +1045,7 @@ checkTDHsettings() {
     echo "   -------------------------------------------------------------------------------------------------------------------------------------------------------"
     echo "   IMPORTANT: Please set the missing environment variables either in your shell or in the tanzu-demo-hub configuration file ~/.tanzu-demo-hub.cfg"
     echo "              and set all variables with the 'export' notation. Place the password in Single Quotes (') especialy if you use special characters"
-    echo "              ie. export TDH_MYVMWARE_USER=xxxxxxx"
-    echo "                  export TDH_MYVMWARE_PASS='xxxxxxxxxxxx'"     
+    echo "              ie. => export <environment_variable>='<value>'"
     echo "   -------------------------------------------------------------------------------------------------------------------------------------------------------"
     echo ""
     exit 1
@@ -1047,7 +1059,7 @@ checkKubernetesServices() {
 #guguseli
   if [ 1 -eq 1 ]; then
     if [ "${service}" == "tdh_user" ]; then
-      if [ "${TDH_CERTMANAGER_EMAIL}" == "" ]; then
+      if [ "${TDH_USER}" == "" ]; then
         missing_variables=1                     
         echo ""
         echo "  4MISSING ENVIRONMENT-VARIABES    DESCRIPTION        "
@@ -5964,6 +5976,7 @@ getYAML() {
   [ "$1" == "AWS_SECRET_KEY" ] && yq -o json $acsec | jq -r '.credentials.aws.secret_key'
   [ "$1" == "AWS_ACCESS_KEY" ] && yq -o json $acsec | jq -r '.credentials.aws.access_key'
   [ "$1" == "AWS_REGION" ] && yq -o json $acsec | jq -r '.credentials.aws.region'
+  [ "$1" == "AWS_ROUTE53_REGION" ] && yq -o json $acsec | jq -r '.credentials.aws.hosted_zone.region'
   [ "$1" == "TMC_API_TOKEN" ] && yq -o json $acsec | jq -r '.credentials.vmc.tmc.tenant.api_token'
 }
 
@@ -11040,10 +11053,12 @@ createClusterIssuerV2() {
 
     tmp_sec=$(getYAML AWS_HOSTED_ZONE_SECRET_KEY) 
     tmp_acc=$(getYAML AWS_HOSTED_ZONE_ACCESS_KEY) 
-    tmp_reg=$(getYAML AWS_REGION) 
+    tmp_reg=$(getYAML AWS_ROUTE53_REGION) 
+
     if [ "${aws_hza}" == "null" -o "${aws_hzs}" == "null" ]; then
       tmp_acc=$(getYAML AWS_SECRET_KEY)
       tmp_sec=$(getYAML AWS_SECRET_KEY)
+      tmp_reg=$(getYAML AWS_REGION) 
       messagePrint " ▪ LetsEnscript using AWS Admin AccessKey" $(maskPassword "$tmp_acc")
       messagePrint " ▪ LetsEnscript using AWS Admin SecretKey" $(maskPassword "$tmp_sec")
     else
