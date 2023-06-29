@@ -25,7 +25,7 @@ tdh_environment:
   network: 
     dns:
       prowider: route53
-      dns_domain: '{{ AWS_HOSTED_DNS_DOMAIN }}'
+      dns_domain: '{{ AWS_ROUTE53_DNS_DOMAIN }}'
       dns_subdomain: {{ subdomain }}
   s3_storage:
   vsphere:
@@ -107,7 +107,7 @@ tdh_clusters:
           description: 'Harbor Container Registry'
           package_id: 'harbor.tanzu.vmware.com'
           package_manager: 'tanzu'
-          server: 'harbor.apps.{{ subdomain }}.{{ AWS_HOSTED_DNS_DOMAIN }}'
+          server: 'harbor.apps.{{ subdomain }}.{{ AWS_ROUTE53_DNS_DOMAIN }}'
           version: 'latest'
           package_repo: tkg-system
           namespace: tanzu-system-packages
@@ -189,7 +189,7 @@ tdh_clusters:
           role: full
           registry: 
             - name: local_registry
-              server: 'harbor.apps.{{ subdomain }}.{{ AWS_HOSTED_DNS_DOMAIN }}'
+              server: 'harbor.apps.{{ subdomain }}.{{ AWS_ROUTE53_DNS_DOMAIN }}'
               user: 'admin'
               pass: 'Password12345'
     control_plane_nodes:

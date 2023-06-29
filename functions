@@ -482,6 +482,7 @@ tmcCheckLogin() {
   FLAG=$1
   [ "${TDH_TANZU_MISSION_CONTROL_REGISTRATION}" == "false" ] && return
   missing_variables=0
+#guguseli
 
   if [ "${TMC_SERVICE_TOKEN}" == "" -o "${TMC_SERVER_URL}" == "" ]; then
     missing_variables=1
@@ -501,9 +502,10 @@ tmcCheckLogin() {
 
   if [ ${missing_variables} -eq 1 ]; then
     echo "  -------------------------------------------------------------------------------------------------------------------------------------------------------"
-    echo "  IMPORTANT: Please set the missing environment variables either in your shell or in the tanzu-demo-hub"
-    echo "             configuration file ~/.tanzu-demo-hub.cfg and set all variables with the 'export' notation"
-    echo "             export TMC_SERVICE_TOKEN='xxxxxxxxxxxx'"
+    echo "  IMPORTANT: Please set the missing environment variables either in your shell or in the tanzu-demo-hub configuration file ~/.tanzu-demo-hub.cfg"
+    echo "             and set all variables with the 'export' notation. Place the password in Single Quotes (') especialy if you use special characters"
+    echo "             ie. export TDH_MYVMWARE_USER=xxxxxxx"
+    echo "                 export TDH_MYVMWARE_PASS='xxxxxxxxxxxx'"      
     echo "  -------------------------------------------------------------------------------------------------------------------------------------------------------"
     exit 1
   fi
@@ -887,11 +889,177 @@ checkCloudCLI() {
 
 }
 
+checkTDHsettings() {
+  service=$1
+  missing_variables=0
+
+  if [ "${service}" == "header" ]; then   
+    messagePrint " ▪ Validate TDH Configuration"                 "\$HOME/.tanzu-demo-hub.cfg"
+  fi
+
+  if [ "${service}" == "tdh_user" ]; then   
+    if [ "${TDH_USER}" == "" ]; then
+      missing_variables=1
+      echo ""
+      echo "   MISSING ENVIRONMENT-VARIABES       DESCRIPTION        "
+      echo "   -----------------------------------------------------------------------------------------------------------------------------------------------------"
+    
+      if [ "${TDH_USER}" == "" ]; then
+        echo "   TDH_USER                           (required) Tanzu Demo Hub User to tag TKG Clusters with your Name"
+        echo "                                                 (usually you VMware User Name without @vmware.com)"
+      fi 
+    fi
+  fi 
+
+  if [ "${service}" == "tmc" ]; then   
+    if [ "${TMC_SERVICE_TOKEN}" == "" -o "${TMC_SERVER_URL}" == "" ]; then
+      missing_variables=1
+      echo ""
+      echo "   MISSING ENVIRONMENT-VARIABES       DESCRIPTION        "
+      echo "   -----------------------------------------------------------------------------------------------------------------------------------------------------"
+
+      if [ "${TMC_SERVICE_TOKEN}" == "" ]; then
+        echo "   TMC_SERVICE_TOKEN                  (required) is the TMC_API_TOKEN which can be optained in the TMC console"
+      fi
+
+      if [ "${TMC_SERVER_URL}" == "" ]; then
+        echo "   TMC_SERVER_URL                     (required) The Tanzu Mission Control (TMC) Server Url"
+        echo "                                                 ie. TMC_SERVER_URL=\"https://tanzuemea.tmc.cloud.vmware.com\""
+      fi
+    fi
+  fi
+
+  if [ "${service}" == "registry_docker" ]; then
+    export TDH_REGISTRY_DOCKER_NAME=docker.io
+
+    if [ "${TDH_REGISTRY_DOCKER_USER}" == "" -o "${TDH_REGISTRY_DOCKER_PASS}" == "" ]; then
+      missing_variables=1
+      echo ""
+      echo "   MISSING ENVIRONMENT-VARIABES       DESCRIPTION        "
+      echo "   -------------------------------------------------------------------------------------------------------------------------------------------------------"
+
+      if [ "${TDH_REGISTRY_DOCKER_USER}" == "" ]; then
+        echo "   TDH_REGISTRY_DOCKER_USER           (required) Docker User"
+      fi
+
+      if [ "${TDH_REGISTRY_DOCKER_PASS}" == "" ]; then
+        echo "   TDH_REGISTRY_DOCKER_PASS           (required) Docker Password"
+      fi
+    fi
+  fi
+
+  if [ "${service}" == "registry_vmware" ]; then
+    export TDH_REGISTRY_VMWARE_NAME=registry.tanzu.vmware.com
+
+    if [ "${TDH_REGISTRY_VMWARE_NAME}" == "" -o "${TDH_REGISTRY_VMWARE_USER}" == "" -o "${TDH_REGISTRY_VMWARE_PASS}" == "" ]; then
+      missing_variables=1
+      echo ""
+      echo "   MISSING ENVIRONMENT-VARIABES       DESCRIPTION        "
+      echo "   -------------------------------------------------------------------------------------------------------------------------------------------------------"
+
+      if [ "${TDH_REGISTRY_VMWARE_USER}" == "" ]; then
+        echo "   TDH_REGISTRY_VMWARE_USER           (required) VMware User for Container Registry: registry.tanzu.vmware.com"
+      fi
+
+      if [ "${TDH_REGISTRY_VMWARE_PASS}" == "" ]; then
+        echo "   TDH_REGISTRY_VMWARE_PASS           (required) VMware Password"
+      fi
+    fi
+  fi
+
+  if [ "${service}" == "aws_route53" ]; then
+    if [ "${AWS_ROUTE53_REGION}" == "" -o "${AWS_ROUTE53_DNS_DOMAIN}" == "" -o "${AWS_ROUTE53_SECRET_KEY}" == "" -o "${AWS_ROUTE53_ACCESS_KEY}" == "" ]; then
+      missing_variables=1
+      echo ""
+      echo "   MISSING ENVIRONMENT-VARIABES       DESCRIPTION        "
+      echo "   -------------------------------------------------------------------------------------------------------------------------------------------------------"
+
+      if [ "${AWS_ROUTE53_REGION}" == "" ]; then 
+        echo "   AWS_ROUTE53_REGION                  (required) Choose the AWS Region where your installation should run"
+        echo "                                                  => aws ec2 --region=eu-west-3 describe-regions --output text | awk '{ print $NF }'"
+        echo "                                                     eu-north-1, eu-west-3, eu-central-1 etc."
+      fi
+        
+      if [ "${AWS_ROUTE53_DNS_DOMAIN}" == "" ]; then
+        echo "   AWS_ROUTE53_DNS_DOMAIN              (required) A DNS Domain managed by AWS Route 53 ie. yourdomain.com with a"
+        echo "                                                  valid DNS Dpmain. => https://console.aws.amazon.com/route53"
+      fi  
+        
+      if [ "${AWS_ROUTE53_ACCESS_KEY}" == "" -o "${AWS_ROUTE53_SECRET_KEY}" == "" ]; then
+        echo "   AWS_ROUTE53_SECRET_KEY              (required) AWS Secret Key for Route53 Access"
+        echo "   AWS_ROUTE53_ACCESS_KEY              (required) AWS Acess Key for Route53 Access"
+        echo ""
+        echo "   Example AWS Access Policy for a Route53 Hosted Zone"
+        echo "   -------------------------------------------------------------------------------------------------------------------------------------------------------"
+        echo "   {"
+        echo "       \"Version\" \"2012-10-17\""
+        echo "       \"Statement\": ["
+        echo "           {"
+        echo "               \"Effect\": \"Allow\","
+        echo "               \"Action\": ["
+        echo "                   \"route53:GetChange\","
+        echo "                   \"route53:GetHostedZone\","
+        echo "                   \"route53:ChangeResourceRecordSets\","
+        echo "                   \"route53:ListResourceRecordSets\","
+        echo "                   \"route53:DeleteHostedZone\","
+        echo "                   \"route53:GetHostedZoneLimit\","
+        echo "                   \"route53:UpdateHostedZoneComment\""
+        echo "               ],"
+        echo "               \"Resource\": ["
+        echo "                   \"arn:aws:route53:::hostedzone/*\","
+        echo "                   \"arn:aws:route53:::change/*\""
+        echo "               ]"
+        echo "           },"
+        echo "           {"
+        echo "               \"Effect\": \"Allow\","
+        echo "               \"Action\": ["
+        echo "                   \"route53:CreateHostedZone\","
+        echo "                   \"route53domains:ListDomains\","
+        echo "                   \"ec2:DescribeVpcs\","
+        echo "                   \"route53:ListHostedZonesByName\""
+        echo "               ],"
+        echo "               \"Resource\": \"*\""
+        echo "           }"
+        echo "       ]"
+        echo "   }"
+        echo "   -------------------------------------------------------------------------------------------------------------------------------------------------------"
+      fi  
+    fi
+  fi
+
+  if [ ${missing_variables} -eq 1 ]; then
+    echo ""
+    echo "   -------------------------------------------------------------------------------------------------------------------------------------------------------"
+    echo "   IMPORTANT: Please set the missing environment variables either in your shell or in the tanzu-demo-hub configuration file ~/.tanzu-demo-hub.cfg"
+    echo "              and set all variables with the 'export' notation. Place the password in Single Quotes (') especialy if you use special characters"
+    echo "              ie. export TDH_MYVMWARE_USER=xxxxxxx"
+    echo "                  export TDH_MYVMWARE_PASS='xxxxxxxxxxxx'"     
+    echo "   -------------------------------------------------------------------------------------------------------------------------------------------------------"
+    echo ""
+    exit 1
+  fi
+}
+
 checkKubernetesServices() {
   service=$1
   missing_variables=0
 
+#guguseli
   if [ 1 -eq 1 ]; then
+    if [ "${service}" == "tdh_user" ]; then
+      if [ "${TDH_CERTMANAGER_EMAIL}" == "" ]; then
+        missing_variables=1                     
+        echo ""
+        echo "  4MISSING ENVIRONMENT-VARIABES    DESCRIPTION        "
+        echo "  -----------------------------------------------------------------------------------------------------------------------------------------------------"
+    
+        if [ "${TDH_USER}" == "" ]; then
+          echo "  TDH_USER                           (required) Tanzu Demo Hub User to tag TKG Clusters with your Name"
+          echo "                                      => (usually you VMware User Name without @vmware.com)"
+        fi 
+      fi
+    fi
+
     if [ "${service}" == "cert-manager" ]; then
       if [ "${TDH_CERTMANAGER_EMAIL}" == "" ]; then
         missing_variables=1
@@ -1013,18 +1181,16 @@ checkKubernetesServices() {
     fi
 
     if [ "${service}" == "registry_vmware" ]; then
+      TDH_REGISTRY_VMWARE_NAME=registry.tanzu.vmware.com
+
       if [ "${TDH_REGISTRY_VMWARE_NAME}" == "" -o "${TDH_REGISTRY_VMWARE_USER}" == "" -o "${TDH_REGISTRY_VMWARE_PASS}" == "" ]; then
         missing_variables=1
         echo ""
         echo "  4MISSING ENVIRONMENT-VARIABES    DESCRIPTION        "
         echo "  -------------------------------------------------------------------------------------------------------------------------------------------------------"
 
-        if [ "${TDH_REGISTRY_VMWARE_NAME}" == "" ]; then
-          echo "  TDH_REGISTRY_VMWARE_NAME         (required) VMware Registry (registry.pivotal.io)"
-        fi
-
         if [ "${TDH_REGISTRY_VMWARE_USER}" == "" ]; then
-          echo "  TDH_REGISTRY_VMWARE_USER         (required) VMware User"
+          echo "  TDH_REGISTRY_VMWARE_USER         (required) VMware User for Container Registry: registry.tanzu.vmware.com"
         fi
 
         if [ "${TDH_REGISTRY_VMWARE_PASS}" == "" ]; then
@@ -1599,7 +1765,7 @@ checkTDHenvironment() {
     echo "             configuration file ~/.tanzu-demo-hub.cfg and set all variables with the 'export' notation"
     echo "             export TDH_MYVMWARE_USER=xxxxxxx"
     echo "             export TDH_MYVMWARE_PASS='xxxxxxxxxxxx'"
-    echo "  IMPORTANT: Place the password in Single Quotes (') especialy if you use special characgters"
+    echo "  IMPORTANT: Place the password in Single Quotes (') especialy if you use special characters"
     echo "  -------------------------------------------------------------------------------------------------------------------------------------------------------"
     exit 1
   fi
@@ -2006,6 +2172,7 @@ checkTDHAccess() {
       echo "                                  valid DNS Zone. => https://console.aws.amazon.com/route53"
     fi
 
+#guguseli
     if [ "${TDH_USER}" == "" ]; then
       echo "  TDH_USER                        (required) Tanzu Demo Hub User to tag TKG Clusters with your Name"
       echo "                                   => (usually you VMware User Name without @vmware.com)"
@@ -4391,8 +4558,8 @@ checkTKGdownloads() {
 
 checkCLIcommands() {
   [ -f /tdh_tools_docker_container  ] && return
-
   cat="$1"
+
   if [ "$cat" == "TKG" ]; then
     if [ ! -x /usr/local/bin/tkg ]; then
       echo "ERROR: /usr/local/bin/tkg not installed, please download package from https://www.vmware.com/go/get-tkg"
@@ -13054,7 +13221,6 @@ tdh_tools_download() {
 
 #sacha
   # --- GET LATES TDH-TOOLS CONTAINER FROM AWS ---
-echo "curl -f https://tanzu-demo-hub.s3.eu-central-1.amazonaws.com/${TDH_TOOLS_IMAGE}.sum"
   curl -f https://tanzu-demo-hub.s3.eu-central-1.amazonaws.com/${TDH_TOOLS_IMAGE}.sum >/dev/null 2>&1; ret=$?
   if [ $ret -ne 0 ]; then 
     echo "ERROR: There is currently no tdh-tools container for version ($TDH_TOOLS_IMAGE) on AWS s3"
@@ -15069,7 +15235,7 @@ vSphereAPI_createContentLibrary() {
       exit
     fi
   else
-    messagePrint " ▪ Verify Local cached Image (VMSERVICE_IMAGE) from S3"   "$HOME/.tanzu-demo-hub/cache/tdh-vmservice/$VMSERVICE_IMAGE"
+    messagePrint " ▪ Verify Local cached Image (VMSERVICE_IMAGE) from S3"   "\$HOME/.tanzu-demo-hub/cache/tdh-vmservice/$VMSERVICE_IMAGE"
   fi
 
   #########################################################################################################################
@@ -17791,12 +17957,12 @@ runTDHtools() {
     # --- VERIFY TOOLS AND ACCESS ---
     verify_docker
     checkCLIcommands        BASIC
-    checkKubernetesServices registry_docker
+    #checkKubernetesServices registry_docker
 
     if [ $NATIVE -eq 0 ]; then
       tdh_tools_build    $TOOLS_TLAG $TOOLS_VERSION
       tdh_tools_download $TOOLS_TLAG $TOOLS_VERSION
-      messagePrint " ▪ Running TDH Tools Docker Container" "$TDH_TOOLS:latest $TDHPATH/$CMD_EXEC $CMD_ARGS"
+      messagePrint " ▪ Running TDH Tools Docker Container" "$TDH_TOOLS:latest"
 
       cid=$(docker ps -a | grep $TDH_TOOLS:latest | awk '{ print $1 }')
       [ "$cid" != "" ] && for n in $cid; do docker rm $n -f > /dev/null 2>&1; done
@@ -17861,7 +18027,7 @@ runTDHtools() {
       docker run $USER_OPTIONS ${CORE_MOUNTS[*]} -e SUPERVISOR -e VERIFY $TDH_TOOLS:latest /usr/local/bin/$POSTSCRIPT 2>/dev/null
 
       [ $ROOT_SHELL -eq 1 ] && SEXEC_OPTIONS=$ROOT_OPTIONS || SEXEC_OPTIONS=$USER_OPTIONS
-      docker run $SEXEC_OPTIONS ${CORE_MOUNTS[*]} -e SUPERVISOR -e VERIFY $TDH_TOOLS:latest $DOCKER_EXEC $DOCKER_ARGS; ret=$?
+      docker run --platform linux/amd64 $SEXEC_OPTIONS ${CORE_MOUNTS[*]} -e SUPERVISOR -e VERIFY $TDH_TOOLS:latest $DOCKER_EXEC $DOCKER_ARGS; ret=$?
   
       # --- FINISH CURRENT SESSION AS WE RUN AS CONTAINER ---
       exit $ret
@@ -19496,8 +19662,8 @@ convertTDHconfig() {
   export CREDENTIALS_SRC=$HOME/.tanzu-demo-hub.cfg
   export CREDENTIALS_DST=$HOME/.tanzu-demo-hub.yml
 
-  grep "=" $CREDENTIALS_SRC | egrep -v "^#" | sed -e "s/'//g" -e '/^#/d' -e 's/export //g' -e "s/=/: '/g" -e 's/"//g' -e 's/  *#.*$//g' -e "s/$/'/g" >  $CREDENTIALS_DST
-  egrep "TMC_SERVER_URL" $HOME/.tanzu-demo-hub.cfg | sed -e "s/'//g" -e 's/"//g' -e "s+^.*//\(.*\)$+TMC_SERVER_TENNANT: '\1'+g"      >> $CREDENTIALS_DST
+  sed -n '1,/^return/p' $CREDENTIALS_SRC | grep "=" | egrep -v "^#" | sed -e "s/'//g" -e '/^#/d' -e 's/export //g' -e "s/=/: '/g" -e 's/"//g' -e 's/  *#.*$//g' -e "s/$/'/g" >  $CREDENTIALS_DST
+  sed -n '1,/^return/p' $CREDENTIALS_SRC | grep "=" | egrep -v "^#" | egrep "TMC_SERVER_URL" | sed -e "s/'//g" -e 's/"//g' -e "s+^.*//\(.*\)$+TMC_SERVER_TENNANT: '\1'+g"    >> $CREDENTIALS_DST
   chmod 600 $CREDENTIALS_DST
 }           
 

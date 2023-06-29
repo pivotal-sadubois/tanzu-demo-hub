@@ -9,7 +9,6 @@
 export TANZU_DEMO_HUB=$(cd "$(pwd)/$(dirname $0)"; pwd)
 export DEBUG=0
 export NATIVE=0
-export DEPLOY_PCF_DEPLOYMENT=aws_tkg_default.cfg
 export TDH_TOOLS_CONTAINER_TYPE=tkg
 unset TMC_MANAGEMENT_CLUSTER
 
@@ -96,23 +95,25 @@ else
   TMC_DISPLAY_NAME="tkgmc-vsphere--$TDH_USER"
 fi
 
-
-
 #############################################################################################################################
 ################################### EXECUTING CODE WITHIN  TDH-TOOLS DOCKER CONTAINER  ######################################
 #############################################################################################################################
-runTDHtools $TDH_TOOLS_CONTAINER_TYPE $DEPLOY_TKG_VERSION "Deploy TKG Cluster with Tanzu Mission Control (TMC)" "/home/tanzu/tanzu-demo-hub/$CMD_EXEC" "$CMD_ARGS"
+runTDHtools $TDH_TOOLS_CONTAINER_TYPE $DEPLOY_TKG_VERSION "Register vSphere Supervisor Cluster to Tanzu Mission Control (TMC)" "/home/tanzu/tanzu-demo-hub/$CMD_EXEC" "$CMD_ARGS"
+
+# --- VERIFY TDH CONFIGURATION ---
+checkTDHsettings header
+checkTDHsettings tdh_user
+checkTDHsettings tmc
 
 # --- VERIFY TOOLS AND ACCESS ---
-#checkCloudCLI
 checkCLIcommands TOOLS
 checkCLIcommands TKG
 checkCLIcommands TANZU
 checkCLIcommands TMC
 
 # --- CLEANUP KUNECONFIG ---
-tmcCheckLogin
-vSphereKubeconfig
+#tmcCheckLogin
+#vSphereKubeconfig
 vSphereLogin
 
 cnt=$(tmc managementcluster list | grep -c "$TMC_DISPLAY_NAME") 
@@ -214,10 +215,6 @@ VSPHERE_NAMESPACE=tanzu-demo-hub
 VSPHERE_DATASTORE=datastore-19 
 VSPHERE_CONTENT_LIBRARY=tanzu-demo-hub
 
-echo "VSPHERE_TKGS_VCENTER_SERVER:$VSPHERE_TKGS_VCENTER_SERVER"
-echo "VSPHERE_TKGS_VCENTER_ADMIN:$VSPHERE_TKGS_VCENTER_ADMIN"
-echo "VSPHERE_TKGS_VCENTER_PASSWORD:$VSPHERE_TKGS_VCENTER_PASSWORD"
-
 TDH_VSPHERE_API_TOKEN=$(vSphereAPI_getToken "$VSPHERE_TKGS_VCENTER_SERVER" "$VSPHERE_TKGS_VCENTER_ADMIN" "$VSPHERE_TKGS_VCENTER_PASSWORD")
 
 vSphereAPI_createNamespace      $TDH_VSPHERE_API_TOKEN $VSPHERE_TKGS_VCENTER_SERVER $VSPHERE_NAMESPACE
@@ -225,13 +222,13 @@ vSphereAPI_createContentLibrary $TDH_VSPHERE_API_TOKEN $VSPHERE_TKGS_VCENTER_SER
 vSphereAPI_updateNamespace      $TDH_VSPHERE_API_TOKEN $VSPHERE_TKGS_VCENTER_SERVER $VSPHERE_NAMESPACE
 
 messageTitle "TMC Management Server Configuration"
-messagePrint " ▪ Management Cluster - Configuration"                     "$HOME/.tanzu-demo-hub/config/${TMC_DISPLAY_NAME}.cfg"
-messagePrint " ▪ Management Cluster - Config YAML"                       "$HOME/.tanzu-demo-hub/config/${TMC_DISPLAY_NAME}.yml"
-messagePrint " ▪ Management Cluster - Kubeconfig"                        "$HOME/.tanzu-demo-hub/config/${TMC_DISPLAY_NAME}.kubeconfig"
-messagePrint " ▪ Tanzu Mission Control (TMC) - Configuration Envfile"    "$HOME/.tanzu-demo-hub/config/${TMC_CONFIG_NAME}.cfg"
-messagePrint " ▪ Tanzu Mission Control (TMC) - Configuration YAML"       "$HOME/.tanzu-demo-hub/config/${TMC_CONFIG_NAME}.yml"
+messagePrint " ▪ Management Cluster - Configuration"                     "\$HOME/.tanzu-demo-hub/config/${TMC_DISPLAY_NAME}.cfg"
+messagePrint " ▪ Management Cluster - Config YAML"                       "\$HOME/.tanzu-demo-hub/config/${TMC_DISPLAY_NAME}.yml"
+messagePrint " ▪ Management Cluster - Kubeconfig"                        "\$HOME/.tanzu-demo-hub/config/${TMC_DISPLAY_NAME}.kubeconfig"
+messagePrint " ▪ Tanzu Mission Control (TMC) - Configuration Envfile"    "\$HOME/.tanzu-demo-hub/config/${TMC_CONFIG_NAME}.cfg"
+messagePrint " ▪ Tanzu Mission Control (TMC) - Configuration YAML"       "\$HOME/.tanzu-demo-hub/config/${TMC_CONFIG_NAME}.yml"
 
-mv $HOME/.kube/config_$VSPHERE_TKGS_SUPERVISOR_CLUSTER $HOME/.tanzu-demo-hub/config/${TMC_DISPLAY_NAME}.kubeconfig
+[ -f $HOME/.kube/config_$VSPHERE_TKGS_SUPERVISOR_CLUSTER ] && mv $HOME/.kube/config_$VSPHERE_TKGS_SUPERVISOR_CLUSTER $HOME/.tanzu-demo-hub/config/${TMC_DISPLAY_NAME}.kubeconfig
 
 KUBERNETES_RELEASE=$(kubectl get tanzukubernetesreleases | tail -1 | awk '{ print $1 }')
 
@@ -259,6 +256,7 @@ echo "TDH_TKGMC_ENVNAME=tkgs"                                                  >
 echo "TDH_TKGMC_TMC_CONFIG="                                                   >> $CONFIG_FILE
 echo "TDH_TKGMC_STORAGE_CLASS=$VSPHERE_TKGS_SUPERVISOR_STORAGE_CLASS"          >> $CONFIG_FILE
 echo "TDH_TKGMC_VSPHERE_NAMESPACE=$VSPHERE_NAMESPACE"                          >> $CONFIG_FILE
+echo "TDH_TKGMC_VSPHERE_SERVER=$VSPHERE_TKGS_VCENTER_SERVER"                   >> $CONFIG_FILE
 echo "TDH_TKGMC_VSPHERE_USER=$VSPHERE_TKGS_VCENTER_ADMIN"                      >> $CONFIG_FILE
 echo "TDH_TKGMC_VSPHERE_PASS='$VSPHERE_TKGS_VCENTER_PASSWORD'"                 >> $CONFIG_FILE
 echo "TDH_TKGMC_CONFIG="                                                       >> $CONFIG_FILE
