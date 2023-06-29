@@ -971,7 +971,7 @@ checkTDHsettings() {
 
       if [ "${TDH_REGISTRY_VMWARE_USER}" == "" ]; then
         echo "   TDH_REGISTRY_VMWARE_USER           (required) VMware User for Container Registry: registry.tanzu.vmware.com"
-        echo "                                                 /
+        echo "                                                 Registry VMware # => SIGN-UP: https://account.run.pivotal.io/z/uaa/sign-up"
       fi
 
       if [ "${TDH_REGISTRY_VMWARE_PASS}" == "" ]; then
