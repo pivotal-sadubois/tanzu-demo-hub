@@ -482,7 +482,6 @@ tmcCheckLogin() {
   FLAG=$1
   [ "${TDH_TANZU_MISSION_CONTROL_REGISTRATION}" == "false" ] && return
   missing_variables=0
-#guguseli
 
   if [ "${TMC_SERVICE_TOKEN}" == "" -o "${TMC_SERVER_URL}" == "" ]; then
     missing_variables=1
@@ -972,6 +971,7 @@ checkTDHsettings() {
 
       if [ "${TDH_REGISTRY_VMWARE_USER}" == "" ]; then
         echo "   TDH_REGISTRY_VMWARE_USER           (required) VMware User for Container Registry: registry.tanzu.vmware.com"
+        echo "                                                 /
       fi
 
       if [ "${TDH_REGISTRY_VMWARE_PASS}" == "" ]; then
@@ -1037,7 +1037,29 @@ checkTDHsettings() {
         echo "   }"
         echo "   -------------------------------------------------------------------------------------------------------------------------------------------------------"
       fi  
+    else
+      # --- CHECK IF AWS CLI IS CONFIGURED ---
+      [ ! -d $HOME/.aws ] && mkdir -p $HOME/.aws
+      if [ ! -f $HOME/.aws/credentials ]; then
+        if [ "$AWS_ROUTE53_ACCESS_KEY" != "" -a "$AWS_ROUTE53_SECRET_KEY" != "" ]; then
+          echo "[default]"                               >  $HOME/.aws/credentials
+          echo "aws_access_key_id = $AWS_ROUTE53_ACCESS_KEY"     >> $HOME/.aws/credentials
+          echo "aws_secret_access_key = $AWS_ROUTE53_SECRET_KEY" >> $HOME/.aws/credentials
+        else
+          echo "ERROR: AWS CLI is not configured yet, please run aws configure"
+          if [ "$NATIVE" == "0" ]; then
+            echo "       => tools/${TDH_TOOLS}.sh"
+            echo "          tdh-tools:/$ aws configure"
+            echo "          tdh-tools:/$ exit"
+          else
+            echo "       => aws configure"
+          fi
+        fi
+        exit 1
+      fi
     fi
+#guguseli
+
   fi
 
   if [ ${missing_variables} -eq 1 ]; then
@@ -2115,6 +2137,7 @@ checkTMCAccess_old() {
       messagePrint " ▪ Pivotal Network Token"            "$PCF_PIVNET_TOKEN"
       messagePrint " ▪ AWS Route53 Hosted DNS Domain"    "$TDH_TKGMC_ENVNAME.$AWS_HOSTED_DNS_DOMAIN"
 
+#lllllllllll
       # --- CHECK IF AWS CLI IS CONFIGURED ---
       [ ! -d $HOME/.aws ] && mkdir -p $HOME/.aws
       if [ ! -f $HOME/.aws/credentials ]; then
@@ -2184,7 +2207,6 @@ checkTDHAccess() {
       echo "                                  valid DNS Zone. => https://console.aws.amazon.com/route53"
     fi
 
-#guguseli
     if [ "${TDH_USER}" == "" ]; then
       echo "  TDH_USER                        (required) Tanzu Demo Hub User to tag TKG Clusters with your Name"
       echo "                                   => (usually you VMware User Name without @vmware.com)"
@@ -5208,7 +5230,7 @@ tkgCreateClusterV2() {
         stt=""
         while [ "$stt" != "True" ]; do
           cmdLoop kubectl get clusters -n $vc_nsp -o json > /tmp/output.json 2>/dev/null
-          stt=$(jq -r --arg key "$wc_nam" '.items[] | select(.metadata.name == $key).status.conditions[] | select(.type == "Ready").status' /tmp/output.json)
+          stt=$(jq -r --arg key "$wc_nam" '.items[] | select(.metadata.name == $key).status.conditions[] | select(.type == "Ready").status' /tmp/output.json 2>/dev/null)
           [ "$stt" == "True" ] && break
           sleep 10
         done
@@ -5216,15 +5238,15 @@ tkgCreateClusterV2() {
         stt=""
         while [ "$stt" != "True" ]; do
           cmdLoop kubectl get tanzukubernetescluster -n $vc_nsp -o json > /tmp/output.json 2>/dev/null
-          stt=$(jq -r --arg key "$wc_nam" '.items[] | select(.metadata.name == $key).status.phase' /tmp/output.json)
+          stt=$(jq -r --arg key "$wc_nam" '.items[] | select(.metadata.name == $key).status.phase' /tmp/output.json 2>/dev/null)
           [ "$stt" == "running" -o "$stt" == "updating" ] && break
           sleep 10
         done
 
         # --- VERIFY STATUS ---
         cmdLoop kubectl get clusters -n $vc_nsp -o json > /tmp/output.json 2>/dev/null
-        stt=$(jq -r --arg key "$wc_nam" '.items[] | select(.metadata.name == $key).status.conditions[].status' /tmp/output.json)
-        typ=$(jq -r --arg key "$wc_nam" '.items[] | select(.metadata.name == $key).status.conditions[].type' /tmp/output.json)
+        stt=$(jq -r --arg key "$wc_nam" '.items[] | select(.metadata.name == $key).status.conditions[].status' /tmp/output.json 2>/dev/null)
+        typ=$(jq -r --arg key "$wc_nam" '.items[] | select(.metadata.name == $key).status.conditions[].type' /tmp/output.json 2>/dev/null)
 
         vsphereWorkloadClusterLoginV2 ${wc_nam}; ret=$?
         if [ ${ret} -eq 0 ]; then
@@ -14944,12 +14966,17 @@ createHarborProject() {
   TDH_HARBOR_REGISTRY_DNS_HARBOR=$(getConfigMapCache tanzu-demo-hub TDH_HARBOR_REGISTRY_DNS_HARBOR)
   TDH_HARBOR_REGISTRY_ADMIN_PASSWORD=$(getConfigMapCache tanzu-demo-hub TDH_HARBOR_REGISTRY_ADMIN_PASSWORD)
   TDH_HARBOR_REGISTRY_ENABLED=$(getConfigMapCache tanzu-demo-hub TDH_HARBOR_REGISTRY_ENABLED)
+echo "HARBOR_PROJECT:$HARBOR_PROJECT"
+echo "TDH_HARBOR_REGISTRY_DNS_HARBOR:$TDH_HARBOR_REGISTRY_DNS_HARBOR"
+echo "TDH_HARBOR_REGISTRY_ADMIN_PASSWORD:$TDH_HARBOR_REGISTRY_ADMIN_PASSWORD"
+echo "TDH_HARBOR_REGISTRY_ENABLED:$TDH_HARBOR_REGISTRY_ENABLED"
 
   AUTH_OPTIONS="--basic -u admin:$TDH_HARBOR_REGISTRY_ADMIN_PASSWORD"
 
   curl $AUTH_OPTIONS -X 'GET' -H 'accept: application/json' \
       https://${TDH_HARBOR_REGISTRY_DNS_HARBOR}/api/v2.0/projects 2>/dev/null > /tmp/output.json 
   nam=$(jq -r --arg key "$HARBOR_PROJECT" '.[] | select(.name == $key).name' /tmp/output.json)
+echo "createHarborProject gaga NAM:$nam"
   if [ "$nam" == "" -o "$nam" == "null" ]; then
     TMP_API_DATA=/tmp/harbor_api_data.json
     echo "{"                                                     >  $TMP_API_DATA
@@ -14957,17 +14984,36 @@ createHarborProject() {
     echo "  \"public\": true"                                >> $TMP_API_DATA
     echo "}"                                                     >> $TMP_API_DATA
 
+echo "TMP_API_DATA:$TMP_API_DATA"
+cat $TMP_API_DATA
     cnt=0; ret=1
     while [ $ret -ne 0 -a $cnt -lt 5 ]; do
+echo "curl $AUTH_OPTIONS -X POST https://${TDH_HARBOR_REGISTRY_DNS_HARBOR}/api/v2.0/projects -H 'accept: application/json' -H 'Content-Type: application/json' --data \"@$TMP_API_DATA\""
       curl $AUTH_OPTIONS -X POST https://${TDH_HARBOR_REGISTRY_DNS_HARBOR}/api/v2.0/projects \
            -H 'accept: application/json' \
            -H 'Content-Type: application/json' \
-           --data "@$TMP_API_DATA" >/dev/null 2>&1; ret=$?
+           --data "@$TMP_API_DATA" >/tmp/error.log 2>&1; ret=$?
       [ $ret -eq 0 ] && break
 
       let cnt=cnt+1
       sleep 10
     done
+
+    if [ $ret -ne 0 ]; then
+      logMessages /tmp/error.log
+      echo "ERROR: failed to create harbor project $HARBOR_PROJECT"
+      if [ "$NATIVE" == "0" ]; then
+        echo "       => tools/${TDH_TOOLS}.sh"
+        echo "          tdh-tools:/$ curl $AUTH_OPTIONS -X POST https://${TDH_HARBOR_REGISTRY_DNS_HARBOR}/api/v2.0/projects \\"
+        echo "                            -H 'accept: application/json' -H 'Content-Type: application/json' --data \"@$TMP_API_DATA\""
+        echo "          tdh-tools:/$ exit"
+      else
+        echo "       => curl $AUTH_OPTIONS -X POST https://${TDH_HARBOR_REGISTRY_DNS_HARBOR}/api/v2.0/projects \\" 
+        echo "               -H 'accept: application/json' -H 'Content-Type: application/json' --data \"@$TMP_API_DATA\""
+      fi
+
+      exit 1
+    fi
   fi
 }
 
