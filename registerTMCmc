@@ -112,7 +112,7 @@ checkCLIcommands TANZU
 checkCLIcommands TMC
 
 # --- CLEANUP KUNECONFIG ---
-#tmcCheckLogin
+tmcCheckLogin
 #vSphereKubeconfig
 vSphereLogin
 
