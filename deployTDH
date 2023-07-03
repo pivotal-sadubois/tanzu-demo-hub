@@ -75,7 +75,7 @@ else
 fi
 
 if [ -f $TDHPATH/deployments/${TDHV2_DEPLOYMENT}.j2 ]; then
- tdh_tools=$(head -5 $TDHPATH/deployments/${TDHV2_DEPLOYMENT}.j2 | yq -o json | jq -r '.tdh_deployment.tdh_tools')
+ tdh_tools=$(head -10 $TDHPATH/deployments/${TDHV2_DEPLOYMENT}.j2 | yq -o json | jq -r '.tdh_deployment.tdh_tools')
 else
   echo "ERROR: Configuration file $TDHV2_MANAGEMENT_CLUSTER can not be found in the directory:"
   echo "       $TDHPATH/deployments or $HOME/.tanzu-demo-hub/config"
@@ -85,6 +85,7 @@ fi
 export TDHV2_MC_CONFIG=$HOME/.tanzu-demo-hub/config/${TDHV2_MANAGEMENT_CLUSTER}
 export TDHV2_WC_CONFIG=$HOME/.tanzu-demo-hub/config/${TDHV2_MANAGEMENT_CLUSTER}
 export TDHV2_SECRETS=$HOME/.tanzu-demo-hub
+export AWS_HOSTED_DNS_DOMAIN=$AWS_ROUTE53_DNS_DOMAIN
 
 #############################################################################################################################
 ################################### EXECUTING CODE WITHIN  TDH-TOOLS DOCKER CONTAINER  ######################################
@@ -116,6 +117,7 @@ checkCLIcommands TMC
 convertTDHconfig
 convertTDHsecrets
 createTDHdeployment
+exit
 
 #############################################################################################################################
 ######################### CREATE TKG CLUSTER AND ATTACH TO TMC AND INSTALL TMC INTEGRATION ##################################
@@ -125,8 +127,9 @@ setKubernetesContextV2             $(getYAML MC_KUBECONFIG)
 tanzuConfigServerV2                $(getYAML MC_NAME)
 
 for clu in $(getYAML WC_CLUSTER_LIST); do
-#[ "$clu" == "tdh-vsphere-sadubois-svc" ] && continue
-#[ "$clu" == "tdh-vsphere-sadubois-tap" ] && continue
+[ "$clu" == "tdh-vsphere-sdubois-svc" ] && continue
+#[ "$clu" == "tdh-vsphere-sdubois-run" ] && continue
+#[ "$clu" == "tdh-vsphere-sdubois-tap" ] && continue
   TDHV2_WORKLOAD_CLUSTER=$clu
 
   setKubernetesContextV2           $(getYAML MC_KUBECONFIG)
@@ -152,4 +155,9 @@ for clu in $(getYAML WC_CLUSTER_LIST); do
   installTAPV2                   ## Tanzu Application Platform (TAP)
   #installKubeernetesDashboard   ## Kubernetes Dashboard
 done
+
+configureAppLiveView
+
+
+
 
