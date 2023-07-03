@@ -939,6 +939,16 @@ checkTDHsettings() {
         echo "                                                 ie. TMC_SERVER_URL=\"https://tanzuemea.tmc.cloud.vmware.com\""
       fi
     fi
+
+    tanzu context list -o json > /tmp/output.json 2>/dev/null
+    val=$(jq -r '.[] | content(.name == "tdh").name' /tmp/output.json 2>/dev/null)
+    if [ "$val" != "tdh" ]; then 
+      messagePrint " ▪ Install TMC Plugins for (TMC) in Tanzu CLI"         "$TMC_SERVER_URL"
+      export  TANZU_API_TOKEN="$TMC_SERVICE_TOKEN"
+      url=$(echo $TMC_SERVER_URL | awk -F'/' '{ print $NF }') 
+      tanzu context create --name tmc --endpoint ${url}:443 > /dev/null 2>&1; ret=$?
+      tanzu plugin sync > /dev/null 2>&1
+    fi
   fi
 
   if [ "${service}" == "registry_docker" ]; then
@@ -1038,25 +1048,28 @@ checkTDHsettings() {
         echo "   -------------------------------------------------------------------------------------------------------------------------------------------------------"
       fi  
     else
-      # --- CHECK IF AWS CLI IS CONFIGURED ---
-      [ ! -d $HOME/.aws ] && mkdir -p $HOME/.aws
-      if [ ! -f $HOME/.aws/credentials ]; then
-        if [ "$AWS_ROUTE53_ACCESS_KEY" != "" -a "$AWS_ROUTE53_SECRET_KEY" != "" ]; then
-          echo "[default]"                               >  $HOME/.aws/credentials
-          echo "aws_access_key_id = $AWS_ROUTE53_ACCESS_KEY"     >> $HOME/.aws/credentials
-          echo "aws_secret_access_key = $AWS_ROUTE53_SECRET_KEY" >> $HOME/.aws/credentials
-        else
-          echo "ERROR: AWS CLI is not configured yet, please run aws configure"
-          if [ "$NATIVE" == "0" ]; then
-            echo "       => tools/${TDH_TOOLS}.sh"
-            echo "          tdh-tools:/$ aws configure"
-            echo "          tdh-tools:/$ exit"
-          else
-            echo "       => aws configure"
-          fi
-        fi
-        exit 1
-      fi
+      export AWS_ACCESS_KEY_ID=$AWS_ROUTE53_ACCESS_KEY
+      export AWS_SECRET_ACCESS_KEY=$AWS_ROUTE53_SECRET_KEY
+      export AWS_DEFAULT_REGION=$AWS_ROUTE53_REGION
+
+      #[ ! -d $HOME/.aws ] && mkdir -p $HOME/.aws
+      #if [ ! -f $HOME/.aws/credentials ]; then
+      #  if [ "$AWS_ROUTE53_ACCESS_KEY" != "" -a "$AWS_ROUTE53_SECRET_KEY" != "" ]; then
+      #    echo "[default]"                               >  $HOME/.aws/credentials
+      #    echo "aws_access_key_id = $AWS_ROUTE53_ACCESS_KEY"     >> $HOME/.aws/credentials
+      #    echo "aws_secret_access_key = $AWS_ROUTE53_SECRET_KEY" >> $HOME/.aws/credentials
+      #  else
+      #    echo "ERROR: AWS CLI is not configured yet, please run aws configure"
+      #    if [ "$NATIVE" == "0" ]; then
+      #      echo "       => tools/${TDH_TOOLS}.sh"
+      #      echo "          tdh-tools:/$ aws configure"
+      #      echo "          tdh-tools:/$ exit"
+      #    else
+      #      echo "       => aws configure"
+      #    fi
+      #  fi
+      #  exit 1
+      #fi
     fi
 #guguseli
 
@@ -2137,7 +2150,6 @@ checkTMCAccess_old() {
       messagePrint " ▪ Pivotal Network Token"            "$PCF_PIVNET_TOKEN"
       messagePrint " ▪ AWS Route53 Hosted DNS Domain"    "$TDH_TKGMC_ENVNAME.$AWS_HOSTED_DNS_DOMAIN"
 
-#lllllllllll
       # --- CHECK IF AWS CLI IS CONFIGURED ---
       [ ! -d $HOME/.aws ] && mkdir -p $HOME/.aws
       if [ ! -f $HOME/.aws/credentials ]; then
@@ -5893,13 +5905,13 @@ getYAML() {
 
   # --- KUBERNETES CLUSTER OBJECTS ---
   [ "$1" == "TDH_DEPLOYMENT" ] && yq -o json $mccfg | jq -r '.tdh_deployment.name'
+  [ "$1" == "TDH_DEPLOYMENT_TYPE" ] && yq -o json $mccfg | jq -r '.tdh_deployment.type'
   [ "$1" == "TDH_DNS_DOMAIN" ] && yq -o json $mccfg | jq -r '.tdh_environment.network.dns.dns_domain'
   [ "$1" == "TDH_DNS_SUBDOMAIN" ] && yq -o json $mccfg | jq -r '.tdh_environment.network.dns.dns_subdomain'
   [ "$1" == "WC_CLUSTER_LIST" ] && yq -o json $mccfg | jq -r '.tdh_clusters[].name'
   [ "$1" == "WC_K8S_VERSION" ] && yq -o json $mccfg | jq -r --arg key "$2" '.tdh_clusters[] | select(.name == $key).config.kubernetes'
   [ "$1" == "WC_DESCRIPTION" ] && yq -o json $mccfg | jq -r --arg key "$2" '.tdh_clusters[] | select(.name == $key).description'
   [ "$1" == "WC_TMC_ENABLED" ] && yq -o json $mccfg | jq -r --arg key "$2" '.tdh_clusters[] | select(.name == $key).config.tmc.enabled'
-#huhu
 
   [ "$1" == "TDH_TMC_API_TOKEN" ] && yq -o json $mccfg | jq -r '.tdh_environment.vmc.account.api_token'
 
@@ -5970,7 +5982,6 @@ getYAML() {
   [ "$1" == "TAP_LOCAL_REGISTRY_PASS" ] && yq -o json $mccfg | jq -r --arg key "$2" --arg reg "$3"  \
     '.tdh_clusters[] | select(.name == $key).config.services.tap.registry[] | select(.name == $reg).pass' 2>/dev/null
 
-#gggggggggggggg
 
 
   [ "$1" == "REPO_LIST" ] && yq -o json $mccfg | jq -r --arg key "$2" '.tdh_clusters[] | select(.name == $key).config.package_repositories[].name'
@@ -6913,14 +6924,15 @@ installTAPV2() {
   NAMESPACE=tanzu-system-packages
   NAMESPACE=tap-install
 
- tap_enbl=$(getYAML SERVICE_TAP_ENABLED $TDHV2_WORKLOAD_CLUSTER) 
- [ "$tap_enbl" == "null" -o "$tap_enbl" == "" ] && return
+  tap_enbl=$(getYAML SERVICE_TAP_ENABLED $TDHV2_WORKLOAD_CLUSTER) 
+  [ "$tap_enbl" == "null" -o "$tap_enbl" == "" ] && return
 
   # --- UPDATE SECRET PLUGIN TO LATEST --- 
   tanzu plugin install secret > /dev/null 2>&1
 
   dnsdomain=$(getYAML TDH_DNS_DOMAIN)
   subdomain=$(getYAML TDH_DNS_SUBDOMAIN)
+  dep_typ=$(getYAML TDH_DEPLOYMENT_TYPE)
   cluster_role=$(getYAML SERVICE_TAP_ROLE $TDHV2_WORKLOAD_CLUSTER)
 
   DNS_DOMAIN="svc.${subdomain}.${dnsdomain}"
@@ -6952,7 +6964,7 @@ installTAPV2() {
   if [ "$TAP_ROLE" == "full" ]; then 
     dockerPullSecret default
     kubectl delete pod tdh-tools-carvel-carvel > /dev/null 2>&1
-    kubectl run --image=docker.io/sadubois/tdh-tools-carvel-carvel-1.6.1:latest tdh-tools-carvel-carvel sleep 10000000
+    kubectl run --image=docker.io/sadubois/tdh-tools-carvel-carvel-1.6.1:latest tdh-tools-carvel-carvel sleep 10000000 > /dev/null 2>&1
 
     cnt=0; ret=1
     while [ $ret -ne 0 -a $cnt -lt 5 ]; do
@@ -7098,8 +7110,6 @@ installTAPV2() {
   TanzuPackage_RepoSync      $NAMESPACE
 
   if [ "$TAP_ROLE" == "run" ]; then 
-    echo run
-
     messagePrint " ▪ Create TAP Configuration Files"                "Stage-1, Stage-2 and Stage-3"
     TAP_CONFIG_1=$HOME/.tanzu-demo-hub/$TDH_DEPLOYMENT_PATH/tap_config_stage_1.yaml
     echo "ceip_policy_disclosed: true"                                                                                            >  $TAP_CONFIG_1
@@ -7108,6 +7118,8 @@ installTAPV2() {
     echo "    service:"                                                                                                           >> $TAP_CONFIG_1
     echo "      type: LoadBalancer"                                                                                               >> $TAP_CONFIG_1
     echo ""                                                                                                                       >> $TAP_CONFIG_1
+
+    # https://docs.vmware.com/en/VMware-Tanzu-Application-Platform/1.5/tap-reference-architecture/GUID-reference-designs-tap-architecture-dev-components.html
     echo "appliveview_connector:"                                                                                                 >> $TAP_CONFIG_1
     echo "  backend:"                                                                                                             >> $TAP_CONFIG_1
     echo "    sslDeactivated: false"                                                                                              >> $TAP_CONFIG_1
@@ -7127,10 +7139,10 @@ installTAPV2() {
     echo "       => tools/${TDH_TOOLS}.sh"
     echo "          export STAGEDIR=\$HOME/.tanzu-demo-hub/$TDH_DEPLOYMENT_PATH"
     echo "          export KUBECONFIG=\$HOME/.tanzu-demo-hub/$TDH_DEPLOYMENT_PATH/$TDHV2_WORKLOAD_CLUSTER.kubeconfig"
-    echo "          tdh-tools:/$ tanzu package install tap -p tap.tanzu.vmware.com -v $TAP_VERSION --values-file \$STAGEDIR/tap_config_stage_1.yaml -n tap-install --wait            # INSTALL STAGE-1 - DONE"
-    echo "          tdh-tools:/$ tanzu package installed update tap -p tap.tanzu.vmware.com -v $TAP_VERSION --values-file \$STAGEDIR/tap_config_stage_2.yaml -n tap-install --wait"  # INSTALL STAGE-2"
-    echo "          tdh-tools:/$ tanzu package installed update tap -p tap.tanzu.vmware.com -v $TAP_VERSION --values-file \$STAGEDIR/tap_config_stage_3.yaml -n tap-install --wait   # INSTALL STAGE-3 ALL"
-    echo "          tdh-tools:/$ tanzu package installed update tap -p tap.tanzu.vmware.com -v $TAP_VERSION --values-file \$STAGEDIR/tap_config_stage_1.yaml -n tap-install --wait   # BACK TO STAGE-1"
+    echo "          tdh-tools:/$ tanzu package install tap -p tap.tanzu.vmware.com -v $TAP_VERSION --values-file \$STAGEDIR/tap_config_stage_1.yaml -n tap-install --wait"
+
+#ppppppppp run
+
     echo "   Verify Status of installed Package"
     echo "       => tools/${TDH_TOOLS}.sh"
     echo "          tdh-tools:/$ tanzu package installed list -n tap-install"
@@ -7246,6 +7258,7 @@ installTAPV2() {
     echo ""                                                                                                                       >> $TAP_CONFIG_2
 
     TAP_CONFIG_3=$HOME/.tanzu-demo-hub/$TDH_DEPLOYMENT_PATH/tap_config_stage_3.yaml
+    TAP_CONFIG_4=$HOME/.tanzu-demo-hub/$TDH_DEPLOYMENT_PATH/tap_config_stage_4.yaml
     echo ""                                                                                                                       >  $TAP_CONFIG_3
     echo "profile: full"                                                                                                          >> $TAP_CONFIG_3
     echo ""                                                                                                                       >> $TAP_CONFIG_3
@@ -7289,6 +7302,9 @@ installTAPV2() {
     echo "  # workshops.learningcenter.tanzu.vmware.com"                                                                          >> $TAP_CONFIG_3
     echo "  # bitnami.services.tanzu.vmware.com"                                                                                  >> $TAP_CONFIG_1
     echo ""                                                                                                                       >> $TAP_CONFIG_3
+
+    # --- MAKE A COPY ---
+    cat $TAP_CONFIG_3 > $TAP_CONFIG_4
 
     TAP_CONFIG=$HOME/.tanzu-demo-hub/$TDH_DEPLOYMENT_PATH/tap_config_all.yaml
     echo "shared:"                                                                                                                >  $TAP_CONFIG
@@ -7433,12 +7449,13 @@ installTAPV2() {
     echo "    secret_name: $TLS_SECRET"                                                                                           >> $TAP_CONFIG
     echo "  domain: $DNS_DOMAIN"                                                                                                  >> $TAP_CONFIG
     echo ""                                                                                                                       >> $TAP_CONFIG
+
+    # https://docs.vmware.com/en/VMware-Tanzu-Application-Platform/1.5/tap-reference-architecture/GUID-reference-designs-tap-architecture-dev-components.html
     echo "appliveview:"                                                                                                           >> $TAP_CONFIG
     echo "  connector_namespaces: [default]"                                                                                      >> $TAP_CONFIG
-    echo "  service_type: LoadBalancer"                                                                                           >> $TAP_CONFIG
-    echo ""                                                                                                                       >> $TAP_CONFIG
-    echo "appliveview_connector:"                                                                                                 >> $TAP_CONFIG
-    echo "  activateSensitiveOperations: true"                                                                                    >> $TAP_CONFIG
+    echo "  ingress_enabled: \"true\""                                                                                            >> $TAP_CONFIG
+    echo "  ingress_domain: $DNS_DOMAIN"                                                                                          >> $TAP_CONFIG
+    echo "  sslDisabled: \"true\""                                                                                                >> $TAP_CONFIG
     echo ""                                                                                                                       >> $TAP_CONFIG
     echo "metadata_store:"                                                                                                        >> $TAP_CONFIG
     echo "  ns_for_export_app_cert: '*'"                                                                                          >> $TAP_CONFIG
@@ -7469,7 +7486,7 @@ installTAPV2() {
     echo "  storageClass: \"$VSPHERE_TKGS_SUPERVISOR_STORAGE_CLASS\""                                                             >> $TAP_CONFIG
     echo "  service_type: ClusterIP"                                                                                              >> $TAP_CONFIG
     echo "  tls:"                                                                                                                 >> $TAP_CONFIG
-    echo "    secretName: $TLS_SECRET"                                                                                     >> $TAP_CONFIG
+    echo "    secretName: $TLS_SECRET"                                                                                            >> $TAP_CONFIG
     echo "    namespace: tdh-cert-admin"                                                                                          >> $TAP_CONFIG
     echo ""                                                                                                                       >> $TAP_CONFIG
     echo "  app_config:"                                                                                                          >> $TAP_CONFIG
@@ -7478,7 +7495,6 @@ installTAPV2() {
     echo "    app:"                                                                                                               >> $TAP_CONFIG
     echo "      title: Tanzu Applicaiton Platform on Tanzu Demo Hub"                                                              >> $TAP_CONFIG
     echo "      baseUrl: https://tap-gui.$DNS_DOMAIN"                                                                             >> $TAP_CONFIG
-
 
     # Tanzu Application Platform GUI integrations
     # https://docs.vmware.com/en/VMware-Tanzu-Application-Platform/1.1/tap/GUID-tap-gui-integrations.html
@@ -7551,7 +7567,7 @@ installTAPV2() {
     #messagePrint " ▪ Metadata Store"     "https://metadata-store.$DNS_DOMAIN:8443/api/v1"
     #messagePrint " ▪ Accelerator Store"  "https://accelerator.$DNS_DOMAIN:8443"
 
-    cat $TAP_CONFIG >> $TAP_CONFIG_1
+    cat $TAP_CONFIG | egrep -v "^XX_MC_XX" | sed 's/XX_SC_XX//g' >> $TAP_CONFIG_1
 
     METADATA_STORE_TOKEN=$(kubectl get secrets metadata-store-read-write-client -n metadata-store -o jsonpath="{.data.token}" 2>/dev/null | base64 -d)
     if [ "$METADATA_STORE_TOKEN" == "" ]; then 
@@ -7604,8 +7620,11 @@ installTAPV2() {
     echo "          Authorization: Bearer $METADATA_STORE_TOKEN"                                                                 >> $TAP_CONFIG_PROXY
     echo "          X-Custom-Source: project-star"                                                                               >> $TAP_CONFIG_PROXY
 
+    cat $TAP_CONFIG $TAP_CONFIG_PROXY | egrep -v "^XX_SC_XX" | sed 's/XX_MC_XX//g' >> $TAP_CONFIG_4
+
     cat $TAP_CONFIG $TAP_CONFIG_PROXY >> $TAP_CONFIG_2
     cat $TAP_CONFIG $TAP_CONFIG_PROXY >> $TAP_CONFIG_3
+    cat $TAP_CONFIG $TAP_CONFIG_PROXY >> $TAP_CONFIG_4
 
     messageLineIntend
     echo "   Manually Reconcile TAP Packages"
@@ -7613,8 +7632,14 @@ installTAPV2() {
     echo "          export STAGEDIR=\$HOME/.tanzu-demo-hub/$TDH_DEPLOYMENT_PATH"
     echo "          export KUBECONFIG=\$HOME/.tanzu-demo-hub/$TDH_DEPLOYMENT_PATH/$TDHV2_WORKLOAD_CLUSTER.kubeconfig"
     echo "          tdh-tools:/$ tanzu package install tap -p tap.tanzu.vmware.com -v $TAP_VERSION --values-file \$STAGEDIR/tap_config_stage_1.yaml -n tap-install --wait            # INSTALL STAGE-1 - DONE"
-    echo "          tdh-tools:/$ tanzu package installed update tap -p tap.tanzu.vmware.com -v $TAP_VERSION --values-file \$STAGEDIR/tap_config_stage_2.yaml -n tap-install --wait"  # INSTALL STAGE-2"
+    echo "          tdh-tools:/$ tanzu package installed update tap -p tap.tanzu.vmware.com -v $TAP_VERSION --values-file \$STAGEDIR/tap_config_stage_2.yaml -n tap-install --wait   # INSTALL STAGE-2"
     echo "          tdh-tools:/$ tanzu package installed update tap -p tap.tanzu.vmware.com -v $TAP_VERSION --values-file \$STAGEDIR/tap_config_stage_3.yaml -n tap-install --wait   # INSTALL STAGE-3 ALL"
+
+    if [ "$dep_typ" == "tap-multicluster" ]; then
+      echo "          tdh-tools:/$ tanzu package installed update tap -p tap.tanzu.vmware.com -v $TAP_VERSION --values-file \$STAGEDIR/tap_config_stage_4.yaml -n tap-install --wait   # INSTALL LIVE-VIEW"
+    fi
+#ppppppppp full
+
     echo "          tdh-tools:/$ tanzu package installed update tap -p tap.tanzu.vmware.com -v $TAP_VERSION --values-file \$STAGEDIR/tap_config_stage_1.yaml -n tap-install --wait   # BACK TO STAGE-1"
     echo "   Verify Status of installed Package"
     echo "       => tools/${TDH_TOOLS}.sh"
@@ -7629,10 +7654,76 @@ installTAPV2() {
   fi
 
   # --- ADD TAP GUI SERVICE ACCOUNT FOR MULTICLUSTER DEPLOYMENTS ---
-  cmdLoop apply -f files/tap/files/tap/tap-gui-serviceaccount-and-rolebinding.yaml > /dev/null 2>&1
+  cmdLoop kubectl apply -f files/tap/tap-gui-serviceaccount-and-rolebinding.yaml > /dev/null 2>&1
+  cmdLoop kubectl apply -f files/tap/secret.yaml > /dev/null 2>&1
 
-#mmmmmmmm new
+  CLUSTER_URL=$(kubectl config view --minify -o jsonpath='{.clusters[0].cluster.server}')
+  CLUSTER_TOKEN=$(kubectl -n tap-gui get secret tap-gui-viewer -o=json | jq -r '.data["token"]' | base64 --decode)
 
+  echo $CLUSTER_URL   > $HOME/.tanzu-demo-hub/$TDH_DEPLOYMENT_PATH/tap_cluster_url.cfg
+  echo $CLUSTER_TOKEN > $HOME/.tanzu-demo-hub/$TDH_DEPLOYMENT_PATH/tap_cluster_token.cfg
+}
+
+#ppppppppppppp
+
+# ------------------------------------------------------------------------------------------
+# Function Name ......: configureAppLiveView
+# Function Purpose ...: Install Tanzu Application Platform - Enable LiveView on Multicluster
+# ------------------------------------------------------------------------------------------
+# Argument ($1) ......: none
+#          ($2) ......: none
+# ------------------------------------------------------------------------------------------
+# Return Value .......: 0 = Success, 1 = failure
+# ------------------------------------------------------------------------------------------
+# https://docs.vmware.com/en/VMware-Tanzu-Application-Platform/1.5/tap/tap-gui-cluster-view-setup.html
+# ------------------------------------------------------------------------------------------
+configureAppLiveView() {
+  dep_typ=$(getYAML TDH_DEPLOYMENT_TYPE)
+  tap_gui=""
+
+  if [ "$dep_typ" == "tap-multicluster" ]; then
+    first=1; cnt=1
+    for clu in $(getYAML WC_CLUSTER_LIST); do
+      TDHV2_WORKLOAD_CLUSTER=$clu
+      tap_enb=$(getYAML SERVICE_TAP_ENABLED $TDHV2_WORKLOAD_CLUSTER)                                                                  
+      [ "$tap_enb" == "null" -o "$tap_enb" == "" ] && continue  
+
+      TDH_DEPLOYMENT_PATH=deployments/${TDHV2_MANAGEMENT_CLUSTER}/$TDHV2_DEPLOYMENT/${TDHV2_WORKLOAD_CLUSTER}
+
+      tap_rol=$(getYAML SERVICE_TAP_ROLE $TDHV2_WORKLOAD_CLUSTER)
+      [ "${tap_rol}" == "full" ] && tap_gui=$TDHV2_WORKLOAD_CLUSTER
+
+      TAP_CONFIG=/tmp/appliveview.yaml
+      if [ ${first} -eq 1 ]; then 
+        echo "    kubernetes:"                                                                                                      >  $TAP_CONFIG
+        echo "      serviceLocatorMethod:"                                                                                          >> $TAP_CONFIG
+        echo "        type: 'multiTenant'"                                                                                          >> $TAP_CONFIG
+        echo "      clusterLocatorMethods:"                                                                                         >> $TAP_CONFIG
+        echo "        - type: 'config'"                                                                                             >> $TAP_CONFIG
+        echo "          clusters:"                                                                                                  >> $TAP_CONFIG
+        first=0
+      fi
+
+      read CLUSTER_URL   < $HOME/.tanzu-demo-hub/$TDH_DEPLOYMENT_PATH/tap_cluster_url.cfg
+      read CLUSTER_TOKEN < $HOME/.tanzu-demo-hub/$TDH_DEPLOYMENT_PATH/tap_cluster_token.cfg
+
+      echo "          ## Cluster $cnt"                                                                                              >> $TAP_CONFIG
+      echo "            - url: $CLUSTER_URL"                                                                                        >> $TAP_CONFIG
+      echo "              name: $TDHV2_WORKLOAD_CLUSTER"                                                                            >> $TAP_CONFIG
+      echo "              authProvider: serviceAccount"                                                                             >> $TAP_CONFIG
+      echo "              serviceAccountToken: \"$CLUSTER_TOKEN\""                                                                  >> $TAP_CONFIG
+      echo "              skipTLSVerify: true"                                                                                      >> $TAP_CONFIG
+      echo "              skipMetricsLookup: true"                                                                                  >> $TAP_CONFIG
+
+     let cnt=cnt+1
+   done
+
+   TAP_GUIHOST=deployments/${TDHV2_MANAGEMENT_CLUSTER}/$TDHV2_DEPLOYMENT/${tap_gui}
+   mv $TAP_CONFIG $HOME/.tanzu-demo-hub/$TAP_GUIHOST/tap_config_appliveview.yaml
+   mv $HOME/.tanzu-demo-hub/$TAP_GUIHOST/tap_config_stage_4.yaml /tmp
+
+  sed "/app_config/r $HOME/.tanzu-demo-hub/$TAP_GUIHOST/tap_config_appliveview.yaml" /tmp/tap_config_stage_4.yaml > $HOME/.tanzu-demo-hub/$TAP_GUIHOST/tap_config_stage_4.yaml
+ fi
 }
 
 # ------------------------------------------------------------------------------------------
@@ -11088,8 +11179,6 @@ createClusterIssuerV2() {
       messagePrint " ▪ LetsEnscript using AWS Route53 SecretKey" $(maskPassword "$tmp_sec")
     fi
 
-#huhu
-
     TDH_TLS_ISSUER_FILE=$HOME/.tanzu-demo-hub/deployments/${TDHV2_MANAGEMENT_CLUSTER}/$TDHV2_DEPLOYMENT/$TDHV2_WORKLOAD_CLUSTER/${tls_iss}.yml
     echo "apiVersion: cert-manager.io/v1"                                          >  $TDH_TLS_ISSUER_FILE
     echo "kind: ClusterIssuer"                                                     >> $TDH_TLS_ISSUER_FILE
@@ -11739,7 +11828,6 @@ InstallCertManagerV2() {
     helmRepoAdd jetstack https://charts.jetstack.io
     #helmRepoAdd bitnami https://charts.bitnami.com/bitnami
 
-#huhu
     CHART_NAME=bitnami/cert-manager
     CHART_NAME=jetstack/cert-manager
     cmdLoop helm search repo $CHART_NAME -o json > /tmp/output.json 2>/dev/null
@@ -14963,20 +15051,13 @@ createGiteaRepo() {
 # ------------------------------------------------------------------------------------------
 createHarborProject() {
   HARBOR_PROJECT=$1
-  TDH_HARBOR_REGISTRY_DNS_HARBOR=$(getConfigMapCache tanzu-demo-hub TDH_HARBOR_REGISTRY_DNS_HARBOR)
-  TDH_HARBOR_REGISTRY_ADMIN_PASSWORD=$(getConfigMapCache tanzu-demo-hub TDH_HARBOR_REGISTRY_ADMIN_PASSWORD)
-  TDH_HARBOR_REGISTRY_ENABLED=$(getConfigMapCache tanzu-demo-hub TDH_HARBOR_REGISTRY_ENABLED)
-echo "HARBOR_PROJECT:$HARBOR_PROJECT"
-echo "TDH_HARBOR_REGISTRY_DNS_HARBOR:$TDH_HARBOR_REGISTRY_DNS_HARBOR"
-echo "TDH_HARBOR_REGISTRY_ADMIN_PASSWORD:$TDH_HARBOR_REGISTRY_ADMIN_PASSWORD"
-echo "TDH_HARBOR_REGISTRY_ENABLED:$TDH_HARBOR_REGISTRY_ENABLED"
-
+  TDH_HARBOR_REGISTRY_DNS_HARBOR=$(getYAML TAP_LOCAL_REGISTRY_SERVER $TDHV2_WORKLOAD_CLUSTER "local_registry") 
+  TDH_HARBOR_REGISTRY_ADMIN_PASSWORD="$(getYAML TAP_LOCAL_REGISTRY_USER $TDHV2_WORKLOAD_CLUSTER 'local_registry')"
   AUTH_OPTIONS="--basic -u admin:$TDH_HARBOR_REGISTRY_ADMIN_PASSWORD"
 
   curl $AUTH_OPTIONS -X 'GET' -H 'accept: application/json' \
       https://${TDH_HARBOR_REGISTRY_DNS_HARBOR}/api/v2.0/projects 2>/dev/null > /tmp/output.json 
   nam=$(jq -r --arg key "$HARBOR_PROJECT" '.[] | select(.name == $key).name' /tmp/output.json)
-echo "createHarborProject gaga NAM:$nam"
   if [ "$nam" == "" -o "$nam" == "null" ]; then
     TMP_API_DATA=/tmp/harbor_api_data.json
     echo "{"                                                     >  $TMP_API_DATA
@@ -14984,11 +15065,8 @@ echo "createHarborProject gaga NAM:$nam"
     echo "  \"public\": true"                                >> $TMP_API_DATA
     echo "}"                                                     >> $TMP_API_DATA
 
-echo "TMP_API_DATA:$TMP_API_DATA"
-cat $TMP_API_DATA
     cnt=0; ret=1
     while [ $ret -ne 0 -a $cnt -lt 5 ]; do
-echo "curl $AUTH_OPTIONS -X POST https://${TDH_HARBOR_REGISTRY_DNS_HARBOR}/api/v2.0/projects -H 'accept: application/json' -H 'Content-Type: application/json' --data \"@$TMP_API_DATA\""
       curl $AUTH_OPTIONS -X POST https://${TDH_HARBOR_REGISTRY_DNS_HARBOR}/api/v2.0/projects \
            -H 'accept: application/json' \
            -H 'Content-Type: application/json' \
@@ -15960,10 +16038,6 @@ TanzuPackage_RepoSync() {
     fi
 
     exit 1
-#  else
-#    messageLine
-#    tanzu package repository list -A
-#    messageLine
   fi
 }
 
@@ -16586,7 +16660,6 @@ installTanzuPackageHarbor() {
     deleteNamespace $INSTALL_NAMESPACE > /dev/null 2>&1
     createNamespace $INSTALL_NAMESPACE > /dev/null 2>&1
 
-#huhu
     # --- DOCKER PULL SECRET ---
     dockerPullSecret $INSTALL_NAMESPACE
 
@@ -16701,7 +16774,6 @@ installTanzuPackageHarbor() {
     fi
   fi
 
-#huhu
   cmdLoop tanzu package installed list -A -o json > /tmp/output.json 2>/dev/null
   stt=$(jq -r --arg key "$PACKAGE_NAME" '.[] | select(.name == $key).name' /tmp/output.json)
   if [ "$stt" == "$PACKAGE_NAME" ]; then
@@ -16761,7 +16833,6 @@ TanzuPackage_Harbor () {
   NAMESPACE=tanzu-system-registry
   PACKAGE_ID=$2
   PACKAGE_DES="Harbor OCI Registry"
-#ppppppppppppp old
 
   HARBOR_TLS_SECRET=tanzu-demo-hub-tls
   NOTARY_TLS_SECRET=tanzu-demo-hub-tls
@@ -19055,6 +19126,7 @@ listTCEmcDeployments() {
 dockerPullSecret() {
   TMP_NAMESPACE=$1
   TMP_SERVICEACCOUNT=$2
+#gggggggggggggg
 
   [ "$TMP_SERVICEACCOUNT" == "" ] && TMP_SERVICEACCOUNT=default
 
@@ -19062,10 +19134,32 @@ dockerPullSecret() {
   nam=$(jq -r --arg key "tdh-docker-repo" '.items[].metadata | select(.name == $key).name' /tmp/output.json) 
   if [ "$nam" != "tdh-docker-repo" ]; then 
     messagePrint " ▪ Create Docker PullSecret for Namespace/ServiceAccount"  "$TMP_NAMESPACE/$TMP_SERVICEACCOUNT"
+
+echo "kubectl -n $TMP_NAMESPACE create secret docker-registry tdh-docker-repo --docker-server docker.io --docker-username $TDH_REGISTRY_DOCKER_USER --docker-password $TDH_REGISTRY_DOCKER_PASS"
     cmdLoop kubectl -n $TMP_NAMESPACE create secret docker-registry tdh-docker-repo \
-            --docker-server $TDH_REGISTRY_DOCKER_NAME \
+            --docker-server docker.io \
             --docker-username $TDH_REGISTRY_DOCKER_USER \
-            --docker-password $TDH_REGISTRY_DOCKER_PASS > /dev/null 2>&1
+            --docker-password $TDH_REGISTRY_DOCKER_PASS > /tmp/error.log 2>&1; ret=$?
+
+    if [ $ret -ne 0 ]; then
+      logMessages /tmp/error.log
+      echo "ERROR: failed to create docker pull secret"
+      if [ "$NATIVE" == "0" ]; then
+        echo "       => tools/${TDH_TOOLS}.sh"
+        echo "          tdh-tools:/$ kubectl -n $TMP_NAMESPACE create secret docker-registry tdh-docker-repo \\"
+        echo "                               --docker-server docker.io \\"
+        echo "                               --docker-username $TDH_REGISTRY_DOCKER_USER \\"
+        echo "                               --docker-password $TDH_REGISTRY_DOCKER_PASS"
+        echo "          tdh-tools:/$ exit" 
+      else
+        echo "       => kubectl -n $TMP_NAMESPACE create secret docker-registry tdh-docker-repo \\"
+        echo "                               --docker-server docker.io \\"
+        echo "                               --docker-username $TDH_REGISTRY_DOCKER_USER \\"
+        echo "                               --docker-password $TDH_REGISTRY_DOCKER_PASS"
+      fi    
+      
+      exit 1
+    fi
   fi
   
   cmdLoop kubectl -n $TMP_NAMESPACE get sa -o json > /tmp/output.json
@@ -19808,7 +19902,6 @@ installPackageRepositories() {
       fi
     fi
   done
-#gggggggggggggg
 
   cmdLoop tanzu package repository list -o json -A > /tmp/output.yaml 2>/dev/null
   messageTitle "Verify Tanzu Package Repositories"
