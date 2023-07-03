@@ -19135,7 +19135,6 @@ dockerPullSecret() {
   if [ "$nam" != "tdh-docker-repo" ]; then 
     messagePrint " ▪ Create Docker PullSecret for Namespace/ServiceAccount"  "$TMP_NAMESPACE/$TMP_SERVICEACCOUNT"
 
-echo "kubectl -n $TMP_NAMESPACE create secret docker-registry tdh-docker-repo --docker-server docker.io --docker-username $TDH_REGISTRY_DOCKER_USER --docker-password $TDH_REGISTRY_DOCKER_PASS"
     cmdLoop kubectl -n $TMP_NAMESPACE create secret docker-registry tdh-docker-repo \
             --docker-server docker.io \
             --docker-username $TDH_REGISTRY_DOCKER_USER \
