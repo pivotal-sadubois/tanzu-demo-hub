@@ -2867,11 +2867,11 @@ cleanHostedZoneEntries() {
       echo "ERROR: failed to delete leftover '_acme' challange records in AWS Route53"
       if [ "$NATIVE" == "0" ]; then
         echo "       => tools/${TDH_TOOLS}.sh"
-        echo "          tdh-tools:/$ cat $TMPROUTE53
+        echo "          tdh-tools:/$ cat $TMPROUTE53"
         echo "          tdh-tools:/$ aws route53 change-resource-record-sets --hosted-zone-id $zone_id --change-batch file://${TMPROUTE53}"
         echo "          tdh-tools:/$ exit"
       else
-        echo "       => cat $TMPROUTE53
+        echo "       => cat $TMPROUTE53"
         echo "       => aws route53 change-resource-record-sets --hosted-zone-id $zone_id --change-batch file://${TMPROUTE53}"
       fi
       exit 1
