@@ -11835,7 +11835,7 @@ InstallCertManagerV2() {
     CHART_VERSION="v1.8.2"
 
     if [ "${tdh_typ}" == "vSphere" -a "$tdh_dns" != "" ]; then
-      HELM_OPTIONS="--set 'extraArgs={--dns01-recursive-nameservers-only,--dns01-recursive-nameservers=$VSPHERE_TKGS_DNS_SERVER}' --set installCRDs=true"
+      HELM_OPTIONS="--set 'extraArgs={--dns01-recursive-nameservers-only,--dns01-recursive-nameservers=$tdh_dns}' --set installCRDs=true"
     else
       HELM_OPTIONS="--set installCRDs=true"
     fi
