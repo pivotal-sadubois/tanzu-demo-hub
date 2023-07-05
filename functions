@@ -2849,6 +2849,8 @@ cleanHostedZoneEntries() {
     echo "  \"ResourceRecordSet\": {"                          >> $TMPROUTE53
     echo "    \"Name\": \"${n}\","                             >> $TMPROUTE53
     echo "    \"Type\": \"$ttt\","                             >> $TMPROUTE53
+    echo "    \"SetIdentifier\": \"\\\"${rrc}\\\"\","          >> $TMPROUTE53
+    echo "    \"MultiValueAnswer\": true,"                     >> $TMPROUTE53
     echo "    \"TTL\": $ttl,"                                  >> $TMPROUTE53
     echo "    \"ResourceRecords\": [ "                         >> $TMPROUTE53
     echo "      { \"Value\": \"\\\"${rrc}\\\"\" }"             >> $TMPROUTE53 
