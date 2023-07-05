@@ -153,11 +153,13 @@ for clu in $(getYAML WC_CLUSTER_LIST); do
   #installJenkins
   #installArgoCD
   #installGitLab
-  installTAPV2                   ## Tanzu Application Platform (TAP)
   #installKubeernetesDashboard   ## Kubernetes Dashboard
+  installTAPV2                   ## Tanzu Application Platform (TAP)
 done
 
+echo gaga1
 configureAppLiveView
+echo gaga2
 
 
 

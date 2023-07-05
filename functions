@@ -7134,6 +7134,39 @@ installTAPV2() {
     echo "  kubernetes_version: \"\""                                                                                             >> $TAP_CONFIG_1
     echo "supply_chain: basic"                                                                                                    >> $TAP_CONFIG_1
 
+    messagePrint " ▪ TAP Install (Stage-1)"     "$HOME/.tanzu-demo-hub/$TDH_DEPLOYMENT_PATH/tap_config_stage_1.yaml"
+    tanzu package install tap -p tap.tanzu.vmware.com -v $TAP_VERSION --values-file $HOME/.tanzu-demo-hub/$TDH_DEPLOYMENT_PATH/tap_config_stage_1.yaml -n tap-install --wait  > /tmp/error.log 2>&1; ret=$?
+
+    if [ $ret -eq 0 ]; then
+      comp=10; fail=0
+      while [ $comp -ne 0 -a $fail -eq 0 ]; do
+        tanzu package installed list -n tap-install -o json > /tmp/output.json 2>/dev/null
+        comp=$(jq -r '.[].status' /tmp/output.json | grep -v "Reconcile succeeded" | wc -l)
+        fail=$(jq -r '.[].status' /tmp/output.json | grep -i "fail" | wc -l)
+        [ $comp -eq 0 -o $fail -gt 0 ] && break
+        sleep 30
+      done
+      echo "1:ok" > $HOME/.tanzu-demo-hub/$TDH_DEPLOYMENT_PATH/current_stage.yaml
+    else
+      # Dont need to wait as command failed before hand
+      echo "1:nok" > $HOME/.tanzu-demo-hub/$TDH_DEPLOYMENT_PATH/current_stage.yaml
+      fail=1
+    fi
+
+    if [ $fail -ne 0 ]; then
+      logMessages /tmp/error.log
+      echo "ERROR: Failed to install TAP packages"
+      if [ "$NATIVE" == "0" ]; then
+        echo "       => tools/${TDH_TOOLS}.sh"
+        echo "          tdh-tools:/$ tanzu package install tap -p tap.tanzu.vmware.com -v $TAP_VERSION --values-file $HOME/.tanzu-demo-hub/$TDH_DEPLOYMENT_PATH/tap_config_stage_1.yaml -n tap-install"
+        echo "          tdh-tools:/$ exit"
+      else
+        echo "       => tanzu package install tap -p tap.tanzu.vmware.com -v $TAP_VERSION --values-file $HOME/.tanzu-demo-hub/$TDH_DEPLOYMENT_PATH/tap_config_stage_1.yaml -n tap-install"
+      fi
+
+      exit 1
+    fi
+
     messageLineIntend
     echo "   Manually Reconcile TAP Packages"
     echo "       => tools/${TDH_TOOLS}.sh"
@@ -7604,9 +7637,6 @@ installTAPV2() {
         exit 1
       fi
   
-      messageLine
-      tanzu package installed list -n tap-install 2>/dev/null | sed 1d
-  
       METADATA_STORE_TOKEN=$(kubectl get secrets metadata-store-read-write-client -n metadata-store -o jsonpath="{.data.token}" | base64 -d)
     fi
   
@@ -7626,14 +7656,94 @@ installTAPV2() {
     cat $TAP_CONFIG $TAP_CONFIG_PROXY >> $TAP_CONFIG_3
     cat $TAP_CONFIG $TAP_CONFIG_PROXY >> $TAP_CONFIG_4
 
+    messagePrint " ▪ TAP Install (Stage-2)"     "$HOME/.tanzu-demo-hub/$TDH_DEPLOYMENT_PATH/tap_config_stage_2.yaml"
+    tanzu package installed update tap -p tap.tanzu.vmware.com -v $TAP_VERSION --values-file $HOME/.tanzu-demo-hub/$TDH_DEPLOYMENT_PATH/tap_config_stage_2.yaml -n tap-install --wait  > /tmp/error.log 2>&1; ret=$?
+
+    if [ $ret -eq 0 ]; then
+      comp=10; fail=0
+      while [ $comp -ne 0 -a $fail -eq 0 ]; do
+        tanzu package installed list -n tap-install -o json > /tmp/output.json 2>/dev/null
+        comp=$(jq -r '.[].status' /tmp/output.json | grep -v "Reconcile succeeded" | wc -l)
+        fail=$(jq -r '.[].status' /tmp/output.json | grep -i "fail" | wc -l)
+        [ $comp -eq 0 -o $fail -gt 0 ] && break
+        sleep 30
+      done
+      echo "1:ok" > $HOME/.tanzu-demo-hub/$TDH_DEPLOYMENT_PATH/current_stage.yaml
+    else
+      # Dont need to wait as command failed before hand
+      echo "1:nok" > $HOME/.tanzu-demo-hub/$TDH_DEPLOYMENT_PATH/current_stage.yaml
+      fail=1
+    fi
+
+    if [ $fail -ne 0 ]; then
+
+      messageLine
+      tanzu package installed list -n tap-install | egrep "STATUS|failed" | sed 's/^/ /g'
+      messageLine
+
+      logMessages /tmp/error.log
+      echo "ERROR: Failed to install TAP packages"
+      if [ "$NATIVE" == "0" ]; then
+        echo "       => tools/${TDH_TOOLS}.sh"
+        echo "          tdh-tools:/$ tanzu package installed update tap -p tap.tanzu.vmware.com -v $TAP_VERSION --values-file $HOME/.tanzu-demo-hub/$TDH_DEPLOYMENT_PATH/tap_config_stage_2.yaml -n tap-install"
+        echo "          tdh-tools:/$ exit"
+      else
+        echo "       => tanzu package installed update tap -p tap.tanzu.vmware.com -v $TAP_VERSION --values-file $HOME/.tanzu-demo-hub/$TDH_DEPLOYMENT_PATH/tap_config_stage_2.yaml -n tap-install"
+      fi
+
+      exit 1
+    fi
+
+    messagePrint " ▪ TAP Install (Stage-3)"     "$HOME/.tanzu-demo-hub/$TDH_DEPLOYMENT_PATH/tap_config_stage_3.yaml"
+    tanzu package installed update tap -p tap.tanzu.vmware.com -v $TAP_VERSION --values-file $HOME/.tanzu-demo-hub/$TDH_DEPLOYMENT_PATH/tap_config_stage_3.yaml -n tap-install --wait  > /tmp/error.log 2>&1; ret=$?
+
+    if [ $ret -eq 0 ]; then
+      comp=10; fail=0
+      while [ $comp -ne 0 -a $fail -eq 0 ]; do
+        tanzu package installed list -n tap-install -o json > /tmp/output.json 2>/dev/null
+        comp=$(jq -r '.[].status' /tmp/output.json | grep -v "Reconcile succeeded" | wc -l)
+        fail=$(jq -r '.[].status' /tmp/output.json | grep -i "fail" | wc -l)
+        [ $comp -eq 0 -o $fail -gt 0 ] && break
+        sleep 30
+      done
+      echo "1:ok" > $HOME/.tanzu-demo-hub/$TDH_DEPLOYMENT_PATH/current_stage.yaml
+    else
+      # Dont need to wait as command failed before hand
+      echo "1:nok" > $HOME/.tanzu-demo-hub/$TDH_DEPLOYMENT_PATH/current_stage.yaml
+      fail=1
+    fi
+
+    if [ $fail -ne 0 ]; then
+      messagePrint "   TAP Packages Reconsiling"                 "failed, some packages could not reconsile"
+      messageLine
+      tanzu package installed list -n tap-install | egrep "STATUS|failed" | sed 's/^/ /g'
+      messageLine
+
+      logMessages /tmp/error.log
+      echo "ERROR: Failed to install TAP packages"
+      if [ "$NATIVE" == "0" ]; then
+        echo "       => tools/${TDH_TOOLS}.sh"
+        echo "          tdh-tools:/$ tanzu package installed update tap -p tap.tanzu.vmware.com -v $TAP_VERSION --values-file $HOME/.tanzu-demo-hub/$TDH_DEPLOYMENT_PATH/tap_config_stage_3.yaml -n tap-install"
+        echo "          tdh-tools:/$ exit"
+      else
+        echo "       => tanzu package installed update tap -p tap.tanzu.vmware.com -v $TAP_VERSION --values-file $HOME/.tanzu-demo-hub/$TDH_DEPLOYMENT_PATH/tap_config_stage_3.yaml -n tap-install"
+      fi
+
+      exit 1
+    else
+      messagePrint " ▪ TAP Packages Reconsiling"                 "Succeeded, all packages has been reconsiled"
+    fi
+
+#ffffffffffff
+
     messageLineIntend
     echo "   Manually Reconcile TAP Packages"
     echo "       => tools/${TDH_TOOLS}.sh"
     echo "          export STAGEDIR=\$HOME/.tanzu-demo-hub/$TDH_DEPLOYMENT_PATH"
     echo "          export KUBECONFIG=\$HOME/.tanzu-demo-hub/$TDH_DEPLOYMENT_PATH/$TDHV2_WORKLOAD_CLUSTER.kubeconfig"
     echo "          tdh-tools:/$ tanzu package install tap -p tap.tanzu.vmware.com -v $TAP_VERSION --values-file \$STAGEDIR/tap_config_stage_1.yaml -n tap-install --wait            # INSTALL STAGE-1 - DONE"
-    echo "          tdh-tools:/$ tanzu package installed update tap -p tap.tanzu.vmware.com -v $TAP_VERSION --values-file \$STAGEDIR/tap_config_stage_2.yaml -n tap-install --wait   # INSTALL STAGE-2"
-    echo "          tdh-tools:/$ tanzu package installed update tap -p tap.tanzu.vmware.com -v $TAP_VERSION --values-file \$STAGEDIR/tap_config_stage_3.yaml -n tap-install --wait   # INSTALL STAGE-3 ALL"
+    echo "          tdh-tools:/$ tanzu package installed update tap -p tap.tanzu.vmware.com -v $TAP_VERSION --values-file \$STAGEDIR/tap_config_stage_2.yaml -n tap-install --wait   # INSTALL STAGE-2 - DONE"
+    echo "          tdh-tools:/$ tanzu package installed update tap -p tap.tanzu.vmware.com -v $TAP_VERSION --values-file \$STAGEDIR/tap_config_stage_3.yaml -n tap-install --wait   # INSTALL STAGE-3 - DONE"
 
     if [ "$dep_typ" == "tap-multicluster" ]; then
       echo "          tdh-tools:/$ tanzu package installed update tap -p tap.tanzu.vmware.com -v $TAP_VERSION --values-file \$STAGEDIR/tap_config_stage_4.yaml -n tap-install --wait   # INSTALL LIVE-VIEW"
@@ -7654,8 +7764,10 @@ installTAPV2() {
   fi
 
   # --- ADD TAP GUI SERVICE ACCOUNT FOR MULTICLUSTER DEPLOYMENTS ---
-  cmdLoop kubectl apply -f files/tap/tap-gui-serviceaccount-and-rolebinding.yaml > /dev/null 2>&1
-  cmdLoop kubectl apply -f files/tap/secret.yaml > /dev/null 2>&1
+  #cmdLoop kubectl apply -f $TDHPATH/files/tap/tap-gui-serviceaccount-and-rolebinding.yaml > /dev/null 2>&1
+  #cmdLoop kubectl apply -f $TDHPATH/files/tap/secret.yaml > /dev/null 2>&1
+  kubectl apply -f $TDHPATH/files/tap/tap-gui-serviceaccount-and-rolebinding.yaml 
+  kubectl apply -f $TDHPATH/files/tap/secret.yaml 
 
   CLUSTER_URL=$(kubectl config view --minify -o jsonpath='{.clusters[0].cluster.server}')
   CLUSTER_TOKEN=$(kubectl -n tap-gui get secret tap-gui-viewer -o=json | jq -r '.data["token"]' | base64 --decode)
@@ -7722,7 +7834,7 @@ configureAppLiveView() {
    mv $TAP_CONFIG $HOME/.tanzu-demo-hub/$TAP_GUIHOST/tap_config_appliveview.yaml
    mv $HOME/.tanzu-demo-hub/$TAP_GUIHOST/tap_config_stage_4.yaml /tmp
 
-  sed "/app_config/r $HOME/.tanzu-demo-hub/$TAP_GUIHOST/tap_config_appliveview.yaml" /tmp/tap_config_stage_4.yaml > $HOME/.tanzu-demo-hub/$TAP_GUIHOST/tap_config_stage_4.yaml
+   sed "/app_config/r $HOME/.tanzu-demo-hub/$TAP_GUIHOST/tap_config_appliveview.yaml" /tmp/tap_config_stage_4.yaml > $HOME/.tanzu-demo-hub/$TAP_GUIHOST/tap_config_stage_4.yaml
  fi
 }
 
@@ -11274,6 +11386,7 @@ createClusterIssuerV2() {
 
     messageTitle "Verify LetsEnscript ClusterIssuer"
     messagePrint " ▪ LetsEnscript Issuer Name"         "$tls_iss"
+    messagePrint " ▪ LetsEnscript Issuer Server"       "$tls_iss"
     messagePrint " ▪ LetsEnscript Request Requested"   "$issuer_date"
     messagePrint " ▪ LetsEnscript Request Reason"      "$issuer_reason"
     messagePrint " ▪ LetsEnscript Request Status"      "$issuer_status"
@@ -11405,10 +11518,10 @@ createCertRequestV2() {
       echo "   ------------------------------------------------------------------------------------------------------------------------"
       kubectl describe certificate $TDH_TLS_CERT
       echo "   ------------------------------------------------------------------------------------------------------------------------"
-      echo "=> kubectl describe clusterissuer letsencrypt-staging"
+      echo "=> kubectl describe clusterissuer $tls_iss"
       echo "=> kubectl describe order"
       echo "=> kubectl describe challenge"
-      echo "=> kubectl describe certificate"
+      echo "=> kubectl describe certificate $tls_cnm"
       exit 1
     fi
   else
@@ -11430,8 +11543,8 @@ createCertRequestV2() {
   tls_stg=$(getConfigMapCache tanzu-demo-hub TDH_HARBOR_STAGING_TLS_CERT)
   tls_svc=$(getConfigMapCache tanzu-demo-hub LETSENSCRIPT_SERVER)
 
+#ssssssssssssssss
   messageTitle "Verify LetsEnscript Certificate"
-  messagePrint " ▪ LetsEnscript Certificate Staging"    "$tls_stg"
   messagePrint " ▪ LetsEnscript Certificate Server"     "$tls_svc"
   messagePrint " ▪ LetsEnscript Certificate Name"       "$tls_cnm"
   messagePrint " ▪ LetsEnscript Certificate Secret"     "$tls_snm"
@@ -16790,7 +16903,7 @@ installTanzuPackageHarbor() {
     messagePrint " ▪ Tanzu Package ($PACKAGE_NAME) Status"          "$pkg_stt"
     messagePrint " ▪ Tanzu Package ($PACKAGE_NAME) URL"             "https://$HARBOR_HOSTNAME"
     messagePrint " ▪ Tanzu Package ($PACKAGE_NAME) User:"           "admin"
-    messagePrint " ▪ Tanzu Package ($PACKAGE_NAME) Password:"       "$TDH_HARBOR_ADMIN_PASSWORD"
+    messagePrint " ▪ Tanzu Package ($PACKAGE_NAME) Password:"       $(getYAML ADMIN_PASSWORD $TDHV2_WORKLOAD_CLUSTER $PACKAGE_ID tanzu)
   else
     echo "ERROR: The Tanzu Package: $PACKAGE_NAME has not been installed"
     exit 1
@@ -16798,7 +16911,7 @@ installTanzuPackageHarbor() {
 
   # --- STORE SETTINGS IN CONFIGMAP ---
   uodateConfigMap tanzu-demo-hub TDH_HARBOR_REGISTRY_ENABLED          "true"
-  uodateConfigMap tanzu-demo-hub TDH_HARBOR_REGISTRY_ADMIN_PASSWORD   "$TDH_HARBOR_ADMIN_PASSWORD"
+  uodateConfigMap tanzu-demo-hub TDH_HARBOR_REGISTRY_ADMIN_PASSWORD   $(getYAML ADMIN_PASSWORD $TDHV2_WORKLOAD_CLUSTER $PACKAGE_ID tanzu)
   uodateConfigMap tanzu-demo-hub TDH_HARBOR_REGISTRY_DNS_HARBOR       "$HARBOR_HOSTNAME"
   uodateConfigMap tanzu-demo-hub TDH_HARBOR_REGISTRY_DNS_NOTARY       "$NOTARY_HOSTNAME"
   uodateConfigMap tanzu-demo-hub TDH_HARBOR_REGISTRY_PACKAGE__NAME    "$pkg_nam"
