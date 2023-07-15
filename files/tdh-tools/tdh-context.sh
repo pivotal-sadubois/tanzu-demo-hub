@@ -34,6 +34,7 @@ if [ -d $HOME/.tanzu-demo-hub/config ]; then
   CONTEXT_LIST=""; INDEX=0
   # --- GATHER RIGHT KUBECONFIG ---
   for n in $(find $HOME/.tanzu-demo-hub -name "*.kubeconfig" 2>/dev/null | egrep "tkgmc|tcemc|/tdh"); do
+echo "=> N:$n"
     cnm=$(echo $n | awk -F'/' '{ print $NF }' | awk -F'.' '{ print $1 }')
     vsp=$(echo $n | egrep -c "tkgmc-vsphere|tcemc-vsphere") 
     dh2=$(echo $n | egrep -c "deployment") 
@@ -112,9 +113,14 @@ if [ -d $HOME/.tanzu-demo-hub/config ]; then
              -u $TDH_TKGMC_VSPHERE_USER > /tmp/error.log 2>&1; ret=$?
   
           if [ $ret -eq 0 ]; then 
-            kubectl get secrets ${cnm}-kubeconfig -o jsonpath='{.data.value}' | base64 -d > ${TKG_CLUSTER_KUBECONFIG[$INDEX]}
-            TKG_CLUSTER_STATUS[$INDEX]="ok"
-            TKG_CLUSTER_STATUS_MSG[$INDEX]="KUBERNETES-API-OK"
+            kubectl get secrets ${cnm}-kubeconfig -o jsonpath='{.data.value}' 2>/dev/null | base64 -d > ${TKG_CLUSTER_KUBECONFIG[$INDEX]}
+            if [ ! -s ${TKG_CLUSTER_KUBECONFIG[$INDEX]} ]; then 
+              TKG_CLUSTER_STATUS[$INDEX]="nok"
+              TKG_CLUSTER_STATUS_MSG[$INDEX]="KUBERNETES-API-NOK"
+            else
+              TKG_CLUSTER_STATUS[$INDEX]="ok"
+              TKG_CLUSTER_STATUS_MSG[$INDEX]="KUBERNETES-API-OK"
+            fi
           fi
   
           [ -s $HOME/.kube/config.old ] && mv $HOME/.kube/config.old $HOME/.kube/config
