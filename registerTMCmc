@@ -30,22 +30,34 @@ export CMD_ARGS=$*
 [ -f $TANZU_DEMO_HUB/functions ] && . $TANZU_DEMO_HUB/functions
 [ -f $HOME/.tanzu-demo-hub.cfg ] && . $HOME/.tanzu-demo-hub.cfg
 
+# --- CHECK FOR BASIC COMANDS ---
+checkCLIcommands        BASIC
+
 DEPLOY_TKG_VERSION=$(ls -1 $TDHPATH/files/tdh-tools/tdh-tools-tkg-*.cfg | sed -e 's/^.*tools-tkg-//g' -e 's/\.cfg//g' | tail -1) 
+
+# Create an Account Credential for EKS Cluster Lifecycle Management
+# https://docs.vmware.com/en/VMware-Tanzu-Mission-Control/services/tanzumc-using/GUID-49DD2889-777E-4C28-8255-C0607E861001.html
+# eks-tmc-cloud-vmware-com-644184825571111404 ## CloudFormation Stack / Credential Name: sadubois-aws-eks / 
+# Account credential: eks-sadubois ## AWS account for EKS cluster lifecycle management
+
 
 usage() {
   str=$(ls -1 $TDHPATH/files/tdh-tools/tdh-tools-tkg-*.cfg | sed -e 's/^.*tools-tkg-//g' -e 's/\.cfg//g' | paste - - | awk '{ printf("%s or %s\n", $1, $2) }')
   echo ""
-  echo "USAGE: $0 <options> [-d <display-name> -v <tkg-version>] [-debug|-clean]"
-  echo "           Options:  -d <display-name>                 # Tanzu Mission Control (TMC) Deployment Name"
+  echo "USAGE: $0 <options> [-p <providor> [oprions] [-debug|-clean]"
+  echo "           Options:  -p <providor>                     # Tanzu Mission Control (TMC) Providor (VSPHERE_TKGS, AWS_EKS, AZURE_AKS)"
   echo "                                                       # (default: tkgmc-vsphere-<tmc-user>"
-  echo "                     --vcenter_server '<name>'         # vCenter Server Name or IP Address"
-  echo "                     --vcenter_user '<user_name>'      # vCenter Server Administrator User"
-  echo "                     --vcenter_pass '<password>'       # vCenter Server Administrator Password"
-  echo "                     --supervisor '<name>'             # vSphere Supervisor Cluster Name"
+  echo "                     AWS_EKS"
+  echo "                       --account_credential '<name>'   # AWS EKS Lifecycle Management - Account Credential" 
+  echo "                       --location 'location'           # AWS Datacenter location ie. eu-central-1"
+  echo "                       --vpc 'name'                    # AWS Virtual Private Cloud (VPC) with Public and Private Subnets"
+  echo "                                                       # https://docs.aws.amazon.com/eks/latest/userguide/creating-a-vpc.html"
   echo ""
-  echo "                     --native                          # Native execution without tdh-tools container"
-  echo "                     --debug                           # default (disabled)"
-  echo "                     --clean                           # cleanuo the deployment"
+  echo "                     VSPHERE_TKGS"
+  echo "                       --vcenter_server '<name>'       # vCenter Server Name or IP Address"
+  echo "                       --vcenter_user '<user_name>'    # vCenter Server Administrator User"
+  echo "                       --vcenter_pass '<password>'     # vCenter Server Administrator Password"
+  echo "                       --supervisor '<name>'           # vSphere Supervisor Cluster Name"
   echo ""
 }
 
@@ -61,6 +73,10 @@ unset VSPHERE_TKGS_DNS_SERVER && export VSPHERE_TKGS_DNS_SERVER=""
 while [ "$1" != "" ]; do
   case $1 in
     -d)                    TMC_DISPLAY_NAME=$2;;
+    -p)                    PROVIDER=$2;;
+    --account_credential)  AWS_EKS_ACCOUNT_CREDENTIAL=$2;;
+    --location)            AWS_EKS_LOCATION=$2;;
+    --vcp)                 AWS_EKS_VCP=$2;;
     --vcenter_server)      VSPHERE_TKGS_VCENTER_SERVER=$2;;
     --vcenter_user)        VSPHERE_TKGS_VCENTER_ADMIN=$2;;
     --vcenter_pass)        VSPHERE_TKGS_VCENTER_PASSWORD=$2;;
@@ -74,11 +90,38 @@ while [ "$1" != "" ]; do
   shift
 done
 
-VSPHERE_TKGS_VCENTER_SERVER=$(echo $VSPHERE_TKGS_VCENTER_SERVER | sed 's+^http.*//++g' | awk '{ printf("https://%s\n", $NF )}')
-if [ "$VSPHERE_TKGS_VCENTER_SERVER" == "" -o "$VSPHERE_TKGS_VCENTER_PASSWORD" == "" -o \
-     "$VSPHERE_TKGS_VCENTER_ADMIN" == "" -o "$VSPHERE_TKGS_SUPERVISOR_CLUSTER" == "" ]; then
+#############################################################################################################################
+################################################ PROVIDER: VSPHERE_TKGS #####################################################
+#############################################################################################################################
+[ "$PROVIDER" == "" ] && usage && exit 1
+if [ "$PROVIDER" == "VSPHERE_TKGS" ]; then 
+  VSPHERE_TKGS_VCENTER_SERVER=$(echo $VSPHERE_TKGS_VCENTER_SERVER | sed 's+^http.*//++g' | awk '{ printf("https://%s\n", $NF )}')
+  if [ "$VSPHERE_TKGS_VCENTER_SERVER" == "" -o "$VSPHERE_TKGS_VCENTER_PASSWORD" == "" -o \
+       "$VSPHERE_TKGS_VCENTER_ADMIN" == "" -o "$VSPHERE_TKGS_SUPERVISOR_CLUSTER" == "" ]; then
 
-  usage; exit 1
+    usage; exit 1
+  fi
+
+  # --- VERIFY ITS A H2O CLUSTER ---
+  cnt=$(echo $VSPHERE_TKGS_VCENTER_SERVER | egrep -c "\.h2o-")
+  if [ $cnt -gt 0 ]; then
+    H2O_ID=$(echo "$VSPHERE_TKGS_VCENTER_SERVER" | awk -F'.' '{ print $2 }')
+    TMC_DISPLAY_NAME="tkgmc-vsphere-${H2O_ID}-$TDH_USER"
+    TMC_CONFIG_NAME="tmc-vsphere-${H2O_ID}"
+    VSPHERE_TKGS_SUPERVISOR_STORAGE_POLICY=vc01cl01-t0compute
+    VSPHERE_TKGS_SUPERVISOR_STORAGE_CLASS=vc01cl01-t0compute
+    VSPHERE_TKGS_DNS_SERVER="10.79.2.5:53"
+  else
+    TMC_CONFIG_NAME="tmc-vsphere-tkgs"
+    TMC_DISPLAY_NAME="tkgmc-vsphere--$TDH_USER"
+  fi
+fi
+
+if [ "$VSPHERE_TKGS_VCENTER_SERVER" == "AWS_EKS" ]; then
+  if [ "$AWS_EKS_ACCOUNT_CREDENTIAL" == "" -o "$AWS_EKS_LOCATION" == "" ]; then 
+    usage; exit 1
+  fi
+  checkTDHsettings tmc
 fi
 
 # --- VERIFY ITS A H2O CLUSTER ---
@@ -113,7 +156,7 @@ checkCLIcommands TMC
 
 # --- CLEANUP KUNECONFIG ---
 tmcCheckLogin
-#vSphereKubeconfig
+vSphereKubeconfig  
 vSphereLogin
 
 cnt=$(tmc managementcluster list | grep -c "$TMC_DISPLAY_NAME") 
@@ -245,9 +288,9 @@ echo "TDH_DEPLOYMENT_CLUSTER_PLAN=dev"                                         >
 echo "TDH_TKGWC_STORAGE_CLASS=$VSPHERE_TKGS_SUPERVISOR_STORAGE_CLASS"          >> $CONFIG_FILE
 echo "TDH_TKGWC_KUBERNETES=\"$KUBERNETES_RELEASE\""                            >> $CONFIG_FILE
 echo ""                                                                        >> $CONFIG_FILE
-echo "nodes[0]='best-effort-medium'"                                           >> $CONFIG_FILE
-echo "nodes[1]='best-effort-large'"                                            >> $CONFIG_FILE
-echo "nodes[2]='best-effort-xlarge'"                                           >> $CONFIG_FILE
+echo "nodes[0]='best-effort-xlarge'"                                           >> $CONFIG_FILE
+echo "nodes[1]='best-effort-2xlarge'"                                          >> $CONFIG_FILE
+echo "nodes[2]='best-effort-4xxlarge'"                                         >> $CONFIG_FILE
 
 CONFIG_FILE="$HOME/.tanzu-demo-hub/config/${TMC_DISPLAY_NAME}.cfg"
 echo "TDH_TKGMC_INFRASTRUCTURE=vSphere"                                        >  $CONFIG_FILE
@@ -264,9 +307,9 @@ echo "TDH_TKGMC_SUPERVISORCLUSTER=$VSPHERE_TKGS_SUPERVISOR_CLUSTER"            >
 echo "TDH_TKGMC_KUBECONFIG=${TMC_DISPLAY_NAME}.kubeconfig"                     >> $CONFIG_FILE
 echo "TDH_TKGMC_TOOLS_CONTAINER=tdh-tools-tkg-$DEPLOY_TKG_VERSION"             >> $CONFIG_FILE
 echo ""                                                                        >> $CONFIG_FILE
-echo "nodes[0]='best-effort-medium'"                                           >> $CONFIG_FILE
-echo "nodes[1]='best-effort-large'"                                            >> $CONFIG_FILE
-echo "nodes[2]='best-effort-2xlarge'"                                          >> $CONFIG_FILE
+echo "nodes[0]='best-effort-large'"                                            >> $CONFIG_FILE
+echo "nodes[1]='best-effort-2xlarge'"                                          >> $CONFIG_FILE
+echo "nodes[2]='best-effort-4xlarge'"                                          >> $CONFIG_FILE
 
 VSPHERE_TKGS_VCENTER_URL=$(echo $VSPHERE_TKGS_VCENTER_SERVER | awk -F'/' '{ print $NF }')
 VSPHERE_TKGS_VCENTER_ID=$(echo $VSPHERE_TKGS_DNS_USER | awk -F'-' '{ print $NF }')
@@ -295,9 +338,9 @@ echo "      storage_class: '$VSPHERE_TKGS_SUPERVISOR_STORAGE_CLASS'"           >
 echo "    vsphere_namespace:"                                                  >> $CONFIG_FILE
 echo "      - name: '$VSPHERE_NAMESPACE'"                                      >> $CONFIG_FILE
 echo "        vm_classes:"                                                     >> $CONFIG_FILE
-echo "          - 'best-effort-medium'"                                        >> $CONFIG_FILE
-echo "          - 'best-effort-large'"                                         >> $CONFIG_FILE
+echo "          - 'best-effort-xlarge'"                                        >> $CONFIG_FILE
 echo "          - 'best-effort-2xlarge'"                                       >> $CONFIG_FILE
+echo "          - 'best-effort-4xlarge'"                                       >> $CONFIG_FILE
 echo "  config_files:"                                                         >> $CONFIG_FILE
 echo "    kubeconfig: '$CFGPATH/${TMC_DISPLAY_NAME}.kubeconfig'"               >> $CONFIG_FILE
 
