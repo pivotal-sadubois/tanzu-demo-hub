@@ -5988,7 +5988,6 @@ getYAML() {
     '.tdh_clusters[] | select(.name == $key).config.services.tap.registry[] | select(.name == $reg).server' 2>/dev/null
 
   # --- LOCAL HARBOR REGISTRY ---
-#ooooooooooooo
   [ "$1" == "TAP_LOCAL_REGISTRY_SERVER" ] && yq -o json $mccfg | jq -r --arg key "$2" --arg reg "$3"  \
     '.tdh_clusters[] | select(.name == $key).config.services.tap.registry[] | select(.name == $reg).server' 2>/dev/null
   [ "$1" == "TAP_LOCAL_REGISTRY_USER" ] && yq -o json $mccfg | jq -r --arg key "$2" --arg reg "$3"  \
@@ -6939,10 +6938,18 @@ mergeKubeconfigFiles() {
 
   echo ""
   messageTitle "TAP Post Installation Steps"
-  messagePrint " ▪ Merging KUBECONFIG Files" "\$HOME/.tanzu-demo-hub/TDH_DEPLOYMENT_PATH/kubeconfig_${TDHV2_DEPLOYMENT}.yaml"
+  messagePrint " ▪ Merging KUBECONFIG Files" "\$HOME/.tanzu-demo-hub/$TDH_DEPLOYMENT_PATH/kubeconfig_${TDHV2_DEPLOYMENT}.yaml"
 
   export KUBECONFIG=$(find $HOME/.tanzu-demo-hub/$TDH_DEPLOYMENT_PATH -name "*.kubeconfig" -type f | tr '\n' ':')
   kubectl config view --flatten > $HOME/.tanzu-demo-hub/$TDH_DEPLOYMENT_PATH/kubeconfig_${TDHV2_DEPLOYMENT}.yaml
+
+  messagePrint " ▪ Login to Local Harbor Registry" "\$HOME/.tanzu-demo-hub/$TDH_DEPLOYMENT_PATH/kubeconfig_${TDHV2_DEPLOYMENT}.yaml"
+  TDH_HARBOR_REGISTRY_DNS_HARBOR=$(getYAML TAP_LOCAL_REGISTRY_SERVER $TDHV2_WORKLOAD_CLUSTER "local_registry")
+  TDH_HARBOR_REGISTRY_ADMIN_PASSWORD="$(getYAML TAP_LOCAL_REGISTRY_PASS $TDHV2_WORKLOAD_CLUSTER 'local_registry')"
+  docker login $TDH_HARBOR_REGISTRY_DNS_HARBOR -u admin -p $TDH_HARBOR_REGISTRY_ADMIN_PASSWORD > /tmp/error.log 2>&1; ret=$?
+
+echo "RET:$ret"
+#ooooooooooo
 } 
 
 # ------------------------------------------------------------------------------------------                                       
@@ -7300,7 +7307,7 @@ installTAPV2() {
     echo ""                                                                                                                       >> $TAP_CONFIG_2
 
     TAP_CONFIG_3=$HOME/.tanzu-demo-hub/$TDH_DEPLOYMENT_PATH/tap_config_stage_3.yaml
-    TAP_CONFIG_4=$HOME/.tanzu-demo-hub/$TDH_DEPLOYMENT_PATH/tap_config_stage_4.yaml
+    TAP_CONFIG_4=$HOME/.tanzu-demo-hub/$TDH_DEPLOYMENT_PATH/tap_config_stage_4_template.yaml
     echo ""                                                                                                                       >  $TAP_CONFIG_3
     echo "profile: full"                                                                                                          >> $TAP_CONFIG_3
     echo ""                                                                                                                       >> $TAP_CONFIG_3
@@ -7793,15 +7800,17 @@ configureAppLiveView() {
     let cnt=cnt+1
   done
 
-  TAP_GUIHOST=deployments/${TDHV2_MANAGEMENT_CLUSTER}/$TDHV2_DEPLOYMENT/${tap_gui}
-  mv $TAP_CONFIG $HOME/.tanzu-demo-hub/$TAP_GUIHOST/tap_config_appliveview.yaml
-  mv $HOME/.tanzu-demo-hub/$TAP_GUIHOST/tap_config_stage_4.yaml /tmp
-  sed "/app_config/r $HOME/.tanzu-demo-hub/$TAP_GUIHOST/tap_config_appliveview.yaml" /tmp/tap_config_stage_4.yaml > $HOME/.tanzu-demo-hub/$TAP_GUIHOST/tap_config_stage_4.yaml
+  TDHV2_WORKLOAD_CLUSTER=$tap_gui
+  TDH_DEPLOYMENT_PATH=deployments/${TDHV2_MANAGEMENT_CLUSTER}/$TDHV2_DEPLOYMENT/${TDHV2_WORKLOAD_CLUSTER}
 
-  messagePrint " ▪ Updating (Stage-4) with LiveView Config" "\$HOME/.tanzu-demo-hub/$TAP_GUIHOST/tap_config_stage_4.yaml"
-  messagePrint " ▪ Switching Kubernetes Context" "${tap_gui}-admin@$tap_gui"
+  mv $TAP_CONFIG $HOME/.tanzu-demo-hub/$TDH_DEPLOYMENT_PATH/tap_config_appliveview.yaml
+  sed "/app_config/r $HOME/.tanzu-demo-hub/$TDH_DEPLOYMENT_PATH/tap_config_appliveview.yaml" $HOME/.tanzu-demo-hub/$TDH_DEPLOYMENT_PATH/tap_config_stage_4_template.yaml > $HOME/.tanzu-demo-hub/$TDH_DEPLOYMENT_PATH/tap_config_stage_4.yaml
+
+  messagePrint " ▪ Updating (Stage-4) with LiveView Config" "\$HOME/.tanzu-demo-hub/$TDH_DEPLOYMENT_PATH/tap_config_stage_4.yaml"
+  messagePrint " ▪ Switching Kubernetes Context" "${TDHV2_WORKLOAD_CLUSTER}-admin@$TDHV2_WORKLOAD_CLUSTER"
+
   export KUBECONFIG=$HOME/.tanzu-demo-hub/deployments/${TDHV2_MANAGEMENT_CLUSTER}/$TDHV2_DEPLOYMENT/kubeconfig_${TDHV2_DEPLOYMENT}.yaml
-  cmdLoop kubectl config use-context ${tap_gui}-admin@$tap_gui > /dev/null 2>&1
+  cmdLoop kubectl config use-context ${TDHV2_WORKLOAD_CLUSTER}-admin@$TDHV2_WORKLOAD_CLUSTER > /dev/null 2>&1
 
   goTAPStage 4
 

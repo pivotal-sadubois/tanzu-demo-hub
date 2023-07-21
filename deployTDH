@@ -123,17 +123,14 @@ createTDHdeployment
 #############################################################################################################################
 ######################### CREATE TKG CLUSTER AND ATTACH TO TMC AND INSTALL TMC INTEGRATION ##################################
 #############################################################################################################################
-vsphereSupervisorClusterLoginV2    $(getYAML MC_NAME)
-setKubernetesContextV2             $(getYAML MC_KUBECONFIG)
-tanzuConfigServerV2                $(getYAML MC_NAME)
-
 for clu in $(getYAML WC_CLUSTER_LIST); do
-#[ "$clu" == "tdh-vsphere-sdubois-svc" ] && continue
-#[ "$clu" == "tdh-vsphere-sdubois-run" ] && continue
-#[ "$clu" == "tdh-vsphere-sdubois-tap" ] && continue
   TDHV2_WORKLOAD_CLUSTER=$clu
 
-  setKubernetesContextV2           $(getYAML MC_KUBECONFIG)
+  vsphereSupervisorClusterLoginV2    $(getYAML MC_NAME)
+  setKubernetesContextV2             $(getYAML MC_KUBECONFIG)
+  tanzuConfigServerV2                $(getYAML MC_NAME)
+
+  setKubernetesContextV2             $(getYAML MC_KUBECONFIG)
   tkgCreateClusterV2
   tmcAttachClusterV2 
   createTLSCertificateV2 $clu
@@ -144,8 +141,8 @@ for clu in $(getYAML WC_CLUSTER_LIST); do
   installTanzuPackageContour
   installTanzuPackageHarbor
 
-  #installBuildService          ## Tanzu Build Service (TBS)
-  #installTanzuDataPostgres     ## Tanzu Data SQL
+  #installBuildService               ## Tanzu Build Service (TBS)
+  #installTanzuDataPostgres          ## Tanzu Data SQL
   #installSpringCloudGateway
   #installMinio
   #installKubeapps
@@ -153,14 +150,12 @@ for clu in $(getYAML WC_CLUSTER_LIST); do
   #installJenkins
   #installArgoCD
   #installGitLab
-  #installKubeernetesDashboard   ## Kubernetes Dashboard
-  installTAPV2                   ## Tanzu Application Platform (TAP)
+  #installKubeernetesDashboard       ## Kubernetes Dashboard
+  installTAPV2                       ## Tanzu Application Platform (TAP)
 done
 
-echo gaga1
+mergeKubeconfigFiles
 configureAppLiveView
-echo gaga2
+configureSupplyChainBasic
 
-
-
-
+exit
