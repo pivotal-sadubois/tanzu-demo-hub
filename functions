@@ -5046,17 +5046,23 @@ tkgCreateClusterV2() {
       # https://docs.vmware.com/en/VMware-Tanzu-Kubernetes-Grid/2.2/tkg-deploy-mc-22/mgmt-release-notes.html
       tkg_lst=" \
         1.25.7:2.2.0 \
+        1.24.11:2.2.0 \
         1.24.10:2.1.1 \
         1.24.9:2.1.0 \
+        1.23.17:2.2.0 \
+        1.23.16:2.1.1 \
+        1.23.15:2.1.0 \
         1.23.10:1.6.1 \
         1.23.8:1.6.0"
 
       for n in ${tkg_lst}; do
         k8s=$(echo $n | awk -F: '{ print $1 }')
         tkg=$(echo $n | awk -F: '{ print $2 }')
-        ret=$(kubectl get tkr | grep -c "v${k8s}+")
-        [ $ret -gt 0 ] && tkg_rel=$tkg && break
+        tkr=$(kubectl get tkr | awk '{ printf("%s:%s:%s:\n",$2,$3,$4)}' | grep ":True:True:" | grep -v ubuntu | awk -F':' '{ print $1 }' | grep "^${k8s}+")
+        [ "$tkr" != "" ] && wc_rel=$tkg && break
       done
+
+      [ "$wc_rel" == "" ] && wc_rel="n/a"
 
       messageTitle ""
       messageTitle "vSphere with Tanzu (TKGs) Deployment"
@@ -5067,12 +5073,21 @@ tkgCreateClusterV2() {
       messagePrint " ▪ TKG Workload Cluster Consolidated Config"            "\$HOME/.tanzu-demo-hub/deployments/${TDHV2_MANAGEMENT_CLUSTER}/$TDHV2_DEPLOYMENT/${wc_nam}/${wc_nam}.cfg"
 
       wc_k8s="$(getYAML WC_K8S_VERSION $wc_nam)"
-      wc_tkr="$(kubectl get tanzukubernetesreleases | grep "${wc_k8s}" | grep -v ubuntu | tail -1 | awk '{ print $1 }')"
+      wc_tkr=$(kubectl get tkr | awk '{ printf("%s:%s:%s:\n",$2,$3,$4)}' | grep ":True:True:" | grep -v ubuntu | awk -F':' '{ print $1 }' | grep "^${wc_k8s}" | tail -1)
+
       if [ "$wc_tkr" == "" ]; then
-        echo "failed to find TKR release $wc_k8s on the supperwisor cluster"
+        echo "ERROR: failed to find TKR release $wc_k8s on the supperwisor cluster"
+        if [ "$NATIVE" == "0" ]; then
+          echo "       => tools/${TDH_TOOLS}.sh"
+          echo "          tdh-tools:/$ kubectl get tkr"
+          echo "          tdh-tools:/$ exit"
+        else
+          echo "       => kubectl get tkr"
+        fi
+
         exit 1
       fi
-     
+
       wc_cnc="$(getYAML WC_CTRL_NODE_CNT $wc_nam)"
       wc_cnt="$(getYAML WC_CTRL_NODE_TYP $wc_nam)"
       wc_wnc="$(getYAML WC_WORK_NODE_CNT $wc_nam)"
@@ -5088,7 +5103,7 @@ tkgCreateClusterV2() {
       messagePrint " ▪ TKG Workload Control Plane Nodes Count"              "${wc_cnc}"
       messagePrint " ▪ TKG Workload Control Plane Nodes Class"              "${wc_cnt} ($wc_wcl)"
       messagePrint " ▪ TKG Management Cluster Display Name"                 "${mc_nam}"
-      messagePrint " ▪ TKG Management Cluster Release:"                     "TKG ${tkg_rel}"
+      messagePrint " ▪ TKG Management Cluster Release:"                     "TKG ${wc_rel}"
       messagePrint " ▪ TKG Management Cluster Supervisor Cluster"           "${vc_sup}"
       messagePrint " ▪ TKG Management Cluster Configuration"                "\$HOME/.tanzu-demo-hub/config/${mc_nam}.cfg"
       messagePrint " ▪ TKG Management Cluster Kubeconfig"                   "\$HOME/.tanzu-demo-hub/config/${mc_nam}.kubeconfig"
@@ -5229,7 +5244,7 @@ tkgCreateClusterV2() {
 
         cnt=0; ret=1
         while [ $ret -ne 0 -a $cnt -lt 3 ]; do
-          kubectl apply -f $CONFIG_YAML --wait=true > /tmp/error 2>&1; ret=$?
+          kubectl apply -f $CONFIG_YAML --wait=true > /tmp/error.log 2>&1; ret=$?
           [ "$ret" -eq 9 ] && break
           let cnt=cnt+1
           sleep 10
@@ -5295,7 +5310,7 @@ tkgCreateClusterV2() {
         uodateConfigMap tanzu-demo-hub VSPHERE_TKGS_VCENTER_ADMIN              "${vc_usr}"
         uodateConfigMap tanzu-demo-hub VSPHERE_TKGS_VCENTER_ADMIN_USER         "${vc_usr}"
         uodateConfigMap tanzu-demo-hub VSPHERE_TKGS_VCENTER_ADMIN_PASS         "${vc_pas}"
-        uodateConfigMap tanzu-demo-hub VSPHERE_TKGS_RELEASE                    "$tkg_rel"
+        uodateConfigMap tanzu-demo-hub VSPHERE_TKGS_RELEASE                    "${wc_rel}"
         uodateConfigMap tanzu-demo-hub VSPHERE_TKGS_SUPERVISOR_CLUSTER         "${vc_sup}"
         uodateConfigMap tanzu-demo-hub VSPHERE_TKGS_SUPERVISOR_STORAGE_POLICY  "${vc_scp}"
         uodateConfigMap tanzu-demo-hub VSPHERE_TKGS_SUPERVISOR_STORAGE_CLASS   "${vc_scl}"
