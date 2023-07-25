@@ -5186,7 +5186,8 @@ tkgCreateClusterV2() {
           echo "          storage: 50Gi"                                                  >> $CONFIG_YAML
         fi
 
-        if [ "$tkg_api" == "v1alpha1" ]; then 
+        if [ "$tkg_api" == "v1alpha1" -o "$tkg_api" == "v1alpha2" ]; then 
+          CONFIG_YAML=$TDH_DEPLOYMENT_PATH/${wc_nam}.yaml
           echo "apiVersion: run.tanzu.vmware.com/v1alpha1"                                >  $CONFIG_YAML
           echo "kind: TanzuKubernetesCluster"                                             >> $CONFIG_YAML
           echo "metadata:"                                                                >> $CONFIG_YAML
