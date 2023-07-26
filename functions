@@ -5058,7 +5058,7 @@ tkgCreateClusterV2() {
       for n in ${tkg_lst}; do
         k8s=$(echo $n | awk -F: '{ print $1 }')
         tkg=$(echo $n | awk -F: '{ print $2 }')
-        tkr=$(kubectl get tkr | awk '{ printf("%s:%s:%s:\n",$2,$3,$4)}' | grep ":True:True:" | grep -v ubuntu | awk -F':' '{ print $1 }' | grep "^${k8s}+")
+        tkr=$(kubectl get tkr | awk '{ printf("%s:%s:%s:\n",$2,$3,$4)}' | grep ":True:True:" | grep -v ubuntu | awk -F':' '{ print $1 }' | egrep "^${k8s}+|^v${k8s}+")
         [ "$tkr" != "" ] && wc_rel=$tkg && break
       done
 
@@ -5073,8 +5073,8 @@ tkgCreateClusterV2() {
       messagePrint " ▪ TKG Workload Cluster Consolidated Config"            "\$HOME/.tanzu-demo-hub/deployments/${TDHV2_MANAGEMENT_CLUSTER}/$TDHV2_DEPLOYMENT/${wc_nam}/${wc_nam}.cfg"
 
       wc_k8s="$(getYAML WC_K8S_VERSION $wc_nam)"
-      wc_tkr=$(kubectl get tkr | awk '{ printf("%s:%s:%s:\n",$2,$3,$4)}' | grep ":True:True:" | grep -v ubuntu | awk -F':' '{ print $1 }' | grep "^${wc_k8s}" | tail -1)
-
+      cmdLoop kubectl get tkr > /tmp/output.txt 2>/dev/null
+      wc_tkr=$(awk '{ printf("%s:%s:%s:%s:\n",$1,$2,$3,$4)}' /tmp/output.txt | grep ":True:True:" | egrep -v "ubuntu" | sort -V | egrep ":${wc_k8s}+|:v${wc_k8s}+" | tail -1 | awk -F':' '{ print $1 }')
       if [ "$wc_tkr" == "" ]; then
         echo "ERROR: failed to find TKR release $wc_k8s on the supperwisor cluster"
         if [ "$NATIVE" == "0" ]; then
@@ -5201,7 +5201,38 @@ tkgCreateClusterV2() {
           echo "          storage: 50Gi"                                                  >> $CONFIG_YAML
         fi
 
-        if [ "$tkg_api" == "v1alpha1" -o "$tkg_api" == "v1alpha2" ]; then 
+        if [ "$tkg_api" == "v1alpha2" ]; then 
+          # https://docs.vmware.com/en/VMware-vSphere/7.0/vmware-vsphere-with-tanzu/GUID-3040E41B-8A54-4D23-8796-A123E7CAE3BA.html
+          CONFIG_YAML=$TDH_DEPLOYMENT_PATH/${wc_nam}.yaml
+          echo "apiVersion: run.tanzu.vmware.com/v1alpha2"                                >  $CONFIG_YAML
+          echo "kind: TanzuKubernetesCluster"                                             >> $CONFIG_YAML
+          echo "metadata:"                                                                >> $CONFIG_YAML
+          echo "  name: $wc_nam"                                                          >> $CONFIG_YAML
+          echo "  namespace: $vc_nsp"                                                     >> $CONFIG_YAML
+          echo "spec:"                                                                    >> $CONFIG_YAML
+          echo "  topology:"                                                              >> $CONFIG_YAML
+          echo "    controlPlane:"                                                        >> $CONFIG_YAML
+          echo "      replicas: $wc_cnc"                                                  >> $CONFIG_YAML
+          echo "      vmClass: $wc_wcl"                                                   >> $CONFIG_YAML
+          echo "      storageClass: $vc_scl"                                              >> $CONFIG_YAML
+          echo "      tkr:"                                                               >> $CONFIG_YAML
+          echo "        reference:"                                                       >> $CONFIG_YAML
+          echo "          name: $wc_tkr"                                                  >> $CONFIG_YAML
+          echo "    nodePools:"                                                           >> $CONFIG_YAML
+          echo "    - name: worker"                                                       >> $CONFIG_YAML
+          echo "      replicas: $wc_wnc"                                                  >> $CONFIG_YAML
+          echo "      vmClass: $wc_wcl"                                                   >> $CONFIG_YAML
+          echo "      storageClass: $vc_scl"                                              >> $CONFIG_YAML
+          echo "      tkr:"                                                               >> $CONFIG_YAML
+          echo "        reference:"                                                       >> $CONFIG_YAML
+          echo "          name: $wc_tkr"                                                  >> $CONFIG_YAML
+          echo "  settings:"                                                              >> $CONFIG_YAML
+          echo "    storage:"                                                             >> $CONFIG_YAML
+          echo "      defaultClass: $vc_scl"                                              >> $CONFIG_YAML
+        fi
+
+
+        if [ "$tkg_api" == "v1alpha1" ]; then 
           CONFIG_YAML=$TDH_DEPLOYMENT_PATH/${wc_nam}.yaml
           echo "apiVersion: run.tanzu.vmware.com/v1alpha1"                                >  $CONFIG_YAML
           echo "kind: TanzuKubernetesCluster"                                             >> $CONFIG_YAML
@@ -5837,6 +5868,52 @@ tkgCreateCluster() {
         TANZU_TKGWC_SUPERVISOR_CLUSTER=$(getConfigMap tanzu-demo-hub TANZU_TKGWC_SUPERVISOR_CLUSTER)
       fi
     fi
+  fi
+}
+
+# ------------------------------------------------------------------------------------------
+# Function Name ......: tkgInstallKappController
+# Function Purpose ...: Install TKG Kapp Controller
+# ------------------------------------------------------------------------------------------
+# Argument ($1) ......: None
+# ------------------------------------------------------------------------------------------
+# Return Value .......: 0 - SUCCEED, 1 - FAILED
+# ------------------------------------------------------------------------------------------
+# References:
+# https://docs.vmware.com/en/VMware-vSphere/7.0/vmware-vsphere-with-tanzu/
+# ------------------------------------------------------------------------------------------
+tkgInstallKappController() {
+  [ "$TDH_TKGWC_POD_SECURITY_POLICY" == "" ] && TDH_TKGWC_POD_SECURITY_POLICY=tanzu-system-kapp-ctrl-privileged
+
+  cmdLoop kubectl get PodSecurityPolicy -o json > /tmp/output.json
+  nam=$(jq -r --arg key "$TDH_TKGWC_POD_SECURITY_POLICY" '.items[].metadata | select(.name == $key).name' /tmp/output.json)
+  if [ "$nam" != "$TDH_TKGWC_POD_SECURITY_POLICY" ]; then
+    if [ $DEBUG -eq 1 ]; then
+      messagePrint " ▪ create PodSecurityPolicy"                 "$TDH_TKGWC_POD_SECURITY_POLICY"
+      messageLine
+      kubectl apply -f $TDHPATH/files/kapp/$TDH_TKGWC_POD_SECURITY_POLICY}.yaml
+      messageLine
+    else
+      messagePrint " ▪ Define PodSecurityPolicy"                 "$TDH_TKGWC_POD_SECURITY_POLICY"
+      kubectl apply -f $TDHPATH/files/kapp/${TDH_TKGWC_POD_SECURITY_POLICY}.yaml >/dev/null 2>&1
+    fi
+  fi
+
+  cmdLoop kubectl get APIService -n tkg-system -o json > /tmp/output.json
+  nam=$(jq -r --arg key "v1alpha1.data.packaging.carvel.dev" '.items[].metadata | select(.name == $key).name' /tmp/output.json) 
+  if [ "$nam" != "v1alpha1.data.packaging.carvel.dev" ]; then 
+    if [ $DEBUG -eq 1 ]; then
+      messagePrint " ▪ Installing Kapp Controller"               "$TDHPATH/files/kapp/${TDH_KAPP_CONTROLLER}.yaml"
+      messageLine
+      kubectl apply -f $TDHPATH/files/kapp/${TDH_KAPP_CONTROLLER}.yaml
+      messageLine
+    else
+      messagePrint " ▪ Installing Kapp Controller"               "$TDHPATH/files/kapp/${TDH_KAPP_CONTROLLER}.yaml"
+      kubectl apply -f $TDHPATH/files/kapp/${TDH_KAPP_CONTROLLER}.yaml > /dev/null 2>&1
+    fi
+
+    runningPods kube-system
+    runningPods tkg-system
   fi
 }
 
@@ -20109,17 +20186,26 @@ createTDHdeployment() {
 # Return Value .......: 0 - for success, 1 - failure
 # ------------------------------------------------------------------------------------------
 installPackageRepositories() {
+echo gaga1
   cmdLoop tanzu package repository list -o json -A > /tmp/output.yaml 2>/dev/null
+echo gaga2
 
   for rep in $(getYAML REPO_LIST $TDHV2_WORKLOAD_CLUSTER); do
+echo "RET:$rep"
     url=$(getYAML REPO_URL $TDHV2_WORKLOAD_CLUSTER $rep)
     nsp=$(getYAML REPO_NAMESPACE $TDHV2_WORKLOAD_CLUSTER $rep)
 
+echo "URL:$url"
+echo "NSP:$nsp"
     nam=$(jq -r --arg repo "$rep" --arg nsp "$nsp" '.[] | select(.name == $repo and .namespace == $nsp).name' /tmp/output.yaml)
+echo "NAM:$nam"
     if [ "$nam" != "$rep" ]; then 
       messagePrint " ▪ Installing Package Repository Name:"                   "$rep"
 
+echo "tanzu package repository add \"$rep\" --url \"$url\" -n \"$nsp\" -y"
       tanzu package repository add "$rep" --url "$url" -n "$nsp" -y > /tmp/error.log 2>&1; ret=$?
+cat /tmp/error.log
+echo "RET:$ret"
       if [ $ret -ne 0 ]; then
         logMessages /tmp/error.log
         echo "ERROR: failed to add tanzu repository $rep"
