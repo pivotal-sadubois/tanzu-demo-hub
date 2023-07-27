@@ -19138,7 +19138,6 @@ cmdLoop() {
     [ $_ret -eq 0 ] && break
     let _cnt=_cnt+1
     sleep $DELAY
-    let DELAY=DELAY+DELAY
   done
 
   if [ $_ret -ne 0 ]; then
