@@ -14,6 +14,7 @@ if [ -d $HOME/.tanzu-demo-hub/config ]; then
   declare -a TKG_CLUSTER_CONFIG
   declare -a TKG_CLUSTER_IS_VSPHERE
   declare -a TKG_CLUSTER_IS_MGMT
+  declare -a TKG_CLUSTER_COMMENT
   declare -a TKG_CLUSTER_STATUS
   declare -a TKG_CLUSTER_STATUS_MSG
   declare -a TKG_CLUSTER
@@ -34,7 +35,6 @@ if [ -d $HOME/.tanzu-demo-hub/config ]; then
   CONTEXT_LIST=""; INDEX=0
   # --- GATHER RIGHT KUBECONFIG ---
   for n in $(find $HOME/.tanzu-demo-hub -name "*.kubeconfig" 2>/dev/null | egrep "tkgmc|tcemc|/tdh"); do
-echo "=> N:$n"
     cnm=$(echo $n | awk -F'/' '{ print $NF }' | awk -F'.' '{ print $1 }')
     vsp=$(echo $n | egrep -c "tkgmc-vsphere|tcemc-vsphere") 
     dh2=$(echo $n | egrep -c "deployment") 
@@ -54,6 +54,7 @@ echo "=> N:$n"
       TKG_CLUSTER_STATUS_MSG[$INDEX]="KUBERNETES-API-NOT-TESTED"
       TKG_CLUSTER_CONFIG[$INDEX]=$HOME/.tanzu-demo-hub/config/${cnm}.cfg
       TKG_CLUSTER_KUBECONFIG[$INDEX]=$HOME/.tanzu-demo-hub/config/${cnm}.kubeconfig
+      TKG_CLUSTER_COMMENT[$INDEX]="$(egrep 'TDH_TKGMC_COMMENTS' $HOME/.tanzu-demo-hub/config/${cnm}.cfg | awk -F '=' '{ print $2 }' | sed 's/"//g')"
     fi
 
     vsp=$(egrep -c "TDH_TKGMC_INFRASTRUCTURE=vSphere|TDH_TKGMC_VSPHERE_NAMESPACE=" ${TKG_CLUSTER_CONFIG[$INDEX]})
@@ -148,12 +149,13 @@ echo "=> N:$n"
   if [ "$SUPERVISOR" == "true" ]; then 
     echo "" 
     echo " TANZU-DEMO-HUB MANAGEMENT CLUSTERS"
-    echo " -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------"
+    echo " -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------"
     INDEX=0 
     while [ $INDEX -lt ${#TKG_CLUSTER_NAME[@]} ]; do
       if [ "${TKG_CLUSTER_IS_MGMT[$INDEX]}" == "true" ]; then 
         pth=$(echo ${TKG_CLUSTER_KUBECONFIG[$INDEX]} | sed 's+/home/tanzu+$HOME+g')
-        printf " export KUBECONFIG=%-107s   ## %-40s %25s\n" $pth $cnm  "[${TKG_CLUSTER_STATUS_MSG[$INDEX]}]"
+        des=$(echo ${TKG_CLUSTER_COMMENT[$INDEX]})
+        printf " export KUBECONFIG=%-77s   ## %-78s %25s\n" $pth "$des"  "[${TKG_CLUSTER_STATUS_MSG[$INDEX]}]"
       fi
           
       let INDEX=INDEX+1
@@ -162,12 +164,12 @@ echo "=> N:$n"
 
   echo ""
   echo " TANZU-DEMO-HUB WORKLOAD CLUSTERS"
-  echo " -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------"
+  echo " -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------"
   INDEX=0 
   while [ $INDEX -lt ${#TKG_CLUSTER_NAME[@]} ]; do
     if [ "${TKG_CLUSTER_IS_MGMT[$INDEX]}" != "true" ]; then 
       pth=$(echo ${TKG_CLUSTER_KUBECONFIG[$INDEX]} | sed 's+/home/tanzu+$HOME+g')
-      printf " export KUBECONFIG=%-156s  %21s\n" "$pth"  "[${TKG_CLUSTER_STATUS_MSG[$INDEX]}]"
+      printf " export KUBECONFIG=%-165s  %20s\n" "$pth"  "[${TKG_CLUSTER_STATUS_MSG[$INDEX]}]"
     fi
   
     let INDEX=INDEX+1
