@@ -128,7 +128,7 @@ for clu in $(getYAML WC_CLUSTER_LIST); do
 
   vsphereSupervisorClusterLoginV2    $(getYAML MC_NAME)
   setKubernetesContextV2             $(getYAML MC_KUBECONFIG)
-  tanzuConfigServerV2                $(getYAML MC_NAME)
+  #tanzuConfigServerV2                $(getYAML MC_NAME)
 
   setKubernetesContextV2             $(getYAML MC_KUBECONFIG)
   tkgCreateClusterV2

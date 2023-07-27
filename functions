@@ -5074,7 +5074,7 @@ tkgCreateClusterV2() {
 
       wc_k8s="$(getYAML WC_K8S_VERSION $wc_nam)"
       cmdLoop kubectl get tkr > /tmp/output.txt 2>/dev/null
-      wc_tkr=$(awk '{ printf("%s:%s:%s:%s:\n",$1,$2,$3,$4)}' /tmp/output.txt | grep ":True:True:" | egrep -v "ubuntu" | sort -V | egrep ":${wc_k8s}+|:v${wc_k8s}+" | tail -1 | awk -F':' '{ print $1 }')
+      wc_tkr=$(awk '{ printf("%s:%s:%s:%s:\n",$1,$2,$3,$4)}' /tmp/output.txt | grep ":True:True:" | egrep -v "ubuntu|fips" | sort -V | egrep ":${wc_k8s}+|:v${wc_k8s}+" | tail -1 | awk -F':' '{ print $1 }')
       if [ "$wc_tkr" == "" ]; then
         echo "ERROR: failed to find TKR release $wc_k8s on the supperwisor cluster"
         if [ "$NATIVE" == "0" ]; then
@@ -5899,22 +5899,20 @@ tkgInstallKappController() {
     fi
   fi
 
-  cmdLoop kubectl get APIService -n tkg-system -o json > /tmp/output.json
-  nam=$(jq -r --arg key "v1alpha1.data.packaging.carvel.dev" '.items[].metadata | select(.name == $key).name' /tmp/output.json) 
-  if [ "$nam" != "v1alpha1.data.packaging.carvel.dev" ]; then 
-    if [ $DEBUG -eq 1 ]; then
-      messagePrint " ▪ Installing Kapp Controller"               "$TDHPATH/files/kapp/${TDH_KAPP_CONTROLLER}.yaml"
-      messageLine
-      kubectl apply -f $TDHPATH/files/kapp/${TDH_KAPP_CONTROLLER}.yaml
-      messageLine
-    else
-      messagePrint " ▪ Installing Kapp Controller"               "$TDHPATH/files/kapp/${TDH_KAPP_CONTROLLER}.yaml"
-      kubectl apply -f $TDHPATH/files/kapp/${TDH_KAPP_CONTROLLER}.yaml > /dev/null 2>&1
-    fi
+  # https://tanzu.vmware.com/developer/guides/kapp-controller-gs/
+  # kapp deploy -a kc -f https://github.com/vmware-tanzu/carvel-kapp-controller/releases/latest/download/release.yml -y
 
-    runningPods kube-system
+  [ "$TDH_KAPP_CONTROLLER" == "" ] && TDH_KAPP_CONTROLLER=kapp-controller_v0.38.4
+
+  cnt=$(kubectl get pods -A 2>/dev/null | grep -c kapp-controller)
+  if [ $cnt -eq 0 ]; then
+    kapp deploy -a kc -f https://github.com/vmware-tanzu/carvel-kapp-controller/releases/latest/download/release.yml -y > /tmp/error.log; ret=$?
     runningPods tkg-system
   fi
+
+  # --- RELAXING POD SECUROTY ---
+  messagePrint " ▪ Relaxing Cluster Security"               "$TDHPATH/files/psp/vmware-system-privileged.yaml"
+  kubectl apply -f $TDHPATH/files/psp/vmware-system-privileged.yaml > /dev/null 2>&1
 }
 
 # ------------------------------------------------------------------------------------------
@@ -16466,7 +16464,6 @@ TanzuPackage_LocalStorage() {
 # Return Value .......: 0 on Success, 1 on failure
 # ------------------------------------------------------------------------------------------
 installTanzuPackageCertManager() {
-#jjjjjjjjjjj
   PACKAGE_ID="cert-manager.tanzu.vmware.com"
   PACKAGE_DES="Certificate Manager"
   PACKAGE_NAME="cert-manager"
@@ -18832,15 +18829,12 @@ getServiceAccountSecret() {
 # ------------------------------------------------------------------------------------------
 createNamespace() {
   NAMESPACE=$1
-echo "gaga createNamespace NAMESPACE:$NAMESPACE"
 
   cmdLoop kubectl get ns -o json > /tmp/output.json
   if [ -s /tmp/output.json ]; then
     nam=$(jq -r --arg key "$NAMESPACE" '.items[] | select(.metadata.name == $key).metadata.name' /tmp/output.json) 
-echo "gaga createNamespace nam:$nam"
 
     if [ "$nam" == "" ]; then 
-echo gagagagagagaga
       cmdLoop kubectl create ns $NAMESPACE
     fi
   fi
@@ -19150,9 +19144,6 @@ cmdLoop() {
   if [ $_ret -ne 0 ]; then
     logMessages /tmp/cmdloop_error.log 1>&2
     echo "ERROR: Failed to run command, please try manually" 1>&2
-kubectl get ns
-echo "DELAY:$DELAY"
-echo "KUBECONFIG: $KUBECONFIG"
     if [ "$NATIVE" == "0" ]; then
       echo "       => tools/${TDH_TOOLS}.sh" 1>&2
       echo "          tdh-tools:/$ $CMD" 1>&2
@@ -20186,26 +20177,17 @@ createTDHdeployment() {
 # Return Value .......: 0 - for success, 1 - failure
 # ------------------------------------------------------------------------------------------
 installPackageRepositories() {
-echo gaga1
   cmdLoop tanzu package repository list -o json -A > /tmp/output.yaml 2>/dev/null
-echo gaga2
 
   for rep in $(getYAML REPO_LIST $TDHV2_WORKLOAD_CLUSTER); do
-echo "RET:$rep"
     url=$(getYAML REPO_URL $TDHV2_WORKLOAD_CLUSTER $rep)
     nsp=$(getYAML REPO_NAMESPACE $TDHV2_WORKLOAD_CLUSTER $rep)
 
-echo "URL:$url"
-echo "NSP:$nsp"
     nam=$(jq -r --arg repo "$rep" --arg nsp "$nsp" '.[] | select(.name == $repo and .namespace == $nsp).name' /tmp/output.yaml)
-echo "NAM:$nam"
     if [ "$nam" != "$rep" ]; then 
       messagePrint " ▪ Installing Package Repository Name:"                   "$rep"
 
-echo "tanzu package repository add \"$rep\" --url \"$url\" -n \"$nsp\" -y"
       tanzu package repository add "$rep" --url "$url" -n "$nsp" -y > /tmp/error.log 2>&1; ret=$?
-cat /tmp/error.log
-echo "RET:$ret"
       if [ $ret -ne 0 ]; then
         logMessages /tmp/error.log
         echo "ERROR: failed to add tanzu repository $rep"
@@ -20253,10 +20235,9 @@ createTLSCertificateV2() {
   tls_cert=$(getYAML WC_TLS_CERT_NAME $TDHV2_WORKLOAD_CLUSTER)
   tls_scrt=$(getYAML WC_TLS_SECRET_NAME $TDHV2_WORKLOAD_CLUSTER)
 
-#huhu
   # --- VERIFY EXISTING CERTIFICATE ---
-  cmdLoop kubectl get secret -n default -o json > /tmp/output.yaml
-  nam=$(jq -r --arg key "$tls_scrt" '.items[].metadata | select(.name == $key).name' /tmp/output.yaml)
+  cmdLoop kubectl get secret -A -o json > /tmp/output.yaml
+  nam=$(jq -r --arg key "$tls_scrt" '.items[].metadata | select(.name == $key and .namespace == "default").name' /tmp/output.yaml)
 
   if [ "$nam" != "$tls_scrt" ]; then
     InstallCertManagerV2
