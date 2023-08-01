@@ -18,10 +18,6 @@ ADD cluster-essentials          /tanzu-tap/cluster-essentials
 #ADD yelb-catalog    /tanzu-tap/yelb_catalog
 #ADD blank           /tanzu-tap/blank_catalog
 ADD clusterctl      /usr/local/bin
-ADD kbld            /usr/local/bin
-ADD imgpkg          /usr/local/bin
-ADD kapp            /usr/local/bin
-ADD ytt             /usr/local/bin
 ADD h2o             /usr/local/bin
 ADD argocd          /usr/local/bin
 #ADD kubectl         /usr/local/bin
@@ -141,16 +137,15 @@ RUN apt-get update && apt-get install -y \
 ##RUN cd /tanzu-tap && tanzu plugin install --local cli all > /dev/null 2>&1
 ##RUN cd /tanzu && tanzu plugin sync
 
-# --- INSTQLL CARVEL TOOLS ---
-RUN cp /tanzu/cli/imgpkg-linux* /usr/local/bin/imgpkg && chmod a+x /usr/local/bin/imgpkg
-RUN cp /tanzu/cli/kapp-linux* /usr/local/bin/kapp && chmod a+x /usr/local/bin/kapp
-RUN cp /tanzu/cli/kbld-linux* /usr/local/bin/kbld && chmod a+x /usr/local/bin/kbld
-RUN cp /tanzu/cli/ytt-linux* /usr/local/bin/ytt && chmod a+x /usr/local/bin/ytt
-RUN cp /tanzu/cli/vendir-linux* /usr/local/bin/vendir && chmod a+x /usr/local/bin/vendir
-
 # --- DIRTY FIX TO GET LATEST TOOLS (https://github.com/vmware-tanzu/carvel) ---
 RUN curl -sL https://github.com/vmware-tanzu/carvel-imgpkg/releases/download/v0.13.0/imgpkg-linux-amd64 -o /tanzu/cli/imgpkg-linux-amd64
 RUN mv /tanzu/cli/imgpkg-linux-amd64 /usr/local/bin/imgpkg && chmod a+x /usr/local/bin/imgpkg
+
+# --- INSTALL CARVEL TOOLS ---
+RUN cp /tanzu-tap/cluster-essentials/kapp /usr/local/bin/kapp
+RUN cp /tanzu-tap/cluster-essentials/imgpkg /usr/local/bin/imgpkg
+RUN cp /tanzu-tap/cluster-essentials/kbld /usr/local/bin/kbld
+RUN cp /tanzu-tap/cluster-essentials/ytt /usr/local/bin/ytt
 
 RUN pip install yasha
 

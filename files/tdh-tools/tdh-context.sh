@@ -27,6 +27,8 @@ if [ -d $HOME/.tanzu-demo-hub/config ]; then
   TKG_WC_LIST=""
   [ "$SUPERVISOR" == "" ] && export SUPERVISOR="false"
   [ "$VERIFY" == "" ] && export VERIFY="false"
+VERIFY=true
+SUPERVISOR=true
 
   # --- VERIFY VPN"
   curl -k --head -m 3 https://h2o.vmware.com > /dev/null 2>&1; ret=$?
@@ -39,6 +41,7 @@ if [ -d $HOME/.tanzu-demo-hub/config ]; then
     vsp=$(echo $n | egrep -c "tkgmc-vsphere|tcemc-vsphere") 
     dh2=$(echo $n | egrep -c "deployment") 
     mgt=$(echo $n | awk -F'/' '{ print $NF }' | egrep -c "tkgmc|tcemc") 
+
     [ $vsp -gt 0 ] && TKG_MC_LIST="$TKG_MC_LIST $cnm" || TKG_WC_LIST="$TKG_WC_LIST $cnm"
   
     [ "$dh2" -eq 1 ] && TKG_CLUSTER_TDHV2[$INDEX]="true" || TKG_CLUSTER_TDHV2[$INDEX]="false"
@@ -50,14 +53,19 @@ if [ -d $HOME/.tanzu-demo-hub/config ]; then
       TKG_CLUSTER_CONFIG[$INDEX]=$HOME/.tanzu-demo-hub/deployments/${mcn}/${dep}/${cnm}/${cnm}.cfg
       TKG_CLUSTER_KUBECONFIG[$INDEX]=$HOME/.tanzu-demo-hub/deployments/${mcn}/${dep}/${cnm}/${cnm}.kubeconfig
     else
+      TKG_CLUSTER_CONFIG_FILE=$(grep "TDH_TKGMC_NAME=${cnm}" $HOME/.tanzu-demo-hub/config/TDHenv-*.cfg | awk -F':' '{ print $1 }' | awk -F'/' '{ print $NF }')
       TKG_CLUSTER_NAME[$INDEX]="$cnm"
       TKG_CLUSTER_STATUS_MSG[$INDEX]="KUBERNETES-API-NOT-TESTED"
-      TKG_CLUSTER_CONFIG[$INDEX]=$HOME/.tanzu-demo-hub/config/${cnm}.cfg
+      TKG_CLUSTER_CONFIG[$INDEX]=$(grep "TDH_TKGMC_NAME=${cnm}" $HOME/.tanzu-demo-hub/config/TDHenv-*.cfg | awk -F':' '{ print $1 }' | awk -F'/' '{ print $NF }')
+      TKG_CLUSTER_CONFIG[$INDEX]=$HOME/.tanzu-demo-hub/config/${TKG_CLUSTER_CONFIG_FILE}
+
       TKG_CLUSTER_KUBECONFIG[$INDEX]=$HOME/.tanzu-demo-hub/config/${cnm}.kubeconfig
-      TKG_CLUSTER_COMMENT[$INDEX]="$(egrep 'TDH_TKGMC_COMMENTS' $HOME/.tanzu-demo-hub/config/${cnm}.cfg | awk -F '=' '{ print $2 }' | sed 's/"//g')"
+      TKG_CLUSTER_COMMENT[$INDEX]="$(egrep 'TDH_TKGMC_COMMENT' $HOME/.tanzu-demo-hub/config/${TKG_CLUSTER_CONFIG_FILE} | awk -F '=' '{ print $2 }' | sed 's/"//g')"
     fi
 
+    [ ! -s ${TKG_CLUSTER_CONFIG[$INDEX]} ] && continue
     vsp=$(egrep -c "TDH_TKGMC_INFRASTRUCTURE=vSphere|TDH_TKGMC_VSPHERE_NAMESPACE=" ${TKG_CLUSTER_CONFIG[$INDEX]})
+
     [ "$vsp" -gt 0 ] && TKG_CLUSTER_IS_VSPHERE[$INDEX]="true" || TKG_CLUSTER_IS_VSPHERE[$INDEX]="false"
     [ "$mgt" == "1" ] && TKG_CLUSTER_IS_MGMT[$INDEX]="true" || TKG_CLUSTER_IS_MGMT[$INDEX]="false"
   
@@ -82,7 +90,7 @@ if [ -d $HOME/.tanzu-demo-hub/config ]; then
           [ -s ${TKG_CLUSTER_CONFIG[$INDEX]} ] && . ${TKG_CLUSTER_CONFIG[$INDEX]}   ## READ ENVIRONMENT VARIABLES FROM CONFIG FILE
           export KUBECONFIG=$HOME/.kube/config
           export KUBECTL_VSPHERE_PASSWORD=$TDH_TKGMC_VSPHERE_PASS
-  
+
           [ -s $HOME/.kube/config ] && mv $HOME/.kube/config $HOME/.kube/config.old
   
           export KUBECONFIG=$HOME/.kube/config
