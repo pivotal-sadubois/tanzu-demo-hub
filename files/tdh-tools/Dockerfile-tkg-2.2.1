@@ -65,6 +65,10 @@ RUN apt-get update -qq && apt-get install -qqy \
     iptables
 RUN apt-get clean 
 
+# --- DOWNLOAD EKSCLI ---
+RUN curl -sL https://github.com/eksctl-io/eksctl/releases/latest/download/eksctl_Linux_amd64.tar.gz | (cd /usr/local/bin && tar xvfz -)
+RUN chmod a+x /usr/local/bin/eksctl
+
 # --- INSTALL TANZU-CLI
 RUN curl -sL https://baltocdn.com/helm/signing.asc | gpg --dearmor >> /etc/apt/trusted.gpg.d/baltocdn.gpg
 RUN curl -fsSL https://packages.vmware.com/tools/keys/VMWARE-PACKAGING-GPG-RSA-KEY.pub | gpg --dearmor >> /etc/apt/trusted.gpg.d/tanzu-archive-keyring.gpg
