@@ -169,8 +169,6 @@ if [ "$PROVIDER" == "VSPHERE_TKGS" ]; then
   tmcCheckLogin
   vSphereKubeconfig  
   vSphereLogin
-echo gaga
-exit
 
   cnt=$(tmc managementcluster list | grep -c "$TMC_DISPLAY_NAME") 
   if [ $cnt -eq 0 ]; then
