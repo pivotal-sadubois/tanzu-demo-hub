@@ -132,7 +132,11 @@ RUN add-apt-repository "deb https://baltocdn.com/helm/stable/debian/ all main"
 RUN apt-get install helm -y
 
 RUN apt-get update && apt-get install -y \
-    git vim azure-cli jq awscli 
+    git vim azure-cli jq 
+
+# --- INSTALL AWS CLIv2 ----
+RUN curl -q https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip 2>/dev/null -o /tmp/awscliv2.zip
+RUN unzip -q /tmp/awscliv2.zip -d /tmp && /tmp/aws/install
 
 # --- INSTALL TANZU UTILITIES ---
 #RUN install /tanzu/cli/core/v*/tanzu-core-linux_amd64 /usr/local/bin/tanzu
