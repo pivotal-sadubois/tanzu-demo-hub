@@ -308,7 +308,7 @@ if [ "$PROVIDER" == "VSPHERE_TKGS" ]; then
   echo "nodes[2]='best-effort-4xxlarge'"                                         >> $CONFIG_FILE
 
   cmdLoop kubectl get tkr > /tmp/output.txt 2>/dev/null
-  k8s=$(awk '{ printf("%s:%s:%s:%s:\n",$1,$2,$3,$4)}' /tmp/output.txt | grep ":True:True:" | egrep -v "ubuntu|fips" | sort -V | \
+  k8s=$(awk '{ printf("%s:%s:%s:%s:\n",$1,$2,$3,$4)}' /tmp/output.txt | grep ":True:True:" | egrep -v "ubuntu" | sort -V | \
         egrep ":${wc_k8s}+|:v${wc_k8s}+" | tail -1 | awk -F':' '{ print $1 }' | awk -F'-' '{ print $1 }' | sed 's/^v//g')
 
   CONFIG_FILE="$HOME/.tanzu-demo-hub/config/${TDH_ENVIRONMENT_NAME}.cfg"
