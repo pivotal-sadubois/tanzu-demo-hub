@@ -98,7 +98,7 @@ export TDH_REGISTRY_DOCKER_NAME='docker.io'
 #############################################################################################################################
 ################################### EXECUTING CODE WITHIN  TDH-TOOLS DOCKER CONTAINER  ######################################
 #############################################################################################################################
-runTDHtools "tkg" "$tdh_tools" "Deploying a new Demo Environment" "/home/tanzu/tanzu-demo-hub/$CMD_EXEC" "$CMD_ARGS"
+runTDHtools "tkg" "$tdh_tools" "Automated deployment of Tanzu Demo Environments" "/home/tanzu/tanzu-demo-hub/$CMD_EXEC" "$CMD_ARGS"
 
 # --- VERIFY TDH CONFIGURATION ---
 checkTDHsettings header

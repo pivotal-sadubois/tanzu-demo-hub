@@ -6355,14 +6355,14 @@ azureCloudLogin() {
 # Return Value .......: 0 = sucess, 1 = failed
 # ------------------------------------------------------------------------------------------
 deleteKubernetesClusters() { 
+  TDHV2_DEPLOYMENT=$(getYAML TDH_DEPLOYMENT)
   infra_typ="$(getYAML MC_INFTYP)"
   infra_env="$(getYAML MC_TKGENV)"
-  TDHV2_WORKLOAD_CLUSTER=$clu
-  TDHV2_DEPLOYMENT=$(getYAML TDH_DEPLOYMENT)
-  az_rgn="$(getYAML AZ_RESOURCE_GROUP)"
-  az_loc="$(getYAML AZ_LOCATION)"
     
   if [ "$infra_typ" == "Azure" ]; then
+    az_rgn="$(getYAML AZ_RESOURCE_GROUP)"
+    az_loc="$(getYAML AZ_LOCATION)"
+
     azureCloudLogin
     for TDHV2_WORKLOAD_CLUSTER in $(getYAML WC_CLUSTER_LIST); do
       az aks list --resource-group $az_rgn > /tmp/output.json 2>/dev/null
@@ -6412,7 +6412,34 @@ deleteKubernetesClusters() {
   fi
     
   if [ "$infra_typ" == "vSphere" ]; then 
-    echo "delete cluster"
+    vsphereSupervisorClusterLoginV2    $(getYAML MC_NAME)
+    setKubernetesContextV2             $(getYAML MC_KUBECONFIG)
+    for TDHV2_WORKLOAD_CLUSTER in $(getYAML WC_CLUSTER_LIST); do
+      messagePrint " ▪ Deleting TKG Cluster"               "$TDHV2_WORKLOAD_CLUSTER"
+
+      kubectl -n tanzu-demo-hub delete tkc $TDHV2_WORKLOAD_CLUSTER > /tmp/error.log 2>&1; ret=$?
+      if [ $ret -ne 0 ]; then
+        logMessages /tmp/error.log
+        echo "ERROR: failed to delete TKS Workload Cluster ($TDHV2_WORKLOAD_CLUSTER)"
+        if [ "$NATIVE" == "0" ]; then
+          echo "       => tools/${TDH_TOOLS}.sh"
+          echo "          tdh-tools:/$ kubectl -n tanzu-demo-hub delete tkc $TDHV2_WORKLOAD_CLUSTER"
+          echo "          tdh-tools:/$ exit"
+        else
+          echo "       => kubectl -n tanzu-demo-hub delete tkc $TDHV2_WORKLOAD_CLUSTER"
+        fi
+
+        exit 1
+      fi
+    done
+
+    TDH_DEPLOYMENT_PATH=$HOME/.tanzu-demo-hub/deployments/${TDHV2_MANAGEMENT_CLUSTER}/$TDHV2_DEPLOYMENT
+    if [ "$TDHV2_MANAGEMENT_CLUSTER" != "" -a "$TDH_DEPLOYMENT_PATH" != "/" ]; then 
+      messagePrint " ▪ Cleaning up Deployment Configuration"               "$TDH_DEPLOYMENT_PATH"
+      rm -rf $TDH_DEPLOYMENT_PATH
+    fi
+
+    messagePrint " ▪ Cleaning up Tanzu Demo Hub Deployment on vSphere"               "Completed"
   fi  
 
   echo
@@ -19818,7 +19845,7 @@ listClusterConfigV2() {
 
     dep=$(basename $deployment | sed 's/\.j2//g') 
   
-    printf "%-40s %-12s %-15s %-32s %-11s %s\n" $dep "${k8s}.x" "$des"
+    printf "%-40s %-12s %-s\n" $dep "${k8s}.x" "${des}"
   done
 
   messageLine
