@@ -3,17 +3,21 @@
 # File: ........: deployTDH
 # Language .....: bash
 # Author .......: Sacha Dubois, VMware
-# Description ..: Tanzu Demo Hub - Deploy TKG Workload Cluster
+# Description ..: Tanzu Demo Hub - Deploy Kubernetes Workload Cluster
 # ############################################################################################
+
+unset KUBECONFIG
 
 export TANZU_DEMO_HUB=$(cd "$(pwd)/$(dirname $0)"; pwd)
 export TDHPATH=$(cd "$(pwd)/$(dirname $0)"; pwd)
 export DEBUG=0
 export NATIVE=0
 export DEPLOY_TKG_CLEAN=0
-export TDHV2_MANAGEMENT_CLUSTER
+export TDHV2_DEPLOY_ENVIRONMENT
 export TDHV2_WORKLOAD_CLUSTER
+export TDHV2_MANAGEMENT_CLUSTER
 export TDHV2_DEPLOYMENT
+export TDHV2_DEPLOYMENT_FILE
 export TDHV2_DNS_SUBDOMAIN
 export TDH_USER=$USER
 
@@ -31,8 +35,8 @@ checkCLIcommands        BASIC
 
 usage() {
   echo ""
-  echo "USAGE: $0 [options] -m <management-cluster> -c <tdh-deployment> --subdomain <subdomain> [--debug]"
-  echo "            Options:  --delete                  # Delete Workload Cluster"
+  echo "USAGE: $0 [options] -e <deploy-environment> -c <deployment-config> -sd/--subdomain <subdomain> [--debug]"
+  echo "            Options:  --delete                  # Delete Workload Clusters and Cleanup"
   echo "                      --native                  # Use 'native' installed tools instead of the tdh-tools container"
   echo "                      --subdomain <domain>      # DNS Subdomain <subdomain>.<yourdomain>.com"
 
@@ -41,8 +45,9 @@ usage() {
 
 while [ "$1" != "" ]; do
   case $1 in
-    -m)            TDHV2_MANAGEMENT_CLUSTER=$2;;
-    -c)            TDHV2_DEPLOYMENT=$2;;
+    -e)            TDHV2_DEPLOY_ENVIRONMENT=$2;;
+    -c)            TDHV2_DEPLOYMENT_FILE=$2;;
+    -sd)           TDHV2_DNS_SUBDOMAIN=$2;;
     --subdomain)   TDHV2_DNS_SUBDOMAIN=$2;;
     --debug)       DEBUG=1;;
     --delete)      DEPLOY_TKG_CLEAN=1;;
@@ -51,39 +56,40 @@ while [ "$1" != "" ]; do
   shift
 done
 
-if [ "${TDHV2_MANAGEMENT_CLUSTER}" == "" -o "${TDHV2_DEPLOYMENT}" == "" -o "${TDHV2_DNS_SUBDOMAIN}" == "" ]; then
-  [ "${TDHV2_MANAGEMENT_CLUSTER}" == "" ] && listTKGmcV2
-  [ "${TDHV2_DEPLOYMENT}" == "" ] && listClusterConfigV2
+if [ "${TDHV2_DEPLOY_ENVIRONMENT}" == "" -o "${TDHV2_DEPLOYMENT_FILE}" == "" -o "${TDHV2_DNS_SUBDOMAIN}" == "" ]; then
+  [ "${TDHV2_DEPLOY_ENVIRONMENT}" == "" ] && listTDHenv
+  [ "${TDHV2_DEPLOYMENT_FILE}" == "" ] && listClusterConfigV2
 
   usage; exit 0
 fi
 
-[ -f $HOME/.tanzu-demo-hub/config/${TDHV2_MANAGEMENT_CLUSTER}.cfg ] && TDHV2_MANAGEMENT_CLUSTER=${TDHV2_MANAGEMENT_CLUSTER}
+[ -f $HOME/.tanzu-demo-hub/config/${TDHV2_DEPLOY_ENVIRONMENT}.cfg ] && TDHV2_DEPLOY_ENVIRONMENT=${TDHV2_DEPLOY_ENVIRONMENT}
 
 # --- VERIFY DEPLOYMENT ---
-if [ -f $HOME/.tanzu-demo-hub/config/${TDHV2_MANAGEMENT_CLUSTER}.cfg ]; then
-  TMC_DEPLOYMENT_CONFIG=${HOME}/.tanzu-demo-hub/config/${TDHV2_MANAGEMENT_CLUSTER}.cfg
+if [ -f $HOME/.tanzu-demo-hub/config/${TDHV2_DEPLOY_ENVIRONMENT}.cfg ]; then
+  TMC_DEPLOYMENT_CONFIG=${HOME}/.tanzu-demo-hub/config/${TDHV2_DEPLOY_ENVIRONMENT}.cfg
   TDH_TKGMC_NAME=$(egrep "^TDH_TKGMC_NAME=" $TMC_DEPLOYMENT_CONFIG | awk -F'=' '{ print $2 }' | sed 's/"//g')
   TDH_TKGMC_TOOLS_CONTAINER=$(egrep "^TDH_TKGMC_TOOLS_CONTAINER=" $TMC_DEPLOYMENT_CONFIG | awk -F'=' '{ print $2 }' | sed 's/"//g' | awk -F'-' '{ print $NF }')
   K8S_TKGMC=$(echo $TDH_TKGMC_TOOLS_CONTAINER | awk -F'.' '{ printf("%s.%s\n",$1,$2) }')
+  TDHV2_MANAGEMENT_CLUSTER=$TDH_TKGMC_NAME
 
-  . $HOME/.tanzu-demo-hub/config/${TDHV2_MANAGEMENT_CLUSTER}.cfg
+  . $HOME/.tanzu-demo-hub/config/${TDHV2_DEPLOY_ENVIRONMENT}.cfg
 else
-  echo "ERROR: Deployment file $TDHV2_MANAGEMENT_CLUSTER can not be found in the directory:"
+  echo "ERROR: Deployment file $TDHV2_DEPLOY_ENVIRONMENT can not be found in the directory:"
   echo "       $HOME/.tanzu-demo-hub/config"
   exit 1
 fi
 
-if [ -f $TDHPATH/deployments/${TDHV2_DEPLOYMENT}.j2 ]; then
- tdh_tools=$(head -10 $TDHPATH/deployments/${TDHV2_DEPLOYMENT}.j2 | yq -o json | jq -r '.tdh_deployment.tdh_tools')
+if [ -f $TDHPATH/deployments/${TDHV2_DEPLOYMENT_FILE}.j2 ]; then
+ tdh_tools=$(head -10 $TDHPATH/deployments/${TDHV2_DEPLOYMENT_FILE}.j2 | yq -o json | jq -r '.tdh_deployment.tdh_tools')
 else
-  echo "ERROR: Configuration file $TDHV2_MANAGEMENT_CLUSTER can not be found in the directory:"
+  echo "ERROR: Configuration file $TDHV2_DEPLOY_ENVIRONMENT can not be found in the directory:"
   echo "       $TDHPATH/deployments or $HOME/.tanzu-demo-hub/config"
   exit 1
 fi
 
-export TDHV2_MC_CONFIG=$HOME/.tanzu-demo-hub/config/${TDHV2_MANAGEMENT_CLUSTER}
-export TDHV2_WC_CONFIG=$HOME/.tanzu-demo-hub/config/${TDHV2_MANAGEMENT_CLUSTER}
+export TDHV2_MC_CONFIG=$HOME/.tanzu-demo-hub/config/${TDHV2_DEPLOY_ENVIRONMENT}
+export TDHV2_WC_CONFIG=$HOME/.tanzu-demo-hub/config/${TDHV2_DEPLOY_ENVIRONMENT}
 export TDHV2_SECRETS=$HOME/.tanzu-demo-hub
 export AWS_HOSTED_DNS_DOMAIN=$AWS_ROUTE53_DNS_DOMAIN
 export TDH_REGISTRY_VMWARE_NAME='registry.pivotal.io'
@@ -92,7 +98,7 @@ export TDH_REGISTRY_DOCKER_NAME='docker.io'
 #############################################################################################################################
 ################################### EXECUTING CODE WITHIN  TDH-TOOLS DOCKER CONTAINER  ######################################
 #############################################################################################################################
-runTDHtools "tkg" "$tdh_tools" "Deploy TKG Workload Cluster" "/home/tanzu/tanzu-demo-hub/$CMD_EXEC" "$CMD_ARGS"
+runTDHtools "tkg" "$tdh_tools" "Deploying a new Demo Environment" "/home/tanzu/tanzu-demo-hub/$CMD_EXEC" "$CMD_ARGS"
 
 # --- VERIFY TDH CONFIGURATION ---
 checkTDHsettings header
@@ -108,8 +114,6 @@ checkTDHsettings cert-manager
 
 # --- VERIFY TOOLS AND ACCESS ---
 clearConfigMapCache
-checkTanzuCLI
-checkCloudCLI
 checkCLIcommands TOOLS
 checkCLIcommands TKG
 checkCLIcommands TANZU
@@ -121,22 +125,22 @@ convertTDHsecrets
 createTDHdeployment
 
 #############################################################################################################################
+######################### DELETE TKG CLUSTER AND DETTACH TO TMC AND INSTALL TMC INTEGRATION #################################
+#############################################################################################################################
+if [ "$DEPLOY_TKG_CLEAN" -eq 1 ]; then 
+  deleteKubernetesClusters
+  exit 0
+fi
+
+#############################################################################################################################
 ######################### CREATE TKG CLUSTER AND ATTACH TO TMC AND INSTALL TMC INTEGRATION ##################################
 #############################################################################################################################
 for clu in $(getYAML WC_CLUSTER_LIST); do
-  TDHV2_WORKLOAD_CLUSTER=$clu
-
-  vsphereSupervisorClusterLoginV2    $(getYAML MC_NAME)
-  setKubernetesContextV2             $(getYAML MC_KUBECONFIG)
-  #tanzuConfigServerV2                $(getYAML MC_NAME)
-
-  setKubernetesContextV2             $(getYAML MC_KUBECONFIG)
-  tkgCreateClusterV2
-  tmcAttachClusterV2 
-  createTLSCertificateV2 $clu
+  createKubernetesCluster
 
   messageTitle "Tanzu Package Management"
   installPackageRepositories
+
   installTanzuPackageCertManager
   installTanzuPackageContour
   installTanzuPackageHarbor
@@ -157,5 +161,7 @@ done
 mergeKubeconfigFiles
 configureAppLiveView
 configureSupplyChainBasic
+
+messageTitle " *** Thank you for using Tanzu Demo Hub ***"
 
 exit

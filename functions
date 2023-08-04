@@ -940,6 +940,7 @@ checkTDHsettings() {
       fi
     fi
 
+    tanzu config eula accept > /dev/null 2>&1
     tanzu context list -o json > /tmp/output.json 2>/dev/null
     val=$(jq -r '.[] | select(.name == "tmc").name' /tmp/output.json 2>/dev/null)
     if [ "$val" != "tmc" ]; then 
@@ -1759,7 +1760,7 @@ checkCloudAccess() {
       #messagePrint " ▪ Azure Client Secret"          $(maskPassword "$AZURE_CLIENT_SECRET")
       messagePrint " ▪ Azure Region"                 "$AZURE_LOCATION"
 
-      az ad app list > /dev/null 2>&1
+      az group list > /dev/null 2>&1
       if [ $? -ne 0 ]; then
         echo "Please login to Microsoft Azure as described below:"
         az login --tenant $AZURE_TENANT_ID -o none
@@ -5003,6 +5004,172 @@ checkTMCcontext() {
 }
 
 # ------------------------------------------------------------------------------------------
+# Function Name ......: aksCreateCluster
+# Function Purpose ...: Install a Tanzu Kubernetes Grid Workload Cluster
+# ------------------------------------------------------------------------------------------
+# Argument ($1) ......: Workload Cluster Name
+# ------------------------------------------------------------------------------------------
+# Return Value .......: 0 - SUCCEED, 1 - FAILED
+# ------------------------------------------------------------------------------------------
+# References:
+# https://docs.vmware.com/en/VMware-vSphere/7.0/vmware-vsphere-with-tanzu/
+# ------------------------------------------------------------------------------------------
+aksCreateCluster() {
+  wc_nam="$TDHV2_WORKLOAD_CLUSTER"
+
+  wc_nam="$TDHV2_WORKLOAD_CLUSTER"
+  az_rgn="$(getYAML AZ_RESOURCE_GROUP)"
+  az_loc="$(getYAML AZ_LOCATION)"
+
+  wc_des="$(getYAML WC_DESCRIPTION $wc_nam)"
+  wc_k8s="$(getYAML WC_K8S_VERSION $wc_nam)"
+  wc_dep="$(getYAML TDH_DEPLOYMENT)"
+  mc_nam="$(getYAML MC_NAME)"
+
+  TDH_DEPLOYMENT_PATH=$HOME/.tanzu-demo-hub/deployments/${TDHV2_MANAGEMENT_CLUSTER}/$TDHV2_DEPLOYMENT/${wc_nam}
+  mkdir -p $TDH_DEPLOYMENT_PATH
+
+  messageTitle ""
+  messageTitle "Deploying AKS Cluster on Azure Datacenter"
+  messagePrint " ▪ Selecting Azure Datacenter"     "$az_loc"
+
+  cmdLoop az group list -o json > /tmp/output.json; ret=$?
+  arg=$(jq -r --arg key "$az_rgn" --arg loc "$az_loc" '.[] | select(.name == $key and .location == $loc).name' /tmp/output.json)
+
+  if [ "$arg" != "$az_rgn" ]; then 
+    messagePrint " ▪ Creating Resource Group"        "$az_rgn"
+    az group create --location $az_loc --resource-group $az_rgn > /tmp/error.log 2>&1; ret=$?
+    if [ $ret -ne 0 ]; then
+      logMessages /tmp/error.log
+      echo "ERROR: failed to create Azure Resource Group ($az_rgn) in Location ($az_loc)"
+      if [ "$NATIVE" == "0" ]; then
+        echo "       => tools/${TDH_TOOLS}.sh"
+        echo "          tdh-tools:/$ az group create --location $az_loc --resource-group $az_rgn"
+        echo "          tdh-tools:/$ exit"
+      else
+        echo "       => az group create --location $az_loc --resource-group $az_rgn"
+      fi   
+  
+      exit 1
+    fi 
+  else
+    messagePrint " ▪ Verify Resource Group"        "$az_rgn"
+  fi
+
+  messagePrint " ▪ AKS Workload Cluster Name"                           "${TDHV2_WORKLOAD_CLUSTER}"
+  messagePrint " ▪ AKS Workload Cluster Description"                    "${wc_des}"
+  messagePrint " ▪ AKS Workload Cluster Configuration"                  "deployments/${TDH_DEPLOYMENT_FILE}.j2"
+  messagePrint " ▪ AKS Workload Cluster Kubernetes Deployment File"     "\$HOME/.tanzu-demo-hub/deployments/${TDHV2_MANAGEMENT_CLUSTER}/$TDHV2_DEPLOYMENT/${wc_nam}/${wc_nam}.yaml"
+  messagePrint " ▪ AKS Workload Cluster Consolidated Config"            "\$HOME/.tanzu-demo-hub/deployments/${TDHV2_MANAGEMENT_CLUSTER}/$TDHV2_DEPLOYMENT/${wc_nam}/${wc_nam}.cfg"
+
+  k8s=$(az aks get-versions --location $az_loc | jq -r '.orchestrators[].orchestratorVersion' | grep "$wc_k8s" | tail -1)
+
+  wc_cnc="$(getYAML WC_CTRL_NODE_CNT $wc_nam)"
+  wc_cnt="$(getYAML WC_CTRL_NODE_TYP $wc_nam)"
+  wc_wnc="$(getYAML WC_WORK_NODE_CNT $wc_nam)"
+  wc_wnt="$(getYAML WC_WORK_NODE_TYP $wc_nam)"
+
+  wc_ccl="$(getYAML AKS_NODE_CLASS $wc_cnt)"
+  wc_wcl="$(getYAML AKS_NODE_CLASS $wc_wnt)"
+
+  messagePrint " ▪ AKS Workload Cluster Kubernetes Release"             "${k8s}"
+  messagePrint " ▪ AKS Workload Cluster Worker Node Class"              "${wc_wnt} ($wc_ccl)"
+  messagePrint " ▪ AKS Workload Cluster Worker Node Count"              "${wc_wnc}"
+  messagePrint " ▪ AKS Workload Cluster Control Plane Nodes Count"      "${wc_cnc}"
+  messagePrint " ▪ AKS Workload Cluster Control Plane Nodes Class"      "${wc_cnt} ($wc_wcl)"
+  messagePrint " ▪ AKS Workload Cluster SSH Private Key"                "\$HOME/.tanzu-demo-hub/deployments/${TDHV2_MANAGEMENT_CLUSTER}/$TDHV2_DEPLOYMENT/${TDHV2_WORKLOAD_CLUSTER}.private"
+  messagePrint " ▪ AKS Workload Cluster Deployment Details"             "\$HOME/.tanzu-demo-hub/deployments/${TDHV2_MANAGEMENT_CLUSTER}/$TDHV2_DEPLOYMENT/${TDHV2_WORKLOAD_CLUSTER}.json"
+  messagePrint " ▪ AKS Workload Cluster Kubernetes Config"              "\$HOME/.tanzu-demo-hub/deployments/${TDHV2_MANAGEMENT_CLUSTER}/$TDHV2_DEPLOYMENT/${TDHV2_WORKLOAD_CLUSTER}.kubeconfig"
+  messagePrint " ▪ Azure Cloud - TDH Environment Name"                  "${mc_nam}"
+  messagePrint " ▪ Azure Cloud - TDH Datacenter Location"               "${az_loc}"
+  messagePrint " ▪ Azure Cloud - TDH Resource Group Name"               "${az_rgn}"
+  messagePrint " ▪ Azure Cloud - TDH Configuration File"                "\$HOME/.tanzu-demo-hub/config/${mc_nam}.cfg"
+
+  cmdLoop az aks list --resource-group $az_rgn > /tmp/output.json
+  nam=$(jq -r --arg key "$TDHV2_WORKLOAD_CLUSTER" '.[] | select(.name == $key).name' /tmp/output.json )
+  if [ "$nam" == "" ]; then 
+    messagePrint " ▪ Azure Cloud - AKS Cluster ($wc_nam)"               "deploying cluster ....."
+    az aks create -g $az_rgn -n ${TDHV2_WORKLOAD_CLUSTER} --resource-group $az_rgn \
+                  --enable-managed-identity --node-count $wc_wnc --ssh-key-value $TDH_DEPLOYMENT_PATH/${wc_nam} \
+                  --enable-addons monitoring --enable-msi-auth-for-monitoring --generate-ssh-keys --node-vm-size $wc_wcl \
+                  --kubernetes-version $k8s > ${TDH_DEPLOYMENT_PATH}/${wc_nam}.json 2>/tmp/error.log; ret=$?
+
+    if [ ${ret} -eq 0 ]; then
+      messagePrint " ▪ AKS Workload Cluster Status"                 "Ready"
+    else
+      logMessages /tmp/error.log
+      echo "ERROR: failed to create AKS Worksload Cluster, Please try manually"
+      if [ "$NATIVE" == "0" ]; then
+        echo "       => tools/${TDH_TOOLS}.sh"
+        echo "          tdh-tools:/$ az aks create -g $az_rgn -n ${TDHV2_WORKLOAD_CLUSTER} --resource-group $az_rgn \\"
+        echo "          tdh-tools:/$     --enable-managed-identity --node-count $wc_wnc --ssh-key-value $TDH_DEPLOYMENT_PATH/${wc_nam} \\"
+        echo "          tdh-tools:/$     --enable-addons monitoring --enable-msi-auth-for-monitoring \\"
+        echo "          tdh-tools:/$     --generate-ssh-keys --node-vm-size $wc_wcl --kubernetes-version $k8s"
+        echo "          tdh-tools:/$ exit"
+      else
+        echo "       => az aks create -g $az_rgn -n ${TDHV2_WORKLOAD_CLUSTER} --resource-group $az_rgn \\"
+        echo "              --enable-managed-identity --node-count $wc_wnc --ssh-key-value $TDH_DEPLOYMENT_PATH/${wc_nam} \\"
+        echo "              --enable-addons monitoring --enable-msi-auth-for-monitoring \\"
+        echo "              --generate-ssh-keys --node-vm-size $wc_wcl --kubernetes-version $k8s"
+      fi
+      exit 1
+    fi
+
+    # --- RETRIEVE KUBECONFIG ---
+    rm -f $TDH_DEPLOYMENT_PATH/${wc_nam}.kubeconfig 
+    az aks get-credentials --resource-group $az_rgn --name ${TDHV2_WORKLOAD_CLUSTER} --admin --file $TDH_DEPLOYMENT_PATH/${wc_nam}.kubeconfig > /tmp/error.log 2>&1; ret=$?
+    if [ ${ret} -ne 0 ]; then
+      logMessages /tmp/error.log
+      echo "ERROR: Failed to retreive AKS Worksload Cluster Kubernetes credentials"
+      if [ "$NATIVE" == "0" ]; then
+        echo "       => tools/${TDH_TOOLS}.sh"
+        echo "          tdh-tools:/$ az aks get-credentials --resource-group $az_rgn --name ${TDHV2_WORKLOAD_CLUSTER} \\"
+        echo "          tdh-tools:/$     --admin --file $TDH_DEPLOYMENT_PATH/${wc_nam}.kubeconfig"
+        echo "          tdh-tools:/$ exit"
+      else
+        echo "       => az aks get-credentials --resource-group $az_rgn --name ${TDHV2_WORKLOAD_CLUSTER} \\"
+        echo "              --admin --file $TDH_DEPLOYMENT_PATH/${wc_nam}.kubeconfig"
+      fi
+      exit 1
+    fi
+
+    messagePrint " ▪ AKS Workload Cluster Status"                 "Ready"
+  else
+
+    # --- RETRIEVE KUBECONFIG ---
+    rm -f $TDH_DEPLOYMENT_PATH/${wc_nam}.kubeconfig 
+    az aks get-credentials --resource-group $az_rgn --name ${TDHV2_WORKLOAD_CLUSTER} --admin --file $TDH_DEPLOYMENT_PATH/${wc_nam}.kubeconfig > /tmp/error.log 2>&1; ret=$?
+    if [ ${ret} -ne 0 ]; then
+      logMessages /tmp/error.log
+      echo "ERROR: Failed to retreive AKS Worksload Cluster Kubernetes credentials"
+      if [ "$NATIVE" == "0" ]; then
+        echo "       => tools/${TDH_TOOLS}.sh"
+        echo "          tdh-tools:/$ az aks get-credentials --resource-group $az_rgn --name ${TDHV2_WORKLOAD_CLUSTER} \\"
+        echo "          tdh-tools:/$     --admin --file $TDH_DEPLOYMENT_PATH/${wc_nam}.kubeconfig"
+        echo "          tdh-tools:/$ exit"
+      else 
+        echo "       => az aks get-credentials --resource-group $az_rgn --name ${TDHV2_WORKLOAD_CLUSTER} \\"
+        echo "              --admin --file $TDH_DEPLOYMENT_PATH/${wc_nam}.kubeconfig"
+      fi
+      exit 1
+    fi
+
+    messagePrint " ▪ AKS Workload Cluster Status"                 "Ready"
+  fi
+
+  messageLine
+  echo "export KUBECONFIG=\$HOME/.tanzu-demo-hub/deployments/${TDHV2_MANAGEMENT_CLUSTER}/$TDHV2_DEPLOYMENT/${wc_nam}/${wc_nam}.kubeconfig"
+  echo "az aks delete -n ${TDHV2_WORKLOAD_CLUSTER} --resource-group $az_rgn --location $az_loc -y"
+  messageLine
+
+  export KUBECONFIG=$HOME/.tanzu-demo-hub/deployments/${TDHV2_MANAGEMENT_CLUSTER}/$TDHV2_DEPLOYMENT/${wc_nam}/${wc_nam}.kubeconfig
+  
+  #createClusterRoleBindingGroup  default-tkg-admin-privileged-binding "psp:vmware-system-privileged" "system:authenticated"
+#hoho
+}
+
+
+# ------------------------------------------------------------------------------------------
 # Function Name ......: tkgCreateClusterV2
 # Function Purpose ...: Install a Tanzu Kubernetes Grid Workload Cluster
 # ------------------------------------------------------------------------------------------
@@ -5975,25 +6142,34 @@ tkgInstallClusterExtensions() {
 }
 
 getYAML() {
-  mccfg=$HOME/.tanzu-demo-hub/deployments/${TDHV2_MANAGEMENT_CLUSTER}/$TDHV2_DEPLOYMENT/config.yml
+  infra_dep=$(sed -n '/^tdh_deployment/,/^tdh_environment/p' $TDHPATH/deployments/${TDHV2_DEPLOYMENT_FILE}.j2 | \
+              yq -o json | jq -r '.tdh_deployment.name') 
+
+  mccfg=$HOME/.tanzu-demo-hub/deployments/${TDHV2_MANAGEMENT_CLUSTER}/${infra_dep}/config.yml
   acsec=$HOME/.tanzu-demo-hub-secrets.yml
 
-  [ "$1" == "VC_SERVER" ] && yq -o json $mccfg | jq -r '.tkg_management_cluster.config.vcenter.server'
-  [ "$1" == "VC_SERVER_URL" ] && yq -o json $mccfg | jq -r '.tkg_management_cluster.config.vcenter.url'
-  [ "$1" == "VC_NAMESPACE" ] && yq -o json $mccfg | jq -r '.tkg_management_cluster.config.vsphere_namespace[0].name'
-  [ "$1" == "VC_STORAGE_CLASS" ] && yq -o json $mccfg | jq -r '.tkg_management_cluster.config.supervisor_cluster.storage_class'
-  [ "$1" == "VC_STORAGE_POLICY" ] && yq -o json $mccfg | jq -r '.tkg_management_cluster.config.supervisor_cluster.storage_policy'
-  [ "$1" == "VC_DNS_SERVER" ] && yq -o json $mccfg | jq -r '.tkg_management_cluster.config.network.dns_server'
-  [ "$1" == "VC_DNS_USER" ] && yq -o json $mccfg | jq -r '.tkg_management_cluster.config.network.dns_user'
-  [ "$1" == "VC_SUPERVISOR" ] && yq -o json $mccfg | jq -r '.tkg_management_cluster.config.supervisor_cluster.name'
-  [ "$1" == "VC_ADMIN_USER" ] && yq -o json $mccfg | jq -r '.tkg_management_cluster.config.vcenter.admin_user'
-  [ "$1" == "VC_ADMIN_PASS" ] && yq -o json $mccfg | jq -r '.tkg_management_cluster.config.vcenter.admin_pass'
+  [ "$1" == "VC_SERVER" ] && yq -o json $mccfg | jq -r '.tdh_infrastructure_configuration.config.vcenter.server'
+  [ "$1" == "VC_SERVER_URL" ] && yq -o json $mccfg | jq -r '.tdh_infrastructure_configuration.config.vcenter.url'
+  [ "$1" == "VC_NAMESPACE" ] && yq -o json $mccfg | jq -r '.tdh_infrastructure_configuration.config.vsphere_namespace[0].name'
+  [ "$1" == "VC_STORAGE_CLASS" ] && yq -o json $mccfg | jq -r '.tdh_infrastructure_configuration.config.supervisor_cluster.storage_class'
+  [ "$1" == "VC_STORAGE_POLICY" ] && yq -o json $mccfg | jq -r '.tdh_infrastructure_configuration.config.supervisor_cluster.storage_policy'
+  [ "$1" == "VC_DNS_SERVER" ] && yq -o json $mccfg | jq -r '.tdh_infrastructure_configuration.config.network.dns_server'
+  [ "$1" == "VC_DNS_USER" ] && yq -o json $mccfg | jq -r '.tdh_infrastructure_configuration.config.network.dns_user'
+  [ "$1" == "VC_SUPERVISOR" ] && yq -o json $mccfg | jq -r '.tdh_infrastructure_configuration.config.supervisor_cluster.name'
+  [ "$1" == "VC_ADMIN_USER" ] && yq -o json $mccfg | jq -r '.tdh_infrastructure_configuration.config.vcenter.admin_user'
+  [ "$1" == "VC_ADMIN_PASS" ] && yq -o json $mccfg | jq -r '.tdh_infrastructure_configuration.config.vcenter.admin_pass'
+  [ "$1" == "AZ_RESOURCE_GROUP" ] && yq -o json $mccfg | jq -r '.tdh_infrastructure_configuration.config.resourcwe_group'
+  [ "$1" == "AZ_LOCATION" ] && yq -o json $mccfg | jq -r '.tdh_infrastructure_configuration.config.location'
+  [ "$1" == "AZ_SUBSCRIPTION" ] && yq -o json $mccfg | jq -r '.tdh_infrastructure_configuration.credentials.subscription'
+  [ "$1" == "AZ_TENANT" ] && yq -o json $mccfg | jq -r '.tdh_infrastructure_configuration.credentials.tenant_id'
+  [ "$1" == "AZ_CLIENT" ] && yq -o json $mccfg | jq -r '.tdh_infrastructure_configuration.credentials.client_id'
+  [ "$1" == "AZ_CLIENT_SECRET" ] && yq -o json $mccfg | jq -r '.tdh_infrastructure_configuration.credentials.client_secret'
 
 #eeee
-  [ "$1" == "MC_NAME" ] && yq -o json $mccfg | jq -r '.tkg_management_cluster.name'
-  [ "$1" == "MC_INFTYP" ] && yq -o json $mccfg | jq -r '.tkg_management_cluster.infrastructure.type'
-  [ "$1" == "MC_TKGENV" ] && yq -o json $mccfg | jq -r '.tkg_management_cluster.infrastructure.env'
-  [ "$1" == "MC_KUBECONFIG" ] && yq -o json $mccfg | jq -r '.tkg_management_cluster.config_files.kubeconfig'
+  [ "$1" == "MC_NAME" ] && yq -o json $mccfg | jq -r '.tdh_infrastructure_configuration.name'
+  [ "$1" == "MC_INFTYP" ] && yq -o json $mccfg | jq -r '.tdh_infrastructure_configuration.infrastructure.type'
+  [ "$1" == "MC_TKGENV" ] && yq -o json $mccfg | jq -r '.tdh_infrastructure_configuration.infrastructure.env'
+  [ "$1" == "MC_KUBECONFIG" ] && yq -o json $mccfg | jq -r '.tdh_infrastructure_configuration.config_files.kubeconfig'
 
   # --- KUBERNETES CLUSTER OBJECTS ---
   [ "$1" == "TDH_DEPLOYMENT" ] && yq -o json $mccfg | jq -r '.tdh_deployment.name'
@@ -6039,7 +6215,6 @@ getYAML() {
   [ "$1" == "TAP_CATALOG_LOCATION_TARGET" ] && yq -o json $mccfg | jq -r --arg key "$2" --arg reg "$3"  \
     '.tdh_clusters[] | select(.name == $key).config.services.tap.catalog_locations[] | select(.name == $reg).target' 2>/dev/null
 
-#haha
   [ "$1" == "PACKAGE_LIST" ] && yq -o json $mccfg | jq -r --arg key "$2" --arg ins "$3" '.tdh_clusters[] | select(.name == $key).config.packages[].name'
   [ "$1" == "PACKAGE_NAME" ] && yq -o json $mccfg | jq -r --arg key "$2" --arg pkg "$3" --arg typ "$4" \
     '.tdh_clusters[] | select(.name == $key).config.packages[] | select(.package_id == $pkg and .package_manager == $typ).name'
@@ -6097,9 +6272,12 @@ getYAML() {
   [ "$1" == "WC_DNS_HOSTS" ] && yq -o json $mccfg | \
       jq -r --arg key "$2" --arg svc "$3" '.tdh_clusters[] | select(.name == $key).config.dns.tls.hosts[]'
 
-  [ "$1" == "WC_NODE_CLASS" -a "$3" == "S" ] && yq -o json $mccfg | jq -r --arg key "$2" '.tkg_management_cluster.config.vsphere_namespace[].vm_classes[0]'
-  [ "$1" == "WC_NODE_CLASS" -a "$3" == "M" ] && yq -o json $mccfg | jq -r --arg key "$2" '.tkg_management_cluster.config.vsphere_namespace[].vm_classes[1]'
-  [ "$1" == "WC_NODE_CLASS" -a "$3" == "L" ] && yq -o json $mccfg | jq -r --arg key "$2" '.tkg_management_cluster.config.vsphere_namespace[].vm_classes[2]'
+  [ "$1" == "WC_NODE_CLASS" -a "$3" == "S" ] && yq -o json $mccfg | jq -r --arg key "$2" '.tdh_infrastructure_configuration.config.vsphere_namespace[].vm_classes[0]'
+  [ "$1" == "WC_NODE_CLASS" -a "$3" == "M" ] && yq -o json $mccfg | jq -r --arg key "$2" '.tdh_infrastructure_configuration.config.vsphere_namespace[].vm_classes[1]'
+  [ "$1" == "WC_NODE_CLASS" -a "$3" == "L" ] && yq -o json $mccfg | jq -r --arg key "$2" '.tdh_infrastructure_configuration.config.vsphere_namespace[].vm_classes[2]'
+  [ "$1" == "AKS_NODE_CLASS" -a "$2" == "S" ] && yq -o json $mccfg | jq -r '.tdh_infrastructure_configuration.config.vm_classes[0]'
+  [ "$1" == "AKS_NODE_CLASS" -a "$2" == "M" ] && yq -o json $mccfg | jq -r '.tdh_infrastructure_configuration.config.vm_classes[1]'
+  [ "$1" == "AKS_NODE_CLASS" -a "$2" == "L" ] && yq -o json $mccfg | jq -r '.tdh_infrastructure_configuration.config.vm_classes[2]'
 
   ##########################################################################################################################################################
   ###################################################### CREDENTIALS #######################################################################################
@@ -6135,6 +6313,150 @@ setKubernetesContextV2() {
 }
 
 # ------------------------------------------------------------------------------------------
+# Function Name ......: azureCloudLogin
+# Function Purpose ...: Login into Azure Service Principal
+# ------------------------------------------------------------------------------------------
+# Argument ($1) ......: kubeconfig
+#          ($2) ......: none
+# ------------------------------------------------------------------------------------------
+# Return Value .......: 0 = sucess, 1 = failed
+# ------------------------------------------------------------------------------------------
+azureCloudLogin() {
+  az_sub="$(getYAML AZ_SUBSCRIPTION)"
+  az_ten="$(getYAML AZ_TENANT)"
+  az_cln="$(getYAML AZ_CLIENT)"
+  az_pwd="$(getYAML AZ_CLIENT_SECRET)"
+
+  messagePrint " ▪ Login to Azure Service Principal"               "$az_cln"
+
+  az login --service-principal --username $az_cln --password "$az_pwd" --tenant "${az_ten}" > /tmp/error.log 2>&1; ret=$?
+  if [ $ret -ne 0 ]; then
+    logMessages /tmp/error.log
+    echo "ERROR: failed to login with Service Principal"
+    if [ "$NATIVE" == "0" ]; then
+      echo "       => tools/${TDH_TOOLS}.sh"
+      echo "          tdh-tools:/$ az login --service-principal --username $az_cln --password \"$az_pwd\" --tenant \"${az_ten}\""
+      echo "          tdh-tools:/$ exit"
+    else
+      echo "       => az login --service-principal --username $az_cln --password \"$az_pwd\" --tenant \"${az_ten}\""
+    fi
+
+    exit 1
+  fi
+} 
+
+# ------------------------------------------------------------------------------------------
+# Function Name ......: deleteKubernetesClusters()
+# Function Purpose ...: Delete Kubernetes Clusters in specified environment
+# ------------------------------------------------------------------------------------------
+# Argument ($1) ......: none
+#          ($2) ......: none
+# ------------------------------------------------------------------------------------------
+# Return Value .......: 0 = sucess, 1 = failed
+# ------------------------------------------------------------------------------------------
+deleteKubernetesClusters() { 
+  infra_typ="$(getYAML MC_INFTYP)"
+  infra_env="$(getYAML MC_TKGENV)"
+  TDHV2_WORKLOAD_CLUSTER=$clu
+  TDHV2_DEPLOYMENT=$(getYAML TDH_DEPLOYMENT)
+  az_rgn="$(getYAML AZ_RESOURCE_GROUP)"
+  az_loc="$(getYAML AZ_LOCATION)"
+    
+  if [ "$infra_typ" == "Azure" ]; then
+    azureCloudLogin
+    for TDHV2_WORKLOAD_CLUSTER in $(getYAML WC_CLUSTER_LIST); do
+      az aks list --resource-group $az_rgn > /tmp/output.json 2>/dev/null
+      nam=$(jq -r --arg key "$TDHV2_WORKLOAD_CLUSTER" '.[] | select(.name == $key).name' /tmp/output.json )
+      if [ "$nam" != "" ]; then
+        messagePrint " ▪ Deleting AKS Cluster"               "$TDHV2_WORKLOAD_CLUSTER ($az_loc)"
+        az aks delete -n ${TDHV2_WORKLOAD_CLUSTER} --resource-group $az_rgn -y > /tmp/error.log 2>&1; ret=$?
+        if [ $ret -ne 0 ]; then
+          logMessages /tmp/error.log
+          echo "ERROR: failed to delete AKS Cluster: $TDHV2_WORKLOAD_CLUSTER"
+          if [ "$NATIVE" == "0" ]; then
+            echo "       => tools/${TDH_TOOLS}.sh"
+            echo "          tdh-tools:/$ az aks delete -n ${TDHV2_WORKLOAD_CLUSTER} --resource-group $az_rgn -y"
+            echo "          tdh-tools:/$ exit"
+          else
+            echo "       => az aks delete -n ${TDHV2_WORKLOAD_CLUSTER} --resource-group $az_rgn -y"
+          fi
+          
+          exit 1
+        fi  
+      fi
+    done
+
+    az group list -o json > /tmp/output.json; ret=$?
+    arg=$(jq -r --arg key "$az_rgn" --arg loc "$az_loc" '.[] | select(.name == $key and .location == $loc).name' /tmp/output.json)
+
+    if [ "$arg" == "$az_rgn" ]; then 
+      messagePrint " ▪ Deleting Azure Resource Group"               "$az_rgn ($az_loc)"
+
+      az group delete --resource-group $az_rgn -y > /tmp/error.log 2>&1; ret=$?
+      if [ $ret -ne 0 ]; then
+        logMessages /tmp/error.log
+        echo "ERROR: failed to delete Azure Resource Group: $az_rgn"
+        if [ "$NATIVE" == "0" ]; then
+          echo "       => tools/${TDH_TOOLS}.sh"
+          echo "          tdh-tools:/$ az group delete --resource-group $az_rgn"
+          echo "          tdh-tools:/$ exit"
+        else
+          echo "       => az group delete --resource-group $az_rgn"
+        fi
+
+        exit 1
+      fi
+    fi
+
+    messagePrint " ▪ Cleaning up Tanzu Demo Hub Deployment on Azure"               "Completed"
+  fi
+    
+  if [ "$infra_typ" == "vSphere" ]; then 
+    echo "delete cluster"
+  fi  
+
+  echo
+  messageTitle " *** Thank you for using Tanzu Demo Hub ***"
+
+}     
+
+
+# ------------------------------------------------------------------------------------------
+# Function Name ......: createKubernetesCluster()
+# Function Purpose ...: Create a Kubernetes Cluster in specified environment
+# ------------------------------------------------------------------------------------------
+# Argument ($1) ......: none
+#          ($2) ......: none
+# ------------------------------------------------------------------------------------------
+# Return Value .......: 0 = sucess, 1 = failed
+# ------------------------------------------------------------------------------------------
+createKubernetesCluster() {
+  infra_typ="$(getYAML MC_INFTYP)"
+  infra_env="$(getYAML MC_TKGENV)"
+  TDHV2_WORKLOAD_CLUSTER=$clu
+  TDHV2_DEPLOYMENT=$(getYAML TDH_DEPLOYMENT)
+
+  if [ "$infra_typ" == "Azure" ]; then
+    azureCloudLogin
+    aksCreateCluster
+    installClusterEssentialsV2
+    createTLSCertificateV2 $clu
+  fi
+
+  if [ "$infra_typ" == "vSphere" ]; then
+    vsphereSupervisorClusterLoginV2    $(getYAML MC_NAME)
+    setKubernetesContextV2             $(getYAML MC_KUBECONFIG)
+    #tanzuConfigServerV2               $(getYAML MC_NAME)
+
+    setKubernetesContextV2             $(getYAML MC_KUBECONFIG)
+    tkgCreateClusterV2
+    tmcAttachClusterV2  
+    createTLSCertificateV2 $clu
+  fi
+} 
+
+
+# ------------------------------------------------------------------------------------------
 # Function Name ......: tanzuConfigServerV2
 # Function Purpose ...: Add / Renuew Tanzu Config Server
 # ------------------------------------------------------------------------------------------
@@ -6145,6 +6467,11 @@ setKubernetesContextV2() {
 # ------------------------------------------------------------------------------------------
 tanzuConfigServerV2() {
   mc_nam=$1
+  cl_typ="$(getYAML MC_INFTYP)"
+  cl_env="$(getYAML MC_TKGENV)"
+
+  [ "$cl_typ" != "vSphere" -a "$cl_env" != "tkgs" ] && return
+
   str=$(tanzu config server list -o json | jq -r --arg key "$mc_nam" '.[] | select(.name == $key).name')
   if [ "$str" != "" ]; then
     vc_svc=$(getYAML VC_SERVER)
@@ -6192,7 +6519,14 @@ tanzuConfigServerV2() {
 # Return Value .......: 0 = sucess, 1 = failed
 # ------------------------------------------------------------------------------------------
 vsphereSupervisorClusterLoginV2() {
+  unset KUBECONFIG
+
   mc_nam="$1"
+  cl_typ="$(getYAML MC_INFTYP)"
+  cl_env="$(getYAML MC_TKGENV)"
+
+  [ "$cl_typ" != "vSphere" -a "$cl_env" != "tkgs" ] && return
+
   vc_svc="$(getYAML VC_SUPERVISOR)"
   vc_pas="$(getYAML VC_ADMIN_PASS)"
   vc_usr="$(getYAML VC_ADMIN_USER)"
@@ -7038,9 +7372,6 @@ mergeKubeconfigFiles() {
   TDH_HARBOR_REGISTRY_DNS_HARBOR=$(getYAML TAP_LOCAL_REGISTRY_SERVER $TDHV2_WORKLOAD_CLUSTER "local_registry")
   TDH_HARBOR_REGISTRY_ADMIN_PASSWORD="$(getYAML TAP_LOCAL_REGISTRY_PASS $TDHV2_WORKLOAD_CLUSTER 'local_registry')"
   docker login $TDH_HARBOR_REGISTRY_DNS_HARBOR -u admin -p $TDH_HARBOR_REGISTRY_ADMIN_PASSWORD > /tmp/error.log 2>&1; ret=$?
-
-echo "RET:$ret"
-#ooooooooooo
 } 
 
 # ------------------------------------------------------------------------------------------                                       
@@ -7098,6 +7429,7 @@ installTAPV2() {
   #########################################################################################################################
   if [ "$TAP_ROLE" == "full" ]; then 
     TDH_SERVICE_TAP_IMAGE_RELOCATION=$(getConfigMap tanzu-demo-hub TDH_SERVICE_TAP_IMAGE_RELOCATION)
+TDH_SERVICE_TAP_IMAGE_RELOCATION=""
     if [ "$TDH_SERVICE_TAP_IMAGE_RELOCATION" == "" -o "$TDH_SERVICE_TAP_IMAGE_RELOCATION" == "null" ]; then
       messagePrint " ▪ Create helper container for image relocation" "docker.io/sadubois/tdh-tools-carvel-carvel-1.6.1:latest"
       dockerPullSecret default
@@ -7243,6 +7575,7 @@ installTAPV2() {
     messagePrint " ▪ Verify registry secret (registry-credentials)" "$INSTALL_REGISTRY_HOSTNAME"
   fi
 
+echo "gaga TAP_VERSION:$TAP_VERSION"
   TanzuPackage_AddRepo       $NAMESPACE tanzu-tap-repository ${INSTALL_REGISTRY_HOSTNAME}/library/tap-packages:$TAP_VERSION
   TanzuPackage_RepoSync      $NAMESPACE
 
@@ -7617,7 +7950,7 @@ installTAPV2() {
     #echo "  use_cert_manager: \"true\""                                                                                           >> $TAP_CONFIG
     #echo "  tls:"                                                                                                                 >> $TAP_CONFIG
     #echo "    namespace: tdh-cert-admin"                                                                                          >> $TAP_CONFIG
-    #echo "    secretName: $TLS_SECRET"                                                                                     >> $TAP_CONFIG
+    #echo "    secretName: $TLS_SECRET"                                                                                            >> $TAP_CONFIG
     #echo ""                                                                                                                       >> $TAP_CONFIG
 
     echo "tap_gui:"                                                                                                               >> $TAP_CONFIG
@@ -7630,6 +7963,8 @@ installTAPV2() {
     echo "    namespace: tdh-cert-admin"                                                                                          >> $TAP_CONFIG
     echo ""                                                                                                                       >> $TAP_CONFIG
     echo "  app_config:"                                                                                                          >> $TAP_CONFIG
+    echo "    auth:"                                                                                                              >> $TAP_CONFIG
+    echo "      allowGuestAccess: true"                                                                                           >> $TAP_CONFIG
     echo "    organization:"                                                                                                      >> $TAP_CONFIG
     echo "      name: $organization"                                                                                              >> $TAP_CONFIG
     echo "    app:"                                                                                                               >> $TAP_CONFIG
@@ -7772,8 +8107,6 @@ installTAPV2() {
   echo $CLUSTER_TOKEN > $HOME/.tanzu-demo-hub/$TDH_DEPLOYMENT_PATH/tap_cluster_token.cfg
 }
 
-#ppppppppppppp
-
 # ------------------------------------------------------------------------------------------
 # Function Name ......: configureSupplyChainBasic
 # Function Purpose ...: Install the Basic Supply Chain to the Cluster
@@ -7852,15 +8185,17 @@ configureSupplyChainBasic() {
 # https://docs.vmware.com/en/VMware-Tanzu-Application-Platform/1.5/tap/tap-gui-cluster-view-setup.html
 # ------------------------------------------------------------------------------------------
 configureAppLiveView() {
-  tap_gui=""
+  dep_typ=$(getYAML TDH_DEPLOYMENT_TYPE)
 
+  [ "${dep_typ}" != "tap-multicluster" ] && return
+
+  tap_gui=""
   first=1; cnt=1
   for clu in $(getYAML WC_CLUSTER_LIST); do
     TDHV2_WORKLOAD_CLUSTER=$clu
     tap_enb=$(getYAML SERVICE_TAP_ENABLED $TDHV2_WORKLOAD_CLUSTER)                                                                  
     dep_typ=$(getYAML SERVICE_TAP_TYPE $TDHV2_WORKLOAD_CLUSTER)
     [ "$tap_enb" == "null" -o "$tap_enb" == "" -o "$dep_typ" != "multi_node_tap" ] && continue  
-#jojo
 
     tap_rol=$(getYAML SERVICE_TAP_ROLE $TDHV2_WORKLOAD_CLUSTER)
     [ "${tap_rol}" == "full" ] && tap_gui=$TDHV2_WORKLOAD_CLUSTER
@@ -10292,6 +10627,63 @@ echo "helm registry login registry.tanzu.vmware.com --username=$TDH_REGISTRY_VMW
   uodateConfigMap tanzu-demo-hub TDH_SERVICE_TANZU_DATA_POSTGRES_VALIDATED      "$CURRENT_DATE"
 }
 
+# ------------------------------------------------------------------------------------------
+# Function Name ......: installClusterEssentialsV2
+# Function Purpose ...: Installing Tanzu Cluster Essentials
+# ------------------------------------------------------------------------------------------ 
+# Argument ($1) ......: None
+# ------------------------------------------------------------------------------------------
+# Return Value .......: Status (HEALTY, DETACHING, FAILED)
+# ------------------------------------------------------------------------------------------
+# https://docs.vmware.com/en/Cluster-Essentials-for-VMware-Tanzu/1.6/cluster-essentials/deploy.html
+# ------------------------------------------------------------------------------------------
+# IMPORTANT: If you are using a VMware Tanzu Kubernetes Grid cluster, you do not need to
+#            install Cluster Essentials because the contents of Cluster Essentials are
+#            already installed on your cluster.
+# ------------------------------------------------------------------------------------------
+installClusterEssentialsV2() {
+
+  cnt=$(kubectl get pods -n kapp-controller 2>/dev/null | egrep "^kapp-controller" | grep -c "Running")
+echo "CNT:$cnt"
+  if [ $cnt -eq 0 ]; then 
+    messagePrint " ▪ Install Tanzu Cluster Essentials" "namespace/kapp-controller"
+
+    export INSTALL_BUNDLE=registry.tanzu.vmware.com/tanzu-cluster-essentials/cluster-essentials-bundle@sha256:54e516b5d088198558d23cababb3f907cd8073892cacfb2496bb9d66886efe15
+    IMGPKG_REGISTRY_HOSTNAME=registry.tanzu.vmware.com 
+    IMGPKG_REGISTRY_USERNAME=$TDH_REGISTRY_VMWARE_USER
+    IMGPKG_REGISTRY_PASSWORD=$TDH_REGISTRY_VMWARE_PASS
+
+    export TDH_REGISTRY_VMWARE_NAME=registry.tanzu.vmware.com
+    messagePrint " ▪ Verify VMware Registry Access" "$TDH_REGISTRY_VMWARE_NAME"
+    messagePrint "   Registry User"                 "$TDH_REGISTRY_VMWARE_USER"
+    messagePrint "   Registry Password"             "$(maskPassword \"$TDH_REGISTRY_VMWARE_PASS\")"
+
+    cnt=0; ret=1
+    while [ $ret -ne 0 -a $cnt -lt 5 ]; do
+      docker login $TDH_REGISTRY_VMWARE_NAME -u $TDH_REGISTRY_VMWARE_USER -p $TDH_REGISTRY_VMWARE_PASS > /tmp/error 2>&1; ret=$?
+      sleep 10
+      let cnt=cnt+1
+    done
+
+    export INSTALL_BUNDLE=registry.tanzu.vmware.com/tanzu-cluster-essentials/cluster-essentials-bundle@sha256:54e516b5d088198558d23cababb3f907cd8073892cacfb2496bb9d66886efe15
+    export INSTALL_REGISTRY_HOSTNAME=registry.tanzu.vmware.com
+    export INSTALL_REGISTRY_USERNAME=$IMGPKG_REGISTRY_USERNAME
+    export INSTALL_REGISTRY_PASSWORD=$IMGPKG_REGISTRY_PASSWORD
+
+    [ -d /tmp/cluster-essentials ] && rm -rf /tmp/cluster-essentials
+    cp -r /tanzu-tap/cluster-essentials /tmp
+    (cd /tmp/cluster-essentials && ./install.sh --yes > /tmp/error.log 2>&1) 
+
+    sleep 10
+
+    cnt=$(kubectl get pods -n kapp-controller | egrep "^kapp-controller" | grep -c "Running")
+  else
+    messagePrint " ▪ Verify Tanzu Cluster Essentials" "namespace/kapp-controller"
+  fi
+
+#hoho
+
+}
 
 # ------------------------------------------------------------------------------------------
 # Function Name ......: installClusterEssentials
@@ -10301,7 +10693,7 @@ echo "helm registry login registry.tanzu.vmware.com --username=$TDH_REGISTRY_VMW
 # ------------------------------------------------------------------------------------------
 # Return Value .......: Status (HEALTY, DETACHING, FAILED)
 # ------------------------------------------------------------------------------------------
-# https://tanzu.vmware.com/developer/guides/tanzu-application-platform-local-devloper-install/
+# https://docs.vmware.com/en/Cluster-Essentials-for-VMware-Tanzu/1.6/cluster-essentials/deploy.html
 # ------------------------------------------------------------------------------------------
 # IMPORTANT: If you are using a VMware Tanzu Kubernetes Grid cluster, you do not need to 
 #            install Cluster Essentials because the contents of Cluster Essentials are 
@@ -13923,17 +14315,57 @@ tdh_tools_build() {
   if [ "$TDH_SERVICE_TAP_VERSION" != "" ]; then 
     [ ! -d $TDH_DOCKER_CACHE/tap-$TDH_SERVICE_TAP_VERSION ] && mkdir -p $TDH_DOCKER_CACHE/tap-$TDH_SERVICE_TAP_VERSION
 
-    # --- DOWNLOAD TANZU FRAMEWORK ---
-    TAC_PRODUCT_SLUG="tanzu-application-platform"
-    TAC_PRODUCT_FILE="tanzu-framework-linux-amd64"
-    TAC_PRODUCT_VERS="$TDH_TAP_TANZU_FRAMEWORK"
-    TAC_PRODUCT_PNID="$TDH_TAP_TANZU_FRAMEWORK_PIVNET_ID"
+    tap_minor=$(echo $TDH_SERVICE_TAP_VERSION | awk -F'.' '{ print $2 }') 
+    if [ $tap_minor -le 5 ]; then 
+      # --- DOWNLOAD TANZU FRAMEWORK ---
+      TAC_PRODUCT_SLUG="tanzu-application-platform"
+      TAC_PRODUCT_FILE="tanzu-framework-linux-amd64"
+      TAC_PRODUCT_VERS="$TDH_TAP_TANZU_FRAMEWORK"
+      TAC_PRODUCT_PNID="$TDH_TAP_TANZU_FRAMEWORK_PIVNET_ID"
+      if [ ! -e $TDH_DOCKER_CACHE/tap-$TDH_SERVICE_TAP_VERSION/${TAC_PRODUCT_FILE}-${TAC_PRODUCT_VERS}.tar ]; then
+        pid=$(pivnetAPI $PCF_PIVNET_TOKEN GET products/$TAC_PRODUCT_SLUG/releases 2> /dev/null | \
+                 jq -r --arg key "$TDH_SERVICE_TAP_VERSION" '.releases[] | select(.version == $key).id')
+
+        pivnetAPIdownload $PCF_PIVNET_TOKEN $TAC_PRODUCT_SLUG $pid $TAC_PRODUCT_PNID ${TAC_PRODUCT_FILE}.tar > /tmp/error.log 2>&1
+        if [ ! -s /tmp/${TAC_PRODUCT_FILE}.tar ]; then
+          logMessages /tmp/error.log
+          echo "ERROR: failed to download file ${TAC_PRODUCT_FILE}.tar"
+          if [ "$NATIVE" == "0" ]; then
+            echo "       => tools/${TDH_TOOLS}.sh"
+            echo "          tdh-tools:/$ pivnetAPIdownload $PCF_PIVNET_TOKEN $TAC_PRODUCT_SLUG $pid $TDH_TANZU_FRAMEWORK_PIVNET_ID ${TAC_PRODUCT_FILE}.tar"
+            echo "          tdh-tools:/$ exit"
+          else
+            echo "       => pivnetAPIdownload $PCF_PIVNET_TOKEN $TAC_PRODUCT_SLUG $pid $TDH_TANZU_FRAMEWORK_PIVNET_ID ${PRODUCT_FILE}.tar"
+          fi
+  
+          exit 1
+        else
+          mv /tmp/${TAC_PRODUCT_FILE}.tar $TDH_DOCKER_CACHE/tap-$TDH_SERVICE_TAP_VERSION/${TAC_PRODUCT_FILE}-${TAC_PRODUCT_VERS}.tar
+          rm -f $TDH_DOCKER_CACHE/tap-$TDH_SERVICE_TAP_VERSION/${TAC_PRODUCT_FILE}.tar
+          ln -s ${TAC_PRODUCT_FILE}-${TAC_PRODUCT_VERS}.tar $TDH_DOCKER_CACHE/tap-$TDH_SERVICE_TAP_VERSION/${TAC_PRODUCT_FILE}.tar
+        fi
+  
+        REBUILD_REQUIRED_SOFTWARE=1       ## REBUILD REQUIRED BECAUSE OF SOFTWARE CHANGE
+      fi
+  
+      (cd $TDH_DOCKER_FILES && tar xf $TDH_DOCKER_CACHE/tap-$TDH_SERVICE_TAP_VERSION/${TAC_PRODUCT_FILE}.tar)
+      rm -rf $TDH_DOCKER_FILES/clitap
+      mv $TDH_DOCKER_FILES/cli $TDH_DOCKER_FILES/clitap
+      find $TDH_DOCKER_FILES/clitap -type d -exec chmod 777 {} \; 2> /dev/null
+      chmod -R a+r $TDH_DOCKER_FILES/clitap 2>/dev/null
+    fi
+
+    # --- DOWNLOAD TANZU CLUSTER ESSENTIALS ---
+    TAC_PRODUCT_SLUG="tanzu-cluster-essentials"
+    TAC_PRODUCT_FILE="tanzu-cluster-essentials-linux-amd64"
+    TAC_PRODUCT_VERS="$CLUSTER_ESSENTIALS"
+    TAC_PRODUCT_PNID="$CLUSTER_ESSENTIALS_PIVNET_ID"
     if [ ! -e $TDH_DOCKER_CACHE/tap-$TDH_SERVICE_TAP_VERSION/${TAC_PRODUCT_FILE}-${TAC_PRODUCT_VERS}.tar ]; then
       pid=$(pivnetAPI $PCF_PIVNET_TOKEN GET products/$TAC_PRODUCT_SLUG/releases 2> /dev/null | \
                jq -r --arg key "$TDH_SERVICE_TAP_VERSION" '.releases[] | select(.version == $key).id')
 
       pivnetAPIdownload $PCF_PIVNET_TOKEN $TAC_PRODUCT_SLUG $pid $TAC_PRODUCT_PNID ${TAC_PRODUCT_FILE}.tar > /tmp/error.log 2>&1
-      if [ ! -s /tmp/${TAC_PRODUCT_FILE}.tar ]; then 
+      if [ ! -s /tmp/${TAC_PRODUCT_FILE}.tar ]; then
         logMessages /tmp/error.log
         echo "ERROR: failed to download file ${TAC_PRODUCT_FILE}.tar"
         if [ "$NATIVE" == "0" ]; then
@@ -13954,12 +14386,11 @@ tdh_tools_build() {
       REBUILD_REQUIRED_SOFTWARE=1       ## REBUILD REQUIRED BECAUSE OF SOFTWARE CHANGE
     fi
 
-    (cd $TDH_DOCKER_FILES && tar xf $TDH_DOCKER_CACHE/tap-$TDH_SERVICE_TAP_VERSION/${TAC_PRODUCT_FILE}.tar) 
-    rm -rf $TDH_DOCKER_FILES/clitap
-    mv $TDH_DOCKER_FILES/cli $TDH_DOCKER_FILES/clitap
-    find $TDH_DOCKER_FILES/clitap -type d -exec chmod 777 {} \; 2> /dev/null
-    chmod -R a+r $TDH_DOCKER_FILES/clitap 2>/dev/null
+    [ -d $TDH_DOCKER_FILES/cluster-essentials ] && rm -rf $TDH_DOCKER_FILES/cluster-essentials 
+    [ ! -d $TDH_DOCKER_FILES/cluster-essentials ] && mkdir -p $TDH_DOCKER_FILES/cluster-essentials
+    (cd $TDH_DOCKER_FILES/cluster-essentials && tar xf $TDH_DOCKER_CACHE/tap-$TDH_SERVICE_TAP_VERSION/${TAC_PRODUCT_FILE}.tar)
 
+   if [ 1 -eq 0 ]; then 
     # --- DOWNLOAD TANZU FRAMEWORK ---
     TAC_PRODUCT_SLUG="tanzu-application-platform"
     TAC_PRODUCT_FILE="tap-gui-blank-catalog"
@@ -13994,7 +14425,9 @@ tdh_tools_build() {
     (cd $TDH_DOCKER_FILES && tar xf $TDH_DOCKER_CACHE/tap-$TDH_SERVICE_TAP_VERSION/${TAC_PRODUCT_FILE}.tgz)
     find $TDH_DOCKER_FILES/blank -type d -exec chmod 777 {} \; 2>/dev/null
     chmod -R a+r $TDH_DOCKER_FILES/blank_catalog 2>/dev/null
+   fi
 
+   if [ 1 -eq 0 ]; then 
     # --- DOWNLOAD TANZU FRAMEWORK ---
     TAC_PRODUCT_SLUG="tanzu-application-platform"
     TAC_PRODUCT_FILE="tap-gui-yelb-catalog"
@@ -14029,8 +14462,45 @@ tdh_tools_build() {
     (cd $TDH_DOCKER_FILES && tar xf $TDH_DOCKER_CACHE/tap-$TDH_SERVICE_TAP_VERSION/${TAC_PRODUCT_FILE}.tgz)
     find $TDH_DOCKER_FILES/yelb-catalog -type d -exec chmod 777 {} \; 2>/dev/null
     chmod -R a+r $TDH_DOCKER_FILES/yelb_catalog 2>/dev/null
+   fi
   fi
 
+  # --- H2O BINARY ---
+  filename="h2o_Linux_x86_64"
+  if [ ! -s $TDH_DOCKER_CACHE/h2o/${filename}-$H2O_CLI ]; then
+    TDH_TANZU_MISSION_CONTROL_REGISTRATION=true
+    tmcCheckLogin --noverify
+
+    # --- DOWNLOAD TMC CLI ---
+    curl -L https://build-artifactory.eng.vmware.com/artifactory/h2o-local/cli/$H2O_CLI/linux/h2o \
+         -o /tmp/${filename}-$H2O_CLI > /tmp/error.log 2>&1
+    if [ ! -s /tmp/${filename}-$H2O_CLI ]; then
+      logMessages /tmp/error.log
+      echo "ERROR: failed to download clusterctl binary"
+      if [ "$NATIVE" == "0" ]; then
+        echo "       => tools/${TDH_TOOLS}.sh"
+        echo "          tdh-tools:/$ curl -L https://build-artifactory.eng.vmware.com/ui/native/h2o-local/cli/$H2O_CLI/linux/h2o"
+        echo "          tdh-tools:/$ exit"
+      else
+        echo "       => curl -L https://build-artifactory.eng.vmware.com/ui/native/h2o-local/cli/$H2O_CLI/linux/h2o"
+      fi
+    
+      exit 1
+    else 
+      [ ! -d $TDH_DOCKER_CACHE/h2o ] && mkdir -p $TDH_DOCKER_CACHE/h2o
+      mv /tmp/${filename}-$H2O_CLI $TDH_DOCKER_CACHE/h2o/${filename}-$H2O_CLI
+      cp $TDH_DOCKER_CACHE/h2o/${filename}-$H2O_CLI $TDH_DOCKER_FILES/h2o && chmod a+x $TDH_DOCKER_FILES/h2o
+
+      [ -L $TDH_DOCKER_CACHE/h2o/${filename} ] && rm -f $TDH_DOCKER_CACHE/h2o/${filename}
+      ln -s ${filename}-${H2O_CLI} $TDH_DOCKER_CACHE/h2o/${filename}
+    fi
+
+    REBUILD_REQUIRED_SOFTWARE=1       ## REBUILD REQUIRED BECAUSE OF SOFTWARE CHANGE
+  else  
+    cp $TDH_DOCKER_CACHE/h2o/${filename}-$H2O_CLI $TDH_DOCKER_FILES/h2o
+    chmod a+x $TDH_DOCKER_FILES/h2o
+  fi      
+          
   # --- TANZU MISSION CONTROL BINARY ---
   if [ ! -s $TDH_DOCKER_CACHE/tmc-$TMC_CLI/tmc-linux-$TMC_CLI ]; then 
     TDH_TANZU_MISSION_CONTROL_REGISTRATION=true
@@ -14435,6 +14905,7 @@ tdh_tools_build() {
       mv /tmp/govc $TDH_DOCKER_CACHE/govc/${filename}-${TDH_GOVC}
       [ -L $TDH_DOCKER_CACHE/govc/govc ] && rm -f $TDH_DOCKER_CACHE/govc/govc
       ln -s ${filename}-${TDH_GOVC} $TDH_DOCKER_CACHE/govc/govc
+#haha
     fi
 
     REBUILD_REQUIRED_SOFTWARE=1       ## REBUILD REQUIRED BECAUSE OF SOFTWARE CHANGE
@@ -16470,6 +16941,7 @@ installTanzuPackageCertManager() {
   PACKAGE_NAMESPACE="$(getYAML PACKAGE_NAMESPACE $TDHV2_WORKLOAD_CLUSTER $PACKAGE_ID tanzu)"
   PACKAGE_REPO="$(getYAML PACKAGE_REPO $TDHV2_WORKLOAD_CLUSTER $PACKAGE_ID tanzu)"
 
+
   # --- CHECK IF PACKAGE IS CONFIGURED IN THE DEPLOYMENT ---
   [ "$PACKAGE_ID" != "$(getYAML PACKAGE_ID $TDHV2_WORKLOAD_CLUSTER $PACKAGE_ID tanzu)" ] && return 0
     
@@ -16630,10 +17102,10 @@ installTanzuPackageCertManager() {
       messageLine
       if [ "$NATIVE" == "0" ]; then
         echo "       => tools/${TDH_TOOLS}.sh"
-        echo "          tdh-tools:/$ tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $PACKAGE_NAMESPACE --version $package_ver --create-namespace"
+        echo "          tdh-tools:/$ tanzu package install $PACKAGE_NAME -p $PACKAGE_ID --namespace $PACKAGE_NAMESPACE --version $package_ver"
         echo "          tdh-tools:/$ exit"
       else
-        echo "       => tanzu package install $PACKAGE_NAME --package-name $PACKAGE_ID --namespace $PACKAGE_NAMESPACE --version $package_ver --create-namespace"
+        echo "       => tanzu package install $PACKAGE_NAME -p $PACKAGE_ID --namespace $PACKAGE_NAMESPACE --version $package_ver"
       fi
 
       exit 1
@@ -16662,7 +17134,6 @@ installTanzuPackageCertManagerOld() {
   PACKAGE_NAME="cert-manager"
   PACKAGE_NAMESPACE="$1"
   INSTALL_NAMESPACE="cert-manager"
-#haha
 
   # --- CHECK IF PACKAGE IS CONFIGURED IN THE DEPLOYMENT ---
   [ "$PACKAGE_ID" != "$(getYAML PACKAGE_ID $TDHV2_WORKLOAD_CLUSTER $PACKAGE_ID tanzu)" ] && return 0
@@ -19200,28 +19671,39 @@ listTMCDeployments() {
 }
 
 # ------------------------------------------------------------------------------------------
-# Function Name ......: listTKGmcV2
+# Function Name ......: listTDHenv
 # Function Purpose ...: List TMC Deploymnets
 # ------------------------------------------------------------------------------------------
 # Argument ($1) ......: n/a
 # ------------------------------------------------------------------------------------------
 # Return Value .......: 0 - SUCCEED, 1 - FAILED
 # ------------------------------------------------------------------------------------------
-listTKGmcV2() {
+listTDHenv() {
   echo
-  printf "%-40s %-7s %7s %8s  %s\n" "TKG MANAGEMENT-CLUSTER" "CLOUD" "K8S" "VERSION" "STATUS"
+  echo "                                         CLOUD        KUBERNETES"
+  printf "%-40s %-12s %-17s %-75s  %s\n" "TDH DEPLOY EMVIRONMENT" "ENVIRONMNET" "PROVIDER/VERSION" "DESCRIPTION" "STATUS"
   messageLine
 
-  for deployment in $(ls -1 $HOME/.tanzu-demo-hub/config/tkgmc*.cfg $HOME/.tanzu-demo-hub/config/tcemc*.cfg 2>/dev/null ); do
+  for deployment in $(ls -1 $HOME/.tanzu-demo-hub/config/TDHenv*.cfg 2>/dev/null ); do
     TDH_TKGMC_INFRASTRUCTURE=$(egrep "^TDH_TKGMC_INFRASTRUCTURE=" $deployment | awk -F'=' '{ print $2 }' | sed 's/"//g')
-    TDH_TKGMC_ENVNAME=$(egrep "^TDH_TKGMC_ENVNAME=" $deployment | awk -F'=' '{ print $2 }' | sed 's/"//g')
+    TDH_TKGMC_ENVNAME=$(egrep "^TDH_TKGMC_ENVNAME=" $deployment | awk -F'=' '{ print $2 }' | sed 's/"//g' | sed 's/tkgs/TKGs/g')
+    TDH_TKGMC_KUBERNETES=$(egrep "^TDH_TKGMC_KUBERNETES=" $deployment | awk -F'=' '{ print $2 }' | sed 's/"//g')
+    TDH_TKGMC_COMMENT="$(egrep '^TDH_TKGMC_COMMENT=' $deployment | awk -F'=' '{ print $2 }' | sed 's/"//g')"
     TDH_TKGMC_NAME=$(egrep "^TDH_TKGMC_NAME=" $deployment | awk -F'=' '{ print $2 }' | sed 's/"//g')
     TDH_TKGMC_TOOLS_CONTAINER=$(egrep "^TDH_TKGMC_TOOLS_CONTAINER=" $deployment | awk -F'=' '{ print $2 }' | sed 's/"//g' | awk -F'-' '{ print $NF }')
     TDH_TKGMC_KUBECONFIG=$(egrep "^TDH_TKGMC_KUBECONFIG=" $deployment | awk -F'=' '{ print $2 }' | sed 's/"//g')
-    TDH_TKGMC_ENVNAME=$(egrep "^TDH_TKGMC_ENVNAME=" $deployment | awk -F'=' '{ print $2 }' | sed 's/"//g')
     TDH_TKGMC_SUPERVISORCLUSTER=$(egrep "^TDH_TKGMC_SUPERVISORCLUSTER=" $deployment | awk -F'=' '{ print $2 }' | sed 's/"//g')
 
-    if [ "$TDH_TKGMC_ENVNAME" == "tkgs" ]; then 
+    if [ "$TDH_TKGMC_INFRASTRUCTURE" == "Azure" ]; then 
+      az group list > /dev/null 2>&1; ret=$?
+      if [ $ret -eq 0 ]; then 
+        stt="available"
+      else
+        stt="not-loged-in"
+      fi
+    fi
+
+    if [ "$TDH_TKGMC_ENVNAME" == "TKGs" ]; then 
       curl -k https://$TDH_TKGMC_SUPERVISORCLUSTER:6443 > /dev/null 2>&1; ret=$?
       if [ $ret -eq 0 ]; then 
         stt="available"
@@ -19232,7 +19714,7 @@ listTKGmcV2() {
 
     dep=$(basename $deployment | sed 's/\.cfg//g')
 
-    printf "%-40s %-7s %8s %7s  %s\n" $dep $TDH_TKGMC_INFRASTRUCTURE $TDH_TKGMC_ENVNAME "$TDH_TKGMC_TOOLS_CONTAINER" "$stt"
+    printf "%-40s %-12s %-4s / %-10s %-75s  %s\n" $dep $TDH_TKGMC_INFRASTRUCTURE $TDH_TKGMC_ENVNAME $TDH_TKGMC_KUBERNETES "$TDH_TKGMC_COMMENT" "$stt"
 
   done
 
@@ -19325,16 +19807,18 @@ listClusters() {
 # ------------------------------------------------------------------------------------------
 listClusterConfigV2() {
   echo
-  printf "%-40s %-12s %-15s %-32s %-11s %s\n" "TKG-CONFIGURATION" "TKG-VERSION" "DESCRIPTION"
+  echo "                                         REQUIRED"
+  printf "%-40s %-12s %-15s %-32s %-11s %s\n" "DEPLOY CONFIGURATION" "KUBERNETES" "DESCRIPTION"
   messageLine
 
   for deployment in $(ls -1 ${TDHPATH}/deployments/tdh-*.j2); do
     des=$(head -8 $deployment | yq -o json | jq -r '.tdh_deployment.description')
     tkg=$(head -8 $deployment | yq -o json | jq -r '.tdh_deployment.tkg_version')
+    k8s=$(egrep "kubernetes:" $deployment | awk '{ print $NF }' | sed "s/'//g" | sort -V | tail -1) 
 
     dep=$(basename $deployment | sed 's/\.j2//g') 
   
-    printf "%-40s %-12s %-15s %-32s %-11s %s\n" $dep $tkg "$des"
+    printf "%-40s %-12s %-15s %-32s %-11s %s\n" $dep "${k8s}.x" "$des"
   done
 
   messageLine
@@ -20154,13 +20638,25 @@ convertTDHsecrets() {
 # Return Value .......: 0 - for success, 1 - failure                               
 # ------------------------------------------------------------------------------------------
 createTDHdeployment() {
-  TDH_DEPLOYMENT_PATH=$HOME/.tanzu-demo-hub/deployments/${TDHV2_MANAGEMENT_CLUSTER}/$TDHV2_DEPLOYMENT
 
+  infra_typ=$(yq -o json $HOME/.tanzu-demo-hub/config/${TDHV2_MANAGEMENT_CLUSTER}.yml | \
+              jq -r '.tdh_infrastructure_configuration.infrastructure.type')
+  infra_env=$(yq -o json $HOME/.tanzu-demo-hub/config/${TDHV2_MANAGEMENT_CLUSTER}.yml | \
+              jq -r '.tdh_infrastructure_configuration.infrastructure.env')
+
+  infra_dep=$(sed -n '/^tdh_deployment/,/^tdh_environment/p' $TDHPATH/deployments/${TDHV2_DEPLOYMENT_FILE}.j2 | \
+              yq -o json | jq -r '.tdh_deployment.name')
+
+  [ "${infra_typ}" == "vSphere" -a "${infra_env}" == "tkgs" ] && infra=vsphere-tkgs
+  [ "${infra_typ}" == "Azure" -a "${infra_env}" == "tkg" ] && infra="azure-tkg"
+  [ "${infra_typ}" == "Azure" -a "${infra_env}" == "aks" ] && infra="azure-aks"
+
+  TDH_DEPLOYMENT_PATH=$HOME/.tanzu-demo-hub/deployments/${TDHV2_MANAGEMENT_CLUSTER}/$infra_dep
   [ ! -d $TDH_DEPLOYMENT_PATH ] && mkdir -p $TDH_DEPLOYMENT_PATH
   cat $HOME/.tanzu-demo-hub/config/${TDHV2_MANAGEMENT_CLUSTER}.yml \
-      $TDHPATH/deployments/${TDHV2_DEPLOYMENT}.j2 > $TDH_DEPLOYMENT_PATH/config.j2
+      $TDHPATH/deployments/${TDHV2_DEPLOYMENT_FILE}.j2 > $TDH_DEPLOYMENT_PATH/config.j2
 
-  yasha -v $HOME/.tanzu-demo-hub.yml --subdomain=$TDHV2_DNS_SUBDOMAIN --typ=tap --env=vsphere $TDH_DEPLOYMENT_PATH/config.j2 \
+  yasha -v $HOME/.tanzu-demo-hub.yml --subdomain=$TDHV2_DNS_SUBDOMAIN --typ=tap --env=$infra $TDH_DEPLOYMENT_PATH/config.j2 \
         -o $TDH_DEPLOYMENT_PATH/config.yml; ret=$?
   yq -o json  $TDH_DEPLOYMENT_PATH/config.yml > /dev/null 2>&1; ret=$?
   [ $ret -ne 0 ] && echo "ERROR: Failed to convert YAML config" && exit 1
@@ -20176,11 +20672,14 @@ createTDHdeployment() {
 # Return Value .......: 0 - for success, 1 - failure
 # ------------------------------------------------------------------------------------------
 installPackageRepositories() {
+  createNamespace tkg-system > /dev/null 2>&1
+
   cmdLoop tanzu package repository list -o json -A > /tmp/output.yaml 2>/dev/null
 
   for rep in $(getYAML REPO_LIST $TDHV2_WORKLOAD_CLUSTER); do
     url=$(getYAML REPO_URL $TDHV2_WORKLOAD_CLUSTER $rep)
     nsp=$(getYAML REPO_NAMESPACE $TDHV2_WORKLOAD_CLUSTER $rep)
+    createNamespace $nsp > /dev/null 2>&1
 
     nam=$(jq -r --arg repo "$rep" --arg nsp "$nsp" '.[] | select(.name == $repo and .namespace == $nsp).name' /tmp/output.yaml)
     if [ "$nam" != "$rep" ]; then 
@@ -20424,3 +20923,4 @@ goTAPStage() {
 #tanzu package install cert-manager-pkg --package-name cert-manager.tanzu.vmware.com --namespace tanzu-system-packages --version 1.5.3+vmware.2-tkg.1 --create-namespace 
 #kapp list -A
 
+# az login --service-principal -u $AZURE_SERVICE_PRINCIPAL_NAME -p "p3m4dBE_YJjlgA~AaYGy_L16bptcR2USU9" --tenant b39138ca-3cee-4b4a-a4d6-cd83d9dd62f0
