@@ -5241,7 +5241,8 @@ tkgCreateClusterV2() {
 
       wc_k8s="$(getYAML WC_K8S_VERSION $wc_nam)"
       cmdLoop kubectl get tkr > /tmp/output.txt 2>/dev/null
-      wc_tkr=$(awk '{ printf("%s:%s:%s:%s:\n",$1,$2,$3,$4)}' /tmp/output.txt | grep ":True:True:" | egrep -v "ubuntu|fips" | sort -V | egrep ":${wc_k8s}+|:v${wc_k8s}+" | tail -1 | awk -F':' '{ print $1 }')
+      #wc_tkr=$(awk '{ printf("%s:%s:%s:%s:\n",$1,$2,$3,$4)}' /tmp/output.txt | grep ":True:True:" | egrep -v "ubuntu|fips" | sort -V | egrep ":${wc_k8s}+|:v${wc_k8s}+" | tail -1 | awk -F':' '{ print $1 }')
+      wc_tkr=$(awk '{ printf("%s:%s:%s:%s:\n",$1,$2,$3,$4)}' /tmp/output.txt | grep ":True:True:" | egrep -v "ubuntu" | sort -V | egrep ":${wc_k8s}+|:v${wc_k8s}+" | tail -1 | awk -F':' '{ print $1 }')
       if [ "$wc_tkr" == "" ]; then
         echo "ERROR: failed to find TKR release $wc_k8s on the supperwisor cluster"
         if [ "$NATIVE" == "0" ]; then
@@ -5535,6 +5536,8 @@ tkgCreateClusterV2() {
 
     createClusterRoleBindingGroup  default-tkg-admin-privileged-binding "psp:vmware-system-privileged" "system:authenticated"
   fi
+
+echo "\$HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.kubeconfig"
 }
 
 # ------------------------------------------------------------------------------------------
