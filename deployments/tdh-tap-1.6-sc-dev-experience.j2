@@ -1,9 +1,9 @@
 tdh_deployment:
-  name: tdh-tap-singlecluster
+  name: tdh-tap-sc-dev-experience
   type: tap-cinglecluster
-  description: Tanzu Application Platform (TAP) Multicluster Setup
+  description: Tanzu Application Platform (TAP) 1.6 - Singlecluster Deployment for Developer Experience
   tkg_version: 2.1.0
-  tdh_tools: 2.2.0
+  tdh_tools: 2.2.1
 tdh_environment: 
   vmc: &VMC
     account: 
@@ -57,13 +57,16 @@ tdh_clusters:
         - registry
         - argocd
         - minio
-      kubernetes: '1.24'
+      kubernetes: '1.25'
       tdh_tools: '2.2.0'
       tdh_tools: '2.2.0'
       package_repositories: 
         - name: 'tanzu-standard'
           url:  'extensions.aws-usw2.tmc.cloud.vmware.com/packages/standard/repo'
           namespace: 'tkg-system'
+        - name: 'tanzu-standard-1'
+          url:  'extensions.aws-usw2.tmc.cloud.vmware.com/packages/standard/repo'
+          namespace: 'tanzu-system-packages'
       dns: 
         dns_subdomain: {{ subdomain }}
         tls:
@@ -129,17 +132,21 @@ tdh_clusters:
     worker_nodes:
       node_count: 1
       node_size: 'M'
-  - name: 'tdh-{{ env }}-{{ TDH_USER }}-tap'
-    description: 'Tanzu Application Platform (Iterate/Build)'
+  - name: 'tdh-{{ env }}-{{ TDH_USER }}-dev'
+    description: 'Tanzu Application Platform - Development (Iterate/Build)'
     config:
       purpose: tap
-      kubernetes: '1.24'
+      kubernetes: '1.25'
+      ingress_domain: 'dev'
       tkg: '2.2.0'
       tdh_tools: '2.2.0'
       package_repositories:
         - name: 'tanzu-standard'
           url:  'extensions.aws-usw2.tmc.cloud.vmware.com/packages/standard/repo'
           namespace: 'tkg-system'
+        - name: 'tanzu-standard-1'
+          url:  'extensions.aws-usw2.tmc.cloud.vmware.com/packages/standard/repo'
+          namespace: 'tap-install'
       dns:
         dns_subdomain: {{ subdomain }}
         tls:
@@ -149,7 +156,7 @@ tdh_clusters:
           cert_name: tdh-tls-cert
           secret_name: tdh-tls-secret
           hosts:
-            - '*.svc'
+            - '*.dev'
             - '*.cnrs'
             - 'learningcenter'
             - 'tap-gui'
@@ -182,13 +189,29 @@ tdh_clusters:
           package_repo: tap-install
           namespace: tap-install
           version: 'latest'
-          ingress_dns: '*.svc'
+          ingress_dns: '*.dev'
       services:
         tap:
           enabled: true
-          version: 1.5.1
+          version: 1.6.1
           role: full
-          registry: 
+          type: single_node_tap
+          organization: 'Tanzu Demo Hub - Development Environment'
+          default_supply_chain: basic
+
+          namespace:
+            - name: newsletter
+          catalog_locations:
+#            - name: newsletter
+#              type: url
+#              target: 'https://github.com/pivotal-sadubois/newsletter/blob/main/catalog/catalog-info.yaml'
+#            - name: spring-cloud-demo-tap
+#              type: url
+#              target: 'https://github.com/tsalm-pivotal/spring-cloud-demo-tap/blob/main/tap/catalog/catalog-info.yaml'
+#            - name: yelb-catalog
+#              type: url
+#              target: 'https://github.com/dambor/yelb-catalog/blob/main/catalog-info.yaml'
+          registry:
             - name: local_registry
               server: 'harbor.apps.{{ subdomain }}.{{ AWS_ROUTE53_DNS_DOMAIN }}'
               user: 'admin'
@@ -198,4 +221,5 @@ tdh_clusters:
       node_size: 'M'
     worker_nodes:
       node_count: 3
-      node_size: 'L'
+      node_size: 'M'
+
