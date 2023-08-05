@@ -69,6 +69,12 @@ RUN apt-get clean
 RUN curl -sL https://github.com/eksctl-io/eksctl/releases/latest/download/eksctl_Linux_amd64.tar.gz | (cd /usr/local/bin && tar xvfz -)
 RUN chmod a+x /usr/local/bin/eksctl
 
+# --- INSTAL GITHUB CLI ---
+RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
+RUN chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg
+RUN echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | tee /etc/apt/sources.list.d/github-cli.list
+RUN apt update && apt install gh -y
+
 # --- INSTALL TANZU-CLI
 RUN curl -sL https://baltocdn.com/helm/signing.asc | gpg --dearmor >> /etc/apt/trusted.gpg.d/baltocdn.gpg
 RUN curl -fsSL https://packages.vmware.com/tools/keys/VMWARE-PACKAGING-GPG-RSA-KEY.pub | gpg --dearmor >> /etc/apt/trusted.gpg.d/tanzu-archive-keyring.gpg
