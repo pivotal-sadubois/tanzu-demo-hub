@@ -7,7 +7,7 @@
 # ############################################################################################
 
 #########################################################################################################################
-#Execute a command"#################################### VERIFY MANAGEMENT / SUPERVISOR CLUSTER ############################################
+##################################### VERIFY MANAGEMENT / SUPERVISOR CLUSTER ############################################
 #########################################################################################################################
 if [ -d $HOME/.tanzu-demo-hub/config ]; then 
   declare -a TKG_CLUSTER_KUBECONFIG
@@ -27,8 +27,6 @@ if [ -d $HOME/.tanzu-demo-hub/config ]; then
   TKG_WC_LIST=""
   [ "$SUPERVISOR" == "" ] && export SUPERVISOR="false"
   [ "$VERIFY" == "" ] && export VERIFY="false"
-VERIFY=true
-SUPERVISOR=true
 
   # --- VERIFY VPN"
   curl -k --head -m 3 https://h2o.vmware.com > /dev/null 2>&1; ret=$?
@@ -156,33 +154,66 @@ SUPERVISOR=true
 
   if [ "$SUPERVISOR" == "true" ]; then 
     echo "" 
-    echo " TANZU-DEMO-HUB MANAGEMENT CLUSTERS"
-    echo " -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------"
+    echo " TANZU-DEMO-HUB MANAGEMENT / SUPERVISOR CLUSTERS"
+    echo " -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- "
     INDEX=0 
     while [ $INDEX -lt ${#TKG_CLUSTER_NAME[@]} ]; do
       if [ "${TKG_CLUSTER_IS_MGMT[$INDEX]}" == "true" ]; then 
         pth=$(echo ${TKG_CLUSTER_KUBECONFIG[$INDEX]} | sed 's+/home/tanzu+$HOME+g')
         des=$(echo ${TKG_CLUSTER_COMMENT[$INDEX]})
-        printf " export KUBECONFIG=%-77s   ## %-78s %25s\n" $pth "$des"  "[${TKG_CLUSTER_STATUS_MSG[$INDEX]}]"
+        printf " export KUBECONFIG=%-81s   ## %-87s %-20s\n" $pth "$des"  "[${TKG_CLUSTER_STATUS_MSG[$INDEX]}]"
       fi
           
       let INDEX=INDEX+1
     done
   fi
 
-  echo ""
-  echo " TANZU-DEMO-HUB WORKLOAD CLUSTERS"
-  echo " -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------"
-  INDEX=0 
-  while [ $INDEX -lt ${#TKG_CLUSTER_NAME[@]} ]; do
-    if [ "${TKG_CLUSTER_IS_MGMT[$INDEX]}" != "true" ]; then 
-      pth=$(echo ${TKG_CLUSTER_KUBECONFIG[$INDEX]} | sed 's+/home/tanzu+$HOME+g')
-      printf " export KUBECONFIG=%-165s  %20s\n" "$pth"  "[${TKG_CLUSTER_STATUS_MSG[$INDEX]}]"
-    fi
-  
-    let INDEX=INDEX+1
-  done
-  echo  
-fi 
+  for n in $(find $HOME/.tanzu-demo-hub/deployments -name config.yml); do
+     tmc=$(echo $n | awk -F'/' '{ print $(NF-2) }') 
+     dep=$(yq -o json $n | jq -r '.tdh_deployment.name')
+     cfg=$(yq -o json $n | jq -r '.tdh_deployment.source' | sed 's/\.j2//g')
+     des=$(yq -o json $n | jq -r '.tdh_deployment.description')
+     sdm=$(yq -o json $n | jq -r '.tdh_environment.network.dns.dns_subdomain')
+     tde=$(egrep "TDH_TKGMC_NAME=${tmc}" $HOME/.tanzu-demo-hub/config/TDHenv*.cfg | awk -F: '{ print $1 }' | awk -F'/' '{ print $NF }' | sed 's/\.cfg//g') 
 
-/bin/bash
+     echo ""
+     echo " Deployment.............: ${tmc}/${dep}"
+     echo " Description............: ${des}"
+     echo " Deployment Command ....: deployTDH -e $tde -c $cfg -sd $sdm"
+     if [ -f "$HOME/.tanzu-demo-hub/deployments/${tmc}/${dep}/${dep}.log" ]; then 
+       echo " Deployment Logfile ....: \$HOME/.tanzu-demo-hub/deployments/${tmc}/${dep}/${dep}.log"
+     fi
+     echo " -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- "
+
+     INDEX=0 
+     while [ $INDEX -lt ${#TKG_CLUSTER_NAME[@]} ]; do
+       if [ "${TKG_CLUSTER_IS_MGMT[$INDEX]}" != "true" ]; then 
+         cnt=$(echo "${TKG_CLUSTER_KUBECONFIG[$INDEX]}" | grep -c "/home/tanzu/.tanzu-demo-hub/deployments/${tmc}/${dep}") 
+         if [ $cnt -eq 1 ]; then 
+           pth=$(echo ${TKG_CLUSTER_KUBECONFIG[$INDEX]} | sed 's+/home/tanzu+$HOME+g')
+           printf " export KUBECONFIG=%-173s  %-20s\n" "$pth"  "[${TKG_CLUSTER_STATUS_MSG[$INDEX]}]"
+         fi
+       fi
+
+       let INDEX=INDEX+1
+     done
+
+     echo ""
+     echo " Consolidated KUBECONFIG:"
+     echo "    export KUBECONFIG=\$HOME/.tanzu-demo-hub/deployments/${tmc}/${dep}/kubeconfig_${dep}.yaml"
+     INDEX=0
+     while [ $INDEX -lt ${#TKG_CLUSTER_NAME[@]} ]; do
+       if [ "${TKG_CLUSTER_IS_MGMT[$INDEX]}" != "true" ]; then
+         cnt=$(echo "${TKG_CLUSTER_KUBECONFIG[$INDEX]}" | grep -c "/home/tanzu/.tanzu-demo-hub/deployments/${tmc}/${dep}")
+         if [ $cnt -eq 1 ]; then
+           printf "    => %-100s ## %s\n" "kubectl config use-context ${TKG_CLUSTER_NAME[$INDEX]}-admin@${TKG_CLUSTER_NAME[$INDEX]}" "Workload Cluster: ${TKG_CLUSTER_NAME[$INDEX]}"
+         fi
+       fi
+
+       let INDEX=INDEX+1
+     done
+     echo " -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- "
+  done
+fi
+
+cd $HOME/tanzu-demo-hub && /bin/bash 

@@ -4,7 +4,7 @@
 # Author .......: Sacha Dubois, VMware
 # Description ..: Tanzu Demo Hub - Dockerfile for tdh-tools container
 # ############################################################################################
-                                              
+                                               
 FROM --platform=linux/amd64 ubuntu:20.04
 #FROM --platform=linux/arm64 ubuntu:20.04
 MAINTAINER Sacha Dubois <sdubois@vmware.com>
@@ -65,6 +65,10 @@ RUN apt-get update -qq && apt-get install -qqy \
     iptables
 RUN apt-get clean 
 
+# --- INSTALL GOLANG ---
+#RUN add-apt-repository ppa:longsleep/golang-backports
+RUN apt-get install -qqy golang-go
+
 # --- DOWNLOAD EKSCLI ---
 RUN curl -sL https://github.com/eksctl-io/eksctl/releases/latest/download/eksctl_Linux_amd64.tar.gz | (cd /usr/local/bin && tar xvfz -)
 RUN chmod a+x /usr/local/bin/eksctl
@@ -103,10 +107,6 @@ RUN apt-get install -qqy asciinema
 
 # --- INSTALL DNS TOOLS 
 RUN apt-get install -qqy dnsutils
-
-# --- INSTALL GOLANG ---
-RUN add-apt-repository ppa:longsleep/golang-backports
-RUN apt-get install -qqy golang-go
 
 # --- INSTALL KUSTOMIZE 
 RUN curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh"  | bash
