@@ -47,13 +47,13 @@ if [ -d $HOME/.tanzu-demo-hub/config ]; then
       dep=$(echo $n | awk -F '/' '{ print $(NF-2) }')
       mcn=$(echo $n | awk -F '/' '{ print $(NF-3) }')
       TKG_CLUSTER_NAME[$INDEX]="$cnm"
-      TKG_CLUSTER_STATUS_MSG[$INDEX]="KUBERNETES-API-NOT-TESTED"
+      TKG_CLUSTER_STATUS_MSG[$INDEX]="K8S-API UNTESTED"
       TKG_CLUSTER_CONFIG[$INDEX]=$HOME/.tanzu-demo-hub/deployments/${mcn}/${dep}/${cnm}/${cnm}.cfg
       TKG_CLUSTER_KUBECONFIG[$INDEX]=$HOME/.tanzu-demo-hub/deployments/${mcn}/${dep}/${cnm}/${cnm}.kubeconfig
     else
       TKG_CLUSTER_CONFIG_FILE=$(grep "TDH_TKGMC_NAME=${cnm}" $HOME/.tanzu-demo-hub/config/TDHenv-*.cfg | awk -F':' '{ print $1 }' | awk -F'/' '{ print $NF }')
       TKG_CLUSTER_NAME[$INDEX]="$cnm"
-      TKG_CLUSTER_STATUS_MSG[$INDEX]="KUBERNETES-API-NOT-TESTED"
+      TKG_CLUSTER_STATUS_MSG[$INDEX]="K8S-API UNTESTED"
       TKG_CLUSTER_CONFIG[$INDEX]=$(grep "TDH_TKGMC_NAME=${cnm}" $HOME/.tanzu-demo-hub/config/TDHenv-*.cfg | awk -F':' '{ print $1 }' | awk -F'/' '{ print $NF }')
       TKG_CLUSTER_CONFIG[$INDEX]=$HOME/.tanzu-demo-hub/config/${TKG_CLUSTER_CONFIG_FILE}
 
@@ -73,11 +73,11 @@ if [ -d $HOME/.tanzu-demo-hub/config ]; then
     # --- VERIFY CLUSTER ---
     if [ "$VERIFY" == "true" ]; then
       kubectl --kubeconfig=${TKG_CLUSTER_KUBECONFIG[$INDEX]} --request-timeout $TIMEOUT get ns >/dev/null 2>&1; ret=$?
-      [ $ret -eq 0 ] && TKG_CLUSTER_STATUS[$INDEX]="ok"  && TKG_CLUSTER_STATUS_MSG[$INDEX]="KUBERNETES-API-OK"
-      [ $ret -ne 0 ] && TKG_CLUSTER_STATUS[$INDEX]="nok" && TKG_CLUSTER_STATUS_MSG[$INDEX]="KUBERNETES-API-NOK"
+      [ $ret -eq 0 ] && TKG_CLUSTER_STATUS[$INDEX]="ok"  && TKG_CLUSTER_STATUS_MSG[$INDEX]="K8S-API OK"
+      [ $ret -ne 0 ] && TKG_CLUSTER_STATUS[$INDEX]="nok" && TKG_CLUSTER_STATUS_MSG[$INDEX]="K8S-API FAILED"
     else
       TKG_CLUSTER_STATUS[$INDEX]="na"
-      TKG_CLUSTER_STATUS_MSG[$INDEX]="KUBERNETES-API-NOT-TESTED"
+      TKG_CLUSTER_STATUS_MSG[$INDEX]="K8S-API UNTESTED"
     fi
   
     # --- IF THE CLUSTER STATUS IS 'NOK' AND THE CKUSTER IS OF TYPE VSPHERE, THEN LOGIN AND MAKE NEW KUBECONFIG ---
@@ -97,10 +97,10 @@ if [ -d $HOME/.tanzu-demo-hub/config ]; then
           kubectl vsphere login --insecure-skip-tls-verify --server $TDH_TKGMC_SUPERVISORCLUSTER -u $TDH_TKGMC_VSPHERE_USER > /tmp/error.log 2>&1; ret=$?
           if [ $ret -eq 0 ]; then
             TKG_CLUSTER_STATUS[$INDEX]="ok" 
-            TKG_CLUSTER_STATUS_MSG[$INDEX]="KUBERNETES-API-OK"
+            TKG_CLUSTER_STATUS_MSG[$INDEX]="K8S-API OK"
           else
             TKG_CLUSTER_STATUS[$INDEX]="na"
-            TKG_CLUSTER_STATUS_MSG[$INDEX]="KUBERNETES-API-NOT-TESTED"
+            TKG_CLUSTER_STATUS_MSG[$INDEX]="K8S-API UNTESTED"
           fi
 
           [ -s $HOME/.kube/config ] && mv $HOME/.kube/config ${TKG_CLUSTER_KUBECONFIG[$INDEX]}
@@ -123,10 +123,10 @@ if [ -d $HOME/.tanzu-demo-hub/config ]; then
             kubectl get secrets ${cnm}-kubeconfig -o jsonpath='{.data.value}' 2>/dev/null | base64 -d > ${TKG_CLUSTER_KUBECONFIG[$INDEX]}
             if [ ! -s ${TKG_CLUSTER_KUBECONFIG[$INDEX]} ]; then 
               TKG_CLUSTER_STATUS[$INDEX]="nok"
-              TKG_CLUSTER_STATUS_MSG[$INDEX]="KUBERNETES-API-NOK"
+              TKG_CLUSTER_STATUS_MSG[$INDEX]="K8S-API FAILED"
             else
               TKG_CLUSTER_STATUS[$INDEX]="ok"
-              TKG_CLUSTER_STATUS_MSG[$INDEX]="KUBERNETES-API-OK"
+              TKG_CLUSTER_STATUS_MSG[$INDEX]="K8S-API OK"
             fi
           fi
   
@@ -135,15 +135,15 @@ if [ -d $HOME/.tanzu-demo-hub/config ]; then
           # --- VERIFY CLUSTER ACCESS AGAIN---
           if [ "$VERIFY" == "true" ]; then
             kubectl --kubeconfig=${TKG_CLUSTER_KUBECONFIG[$INDEX]} --request-timeout $TIMEOUT get ns >/dev/null 2>&1; ret=$?
-            [ $ret -eq 0 ] && TKG_CLUSTER_STATUS[$INDEX]="ok"  && TKG_CLUSTER_STATUS_MSG[$INDEX]="KUBERNETES-API-OK"
-            [ $ret -ne 0 ] && TKG_CLUSTER_STATUS[$INDEX]="nok" && TKG_CLUSTER_STATUS_MSG[$INDEX]="KUBERNETES-API-NOK"
+            [ $ret -eq 0 ] && TKG_CLUSTER_STATUS[$INDEX]="ok"  && TKG_CLUSTER_STATUS_MSG[$INDEX]="K8S-API OK"
+            [ $ret -ne 0 ] && TKG_CLUSTER_STATUS[$INDEX]="nok" && TKG_CLUSTER_STATUS_MSG[$INDEX]="K8S-API FAILED"
           else
             TKG_CLUSTER_STATUS[$INDEX]="na"
-            TKG_CLUSTER_STATUS_MSG[$INDEX]="KUBERNETES-API-NOT-TESTED"
+            TKG_CLUSTER_STATUS_MSG[$INDEX]="K8S-API UNTESTED"
           fi
         fi
       else
-        TKG_CLUSTER_STATUS_MSG[$INDEX]="VMWARE-VPN-NOT-ACTIVE"
+        TKG_CLUSTER_STATUS_MSG[$INDEX]="VMWARE-VPN-DOWN"
         echo "ERROR: Can not verify $nam as connection to VMware VPN is required"
       fi
     fi
@@ -161,7 +161,7 @@ if [ -d $HOME/.tanzu-demo-hub/config ]; then
       if [ "${TKG_CLUSTER_IS_MGMT[$INDEX]}" == "true" ]; then 
         pth=$(echo ${TKG_CLUSTER_KUBECONFIG[$INDEX]} | sed 's+/home/tanzu+$HOME+g')
         des=$(echo ${TKG_CLUSTER_COMMENT[$INDEX]})
-        printf " export KUBECONFIG=%-81s   ## %-87s %-20s\n" $pth "$des"  "[${TKG_CLUSTER_STATUS_MSG[$INDEX]}]"
+        printf " export KUBECONFIG=%-81s   ## %-87s %-20s\n" $pth "$des"  "## ${TKG_CLUSTER_STATUS_MSG[$INDEX]}"
       fi
           
       let INDEX=INDEX+1
@@ -191,7 +191,7 @@ if [ -d $HOME/.tanzu-demo-hub/config ]; then
          cnt=$(echo "${TKG_CLUSTER_KUBECONFIG[$INDEX]}" | grep -c "/home/tanzu/.tanzu-demo-hub/deployments/${tmc}/${dep}") 
          if [ $cnt -eq 1 ]; then 
            pth=$(echo ${TKG_CLUSTER_KUBECONFIG[$INDEX]} | sed 's+/home/tanzu+$HOME+g')
-           printf " export KUBECONFIG=%-173s  %-20s\n" "$pth"  "[${TKG_CLUSTER_STATUS_MSG[$INDEX]}]"
+           printf " export KUBECONFIG=%-173s  %-20s\n" "$pth"  "## ${TKG_CLUSTER_STATUS_MSG[$INDEX]}"
          fi
        fi
 
