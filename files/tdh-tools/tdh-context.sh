@@ -159,7 +159,7 @@ if [ -d $HOME/.tanzu-demo-hub/config ]; then
     INDEX=0 
     while [ $INDEX -lt ${#TKG_CLUSTER_NAME[@]} ]; do
       if [ "${TKG_CLUSTER_IS_MGMT[$INDEX]}" == "true" ]; then 
-        pth=$(echo ${TKG_CLUSTER_KUBECONFIG[$INDEX]} | sed 's+/home/tanzu+$HOME+g')
+        pth=$(echo ${TKG_CLUSTER_KUBECONFIG[$INDEX]} | sed 's+^.*/.tanzu-demo-hub+$HOME/.tanzu-demo-hub+g')
         des=$(echo ${TKG_CLUSTER_COMMENT[$INDEX]})
         printf " export KUBECONFIG=%-81s   ## %-87s %-20s\n" $pth "$des"  "## ${TKG_CLUSTER_STATUS_MSG[$INDEX]}"
       fi
@@ -188,9 +188,9 @@ if [ -d $HOME/.tanzu-demo-hub/config ]; then
      INDEX=0 
      while [ $INDEX -lt ${#TKG_CLUSTER_NAME[@]} ]; do
        if [ "${TKG_CLUSTER_IS_MGMT[$INDEX]}" != "true" ]; then 
-         cnt=$(echo "${TKG_CLUSTER_KUBECONFIG[$INDEX]}" | grep -c "/home/tanzu/.tanzu-demo-hub/deployments/${tmc}/${dep}") 
+         cnt=$(echo "${TKG_CLUSTER_KUBECONFIG[$INDEX]}" | grep -c ".tanzu-demo-hub/deployments/${tmc}/${dep}") 
          if [ $cnt -eq 1 ]; then 
-           pth=$(echo ${TKG_CLUSTER_KUBECONFIG[$INDEX]} | sed 's+/home/tanzu+$HOME+g')
+           pth=$(echo ${TKG_CLUSTER_KUBECONFIG[$INDEX]} | sed 's+^.*/.tanzu-demo-hub+$HOME/.tanzu-demo-hub+g')
            printf " export KUBECONFIG=%-173s  %-20s\n" "$pth"  "## ${TKG_CLUSTER_STATUS_MSG[$INDEX]}"
          fi
        fi
@@ -204,7 +204,7 @@ if [ -d $HOME/.tanzu-demo-hub/config ]; then
      INDEX=0
      while [ $INDEX -lt ${#TKG_CLUSTER_NAME[@]} ]; do
        if [ "${TKG_CLUSTER_IS_MGMT[$INDEX]}" != "true" ]; then
-         cnt=$(echo "${TKG_CLUSTER_KUBECONFIG[$INDEX]}" | grep -c "/home/tanzu/.tanzu-demo-hub/deployments/${tmc}/${dep}")
+         cnt=$(echo "${TKG_CLUSTER_KUBECONFIG[$INDEX]}" | grep -c ".tanzu-demo-hub/deployments/${tmc}/${dep}")
          if [ $cnt -eq 1 ]; then
            printf "    => %-100s ## %s\n" "kubectl config use-context ${TKG_CLUSTER_NAME[$INDEX]}-admin@${TKG_CLUSTER_NAME[$INDEX]}" "Workload Cluster: ${TKG_CLUSTER_NAME[$INDEX]}"
          fi
@@ -216,4 +216,4 @@ if [ -d $HOME/.tanzu-demo-hub/config ]; then
   done
 fi
 
-cd $HOME/tanzu-demo-hub && /bin/bash 
+[ "$(hostname)" == "tdh-tools" ] && cd $HOME/tanzu-demo-hub && /bin/bash 

@@ -19,6 +19,7 @@ export TDHV2_MANAGEMENT_CLUSTER
 export TDHV2_DEPLOYMENT
 export TDHV2_DEPLOYMENT_FILE
 export TDHV2_DNS_SUBDOMAIN
+export TDHV2_LIST_DEPLOYMENTS=0
 export TDH_USER=$USER
 
 # --- SETTING FOR TDH-TOOLS ---
@@ -30,13 +31,11 @@ export CMD_ARGS=$*
 [ -f $TANZU_DEMO_HUB/functions ] && . $TANZU_DEMO_HUB/functions
 [ -f $HOME/.tanzu-demo-hub.cfg ] && . $HOME/.tanzu-demo-hub.cfg
 
-# --- CHECK FOR BASIC COMANDS ---
-checkCLIcommands        BASIC
-
 usage() {
   echo ""
   echo "USAGE: $0 [options] -e <deploy-environment> -c <deployment-config> -sd/--subdomain <subdomain> [--debug]"
   echo "            Options:  --delete                  # Delete Workload Clusters and Cleanup"
+  echo "                      --list                    # List Current Deployments"
   echo "                      --native                  # Use 'native' installed tools instead of the tdh-tools container"
   echo "                      --subdomain <domain>      # DNS Subdomain <subdomain>.<yourdomain>.com"
 
@@ -49,12 +48,18 @@ while [ "$1" != "" ]; do
     -c)            TDHV2_DEPLOYMENT_FILE=$2;;
     -sd)           TDHV2_DNS_SUBDOMAIN=$2;;
     --subdomain)   TDHV2_DNS_SUBDOMAIN=$2;;
+    --list)        TDHV2_LIST_DEPLOYMENTS=1;;
     --debug)       DEBUG=1;;
     --delete)      DEPLOY_TKG_CLEAN=1;;
     --native)      NATIVE=1;;
   esac
   shift
 done
+
+if [ "$TDHV2_LIST_DEPLOYMENTS" -eq 1 ]; then
+  files/tdh-tools/tdh-context.sh
+  exit 0
+fi
 
 if [ "${TDHV2_DEPLOY_ENVIRONMENT}" == "" -o "${TDHV2_DEPLOYMENT_FILE}" == "" -o "${TDHV2_DNS_SUBDOMAIN}" == "" ]; then
   [ "${TDHV2_DEPLOY_ENVIRONMENT}" == "" ] && listTDHenv
@@ -98,31 +103,27 @@ export TDH_REGISTRY_DOCKER_NAME='docker.io'
 #############################################################################################################################
 ################################### EXECUTING CODE WITHIN  TDH-TOOLS DOCKER CONTAINER  ######################################
 #############################################################################################################################
-runTDHtools "tkg" "$tdh_tools" "Automated deployment of Tanzu Demo Environments" "/home/tanzu/tanzu-demo-hub/$CMD_EXEC" "$CMD_ARGS"
-
-# --- VERIFY TDH CONFIGURATION ---
-checkTDHsettings header
-checkTDHsettings tdh_user
-checkTDHsettings tmc
-checkTDHsettings registry_docker
-checkTDHsettings registry_vmware
-checkTDHsettings aws_route53
-checkTDHsettings cert-manager
+runTDHtools "tkg" "$tdh_tools" "Automated deployment of Tanzu Demo Environments ($(date))" "/home/tanzu/tanzu-demo-hub/$CMD_EXEC" "$CMD_ARGS" 
 
 # --- VERYFY ACCESS TO CLOUD ---
 #checkTDHenvironment   ## pivnet, vmw_cli
 
 # --- VERIFY TOOLS AND ACCESS ---
-clearConfigMapCache
-checkCLIcommands TOOLS
-checkCLIcommands TKG
-checkCLIcommands TANZU
-checkCLIcommands TMC
+#checkCLIcommands TOOLS
+#checkCLIcommands TKG
+#checkCLIcommands TANZU
+#checkCLIcommands TMC
 
 # --- CONVERT TDH CONFIG VARIABLES TO YAML ---
 convertTDHconfig
 convertTDHsecrets
 createTDHdeployment
+
+# --- VALIDATE TDH SETTINGS ---
+clearConfigMapCache
+#validateConfigVariables
+
+#checkKubernetesServices
 
 #############################################################################################################################
 ######################### DELETE TKG CLUSTER AND DETTACH TO TMC AND INSTALL TMC INTEGRATION #################################
@@ -137,7 +138,7 @@ fi
 #############################################################################################################################
 for clu in $(getYAML WC_CLUSTER_LIST); do
   createKubernetesCluster
-
+break
   messageTitle "Tanzu Package Management"
   installPackageRepositories
 
@@ -150,7 +151,7 @@ for clu in $(getYAML WC_CLUSTER_LIST); do
   #installSpringCloudGateway
   #installMinio
   #installKubeapps
-  #installGitea
+  #installGiteaV2
   #installJenkins
   #installArgoCD
   #installGitLab
@@ -159,9 +160,14 @@ for clu in $(getYAML WC_CLUSTER_LIST); do
 done
 
 mergeKubeconfigFiles
-configureAppLiveView
-configureSupplyChainBasic
+#configureAppLiveView
+#configureSupplyChainBasic
+prepareDeploymentLog
 
+echo 
 messageTitle " *** Thank you for using Tanzu Demo Hub ***"
 
 exit
+
+
+
