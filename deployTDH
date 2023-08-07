@@ -119,7 +119,6 @@ createTDHdeployment
 # --- VALIDATE TDH SETTINGS ---
 clearConfigMapCache
 #validateConfigVariables
-#checkKubernetesServices
 
 #############################################################################################################################
 ######################### DELETE TKG CLUSTER AND DETTACH TO TMC AND INSTALL TMC INTEGRATION #################################
@@ -155,8 +154,8 @@ for clu in $(getYAML WC_CLUSTER_LIST); do
 done
 
 mergeKubeconfigFiles
-#configureAppLiveView
-#configureSupplyChainBasic
+configureAppLiveView
+configureSupplyChainBasic
 prepareDeploymentLog
 
 echo 
