@@ -4,7 +4,7 @@
 # Author .......: Sacha Dubois, VMware
 # Description ..: Tanzu Demo Hub - Dockerfile for tdh-tools container
 # ############################################################################################
-                                                 
+                                                   
 FROM --platform=linux/amd64 ubuntu:20.04
 #FROM --platform=linux/arm64 ubuntu:20.04
 MAINTAINER Sacha Dubois <sdubois@vmware.com>
@@ -85,16 +85,6 @@ RUN curl -fsSL https://packages.vmware.com/tools/keys/VMWARE-PACKAGING-GPG-RSA-K
 RUN add-apt-repository "deb [arch=amd64] https://storage.googleapis.com/tanzu-cli-os-packages/apt tanzu-cli-jessie main"
 RUN apt-get update -qq && apt-get install tanzu-cli -qqy
 RUN /usr/bin/tanzu config eula accept
-RUN /usr/bin/tanzu plugin install --group vmware-tkg/default
-RUN /usr/bin/tanzu plugin install --group vmware-tap/default:v1.6.1
-
-# --- INSTALL TANZU CLI ---
-#RUN mkdir -p /etc/apt/keyrings/
-#RUN curl -fsSL https://packages.vmware.com/tools/keys/VMWARE-PACKAGING-GPG-RSA-KEY.pub | gpg --dearmor -o /etc/apt/keyrings/tanzu-archive-keyring.gpg
-#RUN echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/tanzu-archive-keyring.gpg] https://storage.googleapis.com/tanzu-cli-os-packages/apt tanzu-cli-jessie main" | tee /etc/apt/sources.list.d/tanzu.list
-#RUN apt-get update
-#RUN apt-get install -y tanzu-cli
-#RUN tanzu plugin install --group vmware-tap/default:v1.6.1
 
 # --- INSTALL YQ ---
 RUN wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
@@ -143,13 +133,6 @@ RUN apt-get update && apt-get install -y \
 # --- INSTALL AWS CLIv2 ----
 RUN curl -q https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip 2>/dev/null -o /tmp/awscliv2.zip
 RUN unzip -q /tmp/awscliv2.zip -d /tmp && /tmp/aws/install
-
-# --- INSTALL TANZU UTILITIES ---
-#RUN install /tanzu/cli/core/v*/tanzu-core-linux_amd64 /usr/local/bin/tanzu
-#RUN gunzip -q /tanzu/cli/*.gz
-##RUN cd /tanzu && tanzu plugin clean
-##RUN cd /tanzu-tap && tanzu plugin install --local cli all > /dev/null 2>&1
-##RUN cd /tanzu && tanzu plugin sync
 
 # --- DIRTY FIX TO GET LATEST TOOLS (https://github.com/vmware-tanzu/carvel) ---
 RUN curl -sL https://github.com/vmware-tanzu/carvel-imgpkg/releases/download/v0.13.0/imgpkg-linux-amd64 -o /tanzu/cli/imgpkg-linux-amd64
