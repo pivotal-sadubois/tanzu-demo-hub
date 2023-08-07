@@ -888,6 +888,14 @@ checkCloudCLI() {
 
 }
 
+#jojo
+validateConfigVariables () {
+  for n in $(getYAML TDH_CONFIG_LIST); do
+    checkTDHsettings $n
+  done
+#hudi
+}
+
 checkTDHsettings() {
   service=$1
   missing_variables=0
@@ -896,12 +904,68 @@ checkTDHsettings() {
     messagePrint " ▪ Validate TDH Configuration"                 "\$HOME/.tanzu-demo-hub.cfg"
   fi
 
+  if [ "${service}" == "github" ]; then
+    if [ "${TDH_DEMO_GITHUB_USER}" == "" -o "${TDH_DEMO_GITHUB_TOKEN}" == "" ]; then
+      missing_variables=1
+      echo ""
+      echo "   MISSING ENVIRONMENT-VARIABES     DESCRIPTION        "
+      echo "   ---------------------------------------------------------------------------------------------------------------------------------------------------------------"
+
+      if [ "${TDH_DEMO_GITHUB_USER}" == "" ]; then
+        echo "   TDH_DEMO_GITHUB_USER             (required) TAP Github User (read / write access required)"
+      fi
+
+      if [ "${TDH_DEMO_GITHUB_TOKEN}" == "" ]; then
+        echo "   TDH_DEMO_GITHUB_TOKEN            (required) TAP Github Access Token (https://github.com/settings/tokens)"
+      fi
+
+      echo "   ---------------------------------------------------------------------------------------------------------------------------------------------------------------"
+      echo "   *** Create a new empty Github Account for running demos, Tanzu Demo Hub will use this account to create and delete repositories during demos ***"
+    else
+      gh repo list $TDH_DEMO_GITHUB_USER > /tmp/error.log 2>&1; ret=$? 
+      if [ $ret -ne 0 ]; then
+        logMessages /tmp/error.log
+        echo "ERROR: Github user ($TDH_DEMO_GITHUB_USER) does not exist. Please verify manually"
+        if [ "$NATIVE" == "0" ]; then
+          echo "       => tools/${TDH_TOOLS}.sh"
+          echo "          tdh-tools:/$ curl https://github.com/$TDH_DEMO_GITHUB_USER"
+          echo "          tdh-tools:/$ exit"
+        else       
+          echo "       => https://github.com/$TDH_DEMO_GITHUB_USER"
+        fi
+
+        exit 1
+      fi 
+
+      echo "$TDH_DEMO_GITHUB_TOKEN" | gh auth login -h github.com -p https --with-token > /tmp/error.log 2>&1; ret=$?
+      if [ $ret -ne 0 ]; then
+        logMessages /tmp/error.log
+        echo "ERROR: Failed to login to Github with token ($TDH_DEMO_GITHUB_TOKEN), Please verify manually"
+        if [ "$NATIVE" == "0" ]; then
+          echo "       => tools/${TDH_TOOLS}.sh"
+          echo "          tdh-tools:/$ echo \"$TDH_DEMO_GITHUB_TOKEN\" | gh auth login -h github.com -p https --with-token"
+          echo "          tdh-tools:/$ exit"
+        else  
+          echo "       => echo \"$TDH_DEMO_GITHUB_TOKEN\" | gh auth login -h github.com -p https --with-token"
+        fi
+
+        exit 1 
+      fi 
+
+
+exit
+    fi
+  fi
+
+#hudi
+
+
   if [ "${service}" == "tdh_user" ]; then   
     if [ "${TDH_USER}" == "" ]; then
       missing_variables=1
       echo ""
       echo "   MISSING ENVIRONMENT-VARIABES       DESCRIPTION        "
-      echo "   -----------------------------------------------------------------------------------------------------------------------------------------------------"
+      echo "   -------------------------------------------------------------------------------------------------------------------------------------------------------------"
     
       if [ "${TDH_USER}" == "" ]; then
         echo "   TDH_USER                           (required) Tanzu Demo Hub User to tag TKG Clusters with your Name"
@@ -915,7 +979,7 @@ checkTDHsettings() {
       missing_variables=1 
       echo ""     
       echo "   MISSING ENVIRONMENT-VARIABES       DESCRIPTION        "
-      echo "   -----------------------------------------------------------------------------------------------------------------------------------------------------"
+      echo "   -------------------------------------------------------------------------------------------------------------------------------------------------------------"
     
       if [ "${TDH_CERTMANAGER_EMAIL}" == "" ]; then
         echo "   TDH_CERTMANAGER_EMAIL              (required) Personal Email address to receive update from Let's Enscript"
@@ -928,7 +992,7 @@ checkTDHsettings() {
       missing_variables=1
       echo ""
       echo "   MISSING ENVIRONMENT-VARIABES       DESCRIPTION        "
-      echo "   -----------------------------------------------------------------------------------------------------------------------------------------------------"
+      echo "   -------------------------------------------------------------------------------------------------------------------------------------------------------------"
 
       if [ "${TMC_SERVICE_TOKEN}" == "" ]; then
         echo "   TMC_SERVICE_TOKEN                  (required) is the TMC_API_TOKEN which can be optained in the TMC console"
@@ -959,7 +1023,7 @@ checkTDHsettings() {
       missing_variables=1
       echo ""
       echo "   MISSING ENVIRONMENT-VARIABES       DESCRIPTION        "
-      echo "   -------------------------------------------------------------------------------------------------------------------------------------------------------"
+      echo "   ---------------------------------------------------------------------------------------------------------------------------------------------------------------"
 
       if [ "${TDH_REGISTRY_DOCKER_USER}" == "" ]; then
         echo "   TDH_REGISTRY_DOCKER_USER           (required) Docker User"
@@ -978,7 +1042,7 @@ checkTDHsettings() {
       missing_variables=1
       echo ""
       echo "   MISSING ENVIRONMENT-VARIABES       DESCRIPTION        "
-      echo "   -------------------------------------------------------------------------------------------------------------------------------------------------------"
+      echo "   ---------------------------------------------------------------------------------------------------------------------------------------------------------------"
 
       if [ "${TDH_REGISTRY_VMWARE_USER}" == "" ]; then
         echo "   TDH_REGISTRY_VMWARE_USER           (required) VMware User for Container Registry: registry.tanzu.vmware.com"
@@ -996,7 +1060,7 @@ checkTDHsettings() {
       missing_variables=1
       echo ""
       echo "   MISSING ENVIRONMENT-VARIABES       DESCRIPTION        "
-      echo "   -------------------------------------------------------------------------------------------------------------------------------------------------------"
+      echo "   ---------------------------------------------------------------------------------------------------------------------------------------------------------------"
 
       if [ "${AWS_ROUTE53_REGION}" == "" ]; then 
         echo "   AWS_ROUTE53_REGION                  (required) Choose the AWS Region where your installation should run"
@@ -1014,7 +1078,7 @@ checkTDHsettings() {
         echo "   AWS_ROUTE53_ACCESS_KEY              (required) AWS Acess Key for Route53 Access"
         echo ""
         echo "   Example AWS Access Policy for a Route53 Hosted Zone"
-        echo "   -------------------------------------------------------------------------------------------------------------------------------------------------------"
+        echo "   ---------------------------------------------------------------------------------------------------------------------------------------------------------------"
         echo "   {"
         echo "       \"Version\" \"2012-10-17\""
         echo "       \"Statement\": ["
@@ -1046,7 +1110,7 @@ checkTDHsettings() {
         echo "           }"
         echo "       ]"
         echo "   }"
-        echo "   -------------------------------------------------------------------------------------------------------------------------------------------------------"
+        echo "   ---------------------------------------------------------------------------------------------------------------------------------------------------------------"
       fi  
     else
       export AWS_ACCESS_KEY_ID=$AWS_ROUTE53_ACCESS_KEY
@@ -1078,11 +1142,11 @@ checkTDHsettings() {
 
   if [ ${missing_variables} -eq 1 ]; then
     echo ""
-    echo "   -------------------------------------------------------------------------------------------------------------------------------------------------------"
+    echo "   ---------------------------------------------------------------------------------------------------------------------------------------------------------------"
     echo "   IMPORTANT: Please set the missing environment variables either in your shell or in the tanzu-demo-hub configuration file ~/.tanzu-demo-hub.cfg"
     echo "              and set all variables with the 'export' notation. Place the password in Single Quotes (') especialy if you use special characters"
     echo "              ie. => export <environment_variable>='<value>'"
-    echo "   -------------------------------------------------------------------------------------------------------------------------------------------------------"
+    echo "   ---------------------------------------------------------------------------------------------------------------------------------------------------------------"
     echo ""
     exit 1
   fi
@@ -5241,7 +5305,6 @@ tkgCreateClusterV2() {
 
       wc_k8s="$(getYAML WC_K8S_VERSION $wc_nam)"
       cmdLoop kubectl get tkr > /tmp/output.txt 2>/dev/null
-      #wc_tkr=$(awk '{ printf("%s:%s:%s:%s:\n",$1,$2,$3,$4)}' /tmp/output.txt | grep ":True:True:" | egrep -v "ubuntu|fips" | sort -V | egrep ":${wc_k8s}+|:v${wc_k8s}+" | tail -1 | awk -F':' '{ print $1 }')
       wc_tkr=$(awk '{ printf("%s:%s:%s:%s:\n",$1,$2,$3,$4)}' /tmp/output.txt | grep ":True:True:" | egrep -v "ubuntu" | sort -V | egrep ":${wc_k8s}+|:v${wc_k8s}+" | tail -1 | awk -F':' '{ print $1 }')
       if [ "$wc_tkr" == "" ]; then
         echo "ERROR: failed to find TKR release $wc_k8s on the supperwisor cluster"
@@ -5536,8 +5599,6 @@ tkgCreateClusterV2() {
 
     createClusterRoleBindingGroup  default-tkg-admin-privileged-binding "psp:vmware-system-privileged" "system:authenticated"
   fi
-
-echo "\$HOME/.tanzu-demo-hub/config/${TDH_TKGMC_NAME}.kubeconfig"
 }
 
 # ------------------------------------------------------------------------------------------
@@ -6168,11 +6229,17 @@ getYAML() {
   [ "$1" == "AZ_CLIENT" ] && yq -o json $mccfg | jq -r '.tdh_infrastructure_configuration.credentials.client_id'
   [ "$1" == "AZ_CLIENT_SECRET" ] && yq -o json $mccfg | jq -r '.tdh_infrastructure_configuration.credentials.client_secret'
 
+#jojo
+  [ "$1" == "TDH_CONFIG_LIST" ] && yq -o json $mccfg | jq -r '.tdh_environment.tdh_config[]'
+
 #eeee
   [ "$1" == "MC_NAME" ] && yq -o json $mccfg | jq -r '.tdh_infrastructure_configuration.name'
   [ "$1" == "MC_INFTYP" ] && yq -o json $mccfg | jq -r '.tdh_infrastructure_configuration.infrastructure.type'
   [ "$1" == "MC_TKGENV" ] && yq -o json $mccfg | jq -r '.tdh_infrastructure_configuration.infrastructure.env'
   [ "$1" == "MC_KUBECONFIG" ] && yq -o json $mccfg | jq -r '.tdh_infrastructure_configuration.config_files.kubeconfig'
+
+  #[ "$1" == "CLUSTER_WITH_ROLE" ] && yq -o json $mccfg | jq -r --arg key "$2" '.tdh_clusters[] | select(.config.role[] == $key).name'
+#gogo
 
   # --- KUBERNETES CLUSTER OBJECTS ---
   [ "$1" == "TDH_DEPLOYMENT" ] && yq -o json $mccfg | jq -r '.tdh_deployment.name'
@@ -6218,6 +6285,7 @@ getYAML() {
   [ "$1" == "TAP_CATALOG_LOCATION_TARGET" ] && yq -o json $mccfg | jq -r --arg key "$2" --arg reg "$3"  \
     '.tdh_clusters[] | select(.name == $key).config.services.tap.catalog_locations[] | select(.name == $reg).target' 2>/dev/null
 
+#koko
   [ "$1" == "PACKAGE_LIST" ] && yq -o json $mccfg | jq -r --arg key "$2" --arg ins "$3" '.tdh_clusters[] | select(.name == $key).config.packages[].name'
   [ "$1" == "PACKAGE_NAME" ] && yq -o json $mccfg | jq -r --arg key "$2" --arg pkg "$3" --arg typ "$4" \
     '.tdh_clusters[] | select(.name == $key).config.packages[] | select(.package_id == $pkg and .package_manager == $typ).name'
@@ -6231,6 +6299,8 @@ getYAML() {
     '.tdh_clusters[] | select(.name == $key).config.packages[] | select(.package_id == $pkg).namespace' 2>/dev/null
   [ "$1" == "PACKAGE_INGRESS_DNS" ] && yq -o json $mccfg | jq -r --arg key "$2" --arg pkg "$3" --arg typ "$4" \
     '.tdh_clusters[] | select(.name == $key).config.packages[] | select(.package_id == $pkg).ingress_dns' 2>/dev/null
+  [ "$1" == "ADMIN_USER" ] && yq -o json $mccfg | jq -r --arg key "$2" --arg pkg "$3" --arg typ "$4" \
+    '.tdh_clusters[] | select(.name == $key).config.packages[] | select(.package_id == $pkg).admin_user' 2>/dev/null
   [ "$1" == "ADMIN_PASSWORD" ] && yq -o json $mccfg | jq -r --arg key "$2" --arg pkg "$3" --arg typ "$4" \
     '.tdh_clusters[] | select(.name == $key).config.packages[] | select(.package_id == $pkg).admin_password' 2>/dev/null
   [ "$1" == "PACKAGE_DESCRIPTION" ] && yq -o json $mccfg | jq -r --arg key "$2" --arg pkg "$3" --arg typ "$4" \
@@ -6448,7 +6518,7 @@ deleteKubernetesClusters() {
   echo
   messageTitle " *** Thank you for using Tanzu Demo Hub ***"
 
-}     
+}
 
 
 # ------------------------------------------------------------------------------------------
@@ -7395,13 +7465,16 @@ mergeKubeconfigFiles() {
   messageTitle "TAP Post Installation Steps"
   messagePrint " ▪ Merging KUBECONFIG Files" "\$HOME/.tanzu-demo-hub/$TDH_DEPLOYMENT_PATH/kubeconfig_${TDHV2_DEPLOYMENT}.yaml"
 
+  TDHV2_WORKLOAD_CLUSTER=$(getYAML CLUSTER_WITH_ROLE "registry")
+
   export KUBECONFIG=$(find $HOME/.tanzu-demo-hub/$TDH_DEPLOYMENT_PATH -name "*.kubeconfig" -type f | tr '\n' ':')
   kubectl config view --flatten > $HOME/.tanzu-demo-hub/$TDH_DEPLOYMENT_PATH/kubeconfig_${TDHV2_DEPLOYMENT}.yaml
 
-  messagePrint " ▪ Login to Local Harbor Registry" "\$HOME/.tanzu-demo-hub/$TDH_DEPLOYMENT_PATH/kubeconfig_${TDHV2_DEPLOYMENT}.yaml"
   TDH_HARBOR_REGISTRY_DNS_HARBOR=$(getYAML TAP_LOCAL_REGISTRY_SERVER $TDHV2_WORKLOAD_CLUSTER "local_registry")
   TDH_HARBOR_REGISTRY_ADMIN_PASSWORD="$(getYAML TAP_LOCAL_REGISTRY_PASS $TDHV2_WORKLOAD_CLUSTER 'local_registry')"
+
   docker login $TDH_HARBOR_REGISTRY_DNS_HARBOR -u admin -p $TDH_HARBOR_REGISTRY_ADMIN_PASSWORD > /tmp/error.log 2>&1; ret=$?
+  messagePrint " ▪ Login to Local Harbor Registry" "$TDH_HARBOR_REGISTRY_DNS_HARBOR"
 } 
 
 # ------------------------------------------------------------------------------------------                                       
@@ -7605,7 +7678,6 @@ TDH_SERVICE_TAP_IMAGE_RELOCATION=""
     messagePrint " ▪ Verify registry secret (registry-credentials)" "$INSTALL_REGISTRY_HOSTNAME"
   fi
 
-echo "gaga TAP_VERSION:$TAP_VERSION"
   TanzuPackage_AddRepo       $NAMESPACE tanzu-tap-repository ${INSTALL_REGISTRY_HOSTNAME}/library/tap-packages:$TAP_VERSION
   TanzuPackage_RepoSync      $NAMESPACE
 
@@ -8135,6 +8207,24 @@ echo "gaga TAP_VERSION:$TAP_VERSION"
 
   echo $CLUSTER_URL   > $HOME/.tanzu-demo-hub/$TDH_DEPLOYMENT_PATH/tap_cluster_url.cfg
   echo $CLUSTER_TOKEN > $HOME/.tanzu-demo-hub/$TDH_DEPLOYMENT_PATH/tap_cluster_token.cfg
+}
+
+# ------------------------------------------------------------------------------------------
+# Function Name ......: prepareDeploymentLog
+# Function Purpose ...: Prepare Deployment Logfile
+# ------------------------------------------------------------------------------------------
+# Argument ($1) ......: none
+#          ($2) ......: none                                                                                                      
+# ------------------------------------------------------------------------------------------                                      
+# Return Value .......: 0 = Success, 1 = failure                                                                                  
+# ------------------------------------------------------------------------------------------                                      
+prepareDeploymentLog() {                            
+  if [ -f $HOME/.tanzu-demo-hub/deployment.log ]; then 
+    TDH_DEPLOYMENT_LOGFILE=deployments/${TDHV2_MANAGEMENT_CLUSTER}/$TDHV2_DEPLOYMENT/${TDHV2_DEPLOYMENT}.log
+    messagePrint " ▪ Deployment Logile" "\$HOME/.tanzu-demo-hub/$TDH_DEPLOYMENT_LOGFILE"
+
+    mv $HOME/.tanzu-demo-hub/deployment.log $HOME/.tanzu-demo-hub/$TDH_DEPLOYMENT_LOGFILE
+  fi
 }
 
 # ------------------------------------------------------------------------------------------
@@ -9436,6 +9526,238 @@ installJenkins() {
 #                     : https://docs.gitea.io/en-us/api-usage/ ............. Gitea API Guide
 #                     : https://try.gitea.io/api/swagger#/user/userCreateToken ..... Swagger
 # ------------------------------------------------------------------------------------------
+installGiteaV2() {
+  TDHV2_WORKLOAD_CLUSTER=$clu
+  HELMCHART=gitea
+  HELMREPO=gitea-charts
+
+  pkg="$(getYAML PACKAGE_NAME $TDHV2_WORKLOAD_CLUSTER $HELMCHART helm)"
+  [ "$pkg" != "$HELMCHART" ] && return
+
+  NAMESPACE="$(getYAML PACKAGE_NAMESPACE $TDHV2_WORKLOAD_CLUSTER $HELMCHART helm)"
+  HELMREPO_URL="$(getYAML PACKAGE_REPO $TDHV2_WORKLOAD_CLUSTER $HELMCHART helm)"
+  GITEA_USER="$(getYAML ADMIN_USER $TDHV2_WORKLOAD_CLUSTER $HELMCHART helm)"
+  GITEA_PASS="$(getYAML ADMIN_PASSWORD $TDHV2_WORKLOAD_CLUSTER $HELMCHART helm)"
+
+  dnsdomain=$(getYAML TDH_DNS_DOMAIN)
+  subdomain=$(getYAML TDH_DNS_SUBDOMAIN)
+  DNS_DOMAIN="apps.${subdomain}.${dnsdomain}"
+
+helm delete gitea -n gitea > /dev/null 2>&1
+
+#koko
+  messageTitle "Self-hosted Git service (Gitea)"
+  cnt=$(helm list -q -n $NAMESPACE | egrep -c "^$HELMCHART")
+  if [ $cnt -eq 0 ]; then
+    # --- CREATE NAMESPACE ---
+    messagePrint " ▪ Create Namespace" "$HELMCHART"
+    deleteNamespace $NAMESPACE > /dev/null 2>&1
+    createNamespace $NAMESPACE > /dev/null 2>&1
+
+    tls_iss=$(getYAML WC_TLS_CA_ISSUER $clu)
+    tls_cnm=$(getYAML WC_TLS_CERT_NAME $clu)
+    tls_snm=$(getYAML WC_TLS_SECRET_NAME $clu)
+
+    # --- COPY SECRET TO NAMESPACE ---
+    messagePrint " ▪ Copy TLS Secret" "$tls_snm"
+    copySecretObject default $NAMESPACE $tls_snm
+
+    # --- DOCKER PULL SECRET ---
+    dockerPullSecret $NAMESPACE
+
+    # --- ADDING HELM REPO ---
+    helmRepoAdd $HELMREPO $HELMREPO_URL
+
+    if [ "$TDH_SERVICE_GITEA_VERSION" == "" -o "$TDH_SERVICE_GITEA_VERSION" == "latest" ]; then
+      HELM_CHART_VERSION=$(helm search repo $HELMREPO/$HELMCHART | egrep "^$HELMREPO/$HELMCHART" | tail -1 | awk '{ print $2 }')
+    else
+      HELM_CHART_VERSION=$TDH_SERVICE_GITEA_VERSION
+    fi
+
+    HELM_VALUES=/tmp/gitea_values.yaml
+
+    echo "global:"                                                                                                              >  $HELM_VALUES
+    echo "  imageRegistry: docker.io"                                                                                           >> $HELM_VALUES
+    echo "  imagePullSecrets:"                                                                                                  >> $HELM_VALUES
+    echo "    - tdh-docker-repo"                                                                                                >> $HELM_VALUES
+    echo ""                                                                                                                     >> $HELM_VALUES
+    echo "images:"                                                                                                              >> $HELM_VALUES
+    echo "  imageRegistry: docker.io"                                                                                           >> $HELM_VALUES
+    echo "  imagePullPolicy: Always"                                                                                            >> $HELM_VALUES
+    echo "  imagePullSecrets: tdh-docker-repo"                                                                                  >> $HELM_VALUES
+    echo ""                                                                                                                     >> $HELM_VALUES
+    echo "config:"                                                                                                              >> $HELM_VALUES
+    echo "  disableRegistration: true"                                                                                          >> $HELM_VALUES
+    echo ""                                                                                                                     >> $HELM_VALUES
+    echo "gitea:"                                                                                                               >> $HELM_VALUES
+    echo "  admin:"                                                                                                             >> $HELM_VALUES
+#    echo "    existingSecret: gitea-admin-secret"                                                                               >> $HELM_VALUES
+    echo "    username: \"$GITEA_USER\""                                                                                        >> $HELM_VALUES
+    echo "    password: \"$GITEA_PASS\""                                                                                        >> $HELM_VALUES
+    echo "    email: \"gitea@local.domain\""                                                                                    >> $HELM_VALUES
+    echo "postgresql-ha:"                                                                                                          >> $HELM_VALUES
+    echo "  enabled: false"                                                                                                     >> $HELM_VALUES
+
+    echo ""                                                                                                                     >> $HELM_VALUES
+    echo "ingress:"                                                                                                             >> $HELM_VALUES
+    echo "  enabled: true"                                                                                                      >> $HELM_VALUES
+    echo "  annotations:"                                                                                                       >> $HELM_VALUES
+    echo "    kubernetes.io/ingress.class: contour"                                                                             >> $HELM_VALUES
+    echo "    ingress.kubernetes.io/force-ssl-redirect: \"true\""                                                               >> $HELM_VALUES
+    echo "  hosts:"                                                                                                             >> $HELM_VALUES
+    echo "    - host: $HELMCHART.$DNS_DOMAIN"                                                                                   >> $HELM_VALUES
+    echo "      paths:"                                                                                                         >> $HELM_VALUES
+    echo "      - path: /"                                                                                                      >> $HELM_VALUES
+    echo "        pathType: Prefix"                                                                                             >> $HELM_VALUES
+    echo "  tls:"                                                                                                               >> $HELM_VALUES
+    echo "    - secretName: $tls_snm"                                                                                           >> $HELM_VALUES
+    echo "      hosts:"                                                                                                         >> $HELM_VALUES
+    echo "        - $HELMCHART.$DNS_DOMAIN"                                                                                     >> $HELM_VALUES
+
+
+    
+    GITEA_SECRET=/tmp/gitea_secret.yaml
+    echo "apiVersion: v1"                                                                                                       >> $GITEA_SECRET
+    echo "kind: Secret"                                                                                                         >> $GITEA_SECRET
+    echo "metadata:"                                                                                                            >> $GITEA_SECRET
+    echo "  name: gitea-admin-secret"                                                                                           >> $GITEA_SECRET
+    echo "type: Opaque"                                                                                                         >> $GITEA_SECRET
+    echo "stringData:"                                                                                                          >> $GITEA_SECRET
+    echo "  username: $GITEA_USER"                                                                                              >> $GITEA_SECRET
+    echo "  password: $GITEA_PASS"                                                                                              >> $GITEA_SECRET
+
+    kubectl apply -f $GITEA_SECRET -n $NAMESPACE
+
+echo $KUBECONFIG
+
+#gaga giteaV2
+    messagePrint " ▪ Deploy the $HELMCHART Helm Chart" "$HELMCHART"
+    cnt=0; ret=1; stt="notdeployed"
+    while [ $ret -ne 0 -a $cnt -lt 5 -a "$stt" != "deployed" ]; do
+      helm install $HELMCHART --namespace $NAMESPACE $HELMREPO/$HELMCHART -f $HELM_VALUES --version $HELM_CHART_VERSION --create-namespace --wait --wait-for-jobs --timeout 10m > /tmp/error.log 2>&1; ret=$?
+      #helm install $HELMCHART --namespace $NAMESPACE $HELMREPO/$HELMCHART -f $HELM_VALUES --version $HELM_CHART_VERSION --create-namespace --wait --wait-for-jobs --timeout 10m; ret=$?
+
+      # --- WAIT FOR PODS TO GET STARTED ---
+      runningPods $NAMESPACE
+
+      cmdLoop helm ls -n $NAMESPACE -o json > /tmp/output.json
+      stt=$(jq -r --arg chart "$HELMCHART" '.[] | select(.name == $chart).status' /tmp/output.json)
+
+      [ $ret -eq 0 -a "$stt" == "deployed" ] && break
+
+      # --- DELTE FAILED HELM CHART ---
+      deleteHelmChart $NAMESPACE $HELMCHART > /dev/null 2>&1
+      deleteNamespace $NAMESPACE > /dev/null 2>&1
+
+      let cnt=cnt+1
+      sleep 30
+    done
+
+    if [ $ret -ne 0 -o "$stt" != "deployed" ]; then
+      logMessages /tmp/error.log
+      echo "ERROR: Failed to deploy $HELMCHART Helm Chart"
+      if [ "$NATIVE" == "0" ]; then
+        echo "       => tools/${TDH_TOOLS}.sh"
+        echo "          tdh-tools:/$ helm install $HELMCHART --namespace $NAMESPACE $HELMREPO/$HELMCHART -f $HELM_VALUES --version $HELM_CHART_VERSION"
+        echo "          tdh-tools:/$ exit"
+      else
+        echo "       => helm install $HELMCHART --namespace $NAMESPACE $HELMREPO/$HELMCHART -f $HELM_VALUES --version $HELM_CHART_VERSION"
+      fi
+
+      exit 1
+    fi
+
+    uodateConfigMap tanzu-demo-hub TDH_SERVICE_GITEA_ADMIN_TOKEN_ID  ""
+  fi
+
+  cmdLoop helm ls -n $NAMESPACE -o json > /tmp/output.json
+  if [ -s /tmp/output.json ]; then
+    ver=$(jq -r --arg chart "$HELMCHART" '.[] | select(.name == $chart).app_version' /tmp/output.json)
+    crt=$(jq -r --arg chart "$HELMCHART" '.[] | select(.name == $chart).chart' /tmp/output.json)
+    stt=$(jq -r --arg chart "$HELMCHART" '.[] | select(.name == $chart).status' /tmp/output.json)
+    dat=$(jq -r --arg chart "$HELMCHART" '.[] | select(.name == $chart).updated' /tmp/output.json)
+  else
+    ver=""; crt=""; stt=""; dat=""
+  fi
+
+  pod=$(kubectl get pods -n gitea -o json | jq -r '.items[].metadata | select(.labels."app.kubernetes.io/name" == "gitea").name') 
+echo "POD:$pod"
+
+echo "kubectl -n $HELMCHART exec -it $pod -- su git -c \"id\""
+
+if [ 1 -eq 2 ]; then 
+  # --- WAIT FOR HARBOR TO COME ONLINE ---
+  pod=$(kubectl get pods -n gitea -o json | jq -r '.items[].metadata | select(.labels."app.kubernetes.io/name" == "gitea").name') 
+echo "POD:$pod"
+  ret=1; cnt=0
+  while [ $ret -ne 0 -a $cnt -le 5 ]; do
+    kubectl -n $HELMCHART exec -it $pod -- su git -c "$HELMCHART admin user change-password -u $GITEA_USER -p $GITEA_PASS" > /tmp/error.log 2>&1; ret=$?
+    [ $ret -eq 0 ] && break
+    sleep 60
+    let cnt=cnt+1
+  done
+
+  if [ $ret -ne 0 ]; then
+    logMessages /tmp/error.log
+    echo "ERROR: Failed to change password for Gitea"
+    if [ "$NATIVE" == "0" ]; then
+      echo "       => tools/${TDH_TOOLS}.sh"
+      echo "          tdh-tools:/$ kubectl -n $HELMCHART exec -it gitea-0 -- su git -c \"$HELMCHART admin user change-password -u $GITEA_USER -p $GITEA_PASS\""
+      echo "          tdh-tools:/$ exit"
+    else
+      echo "       =>  kubectl -n $HELMCHART exec -it gitea-0 -- $HELMCHART admin user change-password -u $GITEA_USER -p $GITEA_PASS"
+    fi
+
+    exit 1
+  fi
+fi
+
+
+  messagePrint " ▪ Verify Helm Chart $HELMCHART"   "$crt"
+  messagePrint "   Helm Chart Name"                "$HELMCHART"
+  messagePrint "   Helm Chart Version"             "$ver"
+  messagePrint "   Helm Chart Status"              "$stt"
+  messagePrint "   Helm Chart Installed/Updated"   "$dat"
+  messagePrint "   Gitea Internal Name"            "gitea.gitea.svc.cluster.local"
+  messagePrint "   Gitea Management Portal"        "https://gitea.$DNS_DOMAIN"
+  messagePrint "   Gitea Admin User"               "$GITEA_USER"
+  messagePrint "   Gitea Admin Password"           "$GITEA_PASS"
+
+  # --- STORE SETTINGS IN CONFIGMAP ---
+  uodateConfigMap tanzu-demo-hub TDH_SERVICE_GITEA                 "true"
+  uodateConfigMap tanzu-demo-hub TDH_SERVICE_GITEA_ADMIN_USER      "$GITEA_USER"
+  uodateConfigMap tanzu-demo-hub TDH_SERVICE_GITEA_ADMIN_PASS      "$GITEA_PASS"
+  uodateConfigMap tanzu-demo-hub TDH_SERVICE_GITEA_SERVER          "gitea.$DNS_DOMAIN"
+  uodateConfigMap tanzu-demo-hub TDH_SERVICE_GITEA_SERVER_URL      "https://gitea.$DNS_DOMAIN"
+
+  # --- CREATE AMDIN TOKEN FOR USER gitea_admin ---
+  createGiteaAPItoken
+
+  TDH_SERVICE_GITEA_ADMIN_TOKEN_ID=$(getConfigMap tanzu-demo-hub TDH_SERVICE_GITEA_ADMIN_TOKEN_ID)
+  messagePrint "   Gitea Admin Token ID"           "$TDH_SERVICE_GITEA_ADMIN_TOKEN_ID"
+
+
+
+
+
+exit
+
+#koko
+
+}
+
+# ------------------------------------------------------------------------------------------
+# Function Name ......: installGitea
+# Function Purpose ...: Install Gitea Helm Chargt
+# ------------------------------------------------------------------------------------------
+# Argument ($1) ......: None
+# ------------------------------------------------------------------------------------------
+# Return Value .......: 0 - SUCCEED, 1 - FAILED
+# ------------------------------------------------------------------------------------------
+# References .........: https://gitea.com/gitea/helm-chart ............. Gitea Documentation
+#                     : https://docs.gitea.io/en-us/api-usage/ ............. Gitea API Guide
+#                     : https://try.gitea.io/api/swagger#/user/userCreateToken ..... Swagger
+# ------------------------------------------------------------------------------------------
 installGitea() {
   NAMESPACE=gitea
   HELMCHART=gitea
@@ -9495,9 +9817,6 @@ installGitea() {
     echo ""                                                                                                                     >> $HELM_VALUES
     echo "gitea:"                                                                                                               >> $HELM_VALUES
     echo "  admin:"                                                                                                             >> $HELM_VALUES
-#    echo "    # NOTE: Password can not be changed its stays 'r8sA8CPHD9!bt6d'"                                                  >> $HELM_VALUES
-#    echo "    username: gitea_admin"                                                                                            >> $HELM_VALUES
-#    echo "    password: r8sA8CPHD9!bt6d"                                                                                        >> $HELM_VALUES
     echo "    username: gitea_admin"                                                                                            >> $HELM_VALUES
     echo "    password: $TDH_HARBOR_ADMIN_PASSWORD"                                                                             >> $HELM_VALUES
     echo "    email: \"gi@tea.com\""                                                                                            >> $HELM_VALUES
@@ -10279,7 +10598,6 @@ installGitLab() {
     echo "  installCRDs: false"                                                                                                 >> $HELM_VALUES
     echo "  install: false"                                                                                                     >> $HELM_VALUES
 
-#gogo
     cnt=0; ret=1; stt="notdeployed"
     while [ $ret -ne 0 -a $cnt -lt 5 -a "$stt" != "deployed" ]; do
       #helm install gitlab gitlab/gitlab -f ${HELM_VALUES} --namespace $NAMESPACE --wait --wait-for-jobs --timeout 10m > /tmp/error.log 2>&1; ret=$?
@@ -16048,12 +16366,23 @@ createGiteaAPItoken() {
   TDH_SERVICE_GITEA_SERVER_URL=$(getConfigMap tanzu-demo-hub TDH_SERVICE_GITEA_SERVER_URL)
   TDH_SERVICE_GITEA_ADMIN_TOKEN_ID=$(getConfigMap tanzu-demo-hub TDH_SERVICE_GITEA_ADMIN_TOKEN_ID)
 
-  if [ "$TDH_SERVICE_GITEA_ADMIN_TOKEN_ID" == "" -o "$TDH_SERVICE_GITEA_ADMIN_TOKEN_ID" == "null" ]; then 
+echo "TDH_SERVICE_GITEA_ADMIN_USER:$TDH_SERVICE_GITEA_ADMIN_USER"
+echo "TDH_SERVICE_GITEA_ADMIN_PASS:$TDH_SERVICE_GITEA_ADMIN_PASS"
+echo "TDH_SERVICE_GITEA_SERVER:$TDH_SERVICE_GITEA_SERVER"
+echo "TDH_SERVICE_GITEA_SERVER_URL:$TDH_SERVICE_GITEA_SERVER_URL"
+echo "TDH_SERVICE_GITEA_ADMIN_TOKEN_ID:$TDH_SERVICE_GITEA_ADMIN_TOKEN_ID"
+
+echo baba1
+  if [ "$TDH_SERVICE_GITEA_ADMIN_TOKEN_ID" == "" -o "$TDH_SERVICE_GITEA_ADMIN_TOKEN_ID" == "null" -o "$TDH_SERVICE_GITEA_ADMIN_TOKEN_ID" == "<empty>" ]; then 
+echo baba2
+echo "curl -X GET https://${TDH_SERVICE_GITEA_SERVER}/api/v1/users/$TDH_SERVICE_GITEA_ADMIN_USER/tokens"
     token=$(curl -X GET https://${TDH_SERVICE_GITEA_SERVER}/api/v1/users/$TDH_SERVICE_GITEA_ADMIN_USER/tokens \
                  -H 'accept: application/json' \
                  -H 'Content-Type: application/json' \
                  -u "$TDH_SERVICE_GITEA_ADMIN_USER:$TDH_SERVICE_GITEA_ADMIN_PASS" 2>/dev/null | \
                  jq -r '.[] | select(.name == "tanzu-demo-hub").name') 
+
+echo "TOKEN:$token"
 
     if [ "$token" == "tanzu-demo-hub" ]; then
       curl -X DELETE https://${TDH_SERVICE_GITEA_SERVER}/api/v1/users/$TDH_SERVICE_GITEA_ADMIN_USER/tokens/tanzu-demo-hub \
@@ -18873,7 +19202,7 @@ runTDHtools() {
   TDH_TOOLS_PATH=".${TDH_TOOLS}"
 
   if [ ! -f /tdh_tools_docker_container  ]; then
-    tdhHeader "$HEADER_TEXT"
+    tdhHeader "$HEADER_TEXT" | tee $HOME/.tanzu-demo-hub/deployment.log
 
     cnt=$(docker ps | grep -c "tdh-tools-${TOOLS_TLAG}-${TOOLS_VERSION}:latest")
     if [ $cnt -gt 0 ]; then 
@@ -18893,9 +19222,9 @@ runTDHtools() {
     #checkKubernetesServices registry_docker
 
     if [ $NATIVE -eq 0 ]; then
-      tdh_tools_build    $TOOLS_TLAG $TOOLS_VERSION
-      tdh_tools_download $TOOLS_TLAG $TOOLS_VERSION
-      messagePrint " ▪ Running TDH Tools Docker Container" "$TDH_TOOLS:latest"
+      tdh_tools_build    $TOOLS_TLAG $TOOLS_VERSION | tee -a $HOME/.tanzu-demo-hub/deployment.log
+      tdh_tools_download $TOOLS_TLAG $TOOLS_VERSION | tee -a $HOME/.tanzu-demo-hub/deployment.log
+      messagePrint " ▪ Running TDH Tools Docker Container" "$TDH_TOOLS:latest" | tee -a $HOME/.tanzu-demo-hub/deployment.log
 
       cid=$(docker ps -a | grep $TDH_TOOLS:latest | awk '{ print $1 }')
       [ "$cid" != "" ] && for n in $cid; do docker rm $n -f > /dev/null 2>&1; done
@@ -18960,7 +19289,7 @@ runTDHtools() {
       docker run $USER_OPTIONS ${CORE_MOUNTS[*]} -e SUPERVISOR -e VERIFY $TDH_TOOLS:latest /usr/local/bin/$POSTSCRIPT 2>/dev/null
 
       [ $ROOT_SHELL -eq 1 ] && SEXEC_OPTIONS=$ROOT_OPTIONS || SEXEC_OPTIONS=$USER_OPTIONS
-      docker run --platform linux/amd64 $SEXEC_OPTIONS ${CORE_MOUNTS[*]} -e SUPERVISOR -e VERIFY $TDH_TOOLS:latest $DOCKER_EXEC $DOCKER_ARGS; ret=$?
+      docker run --platform linux/amd64 $SEXEC_OPTIONS ${CORE_MOUNTS[*]} -e SUPERVISOR -e VERIFY $TDH_TOOLS:latest $DOCKER_EXEC $DOCKER_ARGS 2>&1 | tee -a $HOME/.tanzu-demo-hub/deployment.log
   
       # --- FINISH CURRENT SESSION AS WE RUN AS CONTAINER ---
       exit $ret
@@ -18977,7 +19306,7 @@ tdhHeader() {
   TEXT=$1
   echo ""
   echo "Tanzu Demo Hub - $TEXT"
-  echo "by Sacha Dubois, VMware Inc,"
+  echo "by Sacha Dubois, VMware Inc."
   messageLine
 }
 
@@ -19941,7 +20270,6 @@ listTCEmcDeployments() {
 dockerPullSecret() {
   TMP_NAMESPACE=$1
   TMP_SERVICEACCOUNT=$2
-#gggggggggggggg
 
   [ "$TMP_SERVICEACCOUNT" == "" ] && TMP_SERVICEACCOUNT=default
 

@@ -57,11 +57,17 @@ while [ "$1" != "" ]; do
 done
 
 if [ "$TDHV2_LIST_DEPLOYMENTS" -eq 1 ]; then
+  tdhHeader "Automated deployment of Tanzu Demo Environments"
+  #messagePrint " ▪ List Current TDH Deployments" "\$HOME/.tanzu-demo-hub/deployments"
+  export VERIFY="true"
+
   files/tdh-tools/tdh-context.sh
   exit 0
 fi
 
 if [ "${TDHV2_DEPLOY_ENVIRONMENT}" == "" -o "${TDHV2_DEPLOYMENT_FILE}" == "" -o "${TDHV2_DNS_SUBDOMAIN}" == "" ]; then
+  tdhHeader "Automated deployment of Tanzu Demo Environments"
+  #messagePrint " ▪ Shows Active Deployment Environments and Configuration" "\$HOME/.tanzu-demo-hub/config"
   [ "${TDHV2_DEPLOY_ENVIRONMENT}" == "" ] && listTDHenv
   [ "${TDHV2_DEPLOYMENT_FILE}" == "" ] && listClusterConfigV2
 
@@ -105,15 +111,6 @@ export TDH_REGISTRY_DOCKER_NAME='docker.io'
 #############################################################################################################################
 runTDHtools "tkg" "$tdh_tools" "Automated deployment of Tanzu Demo Environments ($(date))" "/home/tanzu/tanzu-demo-hub/$CMD_EXEC" "$CMD_ARGS" 
 
-# --- VERYFY ACCESS TO CLOUD ---
-#checkTDHenvironment   ## pivnet, vmw_cli
-
-# --- VERIFY TOOLS AND ACCESS ---
-#checkCLIcommands TOOLS
-#checkCLIcommands TKG
-#checkCLIcommands TANZU
-#checkCLIcommands TMC
-
 # --- CONVERT TDH CONFIG VARIABLES TO YAML ---
 convertTDHconfig
 convertTDHsecrets
@@ -122,7 +119,6 @@ createTDHdeployment
 # --- VALIDATE TDH SETTINGS ---
 clearConfigMapCache
 #validateConfigVariables
-
 #checkKubernetesServices
 
 #############################################################################################################################
@@ -138,7 +134,6 @@ fi
 #############################################################################################################################
 for clu in $(getYAML WC_CLUSTER_LIST); do
   createKubernetesCluster
-break
   messageTitle "Tanzu Package Management"
   installPackageRepositories
 
