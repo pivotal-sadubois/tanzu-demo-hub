@@ -27,6 +27,7 @@ if [ -d $HOME/.tanzu-demo-hub/config ]; then
   TKG_WC_LIST=""
   [ "$SUPERVISOR" == "" ] && export SUPERVISOR="false"
   [ "$VERIFY" == "" ] && export VERIFY="false"
+  [ ! -f $HOME/.kube/config ] && touch $HOME/.kube/config
 
   # --- VERIFY VPN"
   curl -k --head -m 3 https://h2o.vmware.com > /dev/null 2>&1; ret=$?
@@ -215,5 +216,10 @@ if [ -d $HOME/.tanzu-demo-hub/config ]; then
      echo " -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- "
   done
 fi
+
+unset KUBECTL_VSPHERE_PASSWORD
+unset KUBECONFIG
+unset SUPERVISOR
+unset VERIFY
 
 [ "$(hostname)" == "tdh-tools" ] && cd $HOME/tanzu-demo-hub && /bin/bash 

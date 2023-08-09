@@ -19232,14 +19232,15 @@ runTDHtools() {
 
       export TANZU_HOME=/home/tanzu
       export CORE_OPTIONS="-it --init --rm --hostname tdh-tools --name $TDH_TOOLS --network=host"
-      export USER_OPTIONS="$CORE_OPTIONS -u 1000:1000 --env-file /tmp/tdh.env -e KUBECONFIG=$HOME/.kube/config"
-      export ROOT_OPTIONS="$CORE_OPTIONS --env-file /tmp/tdh.env -e KUBECONFIG=$HOME/.kube/config"
+      export USER_OPTIONS="$CORE_OPTIONS -u 1000:1000 --env-file /tmp/tdh.env -e KUBECONFIG=/home/tanzu/.kube/config"
+      export ROOT_OPTIONS="$CORE_OPTIONS --env-file /tmp/tdh.env -e KUBECONFIG=/home/tanzu/.kube/config"
       #echo "export PATH=\"~/.local/bin:\$PATH\"" > $HOME/$TDH_TOOLS_PATH/.bashrc
 
+      [ ! -d $HOME/.kube ] && mkdir -p $HOME/.kube 
+      [ ! -f $HOME/.kube/config ] && touch $HOME/.kube/config
       [ ! -s $HOME/.tanzu-demo-hub.yml ] && touch $HOME/.tanzu-demo-hub.yml
       [ ! -s $HOME/.tanzu-demo-hub-secrets.yml ] && touch $HOME/.tanzu-demo-hub-secrets.yml
 
-#hulu
       export CORE_MOUNTS=(
                "-v /var/run/docker.sock:/var/run/docker.sock"                           ## REQIORED FOR DOCKER
                "-v $HOME/.tanzu-demo-hub:$TANZU_HOME/.tanzu-demo-hub:rw"
