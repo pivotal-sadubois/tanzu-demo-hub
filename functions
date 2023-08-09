@@ -6229,17 +6229,14 @@ getYAML() {
   [ "$1" == "AZ_CLIENT" ] && yq -o json $mccfg | jq -r '.tdh_infrastructure_configuration.credentials.client_id'
   [ "$1" == "AZ_CLIENT_SECRET" ] && yq -o json $mccfg | jq -r '.tdh_infrastructure_configuration.credentials.client_secret'
 
-#jojo
   [ "$1" == "TDH_CONFIG_LIST" ] && yq -o json $mccfg | jq -r '.tdh_environment.tdh_config[]'
 
-#eeee
   [ "$1" == "MC_NAME" ] && yq -o json $mccfg | jq -r '.tdh_infrastructure_configuration.name'
   [ "$1" == "MC_INFTYP" ] && yq -o json $mccfg | jq -r '.tdh_infrastructure_configuration.infrastructure.type'
   [ "$1" == "MC_TKGENV" ] && yq -o json $mccfg | jq -r '.tdh_infrastructure_configuration.infrastructure.env'
   [ "$1" == "MC_KUBECONFIG" ] && yq -o json $mccfg | jq -r '.tdh_infrastructure_configuration.config_files.kubeconfig'
 
   #[ "$1" == "CLUSTER_WITH_ROLE" ] && yq -o json $mccfg | jq -r --arg key "$2" '.tdh_clusters[] | select(.config.role[] == $key).name'
-#gogo
 
   # --- KUBERNETES CLUSTER OBJECTS ---
   [ "$1" == "TDH_DEPLOYMENT" ] && yq -o json $mccfg | jq -r '.tdh_deployment.name'
@@ -6546,7 +6543,7 @@ createKubernetesCluster() {
   if [ "$infra_typ" == "vSphere" ]; then
     vsphereSupervisorClusterLoginV2    $(getYAML MC_NAME)
     setKubernetesContextV2             $(getYAML MC_KUBECONFIG)
-    #tanzuConfigServerV2               $(getYAML MC_NAME)
+    tanzuConfigServerV2               $(getYAML MC_NAME)
 
     setKubernetesContextV2             $(getYAML MC_KUBECONFIG)
     tkgCreateClusterV2
@@ -6607,6 +6604,7 @@ tanzuConfigServerV2() {
 
     exit 1
   fi
+
 }
 
 # ------------------------------------------------------------------------------------------
@@ -19234,8 +19232,8 @@ runTDHtools() {
 
       export TANZU_HOME=/home/tanzu
       export CORE_OPTIONS="-it --init --rm --hostname tdh-tools --name $TDH_TOOLS --network=host"
-      export USER_OPTIONS="$CORE_OPTIONS -u 1000:1000 --env-file /tmp/tdh.env -e \"KUBECONFIG=$HOME/.kube/config\""
-      export ROOT_OPTIONS="$CORE_OPTIONS --env-file /tmp/tdh.env -e \"KUBECONFIG=$HOME/.kube/config\""
+      export USER_OPTIONS="$CORE_OPTIONS -u 1000:1000 --env-file /tmp/tdh.env -e KUBECONFIG=$HOME/.kube/config"
+      export ROOT_OPTIONS="$CORE_OPTIONS --env-file /tmp/tdh.env -e KUBECONFIG=$HOME/.kube/config"
       #echo "export PATH=\"~/.local/bin:\$PATH\"" > $HOME/$TDH_TOOLS_PATH/.bashrc
 
       [ ! -s $HOME/.tanzu-demo-hub.yml ] && touch $HOME/.tanzu-demo-hub.yml
@@ -19289,7 +19287,14 @@ runTDHtools() {
       docker run $USER_OPTIONS ${CORE_MOUNTS[*]} -e SUPERVISOR -e VERIFY $TDH_TOOLS:latest /usr/local/bin/$POSTSCRIPT 2>/dev/null
 
       [ $ROOT_SHELL -eq 1 ] && SEXEC_OPTIONS=$ROOT_OPTIONS || SEXEC_OPTIONS=$USER_OPTIONS
-      docker run --platform linux/amd64 $SEXEC_OPTIONS ${CORE_MOUNTS[*]} -e SUPERVISOR -e VERIFY $TDH_TOOLS:latest $DOCKER_EXEC $DOCKER_ARGS 2>&1 | tee -a $HOME/.tanzu-demo-hub/deployment.log
+      if [ "${DOCKER_EXEC}" == "/usr/local/bin/tdh-context.sh" ]; then
+        unset TDH_DEMO_GITHUB_TOKEN TDH_REGISTRY_DOCKER_PASS TDHPATH TDH_CERTMANAGER_EMAIL SUPERVISOR VERIFY TDH_REGISTRY_VMWARE_USER TDH_REGISTRY_VMWARE_PASS
+        unset TDH_DEMO_GITHUB_USERTDH_REGISTRY_DOCKER_PASS 
+        docker run --platform linux/amd64 $SEXEC_OPTIONS ${CORE_MOUNTS[*]} -e SUPERVISOR -e VERIFY $TDH_TOOLS:latest $DOCKER_EXEC $DOCKER_ARGS 2>&1 
+      else
+        docker run --platform linux/amd64 $SEXEC_OPTIONS ${CORE_MOUNTS[*]} -e SUPERVISOR -e VERIFY $TDH_TOOLS:latest $DOCKER_EXEC $DOCKER_ARGS 2>&1 | \
+            tee -a $HOME/.tanzu-demo-hub/deployment.log
+      fi
   
       # --- FINISH CURRENT SESSION AS WE RUN AS CONTAINER ---
       exit $ret
