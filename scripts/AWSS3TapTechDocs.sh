@@ -46,10 +46,14 @@ CATALOG_NMSP=$(yq -o=json $CATALOG_INFO | jq -r '.metadata.namespace')
 CATALOG_NAME=$(yq -o=json $CATALOG_INFO | jq -r '.metadata.name') 
 [ "$CATALOG_NMSP" == "" -o "$CATALOG_NMSP" == "null" ] && CATALOG_NMSP="default"
 
-. ~/.tanzu-demo-hub.cfg
+if [ -f $HOME/.tanzu-demo-hub-techdocs.cfg ]; then 
+  . $HOME/.tanzu-demo-hub-techdocs.cfg
+else
+  echo "ERROR: TechDocs Config file $HOME/.tanzu-demo-hub-techdocs.cfg does not exist"; exit 1
+fi
 
 if [ "$TAP_S3_TECH_DOC_BUCKET" == "" ]; then 
-  echo "ERROR: AWS S3 Bucket: TAP_S3_TECH_DOC_BUCKET not configured in ~/.tanzu-demo-hub.cfg"; exit
+  echo "ERROR: AWS S3 Bucket: TAP_S3_TECH_DOC_BUCKET not configured in ~/.tanzu-demo-hub-techdocs.cfg"; exit
 fi
 
 # --- AWS ADMIN SECRETS ---

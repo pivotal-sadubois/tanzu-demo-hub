@@ -37,6 +37,6 @@ cnt=0; ret=1
 while [ ${ret} -ne 0 -a ${cnt} -lt 3 ]; do
   tanzu plugin sync > /dev/null 2>&1; ret=$?
   [ $ret -eq 0 ] && break
-  cnt=cnt+1
+  let cnt=cnt+1
 done
 
