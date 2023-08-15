@@ -24,11 +24,11 @@ fi
 
 export AWS_ACCESS_KEY_ID="$TDH_TOOLS_S3_ACCESS_KEY"
 export AWS_SECRET_ACCESS_KEY="$TDH_TOOLS_S3_SECRET_KEY"
-export AWS_DEFAULT_REGION=$TDH_TOOLS_REGION
+export AWS_DEFAULT_REGION=$TDH_TOOLS_S3_REGION
 
 #             "Resource": "arn:aws:s3:::tdh-tools"
-aws s3 cp $HOME/.tanzu-demo-hub/cache/tdh-tools/${TDH_TOOLS_NAME}.tar s3://$TDH_TOOLS_BUCKET
-aws s3 cp $HOME/.tanzu-demo-hub/cache/tdh-tools/${TDH_TOOLS_NAME}.sum s3://$TDH_TOOLS_BUCKET
-aws s3 cp $HOME/.tanzu-demo-hub/cache/tdh-tools/${TDH_TOOLS_NAME}.tag s3://$TDH_TOOLS_BUCKET
+aws s3 cp $HOME/.tanzu-demo-hub/cache/tdh-tools/${TDH_TOOLS_NAME}.tar s3://$TDH_TOOLS_S3_BUCKET
+aws s3 cp $HOME/.tanzu-demo-hub/cache/tdh-tools/${TDH_TOOLS_NAME}.sum s3://$TDH_TOOLS_S3_BUCKET
+aws s3 cp $HOME/.tanzu-demo-hub/cache/tdh-tools/${TDH_TOOLS_NAME}.tag s3://$TDH_TOOLS_S3_BUCKET
 echo "------------------------------------------------------------------------------------------------------------"
-aws s3 ls $TDH_TOOLS_BUCKET
+aws s3 ls $TDH_TOOLS_S3_BUCKET
