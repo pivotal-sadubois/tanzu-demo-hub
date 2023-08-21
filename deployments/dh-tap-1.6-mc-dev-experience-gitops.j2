@@ -1,20 +1,10 @@
 tdh_deployment:
   name: tdh-tap-mc-dev-experience-gitops
-  source: tdh-tap-1.6-mc-dev-experience-gitops.j2
   type: tap-multicluster
   description: Tanzu Application Platform (TAP) 1.6 - Multi-cluster Deployment for Developer Experience and GitOps
   tkg_version: 2.1.0
-  tdh_tools: 2.2.1
+  tdh_tools: 2.2.0
 tdh_environment: 
-  tdh_config:
-    - header
-    - tdh_user
-    - tmc
-    - registry_docker
-    - registry_vmware
-    - aws_route53
-    - cert-manager
-    - github
   vmc: &VMC
     account: 
       name: '{{ TDH_USER }}'
@@ -62,21 +52,18 @@ tdh_clusters:
   - name: 'tdh-{{ env }}-{{ TDH_USER }}-svc'
     description: 'Tanzu Shared Services'
     config:
-      purpose: svc
+      purpose: tap
       role:
         - registry
         - argocd
         - minio
-      kubernetes: '1.25'
+      kubernetes: '1.24'
       tdh_tools: '2.2.0'
       tdh_tools: '2.2.0'
       package_repositories: 
         - name: 'tanzu-standard'
           url:  'extensions.aws-usw2.tmc.cloud.vmware.com/packages/standard/repo'
           namespace: 'tkg-system'
-        - name: 'tanzu-standard-1'
-          url:  'extensions.aws-usw2.tmc.cloud.vmware.com/packages/standard/repo'
-          namespace: 'tanzu-system-packages'
       dns: 
         dns_subdomain: {{ subdomain }}
         tls:
@@ -146,9 +133,7 @@ tdh_clusters:
     description: 'Tanzu Application Platform - Development (Iterate/Build)'
     config:
       purpose: tap
-      role:
-        - tap
-      kubernetes: '1.25'
+      kubernetes: '1.24'
       ingress_domain: 'dev'
       tkg: '2.2.0'
       tdh_tools: '2.2.0'
@@ -156,9 +141,6 @@ tdh_clusters:
         - name: 'tanzu-standard'
           url:  'extensions.aws-usw2.tmc.cloud.vmware.com/packages/standard/repo'
           namespace: 'tkg-system'
-        - name: 'tanzu-standard-1'
-          url:  'extensions.aws-usw2.tmc.cloud.vmware.com/packages/standard/repo'
-          namespace: 'tap-install'
       dns:
         dns_subdomain: {{ subdomain }}
         tls:
@@ -205,7 +187,7 @@ tdh_clusters:
       services:
         tap:
           enabled: true
-          version: 1.6.1
+          version: 1.5.1
           role: full
           type: single_node_tap
           organization: 'Tanzu Demo Hub - Development Environment'
@@ -238,19 +220,14 @@ tdh_clusters:
     description: 'Tanzu Application Platform - Production (GitOps)'
     config:
       purpose: tap
-      role:
-        - tap
       ingress_domain: 'ops'
-      kubernetes: '1.25'
+      kubernetes: '1.24'
       tkg: '2.2.0'
       tdh_tools: '2.2.0'
       package_repositories:
         - name: 'tanzu-standard'
           url:  'extensions.aws-usw2.tmc.cloud.vmware.com/packages/standard/repo'
           namespace: 'tkg-system'
-        - name: 'tanzu-standard-1'
-          url:  'extensions.aws-usw2.tmc.cloud.vmware.com/packages/standard/repo'
-          namespace: 'tap-install'
       dns:
         dns_subdomain: {{ subdomain }}
         tls:
@@ -325,18 +302,13 @@ tdh_clusters:
     description: 'Tanzu Application Platform - Production (Run)'
     config:
       purpose: tap
-      role:
-        - tap
-      kubernetes: '1.25'
+      kubernetes: '1.24'
       tkg: '2.2.0'
       tdh_tools: '2.2.0'
       package_repositories:
         - name: 'tanzu-standard'
           url:  'extensions.aws-usw2.tmc.cloud.vmware.com/packages/standard/repo'
           namespace: 'tkg-system'
-        - name: 'tanzu-standard-1'
-          url:  'extensions.aws-usw2.tmc.cloud.vmware.com/packages/standard/repo'
-          namespace: 'tap-install'
       dns:
         dns_subdomain: {{ subdomain }}
         tls:

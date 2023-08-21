@@ -888,7 +888,14 @@ checkCloudCLI() {
 
 }
 
-#jojo
+# ------------------------------------------------------------------------------------------
+# Function Name ......: validateConfigVariables
+# Function Purpose ...: Validate TDH Configuration comming from the deployment file
+# ------------------------------------------------------------------------------------------
+# Argument ($1) ......: none
+# ------------------------------------------------------------------------------------------
+# Return Value .......: 0 - for success, 1 - failure
+# ------------------------------------------------------------------------------------------
 validateConfigVariables () {
   for n in $(getYAML TDH_CONFIG_LIST); do
     checkTDHsettings $n
@@ -896,6 +903,14 @@ validateConfigVariables () {
 #hudi
 }
 
+# ------------------------------------------------------------------------------------------
+# Function Name ......: checkTDHsettings
+# Function Purpose ...: Validate TDH Configuration by parameter
+# ------------------------------------------------------------------------------------------
+# Argument ($1) ......: service (ie. header, techdoc, github)
+# ------------------------------------------------------------------------------------------
+# Return Value .......: 0 - for success, 1 - failure
+# ------------------------------------------------------------------------------------------
 checkTDHsettings() {
   service=$1
   missing_variables=0
@@ -903,6 +918,169 @@ checkTDHsettings() {
   if [ "${service}" == "header" ]; then   
     messagePrint " ▪ Validate TDH Configuration"                 "\$HOME/.tanzu-demo-hub.cfg"
   fi
+
+  if [ "${service}" == "techdoc-upload" ]; then
+    if [ "${AWS_S3_TECHDOC_BUCKET_REGION}" == "" -o "${AWS_S3_TECHDOC_BUCKET}" == "" -o \
+         "${AWS_S3_TECHDOC_UPLOAD_ACCESS_KEY}" == "" -o "${AWS_S3_TECHDOC_UPLOAD_SECRET_KEY}" == "" ]; then
+
+      missing_variables=1
+      echo ""
+      echo "   MISSING ENVIRONMENT-VARIABES       DESCRIPTION        "
+      echo "   -------------------------------------------------------------------------------------------------------------------------------------------------------------"
+
+      if [ "${AWS_S3_TECHDOC_BUCKET_REGION}" == "" ]; then
+        echo "   AWS_S3_TECHDOC_BUCKET_REGION       (required) AWS S3 Bucket Region (ie. eu-central-1)"
+      fi
+
+      if [ "${AWS_S3_TECHDOC_BUCKET}" == "" ]; then
+        echo "   AWS_S3_TECHDOC_BUCKET              (required) AWS S3 Bucket Name to store Techdocs"
+      fi
+
+      if [ "${AWS_S3_TECHDOC_UPLOAD_ACCESS_KEY}" == "" -o "${AWS_S3_TECHDOC_UPLOAD_SECRET_KEY}" == "" ]; then
+        echo "   AWS_S3_TECHDOC_UPLOAD_ACCESS_KEY   (required) AWS Secret Key to Access S3 Bucket tdh-techdoc for upload"
+        echo "   AWS_S3_TECHDOC_UPLOAD_SECRET_KEY   (required) AWS Access Key to Access S3 Bucket tdh-techdoc for upload"
+      fi
+
+      echo ""
+      echo "   Example AWS Access Policy for S3 Read / Write Access for Techdoc uploads"
+      echo "   ---------------------------------------------------------------------------------------------------------------------------------------------------------------"
+      echo "   {"
+      echo "       \"Version\" \"2012-10-17\""
+      echo "       \"Statement\": [" 
+      echo "           {"
+      echo "               \"Effect\": \"Allow\","
+      echo "               \"Action\": ["
+      echo "                   \"s3:*\","
+      echo "               ],"
+      echo "               \"Resource\": ["
+      echo "                   \"arn:aws:s3:::tap-techdoc\","
+      echo "                   \"arn:aws:s3:::tap-techdoc/*\""
+      echo "               ]"
+      echo "           }"
+      echo "       ]"
+      echo "   }"
+      echo "   ---------------------------------------------------------------------------------------------------------------------------------------------------------------"
+
+    if [ "${AWS_S3_TECHDOC_READONLY_ACCESS_KEY}" == "" -o "${AWS_S3_TECHDOC_READONLY_SECRET_KEY}" == "" -o "${AWS_S3_TECHDOC_ACCOUNT_ID}" == "" ]; then 
+        echo "   AWS_S3_TECHDOC_ACCOUNT_ID            (required) AWS Account ID"
+        echo "   AWS_S3_TECHDOC_READONLY_ACCESS_KEY   (required) AWS Secret Key to Access S3 Bucket tdh-techdoc for upload"
+        echo "   AWS_S3_TECHDOC_READONLY_SECRET_KEY   (required) AWS Access Key to Access S3 Bucket tdh-techdoc for upload"
+
+        echo ""
+        echo "   Example AWS Access Policy for S3 Read Only Access for Techdoc within TAP Gui"
+        echo "   ---------------------------------------------------------------------------------------------------------------------------------------------------------------"
+        echo "   {"
+        echo "       \"Version\" \"2012-10-17\""
+        echo "       \"Statement\": ["
+        echo "           {"
+        echo "               \"Effect\": \"Allow\","
+        echo "               \"Action\": ["
+        echo "                   \"s3:GetBucketPublicAccessBlock\","
+        echo "                   \"s3:GetObject\","
+        echo "                   \"s3:ListBucket\","
+        echo "               ],"
+        echo "               \"Resource\": ["
+        echo "                   \"arn:aws:s3:::tap-techdoc\","
+        echo "                   \"arn:aws:s3:::tap-techdoc/*\""
+        echo "               ]"
+        echo "           }"
+        echo "       ]"
+        echo "   }"
+        echo "   ---------------------------------------------------------------------------------------------------------------------------------------------------------------"
+      fi
+    fi
+  fi
+
+
+  if [ "${service}" == "techdoc" ]; then
+    if [ "${AWS_S3_TECHDOC_ACCOUNT_ID}" == "" -o "${TAP_S3_TECH_DOC_BUCKET}" == "" -o "${TAP_S3_USER}" == "" -o "${TAP_S3_ACCESS_KEY}" == "" -o \
+         "${AWS_S3_TECHDOC_READONLY_ACCESS_KEY}" == "" -o "${AWS_S3_TECHDOC_READONLY_SECRET_KEY}" == "" ]; then
+
+      missing_variables=1
+      echo ""
+      echo "   MISSING ENVIRONMENT-VARIABES       DESCRIPTION        "
+      echo "   -------------------------------------------------------------------------------------------------------------------------------------------------------------"
+
+      if [ "${AWS_S3_TECHDOC_ACCOUNT_ID}" == "" ]; then
+        echo "   AWS_S3_TECHDOC_ACCOUNT_ID          (required) AWS S3 AccountID"
+      fi
+
+      if [ "${TAP_S3_TECH_DOC_BUCKET}" == "" ]; then
+        echo "   TAP_S3_TECH_DOC_BUCKET             (required) AWS S3 Bucket to store Techdocs"
+      fi
+
+      if [ "${TAP_S3_USER}" == "" ]; then
+        echo "   TAP_S3_USER                        (required) AWS S3 IAM User"
+      fi
+
+#gugu
+      if [ "${TAP_S3_TECH_DOC_POLICY}" == "" ]; then
+        echo "   TAP_S3_TECH_DOC_POLICY             (required) S3 Policy"
+      fi
+
+      if [ "${TAP_S3_TECH_DOC_POLICY}" == "" ]; then
+        echo "   TAP_S3_TECH_DOC_POLICY             (required) S3 Policy"
+      fi
+
+      if [ "${AWS_S3_TECHDOC_READONLY_ACCESS_KEY}" == "" -o "${AWS_S3_TECHDOC_READONLY_SECRET_KEY}" == "" ]; then
+        echo "   AWS_S3_TECHDOC_READONLY_ACCESS_KEY (required) AWS Secret Key to Access S3 Bucket tdh-techdoc for upload"
+        echo "   AWS_S3_TECHDOC_READONLY_SECRET_KEY (required) AWS Access Key to Access S3 Bucket tdh-techdoc for upload"
+      fi
+
+      if [ "${TAP_S3_TECH_DOC_POLICY}" == "" ]; then
+        echo "   TAP_S3_TECH_DOC_POLICY             (required) AWS S3 Read / Write Policy for Techdoc uploads"
+        echo ""
+        echo "   Example AWS Access Policy for S3 Read / Write Access for Techdoc uploads"
+        echo "   ---------------------------------------------------------------------------------------------------------------------------------------------------------------"
+        echo "   {"
+        echo "       \"Version\" \"2012-10-17\""
+        echo "       \"Statement\": ["
+        echo "           {"
+        echo "               \"Effect\": \"Allow\","
+        echo "               \"Action\": ["
+        echo "                   \"route53:GetChange\","
+        echo "                   \"route53:UpdateHostedZoneComment\""
+        echo "               ],"
+        echo "               \"Resource\": ["
+        echo "                   \"arn:aws:route53:::hostedzone/*\","
+        echo "                   \"arn:aws:route53:::change/*\""
+        echo "               ]"
+        echo "           },"
+        echo "           {"
+        echo "               \"Effect\": \"Allow\","
+        echo "               \"Action\": ["
+        echo "                   \"route53:CreateHostedZone\","
+        echo "                   \"route53domains:ListDomains\","
+        echo "                   \"ec2:DescribeVpcs\","
+        echo "                   \"route53:ListHostedZonesByName\""
+        echo "               ],"
+        echo "               \"Resource\": \"*\""
+        echo "           }"
+        echo "       ]"
+        echo "   }"
+        echo "   ---------------------------------------------------------------------------------------------------------------------------------------------------------------"
+        echo ""
+        echo "   Example AWS Access Policy for S3 Readonly Access"
+        echo "   ---------------------------------------------------------------------------------------------------------------------------------------------------------------"
+        echo "   {"
+        echo "       \"Version\" \"2012-10-17\""
+        echo "       \"Statement\": ["
+        echo "           {"
+        echo "               \"Effect\": \"Allow\","
+        echo "               \"Action\": ["
+        echo "                   \"s3:GetBucketPublicAccessBlock\","
+        echo "                   \"s3:GetObject\","
+        echo "                   \"s3:ListBucket\""
+        echo "               ],"
+        echo "               \"Resource\": \"arn:aws:s3:::tdh-techdoc\""
+        echo "           }"
+        echo "       ]"
+        echo "   }"
+        echo "   ---------------------------------------------------------------------------------------------------------------------------------------------------------------"
+      fi
+    fi
+  fi
+
 
   if [ "${service}" == "github" ]; then
     if [ "${TDH_DEMO_GITHUB_USER}" == "" -o "${TDH_DEMO_GITHUB_TOKEN}" == "" ]; then
@@ -951,9 +1129,6 @@ checkTDHsettings() {
 
         exit 1 
       fi 
-
-
-exit
     fi
   fi
 
@@ -1136,7 +1311,6 @@ exit
       #  exit 1
       #fi
     fi
-#guguseli
 
   fi
 
@@ -2926,10 +3100,8 @@ cleanHostedZoneEntries() {
     messagePrint " ▪ Deleting Record in Zone: ${dns_sdo}.${dns_dom}."    "$n"
     cmdLoop aws route53 change-resource-record-sets --hosted-zone-id $zone_id --change-batch file://${TMPROUTE53} > /tmp/error.log 2>&1; ret=$?
 
-    messagePrint " ▪ Deleting Record in Zone: ${dns_sdo}.${dns_dom}."    "$n"
-    cmdLoop aws route53 change-resource-record-sets --hosted-zone-id $zone_id --change-batch file://${TMPROUTE53} > /tmp/error.log 2>&1; ret=$?
-
     if [ $ret -ne 0 ]; then
+      logMessages $TMPROUTE53
       logMessages /tmp/error.log
       echo "ERROR: failed to delete leftover '_acme' challange records in AWS Route53"
       if [ "$NATIVE" == "0" ]; then
@@ -2948,6 +3120,9 @@ cleanHostedZoneEntries() {
 
 getHostedZoneId() {
   zone="$1"
+  export AWS_ACCESS_KEY_ID=$AWS_ROUTE53_ACCESS_KEY
+  export AWS_SECRET_ACCESS_KEY=$AWS_ROUTE53_SECRET_KEY
+  export AWS_DEFAULT_REGION=$AWS_ROUTE53_REGION
 
   cmdLoop aws route53 list-hosted-zones-by-name --dns-name "${zone}" > /tmp/output.json
   zone_id=$(jq -r --arg key "${zone}." '.HostedZones[] | select(.Name == $key).Id' /tmp/output.json | \
@@ -2958,7 +3133,10 @@ getHostedZoneId() {
 }
 
 verifyHostedZone() {
-  zone=$1
+  zone=$1 
+  export AWS_ACCESS_KEY_ID=$AWS_ROUTE53_ACCESS_KEY
+  export AWS_SECRET_ACCESS_KEY=$AWS_ROUTE53_SECRET_KEY
+  export AWS_DEFAULT_REGION=$AWS_ROUTE53_REGION
 
   ZONE_ID=$(aws route53 list-hosted-zones-by-name --dns-name ${zone} | jq -r ".HostedZones[] | select(.Name | \
             scan(\"^$zone.\")).Id")
@@ -2969,23 +3147,57 @@ verifyHostedZone() {
 
 route53createHostedZone() {
   zone=$1
+  export AWS_ACCESS_KEY_ID=$AWS_ROUTE53_ACCESS_KEY
+  export AWS_SECRET_ACCESS_KEY=$AWS_ROUTE53_SECRET_KEY
+  export AWS_DEFAULT_REGION=$AWS_ROUTE53_REGION
 
-  ZONE_ID=$(aws route53 list-hosted-zones-by-name --dns-name ${zone} | jq -r ".HostedZones[] | select(.Name | \
-            scan(\"^$zone.\")).Id")
-  if [ "${ZONE_ID}" != "" ]; then
-    route53deleteHostedZone $ZONE_ID
+  cmdLoop aws route53 list-hosted-zones-by-name --dns-name ${zone} > /tmp/output.json 2>/tmp/error.log; ret=$?
+  if [ $ret -ne 0 ]; then                                      
+      logMessages /tmp/error.log
+
+      echo "ERROR: failed to list AWS hosted zone ${zone}"
+      if [ "$NATIVE" == "0" ]; then
+        echo "       => tools/ols.sh"
+        echo "          tdh-tools:/$ export AWS_ACCESS_KEY_ID=$TDH_TOOLS_S3_ACCESS_KEY"
+        echo "          tdh-tools:/$ export AWS_SECRET_ACCESS_KEY=$TDH_TOOLS_S3_SECRET_KEY"
+        echo "          tdh-tools:/$ export AWS_DEFAULT_REGION=$AWS_ROUTE53_REGION"
+        echo "          tdh-tools:/$ aws route53 list-hosted-zones-by-name --dns-name ${zone}"
+        echo "          tdh-tools:/$ exit"
+      else
+        echo "       => export AWS_ACCESS_KEY_ID=$TDH_TOOLS_S3_ACCESS_KEY"
+        echo "       => export AWS_SECRET_ACCESS_KEY=$TDH_TOOLS_S3_SECRET_KEY"
+        echo "       => export AWS_DEFAULT_REGION=$AWS_ROUTE53_REGION"
+        echo "       => aws route53 list-hosted-zones-by-name --dns-name ${zone}"
+      fi
+      exit 1
+  else
+    ZONE_ID=$(jq -r ".HostedZones[] | select(.Name | scan(\"^$zone.\")).Id"  /tmp/output.json)
   fi
 
+  if [ "${ZONE_ID}" != "" ]; then
+    for n in $ZONE_ID; do
+      route53deleteHostedZone $n
+    done
+  fi
+
+#00000000000
   aws route53 create-hosted-zone --name $zone --caller-reference "$(date)" \
-       --hosted-zone-config Comment="Managed by tanzu-demo-hub" > /dev/null 2>&1
-  if [ $? -ne 0 ]; then
+       --hosted-zone-config Comment="Managed by tanzu-demo-hub" > /tmp/error.log 2>&1; ret=$?
+  if [ $ret -ne 0 ]; then
+      logMessages /tmp/error.log
       echo "ERROR: failed to create AWS Route53 zone $ZONE_ID"
       if [ "$NATIVE" == "0" ]; then
         echo "       => tools/ols.sh"
+        echo "          tdh-tools:/$ export AWS_ACCESS_KEY_ID=$TDH_TOOLS_S3_ACCESS_KEY"
+        echo "          tdh-tools:/$ export AWS_SECRET_ACCESS_KEY=$TDH_TOOLS_S3_SECRET_KEY"
+        echo "          tdh-tools:/$ export AWS_DEFAULT_REGION=$AWS_ROUTE53_REGION"
         echo "          tdh-tools:/$ aws route53 create-hosted-zone --name $zone --caller-reference \"$(date)\" \\"
         echo "                         --hosted-zone-config Comment=\"command-line version\""
         echo "          tdh-tools:/$ exit"
       else
+        echo "       => export AWS_ACCESS_KEY_ID=$TDH_TOOLS_S3_ACCESS_KEY"
+        echo "       => export AWS_SECRET_ACCESS_KEY=$TDH_TOOLS_S3_SECRET_KEY"
+        echo "       => export AWS_DEFAULT_REGION=$AWS_ROUTE53_REGION"
         echo "       => aws route53 create-hosted-zone --name $zone --caller-reference \"$(date)\" \\"
         echo "          --hosted-zone-config Comment=\"command-line version\""
       fi
@@ -3002,6 +3214,10 @@ route53createHostedZone() {
 
 route53setNSrecord () {
   hnm=$1; dom=$2; dns="$3"
+
+  export AWS_ACCESS_KEY_ID=$AWS_ROUTE53_ACCESS_KEY
+  export AWS_SECRET_ACCESS_KEY=$AWS_ROUTE53_SECRET_KEY
+  export AWS_DEFAULT_REGION=$AWS_ROUTE53_REGION
 
   ZONE_ID=$(aws route53 list-hosted-zones-by-name --dns-name ${dom} | jq -r ".HostedZones[] | select(.Name | \
             scan(\"^$dom.\")).Id")
@@ -3035,15 +3251,24 @@ route53setNSrecord () {
   echo "}"                                                   >> $TMPROUTE53
 
   aws route53 change-resource-record-sets --hosted-zone-id $ZONE_ID \
-      --change-batch file://${TMPROUTE53} > /dev/null 2>&1
-  if [ $? -ne 0 ]; then
+      --change-batch file://${TMPROUTE53} > /tmp/error.log 2>&1; ret=$?
+  if [ $ret -ne 0 ]; then
+    logMessages $TMPROUTE53
+    logMessages /tmp/error.log
+
     echo "4ERROR: failed to set DNS for $hnm"
     if [ "$NATIVE" == "0" ]; then
       echo "       => tools/${TDH_TOOLS}.sh"
+      echo "          tdh-tools:/$ export AWS_ACCESS_KEY_ID=$TDH_TOOLS_S3_ACCESS_KEY"
+      echo "          tdh-tools:/$ export AWS_SECRET_ACCESS_KEY=$TDH_TOOLS_S3_SECRET_KEY" 
+      echo "          tdh-tools:/$ export AWS_DEFAULT_REGION=$AWS_ROUTE53_REGION"
       echo "          tdh-tools:/$ aws route53 change-resource-record-sets --hosted-zone-id \"${ZONE_ID}\" \\"
       echo "                           --change-batch file://${TMPROUTE53}"
       echo "          tdh-tools:/$ exit"
     else
+      echo "       => export AWS_ACCESS_KEY_ID=$TDH_TOOLS_S3_ACCESS_KEY"
+      echo "       => export AWS_SECRET_ACCESS_KEY=$TDH_TOOLS_S3_SECRET_KEY" 
+      echo "       => export AWS_DEFAULT_REGION=$AWS_ROUTE53_REGION"
       echo "       => aws route53 change-resource-record-sets --hosted-zone-id \"${ZONE_ID}\" \\"
       echo "              --change-batch file://${TMPROUTE53}"
     fi
@@ -3090,6 +3315,11 @@ maskPassword() {
 route53getIPaddress() {
   env=$1
   dom=$2
+
+  export AWS_ACCESS_KEY_ID=$AWS_ROUTE53_ACCESS_KEY
+  export AWS_SECRET_ACCESS_KEY=$AWS_ROUTE53_SECRET_KEY
+  export AWS_DEFAULT_REGION=$AWS_ROUTE53_REGION
+
   hst="jump-${env}.${dom}."
   ZONE_ID=$(aws route53 list-hosted-zones-by-name --dns-name ${dom} | jq -r ".HostedZones[] | select(.Name | \
             scan(\"^$dom.\")).Id")
@@ -3102,6 +3332,10 @@ route53getIPaddress() {
 #route53setDNSrecord "$pip" "$JUMP_HOST" "$AWS_HOSTED_DNS_DOMAIN"
 route53setDNSrecord() {
   ipa=$1; hnm=$2; dom=$3
+
+  export AWS_ACCESS_KEY_ID=$AWS_ROUTE53_ACCESS_KEY
+  export AWS_SECRET_ACCESS_KEY=$AWS_ROUTE53_SECRET_KEY
+  export AWS_DEFAULT_REGION=$AWS_ROUTE53_REGION
 
   ZONE_ID=$(aws route53 list-hosted-zones-by-name --dns-name ${dom} | jq -r '.HostedZones[0].Id')
   ZONE_ID_STR=$(echo "${ZONE_ID}" | awk -F'/' '{ print $NF }')
@@ -3821,6 +4055,10 @@ setTKGclusterDNS() {
   DNS_PREFIX="$TDH_TKGMC_ENVNAME"
   DNS_SUFFIX="$AWS_HOSTED_DNS_DOMAIN"
 
+  export AWS_ACCESS_KEY_ID=$AWS_ROUTE53_ACCESS_KEY
+  export AWS_SECRET_ACCESS_KEY=$AWS_ROUTE53_SECRET_KEY
+  export AWS_DEFAULT_REGION=$AWS_ROUTE53_REGION
+
   if [ "${TDH_TKGMC_INFRASTRUCTURE}" == "AWS" ]; then
     AWS_ID=$(echo $DNSLB | awk -F '-' '{ print $1 }')
     AWS_LB="k8s-master-$TKG_CLUSTER"
@@ -4259,6 +4497,10 @@ setDNSrecord() {
   DNS_SUFFIX="$3"
   HOSTNAME="$4"
   TYPE="$5"
+
+  export AWS_ACCESS_KEY_ID=$AWS_ROUTE53_ACCESS_KEY
+  export AWS_SECRET_ACCESS_KEY=$AWS_ROUTE53_SECRET_KEY
+  export AWS_DEFAULT_REGION=$AWS_ROUTE53_REGION
 
   if [ "$TYPE" == "" ]; then TYPE=A; fi
   
@@ -5127,6 +5369,17 @@ aksCreateCluster() {
   messagePrint " ▪ AKS Workload Cluster Consolidated Config"            "\$HOME/.tanzu-demo-hub/deployments/${TDHV2_MANAGEMENT_CLUSTER}/$TDHV2_DEPLOYMENT/${wc_nam}/${wc_nam}.cfg"
 
   k8s=$(az aks get-versions --location $az_loc | jq -r '.orchestrators[].orchestratorVersion' | grep "$wc_k8s" | tail -1)
+  if [ "$k8s" == "" ]; then
+    echo "ERROR: Desired Kubernetes Release ($wc_k8s) not found, please choose another version"
+    if [ "$NATIVE" == "0" ]; then
+      echo "       => tools/${TDH_TOOLS}.sh"
+      echo "          tdh-tools:/$ az aks get-versions --location $az_loc"
+      echo "          tdh-tools:/$ exit"
+    else
+      echo "       => az aks get-versions --location $az_loc"
+    fi
+    exit 1
+  fi
 
   wc_cnc="$(getYAML WC_CTRL_NODE_CNT $wc_nam)"
   wc_cnt="$(getYAML WC_CTRL_NODE_TYP $wc_nam)"
@@ -6428,7 +6681,7 @@ deleteKubernetesClusters() {
   TDHV2_DEPLOYMENT=$(getYAML TDH_DEPLOYMENT)
   infra_typ="$(getYAML MC_INFTYP)"
   infra_env="$(getYAML MC_TKGENV)"
-    
+
   if [ "$infra_typ" == "Azure" ]; then
     az_rgn="$(getYAML AZ_RESOURCE_GROUP)"
     az_loc="$(getYAML AZ_LOCATION)"
@@ -6478,6 +6731,9 @@ deleteKubernetesClusters() {
       fi
     fi
 
+    messagePrint " ▪ Cleaning Deployment Configuration files and Directory"               "$TDHV2_DEPLOYMENT"
+    [ -d $HOME/.tanzu-demo-hub/deployments/$TDHV2_DEPLOY_ENVIRONMENT/$TDHV2_DEPLOYMENT ] && rm -rf $HOME/.tanzu-demo-hub/deployments/$TDHV2_DEPLOY_ENVIRONMENT/$TDHV2_DEPLOYMENT
+
     messagePrint " ▪ Cleaning up Tanzu Demo Hub Deployment on Azure"               "Completed"
   fi
     
@@ -6508,6 +6764,9 @@ deleteKubernetesClusters() {
       messagePrint " ▪ Cleaning up Deployment Configuration"               "$TDH_DEPLOYMENT_PATH"
       rm -rf $TDH_DEPLOYMENT_PATH
     fi
+
+    messagePrint " ▪ Cleaning Deployment Configuration files and Directory"               "$TDHV2_DEPLOYMENT"
+    [ -d $HOME/.tanzu-demo-hub/deployments/$TDHV2_DEPLOY_ENVIRONMENT/$TDHV2_DEPLOYMENT ] && rm -rf $HOME/.tanzu-demo-hub/deployments/$TDHV2_DEPLOY_ENVIRONMENT/$TDHV2_DEPLOYMENT
 
     messagePrint " ▪ Cleaning up Tanzu Demo Hub Deployment on vSphere"               "Completed"
   fi  
@@ -8118,20 +8377,21 @@ TDH_SERVICE_TAP_IMAGE_RELOCATION=""
 
     # Tanzu Application Platform - TechDocs Documentation (how to setup an AWS S3 Bucket)
     # https://docs.vmware.com/en/VMware-Tanzu-Application-Platform/1.4/tap/tap-gui-techdocs-usage.html
-    if [ "$TAP_S3_TECH_DOC_BUCKET" != "" -a "$TAP_S3_ACCESS_KEY" != "" -a "$TAP_S3_REGION" != "" ]; then
+    if [ "$AWS_S3_TECHDOC_BUCKET" != "" -a "$AWS_S3_TECHDOC_READONLY_ACCESS_KEY" != "" -a "$AWS_S3_TECHDOC_BUCKET_REGION" != "" -o \
+         "$AWS_S3_TECHDOC_ACCOUNT_ID" != "" -a "$AWS_S3_TECHDOC_READONLY_SECRET_KEY" != "" ]; then
       echo "    techdocs:"                                                                                                         >> $TAP_CONFIG
       echo "      builder: 'external'"                                                                                             >> $TAP_CONFIG
       echo "      publisher:"                                                                                                      >> $TAP_CONFIG
       echo "        type: 'awsS3'"                                                                                                 >> $TAP_CONFIG
       echo "        awsS3:"                                                                                                        >> $TAP_CONFIG
-      echo "          bucketName: \"tdh-tap-tech-docs\""                                                                           >> $TAP_CONFIG
-      echo "          accountId: \"450431177868\""                                                                                 >> $TAP_CONFIG
-      echo "          region: \"$TAP_S3_REGION\""                                                                                  >> $TAP_CONFIG
+      echo "          bucketName: \"$AWS_S3_TECHDOC_BUCKET\""                                                                      >> $TAP_CONFIG
+      echo "          accountId: \"$AWS_S3_TECHDOC_ACCOUNT_ID\""                                                                   >> $TAP_CONFIG
+      echo "          region: \"$AWS_S3_TECHDOC_BUCKET_REGION\""                                                                   >> $TAP_CONFIG
       echo "    aws:"                                                                                                              >> $TAP_CONFIG
       echo "      accounts:"                                                                                                       >> $TAP_CONFIG
-      echo "        - accountId: \"450431177868\""                                                                                 >> $TAP_CONFIG
-      echo "          accessKeyId: \"$TAP_S3_ACCESS_KEY\""                                                                         >> $TAP_CONFIG
-      echo "          secretAccessKey: \"$TAP_S3_SECRET_KEY\""                                                                     >> $TAP_CONFIG
+      echo "        - accountId: \"$AWS_S3_TECHDOC_ACCOUNT_ID\""                                                                   >> $TAP_CONFIG
+      echo "          accessKeyId: \"$AWS_S3_TECHDOC_READONLY_ACCESS_KEY\""                                                        >> $TAP_CONFIG
+      echo "          secretAccessKey: \"$AWS_S3_TECHDOC_READONLY_SECRET_KEY\""                                                    >> $TAP_CONFIG
       echo ""                                                                                                                      >> $TAP_CONFIG
     fi
 
@@ -10988,9 +11248,7 @@ echo "helm registry login registry.tanzu.vmware.com --username=$TDH_REGISTRY_VMW
 #            already installed on your cluster.
 # ------------------------------------------------------------------------------------------
 installClusterEssentialsV2() {
-
   cnt=$(kubectl get pods -n kapp-controller 2>/dev/null | egrep "^kapp-controller" | grep -c "Running")
-echo "CNT:$cnt"
   if [ $cnt -eq 0 ]; then 
     messagePrint " ▪ Install Tanzu Cluster Essentials" "namespace/kapp-controller"
 
@@ -12280,10 +12538,10 @@ createCertRequestV2() {
 
     cnt=0
 
-    cmdLoop kubectl get certificate $tls_cnm -o json > /tmp/output.json
+    kubectl get certificate $tls_cnm -o json > /tmp/output.json
     stt=$(jq -r '.status.conditions[] | select(.type == "Ready").status' /tmp/output.json)
     while [ $cnt -lt 20 -a "$stt" != "True" ]; do
-      cmdLoop kubectl get certificate $tls_cnm -o json > /tmp/output.json
+      kubectl get certificate $tls_cnm -o json > /tmp/output.json
       stt=$(jq -r '.status.conditions[] | select(.type == "Ready").status' /tmp/output.json)
 
       if [ "$stt" == "True" ]; then cnt=1; fi
@@ -12432,7 +12690,7 @@ createClusterIssuer() {
       echo "    \"Type\": \"$ttt\","                             >> $TMPROUTE53
       echo "    \"TTL\": $ttl,"                                  >> $TMPROUTE53
       echo "    \"ResourceRecords\": [ "                         >> $TMPROUTE53
-      echo "      { \"Value\": \"\\\"${rrc}\\\"\" }"                    >> $TMPROUTE53
+      echo "      { \"Value\": \"\\\"${rrc}\\\"\" }"             >> $TMPROUTE53
       echo "    ]"                                               >> $TMPROUTE53
       echo "}}]"                                                 >> $TMPROUTE53
       echo "}"                                                   >> $TMPROUTE53
@@ -12441,6 +12699,7 @@ createClusterIssuer() {
       cmdLoop aws route53 change-resource-record-sets --hosted-zone-id $AWS_HOSTED_ZONE_ID --change-batch file://${TMPROUTE53} > /tmp/error.log 2>&1; ret=$?
 
       if [ $ret -ne 0 ]; then
+        logMessages $TMPROUTE53
         logMessages /tmp/error.log
         echo "ERROR: failed to delete leftover '_acme' challange records in AWS Route53"
         if [ "$NATIVE" == "0" ]; then
@@ -14332,7 +14591,10 @@ tdh_tools_download() {
 
 #sacha
   # --- GET LATES TDH-TOOLS CONTAINER FROM AWS ---
-  curl -f https://tanzu-demo-hub.s3.eu-central-1.amazonaws.com/${TDH_TOOLS_IMAGE}.sum >/dev/null 2>&1; ret=$?
+  S3_URL="https://tanzu-demo-hub.s3.eu-central-1.amazonaws.com"
+  S3_URL="https://tdh-tools.s3.eu-central-1.amazonaws.com"
+
+  curl -f --head ${S3_URL}/${TDH_TOOLS_IMAGE}.sum >/dev/null 2>&1; ret=$?
   if [ $ret -ne 0 ]; then 
     echo "ERROR: There is currently no tdh-tools container for version ($TDH_TOOLS_IMAGE) on AWS s3"
     echo "       Please contact tanzu-demo-hub support team (#tanzu-demo-hub on slack)."
@@ -14340,8 +14602,8 @@ tdh_tools_download() {
   fi
 
   TDH_TOOLS_DOWNLOAD_REQUIRED=false
-  TDH_TOOLS_TAG_S3=$(curl https://tanzu-demo-hub.s3.eu-central-1.amazonaws.com/${TDH_TOOLS_IMAGE}.tag 2>/dev/null) 
-  TDH_TOOLS_SUM_S3=$(curl https://tanzu-demo-hub.s3.eu-central-1.amazonaws.com/${TDH_TOOLS_IMAGE}.sum 2>/dev/null) 
+  TDH_TOOLS_TAG_S3=$(curl ${S3_URL}/${TDH_TOOLS_IMAGE}.tag 2>/dev/null) 
+  TDH_TOOLS_SUM_S3=$(curl ${S3_URL}/${TDH_TOOLS_IMAGE}.sum 2>/dev/null) 
   if [ "$TDH_TOOLS_TAG_S3" != "" ]; then
     # --- LETS SEE IF WE HAVE THAT VERSION IN THE LOCAL CACHE ---
     if [ -f $HOME/.tanzu-demo-hub/cache/tdh-tools/$TDH_TOOLS_IMAGE.tag ]; then 
@@ -14359,7 +14621,7 @@ tdh_tools_download() {
     fi
   else
     echo "ERROR: Unexpected error apeared. The tdh-tools checksum files exists for release: $TDH_TOOLS_IMAGE in AWS S3"
-    echo "       https://tanzu-demo-hub.s3.eu-central-1.amazonaws.com/${TDH_TOOLS_IMAGE}.sum but its empty"
+    echo "       ${S3_URL}/${TDH_TOOLS_IMAGE}.sum but its empty"
     echo "       Please contact tanzu-demo-hub support team (#tanzu-demo-hub on slack)."
     exit 0
   fi
@@ -14367,8 +14629,8 @@ tdh_tools_download() {
   if [ "$TDH_TOOLS_DOWNLOAD_REQUIRED" == "true" ]; then
     [ ! -d $HOME/.tanzu-demo-hub/cache/tdh-tools ] && mkdir -p $HOME/.tanzu-demo-hub/cache/tdh-tools
     messagePrint " ▪ Downloading ($TDH_TOOLS_IMAGE) from AWS S3" "https://tanzu-demo-hub.s3.eu-central-1.amazonaws.com/${TDH_TOOLS_IMAGE}.tar"
-    wget -q https://tanzu-demo-hub.s3.eu-central-1.amazonaws.com/${TDH_TOOLS_IMAGE}.tar -O $HOME/.tanzu-demo-hub/cache/tdh-tools/${TDH_TOOLS_IMAGE}.tar
-    wget -q https://tanzu-demo-hub.s3.eu-central-1.amazonaws.com/${TDH_TOOLS_IMAGE}.tag -O $HOME/.tanzu-demo-hub/cache/tdh-tools/${TDH_TOOLS_IMAGE}.tag
+    wget -q ${S3_URL}/${TDH_TOOLS_IMAGE}.tar -O $HOME/.tanzu-demo-hub/cache/tdh-tools/${TDH_TOOLS_IMAGE}.tar
+    wget -q ${S3_URL}/${TDH_TOOLS_IMAGE}.tag -O $HOME/.tanzu-demo-hub/cache/tdh-tools/${TDH_TOOLS_IMAGE}.tag
     if [ -d "$HOME/.${TDH_TOOLS_IMAGE}" ]; then 
       messagePrint " ▪ Cleaning up old ($TDH_TOOLS_IMAGE) runtime directory" "\$HOME/.${TDH_TOOLS_IMAGE}"
       [ "$HOME" != "" -a "$TDH_TOOLS_IMAGE" != "" ] && rm -rf $HOME/.${TDH_TOOLS_IMAGE} > /dev/null 2>&1
@@ -14382,7 +14644,7 @@ tdh_tools_download() {
       fi
     else
       echo "ERROR: Failed to download ${TDH_TOOLS_IMAGE}.tar from AWS S3, please try manually"
-      echo "       =>  wget -q https://tanzu-demo-hub.s3.eu-central-1.amazonaws.com/${TDH_TOOLS_IMAGE}.tar -O $HOME/.tanzu-demo-hub/cache/tdh-tools/${TDH_TOOLS_IMAGE}.tar"
+      echo "       =>  wget -q ${S3_URL}/${TDH_TOOLS_IMAGE}.tar -O $HOME/.tanzu-demo-hub/cache/tdh-tools/${TDH_TOOLS_IMAGE}.tar"
       exit
     fi
   fi
@@ -19289,7 +19551,7 @@ runTDHtools() {
 
       [ $ROOT_SHELL -eq 1 ] && SEXEC_OPTIONS=$ROOT_OPTIONS || SEXEC_OPTIONS=$USER_OPTIONS
       if [ "${DOCKER_EXEC}" == "/usr/local/bin/tdh-context.sh" ]; then
-        unset TDH_DEMO_GITHUB_TOKEN TDH_REGISTRY_DOCKER_PASS TDHPATH TDH_CERTMANAGER_EMAIL SUPERVISOR VERIFY TDH_REGISTRY_VMWARE_USER TDH_REGISTRY_VMWARE_PASS
+        unset TDH_DEMO_GITHUB_TOKEN TDH_REGISTRY_DOCKER_PASS TDHPATH TDH_CERTMANAGER_EMAIL TDH_REGISTRY_VMWARE_USER TDH_REGISTRY_VMWARE_PASS
         unset TDH_DEMO_GITHUB_USERTDH_REGISTRY_DOCKER_PASS 
         docker run --platform linux/amd64 $SEXEC_OPTIONS ${CORE_MOUNTS[*]} -e SUPERVISOR -e VERIFY $TDH_TOOLS:latest $DOCKER_EXEC $DOCKER_ARGS 2>&1 
       else
@@ -21102,6 +21364,10 @@ createTLSCertificateV2() {
   nam=$(jq -r --arg key "$tls_scrt" '.items[].metadata | select(.name == $key and .namespace == "default").name' /tmp/output.yaml)
 
   if [ "$nam" != "$tls_scrt" ]; then
+    export AWS_ACCESS_KEY_ID=$AWS_ROUTE53_ACCESS_KEY
+    export AWS_SECRET_ACCESS_KEY=$AWS_ROUTE53_SECRET_KEY
+    export AWS_DEFAULT_REGION=$AWS_ROUTE53_REGION
+
     InstallCertManagerV2
     createClusterIssuerV2         $clu
     createCertRequestV2           $clu
@@ -21125,6 +21391,7 @@ reconsileTAPStage() {
   stage_failed=1
   cnt=1
 
+  [ $target_stg -eq 0 ] && target_stg=1
   [ "$(tanzu package installed list -n tap-install -o json | jq -r '.[] | select(.name == "tap").name')" == "tap" ] && TAP_MODE="update" || TAP_MODE="install"
 
   TAP_VERSION=$(getYAML SERVICE_TAP_VERSION $TDHV2_WORKLOAD_CLUSTER)

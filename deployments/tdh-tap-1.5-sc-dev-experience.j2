@@ -1,5 +1,6 @@
 tdh_deployment:
   name: tdh-tap-sc-dev-experience
+  source: tdh-tap-1.5-sc-dev-experience.j2
   type: tap-cinglecluster
   description: Tanzu Application Platform (TAP) 1.5 - Singlecluster Deployment for Developer Experience
   tkg_version: 2.1.0
@@ -57,13 +58,16 @@ tdh_clusters:
         - registry
         - argocd
         - minio
-      kubernetes: '1.24'
+      kubernetes: '1.25'
       tdh_tools: '2.2.0'
       tdh_tools: '2.2.0'
       package_repositories: 
         - name: 'tanzu-standard'
           url:  'extensions.aws-usw2.tmc.cloud.vmware.com/packages/standard/repo'
           namespace: 'tkg-system'
+        - name: 'tanzu-standard-1'
+          url:  'extensions.aws-usw2.tmc.cloud.vmware.com/packages/standard/repo'
+          namespace: 'tanzu-system-packages'
       dns: 
         dns_subdomain: {{ subdomain }}
         tls:
@@ -133,7 +137,7 @@ tdh_clusters:
     description: 'Tanzu Application Platform - Development (Iterate/Build)'
     config:
       purpose: tap
-      kubernetes: '1.24'
+      kubernetes: '1.25'
       ingress_domain: 'dev'
       tkg: '2.2.0'
       tdh_tools: '2.2.0'
@@ -141,6 +145,9 @@ tdh_clusters:
         - name: 'tanzu-standard'
           url:  'extensions.aws-usw2.tmc.cloud.vmware.com/packages/standard/repo'
           namespace: 'tkg-system'
+        - name: 'tanzu-standard-1'
+          url:  'extensions.aws-usw2.tmc.cloud.vmware.com/packages/standard/repo'
+          namespace: 'tap-install'
       dns:
         dns_subdomain: {{ subdomain }}
         tls:

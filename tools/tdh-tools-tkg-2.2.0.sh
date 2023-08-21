@@ -59,7 +59,7 @@ done
 #############################################################################################################################
 ################################### EXECUTING CODE WITHIN  TDH-TOOLS DOCKER CONTAINER  ######################################
 #############################################################################################################################
-runTDHtools tkg $TKG_VERSION "Run TDH Tools Docker Container" "$COMMAND" ""
+runTDHtools tkg $TKG_VERSION "Run TDH Tools Docker Container" "$COMMAND" "" 
 
 if [ $SILENT -eq 1 ]; then 
   tdh_tools_build    tkg > /dev/null 2>&1

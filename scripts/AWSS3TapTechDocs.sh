@@ -1,6 +1,6 @@
 #!/bin/bash
 # ============================================================================================
-# File: ........: AWSS3BucketUpload.sh
+# File: ........: AWSS3TapTechDocs.sh
 # Language .....: bash
 # Author .......: Sacha Dubois, VMware
 # --------------------------------------------------------------------------------------------
@@ -8,6 +8,7 @@
 # ============================================================================================
 [ "$(hostname)" == "tdh-tools" ] && echo "ERROR: Need to run outside a tdh-tools container" && exit
 
+TDHPATH=$(cd "$(pwd)/$(dirname $0)"; pwd)
 TDH_TOOLS_NAME=$1
 
 if [ "$TDH_TOOLS_NAME" == "" ]; then 
@@ -20,6 +21,13 @@ if [ "$TDH_TOOLS_NAME" == "" ]; then
   echo "                 - https://github.com/pivotal-sadubois/newsletter"
   exit 0
 fi
+
+# --- LOAD TDH CONFIGURATION AND FUNCTIONS ---
+[ -f $TDHPATH/../functions ] && . $TDHPATH/../functions
+[ -f $HOME/.tanzu-demo-hub.cfg ] && . $HOME/.tanzu-demo-hub.cfg
+
+checkTDHsettings techdoc-upload
+
 
 GIT_TMPREPO=/tmp/tech_docs
 GIT_TMPSITE=/tmp/tech_site
@@ -46,24 +54,19 @@ CATALOG_NMSP=$(yq -o=json $CATALOG_INFO | jq -r '.metadata.namespace')
 CATALOG_NAME=$(yq -o=json $CATALOG_INFO | jq -r '.metadata.name') 
 [ "$CATALOG_NMSP" == "" -o "$CATALOG_NMSP" == "null" ] && CATALOG_NMSP="default"
 
-if [ -f $HOME/.tanzu-demo-hub-techdocs.cfg ]; then 
-  . $HOME/.tanzu-demo-hub-techdocs.cfg
-else
-  echo "ERROR: TechDocs Config file $HOME/.tanzu-demo-hub-techdocs.cfg does not exist"; exit 1
-fi
-
-if [ "$TAP_S3_TECH_DOC_BUCKET" == "" ]; then 
-  echo "ERROR: AWS S3 Bucket: TAP_S3_TECH_DOC_BUCKET not configured in ~/.tanzu-demo-hub-techdocs.cfg"; exit
+if [ "$AWS_S3_TECHDOC_BUCKET" == "" ]; then 
+  echo "ERROR: AWS S3 Bucket: AWS_S3_TECHDOC_BUCKET not configured in ~/.tanzu-demo-hub-techdocs.cfg"; exit
 fi
 
 # --- AWS ADMIN SECRETS ---
-export AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY
-export AWS_SECRET_ACCESS_KEY=$AWS_SECRET_KEY
-export AWS_REGION=$TAP_S3_REGION
+export AWS_ACCESS_KEY_ID=$AWS_S3_TECHDOC_UPLOAD_ACCESS_KEY
+export AWS_SECRET_ACCESS_KEY=$AWS_S3_TECHDOC_UPLOAD_SECRET_KEY
+export AWS_REGION=$AWS_S3_TECHDOC_BUCKET_REGION
 
-echo "export AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY"
-echo "export AWS_SECRET_ACCESS_KEY=$AWS_SECRET_KEY"
-echo "export AWS_REGION=$TAP_S3_REGION"
+echo "export AWS_ACCESS_KEY_ID=$AWS_S3_TECHDOC_UPLOAD_ACCESS_KEY"
+echo "export AWS_SECRET_ACCESS_KEY=$AWS_S3_TECHDOC_UPLOAD_SECRET_KEY"
+echo "export AWS_REGION=$AWS_S3_TECHDOC_BUCKET_REGION"
+
 
 echo "npx @techdocs/cli generate --source-dir $CATALOG_PATH --output-dir $GIT_TMPSITE" >  /tmp/tech.txt
 npx @techdocs/cli generate --source-dir $CATALOG_PATH --output-dir $GIT_TMPSITE 2>/dev/null; ret=$?
@@ -72,11 +75,13 @@ if [ $ret -ne 0 ]; then
   echo " => npx @techdocs/cli generate --source-dir $CATALOG_INFO --output-dir $GIT_TMPSITE"; exit
 fi
 
-echo "npx @techdocs/cli publish --publisher-type awsS3 --storage-name $TAP_S3_TECH_DOC_BUCKET --entity $CATALOG_NMSP/$CATALOG_KIND/$CATALOG_NAME --directory $GIT_TMPSITE" >> /tmp/tech.txt
-npx @techdocs/cli publish --publisher-type awsS3 --storage-name $TAP_S3_TECH_DOC_BUCKET --entity $CATALOG_NMSP/$CATALOG_KIND/$CATALOG_NAME --directory $GIT_TMPSITE 2>/dev/null; ret=$?
+
+echo "npx @techdocs/cli publish --publisher-type awsS3 --storage-name $AWS_S3_TECHDOC_BUCKET --entity $CATALOG_NMSP/$CATALOG_KIND/$CATALOG_NAME --directory $GIT_TMPSITE" >> /tmp/tech.txt
+npx @techdocs/cli publish --publisher-type awsS3 --storage-name $AWS_S3_TECHDOC_BUCKET --entity $CATALOG_NMSP/$CATALOG_KIND/$CATALOG_NAME --directory $GIT_TMPSITE 2>/dev/null; ret=$?
 if [ $ret -ne 0 ]; then 
   echo "ERROR: failed to Publish documentation"
-  echo " => npx @techdocs/cli publish --publisher-type awsS3 --storage-name $TAP_S3_TECH_DOC_BUCKET --entity $CATALOG_NMSP/$CATALOG_KIND/$CATALOG_NAME --directory $GIT_TMPSITE"; exit
+  echo " => npx @techdocs/cli publish --publisher-type awsS3 --storage-name $AWS_S3_TECHDOC_BUCKET --entity $CATALOG_NMSP/$CATALOG_KIND/$CATALOG_NAME --directory $GIT_TMPSITE"; exit
+  exit
 fi
 
 echo "---------------------------------------------------------------------------------------------------------------------"
@@ -95,13 +100,13 @@ echo "npx @techdocs/cli generate --source-dir $TARGET_PATH --output-dir $GIT_TMP
   echo "=> Processing: $n ($TARGET_NMSP/$TARGET_KIND/$TARGET_NAME) $TARGET_PATH"
 echo "npx @techdocs/cli publish \
       --publisher-type awsS3 \
-      --storage-name $TAP_S3_TECH_DOC_BUCKET \
+      --storage-name $AWS_S3_TECHDOC_BUCKET \
       --entity $TARGET_NMSP/$TARGET_KIND/$TARGET_NAME \
       --directory $GIT_TMPSITE" >> /tmp/tech.txt
 
   npx @techdocs/cli publish \
       --publisher-type awsS3 \
-      --storage-name $TAP_S3_TECH_DOC_BUCKET \
+      --storage-name $AWS_S3_TECHDOC_BUCKET \
       --entity $TARGET_NMSP/$TARGET_KIND/$TARGET_NAME \
       --directory $GIT_TMPSITE 2>/dev/null | sed 's/^/   /g'
 
