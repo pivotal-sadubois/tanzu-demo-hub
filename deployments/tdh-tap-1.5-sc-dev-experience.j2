@@ -6,6 +6,15 @@ tdh_deployment:
   tkg_version: 2.1.0
   tdh_tools: 2.2.1
 tdh_environment: 
+ tdh_config:
+    - header
+    - tdh_user
+    - tmc
+    - registry_docker
+    - registry_vmware
+    - aws_route53
+    - cert-manager
+    - techdoc
   vmc: &VMC
     account: 
       name: '{{ TDH_USER }}'
