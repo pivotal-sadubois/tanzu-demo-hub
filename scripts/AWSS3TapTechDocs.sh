@@ -26,8 +26,7 @@ fi
 [ -f $TDHPATH/../functions ] && . $TDHPATH/../functions
 [ -f $HOME/.tanzu-demo-hub.cfg ] && . $HOME/.tanzu-demo-hub.cfg
 
-checkTDHsettings techdoc-upload
-
+checkTDHsettings techdoc
 
 GIT_TMPREPO=/tmp/tech_docs
 GIT_TMPSITE=/tmp/tech_site

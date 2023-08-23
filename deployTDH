@@ -118,7 +118,7 @@ createTDHdeployment
 
 # --- VALIDATE TDH SETTINGS ---
 clearConfigMapCache
-#validateConfigVariables
+validateConfigVariables
 
 #############################################################################################################################
 ######################### DELETE TKG CLUSTER AND DETTACH TO TMC AND INSTALL TMC INTEGRATION #################################

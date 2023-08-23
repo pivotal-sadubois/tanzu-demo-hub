@@ -900,7 +900,6 @@ validateConfigVariables () {
   for n in $(getYAML TDH_CONFIG_LIST); do
     checkTDHsettings $n
   done
-#hudi
 }
 
 # ------------------------------------------------------------------------------------------
@@ -919,7 +918,7 @@ checkTDHsettings() {
     messagePrint " ▪ Validate TDH Configuration"                 "\$HOME/.tanzu-demo-hub.cfg"
   fi
 
-  if [ "${service}" == "techdoc-upload" ]; then
+  if [ "${service}" == "techdoc" ]; then
     if [ "${AWS_S3_TECHDOC_BUCKET_REGION}" == "" -o "${AWS_S3_TECHDOC_BUCKET}" == "" -o \
          "${AWS_S3_TECHDOC_UPLOAD_ACCESS_KEY}" == "" -o "${AWS_S3_TECHDOC_UPLOAD_SECRET_KEY}" == "" ]; then
 
@@ -991,97 +990,6 @@ checkTDHsettings() {
     fi
   fi
 
-
-  if [ "${service}" == "techdoc" ]; then
-    if [ "${AWS_S3_TECHDOC_ACCOUNT_ID}" == "" -o "${TAP_S3_TECH_DOC_BUCKET}" == "" -o "${TAP_S3_USER}" == "" -o "${TAP_S3_ACCESS_KEY}" == "" -o \
-         "${AWS_S3_TECHDOC_READONLY_ACCESS_KEY}" == "" -o "${AWS_S3_TECHDOC_READONLY_SECRET_KEY}" == "" ]; then
-
-      missing_variables=1
-      echo ""
-      echo "   MISSING ENVIRONMENT-VARIABES       DESCRIPTION        "
-      echo "   -------------------------------------------------------------------------------------------------------------------------------------------------------------"
-
-      if [ "${AWS_S3_TECHDOC_ACCOUNT_ID}" == "" ]; then
-        echo "   AWS_S3_TECHDOC_ACCOUNT_ID          (required) AWS S3 AccountID"
-      fi
-
-      if [ "${TAP_S3_TECH_DOC_BUCKET}" == "" ]; then
-        echo "   TAP_S3_TECH_DOC_BUCKET             (required) AWS S3 Bucket to store Techdocs"
-      fi
-
-      if [ "${TAP_S3_USER}" == "" ]; then
-        echo "   TAP_S3_USER                        (required) AWS S3 IAM User"
-      fi
-
-#gugu
-      if [ "${TAP_S3_TECH_DOC_POLICY}" == "" ]; then
-        echo "   TAP_S3_TECH_DOC_POLICY             (required) S3 Policy"
-      fi
-
-      if [ "${TAP_S3_TECH_DOC_POLICY}" == "" ]; then
-        echo "   TAP_S3_TECH_DOC_POLICY             (required) S3 Policy"
-      fi
-
-      if [ "${AWS_S3_TECHDOC_READONLY_ACCESS_KEY}" == "" -o "${AWS_S3_TECHDOC_READONLY_SECRET_KEY}" == "" ]; then
-        echo "   AWS_S3_TECHDOC_READONLY_ACCESS_KEY (required) AWS Secret Key to Access S3 Bucket tdh-techdoc for upload"
-        echo "   AWS_S3_TECHDOC_READONLY_SECRET_KEY (required) AWS Access Key to Access S3 Bucket tdh-techdoc for upload"
-      fi
-
-      if [ "${TAP_S3_TECH_DOC_POLICY}" == "" ]; then
-        echo "   TAP_S3_TECH_DOC_POLICY             (required) AWS S3 Read / Write Policy for Techdoc uploads"
-        echo ""
-        echo "   Example AWS Access Policy for S3 Read / Write Access for Techdoc uploads"
-        echo "   ---------------------------------------------------------------------------------------------------------------------------------------------------------------"
-        echo "   {"
-        echo "       \"Version\" \"2012-10-17\""
-        echo "       \"Statement\": ["
-        echo "           {"
-        echo "               \"Effect\": \"Allow\","
-        echo "               \"Action\": ["
-        echo "                   \"route53:GetChange\","
-        echo "                   \"route53:UpdateHostedZoneComment\""
-        echo "               ],"
-        echo "               \"Resource\": ["
-        echo "                   \"arn:aws:route53:::hostedzone/*\","
-        echo "                   \"arn:aws:route53:::change/*\""
-        echo "               ]"
-        echo "           },"
-        echo "           {"
-        echo "               \"Effect\": \"Allow\","
-        echo "               \"Action\": ["
-        echo "                   \"route53:CreateHostedZone\","
-        echo "                   \"route53domains:ListDomains\","
-        echo "                   \"ec2:DescribeVpcs\","
-        echo "                   \"route53:ListHostedZonesByName\""
-        echo "               ],"
-        echo "               \"Resource\": \"*\""
-        echo "           }"
-        echo "       ]"
-        echo "   }"
-        echo "   ---------------------------------------------------------------------------------------------------------------------------------------------------------------"
-        echo ""
-        echo "   Example AWS Access Policy for S3 Readonly Access"
-        echo "   ---------------------------------------------------------------------------------------------------------------------------------------------------------------"
-        echo "   {"
-        echo "       \"Version\" \"2012-10-17\""
-        echo "       \"Statement\": ["
-        echo "           {"
-        echo "               \"Effect\": \"Allow\","
-        echo "               \"Action\": ["
-        echo "                   \"s3:GetBucketPublicAccessBlock\","
-        echo "                   \"s3:GetObject\","
-        echo "                   \"s3:ListBucket\""
-        echo "               ],"
-        echo "               \"Resource\": \"arn:aws:s3:::tdh-techdoc\""
-        echo "           }"
-        echo "       ]"
-        echo "   }"
-        echo "   ---------------------------------------------------------------------------------------------------------------------------------------------------------------"
-      fi
-    fi
-  fi
-
-
   if [ "${service}" == "github" ]; then
     if [ "${TDH_DEMO_GITHUB_USER}" == "" -o "${TDH_DEMO_GITHUB_TOKEN}" == "" ]; then
       missing_variables=1
@@ -1100,7 +1008,7 @@ checkTDHsettings() {
       echo "   ---------------------------------------------------------------------------------------------------------------------------------------------------------------"
       echo "   *** Create a new empty Github Account for running demos, Tanzu Demo Hub will use this account to create and delete repositories during demos ***"
     else
-      gh repo list $TDH_DEMO_GITHUB_USER > /tmp/error.log 2>&1; ret=$? 
+      curl -f "https://github.com/$TDH_DEMO_GITHUB_USER" > /tmp/error.log 2>&1; ret=$? 
       if [ $ret -ne 0 ]; then
         logMessages /tmp/error.log
         echo "ERROR: Github user ($TDH_DEMO_GITHUB_USER) does not exist. Please verify manually"
@@ -1128,6 +1036,21 @@ checkTDHsettings() {
         fi
 
         exit 1 
+      fi 
+
+      gh repo list $TDH_DEMO_GITHUB_USER > /tmp/error.log 2>&1; ret=$?
+      if [ $ret -ne 0 ]; then
+        logMessages /tmp/error.log
+        echo "ERROR: Github user ($TDH_DEMO_GITHUB_USER) does not exist. Please verify manually"
+        if [ "$NATIVE" == "0" ]; then
+          echo "       => tools/${TDH_TOOLS}.sh"
+          echo "          tdh-tools:/$ curl https://github.com/$TDH_DEMO_GITHUB_USER"
+          echo "          tdh-tools:/$ exit"
+        else       
+          echo "       => https://github.com/$TDH_DEMO_GITHUB_USER"
+        fi
+
+        exit 1
       fi 
     fi
   fi
@@ -9283,20 +9206,21 @@ fi
 
     # Tanzu Application Platform - TechDocs Documentation (how to setup an AWS S3 Bucket)
     # https://docs.vmware.com/en/VMware-Tanzu-Application-Platform/1.4/tap/tap-gui-techdocs-usage.html
-    if [ "$TAP_S3_TECH_DOC_BUCKET" != "" -a "$TAP_S3_ACCESS_KEY" != "" -a "$TAP_S3_REGION" != "" ]; then 
+    if [ "$AWS_S3_TECHDOC_BUCKET" != "" -a "$AWS_S3_TECHDOC_READONLY_ACCESS_KEY" != "" -a "$AWS_S3_TECHDOC_BUCKET_REGION" != "" -o \
+         "$AWS_S3_TECHDOC_ACCOUNT_ID" != "" -a "$AWS_S3_TECHDOC_READONLY_SECRET_KEY" != "" ]; then 
       echo "    techdocs:"                                                                                                         >> $TAP_CONFIG
       echo "      builder: 'external'"                                                                                             >> $TAP_CONFIG
       echo "      publisher:"                                                                                                      >> $TAP_CONFIG
       echo "        type: 'awsS3'"                                                                                                 >> $TAP_CONFIG
       echo "        awsS3:"                                                                                                        >> $TAP_CONFIG
-      echo "          bucketName: \"tdh-tap-tech-docs\""                                                                           >> $TAP_CONFIG
+      echo "          bucketName: \"$AWS_S3_TECHDOC_BUCKET\""                                                                      >> $TAP_CONFIG
       echo "          accountId: \"450431177868\""                                                                                 >> $TAP_CONFIG
       echo "          region: \"$TAP_S3_REGION\""                                                                                  >> $TAP_CONFIG
       echo "    aws:"                                                                                                              >> $TAP_CONFIG
       echo "      accounts:"                                                                                                       >> $TAP_CONFIG
-      echo "        - accountId: \"450431177868\""                                                                                 >> $TAP_CONFIG
-      echo "          accessKeyId: \"$TAP_S3_ACCESS_KEY\""                                                                         >> $TAP_CONFIG
-      echo "          secretAccessKey: \"$TAP_S3_SECRET_KEY\""                                                                     >> $TAP_CONFIG
+      echo "        - accountId: \"$AWS_S3_TECHDOC_BUCKET\""                                                                       >> $TAP_CONFIG
+      echo "          accessKeyId: \"$AWS_S3_TECHDOC_READONLY_ACCESS_KEY\""                                                        >> $TAP_CONFIG
+      echo "          secretAccessKey: \"$AWS_S3_TECHDOC_READONLY_SECRET_KEY\""                                                    >> $TAP_CONFIG
       echo ""                                                                                                                      >> $TAP_CONFIG
     fi
 
