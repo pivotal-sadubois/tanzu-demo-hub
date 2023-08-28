@@ -5,8 +5,8 @@ metadata:
   namespace: tanzu-demo-hub
 spec:
   distribution:
-    fullVersion: v1.20.9+vmware.1-tkg.1.a4cee5b
-    version: ""
+    fullVersion: v1.22.9---vmware.1-tkg.1.cc71bc8
+    version: 
   settings:
     network:
       cni:
@@ -19,14 +19,20 @@ spec:
         cidrBlocks:
         - 10.96.0.0/16
     storage: 
-      defaultClass: VSPHERE_TKGS_SUPERVISOR_STORAGE_CLASS
+      defaultClass: vc01cl01-t0compute
   topology:
     controlPlane:
-      class: guaranteed-medium
+      class: best-effort-large
       count: 1
-      storageClass: VSPHERE_TKGS_SUPERVISOR_STORAGE_CLASS
+      storageClass: vc01cl01-t0compute
     workers:
       #class: best-effort-2xlarge
-      class: guaranteed-medium
+      class: best-effort-large
       count: 1
-      storageClass: VSPHERE_TKGS_SUPERVISOR_STORAGE_CLASS
+      storageClass: vc01cl01-t0compute
+      volumes:
+        - name: containerd
+          mountPath: /var/lib/containerd
+          capacity:
+            storage: 200Gi
+
