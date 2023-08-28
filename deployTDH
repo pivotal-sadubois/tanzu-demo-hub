@@ -31,6 +31,9 @@ export CMD_ARGS=$*
 [ -f $TANZU_DEMO_HUB/functions ] && . $TANZU_DEMO_HUB/functions
 [ -f $HOME/.tanzu-demo-hub.cfg ] && . $HOME/.tanzu-demo-hub.cfg
 
+# --- CHECK FOR BASIC COMANDS ---
+checkCLIcommands        BASIC
+
 usage() {
   echo ""
   echo "USAGE: $0 [options] -e <deploy-environment> -c <deployment-config> -sd/--subdomain <subdomain> [--debug]"
