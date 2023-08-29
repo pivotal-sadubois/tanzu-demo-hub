@@ -19387,6 +19387,8 @@ runTDHtools() {
 
   if [ ! -f /tdh_tools_docker_container  ]; then
     [ ! -d $HOME/.tanzu-demo-hub ] && mkdir -p $HOME/.tanzu-demo-hub
+    [ ! -d $HOME/.tanzu-demo-hub/config ] && mkdir -p $HOME/.tanzu-demo-hub/config
+    [ ! -d $HOME/.tanzu-demo-hub/deployments ] && mkdir -p $HOME/.tanzu-demo-hub/deployments
     tdhHeader "$HEADER_TEXT" | tee $HOME/.tanzu-demo-hub/deployment.log
 
     cnt=$(docker ps | grep -c "tdh-tools-${TOOLS_TLAG}-${TOOLS_VERSION}:latest")

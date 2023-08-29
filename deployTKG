@@ -29,7 +29,7 @@ checkCLIcommands        BASIC
 
 usage() {
   echo ""
-  echo "USAGE: $0 [options] -d <tkg-deployment.cfg> -c <tkg-configuration.cfg> -n <cluster-name> [-k <kubernetes-version>] [--debug]"
+  echo "USAGE: $0 [options] -d <tkg-deployment> -c <tkg-configuration.cfg> -n <cluster-name> [-k <kubernetes-version>] [--debug]"
   echo "            Options:  [-n  <cluster-name>]      # Should reflect the environment and its purpose. Make sure"
   echo "                                                # to add your user name, to prevent conflicts in TMC"
   echo "                                                # ie. tdh-azure-sdubois or tdh-aws-sdubois-aws"
@@ -67,6 +67,8 @@ if [ "${TKG_DEPLOYMENT}" == "" -o "${TKG_CONFIGURATION}" == "" ]; then
   usage; exit 0
 fi
 
+[ -f $HOME/.tanzu-demo-hub/config/${TKG_DEPLOYMENT}.cfg ] && TKG_DEPLOYMENT=${TKG_DEPLOYMENT}.cfg
+
 # --- VERIFY DEPLOYMENT ---
 if [ -f $HOME/.tanzu-demo-hub/config/${TKG_DEPLOYMENT} ]; then
   TMC_DEPLOYMENT_CONFIG=${HOME}/.tanzu-demo-hub/config/${TKG_DEPLOYMENT}
@@ -86,14 +88,14 @@ if [ -f $TDHPATH/deployments/$TKG_CONFIGURATION ]; then
   TKG_TANZU_KUBERNETES_GRID=$(egrep "^TDH_TOOLS_CONTAINER_VERS=" $TDHPATH/deployments/$TKG_CONFIGURATION | awk -F'=' '{ print $2 }') 
   K8S_TKGWC=$(echo $TKG_TANZU_KUBERNETES_GRID | awk -F'.' '{ printf("%s.%s\n",$1,$2) }')
 
-  if [ "$K8S_TKGMC" != "$K8S_TKGWC" ]; then 
-    K8S_SHORT=$(echo $TDH_TKGMC_TOOLS_CONTAINER | awk -F'.' '{ printf("%s.%s.x\n",$1,$2) }') 
-    echo "ERROR: Management Cluster ($TDH_TKGMC_NAME) deployed with $TKG_DEPLOYMENT has been configured"
-    echo "       with TKG ${K8S_TKGMC}.x, but the TKG Workload Cluster defined in $TKG_CONFIGURATION"
-    echo "       requires TKG ${K8S_TKGWC}.x. Please use a TDK Configuration supporteing TKG $K8S_SHORT instead"
-    echo ""
-    exit
-  fi
+#  if [ "$K8S_TKGMC" != "$K8S_TKGWC" ]; then 
+#    K8S_SHORT=$(echo $TDH_TKGMC_TOOLS_CONTAINER | awk -F'.' '{ printf("%s.%s.x\n",$1,$2) }') 
+#    echo "ERROR: Management Cluster ($TDH_TKGMC_NAME) deployed with $TKG_DEPLOYMENT has been configured"
+#    echo "       with TKG ${K8S_TKGMC}.x, but the TKG Workload Cluster defined in $TKG_CONFIGURATION"
+#    echo "       requires TKG ${K8S_TKGWC}.x. Please use a TDK Configuration supporteing TKG $K8S_SHORT instead"
+#    echo ""
+#    exit
+#  fi
 
   . ${TDHPATH}/deployments/$TKG_CONFIGURATION
 else
@@ -312,6 +314,8 @@ else
   exit 1
 fi
 
+echo "TDH_TKGMC_ENVNAME:$TDH_TKGMC_ENVNAME"
+
 uodateConfigMap tanzu-demo-hub TDH_DOMAIN                         $AWS_HOSTED_DNS_DOMAIN
 uodateConfigMap tanzu-demo-hub TDH_ENVNAME                        $TDH_TKGMC_ENVNAME
 uodateConfigMap tanzu-demo-hub TDH_DEPLOYMENT_TYPE                "tkg"
@@ -322,6 +326,8 @@ uodateConfigMap tanzu-demo-hub TDH_CLUSTER_NAME                   "$TANZU_TKGWC_
 uodateConfigMap tanzu-demo-hub TDH_MANAGEMENT_CLUSTER             "$TANZU_TKGMC_NAME"
 uodateConfigMap tanzu-demo-hub TDH_PROVISIONER_NAME               "$TANZU_TKGWC_TMC_PROVISIONER"
 uodateConfigMap tanzu-demo-hub TDH_MISSION_CONTROL_ACCOUNT_NAME   "ukn"
+
+#createCertificateV2
 
 if [ "${TANZU_TKGWC_INFRASTRUCTURE}" == "vSphere" -a "$TANZU_TKGWC_DEPLOYMENT_MODEL" != "tkgs" ]; then
   InstallMetallLB
