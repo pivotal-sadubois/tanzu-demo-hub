@@ -280,7 +280,6 @@ if [ "$PROVIDER" == "VSPHERE_TKGS" ]; then
   messagePrint " ▪ vSphere Supervisor Cluster - Config YAML"               "\$HOME/.tanzu-demo-hub/config/${TMC_DISPLAY_NAME}.yml"
   messagePrint " ▪ vSphere Supervisor Cluster - Kubeconfig"                "\$HOME/.tanzu-demo-hub/config/${TMC_DISPLAY_NAME}.kubeconfig"
   messagePrint " ▪ Tanzu Mission Control (TMC) - Configuration Envfile"    "\$HOME/.tanzu-demo-hub/config/${TMC_CONFIG_NAME}.cfg"
-  messagePrint " ▪ Tanzu Mission Control (TMC) - Configuration YAML"       "\$HOME/.tanzu-demo-hub/config/${TMC_CONFIG_NAME}.yml"
 
   [ -f $HOME/.kube/config_$VSPHERE_TKGS_SUPERVISOR_CLUSTER ] && mv $HOME/.kube/config_$VSPHERE_TKGS_SUPERVISOR_CLUSTER $HOME/.tanzu-demo-hub/config/${TMC_DISPLAY_NAME}.kubeconfig
   
@@ -292,7 +291,7 @@ if [ "$PROVIDER" == "VSPHERE_TKGS" ]; then
   CONFIG_FILE="$HOME/.tanzu-demo-hub/config/${TMC_CONFIG_NAME}.cfg"
   echo "TDH_INFRASTRUCTURE=tmc"                                                  >  $CONFIG_FILE
   echo "TDH_ENVNAME=tkgs"                                                        >> $CONFIG_FILE
-  echo "TDH_COMMENT=\"$COMMENT_TMP\""                                                >> $CONFIG_FILE
+  echo "TDH_COMMENT=\"$COMMENT_TMP\""                                            >> $CONFIG_FILE
   echo "TDH_DEPLOYMENT_CLOUD=vSphere"                                            >> $CONFIG_FILE
   echo "TDH_DEPLOYMENT_DESCRIPTION='VMware Tanzu for vSphere (TKGs) on H2O'"     >> $CONFIG_FILE
   echo "TDH_DEPLOYMENT_MAINTAINER=$TDH_USER"                                     >> $CONFIG_FILE
@@ -316,14 +315,13 @@ if [ "$PROVIDER" == "VSPHERE_TKGS" ]; then
   echo "TDH_TKGMC_NAME=$TMC_DISPLAY_NAME"                                        >> $CONFIG_FILE
   echo "TDH_TKGMC_KUBERNETES=$k8s"                                               >> $CONFIG_FILE
   echo "TDH_TKGMC_ENVNAME=tkgs"                                                  >> $CONFIG_FILE
-  echo "TDH_TKGMC_COMMENT=\"$COMMENT_TMP\""                                          >> $CONFIG_FILE
+  echo "TDH_TKGMC_COMMENT=\"$COMMENT_TMP\""                                      >> $CONFIG_FILE
   echo "TDH_TKGMC_TMC_CONFIG=${TMC_CONFIG_NAME}.cfg"                             >> $CONFIG_FILE
   echo "TDH_TKGMC_STORAGE_CLASS=$VSPHERE_TKGS_SUPERVISOR_STORAGE_CLASS"          >> $CONFIG_FILE
   echo "TDH_TKGMC_VSPHERE_NAMESPACE=$VSPHERE_NAMESPACE"                          >> $CONFIG_FILE
   echo "TDH_TKGMC_VSPHERE_SERVER=$VSPHERE_TKGS_VCENTER_SERVER"                   >> $CONFIG_FILE
   echo "TDH_TKGMC_VSPHERE_USER=$VSPHERE_TKGS_VCENTER_ADMIN"                      >> $CONFIG_FILE
   echo "TDH_TKGMC_VSPHERE_PASS='$VSPHERE_TKGS_VCENTER_PASSWORD'"                 >> $CONFIG_FILE
-  echo "TDH_TKGMC_CONFIG="                                                       >> $CONFIG_FILE
   echo "TDH_TKGMC_SUPERVISORCLUSTER=$VSPHERE_TKGS_SUPERVISOR_CLUSTER"            >> $CONFIG_FILE
   echo "TDH_TKGMC_KUBECONFIG=${TMC_DISPLAY_NAME}.kubeconfig"                     >> $CONFIG_FILE
   echo "TDH_TKGMC_TOOLS_CONTAINER=tdh-tools-tkg-$DEPLOY_TKG_VERSION"             >> $CONFIG_FILE
@@ -463,11 +461,11 @@ if [ "$PROVIDER" == "AZURE_AKS" ]; then
   echo "AZURE_CLIENT_ID=$az_aid"                                                 >> $CONFIG_FILE
   echo "AZURE_CLIENT_SECRET=$pass"                                               >> $CONFIG_FILE
   echo "AZURE_LOCATION=$AZURE_LOCATION"                                          >> $CONFIG_FILE
-  echo "APP_DISPLAY_NAME=$app_display_name"                                       >> $CONFIG_FILE
+  echo "APP_DISPLAY_NAME=$app_display_name"                                      >> $CONFIG_FILE
   echo ""                                                                        >> $CONFIG_FILE
-  echo "nodes[0]='Standard_D2ds_v4'"                                            >> $CONFIG_FILE
-  echo "nodes[1]='Standard_D4ds_v4'"                                          >> $CONFIG_FILE
-  echo "nodes[2]='Standard_D8ds_v4'"                                          >> $CONFIG_FILE
+  echo "nodes[0]='Standard_D2ds_v4'"                                             >> $CONFIG_FILE
+  echo "nodes[1]='Standard_D4ds_v4'"                                             >> $CONFIG_FILE
+  echo "nodes[2]='Standard_D8ds_v4'"                                             >> $CONFIG_FILE
 
   VSPHERE_TKGS_VCENTER_URL=$(echo $VSPHERE_TKGS_VCENTER_SERVER | awk -F'/' '{ print $NF }')
   VSPHERE_TKGS_VCENTER_ID=$(echo $VSPHERE_TKGS_DNS_USER | awk -F'-' '{ print $NF }')

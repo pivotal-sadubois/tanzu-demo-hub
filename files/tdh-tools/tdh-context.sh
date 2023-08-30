@@ -52,10 +52,23 @@ if [ -d $HOME/.tanzu-demo-hub/config ]; then
       TKG_CLUSTER_CONFIG[$INDEX]=$HOME/.tanzu-demo-hub/deployments/${mcn}/${dep}/${cnm}/${cnm}.cfg
       TKG_CLUSTER_KUBECONFIG[$INDEX]=$HOME/.tanzu-demo-hub/deployments/${mcn}/${dep}/${cnm}/${cnm}.kubeconfig
     else
-      TKG_CLUSTER_CONFIG_FILE=$(grep "TDH_TKGMC_NAME=${cnm}" $HOME/.tanzu-demo-hub/config/TDHenv-*.cfg | awk -F':' '{ print $1 }' | awk -F'/' '{ print $NF }')
+      found=0
+      for file in $(ls -1 $HOME/.tanzu-demo-hub/config/TDHenv-*.cfg); do
+        cfg=$(echo $file | awk -F'/' '{ print $NF }')
+        ccc=$(grep -c "TDH_TKGMC_NAME=${cnm}" $HOME/.tanzu-demo-hub/config/${cfg}) 
+        [ $ccc -eq 1 ] && found=1 && break
+      done
+
+      if [ $found -eq 1 ]; then 
+        TKG_CLUSTER_CONFIG_FILE=$cfg
+      else
+        echo "ERROR: TKG Cluster $cnm could not be found in a \$HOME/.tanzu-demo-hub/config/TDHenv-*.cfg files"
+        exit
+      fi
+
+
       TKG_CLUSTER_NAME[$INDEX]="$cnm"
       TKG_CLUSTER_STATUS_MSG[$INDEX]="K8S-API UNTESTED"
-      TKG_CLUSTER_CONFIG[$INDEX]=$(grep "TDH_TKGMC_NAME=${cnm}" $HOME/.tanzu-demo-hub/config/TDHenv-*.cfg | awk -F':' '{ print $1 }' | awk -F'/' '{ print $NF }')
       TKG_CLUSTER_CONFIG[$INDEX]=$HOME/.tanzu-demo-hub/config/${TKG_CLUSTER_CONFIG_FILE}
 
       TKG_CLUSTER_KUBECONFIG[$INDEX]=$HOME/.tanzu-demo-hub/config/${cnm}.kubeconfig
