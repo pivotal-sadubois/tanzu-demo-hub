@@ -21154,8 +21154,8 @@ convertTDHconfig() {
   export CREDENTIALS_SRC=$HOME/.tanzu-demo-hub.cfg
   export CREDENTIALS_DST=$HOME/.tanzu-demo-hub.yml
 
-  sed -n '1,/^return/p' $CREDENTIALS_SRC | grep "=" | egrep -v "^#" | sed -e "s/'//g" -e '/^#/d' -e 's/export //g' -e "s/=/: '/g" -e 's/"//g' -e 's/  *#.*$//g' -e "s/$/'/g" >  $CREDENTIALS_DST
-  sed -n '1,/^return/p' $CREDENTIALS_SRC | grep "=" | egrep -v "^#" | egrep "TMC_SERVER_URL" | sed -e "s/'//g" -e 's/"//g' -e "s+^.*//\(.*\)$+TMC_SERVER_TENNANT: '\1'+g"    >> $CREDENTIALS_DST
+  sed -n '1,/^return/p' $CREDENTIALS_SRC | grep "=" | egrep -v "^#|AWS_SESSION_TOKEN" | sed -e "s/'//g" -e '/^#/d' -e 's/export //g' -e "s/=/: '/g" -e 's/"//g' -e 's/  *#.*$//g' -e "s/$/'/g" >  $CREDENTIALS_DST
+  sed -n '1,/^return/p' $CREDENTIALS_SRC | grep "=" | egrep -v "^#|AWS_SESSION_TOKEN" | egrep "TMC_SERVER_URL" | sed -e "s/'//g" -e 's/"//g' -e "s+^.*//\(.*\)$+TMC_SERVER_TENNANT: '\1'+g"    >> $CREDENTIALS_DST
   chmod 600 $CREDENTIALS_DST
 }           
 
