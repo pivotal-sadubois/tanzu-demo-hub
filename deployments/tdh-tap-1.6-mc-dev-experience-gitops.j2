@@ -294,12 +294,12 @@ tdh_clusters:
       services:
         tap:
           enabled: true
+          version: 1.6.2
           type: multi_node_tap
           organization: 'Tanzu Demo Hub - Production Environment'
           default_supply_chain: testing_scanning
           namespace:
             - name: newsletter
-          version: 1.6.2
           role: full
           catalog_locations:
             - name: newsletter
@@ -365,7 +365,7 @@ tdh_clusters:
         tap:
           enabled: true
           type: multi_node_tap
-          version: 1.5.1
+          version: 1.6.2
           role: run
           registry: 
             - name: local_registry
