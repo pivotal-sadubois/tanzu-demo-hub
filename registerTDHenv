@@ -65,7 +65,7 @@ usage() {
   echo "                       --vcenter_server '<name>'       # vCenter Server Name or IP Address"
   echo "                       --vcenter_user '<user_name>'    # vCenter Server Administrator User"
   echo "                       --vcenter_pass '<password>'     # vCenter Server Administrator Password"
-  echo "                       --supervisor '<name>'           # vSphere Supervisor Cluster Name"
+  echo "                       --wcp '<name>'                  # vSphere Supervisor Cluster Name (WCP)"
   echo ""
 }
 
@@ -91,7 +91,7 @@ while [ "$1" != "" ]; do
     --vcenter_server)      VSPHERE_TKGS_VCENTER_SERVER=$2;CMD_ARGS="$CMD_ARGS --vcenter_server $2";;
     --vcenter_user)        VSPHERE_TKGS_VCENTER_ADMIN=$2;CMD_ARGS="$CMD_ARGS --vcenter_user $2";;
     --vcenter_pass)        VSPHERE_TKGS_VCENTER_PASSWORD=$2;CMD_ARGS="$CMD_ARGS --vcenter_pass $2";;
-    --supervisor)          VSPHERE_TKGS_SUPERVISOR_CLUSTER=$2;CMD_ARGS="$CMD_ARGS --supervisor $2";;
+    --wcp)                 VSPHERE_TKGS_SUPERVISOR_CLUSTER=$2;CMD_ARGS="$CMD_ARGS --wcp $2";;
     -v)                    DEPLOY_TKG_VERSION=$2;CMD_ARGS="$CMD_ARGS -v $2";;
     --debug)               DEBUG=1;CMD_ARGS="$CMD_ARGS -p $2";;
     --native)              NATIVE=1;CMD_ARGS="$CMD_ARGS -p $2";;
