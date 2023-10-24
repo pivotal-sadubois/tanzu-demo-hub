@@ -1,0 +1,11 @@
+#@ load("@ytt:overlay", "overlay")
+#@ load("@ytt:data", "data")
+#@overlay/match by=overlay.subset({"kind": "Workload"})
+---
+spec:
+  source:
+  #@overlay/replace
+    git: 
+      url: #@ data.values.git.url
+      ref:
+        branch: #@ data.values.git.branch

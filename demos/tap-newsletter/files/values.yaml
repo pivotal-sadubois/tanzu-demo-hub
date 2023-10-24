@@ -1,0 +1,5 @@
+#@data/values-schema
+---
+git:
+  url: value2
+  branch: value4
