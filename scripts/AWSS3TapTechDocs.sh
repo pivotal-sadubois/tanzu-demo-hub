@@ -26,6 +26,11 @@ fi
 [ -f $TDHPATH/../functions ] && . $TDHPATH/../functions
 [ -f $HOME/.tanzu-demo-hub.cfg ] && . $HOME/.tanzu-demo-hub.cfg
 
+pip -q install --upgrade pip
+pip -q install npx
+pip -q install mkdocs
+pip -q install mkdocs-techdocs-core
+
 checkTDHsettings techdoc
 
 GIT_TMPREPO=/tmp/tech_docs
@@ -42,6 +47,7 @@ if [ $ret -ne 0 ]; then
 fi
 
 CATALOG_INFO=$(find $GIT_TMPREPO -name catalog-info.yaml | head -1)
+echo "CATALOG_PATH:$CATALOG_PATH"
 if [ "$CATALOG_INFO" != "" ]; then 
   CATALOG_PATH=$(dirname $CATALOG_INFO)
 else
@@ -64,16 +70,16 @@ export AWS_REGION=$AWS_S3_TECHDOC_BUCKET_REGION
 
 echo "export AWS_ACCESS_KEY_ID=$AWS_S3_TECHDOC_UPLOAD_ACCESS_KEY"
 echo "export AWS_SECRET_ACCESS_KEY=$AWS_S3_TECHDOC_UPLOAD_SECRET_KEY"
+echo "export AWS_S3_TECHDOC_BUCKET=$AWS_S3_TECHDOC_BUCKET"
 echo "export AWS_REGION=$AWS_S3_TECHDOC_BUCKET_REGION"
 
 
-echo "npx @techdocs/cli generate --source-dir $CATALOG_PATH --output-dir $GIT_TMPSITE" >  /tmp/tech.txt
-npx @techdocs/cli generate --source-dir $CATALOG_PATH --output-dir $GIT_TMPSITE 2>/dev/null; ret=$?
+echo "npx @techdocs/cli generate --source-dir $CATALOG_PATH --output-dir $GIT_TMPSITE" --no-docker >  /tmp/tech.txt
+npx @techdocs/cli generate --source-dir $CATALOG_PATH --output-dir $GIT_TMPSITE --no-docker 2>/dev/null; ret=$?
 if [ $ret -ne 0 ]; then
   echo "ERROR: failed to generate the TechDocs for the catalog root"
-  echo " => npx @techdocs/cli generate --source-dir $CATALOG_INFO --output-dir $GIT_TMPSITE"; exit
+  echo " => npx @techdocs/cli generate --source-dir $CATALOG_INFO --output-dir $GIT_TMPSITE --no-docker"; exit
 fi
-
 
 echo "npx @techdocs/cli publish --publisher-type awsS3 --storage-name $AWS_S3_TECHDOC_BUCKET --entity $CATALOG_NMSP/$CATALOG_KIND/$CATALOG_NAME --directory $GIT_TMPSITE" >> /tmp/tech.txt
 npx @techdocs/cli publish --publisher-type awsS3 --storage-name $AWS_S3_TECHDOC_BUCKET --entity $CATALOG_NMSP/$CATALOG_KIND/$CATALOG_NAME --directory $GIT_TMPSITE 2>/dev/null; ret=$?

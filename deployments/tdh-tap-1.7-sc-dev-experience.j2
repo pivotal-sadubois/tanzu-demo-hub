@@ -1,8 +1,8 @@
 tdh_deployment:
   name: tdh-tap-sc-dev-experience
-  source: tdh-tap-1.5-sc-dev-experience.j2
+  source: tdh-tap-1.7-sc-dev-experience.j2
   type: tap-cinglecluster
-  description: Tanzu Application Platform (TAP) 1.5 - Singlecluster Deployment for Developer Experience
+  description: Tanzu Application Platform (TAP) 1.7 - Singlecluster Deployment for Developer Experience
   tkg_version: 2.1.0
   tdh_tools: 2.2.1
 tdh_environment: 
@@ -67,7 +67,7 @@ tdh_clusters:
         - registry
         - argocd
         - minio
-      kubernetes: '1.25'
+      kubernetes: '1.26'
       tdh_tools: '2.2.0'
       tdh_tools: '2.2.0'
       package_repositories: 
@@ -136,6 +136,15 @@ tdh_clusters:
               package_manager: 'helm'
               package_repository: 'https://charts.bitnami.com/bitnami'
               version: 'latest'
+        - name: 'gitea'
+          description: 'Certificate Manager'
+          package_id: 'gitea'
+          package_manager: 'helm'
+          package_repo: 'https://dl.gitea.io/charts'
+          namespace: gitea
+          version: 'latest'
+          admin_user: gitea_admin
+          admin_password: Password12345
     control_plane_nodes:
       node_count: 1
       node_size: 'M'
@@ -146,7 +155,7 @@ tdh_clusters:
     description: 'Tanzu Application Platform - Development (Iterate/Build)'
     config:
       purpose: tap
-      kubernetes: '1.25'
+      kubernetes: '1.26'
       ingress_domain: 'dev'
       tkg: '2.2.0'
       tdh_tools: '2.2.0'
@@ -203,7 +212,7 @@ tdh_clusters:
       services:
         tap:
           enabled: true
-          version: 1.5.1
+          version: 1.7.0
           role: full
           type: single_node_tap
           organization: 'Tanzu Demo Hub - Development Environment'

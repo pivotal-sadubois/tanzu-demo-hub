@@ -32,3 +32,4 @@ fi
 
 # --- CREATE TAP LABEL ---
 kubectl label namespaces $NAMESPACE apps.tanzu.vmware.com/tap-ns=""
+kubectl label namespaces $NAMESPACE pod-security.kubernetes.io/enforce=baseline
