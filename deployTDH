@@ -135,8 +135,10 @@ fi
 ######################### CREATE TKG CLUSTER AND ATTACH TO TMC AND INSTALL TMC INTEGRATION ##################################
 #############################################################################################################################
 for clu in $(getYAML WC_CLUSTER_LIST); do
-#[ "$clu" == "tdh-vsphere-tkgs-sdubois-dev" ] && continue
 #[ "$clu" == "tdh-vsphere-tkgs-sdubois-svc" ] && continue
+#[ "$clu" == "tdh-vsphere-tkgs-sdubois-dev" ] && continue
+#[ "$clu" == "tdh-vsphere-tkgs-sdubois-run" ] && continue
+#[ "$clu" == "tdh-vsphere-tkgs-sdubois-ops" ] && continue
   createKubernetesCluster
   messageTitle "Tanzu Package Management"
   installPackageRepositories
@@ -152,10 +154,14 @@ for clu in $(getYAML WC_CLUSTER_LIST); do
   #installKubeapps
   #installGiteaV2
   #installJenkins
-  #installArgoCD
+  installArgoCDV2
   #installGitLab
   #installKubeernetesDashboard       ## Kubernetes Dashboard
+
+  createCertDelegationV2_depricated
+  createCertDelegationV2             ## Create Certificate Delegation (default/tdh-cert-admin)
   installTAPV2                       ## Tanzu Application Platform (TAP)
+exit
 done
 
 mergeKubeconfigFiles

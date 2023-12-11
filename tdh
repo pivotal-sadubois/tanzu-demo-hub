@@ -1,0 +1,115 @@
+#!/bin/bash
+
+echo ""
+echo "Tanzu Demo Hub - Demo Guide"
+echo "------------------------------------------------------------------------------------------------------------------------------------------------------------------"
+
+# --- CELANUP ---
+rm -f $HOME/.tdh/env
+
+if [ -d $HOME/workspace/tanzu-demo-hub ]; then
+  TDHHOME=$HOME/workspace/tanzu-demo-hub
+else
+  if [ "$TDHHOME" == "" ]; then
+    echo
+    echo "Please set the TDHHOME environment variable where the tanzu-tanzu-demo-hub is installed"
+    echo "export TDHHOME=\$HOME/workspace/tanzu-demo-hub"
+    echo ""
+    exit 0
+  else
+    if [ ! -f "$TDHHOME/tdh" ]; then
+      echo "ERROR: Can not find $TDHHOME/tdh, please verify if TDHHOME is corrct"
+      exit
+    fi
+  fi
+fi
+
+if [ "$TDH_DEMO_CONFIG" == "" ]; then
+  echo "The TDH_DEMO_CONFIG environment variable has not been set. Please set the variable from the list below"
+  echo "ie: export TDH_DEMO_CONFIG=<deployment>"
+  for n in $(find $HOME/.tanzu-demo-hub/deployments -name config.yml | sed -e 's+^.*deployments/++g' -e 's+/config.yml++g'); do
+    echo "   export TDH_DEMO_CONFIG=\"$n\""
+  done
+  echo ""
+
+  exit 0
+else
+  TDH_DEPLOYMENT_NAME=$(echo $TDH_DEMO_CONFIG | awk -F'/' '{ print $NF }') 
+fi
+
+if [ "$TDH_DEMO_NAME" == "" ]; then
+  echo "The demo name hast not be given, please TDH_DEMO_NAME environment variable"
+  echo "ie. "
+  for n in $(find $TDHHOME/demos -name demo-guide.sh | awk -F'/'  '{ print $(NF-1) }'); do
+    echo "   export TDH_DEMO_NAME=$n"
+  done
+
+  echo; exit 0
+fi
+
+if [ 2 -eq 1 ]; then 
+  echo "TDH Home Directory ......: $TDHHOME"
+  echo "TDH Deployment Config ...: \$HOME/.tanzu-demo-hub/deployments/$TDH_DEMO_CONFIG/config.yml"
+  echo "Kubernetes Cnofig .......: \$HOME/.tanzu-demo-hub/deployments/$TDH_DEMO_CONFIG/kubeconfig_${TDH_DEPLOYMENT_NAME}.yaml"
+  echo "Demo Name ...............: $TDH_DEMO_NAME"
+  echo "$TDH_DEMO_NAME" > $HOME/.tdh/tdh_demo_name.cfg
+
+  echo "--------------------------------------------------------------------------------------------------------------------------"
+  echo "INFO: To select a different Demos Project or use another TDH Deployment, unset the following environment variables"
+  echo "      and start over. ie unset TDH_DEMO_NAME or unset TDH_DEMO_CONFIG."
+  echo "--------------------------------------------------------------------------------------------------------------------------"
+fi
+
+TDH_DEPLOYMENT_TYPE=$(yq $HOME/.tanzu-demo-hub/deployments/$TDH_DEMO_CONFIG/config.yml -o json | jq -r '.tdh_deployment.type')
+TDH_SERVICE_LUSTER=$(yq $HOME/.tanzu-demo-hub/deployments/$TDH_DEMO_CONFIG/config.yml -o json | jq -r '.tdh_clusters[1].name')
+if [ "$TDH_DEPLOYMENT_TYPE"  == "tap-multicluster" ]; then
+  TAP_CLUSTER_SVC=$(yq $HOME/.tanzu-demo-hub/deployments/$TDH_DEMO_CONFIG/config.yml -o json | jq -r '.tdh_clusters[0].name')
+  TAP_CONTEXT_SVC="${TAP_CLUSTER_SVC}-admin@${TAP_CLUSTER_SVC}"
+  TAP_CLUSTER_DEV=$(yq $HOME/.tanzu-demo-hub/deployments/$TDH_DEMO_CONFIG/config.yml -o json | jq -r '.tdh_clusters[1].name')
+  TAP_CONTEXT_DEV="${TAP_CLUSTER_DEV}-admin@${TAP_CLUSTER_DEV}"
+  TAP_CLUSTER_OPS=$(yq $HOME/.tanzu-demo-hub/deployments/$TDH_DEMO_CONFIG/config.yml -o json | jq -r '.tdh_clusters[2].name')
+  TAP_CONTEXT_OPS="${TAP_CLUSTER_OPS}-admin@${TAP_CLUSTER_OPS}"
+  TAP_CLUSTER_RUN=$(yq $HOME/.tanzu-demo-hub/deployments/$TDH_DEMO_CONFIG/config.yml -o json | jq -r '.tdh_clusters[3].name')
+  TAP_CONTEXT_RUN="${TAP_CLUSTER_RUN}-admin@${TAP_CLUSTER_RUN}"
+else
+  TAP_CLUSTER_SVC=$(yq $HOME/.tanzu-demo-hub/deployments/$TDH_DEMO_CONFIG/config.yml -o json | jq -r '.tdh_clusters[0].name')
+  TAP_CONTEXT_SVC="${TAP_CLUSTER_SVC}-admin@${TAP_CLUSTER_SVC}"
+  TAP_CLUSTER_DEV=$(yq $HOME/.tanzu-demo-hub/deployments/$TDH_DEMO_CONFIG/config.yml -o json | jq -r '.tdh_clusters[1].name')
+  TAP_CONTEXT_DEV="${TAP_CLUSTER_DEV}-admin@${TAP_CLUSTER_DEV}"
+fi
+
+export KUBECONFIG=$HOME/.tanzu-demo-hub/deployments/$TDH_DEMO_CONFIG/kubeconfig_${TDH_DEPLOYMENT_NAME}.yaml
+
+if [ "$1" == "kc" ]; then
+  if [ "$2" == "" ]; then
+    kubectl config get-contexts
+    echo ""
+    if [ "$TDH_DEPLOYMENT_TYPE"  == "tap-multicluster" ]; then
+      echo "Use 'tdh kc <svc|dev|ops|run)' to set the Kubernetes context"
+    else
+      echo "Use 'tdh kc <svc|dev)' to set the Kubernetes context"
+    fi
+    exit 0
+  else
+    TAP_CONTEXT=""
+    [ "$2" == "svc" ] && TAP_CONTEXT=$TAP_CONTEXT_SVC
+    [ "$2" == "dev" ] && TAP_CONTEXT=$TAP_CONTEXT_DEV
+    [ "$2" == "ops" ] && TAP_CONTEXT=$TAP_CONTEXT_OPS
+    [ "$2" == "run" ] && TAP_CONTEXT=$TAP_CONTEXT_RUN
+ 
+    if [ "$TAP_CONTEXT" != "" ]; then
+      echo "export KUBECONFIG=$HOME/.tanzu-demo-hub/deployments/$TDH_DEMO_CONFIG/kubeconfig_${TDH_DEPLOYMENT_NAME}.yaml" > ~/.tdh/env
+      echo "kubectl config use-context $TAP_CONTEXT" >> ~/.tdh/env
+    else
+      echo "ERROR: Unknown option ($2), please choose either 'svc,dev,ops or run'"; exit 0
+    fi
+  fi
+fi
+
+if [ -f $HOME/workspace/tanzu-demo-hub/demos/$TDH_DEMO_NAME/demo-guide.sh ]; then 
+  . $HOME/workspace/tanzu-demo-hub/demos/$TDH_DEMO_NAME/demo-guide.sh
+else
+  echo "ERROR: \$HOME/workspace/tanzu-demo-hub/demos/$TDH_DEMO_NAME/demo-guide.sh could not be found"
+  exit 0
+fi
+

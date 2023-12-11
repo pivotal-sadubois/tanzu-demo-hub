@@ -67,6 +67,7 @@ tdh_clusters:
         - registry
         - argocd
         - minio
+      ingress_domain: 'apps'
       kubernetes: '1.26'
       tdh_tools: '2.2.0'
       tdh_tools: '2.2.0'
@@ -212,11 +213,12 @@ tdh_clusters:
       services:
         tap:
           enabled: true
-          version: 1.7.0
+          version: 1.7.1
           role: full
+          default_supply_chain: testing_scanning
+          carvel_package: false
           type: single_node_tap
           organization: 'Tanzu Demo Hub - Development Environment'
-          default_supply_chain: basic
 
           namespace:
             - name: newsletter

@@ -1,0 +1,5 @@
+
+export TDHPATH=$(dirname $0)
+$TDHPATH/tdh $*
+
+[ -f $HOME/.tdh/env ] && . $HOME/.tdh/env
