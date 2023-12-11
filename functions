@@ -8241,6 +8241,12 @@ echo "gaga CARVEL_PACKAGE:$CARVEL_PACKAGE"
 
     echo "namespace_provisioner:"                                                                                                 >> $TAP_CONFIG
     echo "  controller: true"                                                                                                     >> $TAP_CONFIG
+    echo "  default_parameters:"                                                                                                  >> $TAP_CONFIG
+    echo "    supply_chain_service_account:"                                                                                      >> $TAP_CONFIG
+    echo "      secrets:"                                                                                                         >> $TAP_CONFIG
+    echo "      - git-ssh"                                                                                                        >> $TAP_CONFIG
+    echo "      - github-ssh-secret"                                                                                              >> $TAP_CONFIG
+    echo "      - github-http-secret"                                                                                             >> $TAP_CONFIG
     echo ""                                                                                                                       >> $TAP_CONFIG
 
     echo "buildservice:"                                                                                                          >> $TAP_CONFIG
