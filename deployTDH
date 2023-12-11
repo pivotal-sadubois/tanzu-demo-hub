@@ -158,7 +158,6 @@ for clu in $(getYAML WC_CLUSTER_LIST); do
   #installGitLab
   #installKubeernetesDashboard       ## Kubernetes Dashboard
 
-  createCertDelegationV2_depricated
   createCertDelegationV2             ## Create Certificate Delegation (default/tdh-cert-admin)
   installTAPV2                       ## Tanzu Application Platform (TAP)
 done
