@@ -7588,7 +7588,7 @@ createCertDelegationV2_depricated() {
   cmdLoop kubectl -n $NAMESPACE get TLSCertificateDelegation -o json > /tmp/output.json 2>/dev/null
   nam=$(jq -r --arg key "$tls_scrt" '.items[].metadata | select(.name == $key).name' /tmp/output.json)
   if [ "$nam" == "" ]; then
-    messagePrint " ▪ Create TLS Cert Delegation to all namespaces" "$CERTNAME"
+    messagePrint " ▪ Create TLS Cert Delegation to all namespaces-2" "$CERTNAME"
 
     TMP_CONFIG=/tmp/tap_config.yaml
     echo ""                                                                                                                       >  $TMP_CONFIG
@@ -7634,7 +7634,7 @@ createCertDelegationV2() {
   cmdLoop kubectl -n $NAMESPACE get TLSCertificateDelegation -o json > /tmp/output.json 2>/dev/null
   nam=$(jq -r --arg key "$tls_scrt" '.items[].metadata | select(.name == $key).name' /tmp/output.json)
   if [ "$nam" == "" ]; then
-    messagePrint " ▪ Create TLS Cert Delegation to all namespaces" "$NAMESPACE/$CERTNAME"
+    messagePrint " ▪ Create TLS Cert Delegation to all namespaces-3" "$NAMESPACE/$CERTNAME"
 
     TMP_CONFIG=/tmp/tap_config.yaml
     echo ""                                                                                                                       >  $TMP_CONFIG
@@ -7690,7 +7690,7 @@ createCertDelegation() {
   cmdLoop kubectl -n $NAMESPACE get TLSCertificateDelegation -o json > /tmp/output.json 2>/dev/null
   nam=$(jq -r --arg key "tanzu-demo-hub-tls" '.items[].metadata | select(.name == $key).name' /tmp/output.json)
   if [ "$nam" == "" ]; then 
-    messagePrint " ▪ Create TLS Cert Delegation to all namespaces" "$CERTNAME"
+    messagePrint " ▪ Create TLS Cert Delegation to all namespaces-1" "$CERTNAME"
 
     TMP_CONFIG=/tmp/tap_config.yaml
     echo ""                                                                                                                       >  $TMP_CONFIG
@@ -7787,9 +7787,6 @@ installTAPV2() {
   export DEFAULT_SUPPLY_CHAIN=$(getYAML DEFAULT_SUPPLY_CHAIN $TDHV2_WORKLOAD_CLUSTER)
   export CARVEL_PACKAGE=$(getYAML CARVEL_PACKAGE $TDHV2_WORKLOAD_CLUSTER)
   export TLS_SECRET=$(getYAML WC_TLS_SECRET_NAME $TDHV2_WORKLOAD_CLUSTER)
-
-echo "gaga DEFAULT_SUPPLY_CHAIN:$DEFAULT_SUPPLY_CHAIN"
-echo "gaga CARVEL_PACKAGE:$CARVEL_PACKAGE"
 
   TDH_DEPLOYMENT_PATH=deployments/${TDHV2_MANAGEMENT_CLUSTER}/$TDHV2_DEPLOYMENT/${TDHV2_WORKLOAD_CLUSTER}
 
@@ -7964,32 +7961,7 @@ echo "gaga CARVEL_PACKAGE:$CARVEL_PACKAGE"
 
     APP_LIVE_VIEW="ops.${subdomain}.${dnsdomain}"
     TAP_CONFIG_1=$HOME/.tanzu-demo-hub/$TDH_DEPLOYMENT_PATH/tap_config_stage_1.yaml
-    echo "excluded_packages:"                                                                                                     >  $TAP_CONFIG_1
-    echo "  # cert-manager.tanzu.vmware.com"                                                                                      >> $TAP_CONFIG_1
-    echo "  # contour.tanzu.vmware.com"                                                                                           >> $TAP_CONFIG_1
-
-#    echo "  - amr-observer.apps.tanzu.vmware.com"                                                                                 >> $TAP_CONFIG_1
-#    echo "  - apis.apps.tanzu.vmware.com "                                                                                 >> $TAP_CONFIG_1
-#    echo "  - apiserver.appliveview.tanzu.vmware.com"                                                                                 >> $TAP_CONFIG_1
-#    echo "  - connector.appliveview.tanzu.vmware.com"                                                                                 >> $TAP_CONFIG_1
-#    echo "  - sso.apps.tanzu.vmware.com"                                                                                 >> $TAP_CONFIG_1
-#    echo "  - bitnami.services.tanzu.vmware.com"                                                                                 >> $TAP_CONFIG_1
-#    echo "  - cartographer.tanzu.vmware.com"                                                                                 >> $TAP_CONFIG_1
-#    echo "  - cnrs.tanzu.vmware.com"                                                                                 >> $TAP_CONFIG_1
-#    echo "  - crossplane.tanzu.vmware.com"                                                                                 >> $TAP_CONFIG_1
-#    echo "  - fluxcd.source.controller.tanzu.vmware.com"                                                                                 >> $TAP_CONFIG_1
-#    echo "  - namespace-provisioner.apps.tanzu.vmware.com"                                                                                 >> $TAP_CONFIG_1
-#    echo "  - ootb-delivery-basic.tanzu.vmware.com"                                                                                 >> $TAP_CONFIG_1
-#    echo "  - ootb-templates.tanzu.vmware.com"                                                                                 >> $TAP_CONFIG_1
-#    echo "  - policy.apps.tanzu.vmware.com"                                                                                 >> $TAP_CONFIG_1
-#    echo "  - servicebinding.tanzu.vmware.com"                                                                                 >> $TAP_CONFIG_1
-#    echo "  - services-toolkit.tanzu.vmware.com"                                                                                 >> $TAP_CONFIG_1
-#    echo "  - controller.source.apps.tanzu.vmware.com"                                                                                 >> $TAP_CONFIG_1
-#    echo "  - tap-auth.tanzu.vmware.com"                                                                                 >> $TAP_CONFIG_1
-#    echo "  - tap-telemetry.tanzu.vmware.com"                                                                                 >> $TAP_CONFIG_1
-
-    echo ""                                                                                                                       >> $TAP_CONFIG_1
-    echo "ceip_policy_disclosed: true"                                                                                            >> $TAP_CONFIG_1
+    echo "ceip_policy_disclosed: true"                                                                                            >  $TAP_CONFIG_1
     echo "contour:"                                                                                                               >> $TAP_CONFIG_1
     echo "  infrastructure_provider: vsphere"                                                                                     >> $TAP_CONFIG_1
     echo "  contour:"                                                                                                             >> $TAP_CONFIG_1
@@ -8038,6 +8010,9 @@ echo "gaga CARVEL_PACKAGE:$CARVEL_PACKAGE"
 
     #run
     goTAPStage 1
+
+    createCertDelegationV2
+#kala
 
     messageLineIntend
     echo "   Manually Reconcile TAP Packages"
@@ -8503,6 +8478,9 @@ echo "gaga CARVEL_PACKAGE:$CARVEL_PACKAGE"
     if [ "$METADATA_STORE_TOKEN" == "" ]; then 
       goTAPStage 1
       METADATA_STORE_TOKEN=$(kubectl get secrets metadata-store-read-write-client -n metadata-store -o jsonpath="{.data.token}" | base64 -d)
+
+      createCertDelegationV2
+#kala
     fi
 
     TAP_CONFIG_PROXY=$HOME/.tanzu-demo-hub/$TDH_DEPLOYMENT_PATH/tap_config_proxy.yaml
@@ -21058,10 +21036,10 @@ reconsileTAPStage() {
       echo "          tdh-tools:/$ export KUBECONFIG=\$HOME/.tanzu-demo-hub/$TDH_DEPLOYMENT_PATH/${TDHV2_WORKLOAD_CLUSTER}.kubeconfig"
       echo "          tdh-tools:/$ export STAGEDIR=\$HOME/.tanzu-demo-hub/$TDH_DEPLOYMENT_PATH"
       echo "          tdh-tools:/$ tanzu package installed list -n tap-install"
-      echo "          tdh-tools:/$ tanzu package installed update tap -p tap.tanzu.vmware.com -v $TAP_VERSION --values-file \$STAGE/tap_config_stage_${CURRENT_STAGE}.yaml -n tap-install"
+      echo "          tdh-tools:/$ tanzu package installed update tap -p tap.tanzu.vmware.com -v $TAP_VERSION --values-file \$STAGEDIR/tap_config_stage_${CURRENT_STAGE}.yaml -n tap-install"
       echo "          tdh-tools:/$ exit"
     else
-      echo "       => tanzu package installed update tap -p tap.tanzu.vmware.com -v $TAP_VERSION --values-file \$STAGE/tap_config_stage_${CURRENT_STAGE}.yaml -n tap-install"
+      echo "       => tanzu package installed update tap -p tap.tanzu.vmware.com -v $TAP_VERSION --values-file \$STAGEDIR/tap_config_stage_${CURRENT_STAGE}.yaml -n tap-install"
     fi
 
     exit 1
