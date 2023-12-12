@@ -80,7 +80,7 @@ fi
 
 export KUBECONFIG=$HOME/.tanzu-demo-hub/deployments/$TDH_DEMO_CONFIG/kubeconfig_${TDH_DEPLOYMENT_NAME}.yaml
 
-if [ "$1" == "kc" ]; then
+if [ "$1" == "context" -o "$1" == "c" ]; then
   if [ "$2" == "" ]; then
     kubectl config get-contexts
     echo ""

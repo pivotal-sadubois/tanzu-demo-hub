@@ -1,5 +1,19 @@
+# Works for bash and zsh, set the following alias in $HOME/.zprofile and in $HOME/.bashrc
+#   alias tdh=". $HOME/workspace/tanzu-demo-hub/tdh_wrapper"
 
-export TDHPATH=$(dirname $0)
-$TDHPATH/tdh $*
+if [[ "$TDHHOME" != "" ]]
+then 
+  if [[ -x "$TDHHOME/tdh" ]]
+  then
+    export KUBECONFIG=""
+    $TDHHOME/tdh $*
+    [ -f $HOME/.tdh/env ] && . $HOME/.tdh/env
+  else
+    echo "ERROR: The shell script $TDHHOME/tdh could not be found, please"
+    echo "       mae sure the the TDHHOME is set correctly"
+  fi
+else
+  echo "ERROR: Pleaes set the Variable TDHHOME"
+  echo "       => export TDHHOME=\$HOME/workspace/tanzu-demo-hub"
+fi
 
-[ -f $HOME/.tdh/env ] && . $HOME/.tdh/env
