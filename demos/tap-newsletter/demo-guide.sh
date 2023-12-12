@@ -53,8 +53,9 @@ if [ "$1" == "init" ]; then
   fi
 
   echo " ✓ Creating 'git-ssh' secret in the 'tap-namespace-provisioning' namespace"
+  # THIS SHIT WORKS NOT !!!!!!
   kubectl delete secret git-ssh -n tap-namespace-provisioning > /dev/null 2>&1
-  kubectl create secret generic git-ssh -n tap-namespace-provisioning \
+  kubectl create secret generic git-ssh -n $TAP_DEVELOPER_NAMESPACE \
     --from-file=$SSHDIR/identity \
     --from-file=$SSHDIR/identity.pub \
     --from-file=$SSHDIR/known_hosts > /dev/null 2>&1; ret=$?
@@ -67,6 +68,7 @@ if [ "$1" == "init" ]; then
     exit
   fi
 
+  # THIS SHIT WORKS !!!!!!
   SSH_CONFIG=$SSHDIR/github-ssh-secret.yaml
   echo "apiVersion: v1"                                                                  >  $SSH_CONFIG
   echo "kind: Secret"                                                                    >> $SSH_CONFIG
@@ -82,9 +84,9 @@ if [ "$1" == "init" ]; then
   echo "  identity.pub: $(base64 -i $SSHDIR/identity.pub)"                               >> $SSH_CONFIG
   echo "  known_hosts: $(base64 -i $SSHDIR/known_hosts)"                                 >> $SSH_CONFIG
 
-  echo " ✓ Create Github SSH Access Secret"
-  kubectl delete secret github-ssh-secret -n tap-namespace-provisioning > /dev/null 2>&1
-  kubectl apply -f $SSH_CONFIG -n tap-namespace-provisioning > /dev/null 2>&1
+  echo " ✓ Create Github SSH Access Secret (github-ssh-secret) in namespace $TAP_DEVELOPER_NAMESPACE"
+  kubectl delete secret github-ssh-secret -n $TAP_DEVELOPER_NAMESPACE > /dev/null 2>&1
+  kubectl apply -f $SSH_CONFIG -n $TAP_DEVELOPER_NAMESPACE > /dev/null 2>&1
 
   SSH_CONFIG=$SSHDIR/github-http-secret.yaml
   echo "apiVersion: v1"                                                                  >  $SSH_CONFIG
@@ -99,21 +101,9 @@ if [ "$1" == "init" ]; then
   echo "  username: $TDH_DEMO_GITHUB_USER"                                               >> $SSH_CONFIG
   echo "  password: $TDH_DEMO_GITHUB_TOKEN"                                              >> $SSH_CONFIG
 
-  echo " ✓ Create Github SSH Access Secret"
-  kubectl delete secret github-http-secret -n tap-namespace-provisioning > /dev/null 2>&1
-  kubectl apply -f $SSH_CONFIG -n tap-namespace-provisioning > /dev/null 2>&1
-
-
-echo $SSH_CONFIG
-
-
-
-exit
-  cp $HOME/.tanzu-demo-hub/deployments/$TDH_DEMO_CONFIG/kubeconfig_${TDH_DEPLOYMENT_NAME}.yaml $HOME/.kube/config
-
-ls -la $$HOME/.tanzu-demo-hub/deployments/$TDH_DEMO_CONFIG/
-
-exit
+  echo " ✓ Create Github SSH Access Secret (github-http-secret) in namespace $TAP_DEVELOPER_NAMESPACE"
+  kubectl delete secret github-http-secret -n $TAP_DEVELOPER_NAMESPACE > /dev/null 2>&1
+  kubectl apply -f $SSH_CONFIG -n $TAP_DEVELOPER_NAMESPAC$TAP_DEVELOPER_NAMESPACE > /dev/null 2>&1
 
   echo " ✓ Setting up Kubernetes Context to the TAP Dev Cluster: $TAP_CONTEXT_DEV"
   kubectl config use-context $TAP_CONTEXT_DEV > /tmp/error.log 2>&1; ret=$?
@@ -168,17 +158,6 @@ exit
   sed -i '' "s/\"tanzu.namespace\": .*$/\"tanzu.namespace\": \"$TAP_DEVELOPER_NAMESPACE\" /" $HOME/Library/Application\ Support/Code/User/settings.json
   sed -i '' "s/\"tanzu.sourceImage\": .*$/\"tanzu.sourceImage\": \"$HARBOR\" /" $HOME/Library/Application\ Support/Code/User/settings.json
   sed -i '' "s+\"tanzu-app-accelerator.tapGuiUrl\": .*$+\"tanzu-app-accelerator.tapGuiUrl\": \"$TAPGUI\" +" $HOME/Library/Application\ Support/Code/User/settings.json
-
-
-# harbor.apps.tap.tanzudemohub.com/library/newsletter
-
-echo "TAP_CLUSTER_DEV:$TAP_CLUSTER_DEV"
-echo "$HOME/.tanzu-demo-hub/deployments/$TDH_DEMO_CONFIG/config.yml"
-
-exit
-
-
-echo end; exit
 
   echo "✓ Fork repository https://github.com/$TDH_DEMO_GITHUB_USER/newsletter"
   echo "Y" | gh repo fork https://github.com/pivotal-sadubois/newsletter.git 

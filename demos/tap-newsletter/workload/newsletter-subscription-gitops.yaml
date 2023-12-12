@@ -1,0 +1,35 @@
+apiVersion: carto.run/v1alpha1
+kind: Workload
+metadata:
+  annotations:
+    autoscaling.knative.dev/minScale: "1"
+  labels:
+    apis.apps.tanzu.vmware.com/register-api: "false"
+    app.kubernetes.io/part-of: newsletter-subscription
+    apps.tanzu.vmware.com/carvel-package-workflow: "true"
+    apps.tanzu.vmware.com/has-tests: "false"
+    apps.tanzu.vmware.com/workload-type: web
+  name: newsletter-subscription
+  namespace: newsletter
+spec:
+  build:
+    env:
+    - name: BP_JVM_VERSION
+      value: "20"
+  params:
+  params:
+    - name: gitops_ssh_secret
+#      value: git-ssh
+      value: github-ssh-secret
+    - name: gitops_server_address
+      value: https://github.com/
+    - name: gitops_repository_owner
+      value: sdubois-tapdemo
+    - name: gitops_repository_name
+      value: cartographer
+  source:
+    git:
+      ref:
+        branch: main
+      url: https://github.com/sdubois-tapdemo/newsletter
+    subPath: newsletter-subscription
