@@ -1,6 +1,8 @@
 #!/bin/bash
 
 TAP_DEVELOPER_NAMESPACE=newsletter
+TAP_WORKLOAD_NAME=newsletter-subscription
+TAP_WORKLOAD_FILE=${TAP_WORKLOAD_NAME}-gitops.yaml
 
 if [ "$1" == "" ]; then 
   echo "tdh init                               ## Initialize Newsletter Demo (Fork Git Repo)"
@@ -54,7 +56,7 @@ if [ "$1" == "init" ]; then
 
   echo " ✓ Creating 'git-ssh' secret in the 'tap-namespace-provisioning' namespace"
   # THIS SHIT WORKS NOT !!!!!!
-  kubectl delete secret git-ssh -n tap-namespace-provisioning > /dev/null 2>&1
+  kubectl delete secret git-ssh -n $TAP_DEVELOPER_NAMESPACE > /dev/null 2>&1
   kubectl create secret generic git-ssh -n $TAP_DEVELOPER_NAMESPACE \
     --from-file=$SSHDIR/identity \
     --from-file=$SSHDIR/identity.pub \
@@ -174,6 +176,11 @@ if [ "$1" == "init" ]; then
     echo "       => docker login $harbor_url -u $harbor_usr -p $harbor_pss"
     exit
   fi
+
+  echo "✓ Apply workload file for ($TAP_WORKLOAD_NAME) on the OPS Cluster"
+  kubectl -n $TAP_DEVELOPER_NAMESPACE delete -f $TDHHOME/demos/$TDH_DEMO_NAME/workload/${TAP_WORKLOAD_FILE} >/dev/null 2>&1
+  kubectl -n $TAP_DEVELOPER_NAMESPACE apply -f $TDHHOME/demos/$TDH_DEMO_NAME/workload/${TAP_WORKLOAD_FILE} >/dev/null 2>&1
+  echo "  => tanzu apps workload get $TAP_WORKLOAD_NAME -n $TAP_DEVELOPER_NAMESPACE"
 
 fi
 
