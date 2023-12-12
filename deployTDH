@@ -136,9 +136,9 @@ fi
 #############################################################################################################################
 for clu in $(getYAML WC_CLUSTER_LIST); do
 [ "$clu" == "tdh-vsphere-tkgs-sdubois-svc" ] && continue
-[ "$clu" == "tdh-vsphere-tkgs-sdubois-dev" ] && continue
+#[ "$clu" == "tdh-vsphere-tkgs-sdubois-dev" ] && continue
 #[ "$clu" == "tdh-vsphere-tkgs-sdubois-run" ] && continue
-[ "$clu" == "tdh-vsphere-tkgs-sdubois-ops" ] && continue
+#[ "$clu" == "tdh-vsphere-tkgs-sdubois-ops" ] && continue
   createKubernetesCluster
   messageTitle "Tanzu Package Management"
   installPackageRepositories
