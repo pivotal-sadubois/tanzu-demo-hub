@@ -19,7 +19,6 @@ spec:
   params:
   params:
     - name: gitops_ssh_secret
-#      value: git-ssh
       value: github-ssh-secret
     - name: gitops_server_address
       value: https://github.com/
@@ -31,5 +30,5 @@ spec:
     git:
       ref:
         branch: main
-      url: https://github.com/sdubois-tapdemo/newsletter
+      url: https://github.com/GIT_USER/newsletter
     subPath: newsletter-subscription
