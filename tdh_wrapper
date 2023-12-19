@@ -5,9 +5,30 @@ if [[ "$TDHHOME" != "" ]]
 then 
   if [[ -x "$TDHHOME/tdh" ]]
   then
+    cnt=$(echo $1 | egrep -c "c|context") 
+    if [[ $cnt -eq 0 ]]
+    then
+      PRESERVE_KUBCONFIG=$KUBECONFIG
+      PRESERVE_CONTEXT=$(kubectl config current-context)
+    fi
+
     export KUBECONFIG=""
     $TDHHOME/tdh $*
-    [ -f $HOME/.tdh/env ] && . $HOME/.tdh/env
+
+    if [[ $cnt -eq 0 ]]
+    then
+      export KUBECONFIG=$PRESERVE_KUBCONFIG
+      kubectl config use-context $PRESERVE_CONTEXT > /dev/null 2>&1
+    else
+      [ -f $HOME/.tdh/env ] && . $HOME/.tdh/env
+    fi
+
+    # --- UNSET DEMO VARIABLES ---
+    if [[ "$1" == "clean" ]]
+    then
+      unset TDH_DEMO_CONFIG
+      unset TDH_DEMO_NAME
+    fi
   else
     echo "ERROR: The shell script $TDHHOME/tdh could not be found, please"
     echo "       mae sure the the TDHHOME is set correctly"
