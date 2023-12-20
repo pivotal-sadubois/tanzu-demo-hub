@@ -7812,10 +7812,10 @@ installTAPV2() {
       kubectl run --image=docker.io/sadubois/tdh-tools-carvel-carvel-1.6.1:latest tdh-tools-carvel-carvel sleep 10000000 -n tdh-tools-carvel > /dev/null 2>&1
 
       cnt=0; ret=1
-      while [ $ret -ne 0 -a $cnt -lt 5 ]; do
+      while [ $ret -ne 0 -a $cnt -lt 10 ]; do
         kubectl exec -it tdh-tools-carvel-carvel -n tdh-tools-carvel -- docker login $INSTALL_REGISTRY_HOSTNAME -u $INSTALL_REGISTRY_USERNAME -p $INSTALL_REGISTRY_PASSWORD > /dev/null 2>&1; ret=$?
         [ $ret -eq 0 ] && break
-        sleep 10
+        sleep 60
         let cnt=cnt+1
       done
   
