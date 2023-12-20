@@ -6,9 +6,33 @@
 # Description ..: Tanzu Demo Hub - Newsletter Demo Guide
 # ############################################################################################
 
+#curl -X 'POST' \
+#  'https://newsletter-subscription.dev.tapmc.tanzudemohub.com/api/v1/subscriptions' \
+#  -H 'accept: application/json' \
+#  -H 'Content-Type: application/json' \
+#  -d '[
+#  {
+#    "emailId": "john@example.com",
+#    "firstName": "John",
+#    "lastName": "Fogerty"
+#  },
+#  {
+#    "emailId": "frank@example.com",
+#    "firstName": "Frank",
+#    "lastName": "Zappa"
+#  },
+#  {
+#    "emailId": "bob@example.com",
+#    "firstName": "Bob",
+#    "lastName": "Seger"
+#  }
+#]'
+
 TAP_DEVELOPER_NAMESPACE=newsletter
-TAP_WORKLOAD_NAME=newsletter-subscription
-TAP_WORKLOAD_FILE=${TAP_WORKLOAD_NAME}-gitops.yaml
+TAP_WORKLOAD_FRONTEND_NAME=newsletter-ui
+TAP_WORKLOAD_FRONTEND_FILE=${TAP_WORKLOAD_FRONTEND_NAME}-gitops.yaml
+TAP_WORKLOAD_BACKEND_NAME=newsletter-subscription
+TAP_WORKLOAD_BACKEND_FILE=${TAP_WORKLOAD_BACKEND_NAME}-gitops.yaml
 TDH_DEMO_GIT_REPO=newsletter
 
 #tanzu accelerator list --server-url http://tap-gui.dev.tapmc.v2steve.net
@@ -59,7 +83,7 @@ if [ "$1" == "guide" ]; then
     echo "4.)  Deploy Newsletter Subscription Service"
     echo "     => tdh context dev"
     echo "     => cd \$HOME/workspace/newsletter/newsletter-subscription"
-    echo "     => tanzu apps workload apply --file config/workload.yaml --namespace $TAP_DEVELOPER_NAMESPACE --local-path . --update-strategy replace --yes --tail"
+    echo "     => tanzu apps workload apply --file config/workload.yaml --namespace $TAP_DEVELOPER_NAMESPACE --local-path . --update-strategy replace --yes --tail --wait"
     echo ""
     echo "     ## see logs / get status"
     echo "     => tanzu apps workload tail newsletter-subscription --namespace $TAP_DEVELOPER_NAMESPACE --timestamp --since 1h"
@@ -68,7 +92,8 @@ if [ "$1" == "guide" ]; then
     echo ""
     echo "5.)  Deploy Newsletter UI Service"
     echo "     => tdh context dev"
-    echo "     => tanzu apps workload apply --file config/workload.yaml --namespace $TAP_DEVELOPER_NAMESPACE  --local-path . --update-strategy replace --yes --tail"
+    echo "     => cd \$HOME/workspace/newsletter/newsletter-ui"
+    echo "     => tanzu apps workload apply --file config/workload.yaml --namespace $TAP_DEVELOPER_NAMESPACE  --local-path . --update-strategy replace --yes --tail --wait"
     echo ""
     echo "     ## see logs / get status"
     echo "     => tanzu apps workload tail newsletter-ui --namespace $TAP_DEVELOPER_NAMESPACE --timestamp --since 1h"
@@ -120,9 +145,9 @@ if [ "$1" == "guide" ]; then
     echo "        ▪ VSCode -> Explorer -> Newsletter Subscription -> config/workload.yaml (right mouse button) -> Tanzu Live Update"
     echo ""
     echo "     => Create branch with CLI"
-    echo "        $ tanzu apps workload apply --file \$HOME/workspace/$TDH_DEMO_GIT_REPO/$TAP_WORKLOAD_NAME/config/workload.yaml --namespace $TAP_DEVELOPER_NAMESPACE \\"
-    echo "             --source-image $HARBOR/library/$TAP_WORKLOAD_NAME \\"
-    echo "             --local-path \$HOME/workspace/$TDH_DEMO_GIT_REPO/$TAP_WORKLOAD_NAME \\"
+    echo "        $ tanzu apps workload apply --file \$HOME/workspace/$TDH_DEMO_GIT_REPO/$TAP_WORKLOAD_BACKEND_NAME/config/workload.yaml --namespace $TAP_DEVELOPER_NAMESPACE \\"
+    echo "             --source-image $HARBOR/library/$TAP_WORKLOAD_BACKEND_NAME \\"
+    echo "             --local-path \$HOME/workspace/$TDH_DEMO_GIT_REPO/$TAP_WORKLOAD_BACKEND_NAME \\"
     echo "             --live-update --tail --update-strategy replace --debug --yes"
     echo ""
     #echo "        $ kubectl -n $TAP_DEVELOPER_NAMESPACE apply -f \$HOME/workspace/newsletter/newsletter-subscription/config/workload.yaml"
@@ -141,15 +166,19 @@ if [ "$1" == "init" ]; then
 
   echo " ✓ Setting up Git Demo Repository (https://github.com/$TDH_DEMO_GITHUB_USER/TDH_DEMO_GIT_REPO)"
   echo "   ▪ Verify github authorization for user '$TDH_DEMO_GITHUB_USER'" 
-  gh auth token > /dev/null 2>&1; ret=$?
+  echo "$TDH_DEMO_GITHUB_TOKEN" | gh auth login -p https --with-token > /dev/null 2>&1; ret=$?
+  gh auth logout --user $TDH_DEMO_GITHUB_USER
   if [ $ret -ne 0 ]; then
-    echo "$TDH_DEMO_GITHUB_TOKEN" | gh auth login -p https --with-token > /dev/null 2>&1; ret=$?
     if [ $ret -ne 0 ]; then
       echo "ERROR: Failed to login Github with the 'gh' utility, please try manually"
       echo "       => echo "$TDH_DEMO_GITHUB_TOKEN" | gh auth login -p https --with-token"
+      echo "       => gh auth logout --user $TDH_DEMO_GITHUB_USER"
       exit 
     fi
   fi
+
+echo debug_end
+exit
 
   rep=$(gh repo list --json name | jq -r --arg key cartographer '.[] | select(.name == $key).name')
   if [ "$rep" == "" ]; then
@@ -193,7 +222,7 @@ if [ "$1" == "init" ]; then
   fi
 
   echo "   ▪ Adding Scan Policy (newsletter-scan-policy) to Developer Namespace ($TAP_DEVELOPER_NAMESPACE)"
-  GITURL="https://raw.githubusercontent.com/$TDH_DEMO_GITHUB_USER/$TDH_DEMO_GIT_REPO/main/$TAP_WORKLOAD_NAME/config/newsletter-scan-policy.yaml"
+  GITURL="https://raw.githubusercontent.com/$TDH_DEMO_GITHUB_USER/$TDH_DEMO_GIT_REPO/main/$TAP_WORKLOAD_BACKEND_NAME/config/newsletter-scan-policy.yaml"
   kubectl -n $TAP_DEVELOPER_NAMESPACE apply -f $GITURL > /dev/null 2>&1; ret=$?
   if [ $ret -ne 0 ]; then
     echo "ERROR: failed to add scan policy, please try manually"
@@ -203,7 +232,7 @@ if [ "$1" == "init" ]; then
   fi
 
   echo "   ▪ Adding Pipline ($pipeline-notest) to Developer Namespace ($TAP_DEVELOPER_NAMESPACE)"
-  GITURL="https://raw.githubusercontent.com/$TDH_DEMO_GITHUB_USER/$TDH_DEMO_GIT_REPO/main/$TAP_WORKLOAD_NAME/config/pipeline-notest.yaml"
+  GITURL="https://raw.githubusercontent.com/$TDH_DEMO_GITHUB_USER/$TDH_DEMO_GIT_REPO/main/$TAP_WORKLOAD_BACKEND_NAME/config/pipeline-notest.yaml"
   kubectl -n $TAP_DEVELOPER_NAMESPACE apply -f $GITURL > /dev/null 2>&1; ret=$?
   if [ $ret -ne 0 ]; then
     echo "ERROR: failed to add pipeline pipeline-notest, please try manually"
@@ -385,14 +414,51 @@ if [ "$1" == "init" ]; then
       exit
     fi
 
-    echo " ✓ Apply workload file for ($TAP_WORKLOAD_NAME) on the OPS Cluster"
+    echo " ✓ Apply workload file for ($TAP_WORKLOAD_BACKEND_NAME) on the OPS Cluster"
     kubectl config use-context $TAP_CONTEXT_OPS > /dev/null
 
-    sed "s/GIT_USER/$TDH_DEMO_GITHUB_USER/g" $TDHHOME/demos/$TDH_DEMO_NAME/workload/template_${TAP_WORKLOAD_NAME}-gitops.yaml > /tmp/${TAP_WORKLOAD_NAME}-gitops.yaml
+    sed "s/GIT_USER/$TDH_DEMO_GITHUB_USER/g" $TDHHOME/demos/$TDH_DEMO_NAME/workload/template_${TAP_WORKLOAD_BACKEND_NAME}-gitops.yaml > /tmp/${TAP_WORKLOAD_BACKEND_NAME}-gitops.yaml
 
-    kubectl -n $TAP_DEVELOPER_NAMESPACE delete -f /tmp/${TAP_WORKLOAD_NAME}-gitops.yaml >/dev/null 2>&1
-    kubectl -n $TAP_DEVELOPER_NAMESPACE apply -f /tmp/${TAP_WORKLOAD_NAME}-gitops.yaml >/dev/null 2>&1
-    echo "  => tanzu apps workload get $TAP_WORKLOAD_NAME -n $TAP_DEVELOPER_NAMESPACE"
+    kubectl -n $TAP_DEVELOPER_NAMESPACE delete -f /tmp/${TAP_WORKLOAD_BACKEND_NAME}-gitops.yaml >/dev/null 2>&1
+    kubectl -n $TAP_DEVELOPER_NAMESPACE apply -f /tmp/${TAP_WORKLOAD_BACKEND_NAME}-gitops.yaml --wait  >/dev/null 2>&1
+    echo "  => tanzu apps workload get $TAP_WORKLOAD_BACKEND_NAME -n $TAP_DEVELOPER_NAMESPACE"
+
+tanzu apps workload list -n newsletter
+
+    echo " ✓ Apply workload file for ($TAP_WORKLOAD_FRONTEND_NAME) on the OPS Cluster"
+    sed "s/GIT_USER/$TDH_DEMO_GITHUB_USER/g" $TDHHOME/demos/$TDH_DEMO_NAME/workload/template_${TAP_WORKLOAD_FRONTEND_NAME}-gitops.yaml > /tmp/${TAP_WORKLOAD_FRONTEND_NAME}-gitops.yaml
+
+    kubectl -n $TAP_DEVELOPER_NAMESPACE delete -f /tmp/${TAP_WORKLOAD_FRONTEND_NAME}-gitops.yaml >/dev/null 2>&1
+    kubectl -n $TAP_DEVELOPER_NAMESPACE apply -f /tmp/${TAP_WORKLOAD_FRONTEND_NAME}-gitops.yaml --wait  >/dev/null 2>&1
+    echo "  => tanzu apps workload get $TAP_WORKLOAD_FRONTEND_NAME -n $TAP_DEVELOPER_NAMESPACE"
+
+tanzu apps workload list -n newsletter
+    myArray=("Elvis:Presley" "Paul:McCartney" "Alice:Cooper" "Tina:Turner" "Liam:Gallagher" "Nick:Cave" "Keith:Richards" "David:Byrne" "Gary:Puckett" "Little:Richard" "Axl:Rose" "David:Bowie" "Bob:Dylan" "Bruce:Springsteen" "Mike:Jagger")
+
+  TMPFILE=/tmp/1.json; rm -f $TMPFILE
+  echo "["                       > $TMPFILE
+  
+  i=1
+  for n in ${myArray[@]}; do
+    fn=$(echo $n | awk -F: '{ print $1 }')
+    ln=$(echo $n | awk -F: '{ print $2 }')
+    em="${fn}.${ln}@example.com"
+  
+    echo " {"                          >> $TMPFILE
+    echo "  \"emailId\": \"$em\","     >> $TMPFILE
+    echo "  \"firstName\": \"$fn\","   >> $TMPFILE
+    echo "  \"lastName\": \"$ln\""     >> $TMPFILE
+  
+    [ $i -ne ${#myArray[@]} ] && str="," || str=""
+  
+    echo " }$str"                      >> $TMPFILE
+    let i=i+1
+  done
+
+  echo "]"                             >> $TMPFILE
+
+    echo "curl -X 'POST' 'https://$TAP_WORKLOAD_BACKEND_NAME.ops.${DNS_SUBDOMAIN}.${DNS_DOMAIN}/api/v1/subscriptions' -H 'accept: application/json' -H 'Content-Type: application/json' -d \"@$TMPFILE\""
+
   fi
 
   echo " ✓ Update VSCode config in (\$HOME/Library/Application Support/Code/User/settings.json)"
@@ -403,7 +469,7 @@ if [ "$1" == "init" ]; then
 
   sed -i '' -e 's/$/~1~/g' -e 's/,~1~/~1~,/g' \
             -e "/\"tanzu.namespace\": /s/^\(.*: \).*~1~/\1\"$TAP_DEVELOPER_NAMESPACE\"~1~/g" \
-            -e "/\"tanzu.sourceImage\": /s+^\(.*: \).*~1~+\1\"$HARBOR/library/$TAP_WORKLOAD_NAME\"~1~+g" \
+            -e "/\"tanzu.sourceImage\": /s+^\(.*: \).*~1~+\1\"$HARBOR/library/$TAP_WORKLOAD_BACKEND_NAME\"~1~+g" \
             -e "/\"tanzu-app-accelerator.tapGuiUrl\": /s+^\(.*: \).*~1~+\1\"$TAPGUI\"~1~+g" \
             -e "/\"tanzu-app-accelerator.tanzuApplicationPlatformGuiUrl\": /s+^\(.*: \).*~1~+\1\"$TAPGUI\"~1~+g" \
             -e 's/~1~//g' $HOME/Library/Application\ Support/Code/User/settings.json
