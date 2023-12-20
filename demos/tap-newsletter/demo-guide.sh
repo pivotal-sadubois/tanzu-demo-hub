@@ -166,8 +166,10 @@ if [ "$1" == "init" ]; then
 
   echo " ✓ Setting up Git Demo Repository (https://github.com/$TDH_DEMO_GITHUB_USER/TDH_DEMO_GIT_REPO)"
   echo "   ▪ Verify github authorization for user '$TDH_DEMO_GITHUB_USER'" 
+echo "\"$TDH_DEMO_GITHUB_TOKEN\" | gh auth login -p https --with-token"
   echo "$TDH_DEMO_GITHUB_TOKEN" | gh auth login -p https --with-token > /dev/null 2>&1; ret=$?
-  gh auth logout --user $TDH_DEMO_GITHUB_USER
+echo "gh auth logout --hostname github.com --user $TDH_DEMO_GITHUB_USER"
+  gh auth logout --hostname github.com --user $TDH_DEMO_GITHUB_USER
   if [ $ret -ne 0 ]; then
     if [ $ret -ne 0 ]; then
       echo "ERROR: Failed to login Github with the 'gh' utility, please try manually"
