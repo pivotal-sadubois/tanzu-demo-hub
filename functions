@@ -7806,27 +7806,35 @@ installTAPV2() {
       createNamespace tdh-tools-carvel > /dev/null 2>&1
       cmdLoop kubectl label ns tdh-tools-carvel pod-security.kubernetes.io/enforce=baseline > /dev/null 2>&1
 
+echo "functions: INSTALL_REGISTRY_HOSTNAME:$INSTALL_REGISTRY_HOSTNAME"
+echo "functions: INSTALL_REGISTRY_USERNAME:$INSTALL_REGISTRY_USERNAME"
+echo "functions: INSTALL_REGISTRY_PASSWORD:$INSTALL_REGISTRY_PASSWORD"
 
       dockerPullSecret default
       kubectl delete pod tdh-tools-carvel-carvel > /dev/null 2>&1
       kubectl run --image=docker.io/sadubois/tdh-tools-carvel-carvel-1.6.1:latest tdh-tools-carvel-carvel sleep 10000000 -n tdh-tools-carvel > /dev/null 2>&1
 
       cnt=0; ret=1
-      while [ $ret -ne 0 -a $cnt -lt 10 ]; do
-        kubectl exec -it tdh-tools-carvel-carvel -n tdh-tools-carvel -- docker login $INSTALL_REGISTRY_HOSTNAME -u $INSTALL_REGISTRY_USERNAME -p $INSTALL_REGISTRY_PASSWORD > /dev/null 2>&1; ret=$?
+      while [ $ret -ne 0 -a $cnt -lt 5 ]; do
+        kubectl exec -it tdh-tools-carvel-carvel -n tdh-tools-carvel -- docker login $INSTALL_REGISTRY_HOSTNAME -u $INSTALL_REGISTRY_USERNAME -p $INSTALL_REGISTRY_PASSWORD > /tmp/error.log 2>&1; ret=$?
         [ $ret -eq 0 ] && break
-        sleep 60
+        sleep 10
         let cnt=cnt+1
       done
   
       if [ $ret -ne 0 ]; then
-        echo "ERROR: Docker login does not work 5'"
+        logMessages /tmp/error.log
+        echo "ERROR: Failed to run docker login to ($INSTALL_REGISTRY_HOSTNAME) in helper container (tdh-tools-carvel-carvel)"
         echo "       => kubectl exec -it tdh-tools-carvel-carvel -n tdh-tools-carvel -- docker login $INSTALL_REGISTRY_HOSTNAME -u $INSTALL_REGISTRY_USERNAME -p $INSTALL_REGISTRY_PASSWORD"; exit 1
       fi
 
+echo "functions: IMGPKG_REGISTRY_HOSTNAME_0:$IMGPKG_REGISTRY_HOSTNAME_0"
+echo "functions: IMGPKG_REGISTRY_USERNAME_0:$IMGPKG_REGISTRY_USERNAME_0"
+echo "functions: IMGPKG_REGISTRY_PASSWORD_0:$IMGPKG_REGISTRY_PASSWORD_0"
+
       cnt=0; ret=1
-      while [ $ret -ne 0 -a $cnt -lt 5 ]; do
-        kubectl exec -it tdh-tools-carvel-carvel -n tdh-tools-carvel -- docker login $IMGPKG_REGISTRY_HOSTNAME_0 -u $IMGPKG_REGISTRY_USERNAME_0 -p $IMGPKG_REGISTRY_PASSWORD_0 > /tmp/error 2>&1; ret=$?
+      while [ $ret -ne 0 -a $cnt -lt 10 ]; do
+        kubectl exec -it tdh-tools-carvel-carvel -n tdh-tools-carvel -- docker login $IMGPKG_REGISTRY_HOSTNAME_0 -u $IMGPKG_REGISTRY_USERNAME_0 -p $IMGPKG_REGISTRY_PASSWORD_0 > /tmp/error.log 2>&1; ret=$?
         sleep 10
         let cnt=cnt+1
       done
@@ -7834,13 +7842,13 @@ installTAPV2() {
 
       if [ $ret -ne 0 ]; then
         logMessages /tmp/error.log
-        echo "ERROR: failed to login to docker registry $TDH_REGISTRY_VMWARE_NAME"
+        echo "ERROR: Failed to run docker login to ($IMGPKG_REGISTRY_HOSTNAME_0) in helper container (tdh-tools-carvel-carvel)"
         if [ "$NATIVE" == "0" ]; then
           echo "       => tools/${TDH_TOOLS}.sh"
           echo "          tdh-tools:/$ kubectl exec -it tdh-tools-carvel-carvel -n tdh-tools-carvel -- docker login $IMGPKG_REGISTRY_HOSTNAME_0 -u $IMGPKG_REGISTRY_USERNAME_0 -p $IMGPKG_REGISTRY_PASSWORD_0"
           echo "          tdh-tools:/$ exit"
         else
-          echo "       => docker login $IMGPKG_REGISTRY_HOSTNAME_0 -u $IMGPKG_REGISTRY_USERNAME_0 -p $IMGPKG_REGISTRY_PASSWORD_0"
+          echo "       => kubectl exec -it tdh-tools-carvel-carvel -n tdh-tools-carvel -- docker login $IMGPKG_REGISTRY_HOSTNAME_0 -u $IMGPKG_REGISTRY_USERNAME_0 -p $IMGPKG_REGISTRY_PASSWORD_0"
         fi
   
         exit 1
@@ -7859,7 +7867,7 @@ installTAPV2() {
 
       if [ $ret -ne 0 ]; then
         logMessages /tmp/error.log
-        echo "ERROR: failed to relocate registryt"
+        echo "ERROR: Failed to run imgpkg image relocation in helper container (tdh-tools-carvel-carvel)"
         if [ "$NATIVE" == "0" ]; then
           echo "       => tools/${TDH_TOOLS}.sh"
           echo "          tdh-tools:/$ kubectl exec -it tdh-tools-carvel-carvel -n tdh-tools-carvel -- imgpkg copy -b registry.tanzu.vmware.com/tanzu-application-platform/tap-packages:${TAP_VERSION} \\"
@@ -17189,7 +17197,6 @@ installTanzuPackageCertManager() {
     # https://faun.pub/pod-security-admission-controller-cluster-level-bda83b80d916                    * Cluster Level
 
     sleep 5
-#gfgfgfgf
     cmdLoop kubectl label ns cert-manager pod-security.kubernetes.io/enforce=baseline
     #cmdLoop kubectl label ns cert-manager pod-security.kubernetes.io/warn-version: v1.26
     if [ $ret -ne 0 ]; then
