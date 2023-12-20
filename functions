@@ -6475,7 +6475,6 @@ getYAML() {
   [ "$1" == "WC_TMC_INS_CIS" ] && yq -o json $mccfg | \
       jq -r --arg key "$2" --arg ins "$3" '.tdh_clusters[] | select(.name == $key).config.tmc.integration.Inspections[] | select(.name == $ins).enabled'
 
-#uuuuuuuu
   [ "$1" == "TAP_CATALOG_LOCATIONS" ] && yq -o json $mccfg | jq -r --arg key "$2" \
     '.tdh_clusters[] | select(.name == $key).config.services.tap.catalog_locations[].name' 2>/dev/null
   [ "$1" == "TAP_CATALOG_LOCATION_TYPE" ] && yq -o json $mccfg | jq -r --arg key "$2" --arg reg "$3"  \
@@ -8252,6 +8251,7 @@ echo "functions: IMGPKG_REGISTRY_PASSWORD_0:$IMGPKG_REGISTRY_PASSWORD_0"
     echo "    duration: 8760h"                                                                                                    >> $TAP_CONFIG
     echo "    renewBefore: 360h"                                                                                                  >> $TAP_CONFIG
 
+    # https://docs.vmware.com/en/VMware-Tanzu-Application-Platform/1.7/tap/namespace-provisioner-use-case4.html
     echo "namespace_provisioner:"                                                                                                 >> $TAP_CONFIG
     echo "  controller: true"                                                                                                     >> $TAP_CONFIG
     echo "  default_parameters:"                                                                                                  >> $TAP_CONFIG
@@ -8260,6 +8260,8 @@ echo "functions: IMGPKG_REGISTRY_PASSWORD_0:$IMGPKG_REGISTRY_PASSWORD_0"
     echo "      - git-ssh"                                                                                                        >> $TAP_CONFIG
     echo "      - github-ssh-secret"                                                                                              >> $TAP_CONFIG
     echo "      - github-http-secret"                                                                                             >> $TAP_CONFIG
+    echo "      imagePullSecrets: "                                                                                               >> $TAP_CONFIG
+    echo "      - docker-credentials"                                                                                             >> $TAP_CONFIG
     echo ""                                                                                                                       >> $TAP_CONFIG
 
     echo "buildservice:"                                                                                                          >> $TAP_CONFIG
@@ -8843,7 +8845,6 @@ installArgoCDV2() {
   PACKAGE_DES="Certificate Manager"
   PACKAGE_NAME="cert-manager"
   PACKAGE_MANAGER="helm"
-  PACKAGE_NAMESPACE="$(getYAML PACKAGE_NAMESPACE $TDHV2_WORKLOAD_CLUSTER $PACKAGE_ID $PACKAGE_MANAGER)"
   PACKAGE_REPO="$(getYAML PACKAGE_REPO $TDHV2_WORKLOAD_CLUSTER $PACKAGE_ID $PACKAGE_MANAGER)"
 
   # --- CHECK IF PACKAGE IS CONFIGURED IN THE DEPLOYMENT ---
@@ -8853,10 +8854,6 @@ installArgoCDV2() {
   subdomain=$(getYAML TDH_DNS_SUBDOMAIN)
   ingress_domain="$(getYAML WC_INGRESS_DOMAIN $TDHV2_WORKLOAD_CLUSTER)"                 
   DNS_DOMAIN="${ingress_domain}.${subdomain}.${dnsdomain}"
-echo "gagaxx ingress_domain:$ingress_domain"
-echo "gagaxx subdomain:$subdomain"
-echo "gagaxx dnsdomain:$dnsdomain"
-echo "gagaxx DNS_DOMAIN:$DNS_DOMAIN"
 
   messageTitle "ArgoCD Continuous Delivery for Kubernetes"
   cnt=$(helm list -q -n $NAMESPACE | egrep -c "^argo-cd")
