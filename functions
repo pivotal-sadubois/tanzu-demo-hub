@@ -7925,7 +7925,6 @@ installTAPV2() {
       --namespace tap-install \
       --export-to-all-namespaces \
       --yes > /tmp/error.log 2>&1
-
     if [ $ret -ne 0 ]; then
       logMessages /tmp/error.log
       echo "ERROR: failed to create registry secret"
@@ -7936,10 +7935,41 @@ installTAPV2() {
         echo "                          --server ${INSTALL_REGISTRY_HOSTNAME} \\"
         echo "                          --export-to-all-namespaces --yes --namespace $NAMESPACE"
         echo "          tdh-tools:/$ exit"
-      else
+      else  
         echo "       => tanzu secret registry add registry-credentials \\"
         echo "                --username ${INSTALL_REGISTRY_USERNAME} --password ${INSTALL_REGISTRY_PASSWORD} \\"
         echo "                --server ${INSTALL_REGISTRY_HOSTNAME} \\"
+        echo "                --export-to-all-namespaces --yes --namespace $NAMESPACE"
+      fi
+      
+      exit 1 
+    fi
+
+#gaga
+
+    messagePrint " ▪ Creating registry secret (docker-credentials)" "$INSTALL_REGISTRY_HOSTNAME"
+    tanzu secret registry add docker-credentials \
+      --server   docker.io \
+      --username ${TDH_REGISTRY_DOCKER_USER} \
+      --password ${TDH_REGISTRY_DOCKER_PASS} \
+      --namespace tap-install \
+      --export-to-all-namespaces \
+      --yes > /tmp/error.log 2>&1 
+
+    if [ $ret -ne 0 ]; then
+      logMessages /tmp/error.log
+      echo "ERROR: failed to create registry secret"
+      if [ "$NATIVE" == "0" ]; then
+        echo "       => tools/${TDH_TOOLS}.sh"
+        echo "          tdh-tools:/$ tanzu secret registry add docker-credentials \\"
+        echo "                          --username ${TDH_REGISTRY_DOCKER_USER} --password ${TDH_REGISTRY_DOCKER_PASS} \\"
+        echo "                          --server docker.io \\"
+        echo "                          --export-to-all-namespaces --yes --namespace $NAMESPACE"
+        echo "          tdh-tools:/$ exit"
+      else
+        echo "       => tanzu secret registry add registry-credentials \\"
+        echo "                --username ${TDH_REGISTRY_DOCKER_USER} --password ${TDH_REGISTRY_DOCKER_PASS} \\"
+        echo "                --server docker.io \\"
         echo "                --export-to-all-namespaces --yes --namespace $NAMESPACE"
       fi
 
@@ -20085,6 +20115,7 @@ dockerPullSecret() {
   if [ "$nam" != "tdh-docker-repo" ]; then 
     messagePrint " ▪ Create Docker PullSecret for Namespace/ServiceAccount"  "$TMP_NAMESPACE/$TMP_SERVICEACCOUNT"
 
+#gaga
     cmdLoop kubectl -n $TMP_NAMESPACE create secret docker-registry tdh-docker-repo \
             --docker-server docker.io \
             --docker-username $TDH_REGISTRY_DOCKER_USER \
@@ -21123,7 +21154,6 @@ goTAPStage() {
 
   else
     while [ $CURRENT_STAGE -lt $TARGET_STAGE ]; do
-echo "1 CURRENT_STAGE:$CURRENT_STAGE TARGET_STAGE:$TARGET_STAGE" 1>&2
       if [ "${CURRENT_STAGE_STATUS}" == "nok" ]; then 
          echo gaga >> /tmp/stage.log
       else
@@ -21131,7 +21161,6 @@ echo "1 CURRENT_STAGE:$CURRENT_STAGE TARGET_STAGE:$TARGET_STAGE" 1>&2
       fi
 
       reconsileTAPStage $CURRENT_STAGE
-echo "2 CURRENT_STAGE:$CURRENT_STAGE TARGET_STAGE:$TARGET_STAGE" 1>&2
     done
   fi
 }
