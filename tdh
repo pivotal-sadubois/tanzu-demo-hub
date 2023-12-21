@@ -24,27 +24,30 @@ else
   fi
 fi
 
-if [ "$TDH_DEMO_CONFIG" == "" ]; then
-  echo "The TDH_DEMO_CONFIG environment variable has not been set. Please set the variable from the list below"
-  echo "ie: export TDH_DEMO_CONFIG=<deployment>"
-  for n in $(find $HOME/.tanzu-demo-hub/deployments -name config.yml | sed -e 's+^.*deployments/++g' -e 's+/config.yml++g'); do
-    echo "   export TDH_DEMO_CONFIG=\"$n\""
-  done
-  echo ""
+if [ "$TDH_DEMO_CONFIG" == "" -o "$TDH_DEMO_NAME" == "" ]; then
+  if [ "$TDH_DEMO_CONFIG" == "" ]; then
+    echo "IMPORTANT: The TDH_DEMO_CONFIG environment variable has not been set. Please set the variable from the list below"
+    echo "           -------------------------------------------------------------------------------------------------------------------------------------------------------"
+    for n in $(find $HOME/.tanzu-demo-hub/deployments -name config.yml | sort -n | sed -e 's+^.*deployments/++g' -e 's+/config.yml++g'); do
+      echo "           export TDH_DEMO_CONFIG=\"$n\""
+    done
+    echo "           -------------------------------------------------------------------------------------------------------------------------------------------------------"
+    echo 
+  fi
+
+  if [ "$TDH_DEMO_NAME" == "" ]; then
+    echo "IMPORTANT: The demo name neets to be set with the TDH_DEMO_NAME environment variable:"
+    echo "           -------------------------------------------------------------------------------------------------------------------------------------------------------"
+    for n in $(find $TDHHOME/demos -name demo-guide.sh | awk -F'/'  '{ print $(NF-1) }'); do
+      echo "           export TDH_DEMO_NAME=$n"
+    done
+    echo "           -------------------------------------------------------------------------------------------------------------------------------------------------------"
+    echo 
+  fi
 
   exit 0
 else
   TDH_DEPLOYMENT_NAME=$(echo $TDH_DEMO_CONFIG | awk -F'/' '{ print $NF }') 
-fi
-
-if [ "$TDH_DEMO_NAME" == "" ]; then
-  echo "The demo name hast not be given, please TDH_DEMO_NAME environment variable"
-  echo "ie. "
-  for n in $(find $TDHHOME/demos -name demo-guide.sh | awk -F'/'  '{ print $(NF-1) }'); do
-    echo "   export TDH_DEMO_NAME=$n"
-  done
-
-  echo; exit 0
 fi
 
 if [ 2 -eq 1 ]; then 

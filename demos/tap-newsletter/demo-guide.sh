@@ -5,6 +5,7 @@
 # Author .......: Sacha Dubois, VMware
 # Description ..: Tanzu Demo Hub - Newsletter Demo Guide
 # ############################################################################################
+#    myArray=("Elvis:Presley" "Paul:McCartney" "Alice:Cooper" "Tina:Turner" "Liam:Gallagher" "Nick:Cave" "Keith:Richards" "David:Byrne" "Gary:Puckett" "Little:Richard" "Axl:Rose" "David:Bowie" "Bob:Dylan" "Bruce:Springsteen" "Mike:Jagger")
 
 #curl -X 'POST' \
 #  'https://newsletter-subscription.dev.tapmc.tanzudemohub.com/api/v1/subscriptions' \
@@ -41,6 +42,7 @@ TDH_DEMO_GIT_REPO=newsletter
 
 if [ "$1" == "" ]; then 
   echo "tdh init                               ## Initialize Newsletter Demo (Fork Git Repo)"
+  echo "tdh setup                              ## Demo Setup"
   echo "tdh guide                              ## Show the Demo Guide"
   echo "tdh context,c [dev,ops,run,svc]        ## Set Kubernetes Context (dev,ops,svc,run)"
   echo "tdh supply-chain [gitops,devops]       ## OPS Supply Chain (gitops, regops)"
@@ -54,6 +56,198 @@ fi
 [ -f $TDHHOME/functions ] && . $TDHHOME/functions
 
 # https://www.atlassian.com/git/tutorials/comparing-workflows/gitflow-workflow
+if [ "$1" == "setup" ]; then 
+  DNS_DOMAIN=$(yq -o json $HOME/.tanzu-demo-hub/deployments/$TDH_DEMO_CONFIG/config.yml | jq -r '.tdh_environment.network.dns.dns_domain')
+  DNS_SUBDOMAIN=$(yq -o json $HOME/.tanzu-demo-hub/deployments/$TDH_DEMO_CONFIG/config.yml | jq -r '.tdh_environment.network.dns.dns_subdomain')
+  HARBOR="harbor.apps.${DNS_SUBDOMAIN}.${DNS_DOMAIN}"
+
+  if [ "$2" == "" ]; then
+    echo "tdh setup dev                        ## Deploy 'Newsletter Subspription' and 'Newsleter UI' from the git 'release/1.0.0' branch"
+    echo "                                     ## - Clone git Repsitory $TDH_DEMO_GIT_REPO into \$HOME/workspace"
+    echo "                                     ## - cwBuild 'Newsletter Subspription' with supply chain 'basic-image-to-url-package' on the ops cluster"
+    echo "                                     ## - cwBuild 'Newsletter UI' with supply chain 'basic-image-to-url-package' on the ops cluster"
+    echo "tdh setup ops                        ## Deploy 'Newsletter Subspription' and 'Newsleter UI' from the git 'release/1.0.0' branch"
+    echo "                                     ## - cwBuild 'Newsletter Subspription' with supply chain 'basic-image-to-url-package' on the ops cluster"
+    echo "                                     ## - cwBuild 'Newsletter UI' with supply chain 'basic-image-to-url-package' on the ops cluster"
+    echo "tdh setup clean                      ## Cleanup deployments and remove the local git repository \$HOME/workspace/$TDH_DEMO_GIT_REPO"
+  fi
+
+  if [ "$2" == "clean" ]; then
+    echo " ✓ Deleting Workload on $TAP_CLUSTER_OPS"
+
+    kubectl config use-context $TAP_CONTEXT_OPS > /dev/null
+    kubectl -n $TAP_DEVELOPER_NAMESPACE delete workload $TAP_WORKLOAD_BACKEND_NAME > /dev/null 2>&1
+    kubectl -n $TAP_DEVELOPER_NAMESPACE delete workload $TAP_WORKLOAD_FRONTEND_NAME > /dev/null 2>&1
+
+    echo " ✓ Deleting Workload on $TAP_CLUSTER_DEV"
+    kubectl config use-context $TAP_CONTEXT_DEV > /dev/null
+    kubectl -n $TAP_DEVELOPER_NAMESPACE delete workload $TAP_WORKLOAD_BACKEND_NAME > /dev/null 2>&1
+    kubectl -n $TAP_DEVELOPER_NAMESPACE delete workload $TAP_WORKLOAD_FRONTEND_NAME > /dev/null 2>&1
+
+    echo ""
+    echo "Demo Setup cleanup successfuly completed"
+  fi
+
+  if [ "$2" == "dev" ]; then
+    kubectl config use-context $TAP_CONTEXT_DEV > /dev/null
+
+    cd $HOME/workspace
+    echo " ✓ Clone/validate Git Repository https://github.com/$TDH_DEMO_GITHUB_USER/newsletter.git to \$HOME/workspace/$TDH_DEMO_GIT_REPO"
+    [ ! -d $HOME/workspace/$TDH_DEMO_GIT_REPO/.git ] && git -C $HOME/workspace clone https://github.com/$TDH_DEMO_GITHUB_USER/${TDH_DEMO_GIT_REPO}.git > /dev/null 2>&1
+
+    echo " ✓ Create Service Claim for PostgreSQL backend"
+    nam=$(kubectl -n $TAP_DEVELOPER_NAMESPACE get ClassClaim -o json | jq --arg key "newsletter-db" -r '.items[].metadata | select(.name == $key).name')
+    if [ "$nam" != "newsletter-db" ]; then 
+      tanzu service class-claim create newsletter-db --class postgresql-unmanaged --parameter storageGB=3 -n $TAP_DEVELOPER_NAMESPACE > /dev/null 2>&1
+    fi
+
+    echo " ✓ Deploy Newsletter Subscription Service"
+    nam=$(kubectl -n newsletter get workloads -o json | jq --arg key "$TAP_WORKLOAD_BACKEND_NAME" -r '.items[].metadata | select(.name == $key).name')
+    if [ "$nam" != "$TAP_WORKLOAD_BACKEND_NAME" ]; then
+      cd $HOME/workspace/$TDH_DEMO_GIT_REPO/$TAP_WORKLOAD_BACKEND_NAME
+      tanzu apps workload apply --file config/workload.yaml --namespace $TAP_DEVELOPER_NAMESPACE --local-path . --update-strategy replace --yes --tail --wait > /tmp/error.log 2>&1
+      sleep 10
+
+      i=1; stt="False"; while [ "$stt" != "True" -a $i -le 15 ]; do
+        stt=$(kubectl -n newsletter get workload $TAP_WORKLOAD_BACKEND_NAME -o json | jq -r '.status.conditions[] | select(.type == "Ready" and .reason == "Ready").status')
+        [ "$stt" == "True" ] && break
+        let i=i+1
+        sleep 30
+      done
+
+      if [ "$stt" != "True" ]; then
+        echo "ERROR: Failed to deploy $TAP_WORKLOAD_BACKEND_NAME on the $TAP_CLUSTER_OPS, please try manually"
+        echo "       => tanzu -n $TAP_WORKLOAD_BACKEND_NAME apps workload get $TAP_WORKLOAD_BACKEND_NAME"
+        echo "       => kubectl -n $TAP_DEVELOPER_NAMESPACE apply -f /tmp/${TAP_WORKLOAD_BACKEND_NAME}-gitops.yaml"
+        exit 1
+      fi
+    fi
+
+    echo " ✓ Deploy Newsletter UI Service"
+    nam=$(kubectl -n newsletter get workloads -o json | jq --arg key "$TAP_WORKLOAD_FRONTEND_NAME" -r '.items[].metadata | select(.name == $key).name')
+    if [ "$nam" != "$TAP_WORKLOAD_FRONTEND_NAME" ]; then
+      cd $HOME/workspace/$TDH_DEMO_GIT_REPO/$TAP_WORKLOAD_FRONTEND_NAME
+      tanzu apps workload apply --file config/workload.yaml --namespace $TAP_DEVELOPER_NAMESPACE --local-path . --update-strategy replace --yes --tail --wait > /tmp/error.log 2>&1
+      sleep 10
+
+      i=1; stt="False"; while [ "$stt" != "True" -a $i -le 15 ]; do
+        stt=$(kubectl -n newsletter get workload $TAP_WORKLOAD_FRONTEND_NAME -o json | jq -r '.status.conditions[] | select(.type == "Ready" and .reason == "Ready").status')
+        [ "$stt" == "True" ] && break
+        let i=i+1
+        sleep 30
+      done
+
+      if [ "$stt" != "True" ]; then
+        echo "ERROR: Failed to deploy $TAP_WORKLOAD_FRONTEND_NAME on the $TAP_CLUSTER_OPS, please try manually"
+        echo "       => tanzu -n $TAP_WORKLOAD_FRONTEND_NAME apps workload get $TAP_WORKLOAD_BACKEND_NAME"
+        echo "       => kubectl -n $TAP_DEVELOPER_NAMESPACE apply -f /tmp/${TAP_WORKLOAD_FRONTEND_NAME}-gitops.yaml"
+        exit 1
+      fi
+    fi
+
+    echo " ✓ Load Test Data to the backend"
+    myArray=("Frank:Zappa" "Paul:McCartney" "Alice:Cooper")
+
+    TMPFILE=/tmp/tap_test_data.json; rm -f $TMPFILE
+    echo "["                       > $TMPFILE
+
+    i=1
+    for n in ${myArray[@]}; do
+      fn=$(echo $n | awk -F: '{ print $1 }')
+      ln=$(echo $n | awk -F: '{ print $2 }')
+      em="${fn}.${ln}@example.com"
+
+      echo " {"                          >> $TMPFILE
+      echo "  \"emailId\": \"$em\","     >> $TMPFILE
+      echo "  \"firstName\": \"$fn\","   >> $TMPFILE
+      echo "  \"lastName\": \"$ln\""     >> $TMPFILE
+
+      [ $i -ne ${#myArray[@]} ] && str="," || str=""
+
+      echo " }$str"                      >> $TMPFILE
+      let i=i+1
+    done
+
+    echo "]"                             >> $TMPFILE
+
+    ids=$(curl -X 'GET' https://$TAP_WORKLOAD_BACKEND_NAME.dev.${DNS_SUBDOMAIN}.${DNS_DOMAIN}/api/v1/subscriptions -H 'accept: application/json' -H 'Content-Type: application/json' 2>/dev/null | \
+          jq -r '.[].id' | wc -l | awk '{ print $1 }') 
+    if [ $ids -lt 3 ]; then 
+      curl -X 'POST' 'https://$TAP_WORKLOAD_BACKEND_NAME.dev.${DNS_SUBDOMAIN}.${DNS_DOMAIN}/api/v1/subscriptions' \
+           -H 'accept: application/json' -H 'Content-Type: application/json' --data "@$TMPFILE" > /tmp/error.log 2>&1; ret=$?
+      if [ $ret -ne 0 ]; then 
+        echo "ERROR: failed to load testing data, please try manually"
+      fi
+    fi
+
+    echo "------------------------------------------------------------------------------------------------------------------------------------------------------------------"
+    tanzu -n $TAP_DEVELOPER_NAMESPACE apps workload list
+    echo "------------------------------------------------------------------------------------------------------------------------------------------------------------------"
+
+    echo " ✓ Manually test functionality, enter following URL's into an Icognito Brwoser window"
+    echo "   Verify the the Backend ($TAP_WORKLOAD_BACKEND_NAME)"
+    echo "   => https://$TAP_WORKLOAD_BACKEND_NAME.dev.${DNS_SUBDOMAIN}.${DNS_DOMAIN}/actuator"
+    echo "" 
+    echo "   Verify the the Frontend ($TAP_WORKLOAD_FRONTEND_NAME)"
+    echo "   => https://$TAP_WORKLOAD_FRONTEND_NAME.dev.${DNS_SUBDOMAIN}.${DNS_DOMAIN}"
+    echo ""
+    echo "Demo Setup cleanup successfuly completed"
+  fi
+
+  if [ "$2" == "ops" ]; then
+    echo " ✓ Apply workload file for ($TAP_WORKLOAD_BACKEND_NAME) on the OPS Cluster"
+    kubectl config use-context $TAP_CONTEXT_OPS > /dev/null
+    sed "s/GIT_USER/$TDH_DEMO_GITHUB_USER/g" $TDHHOME/demos/$TDH_DEMO_NAME/workload/template_${TAP_WORKLOAD_BACKEND_NAME}-gitops.yaml > /tmp/${TAP_WORKLOAD_BACKEND_NAME}-gitops.yaml
+
+    kubectl -n $TAP_DEVELOPER_NAMESPACE delete -f /tmp/${TAP_WORKLOAD_BACKEND_NAME}-gitops.yaml >/dev/null 2>&1
+    kubectl -n $TAP_DEVELOPER_NAMESPACE apply -f /tmp/${TAP_WORKLOAD_BACKEND_NAME}-gitops.yaml --wait  >/dev/null 2>&1
+    sleep 10
+
+    i=1; stt="False"; while [ "$stt" != "True" -a $i -le 15 ]; do
+      stt=$(kubectl -n newsletter get workload $TAP_WORKLOAD_BACKEND_NAME -o json | jq -r '.status.conditions[] | select(.type == "Ready" and .reason == "Ready").status') 
+      [ "$stt" == "True" ] && break
+      let i=i+1
+      sleep 30
+    done
+
+    if [ "$stt" != "True" ]; then 
+      echo "ERROR: Failed to deploy $TAP_WORKLOAD_BACKEND_NAME on the $TAP_CLUSTER_OPS, please try manually"
+      echo "       => tanzu -n $TAP_WORKLOAD_BACKEND_NAME apps workload get $TAP_WORKLOAD_BACKEND_NAME"
+      echo "       => kubectl -n $TAP_DEVELOPER_NAMESPACE apply -f /tmp/${TAP_WORKLOAD_BACKEND_NAME}-gitops.yaml"
+      exit 1
+    fi
+
+    echo " ✓ Apply workload file for ($TAP_WORKLOAD_FRONTEND_NAME) on the OPS Cluster"
+    kubectl config use-context $TAP_CONTEXT_OPS > /dev/null
+    sed "s/GIT_USER/$TDH_DEMO_GITHUB_USER/g" $TDHHOME/demos/$TDH_DEMO_NAME/workload/template_${TAP_WORKLOAD_FRONTEND_NAME}-gitops.yaml > /tmp/${TAP_WORKLOAD_FRONTEND_NAME}-gitops.yaml
+    
+    kubectl -n $TAP_DEVELOPER_NAMESPACE delete -f /tmp/${TAP_WORKLOAD_FRONTEND_NAME}-gitops.yaml >/dev/null 2>&1
+    kubectl -n $TAP_DEVELOPER_NAMESPACE apply -f /tmp/${TAP_WORKLOAD_FRONTEND_NAME}-gitops.yaml --wait  >/dev/null 2>&1
+    sleep 10
+
+    i=1; stt="False"; while [ "$stt" != "True" -a $i -le 15 ]; do
+      stt=$(kubectl -n newsletter get workload $TAP_WORKLOAD_FRONTEND_NAME -o json | jq -r '.status.conditions[] | select(.type == "Ready" and .reason == "Ready").status')
+      [ "$stt" == "True" ] && break
+      let i=i+1
+      sleep 30
+    done
+
+    if [ "$stt" != "True" ]; then
+      echo "ERROR: Failed to deploy $TAP_WORKLOAD_FRONTEND_NAME on the $TAP_CLUSTER_OPS, please try manually"
+      echo "       => tanzu -n $TAP_WORKLOAD_FRONTEND_NAME apps workload get $TAP_WORKLOAD_BACKEND_NAME"
+      echo "       => kubectl -n $TAP_DEVELOPER_NAMESPACE apply -f /tmp/${TAP_WORKLOAD_FRONTEND_NAME}-gitops.yaml"
+      exit 1
+    fi
+
+    echo "------------------------------------------------------------------------------------------------------------------------------------------------------------------"
+    tanzu -n $TAP_DEVELOPER_NAMESPACE apps workload list 
+    echo "------------------------------------------------------------------------------------------------------------------------------------------------------------------"
+
+    echo ""
+    echo "Demo Setup for '$TAP_WORKLOAD_BACKEND_NAME' and '$TAP_WORKLOAD_FRONTEND_NAME' completed"
+  fi
+fi
+
 if [ "$1" == "guide" ]; then 
   DNS_DOMAIN=$(yq -o json $HOME/.tanzu-demo-hub/deployments/$TDH_DEMO_CONFIG/config.yml | jq -r '.tdh_environment.network.dns.dns_domain')
   DNS_SUBDOMAIN=$(yq -o json $HOME/.tanzu-demo-hub/deployments/$TDH_DEMO_CONFIG/config.yml | jq -r '.tdh_environment.network.dns.dns_subdomain')
@@ -410,52 +604,6 @@ if [ "$1" == "init" ]; then
 
       exit
     fi
-
-    echo " ✓ Apply workload file for ($TAP_WORKLOAD_BACKEND_NAME) on the OPS Cluster"
-    kubectl config use-context $TAP_CONTEXT_OPS > /dev/null
-
-    sed "s/GIT_USER/$TDH_DEMO_GITHUB_USER/g" $TDHHOME/demos/$TDH_DEMO_NAME/workload/template_${TAP_WORKLOAD_BACKEND_NAME}-gitops.yaml > /tmp/${TAP_WORKLOAD_BACKEND_NAME}-gitops.yaml
-
-    kubectl -n $TAP_DEVELOPER_NAMESPACE delete -f /tmp/${TAP_WORKLOAD_BACKEND_NAME}-gitops.yaml >/dev/null 2>&1
-    kubectl -n $TAP_DEVELOPER_NAMESPACE apply -f /tmp/${TAP_WORKLOAD_BACKEND_NAME}-gitops.yaml --wait  >/dev/null 2>&1
-    echo "  => tanzu apps workload get $TAP_WORKLOAD_BACKEND_NAME -n $TAP_DEVELOPER_NAMESPACE"
-
-tanzu apps workload list -n newsletter
-
-    echo " ✓ Apply workload file for ($TAP_WORKLOAD_FRONTEND_NAME) on the OPS Cluster"
-    sed "s/GIT_USER/$TDH_DEMO_GITHUB_USER/g" $TDHHOME/demos/$TDH_DEMO_NAME/workload/template_${TAP_WORKLOAD_FRONTEND_NAME}-gitops.yaml > /tmp/${TAP_WORKLOAD_FRONTEND_NAME}-gitops.yaml
-
-    kubectl -n $TAP_DEVELOPER_NAMESPACE delete -f /tmp/${TAP_WORKLOAD_FRONTEND_NAME}-gitops.yaml >/dev/null 2>&1
-    kubectl -n $TAP_DEVELOPER_NAMESPACE apply -f /tmp/${TAP_WORKLOAD_FRONTEND_NAME}-gitops.yaml --wait  >/dev/null 2>&1
-    echo "  => tanzu apps workload get $TAP_WORKLOAD_FRONTEND_NAME -n $TAP_DEVELOPER_NAMESPACE"
-
-tanzu apps workload list -n newsletter
-    myArray=("Elvis:Presley" "Paul:McCartney" "Alice:Cooper" "Tina:Turner" "Liam:Gallagher" "Nick:Cave" "Keith:Richards" "David:Byrne" "Gary:Puckett" "Little:Richard" "Axl:Rose" "David:Bowie" "Bob:Dylan" "Bruce:Springsteen" "Mike:Jagger")
-
-  TMPFILE=/tmp/1.json; rm -f $TMPFILE
-  echo "["                       > $TMPFILE
-  
-  i=1
-  for n in ${myArray[@]}; do
-    fn=$(echo $n | awk -F: '{ print $1 }')
-    ln=$(echo $n | awk -F: '{ print $2 }')
-    em="${fn}.${ln}@example.com"
-  
-    echo " {"                          >> $TMPFILE
-    echo "  \"emailId\": \"$em\","     >> $TMPFILE
-    echo "  \"firstName\": \"$fn\","   >> $TMPFILE
-    echo "  \"lastName\": \"$ln\""     >> $TMPFILE
-  
-    [ $i -ne ${#myArray[@]} ] && str="," || str=""
-  
-    echo " }$str"                      >> $TMPFILE
-    let i=i+1
-  done
-
-  echo "]"                             >> $TMPFILE
-
-    echo "curl -X 'POST' 'https://$TAP_WORKLOAD_BACKEND_NAME.ops.${DNS_SUBDOMAIN}.${DNS_DOMAIN}/api/v1/subscriptions' -H 'accept: application/json' -H 'Content-Type: application/json' -d \"@$TMPFILE\""
-
   fi
 
   echo " ✓ Update VSCode config in (\$HOME/Library/Application Support/Code/User/settings.json)"
@@ -645,4 +793,31 @@ tanzu apps workload delete angular-frontend -n newsletter --yes
 tanzu apps workload apply --file config/workload.yaml --namespace newsletter-ui --local-path .  --yes --tail
 tanzu apps workload apply --file config/workload.yaml --namespace newsletter --local-path .  --yes --tail
 tanzu apps workload apply --file config/workload.yaml --namespace newsletter --local-path .  --yes --tail
+
+tanzu apps workload list -n newsletter
+    myArray=("Elvis:Presley" "Paul:McCartney" "Alice:Cooper" "Tina:Turner" "Liam:Gallagher" "Nick:Cave" "Keith:Richards" "David:Byrne" "Gary:Puckett" "Little:Richard" "Axl:Rose" "David:Bowie" "Bob:Dylan" "Bruce:Springsteen" "Mike:Jagger")
+
+  TMPFILE=/tmp/1.json; rm -f $TMPFILE
+  echo "["                       > $TMPFILE
+
+  i=1
+  for n in ${myArray[@]}; do
+    fn=$(echo $n | awk -F: '{ print $1 }')
+    ln=$(echo $n | awk -F: '{ print $2 }')
+    em="${fn}.${ln}@example.com"
+
+    echo " {"                          >> $TMPFILE
+    echo "  \"emailId\": \"$em\","     >> $TMPFILE
+    echo "  \"firstName\": \"$fn\","   >> $TMPFILE
+    echo "  \"lastName\": \"$ln\""     >> $TMPFILE
+
+    [ $i -ne ${#myArray[@]} ] && str="," || str=""
+
+    echo " }$str"                      >> $TMPFILE
+    let i=i+1
+  done
+
+  echo "]"                             >> $TMPFILE
+
+    echo "curl -X 'POST' 'https://$TAP_WORKLOAD_BACKEND_NAME.ops.${DNS_SUBDOMAIN}.${DNS_DOMAIN}/api/v1/subscriptions' -H 'accept: application/json' -H 'Content-Type: application/json' -d \"@$TMPFILE\""
 
