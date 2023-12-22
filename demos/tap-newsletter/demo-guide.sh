@@ -145,7 +145,11 @@ if [ "$1" == "setup" ]; then
       fi
     fi
 
-    echo " ✓ Load Test Data to the backend"
+    echo " ✓ Verify Newsletter Application Deployment"
+    echo "   ---------------------------------------------------------------------------------------------------------------------------------------------------------------"
+    tanzu -n $TAP_DEVELOPER_NAMESPACE apps workload list | sed 's/^/   /g'
+    echo "   ---------------------------------------------------------------------------------------------------------------------------------------------------------------"
+
     myArray=("Frank:Zappa" "Paul:McCartney" "Alice:Cooper")
 
     TMPFILE=/tmp/tap_test_data.json; rm -f $TMPFILE
@@ -170,25 +174,38 @@ if [ "$1" == "setup" ]; then
 
     echo "]"                             >> $TMPFILE
 
+    ret=1; cnt=0
+    while [ $ret -ne 0 -a $cnt -lt 5 ]; do
+      curl -X 'GET' https://$TAP_WORKLOAD_BACKEND_NAME.dev.${DNS_SUBDOMAIN}.${DNS_DOMAIN}/api/v1/subscriptions > /dev/null 2>&1; ret=$? 
+      [ $ret -eq 0 ] && break
+
+      let cnt=cnt+1
+      sleep 30
+    done
+
     ids=$(curl -X 'GET' https://$TAP_WORKLOAD_BACKEND_NAME.dev.${DNS_SUBDOMAIN}.${DNS_DOMAIN}/api/v1/subscriptions -H 'accept: application/json' -H 'Content-Type: application/json' 2>/dev/null | \
           jq -r '.[].id' | wc -l | awk '{ print $1 }') 
     if [ $ids -lt 3 ]; then 
+      echo " ✓ Load Test Data to the backend"
       curl -X 'POST' 'https://$TAP_WORKLOAD_BACKEND_NAME.dev.${DNS_SUBDOMAIN}.${DNS_DOMAIN}/api/v1/subscriptions' \
            -H 'accept: application/json' -H 'Content-Type: application/json' --data "@$TMPFILE" > /tmp/error.log 2>&1; ret=$?
       if [ $ret -ne 0 ]; then 
         echo "ERROR: failed to load testing data, please try manually"
       fi
+    else
+      echo " ✓ Verify Test Data loaded to the backend"
+      echo "   (curl https://$TAP_WORKLOAD_BACKEND_NAME.dev.${DNS_SUBDOMAIN}.${DNS_DOMAIN}/api/v1/subscriptions 2>/dev/null | jq -r)"
+      echo "   ---------------------------------------------------------------------------------------------------------------------------------------------------------------"
+      curl -X 'GET' https://$TAP_WORKLOAD_BACKEND_NAME.dev.${DNS_SUBDOMAIN}.${DNS_DOMAIN}/api/v1/subscriptions -H 'accept: application/json' \
+        -H 'Content-Type: application/json' 2>/dev/null | jq -r | sed 's/^/   /g'
+      echo "   ---------------------------------------------------------------------------------------------------------------------------------------------------------------"
     fi
-
-    echo "------------------------------------------------------------------------------------------------------------------------------------------------------------------"
-    tanzu -n $TAP_DEVELOPER_NAMESPACE apps workload list
-    echo "------------------------------------------------------------------------------------------------------------------------------------------------------------------"
 
     echo " ✓ Manually test functionality, enter following URL's into an Icognito Brwoser window"
     echo "   Verify the the Backend ($TAP_WORKLOAD_BACKEND_NAME)"
-    echo "   => https://$TAP_WORKLOAD_BACKEND_NAME.dev.${DNS_SUBDOMAIN}.${DNS_DOMAIN}/actuator"
+    echo "   => https://$TAP_WORKLOAD_BACKEND_NAME.dev.${DNS_SUBDOMAIN}.${DNS_DOMAIN}/actuator 2>/dev/null | jq -r"
     echo "" 
-    echo "   Verify the the Frontend ($TAP_WORKLOAD_FRONTEND_NAME)"
+    echo "   Verify the the Frontend ($TAP_WORKLOAD_FRONTEND_NAME) in a Icognito Browder Window, or deleate the cache first"
     echo "   => https://$TAP_WORKLOAD_FRONTEND_NAME.dev.${DNS_SUBDOMAIN}.${DNS_DOMAIN}"
     echo ""
     echo "Demo Setup cleanup successfuly completed"
@@ -402,10 +419,20 @@ if [ "$1" == "init" ]; then
   if [ "$nam" == "" ]; then 
     echo "   ▪ Creating Developer Namespace for '$TAP_DEVELOPER_NAMESPACE' on $TAP_CLUSTER_DEV"
     createNamespace $TAP_DEVELOPER_NAMESPACE > /dev/null 2>&1
+
     echo "   ▪ Creating Docker Pull Secret in 'default' service account"
-    dockerPullSecret $TAP_DEVELOPER_NAMESPACE > /dev/null 2>&1                          
+    kubectl -n $TAP_DEVELOPER_NAMESPACE create secret docker-registry docker-credentials \
+            --docker-server docker.io \
+            --docker-username $TDH_REGISTRY_DOCKER_USER \
+            --docker-password $TDH_REGISTRY_DOCKER_PASS > /tmp/error.log 2>&1; ret=$?
+    if [ $ret -ne 0 ]; then 
+      echo "ERROR: Failed to create secret docker-registry in namespace $TAP_DEVELOPER_NAMESPACE"
+      exit
+    fi
+
     echo "   ▪ Add Label for TAP Nameservice Provisoner 'apps.tanzu.vmware.com/tap-ns=\"\""
     kubectl label namespaces $TAP_DEVELOPER_NAMESPACE apps.tanzu.vmware.com/tap-ns="" > /dev/null 2>&1
+
     echo "   ▪ Add Label for Pod Security (Admission Controller) 'pod-security.kubernetes.io/enforce=baseline'"
     kubectl label namespaces $TAP_DEVELOPER_NAMESPACE pod-security.kubernetes.io/enforce=baseline > /dev/null 2>&1
   else
