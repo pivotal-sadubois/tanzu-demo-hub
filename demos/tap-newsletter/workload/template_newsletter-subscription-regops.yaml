@@ -1,0 +1,34 @@
+apiVersion: carto.run/v1alpha1
+kind: Workload
+metadata:
+  labels:
+    app.kubernetes.io/part-of: newsletter
+    apps.tanzu.vmware.com/workload-type: web
+  name: newsletter-subscription
+  namespace: newsletter
+spec:
+  build:
+    env:
+    - name: BP_JVM_VERSION
+      value: "20"
+  serviceClaims:
+  - name: db
+    ref:
+      apiVersion: services.apps.tanzu.vmware.com/v1alpha1
+      kind: ClassClaim
+      name: newsletter-db
+  params:
+    - name: gitops_ssh_secret
+      value: github-ssh-secret
+    - name: gitops_server_address
+      value: https://github.com/
+    - name: gitops_repository_owner
+      value: GIT_USER
+    - name: gitops_repository_name
+      value: cartographer
+  source:
+    git:
+      ref:
+        branch: main
+      url: https://github.com/GIT_USER/newsletter
+    subPath: newsletter-subscription
