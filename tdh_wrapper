@@ -12,7 +12,6 @@ then
       PRESERVE_CONTEXT=$(kubectl config current-context)
     fi
 
-    export KUBECONFIG=""
     $TDHHOME/tdh $*
 
     if [[ $cnt -eq 0 ]]

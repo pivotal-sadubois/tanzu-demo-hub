@@ -50,19 +50,6 @@ else
   TDH_DEPLOYMENT_NAME=$(echo $TDH_DEMO_CONFIG | awk -F'/' '{ print $NF }') 
 fi
 
-if [ 2 -eq 1 ]; then 
-  echo "TDH Home Directory ......: $TDHHOME"
-  echo "TDH Deployment Config ...: \$HOME/.tanzu-demo-hub/deployments/$TDH_DEMO_CONFIG/config.yml"
-  echo "Kubernetes Cnofig .......: \$HOME/.tanzu-demo-hub/deployments/$TDH_DEMO_CONFIG/kubeconfig_${TDH_DEPLOYMENT_NAME}.yaml"
-  echo "Demo Name ...............: $TDH_DEMO_NAME"
-  echo "$TDH_DEMO_NAME" > $HOME/.tdh/tdh_demo_name.cfg
-
-  echo "--------------------------------------------------------------------------------------------------------------------------"
-  echo "INFO: To select a different Demos Project or use another TDH Deployment, unset the following environment variables"
-  echo "      and start over. ie unset TDH_DEMO_NAME or unset TDH_DEMO_CONFIG."
-  echo "--------------------------------------------------------------------------------------------------------------------------"
-fi
-
 TDH_DEPLOYMENT_TYPE=$(yq $HOME/.tanzu-demo-hub/deployments/$TDH_DEMO_CONFIG/config.yml -o json | jq -r '.tdh_deployment.type')
 TDH_SERVICE_LUSTER=$(yq $HOME/.tanzu-demo-hub/deployments/$TDH_DEMO_CONFIG/config.yml -o json | jq -r '.tdh_clusters[1].name')
 if [ "$TDH_DEPLOYMENT_TYPE"  == "tap-multicluster" ]; then
@@ -81,11 +68,24 @@ else
   TAP_CONTEXT_DEV="${TAP_CLUSTER_DEV}-admin@${TAP_CLUSTER_DEV}"
 fi
 
-export KUBECONFIG=$HOME/.tanzu-demo-hub/deployments/$TDH_DEMO_CONFIG/kubeconfig_${TDH_DEPLOYMENT_NAME}.yaml
-
 if [ "$1" == "context" -o "$1" == "c" ]; then
   if [ "$2" == "" ]; then
-    kubectl config get-contexts
+    if [ "$KUBECONFIG" != "$HOME/.tanzu-demo-hub/deployments/$TDH_DEMO_CONFIG/kubeconfig_${TDH_DEPLOYMENT_NAME}.yaml" ]; then 
+      if [ "$TDH_DEPLOYMENT_TYPE"  == "tap-multicluster" ]; then
+        echo "CURRENT   NAME                                                              CLUSTER                        AUTHINFO                             NAMESPACE"
+        echo "          $TAP_CONTEXT_SVC   $TAP_CLUSTER_SVC   ${TAP_CLUSTER_SVC}-admin"
+        echo "          $TAP_CONTEXT_DEV   $TAP_CLUSTER_DEV   ${TAP_CLUSTER_DEV}-admin"
+        echo "          $TAP_CONTEXT_OPS   $TAP_CLUSTER_OPS   ${TAP_CLUSTER_OPS}-admin"
+        echo "          $TAP_CONTEXT_RUN   $TAP_CLUSTER_RUN   ${TAP_CLUSTER_RUN}-admin"
+      else
+        echo "CURRENT   NAME                                                              CLUSTER                        AUTHINFO                             NAMESPACE"
+        echo "          $TAP_CONTEXT_SVC   $TAP_CLUSTER_SVC   ${TAP_CLUSTER_SVC}-admin"
+        echo "          $TAP_CONTEXT_DEV   $TAP_CLUSTER_DEV   ${TAP_CLUSTER_DEV}-admin"
+      fi
+    else
+      kubectl config get-contexts
+    fi
+
     echo ""
     if [ "$TDH_DEPLOYMENT_TYPE"  == "tap-multicluster" ]; then
       echo "Use 'tdh kc <svc|dev|ops|run)' to set the Kubernetes context"
@@ -94,6 +94,8 @@ if [ "$1" == "context" -o "$1" == "c" ]; then
     fi
     exit 0
   else
+    export KUBECONFIG=$HOME/.tanzu-demo-hub/deployments/$TDH_DEMO_CONFIG/kubeconfig_${TDH_DEPLOYMENT_NAME}.yaml
+
     TAP_CONTEXT=""
     [ "$2" == "svc" ] && TAP_CONTEXT=$TAP_CONTEXT_SVC
     [ "$2" == "dev" ] && TAP_CONTEXT=$TAP_CONTEXT_DEV
