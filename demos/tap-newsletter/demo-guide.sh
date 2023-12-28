@@ -7,34 +7,13 @@
 # ############################################################################################
 #    myArray=("Elvis:Presley" "Paul:McCartney" "Alice:Cooper" "Tina:Turner" "Liam:Gallagher" "Nick:Cave" "Keith:Richards" "David:Byrne" "Gary:Puckett" "Little:Richard" "Axl:Rose" "David:Bowie" "Bob:Dylan" "Bruce:Springsteen" "Mike:Jagger")
 
-#curl -X 'POST' \
-#  'https://newsletter-subscription.dev.tapmc.tanzudemohub.com/api/v1/subscriptions' \
-#  -H 'accept: application/json' \
-#  -H 'Content-Type: application/json' \
-#  -d '[
-#  {
-#    "emailId": "john@example.com",
-#    "firstName": "John",
-#    "lastName": "Fogerty"
-#  },
-#  {
-#    "emailId": "frank@example.com",
-#    "firstName": "Frank",
-#    "lastName": "Zappa"
-#  },
-#  {
-#    "emailId": "bob@example.com",
-#    "firstName": "Bob",
-#    "lastName": "Seger"
-#  }
-#]'
-
 TAP_DEVELOPER_NAMESPACE=newsletter
 TAP_WORKLOAD_FRONTEND_NAME=newsletter-ui
 TAP_WORKLOAD_FRONTEND_FILE=${TAP_WORKLOAD_FRONTEND_NAME}-gitops.yaml
 TAP_WORKLOAD_BACKEND_NAME=newsletter-subscription
 TAP_WORKLOAD_BACKEND_FILE=${TAP_WORKLOAD_BACKEND_NAME}-gitops.yaml
 TDH_DEMO_GIT_REPO=newsletter
+TDH_CARTO_GIT_REPO=cartographer
 
 #tanzu accelerator list --server-url http://tap-gui.dev.tapmc.v2steve.net
 #tanzu accelerator get tanzu-java-web-app --server-url http://tap-gui.dev.tapmc.v2steve.net
@@ -66,23 +45,67 @@ if [ "$1" == "setup" ]; then
     echo "                                     ## - Clone git Repsitory $TDH_DEMO_GIT_REPO into \$HOME/workspace"
     echo "                                     ## - cwBuild 'Newsletter Subspription' with supply chain 'basic-image-to-url-package' on the ops cluster"
     echo "                                     ## - cwBuild 'Newsletter UI' with supply chain 'basic-image-to-url-package' on the ops cluster"
-    echo "tdh setup ops                        ## Deploy 'Newsletter Subspription' and 'Newsleter UI' from the git 'release/1.0.0' branch"
+    echo "tdh setup regops                     ## Deploy 'Newsletter Subspription' and 'Newsleter UI' from the git 'release/1.0.0' branch"
+    echo "                                     ## - cwBuild 'Newsletter Subspription' with supply chain 'basic-image-to-url-package' on the ops cluster"
+    echo "                                     ## - cwBuild 'Newsletter UI' with supply chain 'basic-image-to-url-package' on the ops cluster"
+    echo "tdh setup gitops                     ## Deploy 'Newsletter Subspription' and 'Newsleter UI' from the git 'release/1.0.0' branch"
     echo "                                     ## - cwBuild 'Newsletter Subspription' with supply chain 'basic-image-to-url-package' on the ops cluster"
     echo "                                     ## - cwBuild 'Newsletter UI' with supply chain 'basic-image-to-url-package' on the ops cluster"
     echo "tdh setup clean                      ## Cleanup deployments and remove the local git repository \$HOME/workspace/$TDH_DEMO_GIT_REPO"
   fi
 
   if [ "$2" == "clean" ]; then
+
+    ########################################################################################################################
+    ################################################## RUN CLUSTER #########################################################
+    ########################################################################################################################
+    echo " ✓ Deleting Workload on $TAP_CLUSTER_RUN"
+    kubectl config use-context $TAP_CONTEXT_RUN > /dev/null
+
+    kubectl -n ${TAP_DEVELOPER_NAMESPACE}-gitops delete workload $TAP_WORKLOAD_BACKEND_NAME > /dev/null 2>&1
+    kubectl -n ${TAP_DEVELOPER_NAMESPACE}-gitops delete workload $TAP_WORKLOAD_FRONTEND_NAME > /dev/null 2>&1
+    kubectl -n ${TAP_DEVELOPER_NAMESPACE}-gitops delete classclaim newsletter-db > /dev/null 2>&1
+    kubectl -n ${TAP_DEVELOPER_NAMESPACE}-gitops delete servicebinding newsletter-subscription-db > /dev/null 2>&1
+    deleteNamespace ${TAP_DEVELOPER_NAMESPACE}-gitops > /dev/null 2>&1
+    createTAPNamespace $TAP_CONTEXT_RUN ${TAP_DEVELOPER_NAMESPACE}-gitops > /dev/null 2>&1
+
+    kubectl -n ${TAP_DEVELOPER_NAMESPACE}-regops delete workload $TAP_WORKLOAD_FRONTEND_NAME            > /dev/null 2>&1
+    kubectl -n ${TAP_DEVELOPER_NAMESPACE}-regops delete workload $TAP_WORKLOAD_BACKEND_NAME             > /dev/null 2>&1
+    kubectl -n ${TAP_DEVELOPER_NAMESPACE}-regops delete deliverable $TAP_WORKLOAD_BACKEND_NAME          > /dev/null 2>&1
+    kubectl -n ${TAP_DEVELOPER_NAMESPACE}-regops delete servicebinding newsletter-subscription-db       > /dev/null 2>&1
+    kubectl -n ${TAP_DEVELOPER_NAMESPACE}-regops delete classclaim newsletter-db                        > /dev/null 2>&1
+    deleteNamespace ${TAP_DEVELOPER_NAMESPACE}-regops                                                   > /dev/null 2>&1
+    createTAPNamespace $TAP_CONTEXT_RUN ${TAP_DEVELOPER_NAMESPACE}-regops                               > /dev/null 2>&1
+
+    ########################################################################################################################
+    ################################################## OPS CLUSTER #########################################################
+    ########################################################################################################################
     echo " ✓ Deleting Workload on $TAP_CLUSTER_OPS"
-
     kubectl config use-context $TAP_CONTEXT_OPS > /dev/null
-    kubectl -n $TAP_DEVELOPER_NAMESPACE delete workload $TAP_WORKLOAD_BACKEND_NAME > /dev/null 2>&1
-    kubectl -n $TAP_DEVELOPER_NAMESPACE delete workload $TAP_WORKLOAD_FRONTEND_NAME > /dev/null 2>&1
 
+    kubectl -n ${TAP_DEVELOPER_NAMESPACE}-gitops delete workload $TAP_WORKLOAD_BACKEND_NAME > /dev/null 2>&1
+    kubectl -n ${TAP_DEVELOPER_NAMESPACE}-gitops delete workload $TAP_WORKLOAD_FRONTEND_NAME > /dev/null 2>&1
+    kubectl -n ${TAP_DEVELOPER_NAMESPACE}-gitops delete classclaim newsletter-db > /dev/null 2>&1
+    deleteNamespace ${TAP_DEVELOPER_NAMESPACE}-gitops > /dev/null 2>&1
+    createTAPNamespace $TAP_CONTEXT_OPS ${TAP_DEVELOPER_NAMESPACE}-gitops > /dev/null 2>&1
+
+    kubectl -n ${TAP_DEVELOPER_NAMESPACE}-regops delete workload $TAP_WORKLOAD_BACKEND_NAME > /dev/null 2>&1
+    kubectl -n ${TAP_DEVELOPER_NAMESPACE}-regops delete workload $TAP_WORKLOAD_FRONTEND_NAME > /dev/null 2>&1
+    kubectl -n ${TAP_DEVELOPER_NAMESPACE}-regops delete classclaim newsletter-db > /dev/null 2>&1
+    deleteNamespace ${TAP_DEVELOPER_NAMESPACE}-regops > /dev/null 2>&1
+    createTAPNamespace $TAP_CONTEXT_OPS ${TAP_DEVELOPER_NAMESPACE}-regops > /dev/null 2>&1
+
+    ########################################################################################################################
+    ################################################## DEV CLUSTER #########################################################
+    ########################################################################################################################
     echo " ✓ Deleting Workload on $TAP_CLUSTER_DEV"
     kubectl config use-context $TAP_CONTEXT_DEV > /dev/null
+
+    kubectl -n $TAP_DEVELOPER_NAMESPACE delete classclaims newsletter-db > /dev/null 2>&1
     kubectl -n $TAP_DEVELOPER_NAMESPACE delete workload $TAP_WORKLOAD_BACKEND_NAME > /dev/null 2>&1
     kubectl -n $TAP_DEVELOPER_NAMESPACE delete workload $TAP_WORKLOAD_FRONTEND_NAME > /dev/null 2>&1
+    deleteNamespace $TAP_DEVELOPER_NAMESPACE > /dev/null 2>&1
+    createTAPNamespace $TAP_CONTEXT_DEV $TAP_DEVELOPER_NAMESPACE > /dev/null 2>&1
 
     echo ""
     echo "Demo Setup cleanup successfuly completed"
@@ -94,6 +117,27 @@ if [ "$1" == "setup" ]; then
     cd $HOME/workspace
     echo " ✓ Clone/validate Git Repository https://github.com/$TDH_DEMO_GITHUB_USER/newsletter.git to \$HOME/workspace/$TDH_DEMO_GIT_REPO"
     [ ! -d $HOME/workspace/$TDH_DEMO_GIT_REPO/.git ] && git -C $HOME/workspace clone https://github.com/$TDH_DEMO_GITHUB_USER/${TDH_DEMO_GIT_REPO}.git > /dev/null 2>&1
+
+    nam=$(kubectl get ns -o json | jq -r --arg key $TAP_DEVELOPER_NAMESPACE '.items[].metadata | select(.name == $key).name')
+    if [ "$nam" == "" ]; then
+      echo "   ▪ Creating Developer Namespace for '$TAP_DEVELOPER_NAMESPACE' on $TAP_CLUSTER_DEV"
+      createNamespace $TAP_DEVELOPER_NAMESPACE > /dev/null 2>&1
+    
+      echo "   ▪ Add Label for TAP Nameservice Provisoner 'apps.tanzu.vmware.com/tap-ns=\"\""
+      kubectl label namespaces $TAP_DEVELOPER_NAMESPACE apps.tanzu.vmware.com/tap-ns="" > /dev/null 2>&1
+  
+      echo "   ▪ Add Label for Pod Security (Admission Controller) 'pod-security.kubernetes.io/enforce=baseline'"
+      kubectl label namespaces $TAP_DEVELOPER_NAMESPACE pod-security.kubernetes.io/enforce=baseline > /dev/null 2>&1
+  
+      echo "   ▪ Creating Docker Pull Secret in 'default' service account"
+      dockerPullSecretV2  ${TAP_DEVELOPER_NAMESPACE} docker-credentials
+    
+      echo "   ▪ Create Github SSH Access Secret (github-http-secret) in namespace ${TAP_DEVELOPER_NAMESPACE}"
+      configWriterSecrets ${TAP_DEVELOPER_NAMESPACE}
+  #gagaga
+    else
+      echo "   ▪ Verify Developer Namespace for '$TAP_DEVELOPER_NAMESPACE'"
+    fi
 
     echo " ✓ Create Service Claim for PostgreSQL backend"
     nam=$(kubectl -n $TAP_DEVELOPER_NAMESPACE get ClassClaim -o json | jq --arg key "newsletter-db" -r '.items[].metadata | select(.name == $key).name')
@@ -109,15 +153,15 @@ if [ "$1" == "setup" ]; then
       sleep 10
 
       i=1; stt="False"; while [ "$stt" != "True" -a $i -le 15 ]; do
-        stt=$(kubectl -n newsletter get workload $TAP_WORKLOAD_BACKEND_NAME -o json | jq -r '.status.conditions[] | select(.type == "Ready" and .reason == "Ready").status')
+        stt=$(kubectl -n $TAP_DEVELOPER_NAMESPACE get workload $TAP_WORKLOAD_BACKEND_NAME -o json | jq -r '.status.conditions[] | select(.type == "Ready" and .reason == "Ready").status')
         [ "$stt" == "True" ] && break
         let i=i+1
-        sleep 30
+        sleep 60
       done
 
       if [ "$stt" != "True" ]; then
         echo "ERROR: Failed to deploy $TAP_WORKLOAD_BACKEND_NAME on the $TAP_CLUSTER_OPS, please try manually"
-        echo "       => tanzu -n $TAP_WORKLOAD_BACKEND_NAME apps workload get $TAP_WORKLOAD_BACKEND_NAME"
+        echo "       => tanzu -n $TAP_DEVELOPER_NAMESPACE apps workload get $TAP_WORKLOAD_BACKEND_NAME"
         echo "       => kubectl -n $TAP_DEVELOPER_NAMESPACE apply -f /tmp/${TAP_WORKLOAD_BACKEND_NAME}-gitops.yaml"
         exit 1
       fi
@@ -187,14 +231,22 @@ if [ "$1" == "setup" ]; then
           jq -r '.[].id' | wc -l | awk '{ print $1 }') 
     if [ $ids -lt 3 ]; then 
       echo " ✓ Load Test Data to the backend"
-      curl -X 'POST' 'https://$TAP_WORKLOAD_BACKEND_NAME.dev.${DNS_SUBDOMAIN}.${DNS_DOMAIN}/api/v1/subscriptions' \
+      echo "   (curl https://$TAP_WORKLOAD_BACKEND_NAME.dev.${DNS_SUBDOMAIN}.${DNS_DOMAIN}/api/v1/subscriptions 2>/dev/null | jq -r)"
+      curl -X 'POST' https://$TAP_WORKLOAD_BACKEND_NAME.dev.${DNS_SUBDOMAIN}.${DNS_DOMAIN}/api/v1/subscriptions \
            -H 'accept: application/json' -H 'Content-Type: application/json' --data "@$TMPFILE" > /tmp/error.log 2>&1; ret=$?
-      if [ $ret -ne 0 ]; then 
+      if [ $ret -eq 0 ]; then 
+        echo "   ---------------------------------------------------------------------------------------------------------------------------------------------------------------"
+        curl -X 'GET' https://$TAP_WORKLOAD_BACKEND_NAME.dev.${DNS_SUBDOMAIN}.${DNS_DOMAIN}/api/v1/subscriptions -H 'accept: application/json' \
+          -H 'Content-Type: application/json' 2>/dev/null | jq -r | sed 's/^/   /g'
+        echo "   ---------------------------------------------------------------------------------------------------------------------------------------------------------------"
+      else
         echo "ERROR: failed to load testing data, please try manually"
+        echo "curl -X 'POST' 'https://$TAP_WORKLOAD_BACKEND_NAME.dev.${DNS_SUBDOMAIN}.${DNS_DOMAIN}/api/v1/subscriptions' -H 'accept: application/json' -H 'Content-Type: application/json' --data \"@$TMPFILE\""
       fi
     else
       echo " ✓ Verify Test Data loaded to the backend"
       echo "   (curl https://$TAP_WORKLOAD_BACKEND_NAME.dev.${DNS_SUBDOMAIN}.${DNS_DOMAIN}/api/v1/subscriptions 2>/dev/null | jq -r)"
+
       echo "   ---------------------------------------------------------------------------------------------------------------------------------------------------------------"
       curl -X 'GET' https://$TAP_WORKLOAD_BACKEND_NAME.dev.${DNS_SUBDOMAIN}.${DNS_DOMAIN}/api/v1/subscriptions -H 'accept: application/json' \
         -H 'Content-Type: application/json' 2>/dev/null | jq -r | sed 's/^/   /g'
@@ -211,17 +263,81 @@ if [ "$1" == "setup" ]; then
     echo "Demo Setup cleanup successfuly completed"
   fi
 
-  if [ "$2" == "ops" ]; then
+  if [ "$2" == "regops" ]; then
+    ########################################################################################################################
+    ######################################### OPS CLUSTER ##################################################################
+    ########################################################################################################################
+    kubectl config use-context $TAP_CONTEXT_OPS > /dev/null
+    createTAPNamespace $TAP_CONTEXT_OPS ${TAP_DEVELOPER_NAMESPACE}-regops
+
+    nam=$(kubectl -n ${TAP_DEVELOPER_NAMESPACE}-regops get ClassClaim -o json | jq --arg key "newsletter-db" -r '.items[].metadata | select(.name == $key).name')
+    if [ "$nam" != "newsletter-db" ]; then
+      echo " ✓ Create Service Claim for PostgreSQL backend in namespace ${TAP_DEVELOPER_NAMESPACE}-regops"
+      tanzu service class-claim create newsletter-db --class postgresql-unmanaged --parameter storageGB=3 -n ${TAP_DEVELOPER_NAMESPACE}-regops > /dev/null 2>&1
+    else
+      echo " ✓ Verify Service Claim for PostgreSQL backend in namespace ${TAP_DEVELOPER_NAMESPACE}-regops"
+    fi
+
+    echo " ✓ Apply workload file for ($TAP_WORKLOAD_BACKEND_NAME) on the OPS Cluster"
+    sed -e "s/GIT_USER/$TDH_DEMO_GITHUB_USER/g" \
+        -e "s/namespace: newsletter/namespace: ${TAP_DEVELOPER_NAMESPACE}-regops/g" \
+        $TDHHOME/demos/$TDH_DEMO_NAME/workload/template_${TAP_WORKLOAD_BACKEND_NAME}-regops.yaml > /tmp/${TAP_WORKLOAD_BACKEND_NAME}-regops.yaml
+
+    kubectl -n ${TAP_DEVELOPER_NAMESPACE}-regops delete -f /tmp/${TAP_WORKLOAD_BACKEND_NAME}-regops.yaml >/dev/null 2>&1
+    kubectl -n ${TAP_DEVELOPER_NAMESPACE}-regops apply -f /tmp/${TAP_WORKLOAD_BACKEND_NAME}-regops.yaml --wait  >/dev/null 2>&1
+    sleep 10 
+
+    i=1; stt="False"; while [ "$stt" != "True" -a $i -le 15 ]; do
+      stt=$(kubectl -n ${TAP_DEVELOPER_NAMESPACE}-regops get workload $TAP_WORKLOAD_BACKEND_NAME -o json | jq -r '.status.conditions[] | select(.type == "Ready" and .reason == "Ready").status')
+      [ "$stt" == "True" ] && break
+      let i=i+1
+      sleep 30
+    done 
+
+    if [ "$stt" != "True" ]; then
+      echo "ERROR: Failed to deploy $TAP_WORKLOAD_BACKEND_NAME on the $TAP_CLUSTER_OPS, please try manually"
+      echo "       => tanzu -n ${TAP_DEVELOPER_NAMESPACE}-regops apps workload get $TAP_WORKLOAD_BACKEND_NAME"
+      echo "       => kubectl -n ${TAP_DEVELOPER_NAMESPACE}-gitops apply -f /tmp/${TAP_WORKLOAD_BACKEND_NAME}-gitops.yaml"
+      exit 1
+    fi
+
+    ########################################################################################################################
+    ######################################### RUN CLUSTER ##################################################################
+    ########################################################################################################################
+    kubectl config use-context $TAP_CONTEXT_RUN > /dev/null 
+    createTAPNamespace $TAP_CONTEXT_RUN ${TAP_DEVELOPER_NAMESPACE}-regops
+    
+    nam=$(kubectl -n ${TAP_DEVELOPER_NAMESPACE}-regops get ClassClaim -o json | jq --arg key "newsletter-db" -r '.items[].metadata | select(.name == $key).name')
+    if [ "$nam" != "newsletter-db" ]; then
+      echo " ✓ Create Service Claim for PostgreSQL backend in namespace ${TAP_DEVELOPER_NAMESPACE}-regops"
+      tanzu service class-claim create newsletter-db --class postgresql-unmanaged --parameter storageGB=3 -n ${TAP_DEVELOPER_NAMESPACE}-regops > /dev/null 2>&1
+    else
+      echo " ✓ Verify Service Claim for PostgreSQL backend in namespace ${TAP_DEVELOPER_NAMESPACE}-regops"
+    fi
+    
+    echo " ✓ Apply workload file for ($TAP_WORKLOAD_BACKEND_NAME) on the RUN Cluster"
+    sed -e "s/GIT_USER/$TDH_DEMO_GITHUB_USER/g" \
+        -e "s/namespace: newsletter/namespace: ${TAP_DEVELOPER_NAMESPACE}-regops/g" \
+        $TDHHOME/demos/$TDH_DEMO_NAME/workload/template_${TAP_WORKLOAD_BACKEND_NAME}-regops-deliverable.yaml > /tmp/${TAP_WORKLOAD_BACKEND_NAME}-regops-deliverable.yaml
+       
+echo "kubectl -n ${TAP_DEVELOPER_NAMESPACE}-regops apply -f /tmp/${TAP_WORKLOAD_BACKEND_NAME}-regops-deliverable.yaml"
+
+
+  fi
+
+  if [ "$2" == "gitops" ]; then
     echo " ✓ Apply workload file for ($TAP_WORKLOAD_BACKEND_NAME) on the OPS Cluster"
     kubectl config use-context $TAP_CONTEXT_OPS > /dev/null
-    sed "s/GIT_USER/$TDH_DEMO_GITHUB_USER/g" $TDHHOME/demos/$TDH_DEMO_NAME/workload/template_${TAP_WORKLOAD_BACKEND_NAME}-gitops.yaml > /tmp/${TAP_WORKLOAD_BACKEND_NAME}-gitops.yaml
+    sed -e "s/GIT_USER/$TDH_DEMO_GITHUB_USER/g" \
+        -e "s/namespace: newsletter/namespace: ${TAP_DEVELOPER_NAMESPACE}-gitops/g" \
+        $TDHHOME/demos/$TDH_DEMO_NAME/workload/template_${TAP_WORKLOAD_BACKEND_NAME}-gitops.yaml > /tmp/${TAP_WORKLOAD_BACKEND_NAME}-gitops.yaml
 
-    kubectl -n $TAP_DEVELOPER_NAMESPACE delete -f /tmp/${TAP_WORKLOAD_BACKEND_NAME}-gitops.yaml >/dev/null 2>&1
-    kubectl -n $TAP_DEVELOPER_NAMESPACE apply -f /tmp/${TAP_WORKLOAD_BACKEND_NAME}-gitops.yaml --wait  >/dev/null 2>&1
+    kubectl -n ${TAP_DEVELOPER_NAMESPACE}-gitops delete -f /tmp/${TAP_WORKLOAD_BACKEND_NAME}-gitops.yaml >/dev/null 2>&1
+    kubectl -n ${TAP_DEVELOPER_NAMESPACE}-gitops apply -f /tmp/${TAP_WORKLOAD_BACKEND_NAME}-gitops.yaml --wait  >/dev/null 2>&1
     sleep 10
 
     i=1; stt="False"; while [ "$stt" != "True" -a $i -le 15 ]; do
-      stt=$(kubectl -n newsletter get workload $TAP_WORKLOAD_BACKEND_NAME -o json | jq -r '.status.conditions[] | select(.type == "Ready" and .reason == "Ready").status') 
+      stt=$(kubectl -n ${TAP_DEVELOPER_NAMESPACE}-gitops get workload $TAP_WORKLOAD_BACKEND_NAME -o json | jq -r '.status.conditions[] | select(.type == "Ready" and .reason == "Ready").status') 
       [ "$stt" == "True" ] && break
       let i=i+1
       sleep 30
@@ -229,21 +345,23 @@ if [ "$1" == "setup" ]; then
 
     if [ "$stt" != "True" ]; then 
       echo "ERROR: Failed to deploy $TAP_WORKLOAD_BACKEND_NAME on the $TAP_CLUSTER_OPS, please try manually"
-      echo "       => tanzu -n $TAP_WORKLOAD_BACKEND_NAME apps workload get $TAP_WORKLOAD_BACKEND_NAME"
-      echo "       => kubectl -n $TAP_DEVELOPER_NAMESPACE apply -f /tmp/${TAP_WORKLOAD_BACKEND_NAME}-gitops.yaml"
+      echo "       => tanzu -n ${TAP_DEVELOPER_NAMESPACE}-gitops apps workload get $TAP_WORKLOAD_BACKEND_NAME"
+      echo "       => kubectl -n ${TAP_DEVELOPER_NAMESPACE}-gitops apply -f /tmp/${TAP_WORKLOAD_BACKEND_NAME}-gitops.yaml"
       exit 1
     fi
 
     echo " ✓ Apply workload file for ($TAP_WORKLOAD_FRONTEND_NAME) on the OPS Cluster"
     kubectl config use-context $TAP_CONTEXT_OPS > /dev/null
-    sed "s/GIT_USER/$TDH_DEMO_GITHUB_USER/g" $TDHHOME/demos/$TDH_DEMO_NAME/workload/template_${TAP_WORKLOAD_FRONTEND_NAME}-gitops.yaml > /tmp/${TAP_WORKLOAD_FRONTEND_NAME}-gitops.yaml
+    sed -e "s/GIT_USER/$TDH_DEMO_GITHUB_USER/g" \
+        -e "s/namespace: newsletter/namespace: ${TAP_DEVELOPER_NAMESPACE}-gitops/g" \
+        $TDHHOME/demos/$TDH_DEMO_NAME/workload/template_${TAP_WORKLOAD_FRONTEND_NAME}-gitops.yaml > /tmp/${TAP_WORKLOAD_FRONTEND_NAME}-gitops.yaml
     
-    kubectl -n $TAP_DEVELOPER_NAMESPACE delete -f /tmp/${TAP_WORKLOAD_FRONTEND_NAME}-gitops.yaml >/dev/null 2>&1
-    kubectl -n $TAP_DEVELOPER_NAMESPACE apply -f /tmp/${TAP_WORKLOAD_FRONTEND_NAME}-gitops.yaml --wait  >/dev/null 2>&1
+    kubectl -n ${TAP_DEVELOPER_NAMESPACE}-gitops delete -f /tmp/${TAP_WORKLOAD_FRONTEND_NAME}-gitops.yaml >/dev/null 2>&1
+    kubectl -n ${TAP_DEVELOPER_NAMESPACE}-gitops apply -f /tmp/${TAP_WORKLOAD_FRONTEND_NAME}-gitops.yaml --wait  >/dev/null 2>&1
     sleep 10
 
     i=1; stt="False"; while [ "$stt" != "True" -a $i -le 15 ]; do
-      stt=$(kubectl -n newsletter get workload $TAP_WORKLOAD_FRONTEND_NAME -o json | jq -r '.status.conditions[] | select(.type == "Ready" and .reason == "Ready").status')
+      stt=$(kubectl -n ${TAP_DEVELOPER_NAMESPACE}-gitops get workload $TAP_WORKLOAD_FRONTEND_NAME -o json | jq -r '.status.conditions[] | select(.type == "Ready" and .reason == "Ready").status')
       [ "$stt" == "True" ] && break
       let i=i+1
       sleep 30
@@ -252,12 +370,33 @@ if [ "$1" == "setup" ]; then
     if [ "$stt" != "True" ]; then
       echo "ERROR: Failed to deploy $TAP_WORKLOAD_FRONTEND_NAME on the $TAP_CLUSTER_OPS, please try manually"
       echo "       => tanzu -n $TAP_WORKLOAD_FRONTEND_NAME apps workload get $TAP_WORKLOAD_BACKEND_NAME"
-      echo "       => kubectl -n $TAP_DEVELOPER_NAMESPACE apply -f /tmp/${TAP_WORKLOAD_FRONTEND_NAME}-gitops.yaml"
+      echo "       => kubectl -n ${TAP_DEVELOPER_NAMESPACE}-gitops apply -f /tmp/${TAP_WORKLOAD_FRONTEND_NAME}-gitops.yaml"
       exit 1
     fi
 
+    ########################################################################################################################
+    ######################################### RUN CLUSTER ##################################################################
+    ########################################################################################################################
+    kubectl config use-context $TAP_CONTEXT_RUN > /dev/null
+
+    createTAPNamespace $TAP_CONTEXT_RUN ${TAP_DEVELOPER_NAMESPACE}-gitops
+
+    nam=$(kubectl -n ${TAP_DEVELOPER_NAMESPACE}-gitops get ClassClaim -o json | jq --arg key "newsletter-db" -r '.items[].metadata | select(.name == $key).name')
+    if [ "$nam" != "newsletter-db" ]; then
+      echo " ✓ Create Service Claim for PostgreSQL backend in namespace ${TAP_DEVELOPER_NAMESPACE}-regops"
+      tanzu service class-claim create newsletter-db --class postgresql-unmanaged --parameter storageGB=3 -n ${TAP_DEVELOPER_NAMESPACE}-gitops > /dev/null 2>&1
+    else
+      echo " ✓ Verify Service Claim for PostgreSQL backend in namespace ${TAP_DEVELOPER_NAMESPACE}-gitops"
+    fi
+
+    echo " ✓ Apply workload file for ($TAP_WORKLOAD_BACKEND_NAME) on the OPS Cluster"
+    sed -e "s/GIT_USER/$TDH_DEMO_GITHUB_USER/g" \
+        -e "s/namespace: newsletter/namespace: ${TAP_DEVELOPER_NAMESPACE}-regops/g" \
+        $TDHHOME/demos/$TDH_DEMO_NAME/workload/template_${TAP_WORKLOAD_BACKEND_NAME}-regops-deliverable.yaml > /tmp/${TAP_WORKLOAD_BACKEND_NAME}-regops-deliverable.yaml
+
+
     echo "------------------------------------------------------------------------------------------------------------------------------------------------------------------"
-    tanzu -n $TAP_DEVELOPER_NAMESPACE apps workload list 
+    tanzu -n ${TAP_DEVELOPER_NAMESPACE}-gitops apps workload list 
     echo "------------------------------------------------------------------------------------------------------------------------------------------------------------------"
 
     echo ""
@@ -368,9 +507,9 @@ fi
 if [ "$1" == "init" ]; then 
   echo " ✓ Generating kubeconfig in \$HOME/.kube/config with '$TDH_SERVICE_LUSTER' and '$TAP_DEVELOPER_NAMESPACE' namespace as default context"
   echo "   Default Context will set to '$TAP_CONTEXT_DEV with '$TAP_DEVELOPER_NAMESPACE' as namespace'"
-  echo "   ------------------------------------------------------------------------------------------------------------------------------------------------------------"
+  echo "   ---------------------------------------------------------------------------------------------------------------------------------------------------------------"
   kubectl --kubeconfig=$HOME/.kube/config config get-contexts | sed 's/^/   /g'
-  echo "   ------------------------------------------------------------------------------------------------------------------------------------------------------------"
+  echo "   ---------------------------------------------------------------------------------------------------------------------------------------------------------------"
 
   yq ".contexts[0].context.namespace = \"$TAP_DEVELOPER_NAMESPACE\"" \
        $HOME/.tanzu-demo-hub/deployments/$TDH_DEMO_CONFIG/$TDH_SERVICE_LUSTER/${TDH_SERVICE_LUSTER}.kubeconfig > $HOME/.kube/config
@@ -388,12 +527,12 @@ if [ "$1" == "init" ]; then
     fi
   fi
 
-  rep=$(gh repo list --json name | jq -r --arg key cartographer '.[] | select(.name == $key).name')
+  rep=$(gh repo list --json name | jq -r --arg key $TDH_CARTO_GIT_REPO '.[] | select(.name == $key).name')
   if [ "$rep" == "" ]; then
-    echo "   ▪ Create TAP Config Write Repository https://github.com/$TDH_DEMO_GITHUB_USER/cartographer"
-    gh repo create $TDH_DEMO_GITHUB_USER/cartographer --yes >/dev/null 2>&1
+    echo "   ▪ Create TAP Config Write Repository https://github.com/$TDH_DEMO_GITHUB_USER/$TDH_CARTO_GIT_REPO"
+    gh repo create $TDH_DEMO_GITHUB_USER/$TDH_CARTO_GIT_REPO --yes >/dev/null 2>&1
   else 
-    echo "   ▪ Verify TAP Config Writer Repository https://github.com/$TDH_DEMO_GITHUB_USER/cartographer"
+    echo "   ▪ Verify TAP Config Writer Repository https://github.com/$TDH_DEMO_GITHUB_USER/$TDH_CARTO_GIT_REPO"
   fi
 
   rep=$(gh repo list --json name | jq -r --arg key $TDH_DEMO_GIT_REPO '.[] | select(.name == $key).name')
@@ -420,21 +559,18 @@ if [ "$1" == "init" ]; then
     echo "   ▪ Creating Developer Namespace for '$TAP_DEVELOPER_NAMESPACE' on $TAP_CLUSTER_DEV"
     createNamespace $TAP_DEVELOPER_NAMESPACE > /dev/null 2>&1
 
-    echo "   ▪ Creating Docker Pull Secret in 'default' service account"
-    kubectl -n $TAP_DEVELOPER_NAMESPACE create secret docker-registry docker-credentials \
-            --docker-server docker.io \
-            --docker-username $TDH_REGISTRY_DOCKER_USER \
-            --docker-password $TDH_REGISTRY_DOCKER_PASS > /tmp/error.log 2>&1; ret=$?
-    if [ $ret -ne 0 ]; then 
-      echo "ERROR: Failed to create secret docker-registry in namespace $TAP_DEVELOPER_NAMESPACE"
-      exit
-    fi
-
     echo "   ▪ Add Label for TAP Nameservice Provisoner 'apps.tanzu.vmware.com/tap-ns=\"\""
     kubectl label namespaces $TAP_DEVELOPER_NAMESPACE apps.tanzu.vmware.com/tap-ns="" > /dev/null 2>&1
 
     echo "   ▪ Add Label for Pod Security (Admission Controller) 'pod-security.kubernetes.io/enforce=baseline'"
     kubectl label namespaces $TAP_DEVELOPER_NAMESPACE pod-security.kubernetes.io/enforce=baseline > /dev/null 2>&1
+
+    echo "   ▪ Creating Docker Pull Secret in 'default' service account"
+    dockerPullSecretV2  ${TAP_DEVELOPER_NAMESPACE} docker-credentials
+
+    echo "   ▪ Create Github SSH Access Secret (github-http-secret) in namespace ${TAP_DEVELOPER_NAMESPACE}"
+    configWriterSecrets ${TAP_DEVELOPER_NAMESPACE}
+#gagaga
   else
     echo "   ▪ Verify Developer Namespace for '$TAP_DEVELOPER_NAMESPACE'"
   fi
@@ -459,75 +595,11 @@ if [ "$1" == "init" ]; then
     exit
   fi
 
-# ----
-    SSHDIR=$HOME/.tanzu-demo-hub/deployments/$TDH_DEMO_CONFIG/git-ssh
-    if [ ! -d $SSHDIR ]; then
-      mkdir -p $SSHDIR
-
-      cd $SSHDIR && ssh-keygen -R github.com > /dev/null 2>&1
-      cd $SSHDIR && ssh-keygen -t ecdsa -b 521 -C "" -f "identity" -N "" > /dev/null 2>&1
-      cd $SSHDIR && ssh-keyscan github.com > ./known_hosts 2>/dev/null
-      gh ssh-key add -t "tap" $SSHDIR/identity.pub > /dev/null 2>&1; ret=$?
-    fi
-
-    # THIS SHIT DOES NOT WORK !!!!!!
-    echo "   ▪ Create Github SSH Access Secret (git-ssh) in namespace $TAP_DEVELOPER_NAMESPACE"
-    kubectl delete secret git-ssh -n $TAP_DEVELOPER_NAMESPACE > /dev/null 2>&1
-    kubectl create secret generic git-ssh -n $TAP_DEVELOPER_NAMESPACE \
-      --from-file=$SSHDIR/identity \
-      --from-file=$SSHDIR/identity.pub \
-      --from-file=$SSHDIR/known_hosts > /dev/null 2>&1; ret=$?
-    if [ $ret -ne 0 ]; then
-      echo "ERROR: failed to create secret git-ssh, please try manually"
-      echo "kubectl create secret generic git-ssh -n tap-namespace-provisioning \\"
-      echo "  --from-file=$SSHDIR/identity \\"
-      echo "  --from-file=$SSHDIR/identity.pub \\"
-      echo "  --from-file=$SSHDIR/known_hosts"
-      exit
-    fi
-
-    # THIS SHIT WORKS !!!!!!
-    SSH_CONFIG=$SSHDIR/github-ssh-secret.yaml
-    echo "apiVersion: v1"                                                                  >  $SSH_CONFIG
-    echo "kind: Secret"                                                                    >> $SSH_CONFIG
-    echo "metadata:"                                                                       >> $SSH_CONFIG
-    echo "  name: github-ssh-secret"                                                       >> $SSH_CONFIG
-    echo "  annotations: {tekton.dev/git-0: github.com}"                                   >> $SSH_CONFIG
-    echo "type: kubernetes.io/ssh-auth"                                                    >> $SSH_CONFIG
-    echo "stringData:"                                                                     >> $SSH_CONFIG
-    echo "  ssh-privatekey: |"                                                             >> $SSH_CONFIG
-    cat $SSHDIR/identity | sed 's/^/      /g'                                              >> $SSH_CONFIG
-    echo "  identity: |"                                                                   >> $SSH_CONFIG
-    cat $SSHDIR/identity | sed 's/^/      /g'                                              >> $SSH_CONFIG
-    echo "  identity.pub: $(base64 -i $SSHDIR/identity.pub)"                               >> $SSH_CONFIG
-    echo "  known_hosts: $(base64 -i $SSHDIR/known_hosts)"                                 >> $SSH_CONFIG
-
-    echo "   ▪ Create Github SSH Access Secret (github-ssh-secret) in namespace $TAP_DEVELOPER_NAMESPACE"
-    kubectl delete secret github-ssh-secret -n $TAP_DEVELOPER_NAMESPACE > /dev/null 2>&1
-    kubectl apply -f $SSH_CONFIG -n $TAP_DEVELOPER_NAMESPACE > /dev/null 2>&1
-
-
-    SSH_CONFIG=$SSHDIR/github-http-secret.yaml
-    echo "apiVersion: v1"                                                                  >  $SSH_CONFIG
-    echo "kind: Secret"                                                                    >> $SSH_CONFIG
-    echo "metadata:"                                                                       >> $SSH_CONFIG
-    echo "  name: github-http-secret"                                                      >> $SSH_CONFIG
-    echo "  annotations:"                                                                  >> $SSH_CONFIG
-    echo "    tekton.dev/git-0: https://github.com/"                                       >> $SSH_CONFIG
-    echo "    tekton.dev/git-1: http://github.com/"                                        >> $SSH_CONFIG
-    echo "type: kubernetes.io/basic-auth"                                                  >> $SSH_CONFIG
-    echo "stringData:"                                                                     >> $SSH_CONFIG
-    echo "  username: $TDH_DEMO_GITHUB_USER"                                               >> $SSH_CONFIG
-    echo "  password: $TDH_DEMO_GITHUB_TOKEN"                                              >> $SSH_CONFIG
-
-    echo "   ▪ Create Github SSH Access Secret (github-http-secret) in namespace $TAP_DEVELOPER_NAMESPACE"
-    kubectl delete secret github-http-secret -n $TAP_DEVELOPER_NAMESPACE > /dev/null 2>&1
-    kubectl apply -f $SSH_CONFIG -n $TAP_DEVELOPER_NAMESPAC$TAP_DEVELOPER_NAMESPACE > /dev/null 2>&1
-
-# ----
-
-  # --- OPS CLUSTER ---
+  # --- MULTI CLUSTER ---
   if [ "$TDH_DEPLOYMENT_TYPE"  == "tap-multicluster" ]; then
+    ########################################################################################################################
+    ######################################### OPS CLUSTER ##################################################################
+    ########################################################################################################################
     echo " ✓ Verify Kubernetes Cluster Accessability ($TAP_CLUSTER_OPS)"
     kubectl config use-context $TAP_CONTEXT_OPS > /dev/null
     kubectl get ns > /tmp/error.log 2>&1; ret=$?
@@ -538,97 +610,87 @@ if [ "$1" == "init" ]; then
       exit
     fi
 
-    nam=$(kubectl get ns -o json | jq -r --arg key $TAP_DEVELOPER_NAMESPACE '.items[].metadata | select(.name == $key).name')
-    if [ "$nam" == "" ]; then 
-      echo "   ▪ Creating Developer Namespace for '$TAP_DEVELOPER_NAMESPACE'"
-      kubectl config use-context $TAP_CONTEXT_OPS > /dev/null
-      createNamespace $TAP_DEVELOPER_NAMESPACE > /dev/null 2>&1
-      echo "   ▪ Creating Docker Pull Secret in 'default' service account"
-      dockerPullSecret $TAP_DEVELOPER_NAMESPACE > /dev/null 2>&1                          
-      echo "   ▪ Add Label for TAP Nameservice Provisoner 'apps.tanzu.vmware.com/tap-ns=\"\""
-      kubectl label namespaces $TAP_DEVELOPER_NAMESPACE apps.tanzu.vmware.com/tap-ns="" > /dev/null 2>&1
-      echo "   ▪ Add Label for Pod Security (Admission Controller) 'pod-security.kubernetes.io/enforce=baseline'"
-      kubectl label namespaces $TAP_DEVELOPER_NAMESPACE pod-security.kubernetes.io/enforce=baseline > /dev/null 2>&1
-    else
-      echo "   ▪ Verify Developer Namespace for '$TAP_DEVELOPER_NAMESPACE'"
-    fi
+    createTAPNamespace $TAP_CONTEXT_OPS ${TAP_DEVELOPER_NAMESPACE}-regops
+    createTAPNamespace $TAP_CONTEXT_OPS ${TAP_DEVELOPER_NAMESPACE}-gitops
 
-    SSHDIR=$HOME/.tanzu-demo-hub/deployments/$TDH_DEMO_CONFIG/git-ssh
-    if [ ! -d $SSHDIR ]; then 
-      mkdir -p $SSHDIR
-  
-      cd $SSHDIR && ssh-keygen -R github.com > /dev/null 2>&1
-      cd $SSHDIR && ssh-keygen -t ecdsa -b 521 -C "" -f "identity" -N "" > /dev/null 2>&1
-      cd $SSHDIR && ssh-keyscan github.com > ./known_hosts 2>/dev/null
-      gh ssh-key add -t "tap" $SSHDIR/identity.pub > /dev/null 2>&1; ret=$?
-    fi
+#    nam=$(kubectl get ns -o json | jq -r --arg key ${TAP_DEVELOPER_NAMESPACE}-regops '.items[].metadata | select(.name == $key).name')
+#    if [ "$nam" == "" ]; then 
+#      kubectl config use-context $TAP_CONTEXT_OPS > /dev/null
+#
+#      echo "   ▪ Creating Build Namespace for '${TAP_DEVELOPER_NAMESPACE}-gitops'"
+#      createNamespace ${TAP_DEVELOPER_NAMESPACE}-gitops > /dev/null 2>&1
+#
+#      echo "   ▪ Add Label for TAP Nameservice Provisoner 'apps.tanzu.vmware.com/tap-ns=\"\""
+#      kubectl label namespaces ${TAP_DEVELOPER_NAMESPACE}-gitops apps.tanzu.vmware.com/tap-ns="" > /dev/null 2>&1
+#      echo "   ▪ Add Label for Pod Security (Admission Controller) 'pod-security.kubernetes.io/enforce=baseline'"
+#      kubectl label namespaces ${TAP_DEVELOPER_NAMESPACE}-gitops pod-security.kubernetes.io/enforce=baseline > /dev/null 2>&1
+#
+#      echo "   ▪ Creating Docker Pull Secret in 'default' service account"
+#      dockerPullSecretV2  ${TAP_DEVELOPER_NAMESPACE}-gitops docker-credentials
+#      configWriterSecrets ${TAP_DEVELOPER_NAMESPACE}-gitops
+#
+#
+#      echo "   ▪ Creating Build Namespace for '${TAP_DEVELOPER_NAMESPACE}-regops'"
+#      createNamespace ${TAP_DEVELOPER_NAMESPACE}-regops > /dev/null 2>&1
+#
+#      echo "   ▪ Add Label for TAP Nameservice Provisoner 'apps.tanzu.vmware.com/tap-ns=\"\""
+#      kubectl label namespaces ${TAP_DEVELOPER_NAMESPACE}-regops apps.tanzu.vmware.com/tap-ns="" > /dev/null 2>&1
+#      echo "   ▪ Add Label for Pod Security (Admission Controller) 'pod-security.kubernetes.io/enforce=baseline'"
+#      kubectl label namespaces ${TAP_DEVELOPER_NAMESPACE}-regops pod-security.kubernetes.io/enforce=baseline > /dev/null 2>&1
+#
+#      echo "   ▪ Creating Docker Pull Secret in 'default' service account"
+#      dockerPullSecretV2  ${TAP_DEVELOPER_NAMESPACE}-regops docker-credentials
+#      configWriterSecrets ${TAP_DEVELOPER_NAMESPACE}-regops
+#    else
+#      echo "   ▪ Verify Build Namespace for '${TAP_DEVELOPER_NAMESPACE}-gitops'"
+#      echo "   ▪ Verify Build Namespace for '${TAP_DEVELOPER_NAMESPACE}-regops'"
+#    fi
 
-    # THIS SHIT DOES NOT WORK !!!!!!
-    echo "   ▪ Create Github SSH Access Secret (git-ssh) in namespace $TAP_DEVELOPER_NAMESPACE"
-    kubectl delete secret git-ssh -n $TAP_DEVELOPER_NAMESPACE > /dev/null 2>&1
-    kubectl create secret generic git-ssh -n $TAP_DEVELOPER_NAMESPACE \
-      --from-file=$SSHDIR/identity \
-      --from-file=$SSHDIR/identity.pub \
-      --from-file=$SSHDIR/known_hosts > /dev/null 2>&1; ret=$?
-    if [ $ret -ne 0 ]; then 
-      echo "ERROR: failed to create secret git-ssh, please try manually"
-      echo "kubectl create secret generic git-ssh -n tap-namespace-provisioning \\"
-      echo "  --from-file=$SSHDIR/identity \\"
-      echo "  --from-file=$SSHDIR/identity.pub \\"
-      echo "  --from-file=$SSHDIR/known_hosts"
-      exit
-    fi
-
-    # THIS SHIT WORKS !!!!!!
-    SSH_CONFIG=$SSHDIR/github-ssh-secret.yaml
-    echo "apiVersion: v1"                                                                  >  $SSH_CONFIG
-    echo "kind: Secret"                                                                    >> $SSH_CONFIG
-    echo "metadata:"                                                                       >> $SSH_CONFIG
-    echo "  name: github-ssh-secret"                                                       >> $SSH_CONFIG
-    echo "  annotations: {tekton.dev/git-0: github.com}"                                   >> $SSH_CONFIG
-    echo "type: kubernetes.io/ssh-auth"                                                    >> $SSH_CONFIG
-    echo "stringData:"                                                                     >> $SSH_CONFIG
-    echo "  ssh-privatekey: |"                                                             >> $SSH_CONFIG
-    cat $SSHDIR/identity | sed 's/^/      /g'                                              >> $SSH_CONFIG
-    echo "  identity: |"                                                                   >> $SSH_CONFIG
-    cat $SSHDIR/identity | sed 's/^/      /g'                                              >> $SSH_CONFIG
-    echo "  identity.pub: $(base64 -i $SSHDIR/identity.pub)"                               >> $SSH_CONFIG
-    echo "  known_hosts: $(base64 -i $SSHDIR/known_hosts)"                                 >> $SSH_CONFIG
-
-    echo "   ▪ Create Github SSH Access Secret (github-ssh-secret) in namespace $TAP_DEVELOPER_NAMESPACE"
-    kubectl delete secret github-ssh-secret -n $TAP_DEVELOPER_NAMESPACE > /dev/null 2>&1
-    kubectl apply -f $SSH_CONFIG -n $TAP_DEVELOPER_NAMESPACE > /dev/null 2>&1
+    ########################################################################################################################
+    ######################################### RUN CLUSTER ##################################################################
+    ########################################################################################################################
+    echo " ✓ Verify Kubernetes Cluster Accessability ($TAP_CLUSTER_RUN)"
+    createTAPNamespace $TAP_CONTEXT_RUN ${TAP_DEVELOPER_NAMESPACE}-regops
+    createTAPNamespace $TAP_CONTEXT_RUN ${TAP_DEVELOPER_NAMESPACE}-gitops
 
 
-    SSH_CONFIG=$SSHDIR/github-http-secret.yaml
-    echo "apiVersion: v1"                                                                  >  $SSH_CONFIG
-    echo "kind: Secret"                                                                    >> $SSH_CONFIG
-    echo "metadata:"                                                                       >> $SSH_CONFIG
-    echo "  name: github-http-secret"                                                      >> $SSH_CONFIG
-    echo "  annotations:"                                                                  >> $SSH_CONFIG
-    echo "    tekton.dev/git-0: https://github.com/"                                       >> $SSH_CONFIG
-    echo "    tekton.dev/git-1: http://github.com/"                                        >> $SSH_CONFIG
-    echo "type: kubernetes.io/basic-auth"                                                  >> $SSH_CONFIG
-    echo "stringData:"                                                                     >> $SSH_CONFIG
-    echo "  username: $TDH_DEMO_GITHUB_USER"                                               >> $SSH_CONFIG
-    echo "  password: $TDH_DEMO_GITHUB_TOKEN"                                              >> $SSH_CONFIG
 
-    echo "   ▪ Create Github SSH Access Secret (github-http-secret) in namespace $TAP_DEVELOPER_NAMESPACE"
-    kubectl delete secret github-http-secret -n $TAP_DEVELOPER_NAMESPACE > /dev/null 2>&1
-    kubectl apply -f $SSH_CONFIG -n $TAP_DEVELOPER_NAMESPAC$TAP_DEVELOPER_NAMESPACE > /dev/null 2>&1
+#    kubectl config use-context $TAP_CONTEXT_RUN > /dev/null
+#    nam=$(kubectl get ns -o json | jq -r --arg key $TAP_DEVELOPER_NAMESPACE '.items[].metadata | select(.name == $key).name')
+#    if [ "$nam" == "" ]; then
+#      kubectl config use-context $TAP_CONTEXT_RUN > /dev/null
+#
+#      echo "   ▪ Creating Run Namespace for '${TAP_DEVELOPER_NAMESPACE}-gitops'"
+#      createNamespace ${TAP_DEVELOPER_NAMESPACE}-gitops > /dev/null 2>&1
+#
+#      echo "   ▪ Add Label for TAP Nameservice Provisoner 'apps.tanzu.vmware.com/tap-ns=\"\""
+#      kubectl label namespaces ${TAP_DEVELOPER_NAMESPACE}-gitops apps.tanzu.vmware.com/tap-ns="" > /dev/null 2>&1
+#      echo "   ▪ Add Label for Pod Security (Admission Controller) 'pod-security.kubernetes.io/enforce=baseline'"
+#      kubectl label namespaces ${TAP_DEVELOPER_NAMESPACE}-gitops pod-security.kubernetes.io/enforce=baseline > /dev/null 2>&1
+#
+#      echo "   ▪ Creating Docker Pull Secret in 'default' service account"
+#      dockerPullSecretV2  ${TAP_DEVELOPER_NAMESPACE}-gitops docker-credentials
+#      configWriterSecrets ${TAP_DEVELOPER_NAMESPACE}-gitops
+#
+#
+#      echo "   ▪ Creating Run Namespace for '${TAP_DEVELOPER_NAMESPACE}-regops'"
+#      createNamespace ${TAP_DEVELOPER_NAMESPACE}-regops > /dev/null 2>&1
+#
+#      echo "   ▪ Add Label for TAP Nameservice Provisoner 'apps.tanzu.vmware.com/tap-ns=\"\""
+#      kubectl label namespaces ${TAP_DEVELOPER_NAMESPACE}-regops apps.tanzu.vmware.com/tap-ns="" > /dev/null 2>&1
+#      echo "   ▪ Add Label for Pod Security (Admission Controller) 'pod-security.kubernetes.io/enforce=baseline'"
+#      kubectl label namespaces ${TAP_DEVELOPER_NAMESPACE}-regops pod-security.kubernetes.io/enforce=baseline > /dev/null 2>&1
+#
+#      echo "   ▪ Creating Docker Pull Secret in 'default' service account"
+#      dockerPullSecretV2  ${TAP_DEVELOPER_NAMESPACE}-regops docker-credentials
+#      configWriterSecrets ${TAP_DEVELOPER_NAMESPACE}-regops
+#    else
+#      echo "   ▪ Verify Build Namespace for '${TAP_DEVELOPER_NAMESPACE}-gitops'"
+#      echo "   ▪ Verify Build Namespace for '${TAP_DEVELOPER_NAMESPACE}-regops'"
+#    fi
 
     if [ "$TDH_DEMO_GITHUB_USER" == "" -o "$TDH_DEMO_GITHUB_TOKEN" == "" ]; then 
       echo "Please set the TDH_DEMO_GITHUB_USER and TDH_DEMO_GITHUB_TOKEN variable in your \$HOME/.tanzu-demo-hub.cfg file"
-      exit
-    fi
-
-    ns=$(kubectl get ns -o json | jq -r --arg key "$TAP_DEVELOPER_NAMESPACE" '.items[].metadata | select(.name == $key).name')
-    if [ "$ns" != "$TAP_DEVELOPER_NAMESPACE" ]; then
-      echo "ERROR: The developer namespace '$TAP_DEVELOPER_NAMESPACE' does not exist yet, please do the following stepts:"
-      echo "       => tools/tdh-tools-tkg-2.2.1.sh"
-      echo "          tdh-tools:/$ cd \$HOME/workspacea/tanzu-demo-hub/scripts"
-      echo "          tdh-tools:/$ ./tap-create-developer-namespace.sh $TAP_DEVELOPER_NAMESPACE"
-
       exit
     fi
   fi
@@ -664,10 +726,18 @@ if [ "$1" == "init" ]; then
 fi
 
 if [ "$1" == "clean" ]; then 
+  # --- DELETE TAP DEMP REPO ---
   rep=$(gh repo list --json name | jq -r --arg key $TDH_DEMO_GIT_REPO '.[] | select(.name == $key).name')
   if [ "$rep" == "$TDH_DEMO_GIT_REPO" ]; then
     echo " ✓ Deleted repository https://githum.com/$TDH_DEMO_GITHUB_USER/$TDH_DEMO_GIT_REPO"
     gh repo delete $TDH_DEMO_GITHUB_USER/$TDH_DEMO_GIT_REPO --yes >/dev/null 2>&1
+  fi
+
+  # --- DELETE GITOPS CARTOGRAPHER REPO ---
+  rep=$(gh repo list --json name | jq -r --arg key $TDH_CARTO_GIT_REPO '.[] | select(.name == $key).name')
+  if [ "$rep" == "$TDH_CARTO_GIT_REPO" ]; then
+    echo " ✓ Deleted repository https://githum.com/$TDH_DEMO_GITHUB_USER/$TDH_CARTO_GIT_REPO"
+    gh repo delete $TDH_DEMO_GITHUB_USER/$TDH_CARTO_GIT_REPO --yes >/dev/null 2>&1
   fi
   
   if [ -d $HOME/workspace/$TDH_DEMO_GIT_REPO ]; then 
@@ -675,7 +745,7 @@ if [ "$1" == "clean" ]; then
     rm -rf $HOME/workspace/$TDH_DEMO_GIT_REPO
   fi
 
-  echo " ✓ Cleanup Deployments in namespace '$TAP_DEVELOPER_NAMESPACE) on Cluster ($TAP_CLUSTER_DEV)"
+  echo " ✓ Cleanup Deployments in namespace '$TAP_DEVELOPER_NAMESPACE' on Cluster ($TAP_CLUSTER_DEV)"
   kubectl config use-context $TAP_CONTEXT_DEV > /dev/null
 
   for n in $(kubectl -n $TAP_DEVELOPER_NAMESPACE get classclaims -o json 2>/dev/null | jq -r '.items[].metadata.name'); do
@@ -698,8 +768,10 @@ if [ "$1" == "clean" ]; then
     fi
   done
 
+  kubectl delete ns $TAP_DEVELOPER_NAMESPACE > /dev/null 2>&1
+
   if [ "$TDH_DEPLOYMENT_TYPE"  == "tap-multicluster" ]; then
-    echo " ✓ Cleanup Deployments in namespace '$TAP_DEVELOPER_NAMESPACE) on Cluster ($TAP_CLUSTER_OPS)"
+    echo " ✓ Cleanup Deployments in namespace '$TAP_DEVELOPER_NAMESPACE' on Cluster ($TAP_CLUSTER_OPS)"
     kubectl config use-context $TAP_CONTEXT_OPS > /dev/null
 
     for n in $(kubectl -n $TAP_DEVELOPER_NAMESPACE get classclaims -o json 2>/dev/null| jq -r '.items[].metadata.name'); do
@@ -722,7 +794,10 @@ if [ "$1" == "clean" ]; then
       fi
     done
 
-    echo " ✓ Cleanup Deployments in namespace '$TAP_DEVELOPER_NAMESPACE) on Cluster ($TAP_CLUSTER_RUN)"
+    kubectl delete ns ${TAP_DEVELOPER_NAMESPACE}-gitops > /dev/null 2>&1
+    kubectl delete ns ${TAP_DEVELOPER_NAMESPACE}-regops > /dev/null 2>&1
+
+    echo " ✓ Cleanup Deployments in namespace '$TAP_DEVELOPER_NAMESPACE' on Cluster ($TAP_CLUSTER_RUN)"
     kubectl config use-context $TAP_CONTEXT_RUN > /dev/null
 
     for n in $(kubectl -n $TAP_DEVELOPER_NAMESPACE get classclaims -o json 2>/dev/null| jq -r '.items[].metadata.name'); do
@@ -744,6 +819,9 @@ if [ "$1" == "clean" ]; then
         exit
       fi
     done
+
+    kubectl delete ns ${TAP_DEVELOPER_NAMESPACE}-gitops > /dev/null 2>&1
+    kubectl delete ns ${TAP_DEVELOPER_NAMESPACE}-regops > /dev/null 2>&1
   fi
 
   echo ""
@@ -799,6 +877,35 @@ if [ "$1" == "tap" ]; then
   echo "-------------------------------------------------------------------------------------------------------------------------------"
   echo ""
 fi
+
+if [ "$1" == "ClusterSupplyChain" -o "$1" == "clustersupplychain" -o "$1" == "cluster-supply-chain" ]; then
+  echo "############################## $2 ##############################"
+
+  [ "$2" == "" ] && kubectl get ClusterSupplyChain && exit
+  for n in $(kubectl get ClusterSupplyChain $2 -o json | jq -r '.spec.resources[].name'); do
+    echo "=> Ressource: $n"
+
+    kubectl get ClusterSupplyChain $2 -o json | jq --arg key "$n" -r '.spec.resources[] | select(.name == $key)' > /tmp/out.json
+    first=0
+    for nn in $(jq -r '.params[].name' /tmp/out.json 2>/dev/null); do
+      if [ $first -eq 0 ]; then
+        echo "                Parameter: $nn"
+        first=1
+      else
+        echo "                           $nn"
+      fi
+    
+      jq -r --arg key "$nn" '.params[] | select(.name == $key)' /tmp/out.json | \
+      jq 'if (.value) then {"ca_cert_data": .value.ca_cert_data,"repository": .value.repository, "server": .value.server } else . end' | \
+      sed -e 's/certificate:.*$/<CERTIFICATE>"/g' -e 1d -e '$d' -e 's/"//g' -e 's/,$//' -e 's/^  /                             - /g'
+    done 
+  
+    echo "                templateRef:"
+    jq '.templateRef' /tmp/out.json | \
+    sed -e 's/certificate:.*$/<CERTIFICATE>"/g' -e 1d -e '$d' -e 's/"//g' -e 's/,$//' -e 's/^  /                               /g' -e 's/  kind/- kind/g' -e 's/  name/- name/g'
+  done
+fi 
+
 
 exit
 
