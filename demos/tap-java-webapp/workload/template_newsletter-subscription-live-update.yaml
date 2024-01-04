@@ -1,0 +1,44 @@
+apiVersion: carto.run/v1alpha1
+kind: Workload
+metadata:
+  annotations:
+    autoscaling.knative.dev/minScale: "1"
+  labels:
+    apis.apps.tanzu.vmware.com/register-api: "true"
+    app.kubernetes.io/part-of: newsletter
+    apps.tanzu.vmware.com/debug: "true"
+    apps.tanzu.vmware.com/has-tests: "true"
+    apps.tanzu.vmware.com/workload-type: web
+  name: newsletter-subscription
+  namespace: newsletter
+spec:
+  build:
+    env:
+    - name: BP_JVM_VERSION
+      value: "20"
+  params:
+  - name: annotations
+    value:
+      autoscaling.knative.dev/minScale: "1"
+  - name: api_descriptor
+    value:
+      description: Newsletter Subscription Management REST API Service
+      lifecycle: experimental
+      location:
+        path: /v3/api-docs
+      owner: newsletter-team
+      system: newsletter-subscription
+      type: openapi
+  - name: debug
+    value: "true"
+  - name: live-update
+    value: "true"
+  serviceClaims:
+  - name: db
+    ref:
+      apiVersion: services.apps.tanzu.vmware.com/v1alpha1
+      kind: ClassClaim
+      name: newsletter-db
+  source:
+    image: harbor.apps.tapmc.tanzudemohub.com/library/newsletter:latest@sha256:8366fb5f9d0ff8c859e3fd1af51768f0acf9bce73ae766c6ff9afb1fe2e1ef3a
+

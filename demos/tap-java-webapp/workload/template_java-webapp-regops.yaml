@@ -1,0 +1,27 @@
+apiVersion: carto.run/v1alpha1
+kind: Workload
+metadata:
+  labels:
+    app.kubernetes.io/part-of: java-webapp
+    apps.tanzu.vmware.com/workload-type: web
+  name: java-webapp
+  namespace: NAMESPACE
+spec:
+  build:
+    env:
+    - name: BP_JVM_VERSION
+      value: "11"
+  params:
+    - name: gitops_ssh_secret
+      value: github-ssh-secret
+    - name: gitops_server_address
+      value: https://github.com/
+    - name: gitops_repository_owner
+      value: GIT_USER
+    - name: gitops_repository_name
+      value: java-webapp-config
+  source:
+    git:
+      ref:
+        branch: main
+      url: https://github.com/GIT_USER/java-webapp

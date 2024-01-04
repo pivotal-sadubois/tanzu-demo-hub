@@ -1,0 +1,24 @@
+apiVersion: carto.run/v1alpha1
+kind: Deliverable
+metadata:
+  name: newsletter-subscription
+  labels:
+    app.kubernetes.io/component: deliverable
+    app.kubernetes.io/part-of: newsletter
+    app.tanzu.vmware.com/deliverable-type: web
+spec:
+  serviceClaims:
+  - name: db
+    ref:
+      apiVersion: services.apps.tanzu.vmware.com/v1alpha1
+      kind: ClassClaim
+      name: newsletter-db
+  params:
+    - name: gitops_ssh_secret
+      value: github-ssh-secret
+  serviceAccountName: default
+  source:
+    git:
+      ref:
+        branch: main
+      url: ssh://git@github.com/GIT_USER/cartographer

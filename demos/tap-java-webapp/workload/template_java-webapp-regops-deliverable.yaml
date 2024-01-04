@@ -1,0 +1,17 @@
+apiVersion: carto.run/v1alpha1
+kind: Deliverable
+metadata:
+  name: newsletter-subscription
+  annotations:
+    autoscaling.knative.dev/minScale: "1"
+  labels:
+    app.kubernetes.io/component: deliverable
+    app.kubernetes.io/part-of: newsletter
+    app.tanzu.vmware.com/deliverable-type: web
+spec:
+  serviceAccountName: default
+  source:
+    git:
+      ref:
+        branch: main
+      url: https://github.com/GIT_USER/java-webapp-config
