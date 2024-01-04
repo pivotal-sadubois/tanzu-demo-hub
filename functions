@@ -7805,10 +7805,6 @@ installTAPV2() {
       createNamespace tdh-tools-carvel > /dev/null 2>&1
       cmdLoop kubectl label ns tdh-tools-carvel pod-security.kubernetes.io/enforce=baseline > /dev/null 2>&1
 
-echo "functions: INSTALL_REGISTRY_HOSTNAME:$INSTALL_REGISTRY_HOSTNAME"
-echo "functions: INSTALL_REGISTRY_USERNAME:$INSTALL_REGISTRY_USERNAME"
-echo "functions: INSTALL_REGISTRY_PASSWORD:$INSTALL_REGISTRY_PASSWORD"
-
       dockerPullSecret default
       kubectl delete pod tdh-tools-carvel-carvel > /dev/null 2>&1
       kubectl run --image=docker.io/sadubois/tdh-tools-carvel-carvel-1.6.1:latest tdh-tools-carvel-carvel sleep 10000000 -n tdh-tools-carvel > /dev/null 2>&1
@@ -7827,17 +7823,12 @@ echo "functions: INSTALL_REGISTRY_PASSWORD:$INSTALL_REGISTRY_PASSWORD"
         echo "       => kubectl exec -it tdh-tools-carvel-carvel -n tdh-tools-carvel -- docker login $INSTALL_REGISTRY_HOSTNAME -u $INSTALL_REGISTRY_USERNAME -p $INSTALL_REGISTRY_PASSWORD"; exit 1
       fi
 
-echo "functions: IMGPKG_REGISTRY_HOSTNAME_0:$IMGPKG_REGISTRY_HOSTNAME_0"
-echo "functions: IMGPKG_REGISTRY_USERNAME_0:$IMGPKG_REGISTRY_USERNAME_0"
-echo "functions: IMGPKG_REGISTRY_PASSWORD_0:$IMGPKG_REGISTRY_PASSWORD_0"
-
       cnt=0; ret=1
       while [ $ret -ne 0 -a $cnt -lt 10 ]; do
         kubectl exec -it tdh-tools-carvel-carvel -n tdh-tools-carvel -- docker login $IMGPKG_REGISTRY_HOSTNAME_0 -u $IMGPKG_REGISTRY_USERNAME_0 -p $IMGPKG_REGISTRY_PASSWORD_0 > /tmp/error.log 2>&1; ret=$?
         sleep 10
         let cnt=cnt+1
       done
-
 
       if [ $ret -ne 0 ]; then
         logMessages /tmp/error.log
@@ -7998,7 +7989,30 @@ echo "functions: IMGPKG_REGISTRY_PASSWORD_0:$IMGPKG_REGISTRY_PASSWORD_0"
 
     APP_LIVE_VIEW="ops.${subdomain}.${dnsdomain}"
     TAP_CONFIG_1=$HOME/.tanzu-demo-hub/$TDH_DEPLOYMENT_PATH/tap_config_stage_1.yaml
-    echo "ceip_policy_disclosed: true"                                                                                            >  $TAP_CONFIG_1
+    echo "profile: run"                                                                                                           >  $TAP_CONFIG_1
+    echo ""                                                                                                                       >> $TAP_CONFIG_1
+    echo "shared:"                                                                                                                >> $TAP_CONFIG_1
+    echo "  ca_cert_data:  |"                                                                                                     >> $TAP_CONFIG_1
+    echo "    certificate: |"                                                                                                     >> $TAP_CONFIG_1
+
+    cmdLoop kubectl get secret $TLS_SECRET -o json | jq -r '.data."tls.crt"' | base64 -d | sed 's/^/    /g' > /tmp/tmpfile.yaml; ret=$?
+    [ $ret -eq 0 ] && cat /tmp/tmpfile.yaml >> $TAP_CONFIG_1 || exit 1
+
+    echo ""                                                                                                                       >> $TAP_CONFIG_1
+    echo "  ingress_domain: $DNS_DOMAIN"                                                                                          >> $TAP_CONFIG_1
+    echo "  kubernetes_distribution: \"\""                                                                                        >> $TAP_CONFIG_1
+    echo "  kubernetes_version: \"\""                                                                                             >> $TAP_CONFIG_1
+    echo ""                                                                                                                       >> $TAP_CONFIG_1
+    echo "supply_chain: basic"                                                                                                    >> $TAP_CONFIG_1
+    echo "ceip_policy_disclosed: true"                                                                                            >> $TAP_CONFIG_1
+    echo ""                                                                                                                       >> $TAP_CONFIG_1
+    echo "cnrs:"                                                                                                                  >> $TAP_CONFIG_1
+    echo "  domain_name: $DNS_DOMAIN"                                                                                             >> $TAP_CONFIG_1
+    echo "  domain_template: '{{.Name}}.{{.Domain}}'"                                                                             >> $TAP_CONFIG_1
+    echo "  ingress_issuer: \"\""                                                                                                 >> $TAP_CONFIG_1
+    echo "  contour:"                                                                                                             >> $TAP_CONFIG_1
+    echo "    default_tls_secret: default/$TLS_SECRET"                                                                            >> $TAP_CONFIG_1
+    echo ""                                                                                                                       >> $TAP_CONFIG_1
     echo "contour:"                                                                                                               >> $TAP_CONFIG_1
     echo "  infrastructure_provider: vsphere"                                                                                     >> $TAP_CONFIG_1
     echo "  contour:"                                                                                                             >> $TAP_CONFIG_1
@@ -8019,9 +8033,6 @@ echo "functions: IMGPKG_REGISTRY_PASSWORD_0:$IMGPKG_REGISTRY_PASSWORD_0"
     echo "    duration: 8760h"                                                                                                    >> $TAP_CONFIG_1
     echo "    renewBefore: 360h"                                                                                                  >> $TAP_CONFIG_1
 
-
-
-
     # https://docs.vmware.com/en/VMware-Tanzu-Application-Platform/1.4/tap/api-auto-registration-installation.html?hWord=N4IghgNiBc4A4EsD6YCuAXA9kgTgUwHMEBndHMdBTAOxAF8g
     echo "api_auto_registration:"                                                                                                 >> $TAP_CONFIG_1
     echo "  auto_generate_cert: false"                                                                                            >> $TAP_CONFIG_1
@@ -8037,18 +8048,12 @@ echo "functions: IMGPKG_REGISTRY_PASSWORD_0:$IMGPKG_REGISTRY_PASSWORD_0"
     echo "    ingressEnabled: true"                                                                                               >> $TAP_CONFIG_1
     echo "    host:  appliveview.$APP_LIVE_VIEW"                                                                                     >> $TAP_CONFIG_1
     echo ""                                                                                                                       >> $TAP_CONFIG_1
-    echo "profile: run"                                                                                                           >> $TAP_CONFIG_1
-    echo ""                                                                                                                       >> $TAP_CONFIG_1
-    echo "shared:"                                                                                                                >> $TAP_CONFIG_1
-    echo "  ingress_domain: $APP_LIVE_VIEW"                                                                                          >> $TAP_CONFIG_1
-    echo "  kubernetes_distribution: \"\""                                                                                        >> $TAP_CONFIG_1
-    echo "  kubernetes_version: \"\""                                                                                             >> $TAP_CONFIG_1
-    echo "supply_chain: basic"                                                                                                    >> $TAP_CONFIG_1
 
     #run
     goTAPStage 1
 
     createCertDelegationV2
+    updateDNSrecord
 #kala
 
     messageLineIntend
@@ -8450,10 +8455,12 @@ echo "functions: IMGPKG_REGISTRY_PASSWORD_0:$IMGPKG_REGISTRY_PASSWORD_0"
     # https://docs.vmware.com/en/VMware-Tanzu-Application-Platform/1.1/tap/GUID-tap-gui-troubleshooting.html
     # 2022-07-06T22:40:11.421Z catalog warn Unable to read url, Error: Incorrect url: https://gitea.apps-contour.awstkg.pcfsdu.com/tanzu/yelb_catalog/raw/branch/master/catalog-info.yaml, Error: Wrong GitLab URL type=plugin entity=location:default/generated-2c00d586b2fbd35aa8d0cf25570923d1f1416d1c
 
-    echo "    integrations:"                                                                                                       >> $TAP_CONFIG
-    echo "      github:"                                                                                                           >> $TAP_CONFIG
-    echo "        - host: github.com"                                                                                              >> $TAP_CONFIG
-    echo "          token: $TAP_GITHUB_TOKEN"                                                                                      >> $TAP_CONFIG
+    # Create an Application Accelerator Git repository during project creation
+    # https://docs.vmware.com/en/VMware-Tanzu-Application-Platform/1.7/tap/tap-gui-plugins-application-accelerator-git-repo.html
+    #echo "    integrations:"                                                                                                       >> $TAP_CONFIG
+    #echo "      github:"                                                                                                           >> $TAP_CONFIG
+    #echo "        - host: github.com"                                                                                              >> $TAP_CONFIG
+    #echo "          token: $TDH_DEMO_GITHUB_TOKEN"                                                                                 >> $TAP_CONFIG
 
     echo "    catalog:"                                                                                                            >> $TAP_CONFIG
     echo "      locations:"                                                                                                        >> $TAP_CONFIG
@@ -8484,6 +8491,7 @@ echo "functions: IMGPKG_REGISTRY_PASSWORD_0:$IMGPKG_REGISTRY_PASSWORD_0"
     echo "      reading:"                                                                                                          >> $TAP_CONFIG
     echo "        allow:"                                                                                                          >> $TAP_CONFIG
     echo "          - host: '*.$DNS_DOMAIN'"                                                                                       >> $TAP_CONFIG
+    echo "          - host: '*.run.${subdomain}.${dnsdomain}'"                                                                     >> $TAP_CONFIG
     echo "          - host: '*.apps.${subdomain}.${dnsdomain}'"                                                                    >> $TAP_CONFIG
     echo ""                                                                                                                        >> $TAP_CONFIG
 
@@ -20100,6 +20108,126 @@ listTCEmcDeployments() {
 }
 
 # ------------------------------------------------------------------------------------------
+# Function Name ......: configWriterSecrets
+# Function Purpose ...: List TCE Management Cluster Deployments
+# ------------------------------------------------------------------------------------------
+# Argument ($1) ......: Namespace
+#          ($2) ......: Service Account
+# ------------------------------------------------------------------------------------------
+# Return Value .......: 0 - SUCCEED, 1 - FAILED
+# ------------------------------------------------------------------------------------------
+configWriterSecrets() {
+  TMP_NAMESPACE=$1
+  TMP_SECRET_NAME=$2 
+
+  SSHDIR=$HOME/.tanzu-demo-hub/deployments/$TDH_DEMO_CONFIG/git-ssh
+  if [ ! -d $SSHDIR ]; then
+    mkdir -p $SSHDIR
+
+    cd $SSHDIR && ssh-keygen -R github.com > /dev/null 2>&1
+    cd $SSHDIR && ssh-keygen -t ecdsa -b 521 -C "" -f "identity" -N "" > /dev/null 2>&1
+    cd $SSHDIR && ssh-keyscan github.com > ./known_hosts 2>/dev/null
+    gh ssh-key add -t "tap" $SSHDIR/identity.pub > /dev/null 2>&1; ret=$?
+  fi
+
+  # THIS SHIT DOES NOT WORK !!!!!!
+  echo "   ▪ Create Github SSH Access Secret (git-ssh) in namespace $TMP_NAMESPACE"
+  kubectl delete secret git-ssh -n $TMP_NAMESPACE > /dev/null 2>&1
+  kubectl create secret generic git-ssh -n $TMP_NAMESPACE \
+    --from-file=$SSHDIR/identity \
+    --from-file=$SSHDIR/identity.pub \
+    --from-file=$SSHDIR/known_hosts > /dev/null 2>&1; ret=$?
+  if [ $ret -ne 0 ]; then
+    echo "ERROR: failed to create secret git-ssh, please try manually"
+    echo "kubectl create secret generic git-ssh -n $TMP_NAMESPACE \\"
+    echo "  --from-file=$SSHDIR/identity \\"
+    echo "  --from-file=$SSHDIR/identity.pub \\"
+    echo "  --from-file=$SSHDIR/known_hosts"
+    exit
+  fi
+
+  # THIS SHIT WORKS !!!!!!
+  SSH_CONFIG=$SSHDIR/github-ssh-secret.yaml
+  echo "apiVersion: v1"                                                                  >  $SSH_CONFIG
+  echo "kind: Secret"                                                                    >> $SSH_CONFIG
+  echo "metadata:"                                                                       >> $SSH_CONFIG
+  echo "  name: github-ssh-secret"                                                       >> $SSH_CONFIG
+  echo "  annotations: {tekton.dev/git-0: github.com}"                                   >> $SSH_CONFIG
+  echo "type: kubernetes.io/ssh-auth"                                                    >> $SSH_CONFIG
+  echo "stringData:"                                                                     >> $SSH_CONFIG
+  echo "  ssh-privatekey: |"                                                             >> $SSH_CONFIG
+  cat $SSHDIR/identity | sed 's/^/      /g'                                              >> $SSH_CONFIG
+  echo "  identity: |"                                                                   >> $SSH_CONFIG
+  cat $SSHDIR/identity | sed 's/^/      /g'                                              >> $SSH_CONFIG
+  echo "  identity.pub: $(base64 -i $SSHDIR/identity.pub)"                               >> $SSH_CONFIG
+  echo "  known_hosts: $(base64 -i $SSHDIR/known_hosts)"                                 >> $SSH_CONFIG
+
+  echo "   ▪ Create Github SSH Access Secret (github-ssh-secret) in namespace $TMP_NAMESPACE"
+  kubectl delete secret github-ssh-secret -n $TMP_NAMESPACE > /dev/null 2>&1
+  kubectl apply -f $SSH_CONFIG -n $TMP_NAMESPACE > /dev/null 2>&1
+
+  SSH_CONFIG=$SSHDIR/github-http-secret.yaml
+  echo "apiVersion: v1"                                                                  >  $SSH_CONFIG
+  echo "kind: Secret"                                                                    >> $SSH_CONFIG
+  echo "metadata:"                                                                       >> $SSH_CONFIG
+  echo "  name: github-http-secret"                                                      >> $SSH_CONFIG
+  echo "  annotations:"                                                                  >> $SSH_CONFIG
+  echo "    tekton.dev/git-0: https://github.com/"                                       >> $SSH_CONFIG
+  echo "    tekton.dev/git-1: http://github.com/"                                        >> $SSH_CONFIG
+  echo "type: kubernetes.io/basic-auth"                                                  >> $SSH_CONFIG
+  echo "stringData:"                                                                     >> $SSH_CONFIG
+  echo "  username: $TDH_DEMO_GITHUB_USER"                                               >> $SSH_CONFIG
+  echo "  password: $TDH_DEMO_GITHUB_TOKEN"                                              >> $SSH_CONFIG
+
+  echo "   ▪ Create Github SSH Access Secret (github-http-secret) in namespace $TMP_NAMESPACE"
+  kubectl delete secret github-http-secret -n $TMP_NAMESPACE > /dev/null 2>&1
+  kubectl apply -f $SSH_CONFIG -n $TMP_NAMESPACE > /dev/null 2>&1
+}
+
+# ------------------------------------------------------------------------------------------
+# Function Name ......: dockerPullSecretV2
+# Function Purpose ...: List TCE Management Cluster Deployments
+# ------------------------------------------------------------------------------------------
+# Argument ($1) ......: Namespace
+#          ($2) ......: Service Account
+# ------------------------------------------------------------------------------------------
+# Return Value .......: 0 - SUCCEED, 1 - FAILED
+# ------------------------------------------------------------------------------------------
+dockerPullSecretV2() {
+  TMP_NAMESPACE=$1
+  TMP_SECRET_NAME=$2
+
+  cmdLoop kubectl -n $TMP_NAMESPACE get secret -o json > /tmp/output.json
+  nam=$(jq -r --arg key "$TMP_SECRET_NAME" '.items[].metadata | select(.name == $key).name' /tmp/output.json)
+  if [ "$nam" != "$TMP_SECRET_NAME" ]; then
+    cmdLoop kubectl -n $TMP_NAMESPACE create secret docker-registry $TMP_SECRET_NAME \
+            --docker-server docker.io \
+            --docker-username $TDH_REGISTRY_DOCKER_USER \
+            --docker-password $TDH_REGISTRY_DOCKER_PASS > /tmp/error.log 2>&1; ret=$?
+
+    if [ $ret -ne 0 ]; then
+      logMessages /tmp/error.log
+      echo "ERROR: failed to create docker pull secret"
+      if [ "$NATIVE" == "0" ]; then                                                                                             
+        echo "       => tools/${TDH_TOOLS}.sh"
+        echo "          tdh-tools:/$ kubectl -n $TMP_NAMESPACE create secret docker-registry $TMP_SECRET_NAME \\"                
+        echo "                               --docker-server docker.io \\"
+        echo "                               --docker-username $TDH_REGISTRY_DOCKER_USER \\"
+        echo "                               --docker-password $TDH_REGISTRY_DOCKER_PASS"
+        echo "          tdh-tools:/$ exit"
+      else 
+        echo "       => kubectl -n $TMP_NAMESPACE create secret docker-registry $TMP_SECRET_NAME \\"                             
+        echo "                               --docker-server docker.io \\"
+        echo "                               --docker-username $TDH_REGISTRY_DOCKER_USER \\"
+        echo "                               --docker-password $TDH_REGISTRY_DOCKER_PASS"
+      fi
+
+      exit 1
+    fi
+  fi
+}
+
+# ------------------------------------------------------------------------------------------
 # Function Name ......: dockerPullSecret
 # Function Purpose ...: List TCE Management Cluster Deployments
 # ------------------------------------------------------------------------------------------
@@ -21168,6 +21296,46 @@ goTAPStage() {
     done
   fi
 }
+
+# ------------------------------------------------------------------------------------------
+# Function Name ......: createTAPNamespace
+# Function Purpose ...: create TAP Namespace
+# ------------------------------------------------------------------------------------------
+# Argument ($1) ......: Kubernetes Context
+#          ($2) ......: Namespace
+# ------------------------------------------------------------------------------------------
+# Return Value .......: 0 - for success, 1 - failure
+# ------------------------------------------------------------------------------------------
+createTAPNamespace() {
+  TMP_CONTEXT=$1
+  TMP_NAMESPACE=$2
+
+  kubectl config use-context $TMP_CONTEXT > /dev/null 2>&1; ret=$?
+  if [ $ret -ne 0 ]; then 
+    echo "ERROR: failed to set context '$TMP_CONTEXT', pleae try manually"
+    echo "       kubectl config use-context $TMP_CONTEXT"
+    exit 1
+  fi
+
+  nam=$(kubectl get ns -o json | jq -r --arg key $TMP_NAMESPACE '.items[].metadata | select(.name == $key).name')
+  if [ "$nam" == "" ]; then
+    echo " ✓ Create Application Namespace $TMP_NAMESPACE"
+    echo "   ▪ Creating Build Namespace for '$TMP_NAMESPACE'"
+    createNamespace $TMP_NAMESPACE > /dev/null 2>&1
+
+    echo "   ▪ Add Label for TAP Nameservice Provisoner 'apps.tanzu.vmware.com/tap-ns=\"\""
+    kubectl label namespaces $TMP_NAMESPACE apps.tanzu.vmware.com/tap-ns="" > /dev/null 2>&1
+    echo "   ▪ Add Label for Pod Security (Admission Controller) 'pod-security.kubernetes.io/enforce=baseline'"
+    kubectl label namespaces $TMP_NAMESPACE pod-security.kubernetes.io/enforce=baseline > /dev/null 2>&1
+
+    echo "   ▪ Creating Docker Pull Secret in 'default' service account"
+    dockerPullSecretV2  $TMP_NAMESPACE docker-credentials
+    configWriterSecrets $TMP_NAMESPACE
+  else
+    echo " ✓ Verify Application Namespace $TMP_NAMESPACE"
+  fi
+}
+
 
 
 #kubectl get tanzukubernetescluster -n tanzu-demo-hub tdh-vsphere-sadubois

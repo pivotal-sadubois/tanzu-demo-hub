@@ -135,7 +135,7 @@ fi
 ######################### CREATE TKG CLUSTER AND ATTACH TO TMC AND INSTALL TMC INTEGRATION ##################################
 #############################################################################################################################
 for clu in $(getYAML WC_CLUSTER_LIST); do
-[ "$clu" == "tdh-vsphere-tkgs-sdubois-svc" ] && continue
+#[ "$clu" == "tdh-vsphere-tkgs-sdubois-svc" ] && continue
 #[ "$clu" == "tdh-vsphere-tkgs-sdubois-dev" ] && continue
 #[ "$clu" == "tdh-vsphere-tkgs-sdubois-run" ] && continue
 #[ "$clu" == "tdh-vsphere-tkgs-sdubois-ops" ] && continue
