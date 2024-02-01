@@ -5,7 +5,8 @@
 # Author .......: Sacha Dubois, VMware
 # Description ..: Tanzu Demo Hub - Newsletter Demo Guide
 # ############################################################################################
-#    myArray=("Elvis:Presley" "Paul:McCartney" "Alice:Cooper" "Tina:Turner" "Liam:Gallagher" "Nick:Cave" "Keith:Richards" "David:Byrne" "Gary:Puckett" "Little:Richard" "Axl:Rose" "David:Bowie" "Bob:Dylan" "Bruce:Springsteen" "Mike:Jagger")
+# https://newsletter-subscription.dev.tap.tanzudemohub.com/swagger-ui/index.html
+# curl https://newsletter-subscription.dev.tap.tanzudemohub.com/v3/api-docs | jq -r
 
 TAP_DEVELOPER_NAMESPACE=newsletter
 TAP_WORKLOAD_FRONTEND_NAME=newsletter-ui
@@ -55,45 +56,48 @@ if [ "$1" == "setup" ]; then
   fi
 
   if [ "$2" == "clean" ]; then
-
     ########################################################################################################################
     ################################################## RUN CLUSTER #########################################################
     ########################################################################################################################
-    echo " ✓ Deleting Workload on $TAP_CLUSTER_RUN"
-    kubectl config use-context $TAP_CONTEXT_RUN > /dev/null
+    if [ "$TAP_CLUSTER_RUN" != "" ]; then
+      echo " ✓ Deleting Workload on $TAP_CLUSTER_RUN"
+      kubectl config use-context $TAP_CONTEXT_RUN > /dev/null
 
-    kubectl -n ${TAP_DEVELOPER_NAMESPACE}-gitops delete workload $TAP_WORKLOAD_BACKEND_NAME > /dev/null 2>&1
-    kubectl -n ${TAP_DEVELOPER_NAMESPACE}-gitops delete workload $TAP_WORKLOAD_FRONTEND_NAME > /dev/null 2>&1
-    kubectl -n ${TAP_DEVELOPER_NAMESPACE}-gitops delete classclaim newsletter-db > /dev/null 2>&1
-    kubectl -n ${TAP_DEVELOPER_NAMESPACE}-gitops delete servicebinding newsletter-subscription-db > /dev/null 2>&1
-    deleteNamespace ${TAP_DEVELOPER_NAMESPACE}-gitops > /dev/null 2>&1
-    createTAPNamespace $TAP_CONTEXT_RUN ${TAP_DEVELOPER_NAMESPACE}-gitops > /dev/null 2>&1
+      kubectl -n ${TAP_DEVELOPER_NAMESPACE}-gitops delete workload $TAP_WORKLOAD_BACKEND_NAME > /dev/null 2>&1
+      kubectl -n ${TAP_DEVELOPER_NAMESPACE}-gitops delete workload $TAP_WORKLOAD_FRONTEND_NAME > /dev/null 2>&1
+      kubectl -n ${TAP_DEVELOPER_NAMESPACE}-gitops delete classclaim newsletter-db > /dev/null 2>&1
+      kubectl -n ${TAP_DEVELOPER_NAMESPACE}-gitops delete servicebinding newsletter-subscription-db > /dev/null 2>&1
+      deleteNamespace ${TAP_DEVELOPER_NAMESPACE}-gitops > /dev/null 2>&1
+      createTAPNamespace $TAP_CONTEXT_RUN ${TAP_DEVELOPER_NAMESPACE}-gitops > /dev/null 2>&1
 
-    kubectl -n ${TAP_DEVELOPER_NAMESPACE}-regops delete workload $TAP_WORKLOAD_FRONTEND_NAME            > /dev/null 2>&1
-    kubectl -n ${TAP_DEVELOPER_NAMESPACE}-regops delete workload $TAP_WORKLOAD_BACKEND_NAME             > /dev/null 2>&1
-    kubectl -n ${TAP_DEVELOPER_NAMESPACE}-regops delete deliverable $TAP_WORKLOAD_BACKEND_NAME          > /dev/null 2>&1
-    kubectl -n ${TAP_DEVELOPER_NAMESPACE}-regops delete servicebinding newsletter-subscription-db       > /dev/null 2>&1
-    kubectl -n ${TAP_DEVELOPER_NAMESPACE}-regops delete classclaim newsletter-db                        > /dev/null 2>&1
-    deleteNamespace ${TAP_DEVELOPER_NAMESPACE}-regops                                                   > /dev/null 2>&1
-    createTAPNamespace $TAP_CONTEXT_RUN ${TAP_DEVELOPER_NAMESPACE}-regops                               > /dev/null 2>&1
+      kubectl -n ${TAP_DEVELOPER_NAMESPACE}-regops delete workload $TAP_WORKLOAD_FRONTEND_NAME            > /dev/null 2>&1
+      kubectl -n ${TAP_DEVELOPER_NAMESPACE}-regops delete workload $TAP_WORKLOAD_BACKEND_NAME             > /dev/null 2>&1
+      kubectl -n ${TAP_DEVELOPER_NAMESPACE}-regops delete deliverable $TAP_WORKLOAD_BACKEND_NAME          > /dev/null 2>&1
+      kubectl -n ${TAP_DEVELOPER_NAMESPACE}-regops delete servicebinding newsletter-subscription-db       > /dev/null 2>&1
+      kubectl -n ${TAP_DEVELOPER_NAMESPACE}-regops delete classclaim newsletter-db                        > /dev/null 2>&1
+      deleteNamespace ${TAP_DEVELOPER_NAMESPACE}-regops                                                   > /dev/null 2>&1
+      createTAPNamespace $TAP_CONTEXT_RUN ${TAP_DEVELOPER_NAMESPACE}-regops                               > /dev/null 2>&1
+    fi
 
     ########################################################################################################################
     ################################################## OPS CLUSTER #########################################################
     ########################################################################################################################
-    echo " ✓ Deleting Workload on $TAP_CLUSTER_OPS"
-    kubectl config use-context $TAP_CONTEXT_OPS > /dev/null
+    if [ "$TAP_CLUSTER_RUN" != "" ]; then
+      echo " ✓ Deleting Workload on $TAP_CLUSTER_OPS"
+      kubectl config use-context $TAP_CONTEXT_OPS > /dev/null
 
-    kubectl -n ${TAP_DEVELOPER_NAMESPACE}-gitops delete workload $TAP_WORKLOAD_BACKEND_NAME > /dev/null 2>&1
-    kubectl -n ${TAP_DEVELOPER_NAMESPACE}-gitops delete workload $TAP_WORKLOAD_FRONTEND_NAME > /dev/null 2>&1
-    kubectl -n ${TAP_DEVELOPER_NAMESPACE}-gitops delete classclaim newsletter-db > /dev/null 2>&1
-    deleteNamespace ${TAP_DEVELOPER_NAMESPACE}-gitops > /dev/null 2>&1
-    createTAPNamespace $TAP_CONTEXT_OPS ${TAP_DEVELOPER_NAMESPACE}-gitops > /dev/null 2>&1
+      kubectl -n ${TAP_DEVELOPER_NAMESPACE}-gitops delete workload $TAP_WORKLOAD_BACKEND_NAME > /dev/null 2>&1
+      kubectl -n ${TAP_DEVELOPER_NAMESPACE}-gitops delete workload $TAP_WORKLOAD_FRONTEND_NAME > /dev/null 2>&1
+      kubectl -n ${TAP_DEVELOPER_NAMESPACE}-gitops delete classclaim newsletter-db > /dev/null 2>&1
+      deleteNamespace ${TAP_DEVELOPER_NAMESPACE}-gitops > /dev/null 2>&1
+      createTAPNamespace $TAP_CONTEXT_OPS ${TAP_DEVELOPER_NAMESPACE}-gitops > /dev/null 2>&1
 
-    kubectl -n ${TAP_DEVELOPER_NAMESPACE}-regops delete workload $TAP_WORKLOAD_BACKEND_NAME > /dev/null 2>&1
-    kubectl -n ${TAP_DEVELOPER_NAMESPACE}-regops delete workload $TAP_WORKLOAD_FRONTEND_NAME > /dev/null 2>&1
-    kubectl -n ${TAP_DEVELOPER_NAMESPACE}-regops delete classclaim newsletter-db > /dev/null 2>&1
-    deleteNamespace ${TAP_DEVELOPER_NAMESPACE}-regops > /dev/null 2>&1
-    createTAPNamespace $TAP_CONTEXT_OPS ${TAP_DEVELOPER_NAMESPACE}-regops > /dev/null 2>&1
+      kubectl -n ${TAP_DEVELOPER_NAMESPACE}-regops delete workload $TAP_WORKLOAD_BACKEND_NAME > /dev/null 2>&1
+      kubectl -n ${TAP_DEVELOPER_NAMESPACE}-regops delete workload $TAP_WORKLOAD_FRONTEND_NAME > /dev/null 2>&1
+      kubectl -n ${TAP_DEVELOPER_NAMESPACE}-regops delete classclaim newsletter-db > /dev/null 2>&1
+      deleteNamespace ${TAP_DEVELOPER_NAMESPACE}-regops > /dev/null 2>&1
+      createTAPNamespace $TAP_CONTEXT_OPS ${TAP_DEVELOPER_NAMESPACE}-regops > /dev/null 2>&1
+    fi
 
     ########################################################################################################################
     ################################################## DEV CLUSTER #########################################################
@@ -106,6 +110,26 @@ if [ "$1" == "setup" ]; then
     kubectl -n $TAP_DEVELOPER_NAMESPACE delete workload $TAP_WORKLOAD_FRONTEND_NAME > /dev/null 2>&1
     deleteNamespace $TAP_DEVELOPER_NAMESPACE > /dev/null 2>&1
     createTAPNamespace $TAP_CONTEXT_DEV $TAP_DEVELOPER_NAMESPACE > /dev/null 2>&1
+
+    echo "   ▪ Adding Scan Policy (newsletter-scan-policy) to Developer Namespace ($TAP_DEVELOPER_NAMESPACE)"
+    GITURL="https://raw.githubusercontent.com/$TDH_DEMO_GITHUB_USER/$TDH_DEMO_GIT_REPO/main/$TAP_WORKLOAD_BACKEND_NAME/config/newsletter-scan-policy.yaml"
+    kubectl -n $TAP_DEVELOPER_NAMESPACE apply -f $GITURL > /dev/null 2>&1; ret=$?
+    if [ $ret -ne 0 ]; then
+      echo "ERROR: failed to add scan policy, please try manually"
+      echo "       => kubectl config use-context $TAP_CONTEXT_DEV"
+      echo "       => kubectl -n $TAP_DEVELOPER_NAMESPACE apply -f $GITURL"
+      exit
+    fi
+  
+    echo "   ▪ Adding Pipline ($pipeline-notest) to Developer Namespace ($TAP_DEVELOPER_NAMESPACE)"
+    GITURL="https://raw.githubusercontent.com/$TDH_DEMO_GITHUB_USER/$TDH_DEMO_GIT_REPO/main/$TAP_WORKLOAD_BACKEND_NAME/config/pipeline-notest.yaml"
+    kubectl -n $TAP_DEVELOPER_NAMESPACE apply -f $GITURL > /dev/null 2>&1; ret=$?
+    if [ $ret -ne 0 ]; then
+      echo "ERROR: failed to add pipeline pipeline-notest, please try manually"
+      echo "       => kubectl config use-context $TAP_CONTEXT_DEV"
+      echo "       => kubectl -n $TAP_DEVELOPER_NAMESPACE apply -f $GITURL"
+      exit
+    fi
 
     echo ""
     echo "Demo Setup cleanup successfuly completed"
@@ -134,7 +158,6 @@ if [ "$1" == "setup" ]; then
     
       echo "   ▪ Create Github SSH Access Secret (github-http-secret) in namespace ${TAP_DEVELOPER_NAMESPACE}"
       configWriterSecrets ${TAP_DEVELOPER_NAMESPACE}
-  #gagaga
     else
       echo "   ▪ Verify Developer Namespace for '$TAP_DEVELOPER_NAMESPACE'"
     fi
@@ -160,7 +183,7 @@ if [ "$1" == "setup" ]; then
       done
 
       if [ "$stt" != "True" ]; then
-        echo "ERROR: Failed to deploy $TAP_WORKLOAD_BACKEND_NAME on the $TAP_CLUSTER_OPS, please try manually"
+        echo "ERROR: Failed to deploy $TAP_WORKLOAD_BACKEND_NAME on the $TAP_CLUSTER_DEV, please try manually"
         echo "       => tanzu -n $TAP_DEVELOPER_NAMESPACE apps workload get $TAP_WORKLOAD_BACKEND_NAME"
         echo "       => kubectl -n $TAP_DEVELOPER_NAMESPACE apply -f /tmp/${TAP_WORKLOAD_BACKEND_NAME}-gitops.yaml"
         exit 1
@@ -182,7 +205,7 @@ if [ "$1" == "setup" ]; then
       done
 
       if [ "$stt" != "True" ]; then
-        echo "ERROR: Failed to deploy $TAP_WORKLOAD_FRONTEND_NAME on the $TAP_CLUSTER_OPS, please try manually"
+        echo "ERROR: Failed to deploy $TAP_WORKLOAD_FRONTEND_NAME on the $TAP_CLUSTER_DEV, please try manually"
         echo "       => tanzu -n $TAP_WORKLOAD_FRONTEND_NAME apps workload get $TAP_WORKLOAD_BACKEND_NAME"
         echo "       => kubectl -n $TAP_DEVELOPER_NAMESPACE apply -f /tmp/${TAP_WORKLOAD_FRONTEND_NAME}-gitops.yaml"
         exit 1
@@ -570,7 +593,6 @@ if [ "$1" == "init" ]; then
 
     echo "   ▪ Create Github SSH Access Secret (github-http-secret) in namespace ${TAP_DEVELOPER_NAMESPACE}"
     configWriterSecrets ${TAP_DEVELOPER_NAMESPACE}
-#gagaga
   else
     echo "   ▪ Verify Developer Namespace for '$TAP_DEVELOPER_NAMESPACE'"
   fi
@@ -837,7 +859,6 @@ if [ "$1" == "git" ]; then
 fi
 
 if [ "$1" == "service-class" ]; then 
-  echo "-------------------------------------------------------------------------------------------------------------------------------"
   echo "tanzu service class list"
   echo "tanzu service class get postgresql-unmanaged"
   echo "tanzu service class-claim create newsletter-db --class postgresql-unmanaged --parameter storageGB=3 -n newsletter"
