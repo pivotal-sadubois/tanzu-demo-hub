@@ -24,7 +24,12 @@ else
   fi
 fi
 
+
+
 if [ "$TDH_DEMO_CONFIG" == "" -o "$TDH_DEMO_NAME" == "" ]; then
+  [ "$TDH_DEMO_NAME" == "" -a -f $HOME/.tdh/tdh_demo_name.cfg ] && export TDH_DEMO_NAME=$(cat $HOME/.tdh/tdh_demo_name.cfg) 
+  [ "$TDH_DEMO_CONFIG" == "" -a -f $HOME/.tdh/tdh_demo_config.cfg ] && export TDH_DEMO_CONFIG=$(cat $HOME/.tdh/tdh_demo_config.cfg) 
+
   if [ "$TDH_DEMO_CONFIG" == "" ]; then
     echo "IMPORTANT: The TDH_DEMO_CONFIG environment variable has not been set. Please set the variable from the list below"
     echo "           -------------------------------------------------------------------------------------------------------------------------------------------------------"
@@ -45,7 +50,7 @@ if [ "$TDH_DEMO_CONFIG" == "" -o "$TDH_DEMO_NAME" == "" ]; then
     echo 
   fi
 
-  exit 0
+  [ "$TDH_DEMO_CONFIG" == "" -o "$TDH_DEMO_NAME" == "" ] && exit 0
 else
   TDH_DEPLOYMENT_NAME=$(echo $TDH_DEMO_CONFIG | awk -F'/' '{ print $NF }') 
 fi
@@ -67,6 +72,8 @@ else
   TAP_CLUSTER_DEV=$(yq $HOME/.tanzu-demo-hub/deployments/$TDH_DEMO_CONFIG/config.yml -o json | jq -r '.tdh_clusters[1].name')
   TAP_CONTEXT_DEV="${TAP_CLUSTER_DEV}-admin@${TAP_CLUSTER_DEV}"
 fi
+
+export KUBECONFIG=$HOME/.tanzu-demo-hub/deployments/$TDH_DEMO_CONFIG/kubeconfig_${TDH_DEPLOYMENT_NAME}.yaml
 
 if [ "$1" == "context" -o "$1" == "c" ]; then
   if [ "$2" == "" ]; then

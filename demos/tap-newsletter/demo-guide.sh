@@ -52,10 +52,10 @@ if [ "$1" == "setup" ]; then
     echo "tdh setup gitops                     ## Deploy 'Newsletter Subspription' and 'Newsleter UI' from the git 'release/1.0.0' branch"
     echo "                                     ## - cwBuild 'Newsletter Subspription' with supply chain 'basic-image-to-url-package' on the ops cluster"
     echo "                                     ## - cwBuild 'Newsletter UI' with supply chain 'basic-image-to-url-package' on the ops cluster"
-    echo "tdh setup clean                      ## Cleanup deployments and remove the local git repository \$HOME/workspace/$TDH_DEMO_GIT_REPO"
+    echo "tdh setup delete                     ## Cleanup deployments and remove the local git repository \$HOME/workspace/$TDH_DEMO_GIT_REPO"
   fi
 
-  if [ "$2" == "clean" ]; then
+  if [ "$2" == "delete" ]; then
     ########################################################################################################################
     ################################################## RUN CLUSTER #########################################################
     ########################################################################################################################
@@ -132,7 +132,7 @@ if [ "$1" == "setup" ]; then
     fi
 
     echo ""
-    echo "Demo Setup cleanup successfuly completed"
+    echo "Demo Setup successfuly deleted"
   fi
 
   if [ "$2" == "dev" ]; then
@@ -283,7 +283,7 @@ if [ "$1" == "setup" ]; then
     echo "   Verify the the Frontend ($TAP_WORKLOAD_FRONTEND_NAME) in a Icognito Browder Window, or deleate the cache first"
     echo "   => https://$TAP_WORKLOAD_FRONTEND_NAME.dev.${DNS_SUBDOMAIN}.${DNS_DOMAIN}"
     echo ""
-    echo "Demo Setup cleanup successfuly completed"
+    echo "Demo Setup successfuly deleted"
   fi
 
   if [ "$2" == "regops" ]; then
@@ -528,7 +528,18 @@ if [ "$1" == "guide" ]; then
 fi
 
 if [ "$1" == "init" ]; then 
-  echo " ✓ Generating kubeconfig in \$HOME/.kube/config with '$TDH_SERVICE_LUSTER' and '$TAP_DEVELOPER_NAMESPACE' namespace as default context"
+  if [ -f $HOME/.tdh/tdh_demo_name.cfg -a -f $HOME/.tdh/tdh_demo_config.cfg ]; then 
+    [ "$TDH_DEMO_NAME" == "" -a -f $HOME/.tdh/tdh_demo_name.cfg ] && export TDH_DEMO_NAME=$(cat $HOME/.tdh/tdh_demo_name.cfg)
+    [ "$TDH_DEMO_CONFIG" == "" -a -f $HOME/.tdh/tdh_demo_config.cfg ] && export TDH_DEMO_CONFIG=$(cat $HOME/.tdh/tdh_demo_config.cfg)
+
+    if [ "$2" != "--force" ]; then
+      echo "ERROR: TDH Demo environment is currently active with demo: $TDH_DEMO_NAME on the TDH Environment: $TDH_DEMO_CONFIG."
+      echo "       used 'tdh init --force' the reinitiate the demo or 'tdh clean' to delete the demo" 
+      exit
+    fi
+  fi
+
+  echo " ✓ Generating kubeconfig for the Dev Clusterin \$HOME/.kube/config with '$TDH_SERVICE_LUSTER' and '$TAP_DEVELOPER_NAMESPACE' namespace as default context"
   echo "   Default Context will set to '$TAP_CONTEXT_DEV with '$TAP_DEVELOPER_NAMESPACE' as namespace'"
   echo "   ---------------------------------------------------------------------------------------------------------------------------------------------------------------"
   kubectl --kubeconfig=$HOME/.kube/config config get-contexts | sed 's/^/   /g'
@@ -743,6 +754,11 @@ if [ "$1" == "init" ]; then
     exit
   fi
 
+  # --- SETUP DEMO LOCK FILES ---
+  [ ! -d $HOME/.tdh ] && mkdir -p $HOME/.tdh
+  echo "$TDH_DEMO_NAME" > $HOME/.tdh/tdh_demo_name.cfg 
+  echo "$TDH_DEMO_CONFIG" > $HOME/.tdh/tdh_demo_config.cfg 
+
   echo ""
   echo "Demo Initialization successfuly completed"
 fi
@@ -845,6 +861,9 @@ if [ "$1" == "clean" ]; then
     kubectl delete ns ${TAP_DEVELOPER_NAMESPACE}-gitops > /dev/null 2>&1
     kubectl delete ns ${TAP_DEVELOPER_NAMESPACE}-regops > /dev/null 2>&1
   fi
+
+  # --- CLEANING UP LOCK FILES ---
+  rm -f $HOME/.tdh/tdh_demo_name.cfg $HOME/.tdh/tdh_demo_config.cfg
 
   echo ""
   echo "Demo cleanup successfuly completed"

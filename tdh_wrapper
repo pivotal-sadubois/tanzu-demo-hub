@@ -27,6 +27,7 @@ then
     then
       unset TDH_DEMO_CONFIG
       unset TDH_DEMO_NAME
+      unset KUBECONFIG
     fi
   else
     echo "ERROR: The shell script $TDHHOME/tdh could not be found, please"
