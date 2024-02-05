@@ -1,4 +1,5 @@
 #!/bin/bash
+
 # ################################################################################################################
 # File: ........: demo-guide.sh
 # Language .....: bash 
@@ -17,7 +18,7 @@ TAP_DEVELOPER_NAMESPACE=java-webapp
 TAP_WORKLOAD_NAME=java-webapp
 TAP_WORKLOAD_FILE=${TAP_WORKLOAD_NAME}-gitops.yaml
 TDH_DEMO_GIT_REPO=java-webapp
-TDH_CARTO_GIT_REPO=java-webapp-config
+TDH_CARTO_GIT_REPO=${TDH_DEMO_GIT_REPO}-config
 
 #tanzu accelerator list --server-url http://tap-gui.dev.tapmc.v2steve.net
 #tanzu accelerator get tanzu-java-web-app --server-url http://tap-gui.dev.tapmc.v2steve.net
@@ -55,27 +56,21 @@ if [ "$1" == "setup" ]; then
     echo "tdh setup gitops                     ## Deploy 'Newsletter Subspription' and 'Newsleter UI' from the git 'release/1.0.0' branch"
     echo "                                     ## - cwBuild 'Newsletter Subspription' with supply chain 'basic-image-to-url-package' on the ops cluster"
     echo "                                     ## - cwBuild 'Newsletter UI' with supply chain 'basic-image-to-url-package' on the ops cluster"
-    echo "tdh setup clean                      ## Cleanup deployments and remove the local git repository \$HOME/workspace/$TDH_DEMO_GIT_REPO"
+    echo "tdh setup delete                     ## Cleanup deployments and remove the local git repository \$HOME/workspace/$TDH_DEMO_GIT_REPO"
   fi
 
-  if [ "$2" == "clean" ]; then
+  if [ "$2" == "delete" ]; then
     ########################################################################################################################
     ################################################## RUN CLUSTER #########################################################
     ########################################################################################################################
     echo " ✓ Deleting Workload on $TAP_CLUSTER_RUN"
+    kubectl config use-context $TAP_CONTEXT_RUN > /dev/null
 
-    kubectl -n ${TAP_DEVELOPER_NAMESPACE}-gitops delete workload $TAP_WORKLOAD_BACKEND_NAME > /dev/null 2>&1
-    kubectl -n ${TAP_DEVELOPER_NAMESPACE}-gitops delete workload $TAP_WORKLOAD_FRONTEND_NAME > /dev/null 2>&1
-    kubectl -n ${TAP_DEVELOPER_NAMESPACE}-gitops delete classclaim newsletter-db > /dev/null 2>&1
-    kubectl -n ${TAP_DEVELOPER_NAMESPACE}-gitops delete servicebinding newsletter-subscription-db > /dev/null 2>&1
-    deleteNamespace ${TAP_DEVELOPER_NAMESPACE}-gitops > /dev/null 2>&1
-    createTAPNamespace $TAP_CONTEXT_RUN ${TAP_DEVELOPER_NAMESPACE}-gitops > /dev/null 2>&1
+#echo "    tanzu apps workload -n ${TAP_DEVELOPER_NAMESPACE}-regops delete $TAP_WORKLOAD_NAME -y"
+#echo "    kubectl -n ${TAP_DEVELOPER_NAMESPACE}-regops delete -f /tmp/${TAP_WORKLOAD_NAME}-regops-deliverable.yaml > /dev/null 2>&1"
 
-    kubectl -n ${TAP_DEVELOPER_NAMESPACE}-regops delete workload $TAP_WORKLOAD_FRONTEND_NAME            > /dev/null 2>&1
-    kubectl -n ${TAP_DEVELOPER_NAMESPACE}-regops delete workload $TAP_WORKLOAD_BACKEND_NAME             > /dev/null 2>&1
-    kubectl -n ${TAP_DEVELOPER_NAMESPACE}-regops delete deliverable $TAP_WORKLOAD_BACKEND_NAME          > /dev/null 2>&1
-    kubectl -n ${TAP_DEVELOPER_NAMESPACE}-regops delete servicebinding newsletter-subscription-db       > /dev/null 2>&1
-    kubectl -n ${TAP_DEVELOPER_NAMESPACE}-regops delete classclaim newsletter-db                        > /dev/null 2>&1
+    tanzu apps workload -n ${TAP_DEVELOPER_NAMESPACE}-regops delete $TAP_WORKLOAD_NAME -y > /dev/null 2>&1
+    kubectl -n ${TAP_DEVELOPER_NAMESPACE}-regops delete -f /tmp/${TAP_WORKLOAD_NAME}-regops-deliverable.yaml > /dev/null 2>&1
     deleteNamespace ${TAP_DEVELOPER_NAMESPACE}-regops                                                   > /dev/null 2>&1
     createTAPNamespace $TAP_CONTEXT_RUN ${TAP_DEVELOPER_NAMESPACE}-regops                               > /dev/null 2>&1
 
@@ -85,17 +80,9 @@ if [ "$1" == "setup" ]; then
     echo " ✓ Deleting Workload on $TAP_CLUSTER_OPS"
     kubectl config use-context $TAP_CONTEXT_OPS > /dev/null
 
-    kubectl -n ${TAP_DEVELOPER_NAMESPACE}-gitops delete workload $TAP_WORKLOAD_BACKEND_NAME > /dev/null 2>&1
-    kubectl -n ${TAP_DEVELOPER_NAMESPACE}-gitops delete workload $TAP_WORKLOAD_FRONTEND_NAME > /dev/null 2>&1
-    kubectl -n ${TAP_DEVELOPER_NAMESPACE}-gitops delete classclaim newsletter-db > /dev/null 2>&1
+    kubectl -n ${TAP_DEVELOPER_NAMESPACE}-gitops delete workload $TAP_WORKLOAD_NAME > /dev/null 2>&1
     deleteNamespace ${TAP_DEVELOPER_NAMESPACE}-gitops > /dev/null 2>&1
     createTAPNamespace $TAP_CONTEXT_OPS ${TAP_DEVELOPER_NAMESPACE}-gitops > /dev/null 2>&1
-
-    kubectl -n ${TAP_DEVELOPER_NAMESPACE}-regops delete workload $TAP_WORKLOAD_BACKEND_NAME > /dev/null 2>&1
-    kubectl -n ${TAP_DEVELOPER_NAMESPACE}-regops delete workload $TAP_WORKLOAD_FRONTEND_NAME > /dev/null 2>&1
-    kubectl -n ${TAP_DEVELOPER_NAMESPACE}-regops delete classclaim newsletter-db > /dev/null 2>&1
-    deleteNamespace ${TAP_DEVELOPER_NAMESPACE}-regops > /dev/null 2>&1
-    createTAPNamespace $TAP_CONTEXT_OPS ${TAP_DEVELOPER_NAMESPACE}-regops > /dev/null 2>&1
 
     ########################################################################################################################
     ################################################## DEV CLUSTER #########################################################
@@ -115,7 +102,12 @@ if [ "$1" == "setup" ]; then
 
     echo " ✓ Delete the existing and recreat the developer namespace ($TAP_DEVELOPER_NAMESPACE)"
     deleteNamespace $TAP_DEVELOPER_NAMESPACE > /dev/null 2>&1
-    createTAPNamespace $TAP_CONTEXT_DEV $TAP_DEVELOPER_NAMESPACE > /dev/null 2>&1
+    #createTAPNamespace $TAP_CONTEXT_DEV $TAP_DEVELOPER_NAMESPACE > /dev/null 2>&1
+echo "createTAPNamespace $TAP_CONTEXT_DEV $TAP_DEVELOPER_NAMESPACE"
+    createTAPNamespace $TAP_CONTEXT_DEV $TAP_DEVELOPER_NAMESPACE
+
+
+exit
 
     echo "   ▪ Adding Scan Policy (newsletter-scan-policy) to Developer Namespace ($TAP_DEVELOPER_NAMESPACE)"
     kubectl -n $TAP_DEVELOPER_NAMESPACE apply -f $TDHHOME/demos/tap-java-webapp/config/scan-policy.yaml > /dev/null 2>&1; ret=$?
@@ -153,10 +145,11 @@ if [ "$1" == "setup" ]; then
     fi
 
     echo ""
-    echo "Demo Setup cleanup successfuly completed"
+    echo "Demo Setup successfuly deleted"
   fi
 
   if [ "$2" == "dev" ]; then
+    cd $HOME
     DNS_DOMAIN=$(yq -o json $HOME/.tanzu-demo-hub/deployments/$TDH_DEMO_CONFIG/config.yml | jq -r '.tdh_environment.network.dns.dns_domain')
     DNS_SUBDOMAIN=$(yq -o json $HOME/.tanzu-demo-hub/deployments/$TDH_DEMO_CONFIG/config.yml | jq -r '.tdh_environment.network.dns.dns_subdomain')
     HARBOR="harbor.apps.${DNS_SUBDOMAIN}.${DNS_DOMAIN}"
@@ -166,7 +159,7 @@ if [ "$1" == "setup" ]; then
     # --- CREATE TDH_DEMO_GIT_REPO REPO ---
     rep=$(gh repo list --json name | jq -r --arg key $TDH_DEMO_GIT_REPO '.[] | select(.name == $key).name')
     if [ "$rep" != "$TDH_DEMO_GIT_REPO" ]; then
-      echo " ✓ Create Github repository https://githum.com/$TDH_DEMO_GITHUB_USER/$TDH_DEMO_GIT_REPO"
+      echo " ✓ Create Github repository https://github.com/$TDH_DEMO_GITHUB_USER/$TDH_DEMO_GIT_REPO"
       gh repo create $TDH_DEMO_GIT_REPO --public >/dev/null 2>&1; ret=$?
       if [ $ret -ne 0 ]; then
         echo "ERROR: failed to create github repository $TDH_DEMO_GITHUB_USER/$TDH_DEMO_GIT_REPO, please try manually"
@@ -215,15 +208,6 @@ if [ "$1" == "setup" ]; then
       echo " ✓ Verify TAP Demo Applicaiton ($TDH_DEMO_GIT_REPO) under \$HOME/workspace/$TDH_DEMO_GIT_REPO"
     fi
 
-
-#XXX
-
-#    echo " ✓ Create Service Claim for PostgreSQL backend"
-#    nam=$(kubectl -n $TAP_DEVELOPER_NAMESPACE get ClassClaim -o json | jq --arg key "newsletter-db" -r '.items[].metadata | select(.name == $key).name')
-#    if [ "$nam" != "newsletter-db" ]; then 
-#      tanzu service class-claim create newsletter-db --class postgresql-unmanaged --parameter storageGB=3 -n $TAP_DEVELOPER_NAMESPACE > /dev/null 2>&1
-#    fi
-
     nam=$(kubectl -n $TAP_DEVELOPER_NAMESPACE get workloads -o json | jq --arg key "$TAP_WORKLOAD_NAME" -r '.items[].metadata | select(.name == $key).name')
     if [ "$nam" != "$TAP_WORKLOAD_NAME" ]; then
       echo " ✓ Deploy the TAP Demo Applicaiton ($TAP_WORKLOAD_NAME)"
@@ -261,14 +245,61 @@ if [ "$1" == "setup" ]; then
     echo "   Verify the the Backend ($TAP_WORKLOAD_NAME)"
     echo "   => https://${TAP_WORKLOAD_NAME}.dev.${DNS_SUBDOMAIN}.${DNS_DOMAIN}/actuator"
     echo "" 
-    echo "Demo Setup cleanup successfuly completed"
+    echo "Demo Setup successfuly deleted"
   fi
 
   if [ "$2" == "regops" ]; then
+    DNS_DOMAIN=$(yq -o json $HOME/.tanzu-demo-hub/deployments/$TDH_DEMO_CONFIG/config.yml | jq -r '.tdh_environment.network.dns.dns_domain')
+    DNS_SUBDOMAIN=$(yq -o json $HOME/.tanzu-demo-hub/deployments/$TDH_DEMO_CONFIG/config.yml | jq -r '.tdh_environment.network.dns.dns_subdomain')
+    HARBOR="harbor.apps.${DNS_SUBDOMAIN}.${DNS_DOMAIN}"
+
+    sed -e "s/GIT_USER/$TDH_DEMO_GITHUB_USER/g" \
+        -e "s/NAMESPACE/${TAP_DEVELOPER_NAMESPACE}-regops/g" \
+        $TDHHOME/demos/$TDH_DEMO_NAME/workload/template_${TAP_WORKLOAD_NAME}-regops.yaml > /tmp/${TAP_WORKLOAD_NAME}-regops.yaml
+
     ########################################################################################################################
     ######################################### OPS CLUSTER ##################################################################
     ########################################################################################################################
     kubectl config use-context $TAP_CONTEXT_OPS > /dev/null
+
+echo "kubectl -n ${TAP_DEVELOPER_NAMESPACE}-regops apply -f /tmp/${TAP_WORKLOAD_NAME}-regops.yaml"
+
+    nam=$(kubectl -n $TAP_DEVELOPER_NAMESPACE get workloads -o json | jq --arg key "$TAP_WORKLOAD_NAME" -r '.items[].metadata | select(.name == $key).name')
+echo "NAM:$nam"
+    if [ "$nam" != "$TAP_WORKLOAD_NAME" ]; then
+echo gaga2
+      echo " ✓ Deploy the TAP Demo Applicaiton ($TAP_WORKLOAD_NAME)"
+       kubectl -n ${TAP_DEVELOPER_NAMESPACE}-regops apply -f /tmp/${TAP_WORKLOAD_NAME}-regops.yaml > /dev/null 2>&1
+      sleep 10
+  
+      i=1; stt="False"; while [ "$stt" != "True" -a $i -le 15 ]; do
+        stt=$(kubectl -n $TAP_DEVELOPER_NAMESPACE get workload $TAP_WORKLOAD_NAME -o json | jq -r '.status.conditions[] | select(.type == "Ready" and .reason == "Ready").status')
+        [ "$stt" == "True" ] && break 
+        let i=i+1
+        sleep 60
+      done
+        
+      if [ "$stt" != "True" ]; then 
+        echo "ERROR: Failed to deploy $TAP_WORKLOAD_NAME on the $TAP_CLUSTER_DEV, please try manually"
+        echo "       => tanzu -n $TAP_DEVELOPER_NAMESPACE apps workload get $TAP_WORKLOAD_NAME"
+        echo "       => kubectl -n $TAP_DEVELOPER_NAMESPACE apply -f /tmp/${TAP_WORKLOAD_NAME}-gitops.yaml"
+        exit 1 
+      fi 
+    else 
+      stt=$(curl https://${TAP_WORKLOAD_NAME}.dev.${DNS_SUBDOMAIN}.${DNS_DOMAIN} 2>/dev/null | grep -c "Greetings") 
+      if [ $stt -gt 0 ]; then                  
+        echo " ✓ Verify the TAP Demo Applicaiton ($TAP_WORKLOAD_NAME) - Deployment was succesful, application is running"
+      else                                     
+        echo " ✓ Verify the TAP Demo Applicaiton ($TAP_WORKLOAD_NAME) - Deployment was not succesful, please investige manually"
+      fi 
+    fi
+    
+    echo "   ---------------------------------------------------------------------------------------------------------------------------------------------------------------"
+    tanzu -n $TAP_DEVELOPER_NAMESPACE apps workload list | sed 's/^/   /g'
+    echo "   ---------------------------------------------------------------------------------------------------------------------------------------------------------------"
+
+
+exit
 
     #nam=$(kubectl -n ${TAP_DEVELOPER_NAMESPACE}-regops get ClassClaim -o json | jq --arg key "newsletter-db" -r '.items[].metadata | select(.name == $key).name')
     #if [ "$nam" != "newsletter-db" ]; then
@@ -277,10 +308,11 @@ if [ "$1" == "setup" ]; then
     #else
     #  echo " ✓ Verify Service Claim for PostgreSQL backend in namespace ${TAP_DEVELOPER_NAMESPACE}-regops"
     #fi
+#gaga-regops
 
     nam=$(kubectl -n ${TAP_DEVELOPER_NAMESPACE}-regops get workloads -o json | jq --arg key "$TAP_WORKLOAD_NAME" -r '.items[].metadata | select(.name == $key).name')
 
-if [ 1 -eq 2 ]; then 
+if [ 1 -eq 1 ]; then 
     echo " ✓ Apply workload file (/tmp/${TAP_WORKLOAD_NAME}-regops.yaml) for the Applicaiton ($TAP_WORKLOAD_NAME) on the OPS Cluster"
     sed -e "s/GIT_USER/$TDH_DEMO_GITHUB_USER/g" \
         -e "s/NAMESPACE/${TAP_DEVELOPER_NAMESPACE}-regops/g" \
@@ -422,58 +454,16 @@ if [ "$1" == "guide" ]; then
   HARBOR="harbor.apps.${DNS_SUBDOMAIN}.${DNS_DOMAIN}"
 
   if [ "$2" == "" ]; then
-    echo "tdh guide predeploy                    ## Predeploy the Newsletter Application"
-    echo "tdh guide devex                        ## Developer Experiance by developing an app in TAP on Kubernetens"
-    echo "tdh guide devops                       ## Developer Experiance Multistage Demo requires (TAP Multiclaster)"
+    echo "tdh guide scaffolder_cli               ## Create a new Project from an TAP Accelerator (scaffolder) with the CLI"
+    echo "tdh guide scaffolder_vscode            ## Create a new Project from an TAP Accelerator (scaffolder) in VSCode"
+    echo "tdh guide regops                       ## Developer Experiance Multistage Demo requires (TAP Multiclaster)"
   fi
 
-  if [ "$2" == "predeploy" ]; then
-    echo "1.)  Cleanup old $TDH_DEMO_GIT_REPO GIT Repositors Local and on Github"
-    echo "     => tdh clean      ## Remove GIT repos https://github.com/$TDH_DEMO_GITHUB_USER/newsletter.git and local \$HOME/workspace/$TDH_DEMO_GIT_REPO"
-    echo "     => tdh init       ## Fork $TDH_DEMO_GIT_REPO origninal GIT Repository into https://github.com/$TDH_DEMO_GITHUB_USER/newsletter.git"
-    echo ""
-    echo "2.)  Clone $TDH_DEMO_GIT_REPO from CLI"
-    echo "     => git -C \$HOME/workspace clone https://github.com/$TDH_DEMO_GITHUB_USER/newsletter.git"
-    echo ""
-    echo "3.)  Create Service Claim for PostgreSQL backend"
-    echo "     => tdh context dev"
-    echo "     => tanzu service class-claim create newsletter-db --class postgresql-unmanaged --parameter storageGB=3 -n $TAP_DEVELOPER_NAMESPACE"
-    echo ""
-    echo "     ## see status"
-    echo "     => tanzu services class-claims get newsletter-db --namespace $TAP_DEVELOPER_NAMESPACE"
-    echo ""
-    echo "4.)  Deploy Newsletter Subscription Service"
-    echo "     => tdh context dev"
-    echo "     => cd \$HOME/workspace/newsletter/newsletter-subscription"
-    echo "     => tanzu apps workload apply --file config/workload.yaml --namespace $TAP_DEVELOPER_NAMESPACE --local-path . --update-strategy replace --yes --tail --wait"
-    echo ""
-    echo "     ## see logs / get status"
-    echo "     => tanzu apps workload tail newsletter-subscription --namespace $TAP_DEVELOPER_NAMESPACE --timestamp --since 1h"
-    echo "     => tanzu apps workload get newsletter-subscription --namespace $TAP_DEVELOPER_NAMESPACE"
-    echo "     => curl https://newsletter-subscription.dev.${DNS_SUBDOMAIN}.${DNS_DOMAIN}/actuator 2>/dev/null | jq -r"
-    echo ""
-    echo "5.)  Deploy Newsletter UI Service"
-    echo "     => tdh context dev"
-    echo "     => cd \$HOME/workspace/newsletter/newsletter-ui"
-    echo "     => tanzu apps workload apply --file config/workload.yaml --namespace $TAP_DEVELOPER_NAMESPACE  --local-path . --update-strategy replace --yes --tail --wait"
-    echo ""
-    echo "     ## see logs / get status"
-    echo "     => tanzu apps workload tail newsletter-ui --namespace $TAP_DEVELOPER_NAMESPACE --timestamp --since 1h"
-    echo "     => tanzu apps workload get newsletter-ui --namespace $TAP_DEVELOPER_NAMESPACE"
-    echo "     => curl https://newsletter-ui.dev.${DNS_SUBDOMAIN}.${DNS_DOMAIN}"
-    echo ""
-    echo "Delete (undeploy) the Newsleter Application"
-    echo "     => tdh context dev"
-    echo "     => tanzu apps workload delete newsletter-subscription -n $TAP_DEVELOPER_NAMESPACE --yes"
-    echo "     => tanzu apps workload delete newsletter-ui -n $TAP_DEVELOPER_NAMESPACE --yes"
-  fi
-
-  if [ "$2" == "devex" ]; then
+  if [ "$2" == "scaffolder_cli" ]; then
     DNS_DOMAIN=$(yq -o json $HOME/.tanzu-demo-hub/deployments/$TDH_DEMO_CONFIG/config.yml | jq -r '.tdh_environment.network.dns.dns_domain')
     DNS_SUBDOMAIN=$(yq -o json $HOME/.tanzu-demo-hub/deployments/$TDH_DEMO_CONFIG/config.yml | jq -r '.tdh_environment.network.dns.dns_subdomain')
     HARBOR="harbor.apps.${DNS_SUBDOMAIN}.${DNS_DOMAIN}"
 
-#gaga-devex
     echo "Create a new Application basing on the TAP Accelerators project 'tanzu-java-web-app' by CLI"
     echo "-------------------------------------------------------------------------------------------"
     echo "1.)  Create Demo Repository (jave-webapp) and clone it to the local \$HOME/workspace/${TDH_DEMO_GIT_REPO} directory"
@@ -485,7 +475,7 @@ if [ "$1" == "guide" ]; then
     echo "     => gh repo create $TDH_DEMO_GIT_REPO --public"
     echo ""
     echo "2.)  Clone the repository to the local $HOME/workspace directory"
-    echo "     => git -C \$HOME/workspace clone https://github.com/$TDH_DEMO_GITHUB_USER/${TDH_DEMO_GIT_REPO}.git"
+    echo "     => git -C \$HOME/workspace clone https://$TDH_DEMO_GITHUB_TOKEN@github.com/$TDH_DEMO_GITHUB_USER/${TDH_DEMO_GIT_REPO}.git"
     echo ""
     echo "3.)  Create Demo Application (jave-webapp) from a TAP Accelerator"
     echo "     ## With the Tanzu CLI"
@@ -496,13 +486,22 @@ if [ "$1" == "guide" ]; then
     echo "     => unzip -d \$HOME/workspace /tmp/${TDH_DEMO_GIT_REPO}.zip"
     echo ""
     echo "4.)  Add application files to git and push to the github repository"
-    echo "     => cd \$HOME/workspace/${TDH_DEMO_GIT_REPO} && git add * && git commit -m \"new files\" && git push"
+    echo "     => cd \$HOME/workspace/${TDH_DEMO_GIT_REPO}"
+    echo "     => git add * ./.mvn ./.gitignore ./.tanzuignore"
+    echo "     => git commit -m \"new files\" && git push"
     echo ""
     echo "5.)  Manually deploy the Application"
     echo "     => cd \$HOME/workspace/${TDH_DEMO_GIT_REPO}"
     echo "     => tanzu apps workload apply --file config/workload.yaml --namespace $TAP_DEVELOPER_NAMESPACE --local-path . --update-strategy replace --yes --tail --wait"
     echo "     => tanzu apps workload get $TAP_WORKLOAD_NAME--namespace $TAP_DEVELOPER_NAMESPACE"
     echo ""
+  fi
+
+  if [ "$2" == "scaffolder_vscode" ]; then
+    DNS_DOMAIN=$(yq -o json $HOME/.tanzu-demo-hub/deployments/$TDH_DEMO_CONFIG/config.yml | jq -r '.tdh_environment.network.dns.dns_domain')
+    DNS_SUBDOMAIN=$(yq -o json $HOME/.tanzu-demo-hub/deployments/$TDH_DEMO_CONFIG/config.yml | jq -r '.tdh_environment.network.dns.dns_subdomain')
+    HARBOR="harbor.apps.${DNS_SUBDOMAIN}.${DNS_DOMAIN}"
+
     echo "Create a new TAP Accelerators project based on 'tanzu-java-web-app' within VSCode"
     echo "---------------------------------------------------------------------------------"
     echo "1.)  Create Demo Application (jave-webapp) from a TAP Accelerator"
@@ -559,12 +558,56 @@ if [ "$1" == "guide" ]; then
     echo ""
     #echo "        $ kubectl -n $TAP_DEVELOPER_NAMESPACE apply -f \$HOME/workspace/newsletter/newsletter-subscription/config/workload.yaml"
   fi
+
+  if [ "$2" == "regops" ]; then
+    DNS_DOMAIN=$(yq -o json $HOME/.tanzu-demo-hub/deployments/$TDH_DEMO_CONFIG/config.yml | jq -r '.tdh_environment.network.dns.dns_domain')
+    DNS_SUBDOMAIN=$(yq -o json $HOME/.tanzu-demo-hub/deployments/$TDH_DEMO_CONFIG/config.yml | jq -r '.tdh_environment.network.dns.dns_subdomain')
+    HARBOR="harbor.apps.${DNS_SUBDOMAIN}.${DNS_DOMAIN}"
+
+#gaga-regops-guide
+    sed -e "s/GIT_USER/$TDH_DEMO_GITHUB_USER/g" \
+        -e "s/NAMESPACE/${TAP_DEVELOPER_NAMESPACE}-regops/g" \
+        $TDHHOME/demos/$TDH_DEMO_NAME/workload/template_${TAP_WORKLOAD_NAME}-regops.yaml > /tmp/${TAP_WORKLOAD_NAME}-regops.yaml
+
+    sed -e "s/GIT_USER/$TDH_DEMO_GITHUB_USER/g" \
+        -e "s/NAMESPACE/${TAP_DEVELOPER_NAMESPACE}-regops/g" \
+        $TDHHOME/demos/$TDH_DEMO_NAME/workload/template_${TAP_WORKLOAD_NAME}-regops-deliverable.yaml > /tmp/${TAP_WORKLOAD_NAME}-regops-deliverable.yaml
+
+    echo "Configure FluxCD on the TAP Operation Cluster (OPS) to monitor the GIT Repository ($TDH_DEMO_GIT_REPO) for new pull requests"
+    echo "-------------------------------------------------------------------------------------------------------------------------------"
+    echo "IMPORTAND: Make shure thaa application ($TDH_DEMO_GIT_REPO) has been deployed by either 'tdh guide scaffolder_cli' or 'tdh guide scaffolder_vscode?'"
+    echo ""
+    echo "1.)  Apply workload file (/tmp/${TAP_WORKLOAD_NAME}-regops.yaml) for the Applicaiton ($TAP_WORKLOAD_NAME) on the OPS Cluster"
+    echo "     => tdh context ops"
+    echo "     => kubectl -n ${TAP_DEVELOPER_NAMESPACE}-regops apply -f /tmp/${TAP_WORKLOAD_NAME}-regops.yaml"
+    echo ""
+    echo "2.)  Veriy the deployment"
+    echo "     => tanzu apps workload -n ${TAP_WORKLOAD_NAME}-regops list"
+    echo "     => tanzu apps workload -n ${TAP_WORKLOAD_NAME}-regops get $TAP_WORKLOAD_NAME"
+    echo ""
+    echo "3.) Deploy the Deliverable to the TAP RUN Production Cluster"
+    echo "     => tdh context run"
+    echo "     => kubectl -n ${TAP_DEVELOPER_NAMESPACE}-regops apply -f /tmp/${TAP_WORKLOAD_NAME}-regops-deliverable.yaml"
+    echo ""
+#gaga-guide
+  fi
 fi
 
 if [ "$1" == "init" ]; then 
   DNS_DOMAIN=$(yq -o json $HOME/.tanzu-demo-hub/deployments/$TDH_DEMO_CONFIG/config.yml | jq -r '.tdh_environment.network.dns.dns_domain')
   DNS_SUBDOMAIN=$(yq -o json $HOME/.tanzu-demo-hub/deployments/$TDH_DEMO_CONFIG/config.yml | jq -r '.tdh_environment.network.dns.dns_subdomain')
   HARBOR="harbor.apps.${DNS_SUBDOMAIN}.${DNS_DOMAIN}"
+
+  if [ -f $HOME/.tdh/tdh_demo_name.cfg -a -f $HOME/.tdh/tdh_demo_config.cfg ]; then
+    [ "$TDH_DEMO_NAME" == "" -a -f $HOME/.tdh/tdh_demo_name.cfg ] && export TDH_DEMO_NAME=$(cat $HOME/.tdh/tdh_demo_name.cfg)
+    [ "$TDH_DEMO_CONFIG" == "" -a -f $HOME/.tdh/tdh_demo_config.cfg ] && export TDH_DEMO_CONFIG=$(cat $HOME/.tdh/tdh_demo_config.cfg)
+  
+    if [ "$2" != "--force" ]; then
+      echo "ERROR: TDH Demo environment is currently active with demo: $TDH_DEMO_NAME on the TDH Environment: $TDH_DEMO_CONFIG."
+      echo "       used 'tdh init --force' the reinitiate the demo or 'tdh clean' to delete the demo"
+      exit
+    fi
+  fi
 
   echo " ✓ Generating kubeconfig in \$HOME/.kube/config with '$TDH_SERVICE_LUSTER' and '$TAP_DEVELOPER_NAMESPACE' namespace as default context"
   echo "   Default Context will set to '$TAP_CONTEXT_DEV with '$TAP_DEVELOPER_NAMESPACE' as namespace'"
@@ -599,7 +642,6 @@ if [ "$1" == "init" ]; then
       exit 1
     fi
   fi
-
 
   # --- DEV CLUSTER ---
   echo " ✓ Verify Kubernetes Cluster Accessability ($TAP_CLUSTER_DEV)"
@@ -649,8 +691,6 @@ if [ "$1" == "init" ]; then
     echo "       => kubectl -n $TAP_DEVELOPER_NAMESPACE apply -f $TDHHOME/demos/tap-java-webapp/config/pipeline-notest.yaml"
     exit
   fi
-
-#gaga-init
 
   # --- MULTI CLUSTER ---
   if [ "$TDH_DEPLOYMENT_TYPE"  == "tap-multicluster" ]; then
@@ -750,8 +790,7 @@ if [ "$1" == "init" ]; then
     fi
   fi
 
-exit
-
+if [ 1 -eq 2 ]; then 
 #  echo " ✓ Update VSCode config in (\$HOME/Library/Application Support/Code/User/settings.json)"
 #  DNS_DOMAIN=$(yq -o json $HOME/.tanzu-demo-hub/deployments/$TDH_DEMO_CONFIG/config.yml | jq -r '.tdh_environment.network.dns.dns_domain')
 #  DNS_SUBDOMAIN=$(yq -o json $HOME/.tanzu-demo-hub/deployments/$TDH_DEMO_CONFIG/config.yml | jq -r '.tdh_environment.network.dns.dns_subdomain')
@@ -776,12 +815,17 @@ exit
     echo "       => docker login $harbor_url -u $harbor_usr -p $harbor_pss"
     exit
   fi
+fi
+
+  # --- SETUP DEMO LOCK FILES ---
+  [ ! -d $HOME/.tdh ] && mkdir -p $HOME/.tdh
+  echo "$TDH_DEMO_NAME" > $HOME/.tdh/tdh_demo_name.cfg
+  echo "$TDH_DEMO_CONFIG" > $HOME/.tdh/tdh_demo_config.cfg
 
   echo ""
   echo "Demo Initialization successfuly completed"
 fi
 
-#gaga-clean
 if [ "$1" == "clean" ]; then 
   echo " ✓ Verify github authorization for user '$TDH_DEMO_GITHUB_USER'"
     
@@ -902,6 +946,9 @@ if [ "$1" == "clean" ]; then
 #    kubectl delete ns ${TAP_DEVELOPER_NAMESPACE}-gitops > /dev/null 2>&1
 #    kubectl delete ns ${TAP_DEVELOPER_NAMESPACE}-regops > /dev/null 2>&1
 #  fi
+
+  # --- CLEANING UP LOCK FILES ---
+  rm -f $HOME/.tdh/tdh_demo_name.cfg $HOME/.tdh/tdh_demo_config.cfg
 
   echo ""
   echo "Demo cleanup successfuly completed"

@@ -24,7 +24,14 @@ else
   fi
 fi
 
-
+if [ ! -f $HOME/.tdh/tdh_demo_name.cfg -a ! -f $HOME/.tdh/tdh_demo_config.cfg ]; then 
+  if [ "$1" != "init" ]; then 
+    echo "ERROR: No active setup found, please run 'tdh init' first"
+    echo "       => unset TDH_DEMO_CONFIG TDH_DEMO_NAME"
+    echo "       => tdh init"
+    exit 0
+  fi
+fi
 
 if [ "$TDH_DEMO_CONFIG" == "" -o "$TDH_DEMO_NAME" == "" ]; then
   [ "$TDH_DEMO_NAME" == "" -a -f $HOME/.tdh/tdh_demo_name.cfg ] && export TDH_DEMO_NAME=$(cat $HOME/.tdh/tdh_demo_name.cfg) 
@@ -51,7 +58,9 @@ if [ "$TDH_DEMO_CONFIG" == "" -o "$TDH_DEMO_NAME" == "" ]; then
   fi
 
   [ "$TDH_DEMO_CONFIG" == "" -o "$TDH_DEMO_NAME" == "" ] && exit 0
-else
+fi
+
+if [ "$TDH_DEPLOYMENT_NAME" == "" ]; then 
   TDH_DEPLOYMENT_NAME=$(echo $TDH_DEMO_CONFIG | awk -F'/' '{ print $NF }') 
 fi
 
@@ -77,6 +86,7 @@ export KUBECONFIG=$HOME/.tanzu-demo-hub/deployments/$TDH_DEMO_CONFIG/kubeconfig_
 
 if [ "$1" == "context" -o "$1" == "c" ]; then
   if [ "$2" == "" ]; then
+echo gaga2
     if [ "$KUBECONFIG" != "$HOME/.tanzu-demo-hub/deployments/$TDH_DEMO_CONFIG/kubeconfig_${TDH_DEPLOYMENT_NAME}.yaml" ]; then 
       if [ "$TDH_DEPLOYMENT_TYPE"  == "tap-multicluster" ]; then
         echo "CURRENT   NAME                                                              CLUSTER                        AUTHINFO                             NAMESPACE"
