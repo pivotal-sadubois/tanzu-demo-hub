@@ -1,6 +1,8 @@
 apiVersion: carto.run/v1alpha1
 kind: Workload
 metadata:
+  annotations:
+    autoscaling.knative.dev/minScale: "0"
   labels:
     app.kubernetes.io/part-of: java-webapp
     apps.tanzu.vmware.com/workload-type: web

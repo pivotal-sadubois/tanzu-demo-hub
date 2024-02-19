@@ -14,7 +14,7 @@ TAP_WORKLOAD_FRONTEND_FILE=${TAP_WORKLOAD_FRONTEND_NAME}-gitops.yaml
 TAP_WORKLOAD_BACKEND_NAME=newsletter-subscription
 TAP_WORKLOAD_BACKEND_FILE=${TAP_WORKLOAD_BACKEND_NAME}-gitops.yaml
 TDH_DEMO_GIT_REPO=newsletter
-TDH_CARTO_GIT_REPO=cartographer
+TDH_CARTO_GIT_REPO=${TDH_DEMO_GIT_REPO}-config
 
 #tanzu accelerator list --server-url http://tap-gui.dev.tapmc.v2steve.net
 #tanzu accelerator get tanzu-java-web-app --server-url http://tap-gui.dev.tapmc.v2steve.net
@@ -481,44 +481,55 @@ if [ "$1" == "guide" ]; then
 
   if [ "$2" == "devex" ]; then
     echo "1.)  Show Jira Ticket: JRA_411 to the audience"
-    echo "     => https://raw.githubusercontent.com/pivotal-sadubois/newsletter/main/catalog/docs/images/jra411.jpg"
+    echo "     -----------------------------------------"
+    echo "     https://raw.githubusercontent.com/pivotal-sadubois/newsletter/main/catalog/docs/images/jra411.jpg"
     echo ""
     echo "2.)  Clone Demo Repository"
+    echo "     -----------------------------------------"
     echo "     => Clone $TDH_DEMO_GIT_REPO from VSCode"
-    echo "        ▪ VSCode -> Welcome (tab) -> Clone from GIT Repository (https://github.com/$TDH_DEMO_GITHUB_USER/newsletter.git)"
+    echo "        ▪ VSCode -> Welcome (tab) -> Clone from GIT Repository"
+    echo "          (https://github.com/$TDH_DEMO_GITHUB_USER/newsletter.git)"
     echo "          into local directory: \$HOME/workspace/newsletter -- *** DO NOT YET OPEN THE PROJECT ***"
     echo "        ▪ VSCode -> Welcome (tab) -> Open Folder -> \$HOME/workspace/newsletter/newsletter-subscription"
     echo ""
     echo "     => Clone $TDH_DEMO_GIT_REPO from CLI"
-    echo "        $ git -C \$HOME/workspace clone https://github.com/$TDH_DEMO_GITHUB_USER/newsletter.git"
+    echo "     git -C \$HOME/workspace clone https://github.com/$TDH_DEMO_GITHUB_USER/newsletter.git"
     echo ""
     echo "3.)  Open The Tanzu Application Platform (TAP)"
-    echo "     => Register the 'newsletter' app as Catalog Entity"
-    echo "        ▪ TAP Gui (Home) -> Register Entity -> Repository Url: https://github.com/pivotal-sadubois/newsletter/blob/main/catalog/catalog-info.yaml"
+    echo "     -----------------------------------------"
+    echo "     =>  Register the 'newsletter' app as Catalog Entity"
+    echo "         ▪ TAP Gui (Home) -> Register Entity -> Repository Url"
+    echo "           (https://github.com/pivotal-sadubois/newsletter/blob/main/catalog/catalog-info.yaml)"
     echo ""
     echo "4.)  Create a new Branch (JRA_411)"
-    echo "     => Create branch with VSCode"
-    echo "        ▪ VSCode -> Source Control -> Branch -> Create Branch -> JRA_411 -> <comment> -> Pulish Branch"
+    echo "     =>  Create branch with VSCode"
+    echo "         ▪ VSCode -> Source Control -> Branch -> Create Branch -> JRA_411 -> <comment> -> Pulish Branch"
     echo ""
     echo "     => Create branch with CLI"
-    echo "        $ cd \$HOME/workspace/newsletter"
-    echo "        $ git checkout -b \"JRA_411\""
+    echo "        cd \$HOME/workspace/newsletter"
+    echo "        git checkout -b \"JRA_411\""
     echo ""
     echo "5.)  Create a (crossplane) Service Instance"
+    echo "     ---------------------------------------"
     echo "     => View Available Service Classes"
-    echo "        $ tanzu service class list"
-    echo "        $ tanzu service class get postgresql-unmanaged"
+    echo "        tanzu service class list"
+    echo "        tanzu service class get postgresql-unmanaged"
     echo ""
     echo "     => Create a 'PostgreSQL' Service Claim"
-    echo "        $ tanzu service class-claim create newsletter-db --class postgresql-unmanaged --parameter storageGB=3 -n newsletter"
-    echo "        $ tanzu services class-claims get newsletter-db --namespace newsletter"
+    echo "        tanzu service class-claim create newsletter-db \\"
+    echo "            --class postgresql-unmanaged --parameter storageGB=3 -n newsletter"
+    echo "        tanzu services class-claims get newsletter-db --namespace newsletter"
     echo ""
-    echo "6.)  Deploy App"
+    echo "6.)  Deploy the Newletter App"
+    echo "     ------------------------"
     echo "     => Create branch with VSCode"
-    echo "        ▪ VSCode -> Explorer -> Newsletter Subscription -> config/workload.yaml (right mouse button) -> Tanzu Live Update"
+    echo "        ▪ VSCode -> Explorer -> Newsletter Subscription -> config/workload.yaml (right mouse button) -> "
+    echo "          Tanzu Live Update"
     echo ""
     echo "     => Create branch with CLI"
-    echo "        $ tanzu apps workload apply --file \$HOME/workspace/$TDH_DEMO_GIT_REPO/$TAP_WORKLOAD_BACKEND_NAME/config/workload.yaml --namespace $TAP_DEVELOPER_NAMESPACE \\"
+    echo "        $ tanzu apps workload apply \\"
+    echo "             --file \$HOME/workspace/$TDH_DEMO_GIT_REPO/$TAP_WORKLOAD_BACKEND_NAME/config/workload.yaml \\"
+    echo "             --namespace $TAP_DEVELOPER_NAMESPACE \\"
     echo "             --source-image $HARBOR/library/$TAP_WORKLOAD_BACKEND_NAME \\"
     echo "             --local-path \$HOME/workspace/$TDH_DEMO_GIT_REPO/$TAP_WORKLOAD_BACKEND_NAME \\"
     echo "             --live-update --tail --update-strategy replace --debug --yes"
@@ -528,6 +539,10 @@ if [ "$1" == "guide" ]; then
 fi
 
 if [ "$1" == "init" ]; then 
+  DNS_DOMAIN=$(yq -o json $HOME/.tanzu-demo-hub/deployments/$TDH_DEMO_CONFIG/config.yml | jq -r '.tdh_environment.network.dns.dns_domain')
+  DNS_SUBDOMAIN=$(yq -o json $HOME/.tanzu-demo-hub/deployments/$TDH_DEMO_CONFIG/config.yml | jq -r '.tdh_environment.network.dns.dns_subdomain')
+  HARBOR="harbor.apps.${DNS_SUBDOMAIN}.${DNS_DOMAIN}"
+
   if [ -f $HOME/.tdh/tdh_demo_name.cfg -a -f $HOME/.tdh/tdh_demo_config.cfg ]; then 
     [ "$TDH_DEMO_NAME" == "" -a -f $HOME/.tdh/tdh_demo_name.cfg ] && export TDH_DEMO_NAME=$(cat $HOME/.tdh/tdh_demo_name.cfg)
     [ "$TDH_DEMO_CONFIG" == "" -a -f $HOME/.tdh/tdh_demo_config.cfg ] && export TDH_DEMO_CONFIG=$(cat $HOME/.tdh/tdh_demo_config.cfg)
@@ -575,6 +590,18 @@ if [ "$1" == "init" ]; then
     echo "Y" | gh repo fork https://github.com/pivotal-sadubois/$TDH_DEMO_GIT_REPO.git
   else
     echo "   ▪ Verify TAP Demo Repository https://github.com/$TDH_DEMO_GITHUB_USER/$TDH_DEMO_GIT_REPO"
+  fi
+
+  # --- CREATE GITOPS CARTOGRAPHER REPO ---
+  rep=$(gh repo list --json name | jq -r --arg key $TDH_CARTO_GIT_REPO '.[] | select(.name == $key).name')
+  if [ "$rep" != "$TDH_CARTO_GIT_REPO" ]; then
+    echo " ✓ Create repository https://githum.com/$TDH_DEMO_GITHUB_USER/$TDH_CARTO_GIT_REPO"
+    gh repo create $TDH_CARTO_GIT_REPO --public >/dev/null 2>&1; ret=$?
+    if [ $ret -ne 0 ]; then
+      echo "ERROR: failed to create github repository $TDH_DEMO_GITHUB_USER/$TDH_CARTO_GIT_REPO, please try manually"
+      echo "       => gh repo create $TDH_CARTO_GIT_REPO --public"
+      exit 1
+    fi
   fi
 
   # --- DEV CLUSTER ---

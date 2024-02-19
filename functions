@@ -8008,7 +8008,8 @@ installTAPV2() {
     echo ""                                                                                                                       >> $TAP_CONFIG_1
     echo "cnrs:"                                                                                                                  >> $TAP_CONFIG_1
     echo "  domain_name: $DNS_DOMAIN"                                                                                             >> $TAP_CONFIG_1
-    echo "  domain_template: '{{.Name}}.{{.Domain}}'"                                                                             >> $TAP_CONFIG_1
+
+    echo "  domain_template: '{{.Name}}-{{.Namespace}}.{{.Domain}}'"                                                              >> $TAP_CONFIG_1
     echo "  ingress_issuer: \"\""                                                                                                 >> $TAP_CONFIG_1
     echo "  contour:"                                                                                                             >> $TAP_CONFIG_1
     echo "    default_tls_secret: default/$TLS_SECRET"                                                                            >> $TAP_CONFIG_1
@@ -8043,10 +8044,11 @@ installTAPV2() {
 
     # https://docs.vmware.com/en/VMware-Tanzu-Application-Platform/1.5/tap-reference-architecture/GUID-reference-designs-tap-architecture-dev-components.html
     echo "appliveview_connector:"                                                                                                 >> $TAP_CONFIG_1
+    echo "  activateSensitiveOperations: true"                                                                                    >> $TAP_CONFIG_1
     echo "  backend:"                                                                                                             >> $TAP_CONFIG_1
     echo "    sslDeactivated: false"                                                                                              >> $TAP_CONFIG_1
     echo "    ingressEnabled: true"                                                                                               >> $TAP_CONFIG_1
-    echo "    host:  appliveview.$APP_LIVE_VIEW"                                                                                     >> $TAP_CONFIG_1
+    echo "    host:  appliveview.$APP_LIVE_VIEW"                                                                                  >> $TAP_CONFIG_1
     echo ""                                                                                                                       >> $TAP_CONFIG_1
 
     #run
@@ -8395,9 +8397,14 @@ installTAPV2() {
     echo "    include: \"true\""                                                                                                  >> $TAP_CONFIG
     echo "    enable_tls: \"true\""                                                                                               >> $TAP_CONFIG
     echo "  tls:"                                                                                                                 >> $TAP_CONFIG
-    echo "    namespace: default"                                                                                          >> $TAP_CONFIG
+    echo "    namespace: default"                                                                                                 >> $TAP_CONFIG
     echo "    secret_name: $TLS_SECRET"                                                                                           >> $TAP_CONFIG
     echo "  domain: $DNS_DOMAIN"                                                                                                  >> $TAP_CONFIG
+    echo ""                                                                                                                       >> $TAP_CONFIG
+
+    # --- ACTIVATES LOG-LEVEL CHANGING IN THE APP-LIVE-VIEW ---
+    echo "appliveview_connector:"                                                                                                 >> $TAP_CONFIG
+    echo "  activateSensitiveOperations: true"                                                                                    >> $TAP_CONFIG
     echo ""                                                                                                                       >> $TAP_CONFIG
 
     # https://docs.vmware.com/en/VMware-Tanzu-Application-Platform/1.5/tap-reference-architecture/GUID-reference-designs-tap-architecture-dev-components.html
@@ -16318,6 +16325,7 @@ vSphereAPI_createContentLibrary() {
 
   # --- CREATE CONTENT-LIBRARY ---
   cnt=$(govc library.ls /$VCENTER_CONTENT_LIBRARY/ | egrep -c "^/$VCENTER_CONTENT_LIBRARY/$VMSERVICE_IMAGE_NAME")
+cnt=1
   if [ $cnt -eq 0 ]; then 
     messagePrint " ▪ Upload OVF Image to Content Library (tanzu-demo-hub)"   "$VMSERVICE_IMAGE"
 
@@ -19522,6 +19530,38 @@ createNamespace() {
 }
 
 # ------------------------------------------------------------------------------------------
+# Function Name ......: deleteTAPNamespace
+# Function Purpose ...: Delete a Kubernetes Namespace
+# ------------------------------------------------------------------------------------------
+# Argument ($1) ......: Namespace
+# ------------------------------------------------------------------------------------------
+# Return Value .......: 0 - Success, 1 - Failed
+# ------------------------------------------------------------------------------------------
+deleteTAPNamespace() { 
+  NAMESPACE=$1
+
+#gogo
+  nam=$NAMESPACE
+  while [ "$nam" == "$NAMESPACE" ]; do
+    cmdLoop kubectl get ns -o json > /tmp/output.json
+
+
+ls -la /tmp/output.json
+    if [ -s /tmp/output.json ]; then
+      nam=$(jq -r --arg key "$NAMESPACE" '.items[] | select(.metadata.name == $key).metadata.name' /tmp/output.json)
+echo "NAM:$nam"
+echo "NAMESPACE:$NAMESPACE"
+      if [ "$nam" != "" ]; then
+         cmdLoop kubectl get ns $NAMESPACE -o json | \
+            jq -r '. | select(.spec.finalizers[] == "kubernetes").spec.finalizers |= []' > /tmp/namespace.json
+         cmdLoop kubectl replace --raw "/api/v1/namespaces/$NAMESPACE/finalize" -f /tmp/namespace.json > /dev/null 2>&1
+      fi
+    fi
+  done
+}
+
+
+# ------------------------------------------------------------------------------------------
 # Function Name ......: deleteNamespace
 # Function Purpose ...: Delete a Kubernetes Namespace
 # ------------------------------------------------------------------------------------------
@@ -19549,7 +19589,7 @@ deleteNamespace() {
           cmdLoop kubectl replace --raw "/api/v1/namespaces/$NAMESPACE/finalize" -f /tmp/namespace.json > /dev/null 2>&1
         else
           messagePrint " ▪ Deleting Namespace"     "$NAMESPACE"
-          cmdLoop kubectl delete ns $NAMESPACE
+          kubectl delete ns $NAMESPACE
         fi
       fi
     fi
@@ -21298,6 +21338,23 @@ goTAPStage() {
 }
 
 # ------------------------------------------------------------------------------------------
+# Function Name ......: emptyTAPNamespace
+# Function Purpose ...: create TAP Namespace
+# ------------------------------------------------------------------------------------------
+# Argument ($1) ......: Kubernetes Context
+#          ($2) ......: Namespace
+# ------------------------------------------------------------------------------------------
+# Return Value .......: 0 - for success, 1 - failure
+# ------------------------------------------------------------------------------------------
+emptyTAPNamespace() {
+  TMP_CONTEXT=$1
+  TMP_NAMESPACE=$2
+
+  kubectl api-resources --verbs=list --namespaced -o name | xargs -n 1 kubectl delete --ignore-not-found --namespace $TMP_NAMESPACE --all > /dev/null 2>&1
+  #kubectl delete --ignore-not-found --all limitrange,secret,serviceaccount -
+} 
+
+# ------------------------------------------------------------------------------------------
 # Function Name ......: createTAPNamespace
 # Function Purpose ...: create TAP Namespace
 # ------------------------------------------------------------------------------------------
@@ -21309,6 +21366,7 @@ goTAPStage() {
 createTAPNamespace() {
   TMP_CONTEXT=$1
   TMP_NAMESPACE=$2
+  TMP_MODE=$3
 
   kubectl config use-context $TMP_CONTEXT > /dev/null 2>&1; ret=$?
   if [ $ret -ne 0 ]; then 
@@ -21316,6 +21374,8 @@ createTAPNamespace() {
     echo "       kubectl config use-context $TMP_CONTEXT"
     exit 1
   fi
+
+  [ "$TMP_MODE" == "recreate" ] && deleteNamespace ${TMP_NAMESPACE} > /dev/null 2>&1
 
   nam=$(kubectl get ns -o json | jq -r --arg key $TMP_NAMESPACE '.items[].metadata | select(.name == $key).name')
   if [ "$nam" == "" ]; then
