@@ -7813,7 +7813,7 @@ installTAPV2() {
 #haha
       cnt=0; ret=1
       while [ $ret -ne 0 -a $cnt -lt 5 ]; do
-        kubectl exec -it --pod-running-timeout=1m0s tdh-tools-carvel-carvel -n tdh-tools-carvel -- docker login $INSTALL_REGISTRY_HOSTNAME -u $INSTALL_REGISTRY_USERNAME -p $INSTALL_REGISTRY_PASSWORD > /tmp/error.log 2>&1; ret=$?
+        kubectl exec -it --pod-running-timeout=1m0s tdh-tools-carvel-carvel -n tdh-tools-carvel -- docker login $INSTALL_REGISTRY_HOSTNAME -u $INSTALL_REGISTRY_USERNAME -p '"$INSTALL_REGISTRY_PASSWORD"' > /tmp/error.log 2>&1; ret=$?
         [ $ret -eq 0 ] && break
         sleep 10
         let cnt=cnt+1
