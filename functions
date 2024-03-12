@@ -1,4 +1,5 @@
 #!/bin/bash
+#--pod-running-timeout=1m0s
 # ############################################################################################
 # File: ........: functions 
 # Language .....: bash 
@@ -7809,9 +7810,10 @@ installTAPV2() {
       kubectl delete pod tdh-tools-carvel-carvel > /dev/null 2>&1
       kubectl run --image=docker.io/sadubois/tdh-tools-carvel-carvel-1.6.1:latest tdh-tools-carvel-carvel sleep 10000000 -n tdh-tools-carvel > /dev/null 2>&1
 
+#haha
       cnt=0; ret=1
       while [ $ret -ne 0 -a $cnt -lt 5 ]; do
-        kubectl exec -it tdh-tools-carvel-carvel -n tdh-tools-carvel -- docker login $INSTALL_REGISTRY_HOSTNAME -u $INSTALL_REGISTRY_USERNAME -p $INSTALL_REGISTRY_PASSWORD > /tmp/error.log 2>&1; ret=$?
+        kubectl exec -it --pod-running-timeout=1m0s tdh-tools-carvel-carvel -n tdh-tools-carvel -- docker login $INSTALL_REGISTRY_HOSTNAME -u $INSTALL_REGISTRY_USERNAME -p $INSTALL_REGISTRY_PASSWORD > /tmp/error.log 2>&1; ret=$?
         [ $ret -eq 0 ] && break
         sleep 10
         let cnt=cnt+1
@@ -7825,7 +7827,8 @@ installTAPV2() {
 
       cnt=0; ret=1
       while [ $ret -ne 0 -a $cnt -lt 10 ]; do
-        kubectl exec -it tdh-tools-carvel-carvel -n tdh-tools-carvel -- docker login $IMGPKG_REGISTRY_HOSTNAME_0 -u $IMGPKG_REGISTRY_USERNAME_0 -p $IMGPKG_REGISTRY_PASSWORD_0 > /tmp/error.log 2>&1; ret=$?
+        kubectl exec -it --pod-running-timeout=1m0s tdh-tools-carvel-carvel -n tdh-tools-carvel -- docker login $IMGPKG_REGISTRY_HOSTNAME_0 -u $IMGPKG_REGISTRY_USERNAME_0 -p $IMGPKG_REGISTRY_PASSWORD_0 > /tmp/error.log 2>&1; ret=$?
+        [ $ret -eq 0 ] && break
         sleep 10
         let cnt=cnt+1
       done
@@ -15037,7 +15040,6 @@ tdh_tools_build() {
       mv /tmp/govc $TDH_DOCKER_CACHE/govc/${filename}-${TDH_GOVC}
       [ -L $TDH_DOCKER_CACHE/govc/govc ] && rm -f $TDH_DOCKER_CACHE/govc/govc
       ln -s ${filename}-${TDH_GOVC} $TDH_DOCKER_CACHE/govc/govc
-#haha
     fi
 
     REBUILD_REQUIRED_SOFTWARE=1       ## REBUILD REQUIRED BECAUSE OF SOFTWARE CHANGE
@@ -16773,9 +16775,9 @@ echo "https://${TDH_OKTA_DOMAIN}.okta.com/api/v1/authorizationServers/$2/claims"
 verifyVPN() {
   url="https://h2o.vmware.com"
 
-  curl -k --head -m 3 $url > /dev/null 2>&1; ret=$?
+  curl -k --head -m 10 $url > /dev/null 2>&1; ret=$?
   if [ $ret -ne 0 ]; then 
-    echo "ERROR: The site $url can not be reached. Most likely GlobalVPN is not active"
+    echo "ERROR: The site $url can not be reached. Most likely GlobalVPN is not active XXX"
     if [ "$NATIVE" == "0" ]; then
       echo "       => tools/${TDH_TOOLS}.sh"
       echo "          tdh-tools:/$ curl $url"
