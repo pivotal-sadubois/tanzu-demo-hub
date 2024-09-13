@@ -165,102 +165,104 @@ runTDHtools $TDH_TOOLS_CONTAINER_TYPE $DEPLOY_TKG_VERSION "$TXT" "/home/tanzu/ta
 #checkCLIcommands TANZU
 #checkCLIcommands TMC
 
-if [ "$PROVIDER" == "VSPHERE_TKGS" -a "$TMC_ENABLED" -eq 0 ]; then
+if [ "$PROVIDER" == "VSPHERE_TKGS" ]; then
   # --- CLEANUP KUNECONFIG ---
   #tmcCheckLogin
   vSphereKubeconfig  
   vSphereLogin
 
-  cnt=$(tmc managementcluster list | grep -c "$TMC_DISPLAY_NAME") 
-  if [ $cnt -eq 0 ]; then
-    cnt=$(kubectl get ns | egrep -c "^svc-tmc-") 
-    if [ $cnt -gt 0 ]; then
-      kubectl -n svc-tmc- get cm stack-config -o json > /tmp/clinfo.yaml 2>/dev/null; ret=$? 
-      if [ $ret -eq 0 ]; then 
-        clu_mgmt=$(jq -r '.data.management_cluster_name' /tmp/clinfo.yaml) 
-        tmc_host=$(jq -r '.data.tmc_host' /tmp/clinfo.yaml) 
-        tmc_url=$(jq -r '.data.tmc_url' /tmp/clinfo.yaml) 
-  
-        # --- CLEANUP TEMPORARY FILES ---
-        rm -f /tmp/status.yaml
-  
-        if [ "$TMC_DISPLAY_NAME" != "$clu_mgmt" ]; then 
-          echo "ERROR: vSphere Supervisor cluster ($VSPHERE_TKGS_SUPERVISOR_CLUSTER) is already registered in"
-          echo "       TMC Instance ($tmc_url) as $tmc_host."
-          echo "       Please unregister it first:"
-         if [ "$NATIVE" == "0" ]; then
-            echo "       => tools/${TDH_TOOLS}.sh"
-            echo "          tdh-tools:/$ tmc managementcluster deregister $clu_mgmt"
-            echo "          tdh-tools:/$ exit"
+  if [ "$TMC_ENABLED" -eq 1 ]; then
+    cnt=$(tmc managementcluster list | grep -c "$TMC_DISPLAY_NAME") 
+    if [ $cnt -eq 0 ]; then
+      cnt=$(kubectl get ns | egrep -c "^svc-tmc-") 
+      if [ $cnt -gt 0 ]; then
+        kubectl -n svc-tmc- get cm stack-config -o json > /tmp/clinfo.yaml 2>/dev/null; ret=$? 
+        if [ $ret -eq 0 ]; then 
+          clu_mgmt=$(jq -r '.data.management_cluster_name' /tmp/clinfo.yaml) 
+          tmc_host=$(jq -r '.data.tmc_host' /tmp/clinfo.yaml) 
+          tmc_url=$(jq -r '.data.tmc_url' /tmp/clinfo.yaml) 
+    
+          # --- CLEANUP TEMPORARY FILES ---
+          rm -f /tmp/status.yaml
+    
+          if [ "$TMC_DISPLAY_NAME" != "$clu_mgmt" ]; then 
+            echo "ERROR: vSphere Supervisor cluster ($VSPHERE_TKGS_SUPERVISOR_CLUSTER) is already registered in"
+            echo "       TMC Instance ($tmc_url) as $tmc_host."
+            echo "       Please unregister it first:"
+           if [ "$NATIVE" == "0" ]; then
+              echo "       => tools/${TDH_TOOLS}.sh"
+              echo "          tdh-tools:/$ tmc managementcluster deregister $clu_mgmt"
+              echo "          tdh-tools:/$ exit"
+            else
+              echo "       => tmc managementcluster deregister $clu_mgmt"
+            fi
+      
+            exit 1
           else
-            echo "       => tmc managementcluster deregister $clu_mgmt"
+            tmc_orgid=$(jq -r '.data.org_id' /tmp/clinfo.yaml)
+      
+            messageTitle "Verify TMC Registration of the vSphere Supervisor Cluster"
+            messagePrint " ▪ Tanzu Mission Control (TMC) - Instance Name"            "$TMC_SERVER_URL"
+            messagePrint " ▪ Tanzu Mission Control (TMC) - Organization Id"          "$tmc_orgid"
+            messagePrint " ▪ TMC Management Clusrer - Display Name"                  "$TMC_DISPLAY_NAME"
+            messagePrint " ▪ TMC Management Clusrer - vCenter Supervisor Cluster"    "$TMC_DISPLAY_NAME"
+    
+            ret=1; cnt=0
+            while [ $ret -ne 0 -a $cnt -lt 5 ]; do
+              tmc managementcluster get $TMC_DISPLAY_NAME -o json > /tmp/status.json 2>&1; ret=$? 
+              [ $ret -eq 0 ] && break
+              let cnt=cnt+1
+              sleep 30
+            done
+    
+            if [ $ret -ne 0 ]; then
+             echo "ERROR: failed to get management cluster status"
+             if [ "$NATIVE" == "0" ]; then
+                echo "       => tools/${TDH_TOOLS}.sh"
+                echo "          tdh-tools:/$ tmc managementcluster get $TMC_DISPLAY_NAME"
+                echo "          tdh-tools:/$ exit"
+              else
+                echo "       => tmc managementcluster get $TMC_DISPLAY_NAME"
+              fi
+      
+              exit 1
+            fi
+      
+          mc_update=$(jq -r '.status.lastUpdate' /tmp/status.json)
+              mc_status=$(jq -r '.status.healthDetails.message' /tmp/status.json)
+            messagePrint " ▪ TMC Management Clusrer - Last Update from Agent"        "$mc_update"
+            messagePrint " ▪ TMC Management Clusrer - Agent Status"                  "$mc_status"
+           
+            # --- CLEANUP TEMPORARY FILES ---
+            rm -f /tmp/status.yaml
           fi
-    
-          exit 1
         else
-          tmc_orgid=$(jq -r '.data.org_id' /tmp/clinfo.yaml)
-    
-          messageTitle "Verify TMC Registration of the vSphere Supervisor Cluster"
-          messagePrint " ▪ Tanzu Mission Control (TMC) - Instance Name"            "$TMC_SERVER_URL"
-          messagePrint " ▪ Tanzu Mission Control (TMC) - Organization Id"          "$tmc_orgid"
-          messagePrint " ▪ TMC Management Clusrer - Display Name"                  "$TMC_DISPLAY_NAME"
-          messagePrint " ▪ TMC Management Clusrer - vCenter Supervisor Cluster"    "$TMC_DISPLAY_NAME"
-  
-          ret=1; cnt=0
+          messageTitle "Register vSphere Supervisor Cluster to Tanzu Mission Control (TMC)"
+          messagePrint " ▪ vCenter Supervisor Cluster"                       "$VSPHERE_TKGS_SUPERVISOR_CLUSTER"
+          messagePrint " ▪ Tanzu Mission Control (TMC) - Instance"            "$TMC_SERVER_URL"
+          messagePrint " ▪ Tanzu Mission Control (TMC) - Management Clusrer"  "$TMC_DISPLAY_NAME"
+        messagePrint " ▪ Tanzu Mission Control (TMC) - Cluster Group"       "tanzu-demo-hub"
+      
+            ret=1; cnt=0
           while [ $ret -ne 0 -a $cnt -lt 5 ]; do
-            tmc managementcluster get $TMC_DISPLAY_NAME -o json > /tmp/status.json 2>&1; ret=$? 
+            tmc managementcluster register -c tanzu-demo-hub $TMC_DISPLAY_NAME -p TKGS -k $HOME/.kube/config > /dev/null 2>&1; ret=$?
             [ $ret -eq 0 ] && break
             let cnt=cnt+1
             sleep 30
-          done
-  
+        done
+        
           if [ $ret -ne 0 ]; then
-           echo "ERROR: failed to get management cluster status"
-           if [ "$NATIVE" == "0" ]; then
+         echo "ERROR: failed to register vSphere supervisor cluster to Tanzu Mission Control (TMC)"
+             if [ "$NATIVE" == "0" ]; then
               echo "       => tools/${TDH_TOOLS}.sh"
-              echo "          tdh-tools:/$ tmc managementcluster get $TMC_DISPLAY_NAME"
+              echo "          tdh-tools:/$ tmc managementcluster register -c tanzu-demo-hub $TMC_DISPLAY_NAME -p TKGS -k $HOME/.kube/config"
               echo "          tdh-tools:/$ exit"
             else
-              echo "       => tmc managementcluster get $TMC_DISPLAY_NAME"
+              echo "       => tmc managementcluster register -c tanzu-demo-hub tkgmc-vsphere-haas-464-sadubois -p TKGS -k $HOME/.kube/config"
             fi
-    
+      
             exit 1
           fi
-    
-          mc_update=$(jq -r '.status.lastUpdate' /tmp/status.json)
-          mc_status=$(jq -r '.status.healthDetails.message' /tmp/status.json)
-          messagePrint " ▪ TMC Management Clusrer - Last Update from Agent"        "$mc_update"
-          messagePrint " ▪ TMC Management Clusrer - Agent Status"                  "$mc_status"
-         
-          # --- CLEANUP TEMPORARY FILES ---
-          rm -f /tmp/status.yaml
-        fi
-      else
-        messageTitle "Register vSphere Supervisor Cluster to Tanzu Mission Control (TMC)"
-        messagePrint " ▪ vCenter Supervisor Cluster"                       "$VSPHERE_TKGS_SUPERVISOR_CLUSTER"
-        messagePrint " ▪ Tanzu Mission Control (TMC) - Instance"            "$TMC_SERVER_URL"
-        messagePrint " ▪ Tanzu Mission Control (TMC) - Management Clusrer"  "$TMC_DISPLAY_NAME"
-        messagePrint " ▪ Tanzu Mission Control (TMC) - Cluster Group"       "tanzu-demo-hub"
-    
-        ret=1; cnt=0
-        while [ $ret -ne 0 -a $cnt -lt 5 ]; do
-          tmc managementcluster register -c tanzu-demo-hub $TMC_DISPLAY_NAME -p TKGS -k $HOME/.kube/config > /dev/null 2>&1; ret=$?
-          [ $ret -eq 0 ] && break
-          let cnt=cnt+1
-          sleep 30
-        done
-    
-        if [ $ret -ne 0 ]; then
-         echo "ERROR: failed to register vSphere supervisor cluster to Tanzu Mission Control (TMC)"
-         if [ "$NATIVE" == "0" ]; then
-            echo "       => tools/${TDH_TOOLS}.sh"
-            echo "          tdh-tools:/$ tmc managementcluster register -c tanzu-demo-hub $TMC_DISPLAY_NAME -p TKGS -k $HOME/.kube/config"
-            echo "          tdh-tools:/$ exit"
-          else
-            echo "       => tmc managementcluster register -c tanzu-demo-hub tkgmc-vsphere-haas-464-sadubois -p TKGS -k $HOME/.kube/config"
-          fi
-    
-          exit 1
         fi
       fi
     fi
