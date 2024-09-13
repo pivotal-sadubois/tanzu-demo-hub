@@ -27,6 +27,7 @@ fi
 export START_COMMAND="$*"
 export CMD_EXEC=$(basename $0)
 export CMD_ARGS=""
+export TMC_ENABLED=0
 
 # --- SOUTCE FOUNCTIONS AND USER ENVIRONMENT ---
 [ -f $TANZU_DEMO_HUB/functions ] && . $TANZU_DEMO_HUB/functions
@@ -164,9 +165,9 @@ runTDHtools $TDH_TOOLS_CONTAINER_TYPE $DEPLOY_TKG_VERSION "$TXT" "/home/tanzu/ta
 #checkCLIcommands TANZU
 #checkCLIcommands TMC
 
-if [ "$PROVIDER" == "VSPHERE_TKGS" ]; then
+if [ "$PROVIDER" == "VSPHERE_TKGS" -a "$TMC_ENABLED" -eq 0 ]; then
   # --- CLEANUP KUNECONFIG ---
-  tmcCheckLogin
+  #tmcCheckLogin
   vSphereKubeconfig  
   vSphereLogin
 
