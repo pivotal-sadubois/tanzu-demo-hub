@@ -308,6 +308,10 @@ checkIdentityProvider() {
 vSphereLogin() {
   missing_variables=0
 
+
+echo "10 VSPHERE_TKGS_SUPERVISOR_STORAGE_CLASS:$VSPHERE_TKGS_SUPERVISOR_STORAGE_CLASS"
+echo "10 VSPHERE_TKGS_SUPERVISOR_STORAGE_POLICY:$VSPHERE_TKGS_SUPERVISOR_STORAGE_POLICY"
+
   if [ "${VSPHERE_TKGS_VCENTER_ADMIN}" == "" -o "${VSPHERE_TKGS_VCENTER_PASSWORD}" == "" -o "${VSPHERE_TKGS_VCENTER_SERVER}" == "" -o \
        "${VSPHERE_TKGS_SUPERVISOR_STORAGE_CLASS}" == "" -o "${VSPHERE_TKGS_SUPERVISOR_STORAGE_POLICY}" == "" -o \
        "${VSPHERE_TKGS_SUPERVISOR_CLUSTER}" == "" -o "${TDH_USER}" == "" ]; then
@@ -5431,7 +5435,6 @@ aksCreateCluster() {
   export KUBECONFIG=$HOME/.tanzu-demo-hub/deployments/${TDHV2_MANAGEMENT_CLUSTER}/$TDHV2_DEPLOYMENT/${wc_nam}/${wc_nam}.kubeconfig
   
   #createClusterRoleBindingGroup  default-tkg-admin-privileged-binding "psp:vmware-system-privileged" "system:authenticated"
-#hoho
 }
 
 
@@ -5469,9 +5472,7 @@ tkgCreateClusterV2() {
   vc_svu="$(getYAML VC_SERVER_URL)"
   vc_usr="$(getYAML VC_ADMIN_USER)"
   vc_pas="$(getYAML VC_ADMIN_PASS)"
-  vc_nsp="tanzu-demo-hub"
-
-#eeee
+  vc_nsp="$VSPHERE_TKGS_NAMESPACE"
 
   if [ "$(getYAML MC_INFTYP)" == "vSphere" ]; then
     if [ "$(getYAML MC_TKGENV)" == "tkgs" ]; then
@@ -5592,7 +5593,7 @@ tkgCreateClusterV2() {
           echo "  settings:"                                                              >> $CONFIG_YAML
           echo "    network:"                                                             >> $CONFIG_YAML
           echo "      cni:"                                                               >> $CONFIG_YAML
-          echo "        name: antrea"                                                     >> $CONFIG_YAML
+          echo "        name: $VSPHERE_TKGS_CNI"                                          >> $CONFIG_YAML
           echo "      pods:"                                                              >> $CONFIG_YAML
           echo "        cidrBlocks:"                                                      >> $CONFIG_YAML
           echo "        - 172.20.0.0/16"                                                  >> $CONFIG_YAML
@@ -5678,7 +5679,7 @@ tkgCreateClusterV2() {
           echo "  settings:"                                                              >> $CONFIG_YAML
           echo "    network:"                                                             >> $CONFIG_YAML
           echo "      cni:"                                                               >> $CONFIG_YAML
-          echo "        name: antrea"                                                     >> $CONFIG_YAML
+          echo "        name: $VSPHERE_TKGS_CNI"                                          >> $CONFIG_YAML
           echo "      pods:"                                                              >> $CONFIG_YAML
           echo "        cidrBlocks:"                                                      >> $CONFIG_YAML
           echo "        - 172.20.0.0/16"                                                  >> $CONFIG_YAML
@@ -5703,6 +5704,10 @@ tkgCreateClusterV2() {
           echo "          capacity:"                                                      >> $CONFIG_YAML
           echo "            storage: 200Gi"                                               >> $CONFIG_YAML
         fi
+
+        messageLine
+        cat $CONFIG_YAML
+        messageLine
 
         messagePrint " ▪ TKG Workload Cluster ($wc_nam)"          "deploying cluster ....."
 
@@ -5866,7 +5871,7 @@ tkgCreateCluster() {
     egrep "$str" $DEP_SOURCE                                                        >  $CLUSTER_CONFIG_FILE
     echo "CLUSTER_NAME: $TDH_TKGWC_NAME"                                            >> $CLUSTER_CONFIG_FILE
     echo "WORKER_MACHINE_COUNT: $TDH_TKGWC_WORKERNODES"                             >> $CLUSTER_CONFIG_FILE
-    echo "CNI: antrea"                                                              >> $CLUSTER_CONFIG_FILE
+    echo "CNI: $VSPHERE_TKGS_CNI"                                                   >> $CLUSTER_CONFIG_FILE
     echo "ENABLE_MHC: true"                                                         >> $CLUSTER_CONFIG_FILE
     echo "MHC_UNKNOWN_STATUS_TIMEOUT: 10m"                                          >> $CLUSTER_CONFIG_FILE
     echo "MHC_FALSE_STATUS_TIMEOUT: 20m"                                            >> $CLUSTER_CONFIG_FILE
@@ -5954,7 +5959,7 @@ tkgCreateCluster() {
 
     echo "CLUSTER_NAME: $TDH_TKGWC_NAME"                                            >> $CLUSTER_CONFIG_FILE
     echo "WORKER_MACHINE_COUNT: $TDH_TKGWC_WORKERNODES"                             >> $CLUSTER_CONFIG_FILE
-    echo "CNI: antrea"                                                              >> $CLUSTER_CONFIG_FILE
+    echo "CNI: $VSPHERE_TKGS_CNI"                                                   >> $CLUSTER_CONFIG_FILE
     echo "AZURE_CONTROL_PLANE_MACHINE_TYPE: $TDH_TKGWC_CONTROPLANE_MACHINE"         >> $CLUSTER_CONFIG_FILE
     echo "AZURE_NODE_MACHINE_TYPE: $TDH_TKGWC_WORKERNODES_MACHINE"                  >> $CLUSTER_CONFIG_FILE
     echo "AZURE_RESOURCE_GROUP: $TDH_TKGWC_NAME"                                    >> $CLUSTER_CONFIG_FILE
@@ -5964,7 +5969,7 @@ tkgCreateCluster() {
     echo "MHC_UNKNOWN_STATUS_TIMEOUT: 10m"                                          >> $CLUSTER_CONFIG_FILE
     echo "MHC_FALSE_STATUS_TIMEOUT: 20m"                                            >> $CLUSTER_CONFIG_FILE
 
-    [ "${TDH_TKGWC_CNI}" == "" ] && TDH_TKGWC_CNI=calico
+    [ "${TDH_TKGWC_CNI}" == "" ] && TDH_TKGWC_CNI=$VSPHERE_TKGS_CNI
     if [ "${TDH_TKGWC_CNI}" == "antrea" ]; then
       echo "CNI: $TDH_TKGWC_CNI"                                                    >> $CLUSTER_CONFIG_FILE
       echo "ANTREA_NO_SNAT: false"                                                  >> $CLUSTER_CONFIG_FILE
@@ -6080,7 +6085,7 @@ tkgCreateCluster() {
       egrep -v "$str" $DEP_SOURCE | sed -e '/^$/d'                                    >  $CLUSTER_CONFIG_FILE
       echo "CLUSTER_NAME: $TDH_TKGWC_NAME"                                            >> $CLUSTER_CONFIG_FILE
       echo "WORKER_MACHINE_COUNT: $TDH_TKGWC_WORKERNODES"                             >> $CLUSTER_CONFIG_FILE
-      echo "CNI: antrea"                                                              >> $CLUSTER_CONFIG_FILE
+      echo "CNI: $VSPHERE_TKGS_CNI"                                                   >> $CLUSTER_CONFIG_FILE
 
       echo "VSPHERE_CONTROL_PLANE_DISK_GIB: \"$TDH_TKGWC_CONTROL_PLANE_DISK_GIB\""    >> $CLUSTER_CONFIG_FILE
       echo "VSPHERE_CONTROL_PLANE_MEM_MIB: \"$TDH_TKGWC_CONTROL_PLANE_MEM_MIB\""      >> $CLUSTER_CONFIG_FILE
@@ -6186,7 +6191,7 @@ tkgCreateCluster() {
         echo "  settings:"                                                              >> $CLUSTER_CONFIG_FILE
         echo "    network:"                                                             >> $CLUSTER_CONFIG_FILE
         echo "      cni:"                                                               >> $CLUSTER_CONFIG_FILE
-        echo "        name: antrea"                                                     >> $CLUSTER_CONFIG_FILE
+        echo "        name: $VSPHERE_TKGS_CNI"                                          >> $CLUSTER_CONFIG_FILE
         echo "      pods:"                                                              >> $CLUSTER_CONFIG_FILE
         echo "        cidrBlocks:"                                                      >> $CLUSTER_CONFIG_FILE
         echo "        - 172.20.0.0/16"                                                  >> $CLUSTER_CONFIG_FILE
@@ -6495,6 +6500,9 @@ getYAML() {
     '.tdh_clusters[] | select(.name == $key).config.packages[] | select(.package_id == $pkg).package_repo' 2>/dev/null
   [ "$1" == "PACKAGE_NAMESPACE" ] && yq -o json $mccfg | jq -r --arg key "$2" --arg pkg "$3" --arg typ "$4" \
     '.tdh_clusters[] | select(.name == $key).config.packages[] | select(.package_id == $pkg).namespace' 2>/dev/null
+#  [ "$1" == "PACKAGE_DESCRIPTION" ] && yq -o json $mccfg | jq -r --arg key "$2" --arg pkg "$3" --arg typ "$4" \
+#    '.tdh_clusters[] | select(.name == $key).config.packages[] | select(.package_id == $pkg).description' 2>/dev/null
+
   [ "$1" == "PACKAGE_INGRESS_DNS" ] && yq -o json $mccfg | jq -r --arg key "$2" --arg pkg "$3" --arg typ "$4" \
     '.tdh_clusters[] | select(.name == $key).config.packages[] | select(.package_id == $pkg).ingress_dns' 2>/dev/null
   [ "$1" == "ADMIN_USER" ] && yq -o json $mccfg | jq -r --arg key "$2" --arg pkg "$3" --arg typ "$4" \
@@ -6851,7 +6859,7 @@ vsphereSupervisorClusterLoginV2() {
   # --- SET LOGIN PASSWORD AS ENVIRONMENT VARIABLE ---
   export KUBECTL_VSPHERE_PASSWORD="$vc_pas"
 
-  verifyVPN
+  #verifyVPN
 
   [ -s $HOME/.kube/config ] && mv $HOME/.kube/config $HOME/.kube/config.old
 
@@ -6942,7 +6950,7 @@ vsphereWorkloadClusterLoginV2() {
   TKGWC_NAME=$1
   TDH_DEPLOYMENT_PATH=$HOME/.tanzu-demo-hub/deployments/${TDHV2_MANAGEMENT_CLUSTER}/$TDHV2_DEPLOYMENT
 
-  kubectl get secrets ${TKGWC_NAME}-kubeconfig -n tanzu-demo-hub -o jsonpath='{.data.value}' | base64 -d > $TDH_DEPLOYMENT_PATH/${TKGWC_NAME}/${TKGWC_NAME}.kubeconfig
+  kubectl get secrets ${TKGWC_NAME}-kubeconfig -n $VSPHERE_TKGS_NAMESPACE -o jsonpath='{.data.value}' | base64 -d > $TDH_DEPLOYMENT_PATH/${TKGWC_NAME}/${TKGWC_NAME}.kubeconfig
   chmod 600 $TDH_DEPLOYMENT_PATH/${TKGWC_NAME}/${TKGWC_NAME}.kubeconfig
 
   export KUBECONFIG=$TDH_DEPLOYMENT_PATH/${TKGWC_NAME}/${TKGWC_NAME}.kubeconfig
@@ -7945,8 +7953,6 @@ installTAPV2() {
       
       exit 1 
     fi
-
-#gaga
 
     messagePrint " ▪ Creating registry secret (docker-credentials)" "$INSTALL_REGISTRY_HOSTNAME"
     tanzu secret registry add docker-credentials \
@@ -9148,6 +9154,161 @@ installArgoCD() {
   uodateConfigMap tanzu-demo-hub TDH_SERVICE_ARGOCD             "true"
 }
 
+# ------------------------------------------------------------------------------------------
+# Function Name ......: installJenkinsV2
+# Function Purpose ...: Install Gitea Helm Chargt
+# ------------------------------------------------------------------------------------------
+# Argument ($1) ......: None
+# ------------------------------------------------------------------------------------------
+# Return Value .......: 0 - SUCCEED, 1 - FAILED
+# ------------------------------------------------------------------------------------------
+# References .........: https://bitnami.com/stack/jenkins/helm
+#                     : https://github.com/bitnami/charts/tree/main/bitnami/jenkins/#installing-the-chart
+# ------------------------------------------------------------------------------------------
+installJenkinsV2() {
+  TDHV2_WORKLOAD_CLUSTER=$clu
+  APPNAME=jenkins
+  HELMCHART=jenkins
+  HELMREPO=bitnami
+
+  pkg="$(getYAML PACKAGE_NAME $TDHV2_WORKLOAD_CLUSTER $HELMCHART helm)"
+  #[ "$pkg" != "$HELMCHART" ] && return
+
+  INSTALL_NAMESPACE="$(getYAML PACKAGE_NAMESPACE $TDHV2_WORKLOAD_CLUSTER $HELMCHART helm)"
+  DESCRIPTION="$(getYAML PACKAGE_DESCRIPTION $TDHV2_WORKLOAD_CLUSTER $HELMCHART helm)"
+  HELMREPO_URL="$(getYAML PACKAGE_REPO $TDHV2_WORKLOAD_CLUSTER $HELMCHART helm)"
+  ADMIN_USER="$(getYAML ADMIN_USER $TDHV2_WORKLOAD_CLUSTER $HELMCHART helm)"
+  ADMIN_PASS="$(getYAML ADMIN_PASSWORD $TDHV2_WORKLOAD_CLUSTER $HELMCHART helm)"
+
+  dnsdomain=$(getYAML TDH_DNS_DOMAIN)
+  subdomain=$(getYAML TDH_DNS_SUBDOMAIN)
+  DNS_DOMAIN="apps.${subdomain}.${dnsdomain}"
+
+  messageTitle "$DESCRIPTION"
+  cnt=$(helm list -q -n $INSTALL_NAMESPACE | egrep -c "^$HELMCHART")
+
+  if [ $cnt -eq 0 ]; then
+    # --- CREATE GITEA_NAMESPACE ---
+    messagePrint " ▪ Create Namespace" "$HELMCHART"
+    deleteNamespace $INSTALL_NAMESPACE > /dev/null 2>&1
+    createNamespace $INSTALL_NAMESPACE > /dev/null 2>&1
+
+    tls_iss=$(getYAML WC_TLS_CA_ISSUER $clu)
+    tls_cnm=$(getYAML WC_TLS_CERT_NAME $clu)
+    tls_snm=$(getYAML WC_TLS_SECRET_NAME $clu)
+
+    # --- COPY SECRET TO INSTALL_NAMESPACE ---
+    messagePrint " ▪ Copy TLS Secret" "$tls_snm"
+    copySecretObject default $INSTALL_NAMESPACE $tls_snm
+
+    # --- DOCKER PULL SECRET ---
+    dockerPullSecret $INSTALL_NAMESPACE
+
+    # --- ADDING HELM REPO ---
+    helmRepoAdd $HELMREPO $HELMREPO_URL
+
+    if [ "$TDH_SERVICE_GITEA_VERSION" == "" -o "$TDH_SERVICE_GITEA_VERSION" == "latest" ]; then
+      HELM_CHART_VERSION=$(helm search repo $HELMREPO/$HELMCHART | egrep "^$HELMREPO/$HELMCHART" | tail -1 | awk '{ print $2 }')
+    else
+      HELM_CHART_VERSION=$TDH_SERVICE_GITEA_VERSION
+    fi
+
+    HELM_VALUES=/tmp/gitea_values.yaml
+
+    echo "global:"                                                                                                              >  $HELM_VALUES
+    echo "  imageRegistry: docker.io"                                                                                           >> $HELM_VALUES
+    echo "  imagePullSecrets:"                                                                                                  >> $HELM_VALUES
+    echo "    - tdh-docker-repo"                                                                                                >> $HELM_VALUES
+    echo ""                                                                                                                     >> $HELM_VALUES
+    echo "service:"                                                                                                             >> $HELM_VALUES
+    echo "  type: ClusterIP"                                                                                                    >> $HELM_VALUES
+    echo ""                                                                                                                     >> $HELM_VALUES
+    echo "jenkinsUser: $ADMIN_USER"                                                                                             >> $HELM_VALUES
+    echo "jenkinsPassword: $ADMIN_PASS"                                                                                         >> $HELM_VALUES
+    echo ""                                                                                                                     >> $HELM_VALUES
+    echo "ingress:"                                                                                                             >> $HELM_VALUES
+    echo "  enabled: true"                                                                                                      >> $HELM_VALUES
+    echo "  ingressClassName: contour"                                                                                          >> $HELM_VALUES
+    echo "  certManager: false"                                                                                                 >> $HELM_VALUES
+    echo "  annotations:"                                                                                                       >> $HELM_VALUES
+    echo "    ingress.kubernetes.io/force-ssl-redirect: \"true\""                                                               >> $HELM_VALUES
+    echo "  path: /"                                                                                                            >> $HELM_VALUES
+    echo "  hostname: $APPNAME.$DNS_DOMAIN"                                                                                     >> $HELM_VALUES
+    echo "  tls: true"                                                                                                          >> $HELM_VALUES
+    echo "  extraTls:"                                                                                                          >> $HELM_VALUES
+    echo "  - hosts:"                                                                                                           >> $HELM_VALUES
+    echo "      - $APPNAME.$DNS_DOMAIN"                                                                                         >> $HELM_VALUES
+    echo "    secretName: $tls_snm"                                                                                             >> $HELM_VALUES
+
+    messagePrint " ▪ Deploy the $HELMCHART Helm Chart" "$HELMCHART"
+
+    cnt=0; ret=1; stt="notdeployed"
+    while [ $ret -ne 0 -a $cnt -lt 5 -a "$stt" != "deployed" ]; do
+      #echo "helm install $HELMCHART --namespace $INSTALL_NAMESPACE $$HELMREPO/$HELMCHART -f \$HOME/.tdh-tools-tkg-2.2.1/$HELM_VALUES --create-namespace --wait --wait-for-jobs --timeout 10m"
+
+      helm install $HELMCHART --namespace $INSTALL_NAMESPACE $HELMREPO/$HELMCHART -f $HELM_VALUES --wait --wait-for-jobs --timeout 1h > /tmp/error.log 2>&1; ret=$?
+
+      # --- WAIT FOR PODS TO GET STARTED ---
+      runningPods $INSTALL_NAMESPACE
+
+      cmdLoop helm ls -n $INSTALL_NAMESPACE -o json > /tmp/output.json
+      stt=$(jq -r --arg chart "$HELMCHART" '.[] | select(.name == $chart).status' /tmp/output.json)
+
+      [ $ret -eq 0 -a "$stt" == "deployed" ] && break
+
+      # --- DELTE FAILED HELM CHART ---
+      deleteHelmChart $INSTALL_NAMESPACE $HELMCHART > /dev/null 2>&1
+      #deleteNamespace $INSTALL_NAMESPACE > /dev/null 2>&1
+
+      let cnt=cnt+1
+      sleep 30
+    done
+
+    if [ $ret -ne 0 -o "$stt" != "deployed" ]; then
+      logMessages /tmp/error.log
+      echo "ERROR: Failed to deploy $HELMCHART Helm Chart"
+      if [ "$NATIVE" == "0" ]; then
+        echo "       => tools/${TDH_TOOLS}.sh"
+        echo "          tdh-tools:/$ helm install $HELMCHART --namespace $INSTALL_NAMESPACE $HELMREPO/$HELMCHART -f $HELM_VALUES --version $HELM_CHART_VERSION"
+        echo "          tdh-tools:/$ exit"
+      else
+        echo "       => helm install $HELMCHART --namespace $INSTALL_NAMESPACE $HELMREPO/$HELMCHART -f $HELM_VALUES --version $HELM_CHART_VERSION"
+      fi
+
+      exit 1
+    fi
+
+    uodateConfigMap tanzu-demo-hub TDH_SERVICE_GITEA_ADMIN_TOKEN_ID  ""
+  fi
+
+  cmdLoop helm ls -n $INSTALL_NAMESPACE -o json > /tmp/output.json
+  if [ -s /tmp/output.json ]; then
+    ver=$(jq -r --arg chart "$HELMCHART" '.[] | select(.name == $chart).app_version' /tmp/output.json)
+    crt=$(jq -r --arg chart "$HELMCHART" '.[] | select(.name == $chart).chart' /tmp/output.json)
+    stt=$(jq -r --arg chart "$HELMCHART" '.[] | select(.name == $chart).status' /tmp/output.json)
+    dat=$(jq -r --arg chart "$HELMCHART" '.[] | select(.name == $chart).updated' /tmp/output.json)
+  else
+    ver=""; crt=""; stt=""; dat=""
+  fi
+
+  messagePrint " ▪ Verify Helm Chart $HELMCHART"   "$crt"
+  messagePrint "   Helm Chart Name"                "$HELMCHART"
+  messagePrint "   Helm Chart Version"             "$ver"
+  messagePrint "   Helm Chart Status"              "$stt"
+  messagePrint "   Helm Chart Installed/Updated"   "$dat"
+  messagePrint "   Gitea Internal Name"            "$APPNAME.$INSTALL_NAMESPACE.svc.cluster.local"
+  messagePrint "   Gitea Management Portal"        "https://$APPNAME.$DNS_DOMAIN"
+  messagePrint "   Gitea Admin User"               "$ADMIN_USER"
+  messagePrint "   Gitea Admin Password"           "$ADMIN_PASS"
+
+  # --- STORE SETTINGS IN CONFIGMAP ---
+  uodateConfigMap tanzu-demo-hub TDH_SERVICE_JENKINS                 "true"
+  uodateConfigMap tanzu-demo-hub TDH_SERVICE_JENKINS_ADMIN_USER      "$ADMIN_USER"
+  uodateConfigMap tanzu-demo-hub TDH_SERVICE_JENKINS_ADMIN_PASS      "$ADMIN_PASS"
+  uodateConfigMap tanzu-demo-hub TDH_SERVICE_JENKINS_SERVER          "$APPNAME.$DNS_DOMAIN"
+  uodateConfigMap tanzu-demo-hub TDH_SERVICE_JENKINS_SERVER_URL      "https://$APPNAME.$DNS_DOMAIN"
+}
+
 installJenkins() {
   NAMESPACE=jenkins
   HELMCHART=jenkins
@@ -9205,7 +9366,6 @@ installJenkins() {
     echo "      - jenkins.$DOMAIN"                                                                                              >> $HELM_VALUES
     echo "    secretName: tanzu-demo-hub-tls"                                                                                   >> $HELM_VALUES
 
-#gaga Jenkins
     messagePrint " ▪ Deploy the Jenkins Helm Chart" "$HELMCHART"
     cnt=0; ret=1; stt="notdeployed"
     while [ $ret -ne 0 -a $cnt -lt 7 -a "$stt" != "deployed" ]; do
@@ -9304,7 +9464,7 @@ installJenkins() {
 }
 
 # ------------------------------------------------------------------------------------------
-# Function Name ......: installGitea
+# Function Name ......: installBitnamiGitea
 # Function Purpose ...: Install Gitea Helm Chargt
 # ------------------------------------------------------------------------------------------
 # Argument ($1) ......: None
@@ -9315,7 +9475,7 @@ installJenkins() {
 #                     : https://docs.gitea.io/en-us/api-usage/ ............. Gitea API Guide
 #                     : https://try.gitea.io/api/swagger#/user/userCreateToken ..... Swagger
 # ------------------------------------------------------------------------------------------
-installGiteaV2() {
+installBitnamiGitea() {
   TDHV2_WORKLOAD_CLUSTER=$clu
   HELMCHART=gitea
   HELMREPO=gitea-charts
@@ -9323,7 +9483,7 @@ installGiteaV2() {
   pkg="$(getYAML PACKAGE_NAME $TDHV2_WORKLOAD_CLUSTER $HELMCHART helm)"
   [ "$pkg" != "$HELMCHART" ] && return
 
-  NAMESPACE="$(getYAML PACKAGE_NAMESPACE $TDHV2_WORKLOAD_CLUSTER $HELMCHART helm)"
+  GITEA_NAMESPACE="$(getYAML PACKAGE_NAMESPACE $TDHV2_WORKLOAD_CLUSTER $HELMCHART helm)"
   HELMREPO_URL="$(getYAML PACKAGE_REPO $TDHV2_WORKLOAD_CLUSTER $HELMCHART helm)"
   GITEA_USER="$(getYAML ADMIN_USER $TDHV2_WORKLOAD_CLUSTER $HELMCHART helm)"
   GITEA_PASS="$(getYAML ADMIN_PASSWORD $TDHV2_WORKLOAD_CLUSTER $HELMCHART helm)"
@@ -9332,27 +9492,213 @@ installGiteaV2() {
   subdomain=$(getYAML TDH_DNS_SUBDOMAIN)
   DNS_DOMAIN="apps.${subdomain}.${dnsdomain}"
 
-helm delete gitea -n gitea > /dev/null 2>&1
-
-#koko
-  messageTitle "Self-hosted Git service (Gitea)"
-  cnt=$(helm list -q -n $NAMESPACE | egrep -c "^$HELMCHART")
+  messageTitle "Bitnami Git service (Gitea)"
+  cnt=$(helm list -q -n $GITEA_NAMESPACE | egrep -c "^$HELMCHART")
   if [ $cnt -eq 0 ]; then
-    # --- CREATE NAMESPACE ---
+    # --- CREATE GITEA_NAMESPACE ---
     messagePrint " ▪ Create Namespace" "$HELMCHART"
-    deleteNamespace $NAMESPACE > /dev/null 2>&1
-    createNamespace $NAMESPACE > /dev/null 2>&1
+    deleteNamespace $GITEA_NAMESPACE > /dev/null 2>&1
+    createNamespace $GITEA_NAMESPACE > /dev/null 2>&1
 
     tls_iss=$(getYAML WC_TLS_CA_ISSUER $clu)
     tls_cnm=$(getYAML WC_TLS_CERT_NAME $clu)
     tls_snm=$(getYAML WC_TLS_SECRET_NAME $clu)
 
-    # --- COPY SECRET TO NAMESPACE ---
+    # --- COPY SECRET TO GITEA_NAMESPACE ---
     messagePrint " ▪ Copy TLS Secret" "$tls_snm"
-    copySecretObject default $NAMESPACE $tls_snm
+    copySecretObject default $GITEA_NAMESPACE $tls_snm
+echo "gaga copySecretObject default $GITEA_NAMESPACE $tls_snm"
 
     # --- DOCKER PULL SECRET ---
-    dockerPullSecret $NAMESPACE
+    dockerPullSecret $GITEA_NAMESPACE
+
+    HELM_VALUES=/tmp/gitea_values.yaml
+
+    echo "global:"                                                                                                              >  $HELM_VALUES
+    echo "  imageRegistry: docker.io"                                                                                           >> $HELM_VALUES
+    echo "  imagePullSecrets:"                                                                                                  >> $HELM_VALUES
+    echo "    - tdh-docker-repo"                                                                                                >> $HELM_VALUES
+    echo ""                                                                                                                     >> $HELM_VALUES
+    echo "images:"                                                                                                              >> $HELM_VALUES
+    echo "  imageRegistry: docker.io"                                                                                           >> $HELM_VALUES
+    echo "  imagePullPolicy: Always"                                                                                            >> $HELM_VALUES
+    echo "  imagePullSecrets: tdh-docker-repo"                                                                                  >> $HELM_VALUES
+    echo ""                                                                                                                     >> $HELM_VALUES
+    echo "config:"                                                                                                              >> $HELM_VALUES
+    echo "  disableRegistration: true"                                                                                          >> $HELM_VALUES
+    echo ""                                                                                                                     >> $HELM_VALUES
+    echo "podSecurityContext:"                                                                                                  >> $HELM_VALUES
+    echo "  enabled: false"                                                                                                     >> $HELM_VALUES
+    echo "containerSecurityContext:"                                                                                            >> $HELM_VALUES
+    echo "  privileged: false"                                                                                                  >> $HELM_VALUES
+    echo "  allowPrivilegeEscalation: false"                                                                                    >> $HELM_VALUES
+    echo "  seccompProfile:"                                                                                                    >> $HELM_VALUES
+    echo "    type: RuntimeDefault"                                                                                             >> $HELM_VALUES
+    echo "  runAsNonRoot: true"                                                                                                 >> $HELM_VALUES
+    echo ""                                                                                                                     >> $HELM_VALUES
+    echo "adminUsername: \"$GITEA_USER\""                                                                                       >> $HELM_VALUES
+    echo "adminPassword: \"$GITEA_PASS\""                                                                                       >> $HELM_VALUES
+    echo "adminEmail: \"gitea@local.domain\""                                                                                   >> $HELM_VALUES
+    echo ""                                                                                                                     >> $HELM_VALUES
+    echo "service:"                                                                                                             >> $HELM_VALUES
+    echo "  type: ClusterIP"                                                                                                    >> $HELM_VALUES
+    echo ""                                                                                                                     >> $HELM_VALUES
+    echo "ingress:"                                                                                                             >> $HELM_VALUES
+    echo "  enabled: true"                                                                                                      >> $HELM_VALUES
+    echo "  ingressClassName: contour"                                                                                          >> $HELM_VALUES
+    echo "  certManager: false"                                                                                                 >> $HELM_VALUES
+    echo "  annotations:"                                                                                                       >> $HELM_VALUES
+    echo "    ingress.kubernetes.io/force-ssl-redirect: \"true\""                                                               >> $HELM_VALUES
+    echo "    ingress.kubernetes.io/ssl-passthrough: \"true\""                                                                  >> $HELM_VALUES
+    echo "  path: /"                                                                                                            >> $HELM_VALUES
+    echo "  hostname: gitea.$DNS_DOMAIN"                                                                                        >> $HELM_VALUES
+    echo "  tls: true"                                                                                                          >> $HELM_VALUES
+    echo "  selfSigned: false"                                                                                                  >> $HELM_VALUES
+    echo "  extraTls:"                                                                                                          >> $HELM_VALUES
+    echo "  - hosts:"                                                                                                           >> $HELM_VALUES
+    echo "      - gitea.$DNS_DOMAIN"                                                                                            >> $HELM_VALUES
+    echo "    secretName: $tls_snm"                                                                                             >> $HELM_VALUES
+
+#    echo "service:"                                                                                                             >> $HELM_VALUES
+#    echo "  type: ClusterIP"                                                                                                      >> $HELM_VALUES
+#    echo ""                                                                                                                     >> $HELM_VALUES
+#    echo "ingress:"                                                                                                             >> $HELM_VALUES
+#    echo "  enabled: true"                                                                                                      >> $HELM_VALUES
+#    echo "  ingressClassName: contour"                                                                                          >> $HELM_VALUES
+#    echo "  annotations:"                                                                                                       >> $HELM_VALUES
+#    echo "    kubernetes.io/ingress.class: contour"                                                                             >> $HELM_VALUES
+#    echo "    ingress.kubernetes.io/force-ssl-redirect: \"true\""                                                               >> $HELM_VALUES
+#    echo "  hosts:"                                                                                                             >> $HELM_VALUES
+#    echo "    - host: $HELMCHART.$DNS_DOMAIN"                                                                                   >> $HELM_VALUES
+#    echo "      paths:"                                                                                                         >> $HELM_VALUES
+#    echo "      - patextraTlsh: /"                                                                                                      >> $HELM_VALUES
+#    echo "        pathType: Prefix"                                                                                             >> $HELM_VALUES
+#    echo "  tls:"                                                                                                               >> $HELM_VALUES
+#    echo "    - secretName: $tls_snm"                                                                                           >> $HELM_VALUES
+#    echo "      hosts:"                                                                                                         >> $HELM_VALUES
+#    echo "        - $HELMCHART.$DNS_DOMAIN"                                                                                         >> $HELM_VALUES
+
+ echo "helm install $HELMCHART --namespace $GITEA_NAMESPACE oci://registry-1.docker.io/bitnamicharts/gitea -f \$HOME/.tdh-tools-tkg-2.2.1/$HELM_VALUES --create-namespace --wait --wait-for-jobs --timeout 10m"
+
+    messagePrint " ▪ Deploy the $HELMCHART Helm Chart" "$HELMCHART"
+    cnt=0; ret=1; stt="notdeployed"
+    while [ $ret -ne 0 -a $cnt -lt 5 -a "$stt" != "deployed" ]; do
+      helm install $HELMCHART --namespace $GITEA_NAMESPACE oci://registry-1.docker.io/bitnamicharts/gitea  -f $HELM_VALUES --wait --create-namespace --wait-for-jobs --timeout 10m >  /tmp/error.log 2>&1; ret=$?
+
+      #helm install $HELMCHART --namespace $GITEA_NAMESPACE $HELMREPO/$HELMCHART -f $HELM_VALUES --version $HELM_CHART_VERSION --create-namespace --wait --wait-for-jobs --timeout 1h > /tmp/error.log 2>&1; ret=$?
+      #helm install $HELMCHART --namespace $GITEA_NAMESPACE $HELMREPO/$HELMCHART -f $HELM_VALUES --version $HELM_CHART_VERSION --create-namespace --wait --wait-for-jobs --timeout 10m; ret=$?
+
+      helm ls -n $GITEA_NAMESPACE -o json > /tmp/output.json
+      stt=$(jq -r --arg chart "$HELMCHART" '.[] | select(.name == $chart).status' /tmp/output.json)
+
+      [ $ret -eq 0 -a "$stt" == "deployed" ] && break
+
+      # --- DELTE FAILED HELM CHART ---
+      deleteHelmChart $GITEA_NAMESPACE $HELMCHART > /dev/null 2>&1
+      deleteNamespace $GITEA_NAMESPACE > /dev/null 2>&1
+
+      let cnt=cnt+1
+      sleep 30
+    done
+
+    if [ $ret -ne 0 -o "$stt" != "deployed" ]; then
+      logMessages /tmp/error.log
+      echo "ERROR: Failed to deploy $HELMCHART Helm Chart"
+      if [ "$NATIVE" == "0" ]; then
+        echo "       => tools/${TDH_TOOLS}.sh"
+        echo "          tdh-tools:/$ helm install $HELMCHART --namespace $GITEA_NAMESPACE oci://registry-1.docker.io/bitnamicharts/gitea -f $HELM_VALUES --version $HELM_CHART_VERSION"
+        echo "          tdh-tools:/$ exit"
+      else
+        echo "       => helm install $HELMCHART --namespace $GITEA_NAMESPACE oci://registry-1.docker.io/bitnamicharts/gitea -f $HELM_VALUES --wait"                       
+      fi
+
+      exit 1
+    fi
+
+    uodateConfigMap tanzu-demo-hub TDH_SERVICE_GITEA_ADMIN_TOKEN_ID  ""
+  fi
+
+  cmdLoop helm ls -n $NAMESPACE -o json > /tmp/output.json
+  if [ -s /tmp/output.json ]; then
+    ver=$(jq -r --arg chart "$HELMCHART" '.[] | select(.name == $chart).app_version' /tmp/output.json)
+    crt=$(jq -r --arg chart "$HELMCHART" '.[] | select(.name == $chart).chart' /tmp/output.json)
+    stt=$(jq -r --arg chart "$HELMCHART" '.[] | select(.name == $chart).status' /tmp/output.json)
+    dat=$(jq -r --arg chart "$HELMCHART" '.[] | select(.name == $chart).updated' /tmp/output.json)
+  else
+    ver=""; crt=""; stt=""; dat=""
+  fi
+
+  messagePrint " ▪ Verify Helm Chart $HELMCHART"   "$crt"
+  messagePrint "   Helm Chart Name"                "$HELMCHART"
+  messagePrint "   Helm Chart Version"             "$ver"
+  messagePrint "   Helm Chart Status"              "$stt"
+  messagePrint "   Helm Chart Installed/Updated"   "$dat"
+  messagePrint "   Gitea Internal Name"            "gitea.gitea.svc.cluster.local"
+  messagePrint "   Gitea Management Portal"        "https://gitea.$DNS_DOMAIN"
+  messagePrint "   Gitea Admin User"               "$GITEA_USER"
+  messagePrint "   Gitea Admin Password"           "$GITEA_PASS"
+
+  # --- STORE SETTINGS IN CONFIGMAP ---
+  uodateConfigMap tanzu-demo-hub TDH_SERVICE_GITEA                 "true"
+  uodateConfigMap tanzu-demo-hub TDH_SERVICE_GITEA_ADMIN_USER      "$GITEA_USER"
+  uodateConfigMap tanzu-demo-hub TDH_SERVICE_GITEA_ADMIN_PASS      "$GITEA_PASS"
+  uodateConfigMap tanzu-demo-hub TDH_SERVICE_GITEA_SERVER          "gitea.$DNS_DOMAIN"
+  uodateConfigMap tanzu-demo-hub TDH_SERVICE_GITEA_SERVER_URL      "https://gitea.$DNS_DOMAIN"
+
+echo gaga1
+  # --- CREATE AMDIN TOKEN FOR USER gitea_admin ---
+  createGiteaAPItoken
+
+  TDH_SERVICE_GITEA_ADMIN_TOKEN_ID=$(getConfigMap tanzu-demo-hub TDH_SERVICE_GITEA_ADMIN_TOKEN_ID)
+  messagePrint "   Gitea Admin Token ID"           "$TDH_SERVICE_GITEA_ADMIN_TOKEN_ID"
+}
+
+# ------------------------------------------------------------------------------------------
+# Function Name ......: installGitea
+# Function Purpose ...: Install Gitea Helm Chargt
+# ------------------------------------------------------------------------------------------
+# Argument ($1) ......: None
+# ------------------------------------------------------------------------------------------
+# Return Value .......: 0 - SUCCEED, 1 - FAILED
+# ------------------------------------------------------------------------------------------
+# References .........: https://gitea.com/gitea/helm-chart ............. Gitea Documentation
+#                     : https://gitea.com/gitea/helm-chart/src/branch/main/values.yaml
+# ------------------------------------------------------------------------------------------
+installGiteaV2() {
+  TDHV2_WORKLOAD_CLUSTER=$clu
+  HELMCHART=gitea
+  HELMREPO=gitea-charts
+
+  pkg="$(getYAML PACKAGE_NAME $TDHV2_WORKLOAD_CLUSTER $HELMCHART helm)"
+  #[ "$pkg" != "$HELMCHART" ] && return
+
+  GITEA_NAMESPACE="$(getYAML PACKAGE_NAMESPACE $TDHV2_WORKLOAD_CLUSTER $HELMCHART helm)"
+  HELMREPO_URL="$(getYAML PACKAGE_REPO $TDHV2_WORKLOAD_CLUSTER $HELMCHART helm)"
+  GITEA_USER="$(getYAML ADMIN_USER $TDHV2_WORKLOAD_CLUSTER $HELMCHART helm)"
+  GITEA_PASS="$(getYAML ADMIN_PASSWORD $TDHV2_WORKLOAD_CLUSTER $HELMCHART helm)"
+
+  dnsdomain=$(getYAML TDH_DNS_DOMAIN)
+  subdomain=$(getYAML TDH_DNS_SUBDOMAIN)
+  DNS_DOMAIN="apps.${subdomain}.${dnsdomain}"
+
+  messageTitle "Self-hosted Git service (Gitea)"
+  cnt=$(helm list -q -n $GITEA_NAMESPACE | egrep -c "^$HELMCHART")
+  if [ $cnt -eq 0 ]; then
+    # --- CREATE GITEA_NAMESPACE ---
+    messagePrint " ▪ Create Namespace" "$HELMCHART"
+    deleteNamespace $GITEA_NAMESPACE > /dev/null 2>&1
+    createNamespace $GITEA_NAMESPACE > /dev/null 2>&1
+
+    tls_iss=$(getYAML WC_TLS_CA_ISSUER $clu)
+    tls_cnm=$(getYAML WC_TLS_CERT_NAME $clu)
+    tls_snm=$(getYAML WC_TLS_SECRET_NAME $clu)
+
+    # --- COPY SECRET TO GITEA_NAMESPACE ---
+    messagePrint " ▪ Copy TLS Secret" "$tls_snm"
+    copySecretObject default $GITEA_NAMESPACE $tls_snm
+
+    # --- DOCKER PULL SECRET ---
+    dockerPullSecret $GITEA_NAMESPACE
 
     # --- ADDING HELM REPO ---
     helmRepoAdd $HELMREPO $HELMREPO_URL
@@ -9378,65 +9724,82 @@ helm delete gitea -n gitea > /dev/null 2>&1
     echo "config:"                                                                                                              >> $HELM_VALUES
     echo "  disableRegistration: true"                                                                                          >> $HELM_VALUES
     echo ""                                                                                                                     >> $HELM_VALUES
+    echo ""                                                                                                                     >> $HELM_VALUES
+    echo "containerSecurityContext:"                                                                                            >> $HELM_VALUES
+    echo "  privileged: false"                                                                                                  >> $HELM_VALUES
+    echo "  allowPrivilegeEscalation: false"                                                                                    >> $HELM_VALUES
+    echo "  seccompProfile:"                                                                                                    >> $HELM_VALUES
+    echo "    type: RuntimeDefault"                                                                                             >> $HELM_VALUES
+    echo "  runAsNonRoot: true"                                                                                                 >> $HELM_VALUES
+    echo "  capabilities:"                                                                                                      >> $HELM_VALUES
+    echo "    drop:"                                                                                                            >> $HELM_VALUES
+    echo "      - ALL"                                                                                                          >> $HELM_VALUES
+    #echo "securityContext:"                                                                                                    >> $HELM_VALUES
+    #echo "  capabilities:"                                                                                                     >> $HELM_VALUES
+    #echo "    drop=[\"ALL\"]"                                                                                                  >> $HELM_VALUES
+    echo ""                                                                                                                     >> $HELM_VALUES
+
+#huhu
+    echo ""                                                                                                                     >> $HELM_VALUES
     echo "gitea:"                                                                                                               >> $HELM_VALUES
     echo "  admin:"                                                                                                             >> $HELM_VALUES
-#    echo "    existingSecret: gitea-admin-secret"                                                                               >> $HELM_VALUES
     echo "    username: \"$GITEA_USER\""                                                                                        >> $HELM_VALUES
     echo "    password: \"$GITEA_PASS\""                                                                                        >> $HELM_VALUES
     echo "    email: \"gitea@local.domain\""                                                                                    >> $HELM_VALUES
-    echo "postgresql-ha:"                                                                                                          >> $HELM_VALUES
-    echo "  enabled: false"                                                                                                     >> $HELM_VALUES
-
+    echo ""                                                                                                                     >> $HELM_VALUES
+    echo "service:"                                                                                                             >> $HELM_VALUES
+    echo "  type: ClusterIP"                                                                                                    >> $HELM_VALUES
     echo ""                                                                                                                     >> $HELM_VALUES
     echo "ingress:"                                                                                                             >> $HELM_VALUES
     echo "  enabled: true"                                                                                                      >> $HELM_VALUES
+    echo "  ingressClassName: contour"                                                                                          >> $HELM_VALUES
+    echo "  certManager: false"                                                                                                 >> $HELM_VALUES
     echo "  annotations:"                                                                                                       >> $HELM_VALUES
-    echo "    kubernetes.io/ingress.class: contour"                                                                             >> $HELM_VALUES
     echo "    ingress.kubernetes.io/force-ssl-redirect: \"true\""                                                               >> $HELM_VALUES
+    echo "    ingress.kubernetes.io/ssl-passthrough: \"true\""                                                                  >> $HELM_VALUES
     echo "  hosts:"                                                                                                             >> $HELM_VALUES
-    echo "    - host: $HELMCHART.$DNS_DOMAIN"                                                                                   >> $HELM_VALUES
+    echo "    - host: gitea.$DNS_DOMAIN"                                                                                        >> $HELM_VALUES
     echo "      paths:"                                                                                                         >> $HELM_VALUES
-    echo "      - path: /"                                                                                                      >> $HELM_VALUES
-    echo "        pathType: Prefix"                                                                                             >> $HELM_VALUES
+    echo "        - path: /"                                                                                                    >> $HELM_VALUES
+    echo "          pathType: Prefix"                                                                                           >> $HELM_VALUES
+    echo "  extraTls:"                                                                                                          >> $HELM_VALUES
+    echo "  selfSigned: false"                                                                                                  >> $HELM_VALUES
     echo "  tls:"                                                                                                               >> $HELM_VALUES
-    echo "    - secretName: $tls_snm"                                                                                           >> $HELM_VALUES
-    echo "      hosts:"                                                                                                         >> $HELM_VALUES
-    echo "        - $HELMCHART.$DNS_DOMAIN"                                                                                     >> $HELM_VALUES
+    echo "    - hosts:"                                                                                                         >> $HELM_VALUES
+    echo "      - gitea.$DNS_DOMAIN"                                                                                            >> $HELM_VALUES
+    echo "      secretName: $tls_snm"                                                                                           >> $HELM_VALUES
 
+#    GITEA_SECRET=/tmp/gitea_secret.yaml
+#    echo "apiVersion: v1"                                                                                                       >> $GITEA_SECRET
+#    echo "kind: Secret"                                                                                                         >> $GITEA_SECRET
+#    echo "metadata:"                                                                                                            >> $GITEA_SECRET
+#    echo "  name: gitea-admin-secret"                                                                                           >> $GITEA_SECRET
+#    echo "type: Opaque"                                                                                                         >> $GITEA_SECRET
+#    echo "stringData:"                                                                                                          >> $GITEA_SECRET
+#    echo "  username: $GITEA_USER"                                                                                              >> $GITEA_SECRET
+#    echo "  password: $GITEA_PASS"                                                                                              >> $GITEA_SECRET
 
-    
-    GITEA_SECRET=/tmp/gitea_secret.yaml
-    echo "apiVersion: v1"                                                                                                       >> $GITEA_SECRET
-    echo "kind: Secret"                                                                                                         >> $GITEA_SECRET
-    echo "metadata:"                                                                                                            >> $GITEA_SECRET
-    echo "  name: gitea-admin-secret"                                                                                           >> $GITEA_SECRET
-    echo "type: Opaque"                                                                                                         >> $GITEA_SECRET
-    echo "stringData:"                                                                                                          >> $GITEA_SECRET
-    echo "  username: $GITEA_USER"                                                                                              >> $GITEA_SECRET
-    echo "  password: $GITEA_PASS"                                                                                              >> $GITEA_SECRET
+    #kubectl apply -f $GITEA_SECRET -n $GITEA_NAMESPACE
 
-    kubectl apply -f $GITEA_SECRET -n $NAMESPACE
-
-echo $KUBECONFIG
-
-#gaga giteaV2
     messagePrint " ▪ Deploy the $HELMCHART Helm Chart" "$HELMCHART"
+
     cnt=0; ret=1; stt="notdeployed"
     while [ $ret -ne 0 -a $cnt -lt 5 -a "$stt" != "deployed" ]; do
-      helm install $HELMCHART --namespace $NAMESPACE $HELMREPO/$HELMCHART -f $HELM_VALUES --version $HELM_CHART_VERSION --create-namespace --wait --wait-for-jobs --timeout 10m > /tmp/error.log 2>&1; ret=$?
-      #helm install $HELMCHART --namespace $NAMESPACE $HELMREPO/$HELMCHART -f $HELM_VALUES --version $HELM_CHART_VERSION --create-namespace --wait --wait-for-jobs --timeout 10m; ret=$?
+#echo "helm install $HELMCHART --namespace $GITEA_NAMESPACE gitea-charts/gitea -f \$HOME/.tdh-tools-tkg-2.2.1/$HELM_VALUES --create-namespace --wait --wait-for-jobs --timeout 10m"
+
+      helm install $HELMCHART --namespace $GITEA_NAMESPACE $HELMREPO/$HELMCHART -f $HELM_VALUES --wait --wait-for-jobs --timeout 1h > /tmp/error.log 2>&1; ret=$?
 
       # --- WAIT FOR PODS TO GET STARTED ---
-      runningPods $NAMESPACE
+      runningPods $GITEA_NAMESPACE
 
-      cmdLoop helm ls -n $NAMESPACE -o json > /tmp/output.json
+      cmdLoop helm ls -n $GITEA_NAMESPACE -o json > /tmp/output.json
       stt=$(jq -r --arg chart "$HELMCHART" '.[] | select(.name == $chart).status' /tmp/output.json)
 
       [ $ret -eq 0 -a "$stt" == "deployed" ] && break
 
       # --- DELTE FAILED HELM CHART ---
-      deleteHelmChart $NAMESPACE $HELMCHART > /dev/null 2>&1
-      deleteNamespace $NAMESPACE > /dev/null 2>&1
+      deleteHelmChart $GITEA_NAMESPACE $HELMCHART > /dev/null 2>&1
+      #deleteNamespace $GITEA_NAMESPACE > /dev/null 2>&1
 
       let cnt=cnt+1
       sleep 30
@@ -9447,10 +9810,10 @@ echo $KUBECONFIG
       echo "ERROR: Failed to deploy $HELMCHART Helm Chart"
       if [ "$NATIVE" == "0" ]; then
         echo "       => tools/${TDH_TOOLS}.sh"
-        echo "          tdh-tools:/$ helm install $HELMCHART --namespace $NAMESPACE $HELMREPO/$HELMCHART -f $HELM_VALUES --version $HELM_CHART_VERSION"
+        echo "          tdh-tools:/$ helm install $HELMCHART --namespace $GITEA_NAMESPACE $HELMREPO/$HELMCHART -f $HELM_VALUES --version $HELM_CHART_VERSION"
         echo "          tdh-tools:/$ exit"
       else
-        echo "       => helm install $HELMCHART --namespace $NAMESPACE $HELMREPO/$HELMCHART -f $HELM_VALUES --version $HELM_CHART_VERSION"
+        echo "       => helm install $HELMCHART --namespace $GITEA_NAMESPACE $HELMREPO/$HELMCHART -f $HELM_VALUES --version $HELM_CHART_VERSION"
       fi
 
       exit 1
@@ -9459,7 +9822,7 @@ echo $KUBECONFIG
     uodateConfigMap tanzu-demo-hub TDH_SERVICE_GITEA_ADMIN_TOKEN_ID  ""
   fi
 
-  cmdLoop helm ls -n $NAMESPACE -o json > /tmp/output.json
+  cmdLoop helm ls -n $GITEA_NAMESPACE -o json > /tmp/output.json
   if [ -s /tmp/output.json ]; then
     ver=$(jq -r --arg chart "$HELMCHART" '.[] | select(.name == $chart).app_version' /tmp/output.json)
     crt=$(jq -r --arg chart "$HELMCHART" '.[] | select(.name == $chart).chart' /tmp/output.json)
@@ -9470,37 +9833,6 @@ echo $KUBECONFIG
   fi
 
   pod=$(kubectl get pods -n gitea -o json | jq -r '.items[].metadata | select(.labels."app.kubernetes.io/name" == "gitea").name') 
-echo "POD:$pod"
-
-echo "kubectl -n $HELMCHART exec -it $pod -- su git -c \"id\""
-
-if [ 1 -eq 2 ]; then 
-  # --- WAIT FOR HARBOR TO COME ONLINE ---
-  pod=$(kubectl get pods -n gitea -o json | jq -r '.items[].metadata | select(.labels."app.kubernetes.io/name" == "gitea").name') 
-echo "POD:$pod"
-  ret=1; cnt=0
-  while [ $ret -ne 0 -a $cnt -le 5 ]; do
-    kubectl -n $HELMCHART exec -it $pod -- su git -c "$HELMCHART admin user change-password -u $GITEA_USER -p $GITEA_PASS" > /tmp/error.log 2>&1; ret=$?
-    [ $ret -eq 0 ] && break
-    sleep 60
-    let cnt=cnt+1
-  done
-
-  if [ $ret -ne 0 ]; then
-    logMessages /tmp/error.log
-    echo "ERROR: Failed to change password for Gitea"
-    if [ "$NATIVE" == "0" ]; then
-      echo "       => tools/${TDH_TOOLS}.sh"
-      echo "          tdh-tools:/$ kubectl -n $HELMCHART exec -it gitea-0 -- su git -c \"$HELMCHART admin user change-password -u $GITEA_USER -p $GITEA_PASS\""
-      echo "          tdh-tools:/$ exit"
-    else
-      echo "       =>  kubectl -n $HELMCHART exec -it gitea-0 -- $HELMCHART admin user change-password -u $GITEA_USER -p $GITEA_PASS"
-    fi
-
-    exit 1
-  fi
-fi
-
 
   messagePrint " ▪ Verify Helm Chart $HELMCHART"   "$crt"
   messagePrint "   Helm Chart Name"                "$HELMCHART"
@@ -9524,15 +9856,7 @@ fi
 
   TDH_SERVICE_GITEA_ADMIN_TOKEN_ID=$(getConfigMap tanzu-demo-hub TDH_SERVICE_GITEA_ADMIN_TOKEN_ID)
   messagePrint "   Gitea Admin Token ID"           "$TDH_SERVICE_GITEA_ADMIN_TOKEN_ID"
-
-
-
-
-
-exit
-
-#koko
-
+#gagag
 }
 
 # ------------------------------------------------------------------------------------------
@@ -9589,6 +9913,7 @@ installGitea() {
       HELM_CHART_VERSION=$TDH_SERVICE_GITEA_VERSION
     fi
 
+#hoho-gitea
     HELM_VALUES=/tmp/gitea_values.yaml
 
     echo "global:"                                                                                                              >  $HELM_VALUES
@@ -9626,7 +9951,6 @@ installGitea() {
     echo "        - $HELMCHART.$DOMAIN"                                                                                         >> $HELM_VALUES
 
 
-#gaga gitea
     messagePrint " ▪ Deploy the $HELMCHART Helm Chart" "$HELMCHART"
     cnt=0; ret=1; stt="notdeployed"
     while [ $ret -ne 0 -a $cnt -lt 5 -a "$stt" != "deployed" ]; do
@@ -9977,7 +10301,6 @@ installKubeapps() {
 
 
     messagePrint " ▪ Deploy the Kubeapps Helm Chart" "kubeapps"
-#gaga kubeapps
     cnt=0; ret=1; stt="notdeployed"
     while [ $ret -ne 0 -a $cnt -lt 5 -a "$stt" != "deployed" ]; do
       helm install $HELMCHART --namespace $NAMESPACE bitnami/$HELMCHART -f $HELM_VALUES --version $HELM_KUBEAPPS_VERSION --create-namespace --wait --wait-for-jobs --timeout 10m > /tmp/error.log 2>&1; ret=$?
@@ -10175,7 +10498,6 @@ installMinio() {
     # --- ADD REPOSITORY --
     helmRepoAdd bitnami https://charts.bitnami.com/bitnami
 
-#gaga minio
     messagePrint " ▪ Deploy the Minio Helm Chart" "minio"
     cnt=0; ret=1; stt="notdeployed"
     while [ $ret -ne 0 -a $cnt -lt 5 -a "$stt" != "deployed" ]; do
@@ -10594,7 +10916,6 @@ installTanzuDataPostgres() {
         #deleteNamespace $NAMESPACE > /dev/null 2>&1
         #createNamespace $NAMESPACE > /dev/null 2>&1
 
-#gaga postgress
         messagePrint " ▪ Deploy the Postgres operator" "postgres-operator"
         cnt=0; ret=1; stt="notdeployed"
         while [ $ret -ne 0 -a $cnt -lt 5 -a "$stt" != "deployed" ]; do
@@ -10816,7 +11137,6 @@ installClusterEssentialsV2() {
     messagePrint " ▪ Verify Tanzu Cluster Essentials" "namespace/kapp-controller"
   fi
 
-#hoho
 
 }
 
@@ -15318,7 +15638,7 @@ verify_datacenter() {
   export GOVC_USERNAME=$VSPHERE_VCENTER_ADMIN
   export GOVC_PASSWORD=$VSPHERE_VCENTER_PASSWORD
 
-  govc ls / > /dev/null 2>&1
+  govc ls -k=true / > /dev/null 2>&1
   if [ $? -ne 0 ]; then
     echo ""
     echo "ERROR: Can not login to vCenter, please verify manually"
@@ -15326,7 +15646,7 @@ verify_datacenter() {
     echo "       export GOVC_URL=https://${VSPHERE_VCENTER_SERVER}/sdk"
     echo "       export GOVC_USERNAME=$VSPHERE_VCENTER_ADMIN"
     echo "       export GOVC_PASSWORD=$GOVC_PASSWORD"
-    echo "       govc ls /"
+    echo "       govc ls -k=true /"
     exit 1
   fi
 
@@ -15335,7 +15655,7 @@ verify_datacenter() {
     echo "Please set the variale: VSPHERE_DATACENTER=<datacenter> in $HOME/.tanzu-demo-hub.cfg"
     echo "from the following list:"
     messageLine
-    govc ls /
+    govc ls -k=true /
     messageLine
     exit
   else
@@ -15347,13 +15667,13 @@ verify_datacenter() {
       exit
     fi
 
-    cnt=$(govc ls /$VSPHERE_DATACENTER | wc -l | sed 's/  *//g')
+    cnt=$(govc ls -k=true /$VSPHERE_DATACENTER | wc -l | sed 's/  *//g')
     if [ $cnt -eq 0 ]; then
       echo ""
       echo "Datacenter: '$VSPHERE_DATACENTER' not found, please choose on from the list"
       echo "below and set the $VSPHERE_DATACENTER=<datacenter> in $HOME/.tanzu-demo-hub.cfg"
       messageLine
-      govc ls /$VSPHERE_DATACENTER
+      govc ls -k=true /$VSPHERE_DATACENTER
       messageLine
       exit 1
     fi
@@ -15364,7 +15684,7 @@ verify_datacenter() {
     echo "Please set the variale: VSPHERE_DATASTORE=<datastore> in $HOME/.tanzu-demo-hub.cfg"
     echo "from the following list:"
     messageLine
-    govc ls /$VSPHERE_DATACENTER/datastore
+    govc ls -k=true /$VSPHERE_DATACENTER/datastore
     messageLine
     exit 1
   else
@@ -15376,13 +15696,13 @@ verify_datacenter() {
       exit
     fi
 
-    cnt=$(govc ls /$VSPHERE_DATACENTER/datastore/$VSPHERE_DATASTORE | wc -l | sed 's/  *//g')
+    cnt=$(govc ls -k=true /$VSPHERE_DATACENTER/datastore/$VSPHERE_DATASTORE | wc -l | sed 's/  *//g')
     if [ $cnt -eq 0 ]; then
       echo ""
       echo "Datastore: '$VSPHERE_DATASTORE' not found, please choose on from the list"
       echo "below and set the VSPHERE_DATASTORE=<datastore> in $HOME/.tanzu-demo-hub.cfg"
       messageLine
-      govc ls /$VSPHERE_DATACENTER/datastore
+      govc ls -k=true /$VSPHERE_DATACENTER/datastore
       messageLine
       exit 1
     fi
@@ -15393,7 +15713,7 @@ verify_datacenter() {
     echo "Please set the variale: VSPHERE_CLUSTER=<cluster> in $HOME/.tanzu-demo-hub.cfg"
     echo "from the following list:"
     messageLine
-    govc ls /$VSPHERE_DATACENTER/host
+    govc ls -k=true /$VSPHERE_DATACENTER/host
     messageLine
     exit 1
   else
@@ -15405,13 +15725,13 @@ verify_datacenter() {
       exit
     fi
 
-    cnt=$(govc ls /$VSPHERE_DATACENTER/host/$VSPHERE_CLUSTER | wc -l | sed 's/  *//g')
+    cnt=$(govc ls -k=true /$VSPHERE_DATACENTER/host/$VSPHERE_CLUSTER | wc -l | sed 's/  *//g')
     if [ $cnt -eq 0 ]; then
       echo ""
       echo "Datacenter: '$VSPHERE_CLUSTER' not found, please choose on from the list"
       echo "below and set the $VSPHERE_CLUSTER=<cluster> in $HOME/.tanzu-demo-hub.cfg"
       messageLine
-      govc ls /$VSPHERE_DATACENTER/host
+      govc ls -k=true /$VSPHERE_DATACENTER/host
       messageLine
       exit 1
     fi
@@ -15422,7 +15742,7 @@ verify_datacenter() {
     echo "Please set the variale: VSPHERE_NETWORK=<network> in $HOME/.tanzu-demo-hub.cfg"
     echo "from the following list:"
     messageLine
-    govc ls /$VSPHERE_DATACENTER/network
+    govc ls -k=true /$VSPHERE_DATACENTER/network
     messageLine
     exit 1
   else
@@ -15434,13 +15754,13 @@ verify_datacenter() {
       exit
     fi
 
-    cnt=$(govc ls "/$VSPHERE_DATACENTER/network/$VSPHERE_NETWORK" | wc -l | sed 's/  *//g')
+    cnt=$(govc ls -k=true "/$VSPHERE_DATACENTER/network/$VSPHERE_NETWORK" | wc -l | sed 's/  *//g')
     if [ $cnt -eq 0 ]; then
       echo ""
       echo "Datacenter: '$VSPHERE_NETWORK' not found, please choose on from the list"
       echo "below and set the $VSPHERE_NETWORK=<network> in $HOME/.tanzu-demo-hub.cfg"
       messageLine
-      govc ls /$VSPHERE_DATACENTER/network
+      govc ls -k=true /$VSPHERE_DATACENTER/network
       messageLine
       exit 1
     fi
@@ -16152,23 +16472,21 @@ createGiteaAPItoken() {
   TDH_SERVICE_GITEA_SERVER_URL=$(getConfigMap tanzu-demo-hub TDH_SERVICE_GITEA_SERVER_URL)
   TDH_SERVICE_GITEA_ADMIN_TOKEN_ID=$(getConfigMap tanzu-demo-hub TDH_SERVICE_GITEA_ADMIN_TOKEN_ID)
 
-echo "TDH_SERVICE_GITEA_ADMIN_USER:$TDH_SERVICE_GITEA_ADMIN_USER"
-echo "TDH_SERVICE_GITEA_ADMIN_PASS:$TDH_SERVICE_GITEA_ADMIN_PASS"
-echo "TDH_SERVICE_GITEA_SERVER:$TDH_SERVICE_GITEA_SERVER"
-echo "TDH_SERVICE_GITEA_SERVER_URL:$TDH_SERVICE_GITEA_SERVER_URL"
-echo "TDH_SERVICE_GITEA_ADMIN_TOKEN_ID:$TDH_SERVICE_GITEA_ADMIN_TOKEN_ID"
+#echo "TDH_SERVICE_GITEA_ADMIN_USER:$TDH_SERVICE_GITEA_ADMIN_USER"
+#echo "TDH_SERVICE_GITEA_ADMIN_PASS:$TDH_SERVICE_GITEA_ADMIN_PASS"
+#echo "TDH_SERVICE_GITEA_SERVER:$TDH_SERVICE_GITEA_SERVER"
+#echo "TDH_SERVICE_GITEA_SERVER_URL:$TDH_SERVICE_GITEA_SERVER_URL"
+#echo "TDH_SERVICE_GITEA_ADMIN_TOKEN_ID:$TDH_SERVICE_GITEA_ADMIN_TOKEN_ID"
 
-echo baba1
   if [ "$TDH_SERVICE_GITEA_ADMIN_TOKEN_ID" == "" -o "$TDH_SERVICE_GITEA_ADMIN_TOKEN_ID" == "null" -o "$TDH_SERVICE_GITEA_ADMIN_TOKEN_ID" == "<empty>" ]; then 
-echo baba2
-echo "curl -X GET https://${TDH_SERVICE_GITEA_SERVER}/api/v1/users/$TDH_SERVICE_GITEA_ADMIN_USER/tokens"
+#echo "curl -X GET https://${TDH_SERVICE_GITEA_SERVER}/api/v1/users/$TDH_SERVICE_GITEA_ADMIN_USER/tokens"
     token=$(curl -X GET https://${TDH_SERVICE_GITEA_SERVER}/api/v1/users/$TDH_SERVICE_GITEA_ADMIN_USER/tokens \
                  -H 'accept: application/json' \
                  -H 'Content-Type: application/json' \
                  -u "$TDH_SERVICE_GITEA_ADMIN_USER:$TDH_SERVICE_GITEA_ADMIN_PASS" 2>/dev/null | \
                  jq -r '.[] | select(.name == "tanzu-demo-hub").name') 
 
-echo "TOKEN:$token"
+#echo "TOKEN:$token"
 
     if [ "$token" == "tanzu-demo-hub" ]; then
       curl -X DELETE https://${TDH_SERVICE_GITEA_SERVER}/api/v1/users/$TDH_SERVICE_GITEA_ADMIN_USER/tokens/tanzu-demo-hub \
@@ -16303,55 +16621,54 @@ vSphereAPI_createContentLibrary() {
 
 #hhhhhh
   # --- CREATE CONTENT-LIBRARY ---
-  cnt=$(govc library.ls | egrep -c "^/$VCENTER_CONTENT_LIBRARY") 
+  cnt=$(govc library.ls -k=true | egrep -c "^/$VCENTER_CONTENT_LIBRARY") 
   if [ $cnt -eq 0 ]; then 
     messagePrint " ▪ Create Content Library"   "$VCENTER_CONTENT_LIBRARY"
 
-    govc library.create -d="Tanzu Demo Hub - VM Images" $VCENTER_CONTENT_LIBRARY > /dev/null 2>&1
+    govc library.create -d="Fortinet Demo Hub - VM Images" -k=true -ds $VSPHERE_TKGS_DATASTORE $VCENTER_CONTENT_LIBRARY > /dev/null 2>&1
 
-    cnt=$(govc library.ls | egrep -c "^/$VCENTER_CONTENT_LIBRARY")
+    cnt=$(govc library.ls -k=true | egrep -c "^/$VCENTER_CONTENT_LIBRARY")
     if [ $cnt -eq 0 ]; then 
       echo "ERROR: failed to create Content Library ($VCENTER_CONTENT_LIBRARY), please try manually"
       echo "       => export GOVC_INSECURE=1"
       echo "          export GOVC_URL=$GOVC_URL"
       echo "          export GOVC_USERNAME=$GOVC_USERNAME"
       echo "          export GOVC_PASSWORD='$GOVC_PASSWORD'"
-      echo "          govc library.create -d=\"Tanzu Demo Hub - VM Images\" $VCENTER_CONTENT_LIBRARY"
+      echo "          govc library.create -d=\"Fortinet Demo Hub - VM Images\" -k=true -ds $VSPHERE_TKGS_DATASTORE $VCENTER_CONTENT_LIBRARY"
       exit 1
     fi
   else
     messagePrint " ▪ Verify Content Library"   "$VCENTER_CONTENT_LIBRARY"
   fi
 
-  VCENTER_CONTENT_LIBRARY_ID=$(govc library.info /tanzu-demo-hub | egrep "  ID:" | awk '{ print $2 }' )
+  VCENTER_CONTENT_LIBRARY_ID=$(govc library.info -k=true /tanzu-demo-hub | egrep "  ID:" | awk '{ print $2 }' )
 
   # --- CREATE CONTENT-LIBRARY ---
-  cnt=$(govc library.ls /$VCENTER_CONTENT_LIBRARY/ | egrep -c "^/$VCENTER_CONTENT_LIBRARY/$VMSERVICE_IMAGE_NAME")
+  cnt=$(govc library.ls -k=true /$VCENTER_CONTENT_LIBRARY/ | egrep -c "^/$VCENTER_CONTENT_LIBRARY/$VMSERVICE_IMAGE_NAME")
 cnt=1
   if [ $cnt -eq 0 ]; then 
     messagePrint " ▪ Upload OVF Image to Content Library (tanzu-demo-hub)"   "$VMSERVICE_IMAGE"
 
-    govc library.import $VCENTER_CONTENT_LIBRARY $HOME/.tanzu-demo-hub/cache/tdh-vmservice/$VMSERVICE_IMAGE > /dev/null 2>&1
+    govc library.import -k=true $VCENTER_CONTENT_LIBRARY $HOME/.tanzu-demo-hub/cache/tdh-vmservice/$VMSERVICE_IMAGE > /dev/null 2>&1
 
-    cnt=$(govc library.ls /$VCENTER_CONTENT_LIBRARY/ | egrep -c "^/$VCENTER_CONTENT_LIBRARY/$VMSERVICE_IMAGE_NAM")
+    cnt=$(govc library.ls -k=true /$VCENTER_CONTENT_LIBRARY/ | egrep -c "^/$VCENTER_CONTENT_LIBRARY/$VMSERVICE_IMAGE_NAM")
     if [ $cnt -eq 0 ]; then 
       echo "ERROR: failed to create Content Library ($VCENTER_CONTENT_LIBRARY), please try manually"
       echo "       => export GOVC_INSECURE=1"
       echo "          export GOVC_URL=$GOVC_URL"
       echo "          export GOVC_USERNAME=$GOVC_USERNAME"
       echo "          export GOVC_PASSWORD='$GOVC_PASSWORD'"
-      echo "          govc library.import $VCENTER_CONTENT_LIBRARY $HOME/.tanzu-demo-hub/cache/tdh-vmservice/$VMSERVICE_IMAGE"
+      echo "          govc library.import -k=true $VCENTER_CONTENT_LIBRARY $HOME/.tanzu-demo-hub/cache/tdh-vmservice/$VMSERVICE_IMAGE"
       exit 1
     fi
   else
-    messagePrint " ▪ Verify OVF Image in Content Library (tanzu-demo-hub)"   "$VMSERVICE_IMAGE"
+    messagePrint " ▪ Verify OVF Image in Content Library ($VSPHERE_TKGS_CONTENT_LIBRARY)"   "$VMSERVICE_IMAGE"
   fi
 
 
   # --- DUMP CURRENT NAMESPACE DEFINITION --
-  NAMESPACE=tanzu-demo-hub
   curl -k -X GET -H 'Content-type: application/json' \
-                 -H "vmware-api-session-id: $API_TOKEN" ${VCENTER_SERVER}/api/vcenter/namespaces/instances/$NAMESPACE 2>/dev/null | \
+                 -H "vmware-api-session-id: $API_TOKEN" ${VCENTER_SERVER}/api/vcenter/namespaces/instances/$VSPHERE_TKGS_NAMESPACE 2>/dev/null | \
                  jq -r > /tmp/vsphere_config.json
 
   # --- PATCH NAMESPACE TO ADD CONTENT LIBRARY ---
@@ -16360,20 +16677,20 @@ cnt=1
     jq -r --arg key "$VCENTER_CONTENT_LIBRARY_ID" '.vm_service_spec.content_libraries += [$key]' /tmp/vsphere_config.json > /tmp/vsphere_config_new.json
 
     curl -k -X PATCH -H 'Content-type: application/json' \
-                     -H "vmware-api-session-id: $API_TOKEN" ${VCENTER_SERVER}/api/vcenter/namespaces/instances/$NAMESPACE \
+                     -H "vmware-api-session-id: $API_TOKEN" ${VCENTER_SERVER}/api/vcenter/namespaces/instances/$VSPHERE_TKGS_NAMESPACE \
                      -d "@/tmp/vsphere_config_new.json" > /tmp/error.log 2>/dev/null; ret=$?
 
     if [ $ret -ne 0 ]; then
       logMessages /tmp/error.log
       logMessages $VSPHERE_CONFIG
-      echo "ERROR: failed to Patch vSphere Namespace $NAMESPACE"
+      echo "ERROR: failed to Patch vSphere Namespace $VSPHERE_TKGS_NAMESPACE"
       if [ "$NATIVE" == "0" ]; then
         echo "       => tools/${TDH_TOOLS}.sh"
-        echo "          tdh-tools:/$ curl -k -X PATH -H \"vmware-api-session-id: $API_TOKEN\" ${VCENTER_SERVER}/api/vcenter/namespaces/instances/$NAMESPACE \\"
+        echo "          tdh-tools:/$ curl -k -X PATH -H \"vmware-api-session-id: $API_TOKEN\" ${VCENTER_SERVER}/api/vcenter/namespaces/instances/$VSPHERE_TKGS_NAMESPACE \\"
         echo "                            -H 'Content-type: application/json' -d \"@$VSPHERE_CONFIG\""
         echo "          tdh-tools:/$ exit"
       else
-        echo "       => curl -k -X PATH -H \"vmware-api-session-id: $API_TOKEN\" ${VCENTER_SERVER}/api/vcenter/namespaces/instances/$NAMESPACE \\"
+        echo "       => curl -k -X PATH -H \"vmware-api-session-id: $API_TOKEN\" ${VCENTER_SERVER}/api/vcenter/namespaces/instances/$VSPHERE_TKGS_NAMESPACE \\"
         echo "               -H 'Content-type: application/json' -d \"@$VSPHERE_CONFIG\""
       fi
   
@@ -16405,7 +16722,7 @@ vSphereAPI_updateNamespace() {
   export GOVC_USERNAME=$VSPHERE_TKGS_VCENTER_ADMIN
   export GOVC_PASSWORD=$VSPHERE_TKGS_VCENTER_PASSWORD
 
-  VCENTER_CONTENT_LIBRARY_ID=$(govc library.info /tanzu-demo-hub | egrep "  ID:" | awk '{ print $2 }' )
+  VCENTER_CONTENT_LIBRARY_ID=$(govc library.info -k=true /tanzu-demo-hub | egrep "  ID:" | awk '{ print $2 }' )
 
   # VERIFY IF CONTENT LIBRARY HAS BEEN CONFIGURED 
   found=0
@@ -16511,9 +16828,8 @@ vSphereAPI_createNamespace() {
   # --- GET STORAGE POLICY ID FOR 'TANZU' ---
   vm_policy=$(curl -k -X GET -H 'Content-type: application/json' \
                    -H "vmware-api-session-id: $API_TOKEN" ${VCENTER_SERVER}/rest/vcenter/storage/policies 2>/dev/null | \
-                   jq -r --arg key ${VSPHERE_TKGS_SUPERVISOR_STORAGE_POLICY} '.value[] | select(.name == $key ).policy')
+                   jq -r --arg key "${VSPHERE_TKGS_STORAGE_POLICY_NAME}" '.value[] | select(.name == $key ).policy')
 
-#sacha
   # --- UPDATE VSPHERE NAMESPACE CONFIG ---
   VSPHERE_CONFIG=/tmp/vsphere_config.json; rm -f $OKTA_CONFIG
   echo '{'                                                                         >  $VSPHERE_CONFIG
@@ -16557,8 +16873,6 @@ vSphereAPI_createNamespace() {
 
     exit 1
   fi
-
-
 }
 
 
@@ -17105,7 +17419,7 @@ installTanzuPackageCertManager() {
     else
       package_ver=""; package_rel=""
     fi
-    
+
     messageTitle "Installing $PACKAGE_DES in $PACKAGE_NAMESPACE"                                                                  
     messagePrint " ▪ Tanzu Package ($PACKAGE_NAME)"   "$PACKAGE_ID ($package_ver/$package_rel)"                                   
 
@@ -17990,7 +18304,6 @@ installTanzuPackageContour() {
   PACKAGE_REPO="$(getYAML PACKAGE_REPO $TDHV2_WORKLOAD_CLUSTER $PACKAGE_ID tanzu)"
   INSTALL_NAMESPACE=tanzu-system-ingress
 
-#pupup
   # --- CHECK IF PACKAGE IS CONFIGURED IN THE DEPLOYMENT ---
   [ "$PACKAGE_ID" != "$(getYAML PACKAGE_ID $TDHV2_WORKLOAD_CLUSTER $PACKAGE_ID tanzu)" ] && return 0
 
@@ -18027,9 +18340,9 @@ installTanzuPackageContour() {
       echo " service:"                                                                  >> $VALUE_FILE
       echo "   type: LoadBalancer"                                                      >> $VALUE_FILE
       echo "   annotations: {}"                                                         >> $VALUE_FILE
-      echo "   nodePorts:"                                                              >> $VALUE_FILE
-      echo "     http: null"                                                            >> $VALUE_FILE
-      echo "     https: null"                                                           >> $VALUE_FILE
+      #echo "   nodePorts:"                                                              >> $VALUE_FILE
+      #echo "     http: null"                                                            >> $VALUE_FILE
+      #echo "     https: null"                                                           >> $VALUE_FILE
       echo "   externalTrafficPolicy: Cluster"                                          >> $VALUE_FILE
       echo "   disableWait: false"                                                      >> $VALUE_FILE
       echo " hostPorts:"                                                                >> $VALUE_FILE
@@ -18039,7 +18352,7 @@ installTanzuPackageContour() {
       echo " hostNetwork: false"                                                        >> $VALUE_FILE
       echo " terminationGracePeriodSeconds: 300"                                        >> $VALUE_FILE
       echo " logLevel: info"                                                            >> $VALUE_FILE
-      echo " pspNames: null"                                                            >> $VALUE_FILE
+      #echo " pspNames: null"                                                            >> $VALUE_FILE
       echo "certificates:"                                                              >> $VALUE_FILE
       echo " duration: 8760h"                                                           >> $VALUE_FILE
       echo " renewBefore: 360h"                                                         >> $VALUE_FILE
@@ -18152,7 +18465,7 @@ installTanzuPackageContour() {
       echo " service:"                                                                  >> $VALUE_FILE
       echo "   type: LoadBalancer"                                                      >> $VALUE_FILE
       echo "   annotations: {}"                                                         >> $VALUE_FILE
-      echo "   nodePorts:"                                                              >> $VALUE_FILE
+      #echo "   nodePorts:"                                                              >> $VALUE_FILE
       echo "     http: null"                                                            >> $VALUE_FILE
       echo "     https: null"                                                           >> $VALUE_FILE
       echo "   externalTrafficPolicy: Cluster"                                          >> $VALUE_FILE
@@ -18166,7 +18479,7 @@ installTanzuPackageContour() {
       echo " hostNetwork: false"                                                        >> $VALUE_FILE
       echo " terminationGracePeriodSeconds: 300"                                        >> $VALUE_FILE
       echo " logLevel: info"                                                            >> $VALUE_FILE
-      echo " pspNames: null"                                                            >> $VALUE_FILE
+      #echo " pspNames: null"                                                            >> $VALUE_FILE
       echo "certificates:"                                                              >> $VALUE_FILE
       echo " duration: 8760h"                                                           >> $VALUE_FILE
       echo " renewBefore: 360h"                                                         >> $VALUE_FILE
@@ -19081,7 +19394,7 @@ runTDHtools() {
       [ "$cid" != "" ] && for n in $cid; do docker rm $n -f > /dev/null 2>&1; done
 
       # --- DUMP ENVIRONMENT VARIABLES ---
-      env | grep TDH > /tmp/tdh.env
+      env | egrep "VSPHERE|TDH" > /tmp/tdh.env
 
       export TANZU_HOME=/home/tanzu
       export CORE_OPTIONS="-it --init --rm --hostname tdh-tools --name $TDH_TOOLS --network=host"
@@ -19302,7 +19615,7 @@ runningPods() {
 
   cnt=1; 
   while [ $cnt -ne 0 ]; do
-    cmdLoop kubectl get pods -A -o json > /tmp/output.yaml
+    kubectl get pods -A -o json > /tmp/output.yaml
     cnt=$(jq -r --arg key "$NAMESPACE" '.items[] | select(.metadata.namespace == $key).status.phase' /tmp/output.yaml | \
         egrep -vc "Running|Completed|Succeeded|Evicted")
 
@@ -19802,20 +20115,12 @@ deleteTanzuPackage() {
       # --- VERIFY IF PACKAGE IS DELETED ---
       cmdLoop tanzu package installed list -A -o json > /tmp/output.json 2>/dev/null
       pkg=$(jq -r --arg key "$TANZU_PACKAGE" '.[] | select(.name == $key).name' /tmp/output.json)
-echo "pkg:$pkg"
       if [ "$pkg" != "$TANZU_PACKAGE" ]; then
         # --- DELETE SERVICE ACCOUNT IF IT EXIST ----
         cmdLoop kubectl get serviceaccount -n tanzu-system-packages -o json > /tmp/output.json
         nam=$(jq -r --arg key "${TANZU_PACKAGE}-${TANZU_NAMESPACE}-sa" '.items[] | select(.metadata.name == $key).metadata.name' /tmp/output.json)
-echo xxx3
- cmdLoop tanzu package installed list -A 2>/dev/null
-echo xxx4
 
-echo "kubectl -n tanzu-system-packages delete serviceaccount $nam"
         [ "$nam" != "" ] && cmdLoop kubectl -n tanzu-system-packages delete serviceaccount $nam
-echo xxx5
- cmdLoop tanzu package installed list -A 2>/dev/null
-echo xxx6
       else
         break
       fi
@@ -20289,7 +20594,6 @@ dockerPullSecret() {
   if [ "$nam" != "tdh-docker-repo" ]; then 
     messagePrint " ▪ Create Docker PullSecret for Namespace/ServiceAccount"  "$TMP_NAMESPACE/$TMP_SERVICEACCOUNT"
 
-#gaga
     cmdLoop kubectl -n $TMP_NAMESPACE create secret docker-registry tdh-docker-repo \
             --docker-server docker.io \
             --docker-username $TDH_REGISTRY_DOCKER_USER \
@@ -21017,9 +21321,14 @@ convertTDHconfig() {
   export CREDENTIALS_SRC=$HOME/.tanzu-demo-hub.cfg
   export CREDENTIALS_DST=$HOME/.tanzu-demo-hub.yml
 
-  sed -n '1,/^return/p' $CREDENTIALS_SRC | grep "=" | egrep -v "^#|AWS_SESSION_TOKEN" | sed -e "s/'//g" -e '/^#/d' -e 's/export //g' -e "s/=/: '/g" -e 's/"//g' -e 's/  *#.*$//g' -e "s/$/'/g" >  $CREDENTIALS_DST
-  sed -n '1,/^return/p' $CREDENTIALS_SRC | grep "=" | egrep -v "^#|AWS_SESSION_TOKEN" | egrep "TMC_SERVER_URL" | sed -e "s/'//g" -e 's/"//g' -e "s+^.*//\(.*\)$+TMC_SERVER_TENNANT: '\1'+g"    >> $CREDENTIALS_DST
-  chmod 600 $CREDENTIALS_DST
+  if [ -f $CREDENTIALS_SRC ]; then
+    sed -n '1,/^return/p' $CREDENTIALS_SRC | grep "=" | egrep -v "^#|AWS_SESSION_TOKEN" | sed -e "s/'//g" -e '/^#/d' -e 's/export //g' -e "s/=/: '/g" -e 's/"//g' -e 's/  *#.*$//g' -e "s/$/'/g" >  $CREDENTIALS_DST
+    sed -n '1,/^return/p' $CREDENTIALS_SRC | grep "=" | egrep -v "^#|AWS_SESSION_TOKEN" | egrep "TMC_SERVER_URL" | sed -e "s/'//g" -e 's/"//g' -e "s+^.*//\(.*\)$+TMC_SERVER_TENNANT: '\1'+g"    >> $CREDENTIALS_DST
+    chmod 600 $CREDENTIALS_DST
+  else
+    echo "ERROR: $CREDENTIALS_SRC does not exist"; exit 1
+  fi
+
 }           
 
 # ------------------------------------------------------------------------------------------

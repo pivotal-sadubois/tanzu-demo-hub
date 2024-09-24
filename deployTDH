@@ -8,6 +8,8 @@
 
 unset KUBECONFIG
 
+export HOMEBREW_NO_AUTO_UPDATE=1
+export HOMEBREW_NO_ENV_HINTS=1
 export TANZU_DEMO_HUB=$(cd "$(pwd)/$(dirname $0)"; pwd)
 export TDHPATH=$(cd "$(pwd)/$(dirname $0)"; pwd)
 export DEBUG=0
@@ -152,8 +154,9 @@ for clu in $(getYAML WC_CLUSTER_LIST); do
   #installSpringCloudGateway
   #installMinio
   #installKubeapps
-  #installGiteaV2
-  #installJenkins
+
+  installJenkinsV2
+  installGiteaV2
   installArgoCDV2
   #installGitLab
   #installKubeernetesDashboard       ## Kubernetes Dashboard
@@ -162,10 +165,10 @@ for clu in $(getYAML WC_CLUSTER_LIST); do
   installTAPV2                       ## Tanzu Application Platform (TAP)
 done
 
-mergeKubeconfigFiles
-configureAppLiveView
-configureSupplyChainBasic
-prepareDeploymentLog
+#mergeKubeconfigFiles
+#configureAppLiveView
+#configureSupplyChainBasic
+#prepareDeploymentLog
 
 echo 
 messageTitle " *** Thank you for using Tanzu Demo Hub ***"
