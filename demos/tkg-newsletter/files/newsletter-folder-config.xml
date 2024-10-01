@@ -1,0 +1,7 @@
+<com.cloudbees.hudson.plugins.folder.Folder plugin="cloudbees-folder@6.15">
+  <displayName>Newsletter Application</displayName>
+  <description>This is the newsletter folder created via Jenkins CLI</description>
+  <properties/>
+  <folderViews/>
+  <healthMetrics/>
+</com.cloudbees.hudson.plugins.folder.Folder>
