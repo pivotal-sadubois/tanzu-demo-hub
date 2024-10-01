@@ -1259,7 +1259,6 @@ checkKubernetesServices() {
   service=$1
   missing_variables=0
 
-#guguseli
   if [ 1 -eq 1 ]; then
     if [ "${service}" == "tdh_user" ]; then
       if [ "${TDH_USER}" == "" ]; then
@@ -8942,6 +8941,7 @@ installArgoCDV2() {
 
     messagePrint " ▪ ArgoCD Dashboard deployed"        "https://argocd.$DOMAIN"
 
+#gugus
     PROXY_VALUES=/tmp/helm_argocd_proxy_values.yaml
     echo "apiVersion: projectcontour.io/v1"                                                                                     >  $PROXY_VALUES
     echo "kind: HTTPProxy"                                                                                                      >> $PROXY_VALUES
@@ -9162,8 +9162,9 @@ installArgoCD() {
 # ------------------------------------------------------------------------------------------
 # Return Value .......: 0 - SUCCEED, 1 - FAILED
 # ------------------------------------------------------------------------------------------
-# References .........: https://bitnami.com/stack/jenkins/helm
-#                     : https://github.com/bitnami/charts/tree/main/bitnami/jenkins/#installing-the-chart
+#          Helm Chart : https://bitnami.com/stack/jenkins/helm
+#    Chart Parameters : https://github.com/bitnami/charts/tree/main/bitnami/jenkins/#installing-the-chart
+#             API Doc : https://jenkins.apps.corelab.core-software.ch/api/
 # ------------------------------------------------------------------------------------------
 installJenkinsV2() {
   TDHV2_WORKLOAD_CLUSTER=$clu
@@ -9227,7 +9228,7 @@ installJenkinsV2() {
     echo "jenkinsPassword: $ADMIN_PASS"                                                                                         >> $HELM_VALUES
     echo ""                                                                                                                     >> $HELM_VALUES
     echo "ingress:"                                                                                                             >> $HELM_VALUES
-    echo "  enabled: true"                                                                                                      >> $HELM_VALUES
+    echo "  enabled: false"                                                                                                     >> $HELM_VALUES
     echo "  ingressClassName: contour"                                                                                          >> $HELM_VALUES
     echo "  certManager: false"                                                                                                 >> $HELM_VALUES
     echo "  annotations:"                                                                                                       >> $HELM_VALUES
@@ -9241,6 +9242,29 @@ installJenkinsV2() {
     echo "    secretName: $tls_snm"                                                                                             >> $HELM_VALUES
 
     messagePrint " ▪ Deploy the $HELMCHART Helm Chart" "$HELMCHART"
+
+#gugus
+    PROXY_VALUES=/tmp/helm_jenkins_proxy_values.yaml
+    echo "apiVersion: projectcontour.io/v1"                                                                                     >  $PROXY_VALUES
+    echo "kind: HTTPProxy"                                                                                                      >> $PROXY_VALUES
+    echo "metadata:"                                                                                                            >> $PROXY_VALUES
+    echo "  name: jenkins"                                                                                                      >> $PROXY_VALUES
+    echo "  namespace: jenkins"                                                                                                 >> $PROXY_VALUES
+    echo "spec:"                                                                                                                >> $PROXY_VALUES
+    echo "  virtualhost:"                                                                                                       >> $PROXY_VALUES
+    echo "    fqdn: jenkins.$DNS_DOMAIN"                                                                                        >> $PROXY_VALUES
+    echo "    tls:"                                                                                                             >> $PROXY_VALUES
+    echo "      secretName: $tls_snm"                                                                                           >> $PROXY_VALUES
+    echo "  routes:"                                                                                                            >> $PROXY_VALUES
+    echo "    - conditions:"                                                                                                    >> $PROXY_VALUES
+    echo "        - prefix: /"                                                                                                  >> $PROXY_VALUES
+    echo "      enableWebsockets: true"                                                                                         >> $PROXY_VALUES
+    echo "      services:"                                                                                                      >> $PROXY_VALUES
+    echo "        - name: jenkins"                                                                                              >> $PROXY_VALUES
+    echo "          port: 80"                                                                                                   >> $PROXY_VALUES
+
+    messagePrint " ▪ Installing HTTProxy"        "$PROXY_VALUES"
+    cmdLoop kubectl apply -f $PROXY_VALUES
 
     cnt=0; ret=1; stt="notdeployed"
     while [ $ret -ne 0 -a $cnt -lt 5 -a "$stt" != "deployed" ]; do
@@ -9663,6 +9687,7 @@ echo gaga1
 # ------------------------------------------------------------------------------------------
 # References .........: https://gitea.com/gitea/helm-chart ............. Gitea Documentation
 #                     : https://gitea.com/gitea/helm-chart/src/branch/main/values.yaml
+#                     : https://gitea.apps.corelab.core-software.ch/api/swagger
 # ------------------------------------------------------------------------------------------
 installGiteaV2() {
   TDHV2_WORKLOAD_CLUSTER=$clu
@@ -9739,7 +9764,6 @@ installGiteaV2() {
     #echo "    drop=[\"ALL\"]"                                                                                                  >> $HELM_VALUES
     echo ""                                                                                                                     >> $HELM_VALUES
 
-#huhu
     echo ""                                                                                                                     >> $HELM_VALUES
     echo "gitea:"                                                                                                               >> $HELM_VALUES
     echo "  admin:"                                                                                                             >> $HELM_VALUES
@@ -16035,10 +16059,12 @@ tmcAPI_getToken() {
 # ------------------------------------------------------------------------------------------
 # Return Value .......: n/a
 # ------------------------------------------------------------------------------------------
-# Example.............: giteaForkRepo <fork-user> <fork-repo> <org> <name
-#                       giteaForkRepo parth-pandit fortune-demo tdh fortune-demo
+# Example.............: giteaMirrorRepo <fork-user> <fork-repo> <org> <name
+#                       giteaMirrorRepo parth-pandit fortune-demo tdh fortune-demo
 # ------------------------------------------------------------------------------------------
 giteaMirrorRepo() {
+echo gaga1
+  GITEA_REMOTE_USER=$1
   GITEA_REMOTE_REPO=$1
   GITEA_NEW_ORG=$2
   GITEA_NEW_REPO=$3
@@ -16049,8 +16075,14 @@ giteaMirrorRepo() {
   TDH_SERVICE_GITEA_SERVER_URL=$(getConfigMap tanzu-demo-hub TDH_SERVICE_GITEA_SERVER_URL)
   TDH_SERVICE_GITEA_ADMIN_TOKEN_ID=$(getConfigMap tanzu-demo-hub TDH_SERVICE_GITEA_ADMIN_TOKEN_ID)
 
+echo "TDH_SERVICE_GITEA_ADMIN_USER:$TDH_SERVICE_GITEA_ADMIN_USER"
+
+  #curl -X POST ${TDH_SERVICE_GITEA_SERVER_URL}/api/v1/repos/$GITEA_NEW_ORG/$GITEA_NEW_REPO \
+  #     -H 'accept: application/json' 2>/dev/null > /tmp/output.json
   curl -X POST ${TDH_SERVICE_GITEA_SERVER_URL}/api/v1/repos/$GITEA_NEW_ORG/$GITEA_NEW_REPO \
-       -H 'accept: application/json' 2>/dev/null > /tmp/output.json
+       -H 'accept: application/json' 
+echo gugu
+
 
   nam=$(jq -r '.full_name' /tmp/output.json) 
   if [ "$nam" == "" -o "$nam" == "null" ]; then
@@ -16062,7 +16094,9 @@ giteaMirrorRepo() {
     echo "  \"mirror\": true,"                                  >> $TMP_API_DATA
     echo "  \"private\": false"                                 >> $TMP_API_DATA
     echo "}"                                                    >> $TMP_API_DATA
+echo "curl -X GET ${TDH_SERVICE_GITEA_SERVER_URL}/api/v1/repos -H 'accept: application/json' -u "$TDH_SERVICE_GITEA_ADMIN_USER:$TDH_SERVICE_GITEA_ADMIN_PASS"  -H 'Content-Type: application/json'"
 
+echo "${TDH_SERVICE_GITEA_SERVER_URL}/api/v1/repos/migrate"
     cnt=0; ret=1
     while [ $ret -ne 0 -a $cnt -lt 5 ]; do
       curl -X POST ${TDH_SERVICE_GITEA_SERVER_URL}/api/v1/repos/migrate \
@@ -16070,12 +16104,52 @@ giteaMirrorRepo() {
                  -u "$TDH_SERVICE_GITEA_ADMIN_USER:$TDH_SERVICE_GITEA_ADMIN_PASS" \
                  -H 'Content-Type: application/json' \
          --data "@$TMP_API_DATA" >/dev/null 2>&1; ret=$?
+echo "RET:$ret"
       [ $ret -eq 0 ] && break
 
       let cnt=cnt+1
       sleep 10
     done
   fi
+}
+
+# ------------------------------------------------------------------------------------------
+# Function Name ......: giteaForkGithubRepo
+# Function Purpose ...: Get Gitea Repo
+# ------------------------------------------------------------------------------------------
+# Argument ($1) ......: n/a
+# ------------------------------------------------------------------------------------------
+# Return Value .......: n/a
+# ------------------------------------------------------------------------------------------
+# Example.............: giteaForkGithubRepo <github-user> <github-repo> <org> <repo>
+#                       giteaForkGithubRepo pivotal-sadubois newsletter Fortinet newsletter
+# ------------------------------------------------------------------------------------------
+giteaForkGithubRepo() {
+  GITHUB_FORK_USER=$1
+  GITHUB_FORK_REPO=$2
+  GITEA_ORG=$3
+  GITEA_REPO=$4
+
+  TDH_SERVICE_GITEA_ADMIN_TOKEN_ID=$(getConfigMap tanzu-demo-hub TDH_SERVICE_GITEA_ADMIN_TOKEN_ID)
+  TDH_SERVICE_GITEA_ADMIN_USER=$(getConfigMap tanzu-demo-hub TDH_SERVICE_GITEA_ADMIN_USER)
+  TDH_SERVICE_GITEA_ADMIN_PASS=$(getConfigMap tanzu-demo-hub TDH_SERVICE_GITEA_ADMIN_PASS)
+
+  TMP_GITHUB=/tmp/tmp-github; rm -rf $TMP_GITHUB; mkdir -p $TMP_GITHUB
+  TMP_GITEA=/tmp/tmp-gitea; rm -rf $TMP_GITEA; mkdir -p $TMP_GITEA
+
+  git -C $TMP_GITHUB clone https://github.com/$GITHUB_FORK_USER/$GITHUB_FORK_REPO.git > /dev/null 2>&1
+  git -C $TMP_GITEA clone https://${TDH_SERVICE_GITEA_ADMIN_USER}:${TDH_SERVICE_GITEA_ADMIN_PASS}@gitea.apps.corelab.core-software.ch/${GITEA_ORG}/${GITEA_REPO}.git > /dev/null 2>&1
+
+  rm -rf $TMP_GITHUB/${GITEA_REPO}/.git
+  cd $TMP_GITHUB && tar cf $TMP_GITEA/${GITEA_REPO}.tar ${GITEA_REPO} > /dev/null 2>&1
+  cd $TMP_GITEA && tar xf ${GITEA_REPO}.tar > /dev/null 2>&1
+
+  git -C $TMP_GITEA/${GITEA_REPO} add $TMP_GITEA/${GITEA_REPO} > /dev/null 2>&1
+  git -C $TMP_GITEA/${GITEA_REPO} commit -m new  > /dev/null 2>&1
+
+  # --- PUSH TO GIREA REPOSITORY
+  git -C $TMP_GITEA/${GITEA_REPO} config http.postBuffer 524288000  > /dev/null 2>&1
+  git -C $TMP_GITEA/${GITEA_REPO} push  > /dev/null 2>&1
 }
 
 # ------------------------------------------------------------------------------------------
@@ -16092,8 +16166,8 @@ giteaMirrorRepo() {
 giteaForkRepo() {
   GITEA_FORK_USER=$1
   GITEA_FORK_REPO=$2
-  GITEA_REPO=$3
-  GITEA_ORG=$4
+  GITEA_ORG=$3
+  GITEA_REPO=$4
 
   TDH_SERVICE_GITEA_ADMIN_USER=$(getConfigMap tanzu-demo-hub TDH_SERVICE_GITEA_ADMIN_USER)
   TDH_SERVICE_GITEA_ADMIN_PASS=$(getConfigMap tanzu-demo-hub TDH_SERVICE_GITEA_ADMIN_PASS)
@@ -16104,12 +16178,16 @@ giteaForkRepo() {
   curl -X GET ${TDH_SERVICE_GITEA_SERVER_URL}/api/v1/repos/$GITEA_ORG/$GITEA_REPO \
        -H 'accept: application/json' 2>/dev/null > /tmp/output.json
   nam=$(jq -r '.name' /tmp/output.json) 
+echo "NAM:$nam"
   if [ "$nam" == "" -o "$nam" == "null" ]; then
+echo gaga2
     TMP_API_DATA=/tmp/gitea_api_data.json
     echo "{"                                                    >  $TMP_API_DATA
     echo "  \"name\": \"$GITEA_REPO\","                         >> $TMP_API_DATA
     echo "  \"organization\": \"$GITEA_ORG\""                   >> $TMP_API_DATA
     echo "}"                                                    >> $TMP_API_DATA
+
+cat $TMP_API_DATA
 
     cnt=0; ret=1
     while [ $ret -ne 0 -a $cnt -lt 5 ]; do
@@ -16123,6 +16201,7 @@ giteaForkRepo() {
       let cnt=cnt+1
       sleep 10
     done
+echo "ret:$ret"
   fi
 }
 
@@ -16136,6 +16215,9 @@ giteaForkRepo() {
 # ------------------------------------------------------------------------------------------
 # Reference Documentation:
 # https://crib.utwente.nl/git/api/swagger#/repository
+# ------------------------------------------------------------------------------------------
+# Example.............: deleteGiteaRepo <org> <repo>
+#                       deleteGiteaRepo tdh mytdh
 # ------------------------------------------------------------------------------------------
 deleteGiteaRepo() {
   GITEA_ORG=$1
@@ -16155,6 +16237,48 @@ deleteGiteaRepo() {
     cnt=0; ret=1
     while [ $ret -ne 0 -a $cnt -lt 5 ]; do
       curl -X DELETE ${TDH_SERVICE_GITEA_SERVER_URL}/api/v1/repos/$GITEA_ORG/$GITEA_REPO \
+           -H 'accept: application/json' \
+           -H 'Content-Type: application/json' \
+           -u "$TDH_SERVICE_GITEA_ADMIN_USER:$TDH_SERVICE_GITEA_ADMIN_PASS" 2>/dev/null > /tmp/output.json 2>&1; ret=$?
+      [ $ret -eq 0 ] && break
+
+      let cnt=cnt+1
+      sleep 10
+    done
+  fi
+}
+
+# ------------------------------------------------------------------------------------------
+# Function Name ......: deleteGiteaOrg
+# Function Purpose ...: Delete Gitea Org
+# ------------------------------------------------------------------------------------------
+# Argument ($1) ......: n/a
+# ------------------------------------------------------------------------------------------
+# Return Value .......: n/a
+# ------------------------------------------------------------------------------------------
+# Reference Documentation:
+# https://crib.utwente.nl/git/api/swagger#/repository
+# ------------------------------------------------------------------------------------------
+# Example.............: deleteGiteaRepo <org>
+#                       deleteGiteaRepo tdh 
+# ------------------------------------------------------------------------------------------
+deleteGiteaOrg() {                       
+  GITEA_ORG=$1          
+        
+  TDH_SERVICE_GITEA_ADMIN_USER=$(getConfigMap tanzu-demo-hub TDH_SERVICE_GITEA_ADMIN_USER)
+  TDH_SERVICE_GITEA_ADMIN_PASS=$(getConfigMap tanzu-demo-hub TDH_SERVICE_GITEA_ADMIN_PASS)
+  TDH_SERVICE_GITEA_SERVER=$(getConfigMap tanzu-demo-hub TDH_SERVICE_GITEA_SERVER)
+  TDH_SERVICE_GITEA_SERVER_URL=$(getConfigMap tanzu-demo-hub TDH_SERVICE_GITEA_SERVER_URL)
+  TDH_SERVICE_GITEA_ADMIN_TOKEN_ID=$(getConfigMap tanzu-demo-hub TDH_SERVICE_GITEA_ADMIN_TOKEN_ID)
+  
+  curl -X GET ${TDH_SERVICE_GITEA_SERVER_URL}/api/v1/orgs/$GITEA_ORG \
+       -H 'accept: application/json' 2>/dev/null > /tmp/output.json
+  nam=$(jq -r '.name' /tmp/output.json)
+
+  if [ "$nam" == "$GITEA_ORG" ]; then
+    cnt=0; ret=1
+    while [ $ret -ne 0 -a $cnt -lt 5 ]; do
+      curl -X DELETE ${TDH_SERVICE_GITEA_SERVER_URL}/api/v1/orgs/$GITEA_ORG \
            -H 'accept: application/json' \
            -H 'Content-Type: application/json' \
            -u "$TDH_SERVICE_GITEA_ADMIN_USER:$TDH_SERVICE_GITEA_ADMIN_PASS" 2>/dev/null > /tmp/output.json 2>&1; ret=$?
@@ -21706,6 +21830,242 @@ createTAPNamespace() {
     echo " ✓ Verify Application Namespace $TMP_NAMESPACE"
   fi
 }
+
+# ------------------------------------------------------------------------------------------
+# Function Name ......: getKenkinsAPItoken 
+# Function Purpose ...: create TAP Namespace
+# ------------------------------------------------------------------------------------------
+# Argument ($1) ......: Kubernetes Context
+#          ($2) ......: Namespace
+# ------------------------------------------------------------------------------------------
+# Return Value .......: 0 - for success, 1 - failure
+# ------------------------------------------------------------------------------------------
+getKenkinsAPItoken() {
+  TDH_SERVICE_JENKINS_ADMIN_USER=$(getConfigMap tanzu-demo-hub TDH_SERVICE_JENKINS_ADMIN_USER)
+  TDH_SERVICE_JENKINS_ADMIN_PASS=$(getConfigMap tanzu-demo-hub TDH_SERVICE_JENKINS_ADMIN_PASS)
+  TDH_SERVICE_JENKINS_SERVER=$(getConfigMap tanzu-demo-hub TDH_SERVICE_JENKINS_SERVER)
+  TDH_SERVICE_JENKINS_SERVER_URL=$(getConfigMap tanzu-demo-hub TDH_SERVICE_JENKINS_SERVER_URL)
+
+  curl -u "$TDH_SERVICE_JENKINS_ADMIN_USER:$TDH_SERVICE_JENKINS_ADMIN_PASS" \
+  "https://$TDH_SERVICE_JENKINS_SERVER/crumbIssuer/api/xml?xpath=concat(//crumbRequestField,\":\",//crumb)"
+}
+
+# ------------------------------------------------------------------------------------------
+# Function Name ......: exportJenkinsJob
+# Function Purpose ...: create TAP Namespace
+# ------------------------------------------------------------------------------------------
+# Argument ($1) ......: Job Name
+# ------------------------------------------------------------------------------------------
+# Return Value .......: 0 - for success, 1 - failure
+# ------------------------------------------------------------------------------------------
+exportJenkinsJob() {
+  FOLDER=$1
+  JOB_NAME=$2
+  OUTPUT_PATH=$3
+
+  TDH_SERVICE_JENKINS_ADMIN_USER=$(getConfigMap tanzu-demo-hub TDH_SERVICE_JENKINS_ADMIN_USER)
+  TDH_SERVICE_JENKINS_ADMIN_PASS=$(getConfigMap tanzu-demo-hub TDH_SERVICE_JENKINS_ADMIN_PASS)
+  TDH_SERVICE_JENKINS_SERVER=$(getConfigMap tanzu-demo-hub TDH_SERVICE_JENKINS_SERVER)
+  TDH_SERVICE_JENKINS_SERVER_URL=$(getConfigMap tanzu-demo-hub TDH_SERVICE_JENKINS_SERVER_URL)
+
+  # Download Jenkins CLI if not there
+  [ ! -f /tmp/jenkins-cli.jar ] && wget -q https://jenkins.apps.corelab.core-software.ch//jnlpJars/jenkins-cli.jar -O /tmp/jenkins-cli.jar
+    
+  JENKINS_CLI="java -jar /tmp/jenkins-cli.jar -webSocket -s $TDH_SERVICE_JENKINS_SERVER_URL -auth $TDH_SERVICE_JENKINS_ADMIN_USER:$TDH_SERVICE_JENKINS_ADMIN_PASS"
+
+  $JENKINS_CLI get-job ${FOLDER}/${JOB_NAME} > $OUTPUT_PATH/${JOB_NAME}.xml; ret=$?
+
+  if [ $ret -ne 0 ]; then 
+    exit
+  fi
+} 
+
+# ------------------------------------------------------------------------------------------
+# Function Name ......: importJenkinsJob
+# Function Purpose ...: Import Jenkins Pipeline Job
+# ------------------------------------------------------------------------------------------
+# Argument ($1) ......: Job Name
+# ------------------------------------------------------------------------------------------
+# Return Value .......: 0 - for success, 1 - failure
+# ------------------------------------------------------------------------------------------
+importJenkinsJob() {
+  FOLDER=$1
+  JOB_NAME=$2
+  OUTPUT_PATH=$3
+
+  TDH_SERVICE_JENKINS_ADMIN_USER=$(getConfigMap tanzu-demo-hub TDH_SERVICE_JENKINS_ADMIN_USER)
+  TDH_SERVICE_JENKINS_ADMIN_PASS=$(getConfigMap tanzu-demo-hub TDH_SERVICE_JENKINS_ADMIN_PASS)
+  TDH_SERVICE_JENKINS_SERVER=$(getConfigMap tanzu-demo-hub TDH_SERVICE_JENKINS_SERVER)
+  TDH_SERVICE_JENKINS_SERVER_URL=$(getConfigMap tanzu-demo-hub TDH_SERVICE_JENKINS_SERVER_URL)
+
+  # Download Jenkins CLI if not there
+  [ ! -f /tmp/jenkins-cli.jar ] && wget -q https://jenkins.apps.corelab.core-software.ch//jnlpJars/jenkins-cli.jar -O /tmp/jenkins-cli.jar
+
+  JENKINS_CLI="java -jar /tmp/jenkins-cli.jar -webSocket -s $TDH_SERVICE_JENKINS_SERVER_URL -auth $TDH_SERVICE_JENKINS_ADMIN_USER:$TDH_SERVICE_JENKINS_ADMIN_PASS"
+  cnt=$($JENKINS_CLI list-jobs $FOLDER | egrep -c "^$JOB_NAME$") 
+  if [ $cnt -eq 0 ]; then 
+    $JENKINS_CLI create-job ${FOLDER}/${JOB_NAME} < $OUTPUT_PATH/${JOB_NAME}.xml; ret=$?
+
+    if [ $ret -ne 0 ]; then
+      exit
+    fi
+  fi
+}
+
+
+
+# ------------------------------------------------------------------------------------------
+# Function Name ......: importJenkinsFolderConfig
+# Function Purpose ...: import Jenkins Credentials
+# ------------------------------------------------------------------------------------------
+# Argument ($1) ......: Job Name
+# ------------------------------------------------------------------------------------------
+# Return Value .......: 0 - for success, 1 - failure
+# ------------------------------------------------------------------------------------------
+importJenkinsFolderConfig() {
+  FOLDER_NAME=$1
+  FOLDER_FILE=$2
+ 
+  TDH_SERVICE_JENKINS_ADMIN_USER=$(getConfigMap tanzu-demo-hub TDH_SERVICE_JENKINS_ADMIN_USER)
+  TDH_SERVICE_JENKINS_ADMIN_PASS=$(getConfigMap tanzu-demo-hub TDH_SERVICE_JENKINS_ADMIN_PASS)
+  TDH_SERVICE_JENKINS_SERVER=$(getConfigMap tanzu-demo-hub TDH_SERVICE_JENKINS_SERVER)
+  TDH_SERVICE_JENKINS_SERVER_URL=$(getConfigMap tanzu-demo-hub TDH_SERVICE_JENKINS_SERVER_URL)
+ 
+  # Download Jenkins CLI if not there
+  [ ! -f /tmp/jenkins-cli.jar ] && wget -q https://jenkins.apps.corelab.core-software.ch//jnlpJars/jenkins-cli.jar -O /tmp/jenkins-cli.jar
+   
+  JENKINS_CLI="java -jar /tmp/jenkins-cli.jar -webSocket -s $TDH_SERVICE_JENKINS_SERVER_URL -auth $TDH_SERVICE_JENKINS_ADMIN_USER:$TDH_SERVICE_JENKINS_ADMIN_PASS"
+  cnt=$($JENKINS_CLI list-jobs | egrep -c "^$FOLDER_NAME$") 
+  if [ $cnt -eq 0 ]; then 
+    $JENKINS_CLI create-job $FOLDER_NAME < $FOLDER_FILE ; ret=$?
+ 
+    if [ $ret -ne 0 ]; then
+      exit
+    fi
+  fi
+}
+
+
+# ------------------------------------------------------------------------------------------
+# Function Name ......: importJenkinsCredentials
+# Function Purpose ...: import Jenkins Credentials
+# ------------------------------------------------------------------------------------------
+# Argument ($1) ......: Job Name
+# ------------------------------------------------------------------------------------------
+# Return Value .......: 0 - for success, 1 - failure
+# ------------------------------------------------------------------------------------------
+importJenkinsCredentials() {
+  CREDENTIALS_FILE=$1
+  
+  TDH_SERVICE_JENKINS_ADMIN_USER=$(getConfigMap tanzu-demo-hub TDH_SERVICE_JENKINS_ADMIN_USER)
+  TDH_SERVICE_JENKINS_ADMIN_PASS=$(getConfigMap tanzu-demo-hub TDH_SERVICE_JENKINS_ADMIN_PASS)
+  TDH_SERVICE_JENKINS_SERVER=$(getConfigMap tanzu-demo-hub TDH_SERVICE_JENKINS_SERVER)
+  TDH_SERVICE_JENKINS_SERVER_URL=$(getConfigMap tanzu-demo-hub TDH_SERVICE_JENKINS_SERVER_URL)
+  
+  # Download Jenkins CLI if not there
+  [ ! -f /tmp/jenkins-cli.jar ] && wget -q https://jenkins.apps.corelab.core-software.ch//jnlpJars/jenkins-cli.jar -O /tmp/jenkins-cli.jar
+    
+  JENKINS_CLI="java -jar /tmp/jenkins-cli.jar -webSocket -s $TDH_SERVICE_JENKINS_SERVER_URL -auth $TDH_SERVICE_JENKINS_ADMIN_USER:$TDH_SERVICE_JENKINS_ADMIN_PASS"
+  $JENKINS_CLI import-credentials-as-xml "system::system::jenkins" < $CREDENTIALS_FILE; ret=$?
+  
+  if [ $ret -ne 0 ]; then  
+    exit
+  fi 
+}
+
+# ------------------------------------------------------------------------------------------
+# Function Name ......: addJenkinsNode
+# Function Purpose ...: Add Jenkins Node
+# ------------------------------------------------------------------------------------------
+# Argument ($1) ......: Job Name
+# ------------------------------------------------------------------------------------------
+# Return Value .......: 0 - for success, 1 - failure
+# ------------------------------------------------------------------------------------------
+addJenkinsNode() {
+  NODE_NAME=$1
+  NODE_CONFIG=$1
+
+  TDH_SERVICE_JENKINS_ADMIN_USER=$(getConfigMap tanzu-demo-hub TDH_SERVICE_JENKINS_ADMIN_USER)
+  TDH_SERVICE_JENKINS_ADMIN_PASS=$(getConfigMap tanzu-demo-hub TDH_SERVICE_JENKINS_ADMIN_PASS)
+  TDH_SERVICE_JENKINS_SERVER=$(getConfigMap tanzu-demo-hub TDH_SERVICE_JENKINS_SERVER)
+  TDH_SERVICE_JENKINS_SERVER_URL=$(getConfigMap tanzu-demo-hub TDH_SERVICE_JENKINS_SERVER_URL)
+
+  # Download Jenkins CLI if not there
+  [ ! -f /tmp/jenkins-cli.jar ] && wget -q https://jenkins.apps.corelab.core-software.ch//jnlpJars/jenkins-cli.jar -O /tmp/jenkins-cli.jar
+
+  JENKINS_CLI="java -jar /tmp/jenkins-cli.jar -webSocket -s $TDH_SERVICE_JENKINS_SERVER_URL -auth $TDH_SERVICE_JENKINS_ADMIN_USER:$TDH_SERVICE_JENKINS_ADMIN_PASS"
+  $JENKINS_CLI get-node $NODE_NAME > /dev/null 2>&1; ret=$?
+  if [ $ret -ne 0 ]; then  
+    $JENKINS_CLI create-node $NODE_NAME < $NODE_CONFIG
+ 
+    if [ $ret -ne 0 ]; then
+      exit
+    fi
+  fi
+}
+
+# ------------------------------------------------------------------------------------------
+# Function Name ......: installJenkinsPlugin
+# Function Purpose ...: Install a Jenkins Pugin
+# ------------------------------------------------------------------------------------------
+# Argument ($1) ......: Job Name
+# ------------------------------------------------------------------------------------------
+# Return Value .......: 0 - for success, 1 - failure
+# ------------------------------------------------------------------------------------------
+installJenkinsPlugin() {
+  JENKINS_PLUGIN=$1
+  
+  TDH_SERVICE_JENKINS_ADMIN_USER=$(getConfigMap tanzu-demo-hub TDH_SERVICE_JENKINS_ADMIN_USER)
+  TDH_SERVICE_JENKINS_ADMIN_PASS=$(getConfigMap tanzu-demo-hub TDH_SERVICE_JENKINS_ADMIN_PASS)
+  TDH_SERVICE_JENKINS_SERVER=$(getConfigMap tanzu-demo-hub TDH_SERVICE_JENKINS_SERVER)
+  TDH_SERVICE_JENKINS_SERVER_URL=$(getConfigMap tanzu-demo-hub TDH_SERVICE_JENKINS_SERVER_URL)
+
+  # Download Jenkins CLI if not there
+  [ ! -f /tmp/jenkins-cli.jar ] && wget -q https://jenkins.apps.corelab.core-software.ch//jnlpJars/jenkins-cli.jar -O /tmp/jenkins-cli.jar
+
+  JENKINS_CLI="java -jar /tmp/jenkins-cli.jar -webSocket -s $TDH_SERVICE_JENKINS_SERVER_URL -auth $TDH_SERVICE_JENKINS_ADMIN_USER:$TDH_SERVICE_JENKINS_ADMIN_PASS"
+
+  cnt=$($JENKINS_CLI list-plugins | egrep -c "^$JENKINS_PLUGIN ")
+  if [ $cnt -eq 0 ]; then 
+      echo "   ▪ Install Jenkins Plugins: $JENKINS_PLUGIN"
+      $JENKINS_CLI install-plugin $JENKINS_PLUGIN -deploy 
+  fi
+}
+
+
+# ------------------------------------------------------------------------------------------
+# Function Name ......: addJenkinsGlobalEnvironmentVariables
+# Function Purpose ...: add Global Envurinment Variables to Jenkins
+# ------------------------------------------------------------------------------------------
+# Argument ($1) ......: Job Name
+# ------------------------------------------------------------------------------------------
+# Return Value .......: 0 - for success, 1 - failure
+# ------------------------------------------------------------------------------------------
+addJenkinsGlobalEnvironmentVariables() {
+  VARIABLE=$1
+  VALUE=$2
+
+  CONFIG_FILE=/tmp/config.xml
+  
+  TDH_SERVICE_JENKINS_ADMIN_USER=$(getConfigMap tanzu-demo-hub TDH_SERVICE_JENKINS_ADMIN_USER)
+  TDH_SERVICE_JENKINS_ADMIN_PASS=$(getConfigMap tanzu-demo-hub TDH_SERVICE_JENKINS_ADMIN_PASS)
+  TDH_SERVICE_JENKINS_SERVER=$(getConfigMap tanzu-demo-hub TDH_SERVICE_JENKINS_SERVER)
+  TDH_SERVICE_JENKINS_SERVER_URL=$(getConfigMap tanzu-demo-hub TDH_SERVICE_JENKINS_SERVER_URL)
+  
+  curl -u "$TDH_SERVICE_JENKINS_ADMIN_USER:$TDH_SERVICE_JENKINS_ADMIN_PASS" \
+  https://$TDH_SERVICE_JENKINS_SERVER/config.xml -o $CONFIG_FILE 2>/dev/null
+
+  # Extract the globalNodeProperties section if it exists
+  if ! grep -q "<globalNodeProperties>" $CONFIG_FILE; then
+    # Insert the globalNodeProperties section if not present
+    sed -i '/<\/jenkins>/i <globalNodeProperties>\n<hudson.slaves.EnvironmentVariablesNodeProperty>\n<envVars>\n</envVars>\n</hudson.slaves.EnvironmentVariablesNodeProperty>\n</globalNodeProperties>' $CONFIG_FILE
+  fi
+
+  
+
+echo "CONFIG_FILE:$CONFIG_FILE"
+}
+
 
 
 
