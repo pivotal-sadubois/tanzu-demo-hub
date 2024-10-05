@@ -1,0 +1,7 @@
+<com.cloudbees.hudson.plugins.folder.Folder plugin="cloudbees-folder@6.15">
+  <displayName>Fortinet Demo Applications</displayName>
+  <description>This is the Fortinet Application folder created via Jenkins CLI</description>
+  <properties/>
+  <folderViews/>
+  <healthMetrics/>
+</com.cloudbees.hudson.plugins.folder.Folder>
