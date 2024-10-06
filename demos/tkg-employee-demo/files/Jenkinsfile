@@ -69,7 +69,7 @@ pipeline {
                 withCredentials([file(credentialsId: 'kubeconfig', variable: 'KUBECONFIG')]) {
                     sh '''
 
-                      nam=$(kubectl -n $K8S_NAMESPACE get ingress -o json | jq --arg key "employee-demo" -r '.items[].metadata | select(.name == $key).name')
+                      nam=$(kubectl -n $K8S_NAMESPACE get svc -o json | jq --arg key "employee-demo" -r '.items[].metadata | select(.name == $key).name')
                       if [ "$nam" == "" ]; then
                         kubectl create -f $DEPLOYMENT_CONFIG
                       else
