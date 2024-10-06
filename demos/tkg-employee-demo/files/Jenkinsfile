@@ -79,40 +79,6 @@ pipeline {
                 }
             }
         }
-
-        stage('Wait for Application') {
-            steps {
-                script {
-                    sh '''
-                      URL="$HEALTH_CHECK_URL"
-                      TIMEOUT=10  # Time to wait between retries
-                      MAX_RETRIES=30  # Maximum number of retries
-
-                      count=0
-
-                      while [ $count -lt $MAX_RETRIES ]; do
-                        echo "Checking if the application is reachable (attempt $((count+1))/$MAX_RETRIES)..."
-                      
-                        # Make a request to the URL and check the status code
-                        HTTP_STATUS=$(curl -o /dev/null -s -w "%{http_code}" $URL)
-                      
-                        if [ "$HTTP_STATUS" -eq 200 ]; then
-                          echo "Application is reachable at $URL"
-                          exit 0
-                        else
-                          echo "Application is not reachable yet, status code: $HTTP_STATUS. Retrying in $TIMEOUT seconds..."
-                        fi
-                      
-                        # Wait for a bit before retrying
-                        sleep $TIMEOUT
-                        count=$((count+1))
-                      done
-
-                      echo "Application did not become reachable within the maximum retry limit."
-                    '''
-                }
-            }
-        }
     }
 
 
