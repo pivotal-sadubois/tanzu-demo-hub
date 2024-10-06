@@ -71,9 +71,9 @@ pipeline {
 
                       nam=$(kubectl -n $K8S_NAMESPACE get ingress -o json | jq --arg key "employee-demo" -r '.items[].metadata | select(.name == $key).name')
                       if [ "$nam" == "" ]; then
-                        kubectl create -f deployment-employee-demo.yml
+                        kubectl create -f $DEPLOYMENT_CONFIG
                       else
-                        kubectl apply -f deployment-employee-demo.yml
+                        kubectl apply -f $DEPLOYMENT_CONFIG
                       fi
                     '''
                 }

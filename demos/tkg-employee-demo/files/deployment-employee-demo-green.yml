@@ -1,0 +1,71 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: employee-demo
+  namespace: employee-demo-green
+  labels:
+    app: employee-demo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: employee-demo
+  template:
+    metadata:
+      labels:
+        app: employee-demo
+    spec:
+      containers:
+        - name: employee-demo
+          image: harbor.apps.corelab.core-software.ch/library/thymeleafdemo:latest
+          ports:
+            - containerPort: 8080
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: "production"
+            - name: SPRING_DATASOURCE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-credentials
+                  key: spring.datasource.username
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-credentials
+                  key: spring.datasource.password
+          resources:
+            limits:
+              memory: "4Gi"
+              cpu: "1"
+            requests:
+              memory: "1Gi"
+              cpu: "300m"
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            privileged: false
+            readOnlyRootFilesystem: false
+            runAsGroup: 1001
+            runAsNonRoot: true
+            runAsUser: 1001
+            seLinuxOptions: {}
+            seccompProfile:
+              type: RuntimeDefault
+      imagePullSecrets:
+        - name: harbor-pull-secret  # Use the Docker registry pull secret
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: employee-demo
+  namespace: employee-demo-green
+  labels:
+    app: employee-demo
+spec:
+  ports:
+    - port: 8080
+  selector:
+    app: employee-demo
+  type: LoadBalancer
