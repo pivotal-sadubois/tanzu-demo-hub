@@ -1,23 +1,23 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: employee-demo
-  namespace: employee-demo
+  name: employeedb
+  namespace: employeedb
   labels:
-    app: employee-demo
+    app: employeedb
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: employee-demo
+      app: employeedb
   template:
     metadata:
       labels:
-        app: employee-demo
+        app: employeedb
     spec:
       containers:
         - name: employee-demo
-          image: harbor.apps.corelab.core-software.ch/library/thymeleafdemo:latest
+          image: harbor.apps.corelab.core-software.ch/library/employeedb:latest
           ports:
             - containerPort: 8080
           env:
@@ -59,15 +59,15 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: employee-demo
-  namespace: employee-demo
+  name: employeedb
+  namespace: employeedb
   labels:
-    app: employee-demo
+    app: employeedb
 spec:
   ports:
     - port: 8080
   selector:
-    app: employee-demo
+    app: employeedb
   type: ClusterIP
 ---
 apiVersion: networking.k8s.io/v1
@@ -76,22 +76,22 @@ metadata:
   annotations:
     ingress.kubernetes.io/force-ssl-redirect: "true"
     ingress.kubernetes.io/ssl-passthrough: "true"
-  name: employee-demo
-  namespace: employee-demo
+  name: employeedb
+  namespace: employeedb
 spec:
   rules:
-  - host: employee.apps.corelab.core-software.ch
+  - host: employeedb.apps.corelab.core-software.ch
     http:
       paths:
       - backend:
           service:
-            name: employee-demo
+            name: employeedb
             port:
               number: 8080
         path: /
         pathType: Prefix
   tls:
   - hosts:
-    - employee.apps.corelab.core-software.ch
+    - employeedb.apps.corelab.core-software.ch
     secretName: tdh-tls-secret
 

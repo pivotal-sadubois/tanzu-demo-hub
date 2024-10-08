@@ -1,23 +1,23 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: employee-demo
-  namespace: employee-demo-blue
+  name: employeedb
+  namespace: employeedb-blue
   labels:
-    app: employee-demo
+    app: employeedb
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: employee-demo
+      app: employeedb
   template:
     metadata:
       labels:
-        app: employee-demo
+        app: employeedb
     spec:
       containers:
-        - name: employee-demo
-          image: harbor.apps.corelab.core-software.ch/library/thymeleafdemo:latest
+        - name: employeedb
+          image: harbor.apps.corelab.core-software.ch/library/employeedb:latest
           ports:
             - containerPort: 8080
           env:
@@ -59,13 +59,13 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: employee-demo
-  namespace: employee-demo-blue
+  name: employeedb
+  namespace: employeedb-blue
   labels:
-    app: employee-demo
+    app: employeedb
 spec:
   ports:
     - port: 8080
   selector:
-    app: employee-demo
+    app: employeedb
   type: LoadBalancer
