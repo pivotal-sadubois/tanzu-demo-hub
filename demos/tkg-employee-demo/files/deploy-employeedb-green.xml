@@ -35,7 +35,7 @@ DEPLOYMENT_CONFIG=deployment-employeedb-green.yml</propertiesContent>
       <configVersion>2</configVersion>
       <userRemoteConfigs>
         <hudson.plugins.git.UserRemoteConfig>
-          <url>https://gitea.apps.corelab.core-software.ch/Fortinet/EmployeeDBConfig.git</url>
+          <url>https://gitea.apps.corelab.core-software.ch/Fortinet/employeedb-config.git</url>
         </hudson.plugins.git.UserRemoteConfig>
       </userRemoteConfigs>
       <branches>
