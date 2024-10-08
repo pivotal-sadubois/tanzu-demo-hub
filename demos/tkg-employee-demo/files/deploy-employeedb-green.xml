@@ -15,7 +15,9 @@
     <EnvInjectJobProperty plugin="envinject@2.919.v009a_a_1067cd0">
       <info>
         <propertiesContent>TDH_HARBOR_REGISTRY_DNS_HARBOR=harbor.apps.corelab.core-software.ch
-K8S_NAMESPACE=employee-demo</propertiesContent>
+K8S_NAMESPACE=employee-demo-green
+HEALTH_CHECK_URL=https://employee.apps.corelab.core-software.ch/employees/list
+DEPLOYMENT_CONFIG=deployment-employee-demo-green.yml</propertiesContent>
         <secureGroovyScript plugin="script-security@1362.v67dc1f0e1b_b_3">
           <script></script>
           <sandbox>false</sandbox>
@@ -33,7 +35,7 @@ K8S_NAMESPACE=employee-demo</propertiesContent>
       <configVersion>2</configVersion>
       <userRemoteConfigs>
         <hudson.plugins.git.UserRemoteConfig>
-          <url>https://gitea.apps.corelab.core-software.ch/Fortinet/employee-demo-config.git</url>
+          <url>https://gitea.apps.corelab.core-software.ch/Fortinet/EmployeeDBConfig.git</url>
         </hudson.plugins.git.UserRemoteConfig>
       </userRemoteConfigs>
       <branches>

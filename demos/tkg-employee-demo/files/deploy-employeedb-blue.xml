@@ -11,13 +11,31 @@
   </actions>
   <description></description>
   <keepDependencies>false</keepDependencies>
-  <properties/>
+  <properties>
+    <EnvInjectJobProperty plugin="envinject@2.919.v009a_a_1067cd0">
+      <info>
+        <propertiesContent>TDH_HARBOR_REGISTRY_DNS_HARBOR=harbor.apps.corelab.core-software.ch
+K8S_NAMESPACE=employee-demo-blue
+HEALTH_CHECK_URL=https://employee.apps.corelab.core-software.ch/employees/list
+DEPLOYMENT_CONFIG=deployment-employee-demo-blue.yml</propertiesContent>
+        <secureGroovyScript plugin="script-security@1362.v67dc1f0e1b_b_3">
+          <script></script>
+          <sandbox>false</sandbox>
+        </secureGroovyScript>
+        <loadFilesFromMaster>false</loadFilesFromMaster>
+      </info>
+      <on>true</on>
+      <keepJenkinsSystemVariables>true</keepJenkinsSystemVariables>
+      <keepBuildVariables>true</keepBuildVariables>
+      <overrideBuildParameters>false</overrideBuildParameters>
+    </EnvInjectJobProperty>
+  </properties>
   <definition class="org.jenkinsci.plugins.workflow.cps.CpsScmFlowDefinition" plugin="workflow-cps@3969.vdc9d3a_efcc6a_">
     <scm class="hudson.plugins.git.GitSCM" plugin="git@5.5.1">
       <configVersion>2</configVersion>
       <userRemoteConfigs>
         <hudson.plugins.git.UserRemoteConfig>
-          <url>https://gitea.apps.corelab.core-software.ch/Fortinet/employee-demo.git</url>
+          <url>https://gitea.apps.corelab.core-software.ch/Fortinet/EmployeeDBConfig.git</url>
         </hudson.plugins.git.UserRemoteConfig>
       </userRemoteConfigs>
       <branches>

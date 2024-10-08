@@ -1,0 +1,128 @@
+// --------------------------------------------------------------------------------------------
+// File: ........: Jenkinsfile
+// Git Repository: https://github.com/pivotal-sadubois/employee-demo.git
+// Location .....: 
+// Author .......: Sacha Dubois, Fortinet
+// Description ..: Build and Deploy the Newsletter Application to Kubernetes
+// --------------------------------------------------------------------------------------------
+pipeline {
+    agent { node { label 'buildhost' } }
+
+    environment {
+        // Define Harbor Registry Credentials
+        TDH_HARBOR_REGISTRY_ADMIN_USER      =  credentials('harbor-registry-user')
+        TDH_HARBOR_REGISTRY_ADMIN_PASSWORD  =  credentials('harbor-registry-password')
+
+        // Extract MYSQL Credentials from Jenkins 
+        MYSQL_INTEGRATION_USER              = credentials('mysql-integration-user')
+        MYSQL_INTEGRATION_PASSWORD          = credentials('mysql-integration-password')
+
+        REGISTRY_CREDENTIALS = 'harbor-credentials-id' // Jenkins credential ID for Harbor registry
+        DOCKER_IMAGE = "${REGISTRY}/employee-demo" // Docker image name
+        PULL_SECRET_NAME = 'harbor-pull-secret' // Kubernetes secret for pulling Docker images
+    }
+
+    stages {
+        stage('Verify Kubernetes Access') {
+            steps {
+                withCredentials([file(credentialsId: 'kubeconfig', variable: 'KUBECONFIG')]) {
+                    sh '''
+                      kubectl get ns
+                    '''
+                }
+            }
+        }
+
+        stage('Create Kubernetes Namespace') {
+            steps {
+                withCredentials([file(credentialsId: 'kubeconfig', variable: 'KUBECONFIG')]) {
+                    sh '''
+                      nam=$(kubectl get ns -o json | jq --arg key "$K8S_NAMESPACE" -r '.items[].metadata | select(.name == $key).name')
+                      if [ "$nam" != "$K8S_NAMESPACE" ]; then
+                        kubectl create ns $K8S_NAMESPACE
+
+                        # Create Registry Pull Secret
+                        kubectl create secret docker-registry $PULL_SECRET_NAME \
+                            --docker-server=$TDH_HARBOR_REGISTRY_DNS_HARBOR \
+                            --docker-username=$TDH_HARBOR_REGISTRY_ADMIN_USER \
+                            --docker-password=$TDH_HARBOR_REGISTRY_ADMIN_PASSWORD \
+                            --docker-email=admin@example.com \
+                            --namespace $K8S_NAMESPACE || true
+
+                        kubectl create secret generic mysql-credentials \
+                          --from-literal=spring.datasource.username=bitnami \
+                          --from-literal=spring.datasource.password=bitnami \
+                          --namespace $K8S_NAMESPACE
+
+                        # Copy TLS Certificate for the Ingress
+                        kubectl get secrets tdh-tls-secret -o yaml | grep -v "namespace: default" | kubectl -n $K8S_NAMESPACE create -f -
+                      else
+                        echo "Namespace $K8S_NAMESPACE already exists"
+                      fi
+                    '''
+                }
+            }
+        }
+    
+        stage('Deploy Application') {
+            steps {
+                withCredentials([file(credentialsId: 'kubeconfig', variable: 'KUBECONFIG')]) {
+                    sh '''
+
+                      nam=$(kubectl -n $K8S_NAMESPACE get svc -o json | jq --arg key "employee-demo" -r '.items[].metadata | select(.name == $key).name')
+                      if [ "$nam" == "" ]; then
+                        kubectl create -f $DEPLOYMENT_CONFIG
+                      else
+                        kubectl apply -f $DEPLOYMENT_CONFIG
+                      fi
+                    '''
+                }
+            }
+        }
+
+        stage('Wait for Application') {
+            steps {
+                script {
+                    sh '''
+                      URL="$HEALTH_CHECK_URL"
+                      TIMEOUT=10  # Time to wait between retries
+                      MAX_RETRIES=30  # Maximum number of retries
+
+                      count=0
+
+                      while [ $count -lt $MAX_RETRIES ]; do
+                        echo "Checking if the application is reachable (attempt $((count+1))/$MAX_RETRIES)..."
+                      
+                        # Make a request to the URL and check the status code
+                        HTTP_STATUS=$(curl -o /dev/null -s -w "%{http_code}" $URL)
+                      
+                        if [ "$HTTP_STATUS" -eq 200 ]; then
+                          echo "Application is reachable at $URL"
+                          exit 0
+                        else
+                          echo "Application is not reachable yet, status code: $HTTP_STATUS. Retrying in $TIMEOUT seconds..."
+                        fi
+                      
+                        # Wait for a bit before retrying
+                        sleep $TIMEOUT
+                        count=$((count+1))
+                      done
+
+                      echo "Application did not become reachable within the maximum retry limit."
+                    '''
+                }
+            }
+        }
+    }
+
+
+    post {
+        success {
+            echo 'Deployment successful!'
+        }
+
+        failure {
+            echo 'Deployment failed!'
+        }
+    }
+}
