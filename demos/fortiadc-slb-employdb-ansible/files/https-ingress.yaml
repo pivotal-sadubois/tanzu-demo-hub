@@ -1,0 +1,27 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: http-ingress
+  namespace: NAMESPACE
+  annotations:
+    ingress.kubernetes.io/ssl-passthrough: "true"
+    ingress.kubernetes.io/force-ssl-redirect: "true"
+    kubernetes.io/ingress.class: contour
+  labels:
+    app: breathtestshiny
+spec:
+  tls:
+  - hosts:
+    - breathtestshiny.DNS_DOMAIN
+    secretName: https-secret
+  rules:
+  - host: breathtestshiny.DNS_DOMAIN
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: breathtestshiny
+            port:
+              number: 3838

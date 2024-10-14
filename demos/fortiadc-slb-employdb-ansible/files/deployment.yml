@@ -1,0 +1,55 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: XXX
+  namespace: employeedb
+  labels:
+    app: XXX
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: XXX
+  template:
+    metadata:
+      labels:
+        app: XXX
+    spec:
+      containers:
+        - name: employee-demo
+          image: sadubois/employeedb:1.0.0
+          ports:
+            - containerPort: 8080
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: "production"
+            - name: SPRING_DATASOURCE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-credentials
+                  key: spring.datasource.username
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-credentials
+                  key: spring.datasource.password
+          resources:
+            limits:
+              memory: "4Gi"
+              cpu: "1"
+            requests:
+              memory: "1Gi"
+              cpu: "300m"
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            privileged: false
+            readOnlyRootFilesystem: false
+            runAsGroup: 1001
+            runAsNonRoot: true
+            runAsUser: 1001
+            seLinuxOptions: {}
+            seccompProfile:
+              type: RuntimeDefault

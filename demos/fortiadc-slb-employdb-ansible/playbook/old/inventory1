@@ -1,0 +1,9 @@
+[fortiadcs]
+fortiadc-101 ansible_host=fortiadc-101.fortidemo.ch ansible_user="admin"
+         
+[fortiadcs:vars]
+ansible_network_os=fortinet.fortiadc.fadcos
+ansible_httpapi_use_ssl=yes
+ansible_httpapi_validate_certs=no
+ansible_httpapi_port=443
+ansible_password="{{ fortiadc_password }}"

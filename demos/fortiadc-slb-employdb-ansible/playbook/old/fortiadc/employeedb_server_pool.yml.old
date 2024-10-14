@@ -1,0 +1,34 @@
+- name:
+  hosts: fortiadcs
+  collections:
+  - fortinet.fortiadc
+  connection: httpapi
+  gather_facts: false
+  tasks: 
+  - name: Manage real server
+    fadcos_real_server:
+      action: add
+      name: rs_employeedb_green
+      ip: 6.6.6.5
+      status: enable
+      vdom: root
+  - name: employeedb
+    fadcos_real_server_pool:
+      action: add
+      name: employeedb_rs_pool
+      iptype: ipv4
+      vdom: root
+      healthcheck: enable
+      health_check_list:
+              - LB_HLTHCK_ICMP
+#  - name:
+#    hosts: all
+#    connection: httpapi
+#    gather_facts: false
+#    tasks:
+#    - name: Manage real server pool member
+#      fadcos_real_server_pool_member:
+#        action: add
+#        pool_name: employeedb_rs_pool
+#        member_id: 1
+#        rs: 999

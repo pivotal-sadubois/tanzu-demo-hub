@@ -1,0 +1,64 @@
+- name: Manage FortiADC real servers
+  hosts: fortiadcs
+  collections:
+    - fortinet.fortiadc
+  connection: httpapi
+  gather_facts: false
+  vars_files:
+    - /tmp/vault.yml  # Load encrypted variables
+       
+  tasks:
+    - name: Create basic virtual server
+      fadcos_virtual_server:
+        status: disable
+        action: delete
+        iptype: ipv4
+        name: "{{ virtual_server_name }}"
+        ip: "{{ virtual_server_ip }}"
+        pool: "{{ pool_name }}"
+        port: "{{ virtual_server_port }}"
+        interface: "{{ virtual_server_interface }}"
+        profile: LB_PROF_HTTP
+        vstype: l7-load-balance
+      
+    - name: Manage real server pool member
+      fadcos_real_server_pool_member:
+        action: delete
+        pool_name: "{{ pool_name }}"
+        member_id: "{{ item.id }}"
+        rs: "{{ item.name }}"
+      loop: "{{ real_servers }}"
+       
+    - name: "{{ pool_name }}"
+      fadcos_real_server_pool:
+        action: delete
+        name: employeedb
+        iptype: ipv4
+        vdom: root
+        healthcheck: enable
+        health_check_list:
+          - LBHC_HTTP_200
+        
+    - name: Manage Health Checks
+      fadcos_health_check:
+        action: delete
+        name: LBHC_HTTP_200
+        status_code: 200
+        send_string: /
+        dest_addr_type: ipv4
+        hc_type: http
+       
+    - name:  Disable real server
+      fadcos_real_server:
+        action: edit
+        name: "{{ item.name }}"
+        ip: "{{ item.ip }}"
+        status: disable
+        vdom: root
+      loop: "{{ real_servers }}"
+
+    - name:  Delete the real server
+      fadcos_real_server:
+        action: delete
+        name: "{{ item.name }}"
+      loop: "{{ real_servers }}"

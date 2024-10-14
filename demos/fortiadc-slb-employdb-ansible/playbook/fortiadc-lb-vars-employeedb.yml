@@ -1,0 +1,24 @@
+# Real Server Pool
+pool_name: employdb
+virtual_server_name: employdb
+virtual_server_ip: 10.0.101.52
+virtual_server_interface: port1
+virtual_server_port: 80
+virtual_server_type: http
+iptype: ipv4
+vdom: root
+
+# Real Server Pool Members
+real_servers:
+  - name: rs_employdb_1
+    id: 1
+    port: 8080
+    ip: XXXIP1XXX
+  - name: rs_employdb_2
+    id: 2
+    port: 8080
+    ip: XXXIP2XXX
+  - name: rs_employdb_3
+    id: 3
+    port: 8080
+    ip: XXXIP3XXX

@@ -1,0 +1,38 @@
+#!/bin/bash
+
+export KUBECONFIG=/Users/sdu/.tanzu-demo-hub/deployments/tkgmc-vsphere-sdubois/tdh-kubernetes-devops-environment/kubeconfig_tdh-kubernetes-devops-environment.yaml
+
+st1=$(kubectl -n foradc-demoapp-01 logs $(kubectl get pods -n foradc-demoapp-01 --no-headers -o custom-columns=":metadata.name") | grep -c "Completed 200 OK")
+st2=$(kubectl -n foradc-demoapp-02 logs $(kubectl get pods -n foradc-demoapp-02 --no-headers -o custom-columns=":metadata.name") | grep -c "Completed 200 OK")
+st3=$(kubectl -n foradc-demoapp-03 logs $(kubectl get pods -n foradc-demoapp-03 --no-headers -o custom-columns=":metadata.name") | grep -c "Completed 200 OK")
+st4=$(kubectl -n foradc-demoapp-04 logs $(kubectl get pods -n foradc-demoapp-04 --no-headers -o custom-columns=":metadata.name") | grep -c "Completed 200 OK")
+
+echo "ST1:$st1"
+echo "ST2:$st2"
+echo "ST3:$st3"
+echo "ST4:$st4"
+
+exit
+
+while [ 1 ]; do
+  cnb=$(kubectl -n employee-demo-blue logs $(kubectl get pods -n employee-demo-blue --no-headers -o custom-columns=":metadata.name") | grep -c "Completed 200 OK")
+  cng=$(kubectl -n employee-demo-green logs $(kubectl get pods -n employee-demo-green --no-headers -o custom-columns=":metadata.name") | grep -c "Completed 200 OK")
+
+  let ttb=cnb-stb
+  let ttg=cng-stg
+
+  b=$(printf "%02d\n" $ttb)
+  g=$(printf "%02d\n" $ttg)
+
+  clear; /usr/local/bin/figlet -c -w 210 "BLUE>  $b / $g  <GREEN"
+#  echo "                                                                                             Blue                Green"
+
+  sleep 3
+done
+
+
+#(pythondev) MBPro16:fortiadc-slb-ansible sdu$ echo -e "hello \033[32mWorld\033[0m"
+#(pythondev) MBPro16:fortiadc-slb-ansible sdu$ curl http://10.0.101.51:3838                  => 10.0.101.123 [01]  10.0.101.123 [01] 10.0.101.123 [01] 10.0.101.123 [01]
+
+
+

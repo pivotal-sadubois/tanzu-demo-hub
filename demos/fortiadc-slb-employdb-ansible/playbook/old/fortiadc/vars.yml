@@ -1,0 +1,3 @@
+# vars.yml
+employeedb_ip_green: 10.0.201.11
+employeedb_ip_blue: 10.0.201.12

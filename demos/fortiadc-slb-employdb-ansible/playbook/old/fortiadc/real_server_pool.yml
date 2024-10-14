@@ -1,0 +1,16 @@
+- name:
+  hosts: fortiadcs
+  collections:
+  - fortinet.fortiadc
+  connection: httpapi
+  gather_facts: false
+  tasks: 
+  - name: employeedb
+    fadcos_real_server_pool:
+      action: create
+      name: rs_pool
+      iptype: ipv4
+      vdom: root
+      healthcheck: enable
+      health_check_list:
+              - LB_HLTHCK_ICMP

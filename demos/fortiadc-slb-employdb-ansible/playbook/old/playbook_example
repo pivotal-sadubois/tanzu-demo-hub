@@ -1,0 +1,14 @@
+- name: Install Load Balancing Server
+  hosts: fortiadc_host
+  become: yes
+  tasks:
+    - name: Install employee-demo-green
+      llb_server:
+        name: employee-demo-green
+        adress: 10.0.101.174"
+        state: enable
+    - name: Install employee-demo-blue
+      llb_server:
+        name: employee-demo-blue
+        adress: 10.0.101.171"
+        state: enable

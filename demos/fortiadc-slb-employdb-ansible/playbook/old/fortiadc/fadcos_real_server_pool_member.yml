@@ -1,0 +1,37 @@
+---
+- name:
+  hosts: all
+  vars:
+  connection: httpapi
+  gather_facts: false
+  tasks:
+    - name: Create real server for test preparation
+      fadcos_real_server:
+       action: add
+       name: test_rs1
+       ip: 6.6.6.6
+       status: enable
+       vdom: root
+    - name: Create real server pool for test preparation
+      fadcos_real_server_pool:
+        action: add
+        name: rs_pool1
+        iptype: ipv4
+        vdom: root
+        healthcheck: enable
+        health_check_list:
+           - LB_HLTHCK_ICMP
+           - LC_HLTHCK_HTTPS
+        rs_profile: test_server_ssl_profile 
+    - name: Create real server pool member
+      fadcos_real_server_pool_member:
+        action: add
+        pool_name: rs_pool1
+        member_id: 1
+        rs: test_rs1
+    - name: Manage real server pool member
+      fadcos_real_server_pool_member:
+        action: edit
+        pool_name: rs_pool1
+        member_id: 1
+        rs: rs_non_exist

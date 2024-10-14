@@ -1,0 +1,67 @@
+- name: Manage FortiADC real servers
+  hosts: fortiadcs
+  collections:
+    - fortinet.fortiadc
+  connection: httpapi
+  gather_facts: false
+  vars_files:
+    - vars.yml
+
+  tasks:
+    - name: Add real server rs_employeedb_green
+      fadcos_real_server:
+        action: add
+        name: rs_employeedb_green
+        ip: "{{ employeedb_ip_green }}"
+        status: disable
+        vdom: root
+
+    - name: Update IP address of rs_employeedb_green
+      fadcos_real_server:
+        action: edit
+        name: rs_employeedb_green
+        ip: "{{ employeedb_ip_green }}"
+        status: enable
+        vdom: root
+
+    - name: Add real server rs_employeedb_blue
+      fadcos_real_server:
+        action: add
+        name: rs_employeedb_blue
+        ip: "{{ employeedb_ip_blue }}"
+        status: disable
+        vdom: root
+
+    - name: Update IP address of rs_employeedb_blue
+      fadcos_real_server:
+        action: edit
+        name: rs_employeedb_blue
+        ip: "{{ employeedb_ip_blue }}"
+        status: enable
+        vdom: root
+
+    - name: employeedb
+      fadcos_real_server_pool:
+        action: add
+        name: employeedb
+        iptype: ipv4
+        vdom: root
+        healthcheck: enable
+        health_check_list:
+          - LB_HLTHCK_ICMP
+
+    - name: Manage real server pool member
+      fadcos_real_server_pool_member:
+        action: add
+        pool_name: employeedb
+        member_id: 1
+        rs: rs_employeedb_green
+
+    - name: Manage real server pool member
+      fadcos_real_server_pool_member:
+        action: add
+        pool_name: employeedb
+        member_id: 2
+        rs: rs_employeedb_blue
+
+

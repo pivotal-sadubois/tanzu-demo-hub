@@ -1,0 +1,17 @@
+- hosts: fortiadc01
+  collections:
+  - fortinet.fortiadc
+  connection: httpapi
+  gather_facts: 'no'
+  tasks:
+  - name: Only https allow access to the device.
+    fortiadc_system_interface:
+      state: present
+      system_interface:
+        name: internal
+        vdom: root
+        allowaccess:
+          - https
+          - http
+          - ssh
+          - ping

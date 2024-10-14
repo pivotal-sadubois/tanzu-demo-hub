@@ -1,0 +1,10 @@
+# Real Server Pool
+pool_name: employeedb
+iptype: ipv4
+vdom: root
+
+# Real Server Pool Members
+real_servers:
+  - name: rs_employeedb_1
+    id: 1
+    ip: 10.0.101.101
