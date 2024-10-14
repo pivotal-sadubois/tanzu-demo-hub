@@ -1,5 +1,0 @@
-export OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES
-
-ansible-playbook -i ./inventory employeedb_server_pool.yml 
-
-

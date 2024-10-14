@@ -1,6 +1,0 @@
-#ansible-playbook fortiadc-lb-delete.yml -i inventory --extra-vars "@fortiadc-lb-vars-employeedb.yml" --vault-password-file $HOME/.ansible/vault_password 
-
-     ansible-playbook /tmp/fortiadc-lb-delete.yml \
-        -i /tmp/inventory --extra-vars "@/tmp/fortiadc-lb-vars-employeedb.yml" \
-        --vault-password-file /Users/sdu/.ansible/vault_password
-

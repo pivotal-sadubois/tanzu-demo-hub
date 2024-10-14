@@ -34,6 +34,7 @@
         send_string: /
         dest_addr_type: ipv4
         hc_type: http
+      no_log: true  
                     
     - name: "{{ pool_name }}"
       fadcos_real_server_pool:

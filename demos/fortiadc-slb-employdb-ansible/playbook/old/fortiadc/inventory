@@ -1,9 +1,0 @@
-[fortiadcs]
-fortiadc-101 ansible_host=10.0.101.2 ansible_user="ansible" ansible_password="00Penwin$"
-
-[fortiadcs:vars]
-#ansible_network_os=fortinet.fortiadc.fortiadc
-ansible_network_os=fortinet.fortiadc.fadcos
-ansible_httpapi_use_ssl=yes
-ansible_httpapi_validate_certs=no
-ansible_httpapi_port=443

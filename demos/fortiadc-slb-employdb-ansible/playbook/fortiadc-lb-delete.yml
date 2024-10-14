@@ -38,6 +38,7 @@
         healthcheck: enable
         health_check_list:
           - LBHC_HTTP_200
+      no_log: true  
         
     - name: Manage Health Checks
       fadcos_health_check:

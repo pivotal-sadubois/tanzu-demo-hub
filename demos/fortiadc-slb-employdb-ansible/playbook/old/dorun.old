@@ -1,1 +1,0 @@
-ansible-playbook /tmp/fortiadc-lb-config.yml -i /tmp/inventory --extra-vars "@/tmp/fortiadc-lb-vars-employeedb.yml" --vault-password-file $HOME/.ansible/vault_password  -vvv
