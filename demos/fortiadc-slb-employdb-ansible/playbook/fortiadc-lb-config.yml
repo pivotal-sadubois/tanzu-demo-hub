@@ -22,7 +22,7 @@
         action: edit
         name: "{{ item.name }}"
         ip: "{{ item.ip }}"
-        status: enable
+        status: "{{ item.status }}"
         vdom: root
       loop: "{{ real_servers }}"
       
@@ -53,6 +53,7 @@
         member_id: "{{ item.id }}"
         port: "{{ item.port }}"
         rs: "{{ item.name }}"
+        weight: "{{ item.weight }}"
       loop: "{{ real_servers }}"
             
     - name: Create basic virtual server

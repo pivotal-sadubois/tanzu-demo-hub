@@ -1,0 +1,19 @@
+- name: Manage FortiADC real servers
+  hosts: fortiadcs
+  collections:
+    - fortinet.fortiadc
+  connection: httpapi
+  gather_facts: false
+  vars_files:
+    - /tmp/vault.yml  # Load encrypted variables
+         
+  tasks:
+    - name: Manage real server pool member
+      fadcos_real_server_pool_member:
+        action: edit
+        pool_name: "{{ pool_name }}"
+        member_id: "{{ item.id }}"
+        port: "{{ item.port }}"
+        rs: "{{ item.name }}"
+        weight: "{{ item.weight }}"
+      loop: "{{ real_servers }}"
