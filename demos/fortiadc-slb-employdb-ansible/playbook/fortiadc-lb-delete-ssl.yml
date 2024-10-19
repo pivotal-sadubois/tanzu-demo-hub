@@ -1,0 +1,43 @@
+- name: Manage FortiADC real servers
+  hosts: fortiadcs
+  collections:
+    - fortinet.fortiadc
+  connection: httpapi
+  gather_facts: false
+  vars_files:
+    - /tmp/vault.yml  # Load encrypted variables
+
+  tasks:
+    - name: Create basic virtual server {{ virtual_server_name }}
+      fadcos_virtual_server:
+        name: "{{ virtual_server_name }}"
+        action: del
+        ip: "{{ virtual_server_ip }}"
+        pool: "{{ pool_name }}"
+        port: "{{ virtual_server_port }}"
+        interface: "{{ virtual_server_interface }}"
+        profile: LB_PROF_HTTPS
+        vstype: l7-load-balance
+        client_ssl_profile: "{{ client_ssl_profile }}"
+            
+    - name: Manage Client SSL Profile {{ client_ssl_profile }}
+      fadcos_client_ssl_profile:
+        action: del
+        name: "{{ client_ssl_profile }}"
+               
+    - name: Manage Local Certificate Group Members
+      fadcos_local_cert_group:
+        action: del_member
+        local_cert: employeedb-ssl
+        name: "{{ local_cert_group }}"
+         
+    - name: Manage Local Certificate Group
+      fadcos_local_cert_group:
+        action: del_group
+        name: "{{ local_cert_group }}"
+          
+    - name: add CertKey
+      fadcos_system_certificate_local_upload:
+       action: del
+       type: CertKey
+       name: employeedb-ssl

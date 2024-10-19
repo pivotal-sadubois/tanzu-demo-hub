@@ -1,0 +1,15 @@
+# Real Server Pool
+pool_name: employeedb
+        
+# Virtual Server Configuration
+virtual_server_name: employeedb-ssl
+virtual_server_ip: 10.0.101.52
+virtual_server_interface: port1
+virtual_server_port: 443
+virtual_server_type: http
+        
+# Certificate Configuration
+ssl_cert: XXX1XXX 
+ssl_key: XXX2XXX
+local_cert_group: EMPLOYEEDB_CERT_GROUP
+client_ssl_profile: LB_CLIENT_SSL_EMPLOYEEDB

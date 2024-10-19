@@ -1,0 +1,70 @@
+- name: Manage FortiADC real servers
+  hosts: fortiadcs
+  collections:
+    - fortinet.fortiadc
+  connection: httpapi
+  gather_facts: false
+  vars_files:
+    - /tmp/vault.yml  # Load encrypted variables
+
+  tasks:
+    - name: add CertKey
+      fadcos_system_certificate_local_upload:
+       action: add
+       type: CertKey
+       name: employeedb-ssl
+       certificate_file: "{{ ssl_cert }}"
+       key_file: "{{ ssl_key }}"
+         
+    - name: Manage Local Certificate Group
+      fadcos_local_cert_group:
+        action: add_group
+        name: "{{ local_cert_group }}"
+         
+    - name: Manage Local Certificate Group Members
+      fadcos_local_cert_group:
+        action: add_member
+        local_cert: employeedb-ssl
+        name: "{{ local_cert_group }}"
+         
+    - name: Manage Client SSL Profile {{ client_ssl_profile }}
+      fadcos_client_ssl_profile:
+        action: add
+        name: "{{ client_ssl_profile }}"
+        backend_customized_ssl_ciphers_flag: "enable"
+        backend_ssl_OCSP_stapling_support: "disable"
+        backend_ssl_allowed_versions: "sslv3 tlsv1.0 tlsv1.1 tlsv1.2"
+        backend_ssl_sni_forward: "disable"
+        client_certificate_verify_mode: "required"
+        client_sni_required: "disable"
+        customized_ssl_ciphers_flag: "disable"
+        forward_proxy: "disable"
+        forward_proxy_local_signing_ca: "SSLPROXY_LOCAL_CA"
+        http_forward_client_certificate: "disable"
+        http_forward_client_certificate_header: "X-Client-Cert"
+        local_certificate_group: "{{ local_cert_group }}"
+        reject_ocsp_stapling_with_missing_nextupdate: "disable"
+        ssl_allowed_versions: "tlsv1.1 tlsv1.2"
+        ssl_dh_param_size: "1024bit"
+        ssl_dynamic_record_sizing: "disable"
+        ssl_renegotiate_period: "0"
+        ssl_renegotiate_size: "0"
+        ssl_renegotiation: "disable"
+        ssl_renegotiation_interval: "-1"
+        ssl_secure_renegotiation: "require"
+        ssl_session_cache_flag: "enable"
+        use_tls_tickets: "enable"
+
+    - name: Create basic virtual server {{ virtual_server_name }}
+      fadcos_virtual_server:
+        name: "{{ virtual_server_name }}"
+        status: enable
+        action: add
+        iptype: ipv4
+        ip: "{{ virtual_server_ip }}"
+        pool: "{{ pool_name }}"
+        port: "{{ virtual_server_port }}"
+        interface: "{{ virtual_server_interface }}"
+        profile: LB_PROF_HTTPS
+        vstype: l7-load-balance
+        client_ssl_profile: "{{ client_ssl_profile }}"
