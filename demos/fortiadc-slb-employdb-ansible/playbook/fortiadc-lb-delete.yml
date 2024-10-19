@@ -16,6 +16,7 @@
     - name: Manage real server pool member
       fadcos_real_server_pool_member:
         action: delete
+        pool_name: "{{ pool_name }}"
         member_id: "{{ item.id }}"
         rs: "{{ item.name }}"
       loop: "{{ real_servers }}"
@@ -24,19 +25,15 @@
       fadcos_real_server_pool:
         action: delete
         name: "{{ pool_name }}"
-        iptype: ipv4
-        vdom: root
-        healthcheck: enable
-        health_check_list:
-          - LBHC_HTTP_200
         
     - name:  Delete the real server
       fadcos_real_server:
         action: delete
         name: "{{ item.name }}"
       loop: "{{ real_servers }}"
-
+        
     - name: Manage Health Checks
       fadcos_health_check: 
         action: delete 
+        name: LBHC_HTTP_200
       no_log: true 

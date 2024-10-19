@@ -12,6 +12,7 @@
       fadcos_real_server_pool_member:
         action: edit
         pool_name: "{{ pool_name }}"
+        status: "{{ item.status }}"
         member_id: "{{ item.id }}"
         port: "{{ item.port }}"
         rs: "{{ item.name }}"

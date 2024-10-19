@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
         - name: employee-demo
-          image: sadubois/employeedb:1.0.0
+          image: XXXDOCKERXXX
           ports:
             - containerPort: 8080
           env:

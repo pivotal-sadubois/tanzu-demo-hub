@@ -26,7 +26,7 @@
         vdom: root
       loop: "{{ real_servers }}"
       
-    - name: Manage Health Checks
+    - name: Manage Health Checks LBHC_HTTP_200
       fadcos_health_check:
         action: add
         name: LBHC_HTTP_200
@@ -36,7 +36,7 @@
         hc_type: http
       no_log: true  
                     
-    - name: "{{ pool_name }}"
+    - name: Manage Real Server Pool $x{{ pool_name }}
       fadcos_real_server_pool:
         action: add
         name: "{{ pool_name }}"
@@ -46,17 +46,18 @@
         health_check_list:
           - LBHC_HTTP_200
             
-    - name: Manage real server pool member
+    - name: Manage real server pool member 
       fadcos_real_server_pool_member:
         action: add
         pool_name: "{{ pool_name }}"
+        status: "{{ item.status }}"
         member_id: "{{ item.id }}"
         port: "{{ item.port }}"
         rs: "{{ item.name }}"
         weight: "{{ item.weight }}"
       loop: "{{ real_servers }}"
             
-    - name: Create basic virtual server
+    - name: Create basic virtual server {{ virtual_server_name }}
       fadcos_virtual_server:
         name: "{{ virtual_server_name }}"
         status: enable

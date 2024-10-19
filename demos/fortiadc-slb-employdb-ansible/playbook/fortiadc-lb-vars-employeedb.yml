@@ -1,5 +1,7 @@
 # Real Server Pool
 pool_name: employeedb
+         
+# Virtual Server Configuration
 virtual_server_name: employeedb
 virtual_server_ip: 10.0.101.52
 virtual_server_interface: port1
@@ -10,19 +12,19 @@ vdom: root
 
 # Real Server Pool Members
 real_servers:
-  - name: rs_employeedb_1
+  - name: rs_employeedb1
     id: 1
     port: 8080
     status: enable
     ip: XXXIP1XXX
     weight: YYY1YYY
-  - name: rs_employeedb_2
+  - name: rs_employeedb2
     id: 2
     port: 8080
     status: enable
     ip: XXXIP2XXX
     weight: YYY2YYY
-  - name: rs_employeedb_3
+  - name: rs_employeedb3
     id: 3
     port: 8080
     status: enable
