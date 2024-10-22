@@ -1,5 +1,5 @@
 [fortiadcs]
-fortiadc-101 ansible_host=fortiadc-101.fortidemo.ch ansible_user="admin" ansible_password="00Penwin$"
+fortiadc-101 ansible_host=fortiadc-101.fortidemo.ch ansible_user="admin" ansible_password="{{ fortiadc_password }}"
          
 [fortiadcs:vars]
 ansible_network_os=fortinet.fortiadc.fadcos

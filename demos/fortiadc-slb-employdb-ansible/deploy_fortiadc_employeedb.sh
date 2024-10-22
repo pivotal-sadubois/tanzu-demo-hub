@@ -84,7 +84,7 @@ checkCLIarguments $*
 
 # Created by /usr/local/bin/figlet
 clear
-echo '
+echo '                                                                                      '
 echo '                             _____          _   _    _    ____   ____                 '
 echo '                            |  ___|__  _ __| |_(_)  / \  |  _ \ / ___|                '
 echo '                            | |_ / _ \|  __| __| | / _ \ | | | | |                    '
@@ -216,6 +216,11 @@ prtText "Create a vault file containing the 'fortiadc_password' password in clea
 echo "# vault.yml"                              >  $TMPDIR/vault.yml 
 echo "fortiadc_password: \"Password12345\""     >> $TMPDIR/vault.yml
 execCat "$TMPDIR/vault.yml"
+
+# Now copy the right password into vault.yaml invinsible from the user
+pass=$(cat $HOME/.ansible/vault_password)
+echo "# vault.yml"                              >  $TMPDIR/vault.yml 
+echo "fortiadc_password: \"$pass\""             >> $TMPDIR/vault.yml
 
 prtText "Encrypt the vault.yml with ansible-vault"
 slntCmd "ansible-vault encrypt /tmp/vault.yml --vault-password-file \$HOME/.ansible/vault_password"

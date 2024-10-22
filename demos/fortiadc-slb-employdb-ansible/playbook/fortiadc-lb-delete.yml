@@ -8,12 +8,12 @@
     - /tmp/vault.yml  # Load encrypted variables
        
   tasks:
-    - name: Create basic virtual server
+    - name: Delete virtual server 
       fadcos_virtual_server:
         action: delete
         name: "{{ virtual_server_name }}"
       
-    - name: Manage real server pool member
+    - name: Delete real server pool member
       fadcos_real_server_pool_member:
         action: delete
         pool_name: "{{ pool_name }}"
@@ -32,7 +32,7 @@
         name: "{{ item.name }}"
       loop: "{{ real_servers }}"
         
-    - name: Manage Health Checks
+    - name: Delete Health Checks
       fadcos_health_check: 
         action: delete 
         name: LBHC_HTTP_200
