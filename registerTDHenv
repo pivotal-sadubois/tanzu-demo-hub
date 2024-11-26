@@ -33,10 +33,6 @@ export TMC_ENABLED=0
 [ -f $TANZU_DEMO_HUB/functions ] && . $TANZU_DEMO_HUB/functions
 [ -f $HOME/.tanzu-demo-hub.cfg ] && . $HOME/.tanzu-demo-hub.cfg
 
-echo "gaga 1 VSPHERE_TKGS_SUPERVISOR_STORAGE_CLASS:$VSPHERE_TKGS_SUPERVISOR_STORAGE_CLASS"
-echo "gaga 1 VSPHERE_TKGS_SUPERVISOR_STORAGE_POLICY:$VSPHERE_TKGS_SUPERVISOR_STORAGE_POLICY"
-
-
 # --- CHECK FOR BASIC COMANDS ---
 checkCLIcommands        BASIC
 
@@ -46,7 +42,6 @@ DEPLOY_TKG_VERSION=$(ls -1 $TDHPATH/files/tdh-tools/tdh-tools-tkg-*.cfg | sed -e
 # https://docs.vmware.com/en/VMware-Tanzu-Mission-Control/services/tanzumc-using/GUID-49DD2889-777E-4C28-8255-C0607E861001.html
 # eks-tmc-cloud-vmware-com-644184825571111404 ## CloudFormation Stack / Credential Name: sadubois-aws-eks / 
 # Account credential: eks-sadubois ## AWS account for EKS cluster lifecycle management
-
 
 usage() {
   str=$(ls -1 $TDHPATH/files/tdh-tools/tdh-tools-tkg-*.cfg | sed -e 's/^.*tools-tkg-//g' -e 's/\.cfg//g' | paste - - | awk '{ printf("%s or %s\n", $1, $2) }')
@@ -132,8 +127,12 @@ if [ "$PROVIDER" == "VSPHERE_TKGS" ]; then
   else
     TXT="Register vSphere Environment and adding Supervisor cluster to Tanzu Mission Control (TMC)"
     TMC_CONFIG_NAME="tmc-vsphere-tkgs"
-    TMC_DISPLAY_NAME="tkgmc-vsphere--$TDH_USER"
+    TMC_DISPLAY_NAME="tkgmc-vsphere-$TDH_USER"
     TDH_ENVIRONMENT_NAME="TDHenv-vsphere"
+    VSPHERE_TKGS_SUPERVISOR_STORAGE_POLICY=tkg-storage-policy
+    VSPHERE_TKGS_SUPERVISOR_STORAGE_CLASS=tkg-storage-policy
+    VSPHERE_TKGS_DATASTORE=esx-nested-datastore
+    VSPHERE_TKGS_DNS_SERVER="10.0.102.1:53"
   fi
 fi
 
@@ -170,18 +169,14 @@ runTDHtools $TDH_TOOLS_CONTAINER_TYPE $DEPLOY_TKG_VERSION "$TXT" "/home/tanzu/ta
 #checkCLIcommands TMC
 
 if [ "$PROVIDER" == "VSPHERE_TKGS" ]; then
-echo "gaga 2 VSPHERE_TKGS_SUPERVISOR_STORAGE_CLASS:$VSPHERE_TKGS_SUPERVISOR_STORAGE_CLASS"
-echo "gaga 2 VSPHERE_TKGS_SUPERVISOR_STORAGE_POLICY:$VSPHERE_TKGS_SUPERVISOR_STORAGE_POLICY"
-if [ "$PROVIDER" == "VSPHERE_TKGS" -a "$TMC_ENABLED" -eq 0 ]; then
   # --- CLEANUP KUNECONFIG ---
   #tmcCheckLogin
   vSphereKubeconfig  
-echo "gaga 3 VSPHERE_TKGS_SUPERVISOR_STORAGE_CLASS:$VSPHERE_TKGS_SUPERVISOR_STORAGE_CLASS"
-echo "gaga 3 VSPHERE_TKGS_SUPERVISOR_STORAGE_POLICY:$VSPHERE_TKGS_SUPERVISOR_STORAGE_POLICY"
   vSphereLogin
 
   if [ "$TMC_ENABLED" -eq 1 ]; then
     cnt=$(tmc managementcluster list | grep -c "$TMC_DISPLAY_NAME") 
+
     if [ $cnt -eq 0 ]; then
       cnt=$(kubectl get ns | egrep -c "^svc-tmc-") 
       if [ $cnt -gt 0 ]; then
@@ -195,7 +190,7 @@ echo "gaga 3 VSPHERE_TKGS_SUPERVISOR_STORAGE_POLICY:$VSPHERE_TKGS_SUPERVISOR_STO
           rm -f /tmp/status.yaml
     
           if [ "$TMC_DISPLAY_NAME" != "$clu_mgmt" ]; then 
-            echo "ERROR: vSphere Supervisor cluster ($VSPHERE_TKGS_SUPERVISOR_CLUSTER) is already registered in"
+            echo "ERROR: vSphere Supervisor cluster ($TDH_ENVIRONMENT_NAME) is already registered in"
             echo "       TMC Instance ($tmc_url) as $tmc_host."
             echo "       Please unregister it first:"
            if [ "$NATIVE" == "0" ]; then
@@ -277,10 +272,10 @@ echo "gaga 3 VSPHERE_TKGS_SUPERVISOR_STORAGE_POLICY:$VSPHERE_TKGS_SUPERVISOR_STO
     fi
   fi
   
-  VSPHERE_NAMESPACE=tanzu-demo-hub
-  VSPHERE_DATASTORE=datastore-19 
-  VSPHERE_CONTENT_LIBRARY=tanzu-demo-hub
-  
+  VSPHERE_NAMESPACE=$VSPHERE_TKGS_NAMESPACE
+  VSPHERE_DATASTORE=$VSPHERE_TKGS_DATASTORE
+  VSPHERE_CONTENT_LIBRARY=$VSPHERE_TKGS_CONTENT_LIBRARY
+
   TDH_VSPHERE_API_TOKEN=$(vSphereAPI_getToken "$VSPHERE_TKGS_VCENTER_SERVER" "$VSPHERE_TKGS_VCENTER_ADMIN" "$VSPHERE_TKGS_VCENTER_PASSWORD")
   
   vSphereAPI_createNamespace      $TDH_VSPHERE_API_TOKEN $VSPHERE_TKGS_VCENTER_SERVER $VSPHERE_NAMESPACE

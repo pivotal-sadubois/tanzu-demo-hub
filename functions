@@ -6,9 +6,8 @@
 # Author .......: Sacha Dubois, VMware
 # Description ..: Tanzu Demo Hub - Cluster Installation
 # ############################################################################################
-
 ROOT_SHELL=0
-  
+[ ! -n "$COLUMNS" ] && export COLUMNS=178
 [ -f usr/local/bin/bat ] && alias cat='/usr/local/bin/bat -p'
 
 function ctrl_c() {
@@ -58,7 +57,8 @@ fakeCmd() {
 }
 
 fileCat() {
-  echo "     -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------"
+  str="";n=5; while [ $n -lt $COLUMNS ]; do str="${str}-"; let n=n+1; done
+  echo "     $str"
 
   if [ -f /usr/local/bin/bat -o /usr/bin/bat ]; then
     bat -p --color always $1 | sed -e 's/^/     /g' -e '/^$/N;/^\n$/D'
@@ -66,13 +66,14 @@ fileCat() {
     cat $1 | sed '/^$/N;/^\n$/D'
   fi
 
-  echo "     -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------"
+  echo "     $str"
   echo ""
 }
 
 execCat() {
   echo -e "     => cat $1\c"; read x
-  echo "     -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------"
+  str="";n=5; while [ $n -lt $COLUMNS ]; do str="${str}-"; let n=n+1; done
+  echo "     $str"
 
   if [ -f /usr/local/bin/bat -o /usr/bin/bat ]; then
     #bat -p --color always $1 | sed 's/^/     /g'
@@ -81,7 +82,7 @@ execCat() {
     cat $1 | sed '/^$/N;/^\n$/D'
   fi
 
-  echo "     -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------"
+  echo "     $str"
   echo ""
 }
 
@@ -92,7 +93,8 @@ execCmd() {
   if [ "$(uname)" == "Darwin" ]; then SED=gsed; else SED=sed; fi
 
   echo -e "     => ${bold}$1${normal}\c"; read x
-  echo "     -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------"
+  str="";n=5; while [ $n -lt $COLUMNS ]; do str="${str}-"; let n=n+1; done
+  echo "     $str"
   ret=1; cnt=0
   while [ $ret -ne 0 -a $cnt -lt 5 ]; do
     eval "$1" > /tmp/execCmd.log 2>&1; ret=$?
@@ -106,7 +108,7 @@ execCmd() {
 
   #DELETEME
   #eval "$1" 2>&1 | $SED '${/^$/d;}' | $SED 's/^/     /g' 
-  echo "     -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------"
+  echo "     $str"
   echo ""
 }
 
@@ -116,8 +118,9 @@ loopCmd() {
 
   if [ "$(uname)" == "Darwin" ]; then SED=gsed; else SED=sed; fi
 
+  str="";n=5; while [ $n -lt $COLUMNS ]; do str="${str}-"; let n=n+1; done
   echo -e "     => ${bold}$1${normal}\c"; read x
-  echo "     ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------"
+  echo "     $str"
   
   ret=1
   while [ $ret -ne 0 -a $cnt -lt 3 ]; do
@@ -132,7 +135,7 @@ loopCmd() {
     echo "XXX-1"
   fi
 
-  echo "     ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------"
+  echo "     $str"
   echo ""
 }
 
@@ -631,12 +634,27 @@ pivnetAPIdownload() {
 }
 
 
+messageLineIntendDemos() {
+  str="";n=5; while [ $n -lt $COLUMNS ]; do str="${str}-"; let n=n+1; done
+  #echo "     -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------"
+  echo "     $str"
+  
+} 
+
 messageLineIntend() {
-  echo "   ---------------------------------------------------------------------------------------------------------------------------------------------------------------"
+  str="";n=3; while [ $n -lt $COLUMNS ]; do str="${str}-"; let n=n+1; done
+  #echo "   ---------------------------------------------------------------------------------------------------------------------------------------------------------------"
+  echo "   $str"
 } 
 
 messageLine() {
-  echo "------------------------------------------------------------------------------------------------------------------------------------------------------------------"
+  #echo "------------------------------------------------------------------------------------------------------------------------------------------------------------------"
+  str="";n=0; while [ $n -lt $COLUMNS ]; do str="${str}-"; let n=n+1; done
+ echo "$str"
+} 
+
+emptyLine() {
+  echo ""
 } 
 
 messagePrint() {
@@ -5807,6 +5825,18 @@ tkgCreateClusterV2() {
   fi
 }
 
+askQustion() {
+  TEST=$1
+
+  answer=""
+  while [ "$answer" != "y" -a "$answer" != "n" ]; do
+    echo -e "     $TEST \c\b" 1>&2; read answer
+  done
+
+  echo "$answer"
+}
+
+
 # ------------------------------------------------------------------------------------------
 # Function Name ......: tkgCreateCluster
 # Function Purpose ...: Install a Tanzu Kubernetes Grid Workload Cluster
@@ -8939,6 +8969,8 @@ installArgoCDV2() {
       exit 1
     fi
 
+    sleep 120
+
     messagePrint " ▪ ArgoCD Dashboard deployed"        "https://argocd.$DOMAIN"
 
 #gugus
@@ -8984,6 +9016,8 @@ installArgoCDV2() {
     messagePrint " ▪ Create Serviceaccount"              "argocd"
     kubectl delete serviceaccount argocd > /dev/null 2>&1
     kubectl create serviceaccount argocd > /dev/null 2>&1
+
+    sleep 120
   fi
 
   cmdLoop helm ls -n $NAMESPACE -o json > /tmp/output.json
@@ -12196,10 +12230,6 @@ createClusterIssuerV2() {
   cmdLoop kubectl get secret -n default -o json > /tmp/output.json
   snm=$(jq -r --arg key "$tls_snm" '.items[].metadata | select(.name == $key).name' /tmp/output.json)
 
-  #cmdLoop kubectl get clusterissuer -o json > /tmp/output.json
-  #stt=$(jq -r --arg key "$tls_iss" '.items[] | select(.metadata.name == $key).status.conditions[].type' /tmp/output.json)
-  #if [ "${stt}" == "" -o "${stt}" == "False" ]; then
-
   if [ "${snm}" != "$tls_snm" ]; then
     verifyHostedZone "${dns_sdo}.${dns_dom}"
     zone_id=$(getHostedZoneId  "${dns_sdo}.${dns_dom}")
@@ -12399,7 +12429,7 @@ createCertRequestV2() {
       echo "          - '${n}.${dns_sdo}.${dns_dom}'"                       >> $CERTIFICATE_CONFIG
     done
 
-    messagePrint " ▪ LetsEnscript Certificate Request"       "$CERTIFICATE_CONFIG"
+    messagePrint " ▪ LetsEnscript Certificate Request"       "\$HOME/.tanzu-demo-hub/deployments/${TDHV2_MANAGEMENT_CLUSTER}/$TDHV2_DEPLOYMENT/$TDHV2_WORKLOAD_CLUSTER/${tls_cnm}-request.yml"
     kubectl create -f $CERTIFICATE_CONFIG > /tmp/error.log 2>&1; ret=$?
     if [ $ret -ne 0 ]; then
       echo "ERROR: failed to deploy letsenscript certificate"
@@ -12407,7 +12437,7 @@ createCertRequestV2() {
       exit 1
     fi
 
-    sleep 300
+    sleep 600
 
     cnt=0
 
@@ -12883,11 +12913,15 @@ InstallCertManagerV2() {
     ## KUBERNETES 1.26
     CHART_VERSION=$(jq -r --arg key "$CHART_NAME" '.[] | select(.name == $key).app_version' /tmp/output.json)
 
-    if [ "${tdh_typ}" == "vSphere" -a "$tdh_dns" != "" ]; then
-      HELM_OPTIONS="--set 'extraArgs={--dns01-recursive-nameservers-only,--dns01-recursive-nameservers=$tdh_dns}' --set installCRDs=true"
-    else
-      HELM_OPTIONS="--set installCRDs=true"
-    fi
+#huhu
+    #if [ "${tdh_typ}" == "vSphere" -a "$tdh_dns" != "" ]; then
+    #  HELM_OPTIONS="--set 'extraArgs={--dns01-recursive-nameservers-only,--dns01-recursive-nameservers=$tdh_dns}' --set installCRDs=true"
+    #else
+    #  HELM_OPTIONS="--set installCRDs=true"
+    #fi
+
+echo "HELM_OPTIONS:$HELM_OPTIONS"
+    HELM_OPTIONS="--set installCRDs=true"
 
     cnt=0; ret=1
     while [ $ret -ne 0 -a $cnt -lt 5 ]; do
@@ -16141,8 +16175,8 @@ giteaForkGithubRepo() {
   git -C $TMP_GITEA clone https://${TDH_SERVICE_GITEA_ADMIN_USER}:${TDH_SERVICE_GITEA_ADMIN_PASS}@gitea.apps.corelab.core-software.ch/${GITEA_ORG}/${GITEA_REPO}.git > /dev/null 2>&1
 
   rm -rf $TMP_GITHUB/${GITEA_REPO}/.git
-  cd $TMP_GITHUB && tar cf $TMP_GITEA/${GITEA_REPO}.tar ${GITEA_REPO} > /dev/null 2>&1
-  cd $TMP_GITEA && tar xf ${GITEA_REPO}.tar > /dev/null 2>&1
+  (cd $TMP_GITHUB && tar cf $TMP_GITEA/${GITEA_REPO}.tar ${GITEA_REPO} > /dev/null 2>&1)
+  (cd $TMP_GITEA && tar xf ${GITEA_REPO}.tar > /dev/null 2>&1)
 
   git -C $TMP_GITEA/${GITEA_REPO} add $TMP_GITEA/${GITEA_REPO} > /dev/null 2>&1
   git -C $TMP_GITEA/${GITEA_REPO} commit -m new  > /dev/null 2>&1
@@ -17531,6 +17565,9 @@ installTanzuPackageCertManager() {
     
   [ "$PACKAGE_NAMESPACE" == "" ] && PACKAGE_NAMESPACE="tap-install"
   createNamespace $PACKAGE_NAMESPACE > /dev/null 2>&1
+  createNamespace $PACKAGE_NAME > /dev/null 2>&1
+echo "kubectl -n $PACKAGE_NAME label --overwrite ns $PACKAGE_NAME pod-security.kubernetes.io/enforce=privileged"
+  kubectl -n $PACKAGE_NAME label --overwrite ns $PACKAGE_NAME pod-security.kubernetes.io/enforce=privileged
     
   cmdLoop tanzu package installed list -A -o json > /tmp/output.json 2>/dev/null
   pkg=$(jq -r --arg key "$PACKAGE_NAME" '.[] | select(.name == $key).name' /tmp/output.json)
@@ -17681,6 +17718,7 @@ installTanzuPackageCertManager() {
   nms=$(jq -r --arg key "$PACKAGE_NAME" '.[] | select(.name == $key).namespace' /tmp/output.json)
   if [ "$stt" == "$PACKAGE_NAME" ]; then
     while [ $cnt -lt 5 ]; do
+echo "tanzu package installed get $PACKAGE_NAME -n $nms -o json > /tmp/pkg.json"
       cmdLoop tanzu package installed get $PACKAGE_NAME -n $nms -o json > /tmp/pkg.json
       pkg_stt=$(jq -r '.[]."status"' /tmp/pkg.json)
       pkg_nam=$(jq -r '.[]."package-name"' /tmp/pkg.json)
@@ -18628,6 +18666,7 @@ installTanzuPackageContour() {
       nam=$(jq -r --arg key "${PACKAGE_NAME}-${PACKAGE_NAMESPACE}-cluster-rolebinding" '.items[] | select(.metadata.name == $key).metadata.name' /tmp/output.json)
       [ "$nam" != "" ] && cmdLoop kubectl -n $PACKAGE_NAMESPACE delete clusterrolebinding $nam
 
+echo "hallihallo tanzu package install $PACKAGE_NAME -p $PACKAGE_ID --namespace $PACKAGE_NAMESPACE --version $package_ver --values-file /tmp/contour-data-values.yaml --wait"
       tanzu package install $PACKAGE_NAME -p $PACKAGE_ID --namespace $PACKAGE_NAMESPACE \
            --version $package_ver --values-file /tmp/contour-data-values.yaml --wait > /tmp/contour.log 2>&1; ret=$?
 
@@ -21193,6 +21232,10 @@ installAdmissionControllerV2() {
   HELM_CHART="gatekeeper/gatekeeper"
   tmc_enb=$(getYAML WC_TMC_ENABLED $wc_nam)
 
+echo "docker login $TDH_REGISTRY_DOCKER_NAME -u $TDH_REGISTRY_DOCKER_USER -p $TDH_REGISTRY_DOCKER_PASS"
+docker login $TDH_REGISTRY_DOCKER_NAME -u $TDH_REGISTRY_DOCKER_USER -p $TDH_REGISTRY_DOCKER_PASS
+
+#gaga123
   if [ "$tmc_enb" == "false" ]; then
     messageTitle "Admission Controller (OPA/Gatekeeper)"
     #messagePrint " ▪ Install OPA/Gatekeeper" "https://raw.githubusercontent.com/open-policy-agent/gatekeeper/master/deploy/gatekeeper.yaml"
