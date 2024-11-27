@@ -28,6 +28,11 @@ export CMD_EXEC=$(basename $0)
 export CMD_ARGS=$*
 export TMPDIR=/tmp
 
+# --- VERIFY TDH ENVIRONMENT ---
+if [ "$TDH_DEMO_NAME" == "" -o "$TDH_DEMO_CONFIG" ]; then 
+  echo "ERROR: No TDH environment configured, please run tdh init"; exit
+fi
+
 genTraffic() {
   st1=$(kubectl -n $NAMESPACE logs $(kubectl -n $NAMESPACE get pods -l app=${APPNAME}-01 --no-headers -o custom-columns=":metadata.name") | grep -c "GET \"/actuator")
   st2=$(kubectl -n $NAMESPACE logs $(kubectl -n $NAMESPACE get pods -l app=${APPNAME}-02 --no-headers -o custom-columns=":metadata.name") | grep -c "GET \"/actuator")
