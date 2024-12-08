@@ -38,3 +38,13 @@ else
   echo "       => export TDHHOME=\$HOME/workspace/tanzu-demo-hub"
 fi
 
+if [[ -f $HOME/.tdh/tdh_demo_name.cfg ]] 
+then
+  export TDH_DEMO_NAME=$(cat $HOME/.tdh/tdh_demo_name.cfg)
+fi
+
+if [[ -f $HOME/.tdh/tdh_demo_config.cfg ]]
+then
+  export TDH_DEMO_CONFIG=$(cat $HOME/.tdh/tdh_demo_config.cfg)
+fi
+
